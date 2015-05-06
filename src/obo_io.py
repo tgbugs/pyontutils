@@ -87,6 +87,15 @@ class OboFile:
     """ Python representation of the obo file structure split into tag-value
         pair stanzas the header is currently its own special stanza.
         type_def = ('<header>','<stanza>')
+
+        Usage: To load an obo file from somwhere on disk initialize an OboFile
+        instance with the full path to the obo file you want to load.
+        To write an obofile call obofileinstance.write(). If the filename for
+        the obofile exists it will not overwrite what you have but will append
+        a number to the end.
+
+        To output to ttl format call str_to_write = obofileinstance.__ttl__()
+        and then write str_to_write to file.  TODO implement .writettl()
     """
     def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None):
         self.filename = filename
