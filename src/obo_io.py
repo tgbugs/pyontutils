@@ -35,6 +35,10 @@
 
     python .obo file parser and writer for the obo 1.2 spec defined at
     https://oboformat.googlecode.com/svn/trunk/doc/GO.format.obo-1_2.html
+
+    can also output to ttl format but conversion is currently ill defined
+
+    ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
 """
 __title__ = 'obo_io'
 __author__ = 'Tom Gillespie'
@@ -50,6 +54,7 @@ TW = 4  # tab width
 
 od.__repr__ = dict.__repr__
 
+# this is our current (horrible) conversion from obo to ttl
 obo_tag_to_ttl = {
     'id':'%s rdf:type owl:Class ;\n',
     'name':' ' * TW + 'rdfs:label "%s"@en ;\n',
@@ -1024,16 +1029,10 @@ def deNone(*args):
 __all__ = [OboFile.__name__, TVPair.__name__, Header.__name__, Term.__name__, Typedef.__name__, Instance.__name__]
 
 def main():
-    folder = '/home/tom/ni/protocols/'
-    #folder = '/home/tgillesp/projects/'
-    #folder = 'C:/Users/root/Dropbox/neuroinformatics/protocols/'
-    #filename = folder + 'ero.obo'
-    #filename = folder + 'badobo.obo'
-    #filename = folder + 'ksm_utf8_2.obo'
-    #filename = folder + 'ksm_com_ids_3.obo'
-    filename = folder + 'onts/ns_entities.obo'
+    folder = '../source-material/'
+    #filename = folder + 'ns_entities.obo'
+    filename = folder + 'ns_methods.obo'
     of = OboFile(filename=filename)
-    #print(of)
     embed()
 
 if __name__ == '__main__':
