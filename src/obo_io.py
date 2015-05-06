@@ -22,6 +22,7 @@
 
 ####
 # TODO
+# add docopt support for conversion from obo -> ttl, probably should mve obo_tag_to_ttl to its own file?
 # figure out how to properly manage references, specfically deleting, because callback hell is NOT the right way
 # figure out how to multiple terms with the same id, there was a bug in how I generated the 2nd verion due to
     # the fact that the old ID was still used in the Terms od, on reloading we now fail
@@ -195,9 +196,6 @@ class TVPair:  #TODO these need to be parented to something!
         '\{':'{',
         '\}':'}',
               }
-    brackets = {'[':']', '{':'}', '(':')', '<':'>', '"':'"', ' ':' '}
-    brackets.update({v:k for k, v in brackets.items()})
-
     def __init__(self, line=None, tag=None, value=None, modifiers=None, comment=None, parent=None, type_od=None, **kwargs):  # TODO kwargs for specific tags
         self.parent = parent
         self.type_od = type_od
@@ -1046,6 +1044,7 @@ def main():
     #filename = folder + 'ns_entities.obo'
     filename = folder + 'ns_methods.obo'
     of = OboFile(filename=filename)
+    ttl = of.__ttl__()
     embed()
 
 if __name__ == '__main__':
