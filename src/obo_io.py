@@ -83,7 +83,10 @@ def id_fix(value):
 
 
 class OboFile:
-    type_def = ('<header>','<stanza>')
+    """ Python representation of the obo file structure split into tag-value
+        pair stanzas the header is currently its own special stanza.
+        type_def = ('<header>','<stanza>')
+    """
     def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None):
         self.filename = filename
         self.Terms = od()
@@ -170,8 +173,12 @@ class OboFile:
 
 
 class TVPair:  #TODO these need to be parented to something!
-    _type_ = '<tag-value pair>'
-    _type_def = ('<tag>', '<value>', '{<trailing modifiers>}', '<comment>')
+    """ Python representation of obo tag-value pairs, all tag-value pairs that
+        require specially structured values are implemented below in the
+        special children section.
+        _type_ = '<tag-value pair>'
+        _type_def = ('<tag>', '<value>', '{<trailing modifiers>}', '<comment>')
+    """
     _reserved_ids = ('OBO:TYPE','OBO:TERM','OBO:TERM_OR_TYPE','OBO:INSTANCE')
     _escapes = {
         '\\n':'\n',
@@ -361,6 +368,9 @@ class TVPair:  #TODO these need to be parented to something!
 
 
 class TVPairStore:
+    """
+        Ancestor class for stanzas and headers.
+    """
     def __new__(cls, *args, **kwargs):
         cls._tags = od()
         for tag, limit in cls._all_tags:
@@ -502,6 +512,7 @@ class TVPairStore:
 
 
 class Header(TVPairStore):
+    """ Header class. """
     _r_tags = ('format-version', )
     _r_defaults = ('1.2',)
     _all_tags = (
@@ -539,6 +550,9 @@ class Header(TVPairStore):
 
 
 class Stanza(TVPairStore):
+    """ Stanza class.
+        _types = ('Term', 'Typedef', 'Instance')
+    """
     _type_ = '<stanza>'
     _type_def = ('[<Stanza name>]','<tag-value pair>')
     _r_tags = ['id', 'name',]
@@ -588,7 +602,6 @@ class Stanza(TVPairStore):
         'is_transitive',
         'is_metadata_tag',
     ]
-    _types = ('Term', 'Typedef', 'Instance')
     def __new__(cls, *args, **kwargs):
         cls._all_tags = [tag for tag in cls._all_tags if tag[0] not in cls._bad_tags]
         instance = super().__new__(cls, *args, **kwargs)
