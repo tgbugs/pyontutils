@@ -70,6 +70,8 @@ def id_fix(value):
             value = 'obo:' + value
         elif value.startswith('birnlex') or value.startswith('nlx'):
             value = 'nifstd:' + value
+        elif value.startswith('MESH'):
+            value = ':'.join(value.split('_'))
         else:
             value = ':' + value
     return value
