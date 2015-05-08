@@ -895,6 +895,7 @@ class Idspace(Value):
             out += self.seps[2]
             out += self.desc
             out += self.seps[2]
+        return out
 
     @classmethod
     def parse(cls, value, *args):
