@@ -32,10 +32,22 @@
 # nlx_qual_ is not getting split correctly to nlx_qual:
 
 """
+    Usage:
+        obo_io.py <obofile>
+        obo_io.py --ttl <obofile> [<ttlfile>]
+        obo_io.py --help
+    Options:
+        -h --help       show this
+        -t --ttl        convert obo file to ttl and exit
+
+
+
     obo_io.py
 
     python .obo file parser and writer for the obo 1.2 spec defined at
     https://oboformat.googlecode.com/svn/trunk/doc/GO.format.obo-1_2.html
+
+    acts as a command line script or as a python module
 
     can also output to ttl format but conversion is currently ill defined
 
@@ -48,6 +60,7 @@ import inspect
 from datetime import datetime
 from getpass import getuser
 from collections import OrderedDict as od
+from docopt import docopt
 from IPython import embed
 
 N = -1  # use to define 'many ' for tag counts
@@ -142,7 +155,11 @@ class OboFile:
         #add store to od.names
         tvpair_store.append_to_obofile(self)
 
-    def write(self, filename):  #FIXME this is bugged
+    def write(self, filename, type_='obo'):  #FIXME this is bugged
+        """ Write file, will not overwrite files with the same name
+            outputs to obo by default but can also output to ttl if
+            passed type_='ttl' when called.
+        """
         if os.path.exists(filename):
             name, ext = filename.rsplit('.',1)
             try:
@@ -157,7 +174,13 @@ class OboFile:
 
         else:
             with open(filename, 'wt', encoding='utf-8') as f:
-                f.write(str(self))  # FIXME this is incredibly slow for big files :/
+                if type_ == 'obo':
+                    f.write(str(self))  # FIXME this is incredibly slow for big files :/
+                elif type_ == 'ttl':
+                    f.write(self.__ttl__())
+                else:
+                    raise TypeError('No exporter for file type %s!' % type_)
+
 
     def __ttl__(self):
         #stores = [self.header.__ttl__()]
@@ -166,7 +189,6 @@ class OboFile:
         stores += [s.__ttl__() for s in self.Typedefs.values()] 
         stores += [s.__ttl__() for s in self.Instances.values()]
         return '\n'.join(stores)
-
 
     def __str__(self):
         stores = [str(self.header)]
@@ -1049,12 +1071,27 @@ def deNone(*args):
 __all__ = [OboFile.__name__, TVPair.__name__, Header.__name__, Term.__name__, Typedef.__name__, Instance.__name__]
 
 def main():
-    folder = '../source-material/'
-    #filename = folder + 'ns_entities.obo'
-    filename = folder + 'ns_methods.obo'
-    of = OboFile(filename=filename)
-    ttl = of.__ttl__()
-    embed()
+    args = docopt(__doc__, version='obo_io 0')
+    if args['--ttl']:
+        filename = args['<obofile>']
+        if os.path.exists(filename):
+            of = OboFile(filename)
+            if args['<ttlfile>']:
+                ttlfilename = args['<ttlfile>']
+            else:
+                fname, ext = filename.rsplit('.',1)
+                if ext != 'obo':  # FIXME pretty sure a successful parse should be the measure here?
+                    # TODO TEST ME!
+                    raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
+                ttlfilename = fname + '.ttl'
+            of.write(ttlfilename, type_='ttl')
+        else:
+            raise FileNotFoundError('No file named %s exists at that path!' % filename)
+    else:
+        filename = args['<obofile>']
+        of = OboFile(filename=filename)
+        ttl = of.__ttl__()
+        embed()
 
 if __name__ == '__main__':
     main()
