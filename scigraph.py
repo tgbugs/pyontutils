@@ -57,6 +57,7 @@ class State:
         code += self.imports
         #code += "paths = %s\n\n" % repr(self.paths)
         code += "exten_mapping = %s\n\n" % repr(self.exten_mapping)
+        code += self.make_baseclass()
         code += self._code
         
         return code
@@ -67,21 +68,51 @@ class State:
         apiVersion = self.globs['apiVersion']
         return code.format(swaggerVersion=swaggerVersion, apiVersion=apiVersion, api_url=self.api_url, t=self.tab)
 
+    def make_baseclass(self):
+        code = (
+            'class restService:\n'
+            '{t}def _get(self, method, url):\n'
+            '{t}{t}print(url)\n'
+            '{t}{t}s = requests.Session()\n'
+            '{t}{t}req = requests.Request(method=method, url=url)\n'
+            '{t}{t}prep = req.prepare()\n'
+            '{t}{t}resp = s.send(prep)\n'
+            '{t}{t}return resp\n'
+            '\n\n'
+        )
+        return code.format(t=self.tab)
+
     def make_class(self, dict_):
-        code = 'class {classname}:\n{t}""" {docstring} """\n{t}basePath="{basePath}"\n'
+        code = 'class {classname}(restService):\n{t}""" {docstring} """\n\n{t}basePath="{basePath}"\n\n'
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
         _, basePath = self.basePath_(dict_['basePath'])
         return code.format(classname=classname, docstring=docstring, basePath=basePath, t=self.tab)
 
     def make_param_parts(self, dict_):
-        param_args = '{name}={defaultValue}'
+        if dict_['required']:
+            param_args = '{name}'
+            param_args = param_args.format(name=dict_['name'])
+        else:
+            param_args = '{name}="{defaultValue}"'
+            param_args = param_args.format(name=dict_['name'], defaultValue=dict_.get('defaultValue',''))
+
         param_rest = '{name}'
         param_doc = '{t}{t}{t}{name}: {description}'
 
-        param_args = param_args.format(name=dict_['name'], defaultValue=dict_.get('defaultValue',''))
         param_rest = param_rest.format(name=dict_['name'])
-        param_doc = param_doc.format(name=dict_['name'], description=dict_.get('description',''), t=self.tab)
+        desc = dict_.get('description','')
+        if len(desc) > 50:
+        #if False:
+            tmp = desc.split(' ')
+            part = len(desc) // 50
+            size = len(tmp) // part
+            lines = []
+            for i in range(part + 1):
+                lines.append(' '.join(tmp[i*size:(i+1) * size]))
+            desc = '\n{t}{t}{t}'.format(t=self.tab).join(lines)
+            #desc = desc[:70] + '\n' + self.tab * 3 + desc[70:]
+        param_doc = param_doc.format(name=dict_['name'], description=desc, t=self.tab)
     
         #return parameter, param_rest, param_doc
         return param_args, param_rest, param_doc
@@ -95,7 +126,7 @@ class State:
             pds.append(pd)
 
         pas = ', '.join(pas)
-        prs = '"?' + '&'.join([pr + '={%s}'%pr for pr in prs]) + '".format(%s)' % ', '.join([pr + '=' + pr for pr in prs]) 
+        prs = '?' + '&'.join([pr + '={%s}'%pr for pr in prs]) + '".format(%s)' % ', '.join([pr + '=' + pr for pr in prs]) 
         pds = '\n'.join(pds)
         return pas, prs, pds
 
@@ -113,20 +144,21 @@ class State:
         #parameters and param_rest need to come from the same source
         code = (
             '{t}def {nickname}(self, {params}, output="application/json"):\n'
-            '{t}{t}""" {docstring}\n{t}{t}"""\n'
-            '{t}{t}\n'
-            '{t}{t}url = self.basePath + {path} + {param_rest}\n'
-            '{t}{t}s = requests.Session()\n'
-            '{t}{t}req = requests.Request(method="{method}", url=url)\n'
-            '{t}{t}prep = req.prepare()\n'
-            '{t}{t}resp = s.send(prep)\n'
-            '{t}{t}return resp\n'
-              )
+            '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
+            #'{t}{t}\n'
+            '{t}{t}url = self.basePath + "{path}{param_rest}\n'
+            '{t}{t}return self._get("{method}", url)\n'
+        )
+
+
         params, param_rest, param_docs = self.make_params(api_dict['parameters'])  # shouldnt have to do this... it should know where to put itself?
-        docstring = api_dict['summary'] + '\n\nArguments:\n' + param_docs
+        docstring = api_dict['summary'] + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
         nickname = api_dict['nickname']
         method = api_dict['method']
-        formatted = code.format(path=self.paths[nickname], nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
+        path = self.paths[nickname]
+        if len(path.split('{')) > 1:
+            param_rest = '?' + param_rest.split('&', 1)[1]
+        formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
@@ -164,7 +196,13 @@ class State:
         return None, self.dodict(dict_)
 
     def Features(self, dict_):
-        return None, self.dodict(dict_)
+        self.dodict(dict_)
+        return None, ''
+
+    def Graph(self, dict_):
+        self.dodict(dict_)
+        return None, ''
+
 
     def properties(self, dict_):
         return None, self.dodict(dict_)
@@ -175,20 +213,8 @@ class State:
     def id(self, value):
         return None, value
 
-    #def edges(self, dict_):
-        #return None, self.dodict(dict_)
-
     def nickname(self, value):
         return None, value
-
-    #def supportsThreadIsolatedTransactions(self, dict_):
-        #return None, self.dodict(dict_)
-
-    #def supportsEdgeProperties(self, dict_):
-        #return None, self.dodict(dict_)
-
-    def Graph(self, dict_):
-        return None, self.dodict(dict_)
 
     def operations(self, list_):
         self.context = 'operations'
@@ -229,7 +255,7 @@ class State:
             code = self.dodict(dict_)
             blocks.append(code)
 
-        return '\n'.join(blocks)
+        return '\n'.join([b for b in blocks if b])
 
     def dodict(self, dict_):
         blocks = []
@@ -245,7 +271,7 @@ class State:
                 print('wtf value is this!?', key, value)
                 raise
 
-        return '\n'.join(blocks)
+        return '\n'.join([b for b in blocks if b])
 
     def class_json(self, dict_):
         code = self.make_class(dict_)
@@ -273,61 +299,6 @@ s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
 s.gencode()
 code = s.make_main()
 print(code)
+with open('/tmp/test_api.py', 'wt') as f:
+    f.write(code)
 
-
-'''
-class api_reader:
-    url_api = "api-docs/"
-    def __init__(self, url_base="http://matrix.neuinfo.org:9000/scigraph/")
-        self.url = url_base
-        self.url_api = urlbase + url_api
-
-    def get_api(self):
-        requests.get(self.url_api)
-
-class restService:  #TODO this REALLY needs to be async... with max timeout "couldnt do x terms"
-    """ base class for things that need to get json docs from REST services
-    """
-    _timeout = 1
-    _cache_xml = 0  #FIXME we may want to make this toggle w/o having to restart all the things
-    def __new__(cls, *args, **kwargs):
-        """ here for now to all hardcoded cache stuff """
-        if cls._cache_xml:
-            cls._xml_cache = {}
-        instance = super().__new__(cls)
-        return instance
-
-    def _get(self, url, response_type):
-        response = requests.get(url, timeout=self._timeout)
-        if response.ok:
-            if response_type == 'xml':
-                return response.text
-            elif response_type == 'json':
-                return response.json()
-            else:
-                return response.text
-        else:
-            raise ConnectionError("Get of %s failed %s %s"%(url, response.status_code, response.reason))
-
-    def xpath(self, xml, *queries):
-        """ Run a set of xpath queries. """
-        try:
-            xmlDoc = etree.fromstring(xml.encode())
-        except etree.ParseError:
-            raise  # TODO
-        
-        results = [xmlDoc.xpath(query) for query in queries]
-
-        if len(results) == 1:
-            return results[0]
-        else:
-            return tuple(results)
-
-class scigraphService(restService):
-    pass
-class Annotation(scigraphService):
-class Graph(scigraphService):
-class Lexical(scigraphService):
-class Vocabulary(scigraphService):
-
-'''
