@@ -1,61 +1,26 @@
 #!/usr/bin/env python3
 """
-    Client library for scigraph. Since swagger codegen is still broken.
+    Client library generator for SciGraph REST api.
 """
 
-import inspect
-import simplejson
 import requests
-
-multilevel = (
-    'path',
-    'items',
-
-)
-level1 = (
-    'apis',  # always
-    'models',
-    'swaggerVersion',
-    'basePath',
-    'resourcePath',
-    'apiVersion',
-)
-apis = (
-    'description',
-    'operations',
-    'method',
-    'nickname',
-    'parameters',
-    'produces',
-    'summary',
-    'type',
-    'name',
-    'paramType',
-    'required',
-    'allowMultiple',
-    'description',
-    'uniqueItems',
-)
 
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
-        self.imports = "import requests\n"
+        self.imports = "import requests\n\n"
         self.api_url = api_url
         self.current_path = self.api_url
-        self.context = 'None'
         self.exten_mapping = {}
         self.paths = {}
         self.globs = {}
         self.tab = '    '
-
 
     def make_main(self):
         code = ""
         code += self.shebang
         code += self.make_doc()
         code += self.imports
-        #code += "paths = %s\n\n" % repr(self.paths)
         code += "exten_mapping = %s\n\n" % repr(self.exten_mapping)
         code += self.make_baseclass()
         code += self._code
@@ -63,7 +28,7 @@ class State:
         return code
         
     def make_doc(self):
-        code = '""" sv: {swaggerVersion}, av: {apiVersion}\n{t}generated for {api_url}\n{t}by scigraph.py"""\n'
+        code = '""" Swagger Version: {swaggerVersion}, API Version: {apiVersion}\n{t}generated for {api_url}\n{t}by scigraph.py\n"""\n'
         swaggerVersion = self.globs['swaggerVersion']
         apiVersion = self.globs['apiVersion']
         return code.format(swaggerVersion=swaggerVersion, apiVersion=apiVersion, api_url=self.api_url, t=self.tab)
@@ -71,6 +36,7 @@ class State:
     def make_baseclass(self):
         code = (
             'class restService:\n'
+            '{t}""" Base class for SciGraph rest services. """\n\n'
             '{t}def _get(self, method, url):\n'
             '{t}{t}print(url)\n'
             '{t}{t}s = requests.Session()\n'
@@ -83,7 +49,12 @@ class State:
         return code.format(t=self.tab)
 
     def make_class(self, dict_):
-        code = 'class {classname}(restService):\n{t}""" {docstring} """\n\n{t}basePath="{basePath}"\n\n'
+        code = (
+            'class {classname}(restService):\n'
+            '{t}""" {docstring} """\n\n'
+            '{t}def __init__(self, basePath="{basePath}"):\n'
+            '{t}{t}self.basePath = basePath\n\n'
+        )
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
         _, basePath = self.basePath_(dict_['basePath'])
@@ -103,18 +74,15 @@ class State:
         param_rest = param_rest.format(name=dict_['name'])
         desc = dict_.get('description','')
         if len(desc) > 50:
-        #if False:
             tmp = desc.split(' ')
             part = len(desc) // 50
             size = len(tmp) // part
             lines = []
             for i in range(part + 1):
                 lines.append(' '.join(tmp[i*size:(i+1) * size]))
-            desc = '\n{t}{t}{t}'.format(t=self.tab).join(lines)
-            #desc = desc[:70] + '\n' + self.tab * 3 + desc[70:]
+            desc = '\n{t}{t}{t}'.format(t=self.tab).join([l for l in lines if l])
         param_doc = param_doc.format(name=dict_['name'], description=desc, t=self.tab)
     
-        #return parameter, param_rest, param_doc
         return param_args, param_rest, param_doc
 
     def make_params(self, list_):
@@ -139,23 +107,19 @@ class State:
         return None, ''
 
     def operation(self, api_dict):
-        print('OPERATIONS', api_dict)
-        #make_api_method
-        #parameters and param_rest need to come from the same source
         code = (
             '{t}def {nickname}(self, {params}, output="application/json"):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
-            #'{t}{t}\n'
             '{t}{t}url = self.basePath + "{path}{param_rest}\n'
             '{t}{t}return self._get("{method}", url)\n'
         )
 
 
-        params, param_rest, param_docs = self.make_params(api_dict['parameters'])  # shouldnt have to do this... it should know where to put itself?
-        docstring = api_dict['summary'] + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        params, param_rest, param_docs = self.make_params(api_dict['parameters'])
         nickname = api_dict['nickname']
-        method = api_dict['method']
         path = self.paths[nickname]
+        docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        method = api_dict['method']
         if len(path.split('{')) > 1:
             param_rest = '?' + param_rest.split('&', 1)[1]
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
@@ -170,11 +134,8 @@ class State:
         return None, ''
 
     def top_path(self, extension):
-        #oldpath = self.current_path
-        #self.current_path += extension
         newpath = self.api_url + extension
         json = requests.get(newpath).json()
-        #out = None, self.dodict(json)
         return json
 
     def path(self, value):
@@ -203,28 +164,13 @@ class State:
         self.dodict(dict_)
         return None, ''
 
-
     def properties(self, dict_):
         return None, self.dodict(dict_)
-
-    def notes(self, value):
-        return None, value
-
-    def id(self, value):
-        return None, value
-
-    def nickname(self, value):
-        return None, value
 
     def operations(self, list_):
         self.context = 'operations'
         code = '\n'.join(self.operation(l) for l in list_)
-        #self.context = 'apis'  # holy crap this is horrible
         return None, code
-
-    def parameters(self, list_):
-        # we make function calls here
-        return None, '#TODO'
 
     def produces(self, list_):
         # we make return option here including the docstring
@@ -244,11 +190,6 @@ class State:
 
         return None, '/'.join(curs)
 
-
-
-    def method(self, value):
-        return 'method', value
-
     def dolist(self, list_):
         blocks = []
         for dict_ in list_:
@@ -263,9 +204,9 @@ class State:
             try:
                 print('trying with key:', key)
                 name, code = self.__class__.__dict__[key](self, value)
-                #print(code)
                 blocks.append(code)
             except KeyError:  # reduce the stuff we aren't worried about
+                # FIXME for some reason this eats other errors too :/
                 print('METHOD', key, 'NOT FOUND')
             except ValueError:
                 print('wtf value is this!?', key, value)
@@ -286,19 +227,22 @@ class State:
         return dict_
 
     def gencode(self):
-        # make_classes
-        print(self.__class__.__dict__)
+        """ Run this to generate the code """
         ledict = requests.get(self.api_url).json()
         ledict = self.dotopdict(ledict)
         out = self.dodict(ledict)
-
-        #print(out)
         self._code = out
 
-s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
-s.gencode()
-code = s.make_main()
-print(code)
-with open('/tmp/test_api.py', 'wt') as f:
-    f.write(code)
+def main():
+    target = '/tmp/test_api.py'
+    s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
+    s.gencode()
+    code = s.make_main()
+    print(code)
+    with open(target, 'wt') as f:
+        f.write(code)
+
+if __name__ == '__main__':
+    main()
+
 
