@@ -92,21 +92,25 @@ class State:
         return param_args, param_rest, param_doc
 
     def make_params(self, list_):
-        pargs, prests, pdocs = [], [], []
+        pargs_list, prests, pdocs = [], [], []
         for param in list_:
             parg, prest, pdoc = self.make_param_parts(param)
-            pargs.append(parg)
+            pargs_list.append(parg)
             prests.append(prest)
             pdocs.append(pdoc)
 
-        if pargs:
-            pargs = ', '.join(pargs) + ', '  # if there are args add a comma
+        if pargs_list:
+            pargs = ', '.join(pargs_list) + ', '  # if there are args add a comma
         else:
             pargs = ''
-        if prests:
+
+        if prests and pargs_list != prests:  # if prests isn't just a copy of the arg
             prests = '?' + '&'.join([pr + '={%s}'%pr for pr in prests]) + "'.format(%s)" % ', '.join([pr + '=' + pr for pr in prests]) 
+        elif pargs:
+            prests = "'.format(%s)" % ', '.join([pr + '=' + pr for pr in prests]) 
         else:
             prests = "'"
+
         pdocs = '\n'.join(pdocs)
         return pargs, prests, pdocs
 
@@ -135,8 +139,7 @@ class State:
         if len(path.split('{')) > 1:
             if '&' in param_rest:  # FIXME this is obscure and could be explicit at a lower level
                 param_rest = '?' + param_rest.split('&',1)[1]  # remove required args from rest args
-            else:
-                param_rest = ''
+                
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
