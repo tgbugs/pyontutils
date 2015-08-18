@@ -86,17 +86,23 @@ class State:
         return param_args, param_rest, param_doc
 
     def make_params(self, list_):
-        pas, prs, pds = [], [], []
+        pargs, prests, pdocs = [], [], []
         for param in list_:
-            pa, pr, pd = self.make_param_parts(param)
-            pas.append(pa)
-            prs.append(pr)
-            pds.append(pd)
+            parg, prest, pdoc = self.make_param_parts(param)
+            pargs.append(parg)
+            prests.append(prest)
+            pdocs.append(pdoc)
 
-        pas = ', '.join(pas)
-        prs = '?' + '&'.join([pr + '={%s}'%pr for pr in prs]) + '".format(%s)' % ', '.join([pr + '=' + pr for pr in prs]) 
-        pds = '\n'.join(pds)
-        return pas, prs, pds
+        if pargs:
+            pargs = ', '.join(pargs) + ', '  # if there are args add a comma
+        else:
+            pargs = ''
+        if prests:
+            prests = '?' + '&'.join([pr + '={%s}'%pr for pr in prests]) + '".format(%s)' % ', '.join([pr + '=' + pr for pr in prests]) 
+        else:
+            prests = '"'
+        pdocs = '\n'.join(pdocs)
+        return pargs, prests, pdocs
 
     def apiVersion(self, value):
         self.globs['apiVersion'] = value
@@ -108,7 +114,7 @@ class State:
 
     def operation(self, api_dict):
         code = (
-            '{t}def {nickname}(self, {params}, output="application/json"):\n'
+            '{t}def {nickname}(self, {params}output="application/json"):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
             '{t}{t}url = self.basePath + "{path}{param_rest}\n'
             '{t}{t}return self._get("{method}", url)\n'
@@ -121,7 +127,10 @@ class State:
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
         method = api_dict['method']
         if len(path.split('{')) > 1:
-            param_rest = '?' + param_rest.split('&', 1)[1]
+            if '&' in param_rest:  # FIXME this is obscure and could be explicit at a lower level
+                param_rest = '?' + param_rest.split('&',1)[1]  # remove required args from rest args
+            else:
+                param_rest = ''
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
