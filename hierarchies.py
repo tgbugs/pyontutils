@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import requests
 import simplejson
+from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
@@ -12,13 +13,6 @@ MID_STEM = '├' + LEAF
 BOT_STEM = '└' + LEAF
 
 CYCLE = 'CYCLE DETECTED DERPS'
-
-trans = {
-    BLANK:BLANK,
-    BOT_STEM:BLANK,
-    BRANCH:(MID_STEM, BOT_STEM, BRANCH),
-    MID_STEM:(MID_STEM, BOT_STEM, BRANCH),
-}
 
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
@@ -62,8 +56,30 @@ def get_node(start, tree):
     print('branch', branch)
     return tree, branch
 
+
+def cycle_check(puta_end, start, graph):  # XXX use the flat_tree trick!
+    visited = []
+    def inner(next_):
+        if next_ not in graph:  # since these aren't actually graphs and some nodes dont have parents
+            return False
+        elif not graph[next_]:
+            return False
+        elif puta_end in graph[next_]:
+            return True
+        elif next_ in visited:
+            print('CYCLE: ', visited + [next_])
+            return False  # A DIFFERENT CYCLE WAS DETECTED will handle later
+        else:
+            visited.append(next_)
+            test = any([inner(c) for c in graph[next_]])
+            visited.pop()
+            return test
+
+    return inner(start)
+
+
 def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than just leaves!
-    """ Remove leaves higher in the tree that occur further down the
+    """ Remove nodes higher in the tree that occur further down the
         SAME branch. If they occur down OTHER branchs leave them alone.
 
         NOTE: modifies in place!
@@ -97,46 +113,14 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
         lleaves.update(new_lleaves)
 
     return lleaves
-def _dematerialize_leaves(parent_name, parent_node):  # FIXME we need to demat more than just leaves!
-    """ Remove leaves higher in the tree that occur further down the
-        SAME branch. If they occur down OTHER branchs leave them alone.
-
-        NOTE: modifies in place!
-    """
-    lleaves = {}
-    children = parent_node[parent_name]
-
-    if not children:  # children could be empty ? i think this only happens @ root?
-        #print('at bottom', parent_name)
-        lleaves[parent_name] = None
-        return lleaves
-
-    children_ord = reversed(sorted([(k, v) for k, v in children.items()], key=tcsort))  # make sure we hit deepest first
-    
-    for child_name, _ in children_ord:  # get list so we can go ahead and pop
-        new_lleaves = dematerialize_leaves(child_name, children)
-
-        if child_name in new_lleaves:  # if it is a leaf!
-            if child_name in lleaves:  # if it has previously been identified as a leaf!
-                print('MATERIALIZATION DETECTED! LOWER PARENT:',
-                      lleaves[child_name],'ZAPPING!:', child_name,
-                      'OF PARENT:', parent_name)
-                children.pop(child_name)
-                #print('cn', child_name, 'pn', parent_name, 'BOTTOM')
-            else:  # if it has NOT previously been identified as a leaf, add the parent!
-                new_lleaves[child_name] = parent_name  # pass it back up to nodes above
-                #print('cn', child_name, 'pn', parent_name)
-
-        lleaves.update(new_lleaves)
-
-    return lleaves
 
 class defaultdict(base_dd):
     __str__ = dict.__str__
     __repr__ = dict.__repr__
 
+class TreeNode(defaultdict):  # FIXME need to factory this to allow separate trees!
+
     pad = '  '
-    strpad = ' | '
     prefix = []
     existing = {}  # FIXME CAREFUL WITH THIS
     current_parent = None
@@ -260,142 +244,75 @@ class defaultdict(base_dd):
             
         return output
 
-    #def __len__(self):  # can't do this!
-        #return sum([len(self[k]) if self[k] else 1 for k in self])
 
-# don't forget the incoming or you will get ALL THE THINGS
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/GO:0044464?relationshipType=subClassOf&direction=INCOMING&depth=%s"
-cell_part_depth = 9
-direction = 'INCOMING'
-root = "GO:0044464"
-
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/NIFGA:birnlex_796?relationshipType=has_proper_part&direction=OUTGOING&depth=%s"
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/NIFGA:birnlex_796?relationshipType=http://www.obofoundry.org/ro/ro.owl%23has_proper_part&direction=OUTGOING&depth=9"
-direction = 'OUTGOING'
-root = "NIFGA:birnlex_796"
-
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/UBERON:0000955?relationshipType=BFO_0000050&direction=INCOMING&depth=%s"
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/UBERON:0000955?relationshipType=http://purl.obolibrary.org/obo/BFO_0000050&direction=INCOMING&depth=%s"
-direction = 'INCOMING'
-root = "UBERON:0000955"
-
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/UBERON:0002749?relationshipType=BFO_0000050&direction=INCOMING&depth=%s"
-query = "http://matrix.neuinfo.org:9000/scigraph/graph/neighbors/UBERON:0002749?relationshipType=http://purl.obolibrary.org/obo/BFO_0000050&direction=INCOMING&depth=%s"
-direction = 'INCOMING'
-root = "UBERON:0002749"
-
-query = "http://localhost:9000/scigraph/graph/neighbors/FMA:Brain?relationshipType=http%3A%2F%2Fsig.biostr.washington.edu%2Ffma3.0%23regional_part_of&direction=INCOMING&depth=10"
-direction = 'INCOMING'
-root = 'FMA:Brain'
-
-#js = []
-#for i in range(10):  # emperically this maxes at depth of 10 w/ 2823 terms
-    #js.append(requests.get(query % i).json())
-
-#with open('/tmp/', 'rt') as f:
-    #j = simplejson.load(f)
+def tree():
+    return TreeNode(tree)
 
 
-j = requests.get(query).json()
-print(len(j['nodes']))
+def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo.org:9000'):
+    query_string = 'http://{url_base}/scigraph/graph/neighbors/{root}?relationshipType={relationshipType}&direction={direction}&depth={depth}'
 
-nodes = {n['id']:n['lbl'] for n in j['nodes']}
-nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
-edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
+    relationshipType = relationshipType.replace('#','%23')
+    query = query_string.format(root=root, relationshipType=relationshipType,
+                                direction=direction, depth=depth, url_base=url_base)
 
-objects = defaultdict(list)  # note: not all nodes are objects!
-for edge in j['edges']:
-    objects[edge['obj']].append(edge['sub'])
+    j = requests.get(query).json()
+    print(len(j['nodes']))
 
-parents = defaultdict(list)
-for edge in j['edges']:
-    parents[edge['sub']].append(edge['obj'])
+    nodes = {n['id']:n['lbl'] for n in j['nodes']}
+    nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
+    edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
 
-if direction == 'OUTGOING':  # flip for the tree
-    objects, parents = parents, objects
+    objects = defaultdict(list)  # note: not all nodes are objects!
+    for edge in j['edges']:
+        objects[edge['obj']].append(edge['sub'])
 
-names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
-pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
+    parents = defaultdict(list)
+    for edge in j['edges']:
+        parents[edge['sub']].append(edge['obj'])
 
+    if direction == 'OUTGOING':  # flip for the tree
+        objects, parents = parents, objects
 
-def tree(): return defaultdict(tree)
+    names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
+    pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
 
-def cycle_check(puta_end, start, graph):  # XXX use find on the subtree instead!
-    visited = []
-    def inner(next_):
-        if next_ not in graph:  # since these aren't actually graphs and some nodes dont have parents
-            return False
-        elif not graph[next_]:
-            return False
-        elif puta_end in graph[next_]:
-            return True
-        elif next_ in visited:
-            print('CYCLE: ', visited + [next_])
-            return False  # A DIFFERENT CYCLE WAS DETECTED will handle later
-        else:
-            visited.append(next_)
-            test = any([inner(c) for c in graph[next_]])
-            visited.pop()
-            return test
+    def build_tree(obj, existing = {}, flat_tree = set()):
+        subjects = objects[obj]
+        t = tree()
+        t[obj]
 
-    return inner(start)
+        for sub in subjects:
+            if sub in existing:  # the first time down gets all children
+                t[obj][sub] = existing[sub]
+            elif sub in flat_tree:  # prevent cycles  KEK that is faster than doing in_tree :D
+                print(CYCLE, sub, 'parent is', obj)
+                t[obj][CYCLE][sub]
+            else:
+                flat_tree.add(sub)
+                subtree, _ = build_tree(sub, existing, flat_tree)
+                t[obj].update(subtree)
 
-def build_tree(obj, existing = {}, flat_tree = set()):  # FUCK YOU MULTIPARENT HIERARCHIES DOUBLE FUCK YOU CYCLES
-    subjects = objects[obj]
-    t = tree()
-    t[obj]
+            if len(parents[sub]) > 1:
+                existing[sub] = t[obj][sub]
 
-    for sub in subjects:
-        #print(sub)
-        """
-        cc = False
-        for child in objects[sub]:
-            cc = cycle_check(sub, child, objects)
-            if cc:
-                print('WTF M8')
-                t[obj][sub][CYCLE]
-                if len(parents[sub]) > 1:  # FIXME :/
-                    existing[sub] = t[obj][sub]  # don't run children :/
-                break
-        if cc:
-            continue
-        #"""
+        return t, existing
+        # for each list of subjects 
+        # look up the subjects of that subject as if it were and object
+        # and and look up those subjects subjects until there are no subjects
+        # but we are not guranteed to have started at the right place
+        # and so we may need to reorder ?
 
-        if sub in existing:  # the first time down gets all children
-            t[obj][sub] = existing[sub]
-        elif sub in flat_tree:  # prevent cycles  KEK that is faster than doing in_tree :D
-            print(CYCLE, sub, 'parent is', obj)
-            t[obj][CYCLE][sub]
-        else:
-            flat_tree.add(sub)
-            subtree, _ = build_tree(sub, existing, flat_tree)
-            t[obj].update(subtree)
+    def rename(tree):
+        dict_ = TreeNode()
+        for k in tree:
+            dict_[nodes[k]] = rename(tree[k])
+        return dict_
 
-        if len(parents[sub]) > 1:
-            existing[sub] = t[obj][sub]
+    hierarchy, dupes = build_tree(root)
+    named_hierarchy = rename(hierarchy)
 
-
-    return t, existing
-    # for each list of subjects 
-    # look up the subjects of that subject as if it were and object
-    # and and look up those subjects subjects until there are no subjects
-    # but we are not guranteed to have started at the right place
-    # and so we may need to reorder ?
-
-parts, dupes = build_tree(root)
-
-#def dicts(t): return {k: dicts(t[k]) for k in t}  # reped w/ mod class
-
-#parts = dicts(partsd)
-
-#def rename(tree): return {nodes[k]: rename(tree[k]) for k in tree}
-def rename(tree):
-    dict_ = defaultdict()
-    for k in tree:
-        dict_[nodes[k]] = rename(tree[k])
-    return dict_
-
-names = rename(parts)
+    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames)
 
 def levels(tree, p, l = 0):
     if p == 0:
@@ -411,14 +328,37 @@ def levels(tree, p, l = 0):
 
 def count(tree): return sum([count(tree[k]) if tree[k] else 1 for k in tree])
 
+def main():
+    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+
+    wut = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
+    nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
+    uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+    uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+
+    queries = (wut, nifga, uberon, uberon_cc)
+
+    url = 'localhost:9000'
+    fma_r = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
+    fma_c = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
 
 
-level_sizes = [len(levels(parts, i)) for i in range(11)]
+    ngao, extra = creatTree(*nifga)
 
-parent_counts = np.unique([len(v) for v in parents.values()])
+    level_sizes = [len(levels(ngao, i)) for i in range(11)]
 
-print(names)
-dematerialize('Brain',names)
-print(names)
-print(parts)
+    parent_counts = np.unique([len(v) for v in extra[-3].values()])
 
+    print(ngao)
+    dematerialize('Brain',ngao)
+    print(ngao)
+    print(extra[0])
+
+
+
+    embed()
+
+    
+
+if __name__ == '__main__':
+    main()
