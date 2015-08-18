@@ -15,6 +15,11 @@ class State:
         self.paths = {}
         self.globs = {}
         self.tab = '    '
+        self.gencode()
+
+    @property
+    def code(self):
+        return self.make_main()
 
     def make_main(self):
         code = ""
@@ -44,15 +49,16 @@ class State:
             '{t}{t}prep = req.prepare()\n'
             '{t}{t}resp = s.send(prep)\n'
             '{t}{t}return resp\n'
-            '\n\n'
+            '\n'
         )
         return code.format(t=self.tab)
 
     def make_class(self, dict_):
         code = (
+            '\n'
             'class {classname}(restService):\n'
             '{t}""" {docstring} """\n\n'
-            '{t}def __init__(self, basePath="{basePath}"):\n'
+            '{t}def __init__(self, basePath=\'{basePath}\'):\n'
             '{t}{t}self.basePath = basePath\n\n'
         )
         classname = dict_['resourcePath'].strip('/').capitalize()
@@ -65,7 +71,7 @@ class State:
             param_args = '{name}'
             param_args = param_args.format(name=dict_['name'])
         else:
-            param_args = '{name}="{defaultValue}"'
+            param_args = "{name}='{defaultValue}'"
             param_args = param_args.format(name=dict_['name'], defaultValue=dict_.get('defaultValue',''))
 
         param_rest = '{name}'
@@ -73,9 +79,9 @@ class State:
 
         param_rest = param_rest.format(name=dict_['name'])
         desc = dict_.get('description','')
-        if len(desc) > 50:
+        if len(desc) > 60:
             tmp = desc.split(' ')
-            part = len(desc) // 50
+            part = len(desc) // 60
             size = len(tmp) // part
             lines = []
             for i in range(part + 1):
@@ -98,9 +104,9 @@ class State:
         else:
             pargs = ''
         if prests:
-            prests = '?' + '&'.join([pr + '={%s}'%pr for pr in prests]) + '".format(%s)' % ', '.join([pr + '=' + pr for pr in prests]) 
+            prests = '?' + '&'.join([pr + '={%s}'%pr for pr in prests]) + "'.format(%s)" % ', '.join([pr + '=' + pr for pr in prests]) 
         else:
-            prests = '"'
+            prests = "'"
         pdocs = '\n'.join(pdocs)
         return pargs, prests, pdocs
 
@@ -114,10 +120,10 @@ class State:
 
     def operation(self, api_dict):
         code = (
-            '{t}def {nickname}(self, {params}output="application/json"):\n'
+            '{t}def {nickname}(self, {params}output=\'application/json\'):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
-            '{t}{t}url = self.basePath + "{path}{param_rest}\n'
-            '{t}{t}return self._get("{method}", url)\n'
+            '{t}{t}url = self.basePath + \'{path}{param_rest}\n'
+            '{t}{t}return self._get(\'{method}\', url)\n'
         )
 
 
@@ -213,6 +219,7 @@ class State:
             try:
                 print('trying with key:', key)
                 name, code = self.__class__.__dict__[key](self, value)
+                print(name)
                 blocks.append(code)
             except KeyError:  # reduce the stuff we aren't worried about
                 # FIXME for some reason this eats other errors too :/
@@ -245,9 +252,8 @@ class State:
 def main():
     target = '/tmp/test_api.py'
     s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
-    s.gencode()
-    code = s.make_main()
-    print(code)
+    code = s.code
+    #print(code)
     with open(target, 'wt') as f:
         f.write(code)
 
