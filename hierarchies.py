@@ -121,9 +121,9 @@ class defaultdict(base_dd):
 class TreeNode(defaultdict):  # FIXME need to factory this to allow separate trees!
 
     pad = '  '
-    prefix = []
-    existing = {}  # FIXME CAREFUL WITH THIS
-    current_parent = None
+    #prefix = []
+    #existing = {}  # FIXME CAREFUL WITH THIS
+    #current_parent = None
 
     def print_tree(self, level = 0):
         output = ''
@@ -173,8 +173,8 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     items.append((str(key), ' *'))  # wait... how the hell...
                 return
 
-            if key in pnames:  # XXX FIXME XXX
-                if len(pnames[key]) > 1:  # XXX FIXME XXX parents not avail in m cases!
+            if key in self.parent_dict:  # XXX FIXME XXX
+                if len(self.parent_dict[key]) > 1:  # XXX FIXME XXX parents not avail in m cases!
                     #print('MORE THAN ONE PARENT')
                     self.existing[key] = self.current_parent
                     key += ' *'  # mark that it will appear elsewhere
@@ -248,6 +248,13 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 def tree():
     return TreeNode(tree)
 
+def newTree(name, **kwargs):
+    base_dict = {'prefix':[], 'existing':{}, 'current_parent':None}
+    base_dict.update(kwargs)
+    newTreeNode = type('TreeNode_' + str(hash(name)).replace('-','_'), (TreeNode,), base_dict)
+    def Tree(): return newTreeNode(Tree)
+
+    return Tree, newTreeNode
 
 def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo.org:9000'):
     query_string = 'http://{url_base}/scigraph/graph/neighbors/{root}?relationshipType={relationshipType}&direction={direction}&depth={depth}'
@@ -277,9 +284,11 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
     pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
 
+    Tree, _ = newTree(query, parent_dict=parents)
+
     def build_tree(obj, existing = {}, flat_tree = set()):
         subjects = objects[obj]
-        t = tree()
+        t = Tree()
         t[obj]
 
         for sub in subjects:
@@ -303,8 +312,9 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
         # but we are not guranteed to have started at the right place
         # and so we may need to reorder ?
 
+    _, nTreeNode = newTree('names' + query, parent_dict=pnames)  # FIXME pnames is wrong...
     def rename(tree):
-        dict_ = TreeNode()
+        dict_ = nTreeNode()
         for k in tree:
             dict_[nodes[k]] = rename(tree[k])
         return dict_
@@ -331,28 +341,29 @@ def count(tree): return sum([count(tree[k]) if tree[k] else 1 for k in tree])
 def main():
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
-    wut = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
+    cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
     nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
     uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
     uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
 
-    queries = (wut, nifga, uberon, uberon_cc)
+    queries = cell, #, nifga, uberon, uberon_cc
 
     url = 'localhost:9000'
     fma_r = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
     fma_c = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
 
 
-    ngao, extra = creatTree(*nifga)
+    for query in queries:
+        tree, extra = creatTree(*query)
+        dematerialize(list(tree.keys())[0], tree)
+        print(tree)
+        #print(extra[0])
 
-    level_sizes = [len(levels(ngao, i)) for i in range(11)]
-
-    parent_counts = np.unique([len(v) for v in extra[-3].values()])
-
-    print(ngao)
-    dematerialize('Brain',ngao)
-    print(ngao)
-    print(extra[0])
+        level_sizes = [len(levels(tree, i)) for i in range(11)]
+        print('level sizes', level_sizes)
+        parent_counts = np.unique([len(v) for v in extra[-3].values()])
+        print('unique parent counts', parent_counts)
+        print('num terms', len(extra[2]))
 
 
 
