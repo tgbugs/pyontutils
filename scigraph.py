@@ -4,6 +4,7 @@
 """
 
 import requests
+from IPython import embed
 
 class State:
     def __init__(self, api_url):
@@ -42,10 +43,12 @@ class State:
         code = (
             'class restService:\n'
             '{t}""" Base class for SciGraph rest services. """\n\n'
-            '{t}def _get(self, method, url):\n'
+            '{t}def _get(self, method, url, output=None):\n'
             '{t}{t}print(url)\n'
             '{t}{t}s = requests.Session()\n'
             '{t}{t}req = requests.Request(method=method, url=url)\n'
+            '{t}{t}if output:\n'
+            '{t}{t}{t}req.headers[\'Accept\'] = output\n'
             '{t}{t}prep = req.prepare()\n'
             '{t}{t}resp = s.send(prep)\n'
             '{t}{t}return resp\n'
@@ -100,7 +103,7 @@ class State:
             pdocs.append(pdoc)
 
         if pargs_list:
-            pargs = ', '.join(pargs_list) + ', '  # if there are args add a comma
+            pargs = ', '.join(pargs_list)# + ', '  # if there are args add a comma
         else:
             pargs = ''
 
@@ -124,10 +127,10 @@ class State:
 
     def operation(self, api_dict):
         code = (
-            '{t}def {nickname}(self, {params}output=\'application/json\'):\n'
+            '{t}def {nickname}(self, {params}{default_output}):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
             '{t}{t}url = self.basePath + \'{path}{param_rest}\n'
-            '{t}{t}return self._get(\'{method}\', url)\n'
+            '{t}{t}return self._get(\'{method}\', url{output})\n'
         )
 
 
@@ -135,12 +138,22 @@ class State:
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        if 'produces' in api_dict:  # ICK but the alt is nastier
+            outputs, default_output = self.make_produces(api_dict['produces'])
+            docstring += outputs
+            output = ', output'
+        else:
+            default_output = ''
+            output = ''
+
         method = api_dict['method']
         if len(path.split('{')) > 1:
             if '&' in param_rest:  # FIXME this is obscure and could be explicit at a lower level
                 param_rest = '?' + param_rest.split('&',1)[1]  # remove required args from rest args
                 
-        formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest, method=method, docstring=docstring, t=self.tab)
+        formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
+                                method=method, docstring=docstring, default_output=default_output,
+                                output=output, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
@@ -191,11 +204,18 @@ class State:
         return None, code
 
     def produces(self, list_):
+        return None, ''
+
+    def make_produces(self, list_):
         # we make return option here including the docstring
         for mimetype in list_:
             self.exten_mapping[mimetype] = mimetype.split('/')[-1]
 
-        return None, ''
+        outputs = '\n{t}{t}{t}outputs:\n{t}{t}{t}{t}'
+        outputs += '\n{t}{t}{t}{t}'.join(list_)
+
+        default_output = ', output=\'{output}\''.format(output=list_[0])
+        return outputs.format(t=self.tab), default_output   # FIXME there MUST be a better way to deal with the bloody {t} all at once
 
     def basePath_(self, value):
         dirs = value.split('/')
@@ -222,7 +242,6 @@ class State:
             try:
                 print('trying with key:', key)
                 name, code = self.__class__.__dict__[key](self, value)
-                print(name)
                 blocks.append(code)
             except KeyError:  # reduce the stuff we aren't worried about
                 # FIXME for some reason this eats other errors too :/
