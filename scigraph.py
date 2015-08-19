@@ -4,7 +4,7 @@
 """
 
 import requests
-from IPython import embed
+
 
 class State:
     def __init__(self, api_url):
@@ -30,6 +30,7 @@ class State:
         code += "exten_mapping = %s\n\n" % repr(self.exten_mapping)
         code += self.make_baseclass()
         code += self._code
+        code += '\n'
         
         return code
         
@@ -58,8 +59,17 @@ class State:
             '{t}{t}else:\n'
             '{t}{t}{t}return resp\n'
             '\n'
+            '{t}def _make_rest(self, default=None, **kwargs):\n'
+            '{t}{t}kwargs = {dict_comp}\n'
+            '{t}{t}param_rest = \'&\'.join([\'%s={STUPID}\' % (arg, arg) for arg in kwargs if arg != default])\n'
+            '{t}{t}param_rest = \'?\' + param_rest if param_rest else param_rest\n'
+            '{t}{t}return param_rest\n'
+            '\n'
+            
         )
-        return code.format(t=self.tab)
+        dict_comp = '{k:v for k, v in kwargs.items() if v}'
+        STUPID = '{%s}'
+        return code.format(t=self.tab, dict_comp=dict_comp, STUPID=STUPID)
 
     def make_class(self, dict_):
         code = (
@@ -78,9 +88,17 @@ class State:
         if dict_['required']:
             param_args = '{name}'
             param_args = param_args.format(name=dict_['name'])
+            required = param_args
         else:
-            param_args = "{name}='{defaultValue}'"
-            param_args = param_args.format(name=dict_['name'], defaultValue=dict_.get('defaultValue',''))
+            param_args = "{name}={defaultValue}"
+            dv = dict_.get('defaultValue', None)
+            if dv:
+                try:
+                    dv = int(dv)
+                except ValueError:
+                    dv = "'%s'" % dv
+            param_args = param_args.format(name=dict_['name'], defaultValue=dv)
+            required = None
 
         param_rest = '{name}'
         param_rest = param_rest.format(name=dict_['name'])
@@ -99,32 +117,31 @@ class State:
             desc = '\n{t}{t}{t}'.format(t=self.tab).join([l for l in lines if l])
         param_doc = param_doc.format(name=dict_['name'], description=desc, t=self.tab)
     
-        return param_args, param_rest, param_doc
+        return param_args, param_rest, param_doc, required
 
     def make_params(self, list_):
         pargs_list, prests, pdocs = [], [], []
+        required = None
         for param in list_:
-            if param['name'] == 'category' or param['name'] == 'prefix':  # FIXME need a more elegant way to build the urls :/
-                continue
-            parg, prest, pdoc = self.make_param_parts(param)
+            parg, prest, pdoc, put_required = self.make_param_parts(param)
+            if put_required:
+                required = "'%s'" % put_required
             pargs_list.append(parg)
             prests.append(prest)
             pdocs.append(pdoc)
 
         if pargs_list:
-            pargs = ', ' + ', '.join(pargs_list)# + ', '  # if there are args add a comma
+            pargs = ', ' + ', '.join(pargs_list)
         else:
             pargs = ''
 
-        if prests:# and pargs_list != prests:  # if prests isn't just a copy of the arg
-            prests = '?' + '&'.join([pr + '={%s}'%pr for pr in prests]) + "'.format(%s)" % ', '.join([pr + '=' + pr for pr in prests]) 
-        elif pargs:
-            prests = "'.format(%s)" % ', '.join([pr + '=' + pr for pr in prests]) 
+        if prests:
+            prests = '{' + ', '.join(["'%s':%s"%(pr, pr) for pr in prests]) + '}'
         else:
-            prests = "'"
+            prests = '{}'
 
         pdocs = '\n'.join(pdocs)
-        return pargs, prests, pdocs
+        return pargs, prests, pdocs, required
 
     def apiVersion(self, value):
         self.globs['apiVersion'] = value
@@ -138,11 +155,14 @@ class State:
         code = (
             '{t}def {nickname}(self{params}{default_output}):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
-            '{t}{t}url = self._basePath + \'{path}{param_rest}\n'
+            '{t}{t}kwargs = {param_rest}\n'
+            '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
+            '{t}{t}url = self._basePath + (\'{path}\' + param_rest).format(**kwargs)\n'
             '{t}{t}return self._get(\'{method}\', url{output})\n'
         )
 
-        params, param_rest, param_docs = self.make_params(api_dict['parameters'])
+
+        params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
@@ -155,16 +175,10 @@ class State:
             output = ''
 
         method = api_dict['method']
-        if len(path.split('{')) > 1:
-            if '&' in param_rest:  # FIXME this is obscure and could be explicit at a lower level
-                param_rest = '?' + param_rest.split('&',1)[1]  # remove required args from rest args
-                #FIXME inconsistency when we have only id...
-            elif path.split('{')[1].startswith(param_rest[1:].split('=')[0]):
-                param_rest = "'" + param_rest.split("'")[-1]  # single term edge case eg id=id
                 
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
-                                method=method, docstring=docstring, default_output=default_output,
-                                output=output, t=self.tab)
+                            method=method, docstring=docstring, required=required,
+                            default_output=default_output, output=output, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
@@ -250,16 +264,12 @@ class State:
     def dodict(self, dict_):
         blocks = []
         for key, value in dict_.items():
-            try:
-                print('trying with key:', key)
+            print('trying with key:', key)
+            if key in self.__class__.__dict__:
                 name, code = self.__class__.__dict__[key](self, value)
                 blocks.append(code)
-            except KeyError:  # reduce the stuff we aren't worried about
-                # FIXME for some reason this eats other errors too :/
+            else:
                 print('METHOD', key, 'NOT FOUND')
-            except ValueError:
-                print('wtf value is this!?', key, value)
-                raise
 
         return '\n'.join([b for b in blocks if b])
 
@@ -286,7 +296,6 @@ def main():
     target = '/tmp/test_api.py'
     s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
     code = s.code
-    #print(code)
     with open(target, 'wt') as f:
         f.write(code)
 
