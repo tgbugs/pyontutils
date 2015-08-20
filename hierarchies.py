@@ -346,12 +346,13 @@ def main():
     uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
     uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
 
-    queries = cell, #, nifga, uberon, uberon_cc
+    queries = cell, nifga, uberon, uberon_cc
 
     url = 'localhost:9000'
     fma_r = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
     fma_c = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
 
+    fma_tree, fma_extra = creatTree(*fma_r, url_base=url)
 
     for query in queries:
         tree, extra = creatTree(*query)
