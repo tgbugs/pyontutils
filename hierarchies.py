@@ -77,8 +77,8 @@ def cycle_check(puta_end, start, graph):  # XXX use the flat_tree trick!
 
     return inner(start)
 
-
 def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than just leaves!
+    #FIXME still an issue: Fornix, Striatum, Diagonal Band
     """ Remove nodes higher in the tree that occur further down the
         SAME branch. If they occur down OTHER branchs leave them alone.
 
@@ -95,8 +95,11 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
     children_ord = reversed(sorted([(k, v) for k, v in children.items()], key=tcsort))  # make sure we hit deepest first
     
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
+        print(child_name)
         new_lleaves = dematerialize(child_name, children)
-
+        if child_name == 'Fornix':
+            embed()
+            
         if child_name in new_lleaves:  # if it is a leaf!
             if child_name in lleaves:  # if it has previously been identified as a leaf!
                 print('MATERIALIZATION DETECTED! LOWER PARENT:',
@@ -358,7 +361,7 @@ def main():
     ncbi_rod =  Query('NCBITaxon:9989', 'subClassOf', 'INCOMING', 10)
 
     queries = cell, nifga, uberon, uberon_cc
-    queries = ncbi_ins, ncbi_rod
+    queries = ncbi_ins, ncbi_rod, uberon, nifga
 
     url = 'localhost:9000'
     fma3_r = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
@@ -374,6 +377,12 @@ def main():
     ncbi_metazoa = Query('NCBITaxon:33208', 'subClassOf', 'INCOMING', 20)
     ncbi_vertebrata = Query('NCBITaxon:7742', 'subClassOf', 'INCOMING', 40)
     #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, url_base=url)
+
+    uberon_tree, uberon_extra = creatTree(*uberon)
+
+    uberon_flat = [n.replace(':','_') for n in flatten(uberon_extra[0])]
+    with open('/tmp/uberon_partonomy_terms', 'wt') as f:
+        f.writelines('\n'.join(uberon_flat))
 
     for query in queries:
         tree, extra = creatTree(*query)
