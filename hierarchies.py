@@ -32,7 +32,7 @@ def in_tree(node, tree):  # XXX TODO
                 return True
         return False
 
-def get_node(start, tree):
+def get_node(start, tree, pnames):
     """ for each parent find a single branch to root """
     def get_first_branch(node):
         if node not in pnames:  # one way to hit a root
@@ -266,6 +266,7 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     j = requests.get(query).json()
     print(len(j['nodes']))
 
+
     nodes = {n['id']:n['lbl'] for n in j['nodes']}
     nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
     edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
@@ -338,6 +339,14 @@ def levels(tree, p, l = 0):
 
 def count(tree): return sum([count(tree[k]) if tree[k] else 1 for k in tree])
 
+def todict(tree): return {k:todict(v) for k, v in tree.items()}
+
+def flatten(tree, out=[]):
+    for name, subtree in tree.items():
+        out.append(name)
+        flatten(subtree, out)
+    return out
+
 def main():
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
@@ -345,14 +354,26 @@ def main():
     nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
     uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
     uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+    ncbi_ins =  Query('NCBITaxon:50557', 'subClassOf', 'INCOMING', 10)
+    ncbi_rod =  Query('NCBITaxon:9989', 'subClassOf', 'INCOMING', 10)
 
     queries = cell, nifga, uberon, uberon_cc
+    queries = ncbi_ins, ncbi_rod
 
     url = 'localhost:9000'
-    fma_r = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
-    fma_c = Query('FMA:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
+    fma3_r = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
+    fma3_c = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
+    #fma3_tree, fma3_extra = creatTree(*fma3_r, url_base=url)
 
-    fma_tree, fma_extra = creatTree(*fma_r, url_base=url)
+    fma_r = Query('FMA:50801', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
+    fma_c = Query('FMA:50801', 'http://purl.org/sig/ont/fma/constitutional_part_of', 'INCOMING', 20)
+    fma_rch_r = Query('FMA:61819', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
+    fma_tree, fma_extra = creatTree(*fma_rch_r, url_base=url)
+
+
+    ncbi_metazoa = Query('NCBITaxon:33208', 'subClassOf', 'INCOMING', 20)
+    ncbi_vertebrata = Query('NCBITaxon:7742', 'subClassOf', 'INCOMING', 40)
+    #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, url_base=url)
 
     for query in queries:
         tree, extra = creatTree(*query)
