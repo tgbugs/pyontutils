@@ -97,8 +97,9 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
         print(child_name)
         new_lleaves = dematerialize(child_name, children)
-        if child_name == 'Fornix':
-            embed()
+        if child_name == 'Fornix':  # debugging failing demat
+            pass
+            #embed()
             
         if child_name in new_lleaves:  # if it is a leaf!
             if child_name in lleaves:  # if it has previously been identified as a leaf!
@@ -282,7 +283,7 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     for edge in j['edges']:
         parents[edge['sub']].append(edge['obj'])
 
-    if direction == 'OUTGOING':  # flip for the tree
+    if direction == 'OUTGOING' or direction == 'BOTH':  # flip for the tree  # FIXME BOTH needs help!
         objects, parents = parents, objects
 
     names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
@@ -371,13 +372,40 @@ def main():
     fma_r = Query('FMA:50801', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
     fma_c = Query('FMA:50801', 'http://purl.org/sig/ont/fma/constitutional_part_of', 'INCOMING', 20)
     fma_rch_r = Query('FMA:61819', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
-    fma_tree, fma_extra = creatTree(*fma_rch_r, url_base=url)
+    #fma_tree, fma_extra = creatTree(*fma_r, url_base=url)
+    #fma_tree, fma_extra = creatTree(*fma_rch_r, url_base=url)
+
+    fma_hip = Query('FMA:275020', 'http://purl.org/sig/ont/fma/regional_part_of', 'BOTH', 20)
+    fma_hip = Query('FMA:275020', 'http://purl.org/sig/ont/fma/constitutional_part_of', 'BOTH', 20)
+    #fma_tree, fma_extra = creatTree(*fma_hip, url_base=url)
+
+    fma_mfg = Query('FMA:273103', 'http://purl.org/sig/ont/fma/regional_part_of', 'BOTH', 20)
+    #fma_tree, fma_extra = creatTree(*fma_mfg, url_base=url)
+
 
 
     ncbi_metazoa = Query('NCBITaxon:33208', 'subClassOf', 'INCOMING', 20)
     ncbi_vertebrata = Query('NCBITaxon:7742', 'subClassOf', 'INCOMING', 40)
     #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, url_base=url)
 
+
+    fma_tel = Query('FMA:62000', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
+    fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, url_base=url)
+
+    childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
+    from heatmaps.scigraph_client import Graph
+    g = Graph('http://localhost:9000/scigraph')
+    parent_nodes = []
+    for curie in childs:
+        json = g.getNeighbors(curie, relationshipType='subClassOf')
+        if json:
+            for node in json['nodes']:
+                if node['id'] != curie:
+                    parent_nodes.append(node)  # should have dupes
+
+
+    embed()
+    return
     uberon_tree, uberon_extra = creatTree(*uberon)
 
     uberon_flat = [n.replace(':','_') for n in flatten(uberon_extra[0])]
