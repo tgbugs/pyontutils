@@ -260,14 +260,18 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo.org:9000'):
+def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo.org:9000', json=None):
     query_string = 'http://{url_base}/scigraph/graph/neighbors/{root}?relationshipType={relationshipType}&direction={direction}&depth={depth}'
 
     relationshipType = relationshipType.replace('#','%23')
     query = query_string.format(root=root, relationshipType=relationshipType,
                                 direction=direction, depth=depth, url_base=url_base)
 
-    j = requests.get(query).json()
+    if json is None:
+        j = requests.get(query).json()
+    else:
+        j = json
+
     print(len(j['nodes']))
 
 
@@ -351,7 +355,17 @@ def flatten(tree, out=[]):
         flatten(subtree, out)
     return out
 
-def main():
+def inv_edges(json):
+    """Switch obj/sub for a set of edges (makes fixing known inverse edges MUCH easier)"""
+    for edge in json['edges']:
+        sub, obj = edge['sub'], edge['obj']
+        edge['sub'] = obj
+        edge['obj'] = sub
+
+        edge['pred'] += 'INVERTED'
+
+
+def _main():
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
     cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
@@ -428,7 +442,39 @@ def main():
 
     embed()
 
-    
+def main():
+    from heatmaps.scigraph_client import Graph
+    g = Graph('http://localhost:9000/scigraph')
+    rtco = 'http://purl.org/sig/ont/fma/constitutional_part_of'.replace('/','%2F')
+    rtro = 'http://purl.org/sig/ont/fma/regional_part_of'.replace('/','%2F')
+    #rtc = 'http://purl.org/sig/ont/fma/constitutional_part'.replace('/','%2F')  # FIXME the sub/pred relation is switched :/
+    #rtr = 'http://purl.org/sig/ont/fma/regional_part'.replace('/','%2F')
+    json_co = g.getEdges(rtco, limit=9999999999)
+    json_ro = g.getEdges(rtro, limit=9999999999)
+    #json_c = g.getEdges(rtc, limit=9999999999)
+    #json_r = g.getEdges(rtr, limit=9999999999)
+    #inv_edges(json_c)
+    #inv_edges(json_r)
+
+    json = json_ro
+    #json['nodes'].extend(json_co['nodes'])
+    #json['edges'].extend(json_co['edges'])
+
+    #json['nodes'].extend(json_c['nodes'])
+    #json['edges'].extend(json_c['edges'])
+    #json['nodes'].extend(json_r['nodes'])
+    #json['edges'].extend(json_r['edges'])
+    #embed()
+
+    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+
+    url = 'localhost:9000'
+    #fma = Query('FMA:50801', 'None', 'INCOMING', 20)
+    fma = Query('FMA:61817', 'None', 'INCOMING', 20)  # Cerebral hemisphere
+    fma_tree, fma_extra = creatTree(*fma, url_base=url, json=json)
+    with open('/tmp/rc_combo_tree', 'wt') as f: f.write(str(fma_tree))
+
+    embed()
 
 if __name__ == '__main__':
     main()
