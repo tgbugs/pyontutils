@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import requests
-import simplejson
 from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
