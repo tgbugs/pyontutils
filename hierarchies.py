@@ -197,7 +197,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             
         # FIXME ideally want to sort by length of the transitive closure :/
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=tcsort))]
-        items_list = sorted([i for i in self.items()], key=tcsort)  # XXX best
+        items_list = sorted([i for i in sorted(self.items())], key=tcsort)  # XXX best
 
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=lambda a: len(a[1])))]
         #items_list = sorted([i for i in self.items()], key=lambda a: len(a[1]))
@@ -364,7 +364,7 @@ def inv_edges(json):
         edge['pred'] += 'INVERTED'
 
 
-def _main():
+def main():
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
     cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
@@ -441,7 +441,7 @@ def _main():
 
     embed()
 
-def main():
+def _main():
     from heatmaps.scigraph_client import Graph
     g = Graph('http://localhost:9000/scigraph')
     rtco = 'http://purl.org/sig/ont/fma/constitutional_part_of'.replace('/','%2F')
