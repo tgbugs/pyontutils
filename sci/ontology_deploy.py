@@ -10,18 +10,23 @@ Options:
 """
 # bug: <path>... by itself must come LAST under usage for parsing to work
 import subprocess
+from os import getcwd
+from os.path import sep
 from glob import glob
 from datetime import datetime
 from docopt import docopt
 from IPython import embed
 from requests import head
 
-TIMESTAMP = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')  # ISO8601 boys
 SERVER = 'nif-apps1.crbs.ucsd.edu'
 FTP_BASE_PATH='/var/www/html/ontology.neuinfo.org/NIF/'
 GITHUB_BASE_URL='https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/'
 
 def main():
+    if getcwd().split(sep)[-1] != 'NIF-Ontology':
+        print('This script must be invoked from the ontology git directory! Usually ~/git/NIF-Ontology')
+        return
+
     args = docopt(__doc__, version='deploy 0')
     print(args)
     if args['--commit'] is not None:
@@ -57,6 +62,7 @@ def main():
         string = template.format(**kwargs) 
         commands.append(string)
 
+    TIMESTAMP = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')  # ISO8601 boys
     string = 'echo \'{} {} {}\' >> {FTP_BASE_PATH}updates.log'.format(TIMESTAMP,
                     COMMIT, str(filepaths), FTP_BASE_PATH=FTP_BASE_PATH)
     commands.append(string)
