@@ -48,13 +48,16 @@ class State:
         code = (
             'class restService:\n'
             '{t}""" Base class for SciGraph rest services. """\n\n'
-            '{t}def _get(self, method, url, output=None):\n'
-            '{t}{t}print(url)\n'
+            '{t}def _get(self, method, url, params=None, output=None):\n'
             '{t}{t}s = requests.Session()\n'
-            '{t}{t}req = requests.Request(method=method, url=url)\n'
+            '{t}{t}if method == \'POST\':\n'
+            '{t}{t}{t}req = requests.Request(method=method, url=url, data=params)\n'
+            '{t}{t}else:\n'
+            '{t}{t}{t}req = requests.Request(method=method, url=url, params=params)\n'
             '{t}{t}if output:\n'
             '{t}{t}{t}req.headers[\'Accept\'] = output\n'
             '{t}{t}prep = req.prepare()\n'
+            '{t}{t}print(prep.url)\n'
             '{t}{t}resp = s.send(prep)\n'
             '{t}{t}if not resp.ok:\n'
             '{t}{t}{t}return None\n'
@@ -68,7 +71,7 @@ class State:
             '{t}def _make_rest(self, default=None, **kwargs):\n'
             '{t}{t}kwargs = {dict_comp}\n'
             '{t}{t}param_rest = \'&\'.join([\'%s={STUPID}\' % (arg, arg) for arg in kwargs if arg != default])\n'
-            '{t}{t}param_rest = \'?\' + param_rest if param_rest else param_rest\n'
+            '{t}{t}param_rest = param_rest if param_rest else \'\'\n'
             '{t}{t}return param_rest\n'
             '\n'
             
@@ -164,13 +167,15 @@ class State:
             '{t}{t}kwargs = {param_rest}\n'
             '{t}{t}kwargs = {dict_comp}\n'
             '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
-            '{t}{t}url = self._basePath + (\'{path}\' + param_rest).format(**kwargs)\n'
-            '{t}{t}return self._get(\'{method}\', url{output})\n'
+            '{t}{t}url = self._basePath + (\'{path}\').format(**kwargs)\n'
+            '{t}{t}requests_params = {dict_comp2}\n'
+            '{t}{t}return self._get(\'{method}\', url, requests_params{output})\n'
         )
 
 
         dict_comp = '{k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
+        dict_comp2 = '{k:v for k, v in kwargs.items() if v != %s}' % required
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
@@ -185,8 +190,9 @@ class State:
         method = api_dict['method']
                 
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
-                            dict_comp=dict_comp, method=method, docstring=docstring, required=required,
-                            default_output=default_output, output=output, t=self.tab)
+                            dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
+                            docstring=docstring, required=required, default_output=default_output,
+                            output=output, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
