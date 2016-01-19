@@ -9,7 +9,7 @@ import requests
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
-        self.imports = "import requests\n\n"
+        self.imports = "import requests\nfrom json import dumps\n\n"
         self.api_url = api_url
         self.current_path = self.api_url
         self.exten_mapping = {}
@@ -162,12 +162,14 @@ class State:
             '{t}def {nickname}(self{params}{default_output}):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
             '{t}{t}kwargs = {param_rest}\n'
+            '{t}{t}kwargs = {dict_comp}\n'
             '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
             '{t}{t}url = self._basePath + (\'{path}\' + param_rest).format(**kwargs)\n'
             '{t}{t}return self._get(\'{method}\', url{output})\n'
         )
 
 
+        dict_comp = '{k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
         nickname = api_dict['nickname']
         path = self.paths[nickname]
@@ -183,7 +185,7 @@ class State:
         method = api_dict['method']
                 
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
-                            method=method, docstring=docstring, required=required,
+                            dict_comp=dict_comp, method=method, docstring=docstring, required=required,
                             default_output=default_output, output=output, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
