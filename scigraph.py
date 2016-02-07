@@ -57,7 +57,7 @@ class State:
             '{t}{t}if output:\n'
             '{t}{t}{t}req.headers[\'Accept\'] = output\n'
             '{t}{t}prep = req.prepare()\n'
-            '{t}{t}print(prep.url)\n'
+            '{t}{t}if not self._quiet: print(prep.url)\n'
             '{t}{t}resp = s.send(prep)\n'
             '{t}{t}if not resp.ok:\n'
             '{t}{t}{t}return None\n'
@@ -85,8 +85,9 @@ class State:
             '\n'
             'class {classname}(restService):\n'
             '{t}""" {docstring} """\n\n'
-            '{t}def __init__(self, basePath=\'{basePath}\'):\n'
-            '{t}{t}self._basePath = basePath\n\n'
+            '{t}def __init__(self, basePath=\'{basePath}\', quiet=True):\n'
+            '{t}{t}self._basePath = basePath\n'
+            '{t}{t}self._quiet = quiet\n\n'
         )
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
