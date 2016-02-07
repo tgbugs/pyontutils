@@ -176,7 +176,7 @@ class State:
 
         dict_comp = '{k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
-        dict_comp2 = '{k:v for k, v in kwargs.items() if v != %s}' % required
+        dict_comp2 = '{k:v for k, v in kwargs.items() if k != %s}' % required
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
