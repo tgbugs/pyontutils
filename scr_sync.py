@@ -122,9 +122,15 @@ class makeGraph:
         [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
 
     def write(self):
+        write_loc = '/tmp/ttl_files'
         with open('/tmp/' + self.name + '.ttl', 'wb') as f:
             f.write(self.g.serialize(format='turtle'))
-        with open('/tmp/ttl_files', 'wt') as f: f.write('/tmp/' + self.name + '.ttl')
+        with open(write_loc, 'wt') as f:
+            f.write('/tmp/' + self.name + '.ttl\n')
+        os.system('java -cp ' +
+            os.path.expanduser('~/git/ttl-convert/target/'
+                               'ttl-convert-1.0-SNAPSHOT-jar-with-dependencies.jar') +
+                  ' scicrunch.App ' + write_loc)
 
     def expand(self, curie):
         #print(curie)
