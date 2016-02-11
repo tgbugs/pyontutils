@@ -986,7 +986,10 @@ class Synonym(Value):
         except ValueError:
             raise ValueError('Malformed synonym: line you are probably missing xrefs.')  # FIXME?!?
         try:
-            scope_typedef, xrefs = scope_typedef_xrefs.split(' [', 1)
+            if scope_typedef_xrefs.startswith('['):  # single space no scopedef typeref
+                scope_typedef, xrefs = scope_typedef_xrefs.split('[', 1)
+            else:
+                scope_typedef, xrefs = scope_typedef_xrefs.split(' [', 1)
         except ValueError:
             raise ValueError('No xrefs found! Please add square brackets [] at the end of each synonym:')  # FIXME?!?
         xrefs = [Xref.parse(xref, tvpair) for xref in xrefs.split(',')]
@@ -997,6 +1000,9 @@ class Synonym(Value):
             except ValueError:  # TODO look in tvpair.parent.header for synonymtypedef
                 scope = scope_typedef
                 typedef = None
+        else:
+            scope = None
+            typedef = None
         split = (text, scope, typedef, xrefs)
         return super().parse(split)
 
