@@ -8,7 +8,7 @@
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from nlxeol.scr_sync import makeGraph
+from scr_sync import makeGraph
 from IPython import embed
 
 # TODO source this from somewhere?
