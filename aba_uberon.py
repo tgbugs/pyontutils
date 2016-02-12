@@ -5,7 +5,7 @@ from os.path import expanduser
 from collections import namedtuple
 import rdflib
 import requests
-from pyontutils.scigraph_client import Vocabulary, Graph
+from scigraph_client import Vocabulary, Graph
 from IPython import embed
 
 v = Vocabulary()
