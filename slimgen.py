@@ -156,7 +156,7 @@ class ncbi(dictParse):
 
 
 def ncbigene_make():
-    with open('ncbi-gene.txt', 'rt') as f:
+    with open('gene-subset-ids.txt', 'rt') as f:
         ids = [l.split(':')[1].strip() for l in f.readlines()]
     
     #url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?retmode=json&retmax=5000&db=gene&id='
