@@ -38,7 +38,8 @@ resp = requests.get(url).json()
 
 ids = set(['MBA:' + str(r['id']) for r in resp['msg']])
 Query = namedtuple('Query', ['id','relationshipType', 'direction', 'depth'])
-uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+#uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+uberon = Query('UBERON:0001062', 'subClassOf', 'INCOMING', 10)  # anatomical entity
 output = g.getNeighbors(**uberon.__dict__)
 
 # TODO figure out the superclass that can actually get all the brain parts
