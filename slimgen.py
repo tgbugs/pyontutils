@@ -188,7 +188,7 @@ def ncbigene_make():
     prefixes = {
         'ILX':'http://interlex.org/base/',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-        'NCBIGene':'http://www.ncbi.nlm.nih.gov/gene?term=',
+        'NCBIGene':'http://www.ncbi.nlm.nih.gov/gene/',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
     }
     ng = makeGraph('ncbigeneslim', prefixes)
