@@ -15,15 +15,18 @@ abagraph = rdflib.Graph()
 abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/abaslim.ttl'), format='turtle')
 abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/aba-bridge.ttl'), format='turtle')
 nses = {k:rdflib.Namespace(v) for k, v in abagraph.namespaces()}
+#nses['ABA'] = nses['MBA']  # enable quick check against the old xrefs
 syn_iri = nses['OBOANN']['synonym']
 acro_iri = nses['OBOANN']['acronym']
 abasyns = {}
 abalabs = {}
 abaacro = {}
+ABA_PREFIX = 'MBA:'
+#ABA_PREFIX = 'ABA:'  # all bad
 for sub in abagraph.subjects(rdflib.RDF.type, rdflib.OWL.Class):
-    if not sub.startswith(nses['MBA']['']):
+    if not sub.startswith(nses[ABA_PREFIX[:-1]]['']):
         continue
-    subkey = 'MBA:' + sub.rsplit('/',1)[1]
+    subkey = ABA_PREFIX + sub.rsplit('/',1)[1]
     sub = rdflib.URIRef(sub)
     abalabs[subkey] = [o for o in abagraph.objects(rdflib.URIRef(sub), rdflib.RDFS.label)][0].toPython()
     syns = []
@@ -36,7 +39,7 @@ for sub in abagraph.subjects(rdflib.RDF.type, rdflib.OWL.Class):
 url = 'http://api.brain-map.org/api/v2/tree_search/Structure/997.json?descendants=true'
 resp = requests.get(url).json()
 
-ids = set(['MBA:' + str(r['id']) for r in resp['msg']])
+ids = set([ABA_PREFIX + str(r['id']) for r in resp['msg']])
 Query = namedtuple('Query', ['id','relationshipType', 'direction', 'depth'])
 #uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
 uberon = Query('UBERON:0001062', 'subClassOf', 'INCOMING', 10)  # anatomical entity
@@ -67,7 +70,7 @@ for node in output['nodes']:
 
     if meta_edge in node['meta']:
         xrefs = node['meta'][meta_edge]
-        mba_ref = [r for r in xrefs if r.startswith('MBA:')]
+        mba_ref = [r for r in xrefs if r.startswith(ABA_PREFIX)]
         u_a_map[curie] = mba_ref
         if mba_ref:
             for mba in mba_ref:
