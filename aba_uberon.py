@@ -50,13 +50,20 @@ u_a_map = {}
 a_u_map = {}
 uberon_syns = {}
 uberon_labs = {}
+syn_types = {
+    'http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym':'Broad',
+    'http://www.geneontology.org/formats/oboInOwl#hasExactSynonym':'Exact',
+    'http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym':'Narrow',
+    'http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym':'Related',
+}
 for node in output['nodes']:
     curie = node['id']
     uberon_labs[curie] = node['lbl']
+    uberon_syns[curie] = {}
     if 'synonym' in node['meta']:
-        uberon_syns[curie] = node['meta']['synonym']
-    else:
-        uberon_syns[curie] = []
+        for stype in syn_types:
+            if stype in node['meta']:
+                uberon_syns[curie][stype] = node['meta'][stype]
 
     if meta_edge in node['meta']:
         xrefs = node['meta'][meta_edge]
@@ -76,13 +83,18 @@ def make_record(uid, aid):  # edit this to change the format
                  '-----UBERON SYNS-----\n'
                  '{uberon_syns}\n'
                 )
+    uberon_syn_rec = uberon_syns[uid]
+    insert_uberon = []
+    for edge, syns in sorted(uberon_syn_rec.items()):
+        insert_uberon.append('--{abv}--\n{syns}'.format(abv=syn_types[edge], syns='\n'.join(sorted(syns))))
+
     kwargs = {
         'uberon_id':uid,
         'uberon_label':uberon_labs[uid],
         'aba_id':aid,
         'aba_label':abalabs[aid],
         'aba_syns':'\n'.join(sorted(abasyns[aid] + abaacro[aid])),
-        'uberon_syns':'\n'.join(sorted(uberon_syns[uid]))
+        'uberon_syns':'\n'.join(insert_uberon)
     }
     return to_format.format(**kwargs)
 
