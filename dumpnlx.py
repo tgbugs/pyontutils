@@ -3,7 +3,7 @@ import csv
 import requests
 from IPython import embed
 
-with open('properties', 'rt') as f:
+with open('nlx_properties', 'rt') as f:
     properties = [l.strip() for l in f.readlines() if not l.startswith('#')]
 
 print(properties)
