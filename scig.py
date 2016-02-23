@@ -2,13 +2,15 @@
 """Look look up ontology terms on the command line.
 
 Usage:
-    scig vi [--local] <id>...
-    scig vt [--local] <term>
-    scig vs [--local] <term>
-    scig g [--rt=RELTYPE] <id>...
+    scig v [--local --verbose] <id>...
+    scig i [--local --verbose] <id>...
+    scig t [--local --verbose] <term>...
+    scig s [--local --verbose] <term>...
+    scig g [--local --verbose --rt=RELTYPE] <id>...
 
 Options:
     -l --local      hit the local scigraph server
+    -v --verbose    print the full uri
 
 """
 from docopt import docopt
@@ -18,31 +20,35 @@ def main():
     args = docopt(__doc__, version='scig 0')
     print(args)
     server = None
+    quiet = True
     if args['--local']:
         server = 'http://localhost:9000/scigraph'
+    if args['--verbose']:
+        quiet = False
 
-    if args['vi']:
-        v = Vocabulary() if server else Vocabulary()
+
+    if args['i'] or args['v']:
+        v = Vocabulary(server, quiet) if server else Vocabulary(quiet=quiet)
         for id_ in args['<id>']:
             out = v.findById(id_)
             if out:
                 print(id_,)
                 for key, value in sorted(out.items()):
                     print('\t%s:' % key, value)
-                #print(id_, out)
-    elif args['vt']:
-        v = Vocabulary(server) if server else Vocabulary()
-        out = sorted(v.findByTerm(args['<term>']), key=lambda t: t['labels'][0])
-        print(args['<term>'])
-        for resp in out:
-            for key, value in sorted(resp.items()):
-                print('\t%s:' % key, value)
-    elif args['vs']:
-        v = Vocabulary(server) if server else Vocabulary()
-        out = sorted(v.searchByTerm(args['<term>']), key=lambda t: t['labels'][0])
-        print(out)
+    elif args['s'] or args['t']:
+        v = Vocabulary(server, quiet) if server else Vocabulary(quiet=quiet)
+        for term in args['<term>']:
+            print(term)
+            out = v.searchByTerm(term) if args['s'] else v.findByTerm(term)
+            if out:
+                for resp in sorted(out, key=lambda t: t['labels'][0]):
+                    curie = resp.pop('curie')
+                    print('\t%s' % curie)
+                    for key, value in sorted(resp.items()):
+                        print('\t\t%s:' % key, value)
+                print()
     elif args['g']:
-        g = Graph(server) if server else Graph()
+        g = Graph(server, quiet) if server else Graph(quiet=quiet)
         for id_ in args['<id>']:
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
