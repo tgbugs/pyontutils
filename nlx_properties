@@ -1,0 +1,184 @@
+#datatype  from http://neurolex.org/wiki/Special:Properties
+Abbrev
+AbbrevSource
+Acronym
+Address
+AltURL
+Authors
+Availability
+AxonLength
+AxonMyelination
+AxonProjectionLaterality
+BamsID
+BamsLink
+BranchingMetrics
+CAO Id
+CellSomaShape
+CellSomaSize
+Cognitive Atlas Link
+CommonName
+Coordinates
+Created
+CurationStatus
+DICOMID
+DefiningCitation
+DefiningCriteria
+DendriteThickness
+DiscourseState
+Example
+FBBT Link
+FiringPatterns
+GbifID
+Grant
+Id
+ItisID
+Label
+Misspelling
+ModifiedDate
+NeuronamesID
+NeuronamesLink
+NumberOfPrimaryDendrites
+OldURL
+OriginOfAxon
+PMID
+PassiveSubthresholdParameters
+Polarity
+Profile
+ProperCitation
+Prov type
+PublicationLink
+Question
+Related application
+SpikingFeatures
+SpontaneousFiringPatterns
+SpontaneousFiringRate
+SubcellularSynapticTarget
+SuperCategory
+SynapticPhysiology
+Synonym
+TaxID
+TaxKey
+TaxName
+TermsofUseURL
+Title
+Tracts
+Twitter
+Umlscui
+Value Representation
+Xref
+YouTube
+# wikipedia
+Species
+Specified by
+About
+AfferentProjections
+Apical Location
+AtlasImage
+Author
+Availability
+AxonDiameter
+AxonTract
+Axon Location
+Axon Orientation
+Axon Shape
+Axon Ultrastructure
+Axon partonomy
+Axon size
+Axon synonym
+Axon terminal
+Axon terminal Orientation
+Axon terminal location
+Basal Location
+Category
+CellularSynapticTarget
+Comment
+Connected to
+Contributor
+Curator
+DOI
+DefinitionSource
+DendriteLength
+DendriteLocation
+Dendrite Location
+Dendrite Orientation
+Dendrite Partonomy
+Dendrite Shape
+Dendrite Size
+Dendrite Ultrastructure
+Develops directly from
+Develops from
+EfferentProjections
+Electrically synapsed to
+ExampleImage
+FBbt Id
+Fasciculates with
+Figure
+Formal language
+FormatTime
+GOTermFinder, GO-TermFinder, GO Term Finder, GO
+Has domain and range
+Has functional role
+Has improper value for
+Has part
+Has postsynaptic terminal in
+Has quality
+Has role
+Has synaptic terminal in
+HelppageAudience
+Homepage
+Http://mobyle.pasteur.fr/cgi-bin/portal.py
+Innervated by
+Innervates
+IsPartof
+Is inverse of
+Is part of
+JournalNumber
+JournalVolume
+LacksMolecularConstituents
+Latitude
+Listedby
+Lists
+Located in
+LocationOfAxonArborization
+LocationOfLocalAxonArborization
+Longitude
+MolecularConstituents
+Name
+Namespace
+NarrowSynonym
+Neurotransmitter
+NeurotransmitterReceptors
+Nifid
+PartiallyOverlapsWith
+Presence of presynaptic sites determined by immunoreactivity to syntaxin and synaptobrevin
+Presence of presynaptic sites of Johnston's organ neurons determined by immunoreactivity to syntaxin and synaptobrevin
+Processing
+Proximal Ultrastructure
+PublicationDate
+PublicationName
+Recommendedby
+Recommends
+Reference
+RelatedTo
+Related disease
+Release date
+RetrievedOn
+Revision date
+SameAs
+SomaLocation
+SomaOrientation
+SpineDensityOnDendrites
+Summary
+Supporting Agency
+Swoogle hits
+Table
+That the MT lacks presynaptic sites is based on negative anti-syntaxin immunolabelling and synaptobrevin
+That the lateral core of AMMC lacks presynaptic sites is based on negative anti-syntaxin immunolabelling and synaptobrevin
+Time
+UMLSCUI
+Use template
+Use template rev
+Usedby
+Uses
+#n-arity
+Has domain and range
