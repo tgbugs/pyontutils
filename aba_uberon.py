@@ -2,10 +2,11 @@
 
 import re
 from os.path import expanduser
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import rdflib
 import requests
 from scigraph_client import Vocabulary, Graph
+from obo_io import OboFile, Header, Term, TVPair
 from IPython import embed
 
 v = Vocabulary()
@@ -77,6 +78,59 @@ for node in output['nodes']:
                 a_u_map[mba] = curie
     else:
         u_a_map[curie] = None
+
+def obo_output():  # oh man obo_io is a terrible interface for writing obofiles :/
+    for aid in abalabs:  # set aids not in uberon to none
+        if aid not in a_u_map:
+            a_u_map[aid] = None
+
+    e = OboFile()
+    n = OboFile()
+    b = OboFile()
+    r = OboFile()
+    name_order = 'Exact', 'Narrow', 'Broad', 'Related'
+    rev = {v:k for k, v in syn_types.items()}  # sillyness
+    syn_order = [rev[n] for n in name_order]
+
+    files_ = {rev['Broad']:b, rev['Exact']:e, rev['Narrow']:n, rev['Related']:r}
+    for aid, uid in sorted(a_u_map.items()):
+        id_line = 'id: ' + aid
+        lines = []
+        lines.append(id_line)
+        lines.append('name: ' + abalabs[aid])
+        if uid in uberon_syns:
+            syns = uberon_syns[uid]
+        else:
+            syns = {}
+
+        for syn_type in syn_order:
+            f = files_[syn_type]
+            if syn_type in syns:
+                for syn in syns[syn_type]:
+                    syn_line = 'synonym: "' + syn + '" ' + syn_types[syn_type].upper() + ' []'
+                    lines.append(syn_line)
+            block = '\n'.join(lines)
+            term = Term(block, f)
+
+    e.filename = 'e-syns.obo'
+    n.filename = 'en-syns.obo'
+    b.filename = 'enb-syns.obo'
+    r.filename = 'enbr-syns.obo'
+    for f in files_.values():
+        h = Header('format-version: 1.2\nontology: %s\n' % f.filename)
+        h.append_to_obofile(f)
+        f.write(f.filename)
+    embed()
+    #bterms = OrderedDict()
+    #bheader = OrderedDict()
+
+    #broad = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
+    #exact = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
+    #narrow = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
+    #relate = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
+
+
+obo_output()
 
 def make_record(uid, aid):  # edit this to change the format
     to_format = ('{uberon_id: <20}{uberon_label:}\n'
