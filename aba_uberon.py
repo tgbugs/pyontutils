@@ -55,10 +55,10 @@ a_u_map = {}
 uberon_syns = {}
 uberon_labs = {}
 syn_types = {
-    'http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym':'Broad',
     'http://www.geneontology.org/formats/oboInOwl#hasExactSynonym':'Exact',
     'http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym':'Narrow',
     'http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym':'Related',
+    'http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym':'Broad',
 }
 for node in output['nodes']:
     curie = node['id']
@@ -86,9 +86,9 @@ def obo_output():  # oh man obo_io is a terrible interface for writing obofiles 
 
     e = OboFile()
     n = OboFile()
-    b = OboFile()
     r = OboFile()
-    name_order = 'Exact', 'Narrow', 'Broad', 'Related'
+    b = OboFile()
+    name_order = 'Exact', 'Narrow', 'Related', 'Broad'
     rev = {v:k for k, v in syn_types.items()}  # sillyness
     syn_order = [rev[n] for n in name_order]
 
@@ -114,21 +114,13 @@ def obo_output():  # oh man obo_io is a terrible interface for writing obofiles 
 
     e.filename = 'e-syns.obo'
     n.filename = 'en-syns.obo'
-    b.filename = 'enb-syns.obo'
-    r.filename = 'enbr-syns.obo'
+    r.filename = 'enr-syns.obo'
+    b.filename = 'enrb-syns.obo'
     for f in files_.values():
         h = Header('format-version: 1.2\nontology: %s\n' % f.filename)
         h.append_to_obofile(f)
         f.write(f.filename)
-    embed()
-    #bterms = OrderedDict()
-    #bheader = OrderedDict()
-
-    #broad = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
-    #exact = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
-    #narrow = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
-    #relate = OboFile(header=, terms=, typedefs=OrderedDict(), instances=OrderedDict())
-
+    #embed()
 
 obo_output()
 
