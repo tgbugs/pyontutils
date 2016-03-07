@@ -2,8 +2,8 @@
 BASE=~/git/NIF-Ontology
 BASESC=$(echo ${BASE} | sed 's/\//\\\//g')
 TTLTARGET=${BASE}/ttl/
-EXTERNALTARGET=${BASE}/external/
-UNUSEDTARGET=${BASE}/ttl/unused/
+EXTERNALTARGET=${TTLTARGET}external/
+UNUSEDTARGET=${TTLTARGET} #unused/   # XXX do the sorting after the conversion
 TMPUNUSED=/tmp/temp_unused
 
 #cd ${BASE}/ttl/
@@ -22,15 +22,15 @@ for OWLFILE in ${OWLFILES}; do
         echo 'mv' ${OWLFILE}.ttl $TTLTARGET$TARGET
         mv ${OWLFILE}.ttl $TTLTARGET$TARGET
     elif [[ $EXTERNAL =~ $OWLFILE ]]; then
-        echo 'cp -a' $OWLFILE ${BASE}/external/
-        cp -a $OWLFILE ${BASE}/external/
+        echo 'cp -a' $OWLFILE $EXTERNALTARGET
+        cp -a $OWLFILE $EXTERNALTARGET
         echo 'rm' $OWLFILE.ttl 
         rm $OWLFILE.ttl 
     # TODO put Views and Retired in utility?
     else
-        echo 'DEAD mv' $OWLFILE.ttl ${TTLTARGET}unused/${TARGET}
-        mv $OWLFILE.ttl ${TTLTARGET}unused/${TARGET}
-        echo ${TTLTARGET}unused/${TARGET} >> /tmp/temp_unused
+        echo 'DEAD mv' $OWLFILE.ttl ${UNUSEDTARGET}${TARGET}
+        mv $OWLFILE.ttl ${UNUSEDTARGET}${TARGET}
+        echo ${TTLTARGET}unused/${TARGET} >> $TMPUNUSED
     fi
 done
 
@@ -65,13 +65,13 @@ for FPATH in $(cat ${BASE}/external.txt); do
     TTLFN=$(echo $ONTFN | sed "s/.owl$/.ttl/")
     #echo $TTLFN
     #echo $ONTFN
-    sed -i "s/\/ttl\/${TTLFN}/\/external\/${ONTFN}/" $FILENAMES
+    sed -i "s/\/ttl\/${TTLFN}/\/ttl\/external\/${ONTFN}/" $FILENAMES
 done
-for FPATH in $(cat ${TMPUNUSED}); do
-    TTLFN=$(basename $FPATH)
-    echo $TTLFN
-    sed -i "s/\/ttl\/${TTLFN}/\/ttl\/unused\/${TTLFN}/" $FPATH
-done
+#for FPATH in $(cat ${TMPUNUSED}); do
+    #TTLFN=$(basename $FPATH)
+    #echo $TTLFN
+    #sed -i "s/\/ttl\/${TTLFN}/\/ttl\/unused\/${TTLFN}/" $FPATH
+#done
 
 # not the right place to do this, though it does seem to work
 #GITHUB="https:\/\/raw.githubusercontent.com\/SciCrunch\/NIF-Ontology\/ttl\/"
