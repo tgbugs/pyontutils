@@ -105,8 +105,11 @@ def obo_output():  # oh man obo_io is a terrible interface for writing obofiles 
 
         for syn_type in syn_order:
             f = files_[syn_type]
+            if syn_types[syn_type] == 'Exact' and uid is not None:
+                syn_line = 'synonym: "' + uberon_labs[uid] + '" ' + syn_types[syn_type].upper() + ' [from label]'
+                lines.append(syn_line)
             if syn_type in syns:
-                for syn in syns[syn_type]:
+                for syn in sorted(syns[syn_type]):
                     syn_line = 'synonym: "' + syn + '" ' + syn_types[syn_type].upper() + ' []'
                     lines.append(syn_line)
             block = '\n'.join(lines)
