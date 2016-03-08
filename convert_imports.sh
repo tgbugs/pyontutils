@@ -12,7 +12,7 @@ TMPUNUSED=/tmp/temp_unused
 #find ../ -name '*owl.ttl' -exec sh -c 'echo $1 $(echo $1 | sed "s/\.owl//" | sed "s/^.\+\///")' _ {} \;
 
 echo > $TMPUNUSED
-OWLFILES=$(find ${BASE} -name '*.owl')
+OWLFILES=$(find -L ${BASE} -name '*.owl')
 #echo $OWLFILES
 GOOD=$(cat ${BASE}/convert.txt ${BASE}/bridge.txt | sed "s/^/${BASESC}\//")
 EXTERNAL=$(cat ${BASE}/external.txt | sed "s/^/${BASESC}\//")
