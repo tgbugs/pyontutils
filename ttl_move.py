@@ -7,13 +7,14 @@ import os
 from IPython import embed
 
 #source locations TODO we should support arbitrary bases here and enforce subfolder namespace purity
-GIT_FOLDER = os.path.expanduser('~/git/NIF-Ontology/.git/') 
+GIT_BASE = '~/git/NIF-Ontology/'
+GIT_FOLDER = os.path.expanduser(GIT_BASE + '.git/') 
 with open(GIT_FOLDER + 'HEAD', 'rt') as f:
     ref = f.read().strip().split(': ')[-1]
 with open(GIT_FOLDER + ref, 'rt') as f:
     head_commit = f.read().strip()
 
-ttl_path = os.path.expanduser('~/git/NIF-Ontology/ttl/')
+ttl_path = os.path.expanduser(GIT_BASE + 'ttl/')
 iri_path = 'http://ontology.neuinfo.org/NIF/ttl/'
 
 utility_path = 'utility'
@@ -54,12 +55,13 @@ MOVE = 'git mv {src_path} {target_path}'
 IMPORT_RENAME = "sed -i 's/{src_iri}/{target_iri}/' {filename}"
 
 commands = ["#/usr/bin/env sh",
+            "cd " + GIT_BASE,
             "echo IF YOU SCREW SOMETHING UP YOU CAN REVERT BY RUNNING THE FOLLOWING COMMAND:",
             "echo git reset --hard {commit}".format(commit=head_commit),
             "echo WARNING: if you do this you may loose uncommited changes.",
            ]
 
-moves, renames = [], []
+renames, adds, moves = [], [], []
 for target_path_folder, src_filenames in sorted(move_dict.items()):
     for filename in src_filenames:
         src_path = ttl_path + filename
@@ -71,9 +73,12 @@ for target_path_folder, src_filenames in sorted(move_dict.items()):
         rename = IMPORT_RENAME.format(src_iri=src_iri, target_iri=target_iri, filename=src_path)
         move = MOVE.format(src_path=src_path, target_path=target_path)
         renames.append(rename)
+        adds.append(src_path)
         moves.append(move)
 
 commands.extend(renames)
+commands.append('git diff')
+commands.append('git add ' + ' '.join(adds))  # XXX FIXME
 commands.extend(moves)
 
 output = '\n'.join(commands)
