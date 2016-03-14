@@ -37,7 +37,7 @@ with open(VIEWS, 'rt') as f:
 
 used = core + bridge
 
-all_ = [fn for fn in os.listdir(ttl_path) if '.ttl' in fn]
+all_ = [fn for fn in os.listdir(ttl_path) if fn.endswith('.ttl')]
 
 unused = [a for a in all_ if a not in used and a not in views]
 
