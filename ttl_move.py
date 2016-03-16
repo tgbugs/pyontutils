@@ -60,6 +60,9 @@ commands = ["#/usr/bin/env sh",
             "echo git reset --hard {commit}".format(commit=head_commit),
             "echo WARNING: if you do this you may loose uncommited changes.",
            ]
+for folder in (utility_path, bridge_path, unused_path):
+    if not os.path.exists(ttl_path + folder):
+        commands.append("mkdir " + ttl_path + folder)
 
 renames, adds, moves = [], [], []
 for target_path_folder, src_filenames in sorted(move_dict.items()):
@@ -70,7 +73,7 @@ for target_path_folder, src_filenames in sorted(move_dict.items()):
         src_iri = src_iri.replace('/','\/')
         target_iri = iri_path + target_path_folder + '/' + filename
         target_iri = target_iri.replace('/','\/')
-        rename = IMPORT_RENAME.format(src_iri=src_iri, target_iri=target_iri, filename=src_path)
+        rename = IMPORT_RENAME.format(src_iri=src_iri, target_iri=target_iri, filename=ttl_path + '*.ttl')
         move = MOVE.format(src_path=src_path, target_path=target_path)
         renames.append(rename)
         adds.append(src_path)
@@ -79,7 +82,10 @@ for target_path_folder, src_filenames in sorted(move_dict.items()):
 commands.extend(renames)
 commands.append('git diff')
 commands.append('git add ' + ' '.join(adds))  # XXX FIXME
+commands.append('git commit -m "updated the uri locations ahead of moving unused and utility ttl files"')
 commands.extend(moves)
+commands.append('git commit -m "this commit completes the moves of ttl files to unused and utility folders"')
+commands.extend(commands[2:5])
 
 output = '\n'.join(commands)
 with open('generated_move_rename.sh', 'wt') as f:
