@@ -14,7 +14,8 @@ from IPython import embed
 
 # TODO source this from somewhere?
 curie_mapping = {
-    'ILX':'http://uri.interlex.org/base/',
+    'ilx':'http://uri.interlex.org/base/',
+    'obo':'http://purl.obolibrary.org/obo/',
     'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
     'MBA':'http://api.brain-map.org/api/v2/data/Structure/',
     'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
@@ -68,7 +69,8 @@ def aba_make():
         parent = node_d['parent_structure_id']
         if parent:
             parent = g.namespaces['MBA'][str(parent)]
-            add_hierarchy(g.g, parent, rdflib.URIRef('http://uri.interlex.org/base/proper_part_of'), cls)
+            #add_hierarchy(g.g, parent, rdflib.URIRef('http://uri.interlex.org/base/proper_part_of'), cls)
+            add_hierarchy(g.g, parent, rdflib.URIRef('http://purl.obolibrary.org/obo/BFO_0000050'), cls)
 
         for t in aba_trips(node_d):
             g.add_node(*t)
