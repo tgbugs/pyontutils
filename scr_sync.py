@@ -96,7 +96,8 @@ def make_records(resources, res_cols, field_mapping):
             output[scrid] = []
         #if 'id' not in [a for a in zip(*output[rid])][0]:
             output[scrid].append(('id', scrid))  # add the empty prefix
-            output[scrid].append(('old_id', oid))
+            if oid:
+                output[scrid].append(('old_id', oid))
             #output[scrid].append(('type', type_))  # this should come via the scigraph cats func
         
         if value_name in field_mapping['MULTI']:
@@ -196,7 +197,8 @@ field_mapping = {
 }
 def main():
     DB_URI = 'mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db}'
-    config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
+    #config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
+    config = mysql_conn_helper('mysql5-1.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
     engine = create_engine(DB_URI.format(**config))
     config = None  # all weakrefs should be gone by now?
     del(config)  # i wonder whether this actually cleans it up when using **config
@@ -270,6 +272,13 @@ def main():
     for id_, rec in output.items():
         for field, value in rec:
             #print(field, value)
+            if not value:  # don't add empty edges
+                print('caught an empty value on field', id_, field)
+                continue
+            if field != 'id' and value in id_:
+            #if field == 'alt_id' and id_[1:] == value:
+                print('caught a mainid appearing as altid', field, value)
+                continue
             g.add_node(*make_node(id_, field, value))
 
     g.write()
