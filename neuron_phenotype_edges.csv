@@ -15,6 +15,7 @@ hasPresynapticTerminalsIn,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,
 isAncestralInTaxon,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,
 phenotypeObservedInBrainRegion,,Located in?,Expresses a relationship between a phenotype and a brain region. This should be used when a neuron phenotype is observed in specific brain regions.,,existential not universal
+phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,
 #references,,,,,
 in taxon,,http://purl.obolibrary.org/obo/RO_0002162,,,
 never in taxon,,http://purl.obolibrary.org/obo/RO_0002161,,,
