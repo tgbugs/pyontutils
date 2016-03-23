@@ -2,6 +2,7 @@
 import os
 import csv
 import json
+from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
@@ -10,36 +11,9 @@ from pyontutils.scr_sync import makeGraph
 from pyontutils.scigraph_client import Vocabulary
 v = Vocabulary()
 
-def memoize(filepath, ser='json'):
-    """ The wrapped function should take no arguments
-        and return the object to be serialized
-    """
-    if ser == 'json':
-        serialize = json.dump
-        deserialize = json.load
-        mode = 't'
-    else:
-        raise TypeError('Bad serialization format.')
-
-    def inner(function):
-        def superinner(reup=False, **kwargs):
-            if os.path.exists(filepath) and not reup:
-                print('deserializing from', filepath)
-                with open(filepath, 'r' + mode) as f:
-                    return deserialize(f)
-            else:
-                output = function(**kwargs)
-                with open(filepath, 'w' + mode) as f:
-                    serialize(output, f)
-                return output
-
-        return superinner
-
-    return inner
-# load existing ontology
-
 PREFIXES = {
     'ilx':'http://uri.interlex.org/base/',
+    'owl':'http://www.w3.org/2002/07/owl#',
     'skos':'http://www.w3.org/2004/02/skos/core#',
     'HBP_CELL':'http://www.hbp.FIXME.org/hbp_cell_ontology/',
     'NIFCELL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#',
@@ -78,9 +52,9 @@ def ilx_add_ids(ilx_labels):
                 if label:
                     raise KeyError('That ILX identifier is already in use! %s %s' % (ilx_id, label))
                 else:
-                    new_lines.append(ilx_id + ':' + label)
+                    new_lines.append(ilx_id + ':' + ilx_labels[ilx_id])
             else:
-                new_lines.append(line)
+                new_lines.append(line.strip())
 
     new_text = '\n'.join(new_lines)
     with open(os.path.expanduser('interlex_reserved.txt.new'), 'wt') as f:
@@ -123,8 +97,22 @@ def ilx_conv(graph, prefix, ilx_start):
 
 NEURON = 'NIFCELL:sao1417703748'
 def clean_hbp_cell():
-    mg = makeGraph('testing', prefixes=PREFIXES)
+    #old graph
+    g = rdflib.Graph()
+    g.parse(os.path.expanduser('~/git/methodsOntology/ttl/hbp_cell_ontology.ttl'), format='turtle')
+    g.remove((None, rdflib.OWL.imports, None))
+    g.remove((None, rdflib.RDF.type, rdflib.OWL.Ontology))
+
+    #new graph
+    NAME = 'NIF-Neuron-HBP-cell-import'
+    mg = makeGraph(NAME, prefixes=PREFIXES)
+    ontid = 'http://ontology.neuinfo.org/NIF/ttl/generated/' + NAME + '.ttl'
+    mg.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    mg.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron HBP cell import')
+    mg.add_node(ontid, rdflib.RDFS.comment, 'this file was automatically using pyontutils/hbp_cells.py')
+    mg.add_node(ontid, rdflib.OWL.versionInfo, date.isoformat(date.today()))
     newgraph = mg.g
+
     skip = {
         '0000000':'NIFCELL:sao1813327414',  # cell
         #'0000001':NEURON,  # neuron  (equiv)
@@ -148,15 +136,15 @@ def clean_hbp_cell():
         '0000071':NEURON,
     }
     to_phenotype = {
-        '0000021':('ilx:hasMolecularPhenotype', 'NIFMOL:sao1744435799'), # glut
-        '0000022':('ilx:hasMolecularPhenotype', 'NIFMOL:sao229636300'), # gaba
+        '0000021':('ilx:hasMolecularPhenotype', 'NIFMOL:sao1744435799'),  # glut, all classes that might be here are equived out
+        '0000022':('ilx:hasMolecularPhenotype', 'NIFMOL:sao229636300'),  # gaba
     }
     lookup = {'NIFCELL', 'NIFNEURNT'}
-
-    g = rdflib.Graph()
-    g.parse(os.path.expanduser('~/git/methodsOntology/ttl/hbp_cell_ontology.ttl'), format='turtle')
-    g.remove((None, rdflib.OWL.imports, None))
-    g.remove((None, rdflib.RDF.type, rdflib.OWL.Ontology))
+    missing_supers = {
+        'HBP_CELL:0000136',
+        'HBP_CELL:0000137',
+        'HBP_CELL:0000140',
+    }
 
     replace = set()
     phen = set()
@@ -238,6 +226,10 @@ def clean_hbp_cell():
     newgraph.remove((None, None, tt))
     newgraph.remove((None, None, tf))
 
+    # add missing subClasses
+    for nosub in missing_supers:
+        mg.add_node(nosub, rdflib.RDFS.subClassOf, NEURON)
+
     # cleanup for subClassOf
     for subject in sorted(newgraph.subjects(rdflib.RDFS.subClassOf, expand(NEURON))):
         sco = [a for a in newgraph.triples((subject, rdflib.RDFS.subClassOf, None))]
@@ -252,10 +244,8 @@ def clean_hbp_cell():
 
     # do ilx
     ilx_start = ilx_get_start()
-
-    ilx_conv_mem = memoize('hbp_cell_interlex.json')(ilx_conv)
-
-    ilx_labels, ilx_replace = ilx_conv_mem(graph=newgraph, prefix='HBP_CELL', ilx_start=ilx_start)
+    #ilx_conv_mem = memoize('hbp_cell_interlex.json')(ilx_conv)  # FIXME NOPE, also need to modify the graph :/
+    ilx_labels, ilx_replace = ilx_conv(graph=newgraph, prefix='HBP_CELL', ilx_start=ilx_start)
     ilx_add_ids(ilx_labels)
     with open('hbp_cell_ilx_ids.json', 'wt') as f:
         json.dump(ilx_replace, f)
@@ -289,7 +279,6 @@ def main():
         for hbp_new in sorted(rep_map.items()):
             writer.writerow(hbp_new)
     mg.write()
-    #embed()
 
 if __name__ == '__main__':
     main()
