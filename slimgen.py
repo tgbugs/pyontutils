@@ -46,10 +46,12 @@ aba_map = {
 def aba_trips(node_d):
     output = []
     parent = 'MBA:' + str(node_d['id'])  # FIXME HRM what happens if we want to change ABA:  OH LOOK
-    for key, edge in aba_map.items():
+    for key, edge in sorted(aba_map.items()):
         value = node_d[key]
         if not value:
             continue
+        elif key == 'safe_name' and value == node_d['name']:
+            continue  # don't duplicate labels as synonyms
         output.append( (parent, edge, value) )
     return output
 
