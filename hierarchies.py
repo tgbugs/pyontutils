@@ -370,12 +370,14 @@ def main():
     cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
     nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
     uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
+    uberon_ae = Query('UBERON:0001062', 'subClassOf', 'INCOMING', 9)  # anatomical entity
     uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
     ncbi_ins =  Query('NCBITaxon:50557', 'subClassOf', 'INCOMING', 10)
     ncbi_rod =  Query('NCBITaxon:9989', 'subClassOf', 'INCOMING', 10)
 
     queries = cell, nifga, uberon, uberon_cc
     queries = ncbi_ins, ncbi_rod, uberon, nifga
+    queries = uberon_ae,
 
     url = 'localhost:9000'
     fma3_r = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
@@ -403,23 +405,26 @@ def main():
 
 
     fma_tel = Query('FMA:62000', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
-    fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, url_base=url)
+    DOFMA = False
+    if DOFMA:
+        fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, url_base=url)
 
-    childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
-    from heatmaps.scigraph_client import Graph
-    g = Graph('http://localhost:9000/scigraph')
-    parent_nodes = []
-    for curie in childs:
-        json = g.getNeighbors(curie, relationshipType='subClassOf')
-        if json:
-            for node in json['nodes']:
-                if node['id'] != curie:
-                    parent_nodes.append(node)  # should have dupes
+        childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
+        from heatmaps.scigraph_client import Graph
+        g = Graph('http://localhost:9000/scigraph')
+        parent_nodes = []
+        for curie in childs:
+            json = g.getNeighbors(curie, relationshipType='subClassOf')
+            if json:
+                for node in json['nodes']:
+                    if node['id'] != curie:
+                        parent_nodes.append(node)  # should have dupes
 
 
-    embed()
-    return
-    uberon_tree, uberon_extra = creatTree(*uberon)
+        embed()
+        return
+
+    uberon_tree, uberon_extra = creatTree(*uberon)  # ,url_base='localhost:9000')  # FIXME why does this crash?
 
     uberon_flat = [n.replace(':','_') for n in flatten(uberon_extra[0])]
     with open('/tmp/uberon_partonomy_terms', 'wt') as f:
@@ -430,6 +435,8 @@ def main():
         dematerialize(list(tree.keys())[0], tree)
         print(tree)
         #print(extra[0])
+        with open('/tmp/' + query.root, 'wt') as f:
+            f.writelines(tree.print_tree())
 
         level_sizes = [len(levels(tree, i)) for i in range(11)]
         print('level sizes', level_sizes)
