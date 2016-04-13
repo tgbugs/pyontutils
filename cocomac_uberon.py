@@ -103,4 +103,47 @@ with open('/tmp/coco_uber_match.csv', 'wt') as f:
 with open('/tmp/coco_uber_search.csv', 'wt') as f:
     writer = csv.writer(f)
     writer.writerows(smap_)
+
+# cocomac -> integrated connectivity terminiology mapping
+
+def lnc(string):
+    return string.lower().replace(',',' ')  # matches the conv in NIF_conn
+
+ccslim = rdflib.Graph().parse(expanduser('~/git/NIF-Ontology/ttl/generated/cocomacslim.ttl'), format='turtle')
+coco_all = [l for l in ccslim.objects(None, rdflib.RDFS.label)]
+
+with open(expanduser('~/files/disco/NIF_conn_allcols_minimal_clean_filtered2.csv'), 'rt') as f:
+    ber_rows = [r for r in csv.reader(f)]
+
+ber_set = set([c for c in zip(*[r for r in ber_rows if r[0] == 'CoCoMac'])][1])
+coco_match_lower_no_comma = set([lnc(t) for t in [c for c in zip(*map_)][0]])
+coco_search_lower_no_comma = set([lnc(t) for t in [c for c in zip(*smap_)][0]])
+coco_all_lower_no_comma = set([lnc(t) for t in coco_all])
+matched = ber_set.intersection(coco_match_lower_no_comma)
+searched = ber_set.intersection(coco_search_lower_no_comma)
+alled = ber_set.intersection(coco_all_lower_no_comma)
+unmapped = alled.difference(matched.union(searched))
+missing = ber_set.difference(alled)
+
+nmatch = len(matched)
+nsearch = len(searched)
+nall = len(alled)
+nunmapped = len(unmapped)
+nmissing = len(missing)
+
+print('# matched =', nmatch)
+print('# searched =', nsearch)
+print('# alled =', nall)
+print('# unmatched =', nunmapped)
+print('# missing =', nmissing)
+
+print('missing')
+for m in sorted(missing):
+    print(m)
+
+print('unmapped')
+for m in sorted(unmapped):
+    print(m)
+
 #embed()
+
