@@ -72,7 +72,7 @@ def mysql_conn_helper(host, db, user, port=3306):
     return kwargs
 
 def make_records(resources, res_cols, field_mapping):
-    resources = {id:(scrid, oid, type) for id, scrid, oid, type in resources}
+    resources = {id:(scrid, oid, type, status) for id, scrid, oid, type, status in resources}
     res_cols_latest = {}
     versions = {}
     for rid, value_name, value, version in res_cols:
@@ -89,7 +89,7 @@ def make_records(resources, res_cols, field_mapping):
     #for rid, original_id, type_, value_name, value in join_results:
     for rid, value_name, value in res_cols:
         #print(rid, value_name, value)
-        scrid, oid, type_ = resources[rid]
+        scrid, oid, type_, status = resources[rid]
         if scrid.startswith('SCR_'):
             scrid = ':' + scrid  # FIXME
         if scrid not in output:
@@ -99,6 +99,8 @@ def make_records(resources, res_cols, field_mapping):
             if oid:
                 output[scrid].append(('old_id', oid))
             #output[scrid].append(('type', type_))  # this should come via the scigraph cats func
+            if status == 'Rejected':
+                output[scrid].append(('deprecated', True))
         
         if value_name in field_mapping['MULTI']:
             values = [v.strip() for v in value.split(',')]  # XXX DANGER ZONE
@@ -159,7 +161,7 @@ class makeGraph:
             if value.startswith(':') and ' ' in value:  # not a compact repr AND starts with a : because humans are insane
                 value = ' ' + value
             value = self.check_thing(value)
-        except TypeError:
+        except (TypeError, AttributeError) as e:
             value = rdflib.Literal(value)  # trust autoconv
         self.g.add( (target, edge, value) )
 
@@ -172,6 +174,7 @@ field_to_edge = {
     'id':'rdf:type',
     'label':'rdfs:label',
     'old_id':'oboInOwl:hasDbXref',  # old vs alt id?
+    'deprecated':'owl:deprecated',
     'superclass':'rdfs:subClassOf',  # translation required
     'synonym':'obo_annot:synonym',  # FIXME
     'type':'FIXME:type',  # bloody type vs superclass :/ ask james
@@ -180,6 +183,11 @@ field_to_edge = {
 def make_node(id_, field, value):
     if field == 'id':
         value = 'owl:Class'
+    #if type(value) == bool:
+        #if value:
+            #value = rdflib.Literal(True)
+        #else:
+            #value = rdflib.Literal(False)
     return id_, field_to_edge[field], value
 
 
@@ -231,7 +239,7 @@ def main():
         #return
         #print('running join')
         print('running 1')
-        r_query = conn.execute('SELECT id, rid, original_id, type FROM resources WHERE id < 16000;')  # avoid the various test entries :(
+        r_query = conn.execute('SELECT id, rid, original_id, type, status FROM resources WHERE id < 16000;')  # avoid the various test entries :(
         print('fetching 1 ')
         r = r_query.fetchall()
         print('running 2')
@@ -242,13 +250,13 @@ def main():
         #embed()
         #return
 
-    r.append( (-100, 'NIF:nlx_63400', 'nlx_63400', 'Resource') )
-    r.append( (-101, 'NIF:nlx_152342', 'nlx_152342', 'Organization') )
-    r.append( (-102, 'NIF:nlx_152328', 'nlx_152328', 'Organization') )
-    r.append( (-103, 'NIF:NEMO_0569000', 'NEMO_0569000', 'Institution') )
-    r.append( (-104, 'NIF:birnlex_2431', 'birnlex_2431', 'Institution') )
-    r.append( (-105, 'NIF:SIO_000688', 'SIO_000688', 'Institution') )
-    r.append( (-106, 'NIF:birnlex_2085', 'birnlex_2085', 'Institution') )
+    r.append( (-100, 'NIF:nlx_63400', 'nlx_63400', 'Resource', 'Curated') )
+    r.append( (-101, 'NIF:nlx_152342', 'nlx_152342', 'Organization', 'Curated') )
+    r.append( (-102, 'NIF:nlx_152328', 'nlx_152328', 'Organization', 'Curated') )
+    r.append( (-103, 'NIF:NEMO_0569000', 'NEMO_0569000', 'Institution', 'Curated') )
+    r.append( (-104, 'NIF:birnlex_2431', 'birnlex_2431', 'Institution', 'Curated') )
+    r.append( (-105, 'NIF:SIO_000688', 'SIO_000688', 'Institution', 'Curated') )
+    r.append( (-106, 'NIF:birnlex_2085', 'birnlex_2085', 'Institution', 'Curated') )
     rc.append( (-100, 'Resource Name', 'Resource', 1) )
     rc.append( (-101, 'Resource Name', 'Commercial Organization', 1) )
     rc.append( (-102, 'Resource Name', 'Organization', 1) )
@@ -272,10 +280,10 @@ def main():
     for id_, rec in output.items():
         for field, value in rec:
             #print(field, value)
-            if not value:  # don't add empty edges
+            if not value:  # don't add empty edges  # FIXME issue with False literal
                 print('caught an empty value on field', id_, field)
                 continue
-            if field != 'id' and value in id_:
+            if field != 'id' and str(value) in id_:
             #if field == 'alt_id' and id_[1:] == value:
                 print('caught a mainid appearing as altid', field, value)
                 continue
