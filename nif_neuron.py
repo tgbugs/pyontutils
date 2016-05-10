@@ -5,7 +5,7 @@ import csv
 from urllib.parse import quote
 import rdflib
 from IPython import embed
-from scr_sync import makeGraph
+from utils import makeGraph
 from obo_io import OboFile
 from scigraph_client import Graph
 

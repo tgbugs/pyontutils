@@ -10,7 +10,7 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from scr_sync import makeGraph
+from utils import makeGraph, add_hierarchy
 from IPython import embed
 
 #
@@ -54,10 +54,6 @@ def aba_trips(node_d):
             continue  # don't duplicate labels as synonyms
         output.append( (parent, edge, value) )
     return output
-
-def add_hierarchy(graph, parent, edge, child):
-    restriction = infixowl.Restriction(edge, graph=graph, someValuesFrom=parent)
-    child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
 def aba_make():
     root = 997  # for actual parts of the brain

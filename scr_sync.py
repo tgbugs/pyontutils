@@ -10,6 +10,7 @@ from datetime import date
 import rdflib
 from IPython import embed
 from sqlalchemy import create_engine, inspect
+from utils import makeGraph
 
 PREFIXES = {
     'owl':'http://www.w3.org/2002/07/owl#',

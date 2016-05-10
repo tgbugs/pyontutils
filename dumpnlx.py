@@ -4,22 +4,12 @@ import pickle
 from os.path import expanduser
 import requests
 from IPython import embed
+from utils import chunk_list
 
 with open('nlx_properties', 'rt') as f:
     properties = [l.strip() for l in f.readlines() if not l.startswith('#')]
 
 print(properties)
-
-chunk_size = 20
-
-def chunk_list(list_, size):
-    ll = len(list_)
-    chunks = []
-    for start, stop in zip(range(0, ll, size), range(size, ll, size)):
-        chunks.append(list_[start:stop])
-    chunks.append(list_[stop:])  # snag unaligned chunks from last stop
-    return chunks
-
 
 def furl(url):
     url = url.replace('[','-5B')

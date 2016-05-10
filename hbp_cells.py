@@ -6,9 +6,8 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from pyontutils.slimgen import add_hierarchy
-from pyontutils.scr_sync import makeGraph
-from pyontutils.scigraph_client import Vocabulary
+from utils import makeGraph, add_hierarchy
+from scigraph_client import Vocabulary
 v = Vocabulary()
 
 PREFIXES = {
