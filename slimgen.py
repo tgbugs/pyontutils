@@ -10,7 +10,7 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makeGraph, add_hierarchy
+from utils import makeGraph, add_hierarchy, chunk_list
 from IPython import embed
 
 #
@@ -159,14 +159,6 @@ def cocomac_make():
     ccgraph.add_node(ontid, rdflib.OWL.versionInfo, date.isoformat(date.today()))
     ccgraph.write()
 
-
-def chunk_list(list_, size):  # from dumpnlx :/
-    ll = len(list_)
-    chunks = []
-    for start, stop in zip(range(0, ll, size), range(size, ll, size)):
-        chunks.append(list_[start:stop])
-    chunks.append(list_[stop:])  # snag unaligned chunks from last stop
-    return chunks
 
 #ncbi_map = {
     #'name':,
