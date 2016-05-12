@@ -75,7 +75,7 @@ AfferentProjections
 Apical Location
 AtlasImage
 Author
-Availability
+#Availability  # duplicate
 AxonDiameter
 AxonTract
 Axon Location
@@ -176,6 +176,7 @@ That the MT lacks presynaptic sites is based on negative anti-syntaxin immunolab
 That the lateral core of AMMC lacks presynaptic sites is based on negative anti-syntaxin immunolabelling and synaptobrevin
 Time
 UMLSCUI
+#NOTE: UMLSCUI is mistype of Umlscui 
 Use template
 Use template rev
 Usedby
