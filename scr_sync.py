@@ -10,7 +10,7 @@ from datetime import date
 import rdflib
 from IPython import embed
 from sqlalchemy import create_engine, inspect
-from utils import makeGraph
+from utils import makeGraph, mysql_conn_helper
 
 PREFIXES = {
     'owl':'http://www.w3.org/2002/07/owl#',
@@ -44,33 +44,6 @@ remap_supers = {
     'Institute':'NIF:SIO_000688',
     'Government granting agency':'NIF:birnlex_2431',
 }
-
-def mysql_conn_helper(host, db, user, port=3306):
-    kwargs = {
-        'host':host,
-        'db':db,
-        'user':user,
-        'port':port,
-        'password':None,  # no you may NOT pass it in
-    }
-    with open(os.path.expanduser('~/.mypass'), 'rt') as f:
-        entries = [l.strip().split(':', 4) for l in f.readlines()]
-    for e_host, e_port, e_db, e_user, e_pass in entries:
-        e_port = int(e_port)
-        if host == e_host:
-            print('yes:', host)
-            if  port == e_port:
-                print('yes:', port)
-                if db == e_db or e_db == '*':  # FIXME bad * expansion
-                    print('yes:', db)
-                    if user == e_user:
-                        print('yes:', user)
-                        kwargs['password'] = e_pass  # last entry wins
-    e_pass = None
-    if kwargs['password'] is None:
-        raise ConnectionError('No password as found for {user}@{host}:{port}/{db}'.format(**kwargs))
-
-    return kwargs
 
 def make_records(resources, res_cols, field_mapping):
     resources = {id:(scrid, oid, type, status) for id, scrid, oid, type, status in resources}

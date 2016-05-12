@@ -2,6 +2,34 @@
     A collection of reused functions and classes.
 """
 
+import os
+
+def mysql_conn_helper(host, db, user, port=3306):
+    kwargs = {
+        'host':host,
+        'db':db,
+        'user':user,
+        'port':port,
+        'password':None,  # no you may NOT pass it in
+    }
+    with open(os.path.expanduser('~/.mypass'), 'rt') as f:
+        entries = [l.strip().split(':', 4) for l in f.readlines()]
+    for e_host, e_port, e_db, e_user, e_pass in entries:
+        e_port = int(e_port)
+        if host == e_host:
+            print('yes:', host)
+            if  port == e_port:
+                print('yes:', port)
+                if db == e_db or e_db == '*':  # FIXME bad * expansion
+                    print('yes:', db)
+                    if user == e_user:
+                        print('yes:', user)
+                        kwargs['password'] = e_pass  # last entry wins
+    e_pass = None
+    if kwargs['password'] is None:
+        raise ConnectionError('No password as found for {user}@{host}:{port}/{db}'.format(**kwargs))
+
+    return kwargs
 
 class makeGraph:
     def __init__(self, name, prefixes):
