@@ -59,7 +59,7 @@ for rows in zip(*results):
             outrow.extend(row)
     full_rows.append(outrow)
 
-with open('/tmp/neurolex_full.csv', 'wt') as f:
+with open('/tmp/neurolex_full.csv', 'wt', newline='\n') as f:
     writer = csv.writer(f)
     writer.writerows(full_rows)
 
