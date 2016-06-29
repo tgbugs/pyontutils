@@ -197,7 +197,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             
         # FIXME ideally want to sort by length of the transitive closure :/
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=tcsort))]
-        items_list = sorted([i for i in sorted(self.items())], key=tcsort)  # XXX best
+        items_list = sorted([i for i in sorted([(k if k is not None else 'None', v if v is not None else 'None') for k, v in self.items()])], key=tcsort)  # XXX best
 
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=lambda a: len(a[1])))]
         #items_list = sorted([i for i in self.items()], key=lambda a: len(a[1]))
@@ -425,6 +425,11 @@ def main():
         return
 
     uberon_tree, uberon_extra = creatTree(*uberon)  # ,url_base='localhost:9000')  # FIXME why does this crash?
+
+    print(uberon_tree)
+    print(uberon_extra[0])
+    embed()
+    return
 
     uberon_flat = [n.replace(':','_') for n in flatten(uberon_extra[0])]
     with open('/tmp/uberon_partonomy_terms', 'wt') as f:
