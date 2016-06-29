@@ -3,6 +3,7 @@
 """
 
 import os
+import rdflib
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
