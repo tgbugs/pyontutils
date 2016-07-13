@@ -140,7 +140,7 @@ class State:
         for param in list_:
             parg, prest, pdoc, put_required = self.make_param_parts(param)
             if put_required:
-                required = "'%s'" % put_required
+                required = "'%s'" % put_required  # XXX fail for multi required?
             pargs_list.append(parg)
             prests.append(prest)
             pdocs.append(pdoc)
@@ -182,17 +182,23 @@ class State:
 
         dict_comp = '{k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
-        dict_comp2 = '{k:v for k, v in kwargs.items() if k != %s}' % required
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
-        #print(params)
-        print(param_rest)
+        # handle whether required is in the url
+        if required:
+            if '{' + required.strip("'") + '}' not in path:
+                required = None
+        if required:
+            dict_comp2 = '{k:v for k, v in kwargs.items() if k != %s}' % required
+        else:
+            dict_comp2 = 'kwargs'
+
         params_conditional = ''
         for cond in 'id','url','relationshipType':
             if cond in param_rest:
                 params_conditional += (
-                    "{t}{t}if {cond}.startswith('http:'):\n"
+                    "{t}{t}if {cond} and {cond}.startswith('http:'):\n"
                     "{t}{t}{t}{cond} = {cond}.replace('/','%2F').replace('#','%23')\n").format(cond=cond, t=self.tab)
 
         if 'produces' in api_dict:  # ICK but the alt is nastier
