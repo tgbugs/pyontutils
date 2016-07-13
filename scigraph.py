@@ -170,6 +170,7 @@ class State:
         code = (
             '{t}def {nickname}(self{params}{default_output}):\n'
             '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
+            '{params_conditional}'
             '{t}{t}kwargs = {param_rest}\n'
             '{t}{t}kwargs = {dict_comp}\n'
             '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
@@ -185,6 +186,15 @@ class State:
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        #print(params)
+        print(param_rest)
+        params_conditional = ''
+        for cond in 'id','url','relationshipType':
+            if cond in param_rest:
+                params_conditional += (
+                    "{t}{t}if {cond}.startswith('http:'):\n"
+                    "{t}{t}{t}{cond} = {cond}.replace('/','%2F').replace('#','%23')\n").format(cond=cond, t=self.tab)
+
         if 'produces' in api_dict:  # ICK but the alt is nastier
             outputs, default_output = self.make_produces(api_dict['produces'])
             docstring += outputs
@@ -198,7 +208,7 @@ class State:
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
                             dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
                             docstring=docstring, required=required, default_output=default_output,
-                            output=output, t=self.tab)
+                            params_conditional=params_conditional, output=output, t=self.tab)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
