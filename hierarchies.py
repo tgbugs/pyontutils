@@ -263,9 +263,10 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     query_string = 'http://{url_base}/scigraph/graph/neighbors/{root}?relationshipType={relationshipType}&direction={direction}&depth={depth}'
 
     relationshipType = relationshipType.replace('#','%23')
-    query = query_string.format(root=root, relationshipType=relationshipType,
+    query = query_string.format(root=root.replace('/','%2F').replace('#','%23'), relationshipType=relationshipType,
                                 direction=direction, depth=depth, url_base=url_base)
 
+    print(query)
     if json is None:
         j = requests.get(query).json()
     else:
