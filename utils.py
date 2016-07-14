@@ -4,6 +4,7 @@
 
 import os
 import rdflib
+from rdflib.extras import infixowl
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
