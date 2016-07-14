@@ -39,17 +39,28 @@ class makeGraph:
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
         self.g = rdflib.Graph()
         [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
+        self.write_loc = '/tmp/ttl_files'
 
-    def write(self):
-        write_loc = '/tmp/ttl_files'
+    def write(self, delay=False):
         with open('/tmp/' + self.name + '.ttl', 'wb') as f:
             f.write(self.g.serialize(format='turtle'))
-        with open(write_loc, 'wt') as f:
-            f.write('/tmp/' + self.name + '.ttl\n')
+        if delay:
+            with open(self.write_loc, 'at') as f:
+                f.write('/tmp/' + self.name + '.ttl\n')
+        else:
+            with open(self.write_loc, 'wt') as f:
+                f.write('/tmp/' + self.name + '.ttl\n')
+            self.owlapi_conversion()
+
+    def owlapi_conversion(self):
         os.system('java -cp ' +
             os.path.expanduser('~/git/ttl-convert/target/'
                                'ttl-convert-1.0-SNAPSHOT-jar-with-dependencies.jar') +
-                  ' scicrunch.App ' + write_loc)
+                  ' scicrunch.App ' + self.write_loc)
+
+    def reset_writeloc(self):
+        with open(self.write_loc, 'wt') as f:
+            f.write('')
 
     def expand(self, curie):
         #print(curie)
