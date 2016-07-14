@@ -97,3 +97,53 @@ def chunk_list(list_, size):
     chunks.append(list_[stop:])  # snag unaligned chunks from last stop
     return chunks
 
+class dictParse:
+    """ Base class for building dict parsers (that can also handle lists).
+        Methods should be named after the keys in the dict and specify
+        what to do with the contents.
+    """
+    def __init__(self, thing, order=[]):
+        if type(thing) == dict:
+            if order:
+                for key in order:
+                    func = getattr(self, key, None)
+                    if func:
+                        func(thing.pop(key))
+            self._next_dict(thing)
+
+        #elif type(thing) == list:
+            #self._next_list(thing)
+        else:
+            print('NOPE')
+
+    def _next_dict(self, dict_):
+        for key, value in dict_.items():
+            func = getattr(self, key, None)
+            if func:
+                func(value)
+
+    def _next_list(self, list_):
+        for value in list_:
+            if type(value) == dict:
+                self._next_dict(value)
+
+    def _terminal(self, value):
+        print(value)
+        pass
+
+class rowParse:
+    """ Base class for parsing a list of fixed lenght lists whose
+        structure is defined by a header (eg from a csv file).
+        Methods should match the name of the 'column' header.
+    """
+    def __init__(self, rows, header, order=[]):
+        self.lookup = {index:name for index, name in enumerate(header)}
+        self._next_rows(rows)
+
+    def _next_rows(self, rows):
+        for row in rows:
+            for i, value in enumerate(row):
+                func = getattr(self, self.lookup[i], None)
+                if func:
+                    func(value)
+
