@@ -10,7 +10,7 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makeGraph, add_hierarchy, chunk_list, dictParse
+from utils import makeGraph, chunk_list, dictParse
 from IPython import embed
 
 #ncbi_map = {
