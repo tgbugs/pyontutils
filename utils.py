@@ -149,12 +149,30 @@ class rowParse:
         Methods should match the name of the 'column' header.
     """
     def __init__(self, rows, header, order=[]):
-        self.lookup = {index:name for index, name in enumerate(header)}
+        eval_order = []
+        self._index_order = []
+        for column in order:
+            index = header.index(column)
+            self._index_order.append(index)
+            eval_order.append(header.pop(index))
+        eval_order.extend(header)
+
+        self.lookup = {index:name for index, name in enumerate(eval_order)}
+
         self._next_rows(rows)
+
+    def _order_enumerate(self, row):
+        i = 0
+        for index in self._index_order:
+            yield i, row.pop(index)
+            i += 1
+        for value in row:
+            yield i, value
+            i += 1
 
     def _next_rows(self, rows):
         for row in rows:
-            for i, value in enumerate(row):
+            for i, value in self._order_enumerate(row):
                 func = getattr(self, self.lookup[i], None)
                 if func:
                     func(value)
