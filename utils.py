@@ -148,6 +148,10 @@ class rowParse:
         structure is defined by a header (eg from a csv file).
         Methods should match the name of the 'column' header.
     """
+
+    class SkipError(BaseException):
+        pass
+
     def __init__(self, rows, header, order=[]):
         eval_order = []
         self._index_order = []
@@ -175,5 +179,8 @@ class rowParse:
             for i, value in self._order_enumerate(row):
                 func = getattr(self, self.lookup[i], None)
                 if func:
-                    func(value)
+                    try:
+                        func(value)
+                    except self.SkipError:
+                        break
 
