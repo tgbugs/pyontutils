@@ -361,12 +361,12 @@ def hcp2016_make():
     atlas_id = 'ilx:hcp_2016_atlas'  # FIXME is this really an atlas?
     atlas = PSArtifact(atlas_id,
                        'Human Connectome Project Multi-Modal human cortical parcellation',
-                       'v1.0',
+                       '1.0',
                        '07-20-2016',
                        'awaiting...',
                        'doi:10.1038/nature18933',
-                       ('Human Connectome Project Multi-Modal parcellation', 'HCP Multi-Modal parcellation'),
-                       ('HCP_MMP',))
+                       ('Human Connectome Project Multi-Modal Parcellation', 'HCP Multi-Modal Parcellation','Human Connectome Project Multi-Modal Parcellation version 1.0'),
+                       ('HCP_MMP', 'HCP-MMP1.0'))
     meta = PScheme(hcp2016.superclass,
                    'HCP parcellation concept',
                    'NCBITaxon:9606',
