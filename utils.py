@@ -151,14 +151,17 @@ class rowParse:
     class SkipError(BaseException):
         pass
 
-    def __init__(self, rows, header, order=[]):
+    def __init__(self, rows, header=None, order=[]):
+        if header is None:
+            header = [c.split('(')[0].strip().replace(' ','_') for c in rows[0]]
+            rows = rows[1:]
         eval_order = []
         self._index_order = []
         for column in order:
             index = header.index(column)
             self._index_order.append(index)
             eval_order.append(header.pop(index))
-        eval_order.extend(header)
+        eval_order.extend(header)  # if not order then just do header order
 
         self.lookup = {index:name for index, name in enumerate(eval_order)}
 
@@ -175,11 +178,19 @@ class rowParse:
 
     def _next_rows(self, rows):
         for row in rows:
+            skip = False
             for i, value in self._order_enumerate(row):
                 func = getattr(self, self.lookup[i], None)
                 if func:
                     try:
                         func(value)
                     except self.SkipError:
+                        skip = True  # ick
                         break
+            if not skip:
+                self._row_post()
+
+    def _row_post(self):
+        """ Run this code after all columns have been parsed """
+        pass
 
