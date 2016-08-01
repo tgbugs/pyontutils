@@ -9,7 +9,9 @@ base = '~/git/NIF-Ontology/ttl/'
 fs = glob.glob(os.path.expanduser(base) + '*')
 fs += glob.glob(os.path.expanduser(base) + '*/*')
 
-mapping = [(urlbase + file.split('/ttl/', 1)[-1], file.split('/ttl/', 1)[-1]) for file in fs if file.endswith('.ttl')]
+_ = [print(f) for f in fs]
+
+mapping = [(urlbase + file.split('/ttl/', 1)[-1], file.split('/ttl/', 1)[-1]) for file in fs if file.endswith('.ttl') or file.endswith('.owl')]
 
 # make a protege catalog file to simplify life
 uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
