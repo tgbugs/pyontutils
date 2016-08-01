@@ -69,7 +69,7 @@ g.write()
 neuroner = '~/git/neuroNER/resources/bluima/neuroner/hbp_morphology_ontology.obo'
 neuroner1 = '~/git/neuroNER/resources/bluima/neuroner/hbp_electrophysiology_ontology.obo'
 neuroner2 = '~/git/neuroNER/resources/bluima/neuroner/hbp_electrophysiology-triggers_ontology.obo'
-hbp_cell = ''
+hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
 nif_qual = '~/git/NIF-Ontology/ttl/NIF-Quality.ttl'
 
 mo = OboFile(os.path.expanduser(neuroner))
