@@ -8,16 +8,16 @@ hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron typ
 hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,needs work,,
 #intrinsic/extrinsic phenotypes,,,,,,
 hasProjectionPhenotype,Has role,,,,"this might be clearer  than hasCircuitRole… but might confuse with projectsTo or the like…, excitatory/inhibitory shouldn't be handled here?",
-hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a laminer brain region.,,May need hasSomaLayerLocation or something,
+hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a laminer brain region.,,May need hasSomaLayerLocation or something,hasLocationPhenotype
 hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region. This is a superProperty and should not be used directly.,,,
-hasSomaLocatedIn,Located in,,,,,
-hasDendriteLocatedIn,DendriteLocation,,,,,
-hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,
+hasSomaLocatedIn,Located in,,,,,hasLocationPhenotype
+hasDendriteLocatedIn,DendriteLocation,,,,,hasLocationPhenotype
+hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasLocationPhenotype
 hasPresynapticTerminalsIn,,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,,
-isAncestralInTaxon,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,,
+hasTaxonRank,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,isAncestralInTaxon (because convergent evolution is SOOO likely…),
 phenotypeObservedInBrainRegion,,Located in?,Expresses a relationship between a phenotype and a brain region. This should be used when a neuron phenotype is observed in specific brain regions.,,existential not universal,
-phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,,
+phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,"this is not the right way to pull this off, need something akin to disjointness",
 #references,,,,,,
 in taxon,,http://purl.obolibrary.org/obo/RO_0002162,,,,
 never in taxon,,http://purl.obolibrary.org/obo/RO_0002161,,,,
