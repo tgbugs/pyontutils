@@ -102,6 +102,8 @@ def add_hierarchy(graph, parent, edge, child):
     """ Helper function to simplify the addition of part_of style
         objectProperties to graphs. FIXME make a method of makeGraph?
     """
+    if type(child) != infixowl.Class:
+        child = infixowl.Class(child, graph=graph)
     restriction = infixowl.Restriction(edge, graph=graph, someValuesFrom=parent)
     child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
