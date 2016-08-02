@@ -39,11 +39,18 @@ PREFIXES = {
 #with open('neurons.csv', 'rt') as f:
     #nrows = [r for r in csv.reader(f)]
 
+def pprint(thing):
+    for t in thing:
+        print()
+        for v in t:
+            print(v)
+
 def make_phenotypes():
     with open('neuron_phenotype_edges.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
     g = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
 
+    pedges = set()
     for row in rows[1:]:
         if row[0].startswith('#') or not row[0]:
             if row[0] == '#references':
@@ -51,6 +58,7 @@ def make_phenotypes():
             print(row)
             continue
         id_ = PREFIXES['ilx'] + row[0]
+        pedges.add(g.expand('ilx:' + row[0]))
         g.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
             g.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
@@ -93,6 +101,13 @@ def make_phenotypes():
     #ng.namespace_manager.bind('default1', None, override=False, replace=True)
     ng.remove((None, rdflib.OWL.imports, None))
 
+    bad_match = {
+        'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#nlx_qual_20090505',
+        'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1693353776',
+        'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1288413465',
+        'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao4459136323',
+        'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#nlx_qual_20090507',
+    }
 
     exact = []
     similar = []
@@ -100,6 +115,11 @@ def make_phenotypes():
     s2 = {}
 
     for subject, label in sorted(ng.subject_objects(rdflib.RDFS.label)):
+
+        syns = set([a for a in ng.objects(subject, rdflib.URIRef('http://www.FIXME.org/nsupper#synonym'))])
+        syns.update(set([a for a in ng.objects(subject, rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#synonym'))]))
+        #if syns:
+            #print(syns)
         #print(subject)
         #print(label.lower())
         if 'quality' in label.lower():
@@ -112,8 +132,10 @@ def make_phenotypes():
         for s, p, o in sorted(ng.triples((None, rdflib.RDFS.label, None))):
             spre = ng.namespace_manager.compute_qname(s)[1]
             if subject != s and label.lower() in o.lower().split(' ') and spre != subpre:
-                print()
-                print(spre, subpre)
+                if s.toPython() in bad_match or subject.toPython() in bad_match:
+                    continue
+                #print()
+                #print(spre, subpre)
                 similar.append((subject, s, label, o))
                 if subpre.toPython() == 'http://FIXME.org/':
                     print('YAY')
@@ -122,7 +144,20 @@ def make_phenotypes():
                     subject, s = s, subject
                     label, o = o, label
 
-                s2[subject] = {'label': label.toPython(), 'o': o.toPython(), 'xrefs':[subject, s]}  # FIXME overwrites
+                if subject in s2:
+                    #print('YES IT EXISTS')
+                    #print(syns, label, [subject, s])
+                    s2[subject]['syns'].update(syns) 
+                    s2[subject]['syns'].add(label) 
+                    s2[subject]['xrefs'] += [subject, s]
+                else:
+                    s2[subject] = {'label': label.toPython(), 'o': o.toPython(), 'xrefs':[subject, s], 'syns':syns}  # FIXME overwrites
+
+    pprint(quals)
+    """ print stuff
+    print('matches')
+    pprint(exact)
+    pprint(similar)
 
     #print('EXACT', exact)
 
@@ -131,8 +166,16 @@ def make_phenotypes():
         print(k)
         for k, v2 in sorted(v.items()):
             print('    ', k, ':', v2)
+    #"""
 
-    desired_nif_terms = set()
+    desired_nif_terms = set() #{
+        #'NIFQUAL:sao1959705051',  # dendrite
+        #'NIFQUAL:sao2088691397',  # axon
+        #'NIFQUAL:sao1057800815',  # morphological
+        #'NIFQUAL:sao-1126011106',  # soma
+        #'NIFQUAL:',
+        #'NIFQUAL:',
+    #}
     starts = [
     #"NIFQUAL:sao2088691397",
     #"NIFQUAL:sao1278200674",
@@ -154,13 +197,16 @@ def make_phenotypes():
 
 
     ilx_base = 'ILX:{:0>7}'
-    ilx_start = 50120
+    ilx_start = 50113
     print(ilx_base.format(ilx_start))
     new_terms = {}
     dg = makeGraph('uwotm8', prefixes=PREFIXES)
     xr = makeGraph('xrefs', prefixes=PREFIXES)
     for s, o in sorted(ng.subject_objects(rdflib.RDFS.label))[::-1]:
         spre = ng.namespace_manager.compute_qname(s)[1]
+        #if spre.toPython() == g.namespaces['NIFQUAL']:
+            #print('skipping', s)
+            #continue  # TODO
         if s in new_terms:
             print(s, 'already in as xref probably')
             continue
@@ -169,15 +215,21 @@ def make_phenotypes():
             #print('DO NOT WANT', s, spre)
             #continue
 
+        syns = set([s for s in ng.objects(s, dg.namespaces['nsu']['synonym'])])
+        #data['syns'] += syns
+
         data = {}
         id_ = ilx_base.format(ilx_start)
         ilx_start += 1
         if s in s2:
             d = s2[s]
+            syns.update(d['syns'])
             new_terms[d['xrefs'][0]] = {'replaced_by':id_}
             xr.add_node(d['xrefs'][0], 'OBOOWL:replacedBy', id_)
+            #dg.add_node(d['xrefs'][0], 'OBOOWL:replacedBy', id_)
             new_terms[d['xrefs'][1]] = {'replaced_by':id_}
             xr.add_node(d['xrefs'][1], 'OBOOWL:replacedBy', id_)
+            #dg.add_node(d['xrefs'][1], 'OBOOWL:replacedBy', id_)
 
             data['labels'] = [d['label'], d['o']]
             #dg.add_node(id_, rdflib.RDFS.label, d['label'])
@@ -185,8 +237,10 @@ def make_phenotypes():
             data['xrefs'] = d['xrefs']
             for x in d['xrefs']:  # FIXME... expecting order of evaluation errors here...
                 dg.add_node(id_, 'OBOOWL:hasDbXref', x)  # xr
-                xr.add_node(id_, 'OBOOWL:hasDbXref', x)  # xr
-        else:
+                xr.add_node(id_, 'OBOOWL:hasDbXref', x)  # x
+
+        elif spre.toPython() != 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#' or ng.namespace_manager.qname(s).replace('default1','NIFQUAL') in desired_nif_terms:  # skip non-xref quals
+            print(ng.namespace_manager.qname(s).replace('default1','NIFQUAL'))
             new_terms[s] = {'replaced_by':id_}
             xr.add_node(s, 'OBOOWL:replacedBy', id_)
             data['labels'] = [o.toPython()]
@@ -194,58 +248,71 @@ def make_phenotypes():
             data['xrefs'] = [s]
             dg.add_node(id_, 'OBOOWL:hasDbXref', s)  # xr
             xr.add_node(id_, 'OBOOWL:hasDbXref', s)  # xr
+        else:
+            ilx_start -= 1
+            continue
 
         new_terms[id_] = data
         dg.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
         xr.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        for syn in ng.objects(s, dg.namespaces['nsu']['synonym']):
-            if len(syn) > 3:
-                dg.add_node(id_, 'OBOANN:synonym', syn)
-            else:
-                dg.add_node(id_, 'OBOANN:abbrev', syn)
+        for syn in syns:
+            if syn.toPython() not in data['labels']:
+                if len(syn) > 3:
+                    dg.add_node(id_, 'OBOANN:synonym', syn)
+                elif syn:
+                    dg.add_node(id_, 'OBOANN:abbrev', syn)
 
-        if 'EPHYS' in s:
+        if 'EPHYS' in s or any(['EPHYS' in x for x in data['xrefs']]):
             dg.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:ElectrophysiologicalPhenotype')
-        elif 'MORPHOLOGY' in s:
+        elif 'MORPHOLOGY' in s or any(['MORPHOLOGY' in x for x in data['xrefs']]):
             dg.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:MorphologicalPhenotype')
 
     #dg.write(delay=True)
     xr.write(delay=True)
 
-    g.write(delay=True)
     for t in dg.g.triples((None, None, None)):
         g.add_node(*t)  # only way to clean prefixes :/
+    g.write(delay=True)
 
-    #embed()
     g2 = makeGraph('pheno-comp', PREFIXES)
     for t in ng.triples((None, None, None)):
         g2.add_node(*t)  # only way to clean prefixes :/
 
     g2.write(delay=True)
     #embed()
+    
+    syn_mappings = {}
+    for sub, syn in [_ for _ in g.g.subject_objects(g.expand('OBOANN:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
+        syn = syn.toPython()
+        if syn in syn_mappings:
+            print('ERROR duplicate synonym!', syn, sub)
+        syn_mappings[syn] = sub
+
+    return syn_mappings, pedges
 
 
-def pprint(thing):
-    for t in thing:
-        print()
-        for v in t:
-            print(v)
 
-#pprint(exact)
-#pprint(similar)
-#pprint(quals)
 
-def make_neurons():
+def make_neurons(syn_mappings, pedges):
     hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
     ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
     ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
+    for pedge in pedges:
+        for s, p, o in ng.g.triples((None, pedge, None)):
+            print(s, p, o)
+            if o in syn_mappings:
+                id_ = syn_mappings[o]
+                print('SUCCESS, substituting', o, 'for', id_)
+                ng.add_node(s, p, id_)
+                ng.g.remove((s, p, o))
+        
     ng.write(delay=True)
 
 
 def main():
     with makeGraph('', {}) as _:
-        make_phenotypes()
-        make_neurons()
+        syn_mappings, pedge = make_phenotypes()
+        make_neurons(syn_mappings, pedge)
 
 if __name__ == '__main__':
     main()
