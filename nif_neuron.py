@@ -4,12 +4,12 @@ import os
 import csv
 from urllib.parse import quote
 import rdflib
-from rdflib.extras import infixowl
 from IPython import embed
 from utils import makeGraph, add_hierarchy
 from obo_io import OboFile
-from scigraph_client import Graph 
+from scigraph_client import Graph, Vocabulary
 sgg = Graph(quiet=False)
+v = Vocabulary()
 
 id_ = None
 
@@ -34,7 +34,9 @@ PREFIXES = {
     'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
     'NIFQUAL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#',
     'NIFCELL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#',
+    'NIFMOL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#',
     'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
+    'PR':'http://purl.obolibrary.org/obo/PR_',
 }
 
 
@@ -295,72 +297,88 @@ def make_phenotypes():
     return syn_mappings, pedges
 
 def make_neurons(syn_mappings, pedges):
+    cheating = {'vasoactive intestinal peptide':'VIP',}
+
     hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
     ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + ng.name + '.ttl'
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+    #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
+    #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
     ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
+    replace_object('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype', ng)
     for pedge in pedges:
         for s, p, o_lit in ng.g.triples((None, pedge, None)):
-            #print(s, p, o_lit)
             o = o_lit.toPython()
             if o in syn_mappings:
                 id_ = syn_mappings[o]
 
-                #child = infixowl.Class(id_, graph=ng.g)
                 add_hierarchy(ng.g, id_, p, s)
-                print('SUCCESS, substituting', o, 'for', id_)
                 ng.g.remove((s, p, o_lit))
-                #try:
-                    #ng.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-                #except TypeError:
-                    #print('BAD id_', s, p, id_)
-                    #for t in ng.g.triples((id_, None, None)):
-                        #print(t)
-                    #pass
+                print('SUCCESS, substituting', o, 'for', id_)
 
-                #ng.add_node(s, p, id_)
             elif 'Location' in p.toPython():
                 if o.startswith('http://'):
                     add_hierarchy(ng.g, o_lit, p, s)
                     ng.g.remove((s, p, o_lit))
-                    #print('WHERE YOU AT', s, p, o_lit)
-                    #try:
-                    #o_add = rdflib.URIRef(o_lit)
-                    #ng.add_node(o_add, rdflib.RDF.type, rdflib.OWL.Class)
-                        #child = infixowl.Class(o_lit, graph=ng.g)
-                    #except TypeError:
-                        #for t in ng.g.triples((o_lit, None, None)):
-                            #print(t)
-                        #pass
+
+            else:
+                if o in cheating:
+                    o = cheating[o]
+
+                data = v.findByTerm(o)
+                if data:
+                    print('SCIGRAPH', [(d['curie'], d['labels']) for d in data])
+                    success = False
+                    for d in data:
+                        if 'PR:' in d['curie']:
+                            sgt = ng.expand(d['curie'])
+                            add_hierarchy(ng.g, sgt, p, s)
+                            ng.g.remove((s, p, o_lit))
+                            success = True
+                            break
+                    if not success:
+                        for d in data:
+                            if 'NIFMOL:' in d['curie']:
+                                sgt = ng.expand(d['curie'])
+                                add_hierarchy(ng.g, sgt, p, s)
+                                ng.g.remove((s, p, o_lit))
+                                success = True
+                                break
 
     ng.write(delay=True)
 
 def add_pedges(graph):
-    graph.add_node('ilx:CellPhenotype', rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node('ilx:CellPhenotype', rdflib.RDFS.label, 'Cell Phenotype')
+    cell_phenotype = 'ilx:CellPhenotype'
+    neuron_phenotype = 'ilx:NeuronPhenotype'
+    ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
+    morpho_phenotype = 'ilx:MorphologicalPhenotype'
 
-    graph.add_node('ilx:NeuronPhenotype', rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node('ilx:NeuronPhenotype', rdflib.RDFS.label, 'Neuron Phenotype')
-    graph.add_node('ilx:NeuronPhenotype', rdflib.RDFS.subClassOf, 'ilx:CellPhenotype')
+    graph.add_node(cell_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(cell_phenotype, rdflib.RDFS.label, 'Cell Phenotype')
+
+    graph.add_node(neuron_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(neuron_phenotype, rdflib.RDFS.label, 'Neuron Phenotype')
+    graph.add_node(neuron_phenotype, rdflib.RDFS.subClassOf, cell_phenotype)
 
 
-    graph.add_node('ilx:ElectrophysiologicalPhenotype', rdflib.RDFS.label, 'Electrophysiological Phenotype')
-    graph.add_node('ilx:ElectrophysiologicalPhenotype', rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node('ilx:ElectrophysiologicalPhenotype', rdflib.RDFS.subClassOf, 'ilx:NeuronPhenotype')
-    #graph.add_node('ilx:ElectrophysiologicalPhenotype', , )
+    graph.add_node(ephys_phenotype, rdflib.RDFS.label, 'Electrophysiological Phenotype')
+    graph.add_node(ephys_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(ephys_phenotype, rdflib.RDFS.subClassOf, neuron_phenotype)
+    #graph.add_node(ephys_phenotype, , )
 
-    graph.add_node('ilx:MorphologicalPhenotype', rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node('ilx:MorphologicalPhenotype', rdflib.RDFS.label, 'Morphological Phenotype')
-    graph.add_node('ilx:MorphologicalPhenotype', rdflib.RDFS.subClassOf, 'ilx:NeuronPhenotype')
-    #graph.add_node('ilx:MorphologicalPhenotype', , )
+    graph.add_node(morpho_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(morpho_phenotype, rdflib.RDFS.label, 'Morphological Phenotype')
+    graph.add_node(morpho_phenotype, rdflib.RDFS.subClassOf, neuron_phenotype)
+    #graph.add_node(morpho_phenotype, , )
 
-def replace_edge(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
-    for s, p, o in graph.g.triples((None, find, None)):
-        graph.add_node(s, replace, o)
-        graph.g.remove(s, p, o)
+def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
+    find = graph.expand(find)
+    for s, p, o in graph.g.triples((None, None, find)):
+        graph.add_node(s, p, replace)
+        graph.g.remove((s, p, o))
 
 def main():
     with makeGraph('', {}) as _:
