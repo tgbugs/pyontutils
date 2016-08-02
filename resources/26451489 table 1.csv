@@ -1,0 +1,28 @@
+Morphological type,Neurogliaform cell (NGC),Small basket cell (SBC),Double bouquet cell (DBC),Bipolar cell (BP),Martinotti cell (MC),Bitufted cell (BTC),Large basket cell (LBC),Nest basket cell (NBC),Chandelier cell (ChC)
+Other morphological classifications,"Dwarf cell
+Button-type cell","Clutch cell","Bitufted cell/interneuron
+Horse-tail cell","Bitufted cell/interneuron","Bitufted cell/interneuron","Bitufted interneuron","Common basket cell
+Typical basket cell","Willow cell
+Arcade cell
+Shaft biased cell
+Atypical basket cell",Axo-axonic cell
+Predominantly expressed Ca2+ binding proteins and peptides,CB (-) PV (-) CR (-) NPY (+) VIP (-) SOM (-),CB (++) PV (-) CR (-) NPY (+) VIP (+++) SOM (++),CB (+) PV (-) CR (+) NPY (-) VIP (+++) SOM (++),CB (-) PV (-) CR (++) NPY (-) VIP (+++) SOM (++),CB (++) PV (-) CR (-) NPY (++) VIP (-) SOM (+++),CB (++) PV (-) CR (++) NPY (+) VIP (+) SOM (++),CB (++) PV (+++) CR (+) NPY (+) VIP (+) SOM (-),CB (++) PV (+++) CR (++) NPY (+) VIP (+) SOM (-),CB (+) PV (-) CR (-) NPY (-) VIP (-) SOM (-)
+Electrical types,bNAC (7%) cNAC (79%) cSTUT (7%) cAC (7%),bNAC (36%) cAC (36%) dNAC (29%),bAC (9%) bIR (37%) bNAC (9%) bSTUT (9%) cAC (9%) cIR (18%) cNAC (9%),bAC (7%) bIR (14%) bNAC (29%) cAC (29%) cNAC (14%) dSTUT (7%),bAC (37%) bIR (11%) bSTUT (4%) cAC (37%) cNAC (3%) cSTUT (3%) dNAC (3%),bAC (17%) cAC (67%) cNAC (17%),bAC (6%) cAC (12%) cIR (6%) cNAC (17%) dNAC (17%) dSTUT (24%),bAC (6%) bIR (6%) bSTUT (13%) cAC (20%) cIR (7%) cNAC (20%) cSTUT (20%) dSTUT (7%),cAC (38%) cNAC (38%) dNAC (25%)
+Other electrical classifications,"Non-fast spiking
+Late spiking","Fast spiking
+Non-accommodating
+Non-adapting","Irregular spiking
+Regular spiking non-pyramidal
+Adapting","Late spiking
+Regular spiking non-pyramidal
+Adapting","Regular spiking non-pyramidal
+Burst spiking non-pyramidal
+Low threshold spiking","Regular spiking non-pyramidal
+Adapting
+Burst spiking non-pyramidal","Fast spiking
+Non-accommodating
+Non-adapting","Fast spiking
+Non-accommodating
+Non-adapting","Fast spiking
+Late spiking
+Non-adapting"
