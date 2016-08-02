@@ -69,7 +69,7 @@ class makeGraph:
         return self.namespaces[prefix][suffix]
 
     def check_thing(self, thing):
-        if type(thing) != rdflib.term.URIRef:
+        if type(thing) != rdflib.term.URIRef and type(thing) != rdflib.term.BNode:
             try:
                 return self.expand(thing)
             except (KeyError, ValueError) as e:
