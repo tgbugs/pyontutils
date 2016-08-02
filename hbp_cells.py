@@ -135,8 +135,8 @@ def clean_hbp_cell():
         '0000071':NEURON,
     }
     to_phenotype = {
-        '0000021':('ilx:hasMolecularPhenotype', 'NIFMOL:sao1744435799'),  # glut, all classes that might be here are equived out
-        '0000022':('ilx:hasMolecularPhenotype', 'NIFMOL:sao229636300'),  # gaba
+        '0000021':('ilx:hasExpressionPhenotype', 'NIFMOL:sao1744435799'),  # glut, all classes that might be here are equived out
+        '0000022':('ilx:hasExperssionPhenotype', 'NIFMOL:sao229636300'),  # gaba
     }
     lookup = {'NIFCELL', 'NIFNEURNT'}
     missing_supers = {
