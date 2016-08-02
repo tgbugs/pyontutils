@@ -91,6 +91,13 @@ class makeGraph:
             value = rdflib.Literal(value)  # trust autoconv
         self.g.add( (target, edge, value) )
 
+    def __enter__(self):
+        self.reset_writeloc()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.owlapi_conversion()
+
 def add_hierarchy(graph, parent, edge, child):
     """ Helper function to simplify the addition of part_of style
         objectProperties to graphs. FIXME make a method of makeGraph?
