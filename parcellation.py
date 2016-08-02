@@ -384,15 +384,13 @@ def hcp2016_make():
     return ontid, atlas
 
 def main():
-    oper = makeGraph('', {})
-    oper.reset_writeloc()
-    fs = fmri_atlases()
-    c = cocomac_make()
-    m = mouse_brain_atlas()
-    h = hcp2016_make()
-    fs.extend([c, m, h])
-    parcellation_schemes(fs)
-    oper.owlapi_conversion()
+    with makeGraph('', {}) as _:
+        fs = fmri_atlases()
+        c = cocomac_make()
+        m = mouse_brain_atlas()
+        h = hcp2016_make()
+        fs.extend([c, m, h])
+        parcellation_schemes(fs)
 
     # make a protege catalog file to simplify life
     uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
