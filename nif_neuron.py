@@ -300,14 +300,43 @@ def make_phenotypes():
 def make_neurons(syn_mappings, pedges, ilx_start_):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',}
+    ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
+
+    #""" It seemed like a good idea at the time...
+    nif_cell = '~/git/NIF-Ontology/ttl/NIF-Cell.ttl'  # need to be on neurons branch
+    cg = rdflib.Graph()
+    cg.parse(os.path.expanduser(nif_cell), format='turtle')
+    missing = (
+    'NIFCELL:nifext_55',
+    'NIFCELL:nifext_56',
+    'NIFCELL:nifext_57',
+    'NIFCELL:nifext_59',
+    'NIFCELL:nifext_81',
+    'NIFCELL:nlx_cell_091205',
+    'NIFCELL:sao1417703748',
+    'NIFCELL:sao2128417084',
+    'NIFCELL:sao862606388',  # secondary, not explicitly in the hbp import
+    )
+    for m in missing:
+        m = ng.expand(m)
+        for s, p, o in cg.triples((m, None, None)):
+            ng.add_node(s, p, o)
+
+
+
+    #cg.remove((None, rdflib.OWL.imports, None))  # DONOTWANT NIF-Cell imports
+    #for t in cg.triples((None, None, None)):
+        #ng.add_node(*t)  # only way to clean prefixes :/
+    #cg = None
+    #"""
 
     hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
-    ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + ng.name + '.ttl'
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
+    #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
     ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
@@ -405,7 +434,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
                     embed()
                     done = True
     defined_graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
-    defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class cell')
+    defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand('NIFCELL:sao1417703748'))
     defined_graph.write(delay=True)
