@@ -20,13 +20,20 @@ v = Vocabulary()
 # 3) ingest table 1
 
 # consts
-defined_class_parent = 'ilx:definedClassCells'
+defined_class_parent = 'ilx:definedClassNeurons'
+morpho_phenotype =  'ilx:MorphologicalPhenotype'
+morpho_edge = 'ilx:hasMorphologicalPhenotype'
+ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
+ephys_edge = 'ilx:hasElectrophysiologicalPhenotype'
+spiking_phenotype = 'ilx:SpikingPhenotype'
+spiking_edge = 'ilx:hasSpikingPhenotype'
+NIFCELL_NEURON = 'NIFCELL:sao1417703748'
 
-id_ = None
+#id_ = None
 
-(id_, rdflib.RDF.type, rdflib.OWL.Class)
-(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
-(id_, rdflib.RDFS.subClassOf, 'NIFCELL:sao1417703748')
+#(id_, rdflib.RDF.type, rdflib.OWL.Class)
+#(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+#(id_, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
 
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
@@ -293,7 +300,7 @@ def make_phenotypes():
         if 'EPHYS' in s or any(['EPHYS' in x for x in data['xrefs']]):
             dg.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:ElectrophysiologicalPhenotype')
         elif 'MORPHOLOGY' in s or any(['MORPHOLOGY' in x for x in data['xrefs']]):
-            dg.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:MorphologicalPhenotype')
+            dg.add_node(id_, rdflib.RDFS.subClassOf, morpho_phenotype)
 
     #dg.write(delay=True)
     xr.write(delay=True)
@@ -336,7 +343,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     'NIFCELL:nifext_59',
     'NIFCELL:nifext_81',
     'NIFCELL:nlx_cell_091205',
-    'NIFCELL:sao1417703748',
+    NIFCELL_NEURON,
     'NIFCELL:sao2128417084',
     'NIFCELL:sao862606388',  # secondary, not explicitly in the hbp import
     )
@@ -446,7 +453,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
                 ilx_start += 1
                 ng.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
                 restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
-                intersection = infixowl.BooleanClass(members=(defined_graph.expand('NIFCELL:sao1417703748'), restriction), graph=defined_graph.g)
+                intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
                 this = infixowl.Class(id_, graph=defined_graph.g)
                 this.equivalentClass = [intersection]
                 this.subClassOf = [ng.expand(defined_class_parent)]
@@ -457,7 +464,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     defined_graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
-    defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand('NIFCELL:sao1417703748'))
+    defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand(NIFCELL_NEURON))
     defined_graph.write(delay=True)
     ng.write(delay=True)
 
@@ -482,14 +489,14 @@ def add_phenotypes(graph):
 
     cell_phenotype = 'ilx:CellPhenotype'
     neuron_phenotype = 'ilx:NeuronPhenotype'
-    ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
-    spiking_phenotype = 'ilx:SpikingPhenotype'
+    #ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
+    #spiking_phenotype = 'ilx:SpikingPhenotype'
     i_spiking_phenotype = 'ilx:InitialSpikingPhenotype'
     burst_p = 'ilx:BurstSpikingPhenotype'
     classical_p = 'ilx:ClassicalSpikingPhenotype'
     delayed_p = 'ilx:DelayedSpikingPhenotype'
     s_spiking_phenotype = 'ilx:SustainedSpikingPhenotype'
-    morpho_phenotype = 'ilx:MorphologicalPhenotype'
+    #morpho_phenotype = 'ilx:MorphologicalPhenotype'
     ac_p = 'ilx:AccomodatingPhenotype'
     nac_p = 'ilx:NonAccomodatingPhenotype'
     st_p = 'ilx:StutteringPhenotype'
@@ -501,10 +508,15 @@ def add_phenotypes(graph):
     add_new(ephys_phenotype, neuron_phenotype)
     add_new(spiking_phenotype, ephys_phenotype)
     add_new(i_spiking_phenotype, spiking_phenotype)
+    iClass = infixowl.Class(graph.expand(i_spiking_phenotype), graph=graph.g)
+
     add_new(burst_p, i_spiking_phenotype, ('burst',))
     add_new(classical_p, i_spiking_phenotype, ('classical',))
     add_new(delayed_p, i_spiking_phenotype, ('delayed',))
     add_new(s_spiking_phenotype, spiking_phenotype)
+    sClass = infixowl.Class(graph.expand(s_spiking_phenotype), graph=graph.g)
+    sClass.disjointWith = [iClass]
+
     add_new(ac_p, s_spiking_phenotype, ('accomodating',))  # FIXME this is silly
     add_new(nac_p, s_spiking_phenotype, ('non accomodating',))
     add_new(st_p, s_spiking_phenotype, ('stuttering',))
@@ -531,9 +543,12 @@ class table1(rowParse):
         self.ilx_start = ilx_start
         self.syn_mappings = syn_mappings
         self.plbls = set()
+        self.done_phenos = {}
         super().__init__(rows)
 
+    #@use_decorators_to_do_mappings_to_generic_classes   # !
     def Morphological_type(self, value):
+        self.phenotype_callbacks = {}
         self.ilx_start += 1
         self.id_ = ilx_base.format(self.ilx_start)
         self.Class = infixowl.Class(self.expand(self.id_), graph=self.graph.g)
@@ -550,33 +565,12 @@ class table1(rowParse):
         self.Class.label = rdflib.Literal(LABEL)
         self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
 
-        self.Class.subClassOf = [self.graph.expand('NIFCELL:sao1417703748'),]
+        self.Class.subClassOf = [self.graph.expand(NIFCELL_NEURON),]
 
         # for phenotypes only...
-        phenotype_lbl = syn.rstrip('cell').strip() + ' phenotype'
-        if phenotype_lbl not in self.plbls:
-            self.plbls.add(phenotype_lbl)
-            self.ilx_start += 1
-            id_ = ilx_base.format(self.ilx_start)
-            self.graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-            self.graph.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:MorphologicalPhenotype')
-            self.graph.add_node(id_, rdflib.RDFS.label, phenotype_lbl)
-            restriction = infixowl.Restriction(self.expand('ilx:hasMorphologicalPhenotype'),
-                                               graph=self.graph.g,
-                                               someValuesFrom=self.expand(id_))
-            self.Class.subClassOf = [restriction]
-
-            #defined class
-            self.ilx_start += 1
-            id_ = ilx_base.format(self.ilx_start)
-            defined = infixowl.Class(self.expand(id_), graph=self.graph.g)
-            defined.label = rdflib.Literal(syn.replace('cell', 'neuron'))
-            intersection = infixowl.BooleanClass(members=(self.graph.expand('NIFCELL:sao1417703748'), restriction), graph=self.graph.g)
-            #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
-            defined.equivalentClass = [intersection]
-            defined.subClassOf = [self.graph.expand(defined_class_parent)]
-            dj_rest = infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=self.expand('ilx:the_classes_that_are_disjoint')) # FIXME TODO this is currently more useful for ephys
-            defined.disjointWith = [dj_rest]
+        phenotype_lbl = syn.rstrip('cell').strip(), morpho_phenotype, morpho_edge, None
+        #if phenotype_lbl not in self.plbls:  # I'm guessing this is less efficient since it adds an extra hash step but haven't tested
+        self.plbls.add(phenotype_lbl)
 
 
     def Other_morphological_classifications(self, value):
@@ -589,7 +583,11 @@ class table1(rowParse):
                 output.append(prefix + ' ' + a)
                 output.append(prefix + ' ' + b)
             else:
+                prefix = v.rstrip('cell').strip()
                 output.append(v)
+
+            phenotype_lbl = prefix, morpho_phenotype, morpho_edge, None
+            self.plbls.add(phenotype_lbl)
 
         #print(value)
         print(output)
@@ -708,6 +706,7 @@ class table1(rowParse):
             #early = apply(e_map, early_late[0])
             #late = apply(l_map, early_late[1:])
             early, late = e_map[early_late[0]], l_map[early_late[1:]]
+            # create electrical subclasses
             self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
             id_ = ilx_base.format(self.ilx_start)
             c = infixowl.Class(self.expand(id_), graph=self.graph.g)
@@ -722,20 +721,54 @@ class table1(rowParse):
         #print(output)
 
     def Other_electrical_classifications(self, value):
-        e_edge = 'ilx:hasElectrophysiologicalPhenotype'
-
         values = value.split(self._sep)
         output = []
+        def callback(pheno_uri):  # terrible way to do this...
+            restriction = infixowl.Restriction(self.expand(ephys_edge), graph=self.graph.g, someValuesFrom=pheno_uri)
+            self.Class.subClassOf = [restriction]
+        callback_name = 'oec'
+        self.phenotype_callbacks[callback_name] = callback
         for v in values:
-            self.graph.add_node(self.id_, e_edge, v)
             output.append(v)
-
+            phenotype_lbl = v, spiking_phenotype, spiking_edge, callback_name
+            self.plbls.add(phenotype_lbl)
         #print(value)
         print(output)
 
     def _row_post(self):
         # electrical here? or can we do those as needed above?
-        pass
+
+        for phenotype_lbl, parent_pheno, p_edge, callback_name in sorted(self.plbls):
+            if phenotype_lbl not in self.done_phenos:
+                #phenotype class  TODO edge too?
+                self.ilx_start += 1
+                id_ = ilx_base.format(self.ilx_start)
+                self.done_phenos[phenotype_lbl] = id_
+                self.graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+                self.graph.add_node(id_, rdflib.RDFS.subClassOf, parent_pheno)
+                self.graph.add_node(id_, rdflib.RDFS.label, phenotype_lbl + ' phenotype')
+                restriction = infixowl.Restriction(self.expand(p_edge),
+                                                   graph=self.graph.g,
+                                                   someValuesFrom=self.expand(id_))
+                self.Class.subClassOf = [restriction]
+
+                #defined class
+                self.ilx_start += 1
+                id_ = ilx_base.format(self.ilx_start)
+                defined = infixowl.Class(self.expand(id_), graph=self.graph.g)
+                defined.label = rdflib.Literal(phenotype_lbl + ' neuron')
+                intersection = infixowl.BooleanClass(members=(self.graph.expand(NIFCELL_NEURON), restriction), graph=self.graph.g)
+                #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+                defined.equivalentClass = [intersection]
+                defined.subClassOf = [self.graph.expand(defined_class_parent)]
+                dj_rest = infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=self.expand('ilx:the_classes_that_are_disjoint')) # FIXME TODO this is currently more useful for ephys
+                defined.disjointWith = [dj_rest]
+            else:
+                id_ = self.done_phenos[phenotype_lbl]
+
+
+            if callback_name:
+                self.phenotype_callbacks[callback_name](self.expand(id_))
 
 def make_table1(syn_mappings, ilx_start):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
@@ -788,6 +821,11 @@ def make_table1(syn_mappings, ilx_start):
                         do_graph(d)
 
 
+    # FIXME this is a dupe with defined_class
+    graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
+    graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
+    graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, graph.expand(NIFCELL_NEURON))
 
     graph.write(delay=True)
     #print(t._set_Electrical_types)
