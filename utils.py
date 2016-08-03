@@ -182,7 +182,7 @@ class rowParse:
                 setattr(self, _set, set())
                 func =  getattr(self, name)
                 @wraps(func)
-                def getunique(value, _set=_set):  # ah late binding hacks
+                def getunique(value, _set=_set, func=func):  # ah late binding hacks
                     getattr(self, _set).add(value)
                     return func(value)
                 setattr(self, name, getunique)
