@@ -180,10 +180,9 @@ class rowParse:
             if inspect.ismethod(obj) and not name.startswith('_'):  # FIXME _ is hack
                 _set = '_set_' + name
                 setattr(self, _set, set())
-                func =  getattr(self, name)
-                @wraps(func)
-                def getunique(value, _set=_set, func=func):  # ah late binding hacks
-                    getattr(self, _set).add(value)
+                @wraps(obj)
+                def getunique(value, set_=_set, func=obj):  # ah late binding hacks
+                    getattr(self, set_).add(value)
                     return func(value)
                 setattr(self, name, getunique)
 
