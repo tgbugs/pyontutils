@@ -2,6 +2,7 @@
 import io
 import os
 import csv
+import types
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
@@ -37,6 +38,7 @@ PREFIXES = {
     'dc':'http://purl.org/dc/elements/1.1/',
     'nsu':'http://www.FIXME.org/nsupper#',
 
+    'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
     'OBOOWL':'http://www.geneontology.org/formats/oboInOwl#',
     'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
     'NIFQUAL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#',
@@ -60,7 +62,8 @@ def make_phenotypes():
     with open('neuron_phenotype_edges.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
     g = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
-
+    
+    lookup = {'asymmetric':'owl:AsymmetricProperty', 'irreflexive':'owl:IrreflexiveProperty'}
     pedges = set()
     for row in rows[1:]:
         if row[0].startswith('#') or not row[0]:
@@ -75,6 +78,12 @@ def make_phenotypes():
             g.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
         if row[6]:
             g.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
+        if row[7]:
+            g.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
+        if row[8]:
+            for t in row[8].split(','):
+                t = t.strip()
+                g.add_node(id_, rdflib.RDF.type, lookup[t])
 
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + g.name + '.ttl'
     g.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -445,6 +454,14 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     defined_graph.write(delay=True)
     ng.write(delay=True)
 
+    for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('OBOANN:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
+        syn = syn.toPython()
+        if syn in syn_mappings:
+            print('ERROR duplicate synonym!', syn, sub)
+        syn_mappings[syn] = sub
+
+    return ilx_start
+
 def add_phenotypes(graph):
     cell_phenotype = 'ilx:CellPhenotype'
     neuron_phenotype = 'ilx:NeuronPhenotype'
@@ -476,22 +493,35 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
         graph.g.remove((s, p, o))
 
 class table1(rowParse):
-    species = 'NCBITaxon:'
-    brain_region = 'UBERON:'
+    species = 'NCBITaxon:10116'
+    brain_region = 'UBERON:0008933'
     citation = 'Markhram et al Cell 2015'
     pmid = 'PMID:26451489'
     _sep = '|'
+    _edge = '\x00\x01\xde\xad\xee\xef\xfe'
 
-    def __init__(self, graph, rows):
-        self.g = graph
+    def __init__(self, graph, rows, syn_mappings, ilx_start):
+        self.graph = graph
+        self.expand = self.graph.expand
+        self.ilx_start = ilx_start
+        self.syn_mappings = syn_mappings
         super().__init__(rows)
 
     def Morphological_type(self, value):
+        self.ilx_start += 1
+        self.id_ = ilx_base.format(self.ilx_start)
+        self.Class = infixowl.Class(self.expand(self.id_), graph=self.graph.g)
+        add_hierarchy(self.graph.g, self.expand(self.species), self.expand('ilx:hasInstanceInSpecies'), self.expand(self.id_))
+        add_hierarchy(self.graph.g, self.expand(self.brain_region), self.expand('ilx:hasSomaLocatedIn'), self.expand(self.id_))
+
         syn, abrv = value.split(' (')
         syn = syn.strip()
         abrv = abrv.rstrip(')').strip()
         print(value)
         print((syn, abrv))
+
+        self.Class.label = rdflib.Literal(syn)
+        self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
 
     def Other_morphological_classifications(self, value):
         values = value.split(self._sep)
@@ -509,12 +539,13 @@ class table1(rowParse):
         print(output)
 
     def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
-        CB = 'calbindin'
-        PV = 'parvalbumin'
-        CR = 'calretnin'
-        NPY = 'neruopeptide y'
-        VIP = 'vip'
-        SOM = 'somatostatin'
+        CB = self.syn_mappings['calbindin']
+        PV = self.syn_mappings['Parvalbumin']
+        CR = self.syn_mappings['calretinin']
+        NPY = self.syn_mappings['neuropeptide Y']
+        VIP = self.syn_mappings['VIP peptides']
+        SOM = self.syn_mappings['somatostatin']
+        p_edge = 'ilx:hasExpressionPhenotype'
         p_map = {
             'CB':CB,
             'PV':PV,
@@ -522,84 +553,192 @@ class table1(rowParse):
             'NPY':NPY,
             'VIP':VIP,
             'SOM':SOM,
+            self._edge:p_edge,
         }
         NEGATIVE = False
-        POSITIVE = True  # FIXME multiple levels?
-        s_map = {
+        POSITIVE = True  # FIXME this requires more processing prior to dispatch...
+        e_edge = ''
+        e_map = {
             '-':NEGATIVE,
             '+':POSITIVE,
             '++':POSITIVE,
             '+++':POSITIVE,
+            self._edge:e_edge,
         }
+        NONE = 0
+        LOW = 1
+        MED = 2
+        HIGH = 3
+        s_edge = None #''  # TODO this needs to be an annotation on the (self.id_, ixl:hasExpressionPhenotype, molecule) triple
+        s_map = {
+            '-':NONE,
+            '+':LOW,
+            '++':MED,
+            '+++':HIGH,
+            self._edge:s_edge,
+        }
+
+        def apply(map_, val):  # XXX this turns out to be a bad idea :/
+            s = self.id_  # FIXME this is what breaks things
+            p = map_[self._edge]
+            o = map_[val]
+            if type(o) == types.FunctionType:
+                o = o(val)
+            if o and p:
+                self.graph.add_node(s, p, o)
+            return o
 
         values = value.split(self._sep)
         output = []
         for v in values:
             abrv, score_paren = v.split(' (')
             score = score_paren.rstrip(')')
-            output.append((abrv, score))
+            molecule = p_map[abrv]
+            muri = molecule
+            #muri = rdflib.URIRef('http://' + molecule.replace(' ','-') + '.org')  # FIXME rearchitect so that uris are already in place at map creation
+            exists = e_map[score]
+            score = s_map[score]
+            if exists:
+                restriction = infixowl.Restriction(self.expand(p_edge), graph=self.graph.g, someValuesFrom=muri)
+                self.Class.subClassOf = [restriction]
+            else:
+                # disjointness
+                restriction = infixowl.Restriction(self.expand(p_edge), graph=self.graph.g, someValuesFrom=muri)
+                self.Class.disjointWith = [restriction]  # TODO do we need to manually add existing?
+            output.append((molecule, exists, score))
 
         print(value)
         print(output)
 
-    def Electrical_types(self, value):
-        early = None
-        late = None
-        b = 'burst'
-        c = 'classical'  # XXX CHECK
-        d = 'delayed'
+    def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
+        b = self.syn_mappings['burst']
+        c = self.syn_mappings['classical']  # XXX CHECK
+        d = self.syn_mappings['delayed']
+        e_edge = 'ilx:hasInitialSpikingPhenotype'  # XXX edge level?
+        #e_edge = 'ilx:hasElectrophysiologicalPhenotype'
         e_map = {
             'b':b,
             'c':c,
             'd':d,
+            self._edge:e_edge,
         }
-        AC = 'accomodating'
-        NAC = 'non accomodating'
-        STUT = 'stuttering'
-        IR = 'irregular'
+        AC = self.syn_mappings['accomodating']
+        NAC = self.syn_mappings['non accomodating']
+        STUT = self.syn_mappings['stuttering']
+        IR = self.syn_mappings['irregular']
+        l_edge = 'ilx:hasSustainedSpikingPhenotype'  # XXX these should not be handled at the edge level?
+        #l_edge = 'ilx:hasElectrophysiologicalPhenotype'
         l_map = {
             'AC':AC,
             'NAC':NAC,
             'STUT':STUT,
             'IR':IR,
-            '':None,
+            self._edge:l_edge,
         }
+
+        def apply(map_, val):  # doesn't work, requires many subclasses
+            s = self.id_
+            p = map_[self._edge]
+            o = map_[val]
+            if o:
+                self.graph.add_node(s, p, o)
+            return o
 
         values = value.split(self._sep)
         output = []
         for v in values:
-            abrv, score_pct_paren = v.split(' (')
+            early_late, score_pct_paren = v.split(' (')
             score = int(score_pct_paren.rstrip('%)'))
-            output.append((abrv, score))
+            #early = apply(e_map, early_late[0])
+            #late = apply(l_map, early_late[1:])
+            early, late = e_map[early_late[0]], l_map[early_late[1:]]
+            self.ilx_start += 1
+            id_ = ilx_base.format(self.ilx_start)
+            c = infixowl.Class(self.expand(id_), graph=self.graph.g)
+            e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
+            l_res = infixowl.Restriction(self.expand(l_edge), graph=self.graph.g, someValuesFrom=late)
+            c.subClassOf = [e_res, l_res]  # handy that...
+            self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
+
+            output.append((early, late, score))
 
         print(value)
         print(output)
 
     def Other_electrical_classifications(self, value):
+        e_edge = 'ilx:hasElectrophysiologicalPhenotype'
+
         values = value.split(self._sep)
         output = []
         for v in values:
+            self.graph.add_node(self.id_, e_edge, v)
             output.append(v)
 
         print(value)
         print(output)
 
+    def _row_post(self):
+        # electrical here? or can we do those as needed above?
+        pass
 
-def make_table1():
+
+
+def make_table1(syn_mappings, ilx_start):
+    # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
+    # it may turn out that things like the disjointness exist at a higher level while correlated properties
+    # should be instantiated together as sub classes, for example if cck and 
+    # FIXME disagreement about nest basket cells
+    # TODO hasPhenotypes needs to be function to get phenotypeOf to work via reasoner??? this seems wrong.
+    #  this also works if phenotypeOf is inverseFunctional
+    #  hasPhenotype shall be asymmetric, irreflexive, and intransitive
+
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [r for r in zip(*csv.reader(f))]
+
     graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
-    t = table1(graph, rows)
+    base = 'http://ontology.neuinfo.org/NIF/ttl/' 
+    ontid = base + graph.name + '.ttl'
+    graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+
+    syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
+    syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
+    t = table1(graph, rows, syn_mappings, ilx_start)
+
+    def do_graph(d):
+        sgt = graph.expand(d['curie'])
+        label = d['labels'][0]
+        graph.add_node(sgt, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_node(sgt, rdflib.RDFS.label, label)
+
+    done = set()
+    for s, p, o in graph.g.triples((None, None, None)): #(rdflib.RDFS.subClassOf,rdflib.OWL.Thing)):
+        if o not in done and type(o) == rdflib.term.URIRef:
+            done.add(o)
+            if not [_ for _ in graph.g.objects((o, rdflib.RDFS.label))]:
+                d = v.findById(o)
+                if d:
+                    if 'PR:' in d['curie']:
+                        do_graph(d)
+                    elif 'NIFMOL:' in d['curie']:
+                        do_graph(d)
+                    elif 'UBERON:' in d['curie']:
+                        do_graph(d)
+                    elif 'NCBITaxon:' in d['curie']:
+                        do_graph(d)
+
+
+
+    graph.write(delay=True)
     #print(t._set_Electrical_types)
     #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
     #embed()
 
 def main():
-    make_table1()
-    return
     with makeGraph('', {}) as _:
         syn_mappings, pedge, ilx_start = make_phenotypes()
-        make_neurons(syn_mappings, pedge, ilx_start)
+        ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
+        make_table1(syn_mappings, ilx_start)
 
 if __name__ == '__main__':
     main()
