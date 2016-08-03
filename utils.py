@@ -3,6 +3,8 @@
 """
 
 import os
+import inspect
+from functools import wraps
 import rdflib
 from rdflib.extras import infixowl
 
@@ -162,7 +164,7 @@ class rowParse:
 
     def __init__(self, rows, header=None, order=[]):
         if header is None:
-            header = [c.split('(')[0].strip().replace(' ','_') for c in rows[0]]
+            header = [c.split('(')[0].strip().replace(' ','_').replace('+','') for c in rows[0]]
             rows = rows[1:]
         eval_order = []
         self._index_order = []
@@ -173,6 +175,17 @@ class rowParse:
         eval_order.extend(header)  # if not order then just do header order
 
         self.lookup = {index:name for index, name in enumerate(eval_order)}
+
+        for name, obj in inspect.getmembers(self):
+            if inspect.ismethod(obj) and not name.startswith('_'):  # FIXME _ is hack
+                _set = '_set_' + name
+                setattr(self, _set, set())
+                func =  getattr(self, name)
+                @wraps(func)
+                def getunique(value, _set=_set):  # ah late binding hacks
+                    getattr(self, _set).add(value)
+                    return func(value)
+                setattr(self, name, getunique)
 
         self._next_rows(rows)
 
