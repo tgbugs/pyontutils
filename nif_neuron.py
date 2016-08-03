@@ -575,6 +575,8 @@ class table1(rowParse):
             #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
             defined.equivalentClass = [intersection]
             defined.subClassOf = [self.graph.expand(defined_class_parent)]
+            dj_rest = infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=self.expand('ilx:the_classes_that_are_disjoint')) # FIXME TODO this is currently more useful for ephys
+            defined.disjointWith = [dj_rest]
 
 
     def Other_morphological_classifications(self, value):
@@ -706,7 +708,7 @@ class table1(rowParse):
             #early = apply(e_map, early_late[0])
             #late = apply(l_map, early_late[1:])
             early, late = e_map[early_late[0]], l_map[early_late[1:]]
-            self.ilx_start += 1
+            self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
             id_ = ilx_base.format(self.ilx_start)
             c = infixowl.Class(self.expand(id_), graph=self.graph.g)
             e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
@@ -745,6 +747,7 @@ def make_table1(syn_mappings, ilx_start):
     #  hasPhenotype shall be asymmetric, irreflexive, and intransitive
     # XXX in answer to Maryann's question about why we need the morphological phenotypes by themselves:
     #  if we don't have them we can't agregate across orthogonal phenotypes since owl correctly keeps the classes distinct
+    # TODO disjointness axioms work really well on defined classes and propagate excellently
 
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [r for r in zip(*csv.reader(f))]
