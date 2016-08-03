@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import io
 import os
+import re
 import csv
 import types
 from urllib.parse import quote
@@ -17,6 +18,9 @@ v = Vocabulary()
 # 1) hiearchy for ephys
 # 2) hiearchy for morpho
 # 3) ingest table 1
+
+# consts
+defined_class_parent = 'ilx:definedClassCells'
 
 id_ = None
 
@@ -63,7 +67,11 @@ def make_phenotypes():
         rows = [r for r in csv.reader(f)]
     g = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
     
-    lookup = {'asymmetric':'owl:AsymmetricProperty', 'irreflexive':'owl:IrreflexiveProperty'}
+    lookup = {
+        'asymmetric':'owl:AsymmetricProperty',
+        'irreflexive':'owl:IrreflexiveProperty',
+        'functional':'owl:FunctionalProperty',
+    }
     pedges = set()
     for row in rows[1:]:
         if row[0].startswith('#') or not row[0]:
@@ -290,9 +298,10 @@ def make_phenotypes():
     #dg.write(delay=True)
     xr.write(delay=True)
 
-    add_phenotypes(dg)
-    for t in dg.g.triples((None, None, None)):
-        g.add_node(*t)  # only way to clean prefixes :/
+    #skip this for now, we can use DG to do lookups later
+    #for t in dg.g.triples((None, None, None)):
+        #g.add_node(*t)  # only way to clean prefixes :/
+    add_phenotypes(g)
     g.write(delay=True)
 
     g2 = makeGraph('pheno-comp', PREFIXES)
@@ -360,7 +369,6 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
     defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
 
-    defined_class_parent = 'ilx:definedClassCells'
     done = True#False
     done_ = set()
     for pedge in pedges:
@@ -439,7 +447,6 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
                 ng.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
                 restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
                 intersection = infixowl.BooleanClass(members=(defined_graph.expand('NIFCELL:sao1417703748'), restriction), graph=defined_graph.g)
-                #intersection = infixowl.BooleanClass(members=(ng.expand(defined_class_parent), restriction), graph=ng.g)
                 this = infixowl.Class(id_, graph=defined_graph.g)
                 this.equivalentClass = [intersection]
                 this.subClassOf = [ng.expand(defined_class_parent)]
@@ -463,28 +470,46 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     return ilx_start
 
 def add_phenotypes(graph):
+    def add_new(id_, sco=None, syns=tuple(), lbl=None):
+        if lbl is None:
+            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_node(id_, rdflib.RDFS.label, lbl)
+        if sco:
+            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
+
+        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
+
     cell_phenotype = 'ilx:CellPhenotype'
     neuron_phenotype = 'ilx:NeuronPhenotype'
     ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
+    spiking_phenotype = 'ilx:SpikingPhenotype'
+    i_spiking_phenotype = 'ilx:InitialSpikingPhenotype'
+    burst_p = 'ilx:BurstSpikingPhenotype'
+    classical_p = 'ilx:ClassicalSpikingPhenotype'
+    delayed_p = 'ilx:DelayedSpikingPhenotype'
+    s_spiking_phenotype = 'ilx:SustainedSpikingPhenotype'
     morpho_phenotype = 'ilx:MorphologicalPhenotype'
+    ac_p = 'ilx:AccomodatingPhenotype'
+    nac_p = 'ilx:NonAccomodatingPhenotype'
+    st_p = 'ilx:StutteringPhenotype'
+    ir_p = 'ilx:IrregularPhenotype'
 
-    graph.add_node(cell_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(cell_phenotype, rdflib.RDFS.label, 'Cell Phenotype')
+    add_new(cell_phenotype)
 
-    graph.add_node(neuron_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(neuron_phenotype, rdflib.RDFS.label, 'Neuron Phenotype')
-    graph.add_node(neuron_phenotype, rdflib.RDFS.subClassOf, cell_phenotype)
-
-
-    graph.add_node(ephys_phenotype, rdflib.RDFS.label, 'Electrophysiological Phenotype')
-    graph.add_node(ephys_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(ephys_phenotype, rdflib.RDFS.subClassOf, neuron_phenotype)
-    #graph.add_node(ephys_phenotype, , )
-
-    graph.add_node(morpho_phenotype, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(morpho_phenotype, rdflib.RDFS.label, 'Morphological Phenotype')
-    graph.add_node(morpho_phenotype, rdflib.RDFS.subClassOf, neuron_phenotype)
-    #graph.add_node(morpho_phenotype, , )
+    add_new(neuron_phenotype, cell_phenotype)
+    add_new(ephys_phenotype, neuron_phenotype)
+    add_new(spiking_phenotype, ephys_phenotype)
+    add_new(i_spiking_phenotype, spiking_phenotype)
+    add_new(burst_p, i_spiking_phenotype, ('burst',))
+    add_new(classical_p, i_spiking_phenotype, ('classical',))
+    add_new(delayed_p, i_spiking_phenotype, ('delayed',))
+    add_new(s_spiking_phenotype, spiking_phenotype)
+    add_new(ac_p, s_spiking_phenotype, ('accomodating',))  # FIXME this is silly
+    add_new(nac_p, s_spiking_phenotype, ('non accomodating',))
+    add_new(st_p, s_spiking_phenotype, ('stuttering',))
+    add_new(ir_p, s_spiking_phenotype, ('irregular',))
+    add_new(morpho_phenotype, neuron_phenotype)
 
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
@@ -505,6 +530,7 @@ class table1(rowParse):
         self.expand = self.graph.expand
         self.ilx_start = ilx_start
         self.syn_mappings = syn_mappings
+        self.plbls = set()
         super().__init__(rows)
 
     def Morphological_type(self, value):
@@ -517,11 +543,39 @@ class table1(rowParse):
         syn, abrv = value.split(' (')
         syn = syn.strip()
         abrv = abrv.rstrip(')').strip()
-        print(value)
+        #print(value)
         print((syn, abrv))
 
-        self.Class.label = rdflib.Literal(syn)
+        LABEL = 'Rat primary somatosensory cortex ' + syn.replace('cell', 'neuron').lower() # FIXME this has to be done last...
+        self.Class.label = rdflib.Literal(LABEL)
         self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
+
+        self.Class.subClassOf = [self.graph.expand('NIFCELL:sao1417703748'),]
+
+        # for phenotypes only...
+        phenotype_lbl = syn.rstrip('cell').strip() + ' phenotype'
+        if phenotype_lbl not in self.plbls:
+            self.plbls.add(phenotype_lbl)
+            self.ilx_start += 1
+            id_ = ilx_base.format(self.ilx_start)
+            self.graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+            self.graph.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:MorphologicalPhenotype')
+            self.graph.add_node(id_, rdflib.RDFS.label, phenotype_lbl)
+            restriction = infixowl.Restriction(self.expand('ilx:hasMorphologicalPhenotype'),
+                                               graph=self.graph.g,
+                                               someValuesFrom=self.expand(id_))
+            self.Class.subClassOf = [restriction]
+
+            #defined class
+            self.ilx_start += 1
+            id_ = ilx_base.format(self.ilx_start)
+            defined = infixowl.Class(self.expand(id_), graph=self.graph.g)
+            defined.label = rdflib.Literal(syn.replace('cell', 'neuron'))
+            intersection = infixowl.BooleanClass(members=(self.graph.expand('NIFCELL:sao1417703748'), restriction), graph=self.graph.g)
+            #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+            defined.equivalentClass = [intersection]
+            defined.subClassOf = [self.graph.expand(defined_class_parent)]
+
 
     def Other_morphological_classifications(self, value):
         values = value.split(self._sep)
@@ -535,7 +589,7 @@ class table1(rowParse):
             else:
                 output.append(v)
 
-        print(value)
+        #print(value)
         print(output)
 
     def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
@@ -607,8 +661,8 @@ class table1(rowParse):
                 self.Class.disjointWith = [restriction]  # TODO do we need to manually add existing?
             output.append((molecule, exists, score))
 
-        print(value)
-        print(output)
+        #print(value)
+        #print(output)
 
     def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
         b = self.syn_mappings['burst']
@@ -662,8 +716,8 @@ class table1(rowParse):
 
             output.append((early, late, score))
 
-        print(value)
-        print(output)
+        #print(value)
+        #print(output)
 
     def Other_electrical_classifications(self, value):
         e_edge = 'ilx:hasElectrophysiologicalPhenotype'
@@ -674,14 +728,12 @@ class table1(rowParse):
             self.graph.add_node(self.id_, e_edge, v)
             output.append(v)
 
-        print(value)
+        #print(value)
         print(output)
 
     def _row_post(self):
         # electrical here? or can we do those as needed above?
         pass
-
-
 
 def make_table1(syn_mappings, ilx_start):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
@@ -691,6 +743,8 @@ def make_table1(syn_mappings, ilx_start):
     # TODO hasPhenotypes needs to be function to get phenotypeOf to work via reasoner??? this seems wrong.
     #  this also works if phenotypeOf is inverseFunctional
     #  hasPhenotype shall be asymmetric, irreflexive, and intransitive
+    # XXX in answer to Maryann's question about why we need the morphological phenotypes by themselves:
+    #  if we don't have them we can't agregate across orthogonal phenotypes since owl correctly keeps the classes distinct
 
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [r for r in zip(*csv.reader(f))]
@@ -700,6 +754,7 @@ def make_table1(syn_mappings, ilx_start):
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
 
     syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
@@ -725,6 +780,8 @@ def make_table1(syn_mappings, ilx_start):
                     elif 'UBERON:' in d['curie']:
                         do_graph(d)
                     elif 'NCBITaxon:' in d['curie']:
+                        do_graph(d)
+                    elif 'NIFCELL:' in d['curie']:
                         do_graph(d)
 
 
