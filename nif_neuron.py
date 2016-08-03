@@ -6,11 +6,16 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import makeGraph, add_hierarchy
+from utils import makeGraph, add_hierarchy, rowParse
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 sgg = Graph(quiet=False)
 v = Vocabulary()
+
+# TODO
+# 1) hiearchy for ephys
+# 2) hiearchy for morpho
+# 3) ingest table 1
 
 id_ = None
 
@@ -470,7 +475,128 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
         graph.add_node(s, p, replace)
         graph.g.remove((s, p, o))
 
+class table1(rowParse):
+    species = 'NCBITaxon:'
+    brain_region = 'UBERON:'
+    citation = 'Markhram et al Cell 2015'
+    pmid = 'PMID:26451489'
+    _sep = '|'
+
+    def __init__(self, graph, rows):
+        self.g = graph
+        super().__init__(rows)
+
+    def Morphological_type(self, value):
+        syn, abrv = value.split(' (')
+        syn = syn.strip()
+        abrv = abrv.rstrip(')').strip()
+        print(value)
+        print((syn, abrv))
+
+    def Other_morphological_classifications(self, value):
+        values = value.split(self._sep)
+        output = []
+        for v in values:
+            if '/' in v:
+                prefix, a_b = v.split(' ')
+                a, b = a_b.split('/')
+                output.append(prefix + ' ' + a)
+                output.append(prefix + ' ' + b)
+            else:
+                output.append(v)
+
+        print(value)
+        print(output)
+
+    def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
+        CB = 'calbindin'
+        PV = 'parvalbumin'
+        CR = 'calretnin'
+        NPY = 'neruopeptide y'
+        VIP = 'vip'
+        SOM = 'somatostatin'
+        p_map = {
+            'CB':CB,
+            'PV':PV,
+            'CR':CR,
+            'NPY':NPY,
+            'VIP':VIP,
+            'SOM':SOM,
+        }
+        NEGATIVE = False
+        POSITIVE = True  # FIXME multiple levels?
+        s_map = {
+            '-':NEGATIVE,
+            '+':POSITIVE,
+            '++':POSITIVE,
+            '+++':POSITIVE,
+        }
+
+        values = value.split(self._sep)
+        output = []
+        for v in values:
+            abrv, score_paren = v.split(' (')
+            score = score_paren.rstrip(')')
+            output.append((abrv, score))
+
+        print(value)
+        print(output)
+
+    def Electrical_types(self, value):
+        early = None
+        late = None
+        b = 'burst'
+        c = 'classical'  # XXX CHECK
+        d = 'delayed'
+        e_map = {
+            'b':b,
+            'c':c,
+            'd':d,
+        }
+        AC = 'accomodating'
+        NAC = 'non accomodating'
+        STUT = 'stuttering'
+        IR = 'irregular'
+        l_map = {
+            'AC':AC,
+            'NAC':NAC,
+            'STUT':STUT,
+            'IR':IR,
+            '':None,
+        }
+
+        values = value.split(self._sep)
+        output = []
+        for v in values:
+            abrv, score_pct_paren = v.split(' (')
+            score = int(score_pct_paren.rstrip('%)'))
+            output.append((abrv, score))
+
+        print(value)
+        print(output)
+
+    def Other_electrical_classifications(self, value):
+        values = value.split(self._sep)
+        output = []
+        for v in values:
+            output.append(v)
+
+        print(value)
+        print(output)
+
+
+def make_table1():
+    with open('resources/26451489 table 1.csv', 'rt') as f:
+        rows = [r for r in zip(*csv.reader(f))]
+    graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
+    t = table1(graph, rows)
+    #print(t._set_Electrical_types)
+    #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
+    #embed()
+
 def main():
+    make_table1()
+    return
     with makeGraph('', {}) as _:
         syn_mappings, pedge, ilx_start = make_phenotypes()
         make_neurons(syn_mappings, pedge, ilx_start)
