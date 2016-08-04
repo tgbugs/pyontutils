@@ -586,8 +586,9 @@ class table1(rowParse):
                 prefix = v.rstrip('cell').strip()
                 output.append(v)
 
-            phenotype_lbl = prefix, morpho_phenotype, morpho_edge, None
-            self.plbls.add(phenotype_lbl)
+            #synonyms
+            #phenotype_lbl = prefix, morpho_phenotype, morpho_edge, None
+            #self.plbls.add(phenotype_lbl)
 
         #print(value)
         print(output)
@@ -781,6 +782,13 @@ def make_table1(syn_mappings, ilx_start):
     # XXX in answer to Maryann's question about why we need the morphological phenotypes by themselves:
     #  if we don't have them we can't agregate across orthogonal phenotypes since owl correctly keeps the classes distinct
     # TODO disjointness axioms work really well on defined classes and propagate excellently
+    # TODO add 'Petilla' or something like that to the phenotype definitions
+    #  we want this because 'Petilla' denotes the exact ANALYSIS used to determine the phenotype
+    #  there are some additional 'protocol' related restrictions on what you can apply analysis to
+    #  but we don't have to model those explicitly which would be a nightmare and break the
+    #  orthogonality of the cell type decomposition
+    # TODO to make this explicit we need to include that phenotypes require 2 things
+    #  1) a type of data (data type?) 2) a way to classify that data (analysis protocol)
 
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [r for r in zip(*csv.reader(f))]
@@ -790,7 +798,7 @@ def make_table1(syn_mappings, ilx_start):
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
-    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
+    #graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
 
     syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
