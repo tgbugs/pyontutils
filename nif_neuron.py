@@ -736,17 +736,23 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             # create electrical subclasses
             output.append((early, late, score))
 
+        # TODO convert this to use unionOf?
         for early, late, _ in output:  # make more CELLS mappings are done above
-            self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
-            id_ = ilx_base.format(self.ilx_start)
-            c = infixowl.Class(self.expand(id_), graph=self.graph.g)
+
+
             e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
             l_res = infixowl.Restriction(self.expand(l_edge), graph=self.graph.g, someValuesFrom=late)
-            c.subClassOf = [e_res, l_res]  # handy that...
-            self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
+            union = infixowl.BooleanClass(operator=rdflib.OWL.unionOf, members=(e_res, l_res), graph=self.graph.g)
+            self.Class.subClassOf = [union]
+
+            #self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
+            #id_ = ilx_base.format(self.ilx_start)
+            #c = infixowl.Class(self.expand(id_), graph=self.graph.g)
+            #c.subClassOf = [e_res, l_res]  # handy that...
+            #self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
+
             self.mutually_disjoints[i_spiking_phenotype].add(early)
             self.mutually_disjoints[s_spiking_phenotype].add(late)
-
 
         #print(value)
         #print(output)
@@ -838,6 +844,8 @@ def make_table1(syn_mappings, ilx_start):
     #  orthogonality of the cell type decomposition
     # TODO to make this explicit we need to include that phenotypes require 2 things
     #  1) a type of data (data type?) 2) a way to classify that data (analysis protocol)
+    #
+    # need a full type restriction... property chain?
 
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [r for r in zip(*csv.reader(f))]
