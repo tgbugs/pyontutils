@@ -298,7 +298,7 @@ def make_phenotypes():
                     dg.add_node(id_, 'OBOANN:abbrev', syn)
 
         if 'EPHYS' in s or any(['EPHYS' in x for x in data['xrefs']]):
-            dg.add_node(id_, rdflib.RDFS.subClassOf, 'ilx:ElectrophysiologicalPhenotype')
+            dg.add_node(id_, rdflib.RDFS.subClassOf, ephys_phenotype)
         elif 'MORPHOLOGY' in s or any(['MORPHOLOGY' in x for x in data['xrefs']]):
             dg.add_node(id_, rdflib.RDFS.subClassOf, morpho_phenotype)
 
@@ -491,16 +491,16 @@ def add_phenotypes(graph):
     neuron_phenotype = 'ilx:NeuronPhenotype'
     #ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
     #spiking_phenotype = 'ilx:SpikingPhenotype'
-    i_spiking_phenotype = 'ilx:InitialSpikingPhenotype'
-    burst_p = 'ilx:BurstSpikingPhenotype'
-    classical_p = 'ilx:ClassicalSpikingPhenotype'
-    delayed_p = 'ilx:DelayedSpikingPhenotype'
-    s_spiking_phenotype = 'ilx:SustainedSpikingPhenotype'
+    i_spiking_phenotype = 'ilx:PatillaInitialSpikingPhenotype'
+    burst_p = 'ilx:PatillaInitialBurstSpikingPhenotype'
+    classical_p = 'ilx:PatillaInitialClassicalSpikingPhenotype'
+    delayed_p = 'ilx:PatillaInitialDelayedSpikingPhenotype'
+    s_spiking_phenotype = 'ilx:PatillaSustainedSpikingPhenotype'
     #morpho_phenotype = 'ilx:MorphologicalPhenotype'
-    ac_p = 'ilx:AccomodatingPhenotype'
-    nac_p = 'ilx:NonAccomodatingPhenotype'
-    st_p = 'ilx:StutteringPhenotype'
-    ir_p = 'ilx:IrregularPhenotype'
+    ac_p = 'ilx:PatillaSustainedAccomodatingPhenotype'
+    nac_p = 'ilx:PatillaSustainedNonAccomodatingPhenotype'
+    st_p = 'ilx:PatillaSustainedStutteringPhenotype'
+    ir_p = 'ilx:PatillaSustainedIrregularPhenotype'
 
     add_new(cell_phenotype)
 
@@ -529,7 +529,7 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
         graph.add_node(s, p, replace)
         graph.g.remove((s, p, o))
 
-class table1(rowParse):
+class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
     species = 'NCBITaxon:10116'
     brain_region = 'UBERON:0008933'
     citation = 'Markhram et al Cell 2015'
@@ -548,6 +548,7 @@ class table1(rowParse):
 
     #@use_decorators_to_do_mappings_to_generic_classes   # !
     def Morphological_type(self, value):
+        print('--------------------')
         self.phenotype_callbacks = {}
         self.ilx_start += 1
         self.id_ = ilx_base.format(self.ilx_start)
@@ -575,7 +576,7 @@ class table1(rowParse):
         self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
 
         # for phenotypes only...
-        phenotype_lbl = syn.rstrip('cell').strip(), morpho_phenotype, morpho_edge, None
+        phenotype_lbl = syn.rstrip('cell').strip(), morpho_phenotype, morpho_edge, 'LOL STUPID MESSAGE PASSING SCHEME' + self.id_
         #if phenotype_lbl not in self.plbls:  # I'm guessing this is less efficient since it adds an extra hash step but haven't tested
         self.plbls.add(phenotype_lbl)
 
@@ -583,6 +584,8 @@ class table1(rowParse):
     def Other_morphological_classifications(self, value):
         values = value.split(self._sep)
         output = []
+        callbacks = []
+
         for v in values:
             if '/' in v:
                 prefix, a_b = v.split(' ')
@@ -592,6 +595,16 @@ class table1(rowParse):
             else:
                 prefix = v.rstrip('cell').strip()
                 output.append(v)
+                def cb(pheno_uri, val=v):
+                    print(pheno_uri, val)
+                    self.graph.add_node(pheno_uri, 'OBOANN:synonym', val)
+                callbacks.append(cb)
+
+        #output = tuple(output)
+        #def callback(pheno_uri, syns=[_ for _ in output]):
+            #for s in syns:
+                #self.graph.add_node(pheno_uri, 'OBOANN:synonym', s)
+            self.phenotype_callbacks['LOL STUPID MESSAGE PASSING SCHEME' + self.id_] = lambda puri: [cb(puri) for cb in callbacks]
 
             #synonyms
             #phenotype_lbl = prefix, morpho_phenotype, morpho_edge, None
@@ -731,7 +744,7 @@ class table1(rowParse):
     def Other_electrical_classifications(self, value):
         values = value.split(self._sep)
         output = []
-        def callback(pheno_uri):  # terrible way to do this...
+        def callback(pheno_uri):  # terrible way to do this... XXX can order help
             restriction = infixowl.Restriction(self.expand(ephys_edge), graph=self.graph.g, someValuesFrom=pheno_uri)
             self.Class.subClassOf = [restriction]
         callback_name = 'oec'
@@ -746,9 +759,12 @@ class table1(rowParse):
     def _row_post(self):
         # electrical here? or can we do those as needed above?
 
+        return
+
         for phenotype_lbl, parent_pheno, p_edge, callback_name in sorted(self.plbls):
             if phenotype_lbl not in self.done_phenos:
                 #phenotype class  TODO edge too?
+                print(phenotype_lbl)
                 self.ilx_start += 1
                 id_ = ilx_base.format(self.ilx_start)
                 self.done_phenos[phenotype_lbl] = id_
