@@ -552,8 +552,14 @@ class table1(rowParse):
         self.ilx_start += 1
         self.id_ = ilx_base.format(self.ilx_start)
         self.Class = infixowl.Class(self.expand(self.id_), graph=self.graph.g)
-        add_hierarchy(self.graph.g, self.expand(self.species), self.expand('ilx:hasInstanceInSpecies'), self.expand(self.id_))
-        add_hierarchy(self.graph.g, self.expand(self.brain_region), self.expand('ilx:hasSomaLocatedIn'), self.expand(self.id_))
+
+        species_rest = infixowl.Restriction(self.expand('ilx:hasInstanceInSpecies'),
+                                           self.graph.g,
+                                           someValuesFrom=self.expand(self.species))
+        location_rest = infixowl.Restriction(self.expand('ilx:hasSomaLocatedIn'),
+                                           self.graph.g,
+                                           someValuesFrom=self.expand(self.brain_region))
+        self.Class.subClassOf = [species_rest, location_rest,self.expand(NIFCELL_NEURON)]
 
         syn, abrv = value.split(' (')
         syn = syn.strip()
@@ -561,11 +567,12 @@ class table1(rowParse):
         #print(value)
         print((syn, abrv))
 
-        LABEL = 'Rat primary somatosensory cortex ' + syn.replace('cell', 'neuron').lower() # FIXME this has to be done last...
+        slbl = v.findById(self.species)['labels'][0]
+        brlbl = v.findById(self.brain_region)['labels'][0]
+        LABEL = slbl + ' ' + brlbl + ' ' + syn.replace('cell', 'neuron').lower() # FIXME this has to be done last...
+
         self.Class.label = rdflib.Literal(LABEL)
         self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
-
-        self.Class.subClassOf = [self.graph.expand(NIFCELL_NEURON),]
 
         # for phenotypes only...
         phenotype_lbl = syn.rstrip('cell').strip(), morpho_phenotype, morpho_edge, None
