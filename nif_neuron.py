@@ -68,11 +68,25 @@ PREFIXES = {
 #with open('neurons.csv', 'rt') as f:
     #nrows = [r for r in csv.reader(f)]
 
+
 def pprint(thing):
     for t in thing:
         print()
         for v in t:
             print(v)
+
+def disjointUnionOf(graph=None, members=None):
+    start = rdflib.BNode()
+    current = start
+    for member in members[:-1]:
+        graph.add((current, rdflib.RDF.first, member))
+        next_ = rdflib.BNode()
+        graph.add((current, rdflib.RDF.rest, next_))
+        current = next_
+
+    graph.add((current, rdflib.RDF.first, members[-1]))
+
+    return start
 
 def make_phenotypes():
     with open('neuron_phenotype_edges.csv', 'rt') as f:
@@ -737,22 +751,34 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             output.append((early, late, score))
 
         # TODO convert this to use unionOf?
+        disjoints = []
         for early, late, _ in output:  # make more CELLS mappings are done above
-
 
             e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
             l_res = infixowl.Restriction(self.expand(l_edge), graph=self.graph.g, someValuesFrom=late)
+
+            """
             union = infixowl.BooleanClass(operator=rdflib.OWL.unionOf, members=(e_res, l_res), graph=self.graph.g)
             self.Class.subClassOf = [union]
 
-            #self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
-            #id_ = ilx_base.format(self.ilx_start)
-            #c = infixowl.Class(self.expand(id_), graph=self.graph.g)
+            """
+            self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
+            id_ = ilx_base.format(self.ilx_start)
+            id_ = self.expand(id_)
+            disjoints.append(id_)
+            c = infixowl.Class(id_, graph=self.graph.g)
+            intersection = infixowl.BooleanClass(operator=rdflib.OWL.intersectionOf, members=(e_res, l_res), graph=self.graph.g)
             #c.subClassOf = [e_res, l_res]  # handy that...
-            #self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
+            c.subClassOf = [intersection]
+            self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
+            #"""
 
             self.mutually_disjoints[i_spiking_phenotype].add(early)
             self.mutually_disjoints[s_spiking_phenotype].add(late)
+
+
+        disjointunion = disjointUnionOf(graph=self.graph.g, members=disjoints)
+        self.graph.add_node(self.id_, rdflib.OWL.disjointUnionOf, disjointunion)
 
         #print(value)
         #print(output)
