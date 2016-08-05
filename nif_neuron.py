@@ -521,11 +521,16 @@ def add_phenotypes(graph):
     st_p = 'ilx:PatillaSustainedStutteringPhenotype'
     ir_p = 'ilx:PatillaSustainedIrregularPhenotype'
 
+    fast = 'ilx:FastSpikingPhenotype'
+    reg_int = 'ilx:RegularSpikingInterneuronPhenotype'
+
     add_new(cell_phenotype)
 
     add_new(neuron_phenotype, cell_phenotype)
     add_new(ephys_phenotype, neuron_phenotype)
     add_new(spiking_phenotype, ephys_phenotype)
+    add_new(fast, spiking_phenotype,('Fast spiking'))
+    add_new(reg_int, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
     add_new(i_spiking_phenotype, spiking_phenotype)
     iClass = infixowl.Class(graph.expand(i_spiking_phenotype), graph=graph.g)
 
@@ -541,6 +546,7 @@ def add_phenotypes(graph):
     add_new(st_p, s_spiking_phenotype, ('stuttering',))
     add_new(ir_p, s_spiking_phenotype, ('irregular',))
     add_new(morpho_phenotype, neuron_phenotype)
+
 
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
@@ -564,8 +570,29 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         self.plbls = set()
         self.phenotype_iri_map = {}
         self.mutually_disjoints = defaultdict(set)
-        super().__init__(rows)
+
+        label_species = sgv.findById(self.species)['labels'][0]
+        label_brain_region = sgv.findById(self.brain_region)['labels'][0]
+        self.labels_extrin = [label_species, label_brain_region]
+
+        order = ['Morphological_type',
+            'Other_morphological_classifications',
+            'Predominantly_expressed_Ca2_binding_proteins_and_peptides',
+            'Other_electrical_classifications',
+            'Electrical_types']
+
+        super().__init__(rows, order=order)
         self._end()
+
+    def _make_label(self):
+        LABEL = ' '.join(
+            self.labels_extrin + \
+            self.labels_ephys + \
+            self.labels_expression + \
+            self.labels_morpho + \
+            ['neuron'])
+        return rdflib.Literal(LABEL)
+
 
     #@use_decorators_to_do_mappings_to_generic_classes   # !
     #@also use decorators to flag output classes as mutually disjoint?
@@ -589,11 +616,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         #print(value)
         print((syn, abrv))
 
-        slbl = sgv.findById(self.species)['labels'][0]
-        brlbl = sgv.findById(self.brain_region)['labels'][0]
-        LABEL = slbl + ' ' + brlbl + ' ' + syn.replace('cell', 'neuron').lower() # FIXME this has to be done last...
+        self.labels_morpho = [syn.rstrip('cell').rstrip().lower()]
 
-        self.Class.label = rdflib.Literal(LABEL)
         self.graph.add_node(self.id_, 'OBOANN:abbrev', abrv)
 
         v = syn.rstrip('cell').strip()
@@ -609,7 +633,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
 
         self._morpho_parent_id = id_
 
-    def Other_morphological_classifications(self, value):  # FIXME bitufted appears repeatedly!
+    def Other_morphological_classifications(self, value):
+        return  #  skipping all of this for now due to bitufted nonsense etc
         values = value.split(self._sep)
         output = []
         callbacks = []
@@ -683,6 +708,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
                 self.graph.add_node(s, p, o)
             return o
 
+        self.labels_expression = []
         values = value.split(self._sep)
         output = []
         for v in values:
@@ -702,6 +728,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
                 self.Class.disjointWith = [restriction]  # TODO do we need to manually add existing?
             output.append((molecule, exists, score))
 
+            self.labels_expression.append(abrv)  # TODO
         #print(value)
         #print(output)
 
@@ -746,13 +773,14 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             score = int(score_pct_paren.rstrip('%)'))
             #early = apply(e_map, early_late[0])
             #late = apply(l_map, early_late[1:])
-            early, late = e_map[early_late[0]], l_map[early_late[1:]]
+            e_name, l_name = early_late[0], early_late[1:]
+            early, late = e_map[e_name], l_map[l_name]
             # create electrical subclasses
-            output.append((early, late, score))
+            output.append((early, late, score, (e_name, l_name)))
 
         # TODO convert this to use unionOf?
         disjoints = []
-        for early, late, _ in output:  # make more CELLS mappings are done above
+        for early, late, _, names in output:  # make more CELLS mappings are done above
 
             e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
             l_res = infixowl.Restriction(self.expand(l_edge), graph=self.graph.g, someValuesFrom=late)
@@ -776,6 +804,14 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             self.mutually_disjoints[i_spiking_phenotype].add(early)
             self.mutually_disjoints[s_spiking_phenotype].add(late)
 
+            # a terrible way to set labels here
+            outer_ephys = tuple(self.labels_ephys)
+            self.labels_ephys.extend(names)
+            c.label = self._make_label()
+            self.labels_ephys = list(outer_ephys)
+
+
+
 
         disjointunion = disjointUnionOf(graph=self.graph.g, members=disjoints)
         self.graph.add_node(self.id_, rdflib.OWL.disjointUnionOf, disjointunion)
@@ -790,13 +826,22 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             output.append(v)
 
         for v in output:
-            if v not in self.phenotype_iri_map:
-                id_ = self._make_phenotype(v, spiking_phenotype, spiking_edge, ephys_defined)
-                self.phenotype_iri_map[v] = id_
-            else:
-                id_ = self.phenotype_iri_map[v]
+            # TODO these need to map to fast spiking or
+            # regular spiking interneuron (need a better name that only depends on ephys)
+            if v in self.syn_mappings:
+                id_ = self.syn_mappings[v]
                 restriction = infixowl.Restriction(self.expand(spiking_edge), graph=self.graph.g, someValuesFrom=id_)
                 self.Class.subClassOf = [restriction]
+                self.labels_ephys = ['fast spiking' if v == 'Fast spiking' else 'regular spiking interneuron'] # TODO need the above as well but trickier to do that
+
+            
+            #if v not in self.phenotype_iri_map:
+                #id_ = self._make_phenotype(v, spiking_phenotype, spiking_edge, ephys_defined)
+                #self.phenotype_iri_map[v] = id_
+            #else:
+                #id_ = self.phenotype_iri_map[v]
+                #restriction = infixowl.Restriction(self.expand(spiking_edge), graph=self.graph.g, someValuesFrom=id_)
+                #self.Class.subClassOf = [restriction]
 
         #print(value)
         print(output)
@@ -845,6 +890,9 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         else:
             return things
 
+    def _row_post(self):
+        self.Class.label = self._make_label()
+
     def _end(self):
         for superClass, disjoint_things in self.mutually_disjoints.items():
             print(superClass)
@@ -874,7 +922,7 @@ def make_table1(syn_mappings, ilx_start):
     # need a full type restriction... property chain?
 
     with open('resources/26451489 table 1.csv', 'rt') as f:
-        rows = [r for r in zip(*csv.reader(f))]
+        rows = [list(r) for r in zip(*csv.reader(f))]
 
     graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
