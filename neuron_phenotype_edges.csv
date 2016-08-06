@@ -10,8 +10,8 @@ hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need th
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasIntrinsicPhenotype,,"asymmetric, irreflexive"
 hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron type and an electrophysiological phenotype concept. This should be used when a neuron type is described using a high level electrophysiological concept class.,,,hasIntrinsicPhenotype,,"asymmetric, irreflexive"
 hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
-hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
-hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
+#hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
+#hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
 hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,needs work,,,,
 #intrinsic/extrinsic phenotypes,,,,,,,,
 hasExtrinsicPhenotype,,,,,,hasPhenotype,,
