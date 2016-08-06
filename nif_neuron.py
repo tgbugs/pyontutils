@@ -32,17 +32,12 @@ spiking_phenotype = 'ilx:SpikingPhenotype'
 i_spiking_phenotype = 'ilx:PetillaInitialSpikingPhenotype'
 s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
 spiking_edge = 'ilx:hasSpikingPhenotype'
+fast_phenotype = 'ilx:FastSpikingPhenotype'
+reg_phenotype = 'ilx:RegularSpikingNonPyramidalPhenotype'
 NIFCELL_NEURON = 'NIFCELL:sao1417703748'
-
-#id_ = None
-
-#(id_, rdflib.RDF.type, rdflib.OWL.Class)
-#(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
-#(id_, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
 
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
-
 
 PREFIXES = {
     #'ILX':'http://uri.interlex.org/base/ilx_',
@@ -64,18 +59,13 @@ PREFIXES = {
     'PR':'http://purl.obolibrary.org/obo/PR_',
 }
 
-
-#with open('neurons.csv', 'rt') as f:
-    #nrows = [r for r in csv.reader(f)]
-
-
 def pprint(thing):
     for t in thing:
         print()
         for v in t:
             print(v)
 
-def disjointUnionOf(graph=None, members=None):
+def disjointUnionOf(graph, members):
     start = rdflib.BNode()
     current = start
     for member in members[:-1]:
@@ -88,10 +78,93 @@ def disjointUnionOf(graph=None, members=None):
 
     return start
 
+def make_mutually_disjoint(graph, members):
+    if len(members) > 1:
+        first, rest = members[0], members[1:]
+        for r in rest:
+            print(first, r)
+            graph.add_node(first, rdflib.OWL.disjointWith, r)
+        return make_mutually_disjoint(graph, rest)
+    else:
+        return members
+
 def make_phenotypes():
+    ilx_start = 50114
+    graph = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
+
+    def add_new(id_, sco=None, syns=tuple(), lbl=None):
+        if lbl is None:
+            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_node(id_, rdflib.RDFS.label, lbl)
+        if sco:
+            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
+
+        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
+
+    
+    with open('neuron_phenotype.csv', 'rt') as f:
+        rows = [r for r in csv.reader(f)]
+
+    class PP(rowParse):  # FIXME use add_new in _row_post?
+        SCD = 'subClassesDisjoint'
+        DJW = 'disjointWith'
+        def __init__(self):
+            self.ilx_start = ilx_start
+            self.parent_child_map = defaultdict(set)
+            self.scd = set()
+            super().__init__(rows)
+
+        def ilx_id(self, value):
+            self.id_ = graph.expand(value)
+            self.Class = infixowl.Class(self.id_, graph=graph.g)
+            self._label = value.split(':',1)[1]  # TODO
+
+        def subClassOf(self, value):
+            if value:
+                self.parent = graph.expand(value)
+                self.parent_child_map[self.parent].add(self.id_)
+                self.Class.subClassOf = [self.parent]
+
+        def label(self, value):
+            if value:
+                self._label = value
+                self.Class.label = value
+            else:
+                self.Class.label = rdflib.Literal(self._label)
+
+        def synonyms(self, value):
+            if value:
+                for v in value.split(','):
+                    graph.add_node(self.id_, 'OBOANN:synonym', v)
+
+        def rules(self, value):
+            if value == PP.SCD:
+                self.scd.add(self.id_)
+            elif value.startswith(PP.DJW):
+                [graph.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
+
+        def _row_post(self):
+            #defined class
+            self.ilx_start += 1
+            id_ = graph.expand(ilx_base.format(self.ilx_start))
+            defined = infixowl.Class(id_, graph=graph.g)
+            defined.label = rdflib.Literal(self._label + ' neuron')
+
+            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=id_)  #FIXME?
+            intersection = infixowl.BooleanClass(members=(graph.expand(NIFCELL_NEURON), restriction), graph=graph.g)
+            #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+            defined.equivalentClass = [intersection]
+
+        def _end(self):
+            for parent in self.scd:
+                make_mutually_disjoint(graph, list(self.parent_child_map[parent]))
+
+    pp = PP()
+    ilx_start = pp.ilx_start
+    
     with open('neuron_phenotype_edges.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
-    g = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
     
     lookup = {
         'asymmetric':'owl:AsymmetricProperty',
@@ -106,28 +179,39 @@ def make_phenotypes():
             print(row)
             continue
         id_ = PREFIXES['ilx'] + row[0]
-        pedges.add(g.expand('ilx:' + row[0]))
-        g.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        pedges.add(graph.expand('ilx:' + row[0]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
-            g.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
+            graph.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
         if row[6]:
-            g.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
+            graph.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
         if row[7]:
-            g.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
+            graph.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
         if row[8]:
             for t in row[8].split(','):
                 t = t.strip()
-                g.add_node(id_, rdflib.RDF.type, lookup[t])
+                graph.add_node(id_, rdflib.RDF.type, lookup[t])
 
-    ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + g.name + '.ttl'
-    g.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    g.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron phenotypes')
-    g.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron phenotype ontology holds neuron phenotypes.')
-    #g.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
-    #g.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
-    #g.write(delay=True)  # moved below to incorporate uwotm8
+    ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
+    graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    graph.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron phenotypes')
+    graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron phenotype ontology holds neuron phenotypes.')
+    #graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
+    #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
+    graph.write(delay=True)  # moved below to incorporate uwotm8
+    
+    syn_mappings = {}
+    for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('OBOANN:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
+        syn = syn.toPython()
+        if syn in syn_mappings:
+            print('ERROR duplicate synonym!', syn, sub)
+        syn_mappings[syn] = sub
+
+    return syn_mappings, pedges, ilx_start
 
 
+
+def _rest_make_phenotypes():
     #phenotype sources
     neuroner = '~/git/neuroNER/resources/bluima/neuroner/hbp_morphology_ontology.obo'
     neuroner1 = '~/git/neuroNER/resources/bluima/neuroner/hbp_electrophysiology_ontology.obo'
@@ -521,15 +605,15 @@ def add_phenotypes(graph):
     st_p = 'ilx:PetillaSustainedStutteringPhenotype'
     ir_p = 'ilx:PetillaSustainedIrregularPhenotype'
 
-    fast = 'ilx:FastSpikingPhenotype'
-    reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
+    #fast = 'ilx:FastSpikingPhenotype'
+    #reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
 
     add_new(cell_phenotype)
     add_new(neuron_phenotype, cell_phenotype)
     add_new(ephys_phenotype, neuron_phenotype)
     add_new(spiking_phenotype, ephys_phenotype)
-    add_new(fast, spiking_phenotype,('Fast spiking'))
-    add_new(reg_int, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
+    add_new(fast_phenotype, spiking_phenotype,('Fast spiking'))
+    add_new(reg_phenotype, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
     add_new(i_spiking_phenotype, spiking_phenotype)
     iClass = infixowl.Class(graph.expand(i_spiking_phenotype), graph=graph.g)
 
@@ -586,10 +670,10 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
     def _make_label(self):
         LABEL = ' '.join(
             self.labels_extrin + \
+            self.labels_morpho + \
             self.labels_ephys + \
             self.labels_expression + \
-            self.labels_morpho + \
-            ['neuron'])
+            ['neuron'])  # switch on interneuron/ other...
         return rdflib.Literal(LABEL)
 
 
@@ -732,9 +816,9 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         #print(output)
 
     def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
-        b = self.syn_mappings['burst']
-        c = self.syn_mappings['classical']  # XXX CHECK
-        d = self.syn_mappings['delayed']
+        b = self.syn_mappings['petilla b']
+        c = self.syn_mappings['petilla c']  # XXX CHECK
+        d = self.syn_mappings['petilla d']
         e_edge = 'ilx:hasSpikingPhenotype'
         #e_edge = 'ilx:hasInitialSpikingPhenotype'  # XXX edge level?
         #e_edge = 'ilx:hasElectrophysiologicalPhenotype'
@@ -744,10 +828,10 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             'd':d,
             self._edge:e_edge,
         }
-        AC = self.syn_mappings['accomodating']
-        NAC = self.syn_mappings['non accomodating']
-        STUT = self.syn_mappings['stuttering']
-        IR = self.syn_mappings['irregular']
+        AC = self.syn_mappings['petilla ac']
+        NAC = self.syn_mappings['petilla nac']
+        STUT = self.syn_mappings['petilla stut']
+        IR = self.syn_mappings['petilla ir']
         l_edge = 'ilx:hasSpikingPhenotype'
         #l_edge = 'ilx:hasSustainedSpikingPhenotype'  # XXX these should not be handled at the edge level?
         #l_edge = 'ilx:hasElectrophysiologicalPhenotype'
@@ -826,14 +910,17 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         for v in values:
             output.append(v)
 
+        valid_mappings = {'Fast spiking':fast_phenotype,
+                          'Non-fast spiking':reg_phenotype,  # only in this very limited context
+                          'Regular spiking non-pyramidal':reg_phenotype}
         for v in output:
             # TODO these need to map to fast spiking or
             # regular spiking interneuron (need a better name that only depends on ephys)
-            if v in self.syn_mappings:
-                id_ = self.syn_mappings[v]
+            if v in valid_mappings:
+                id_ = self.graph.expand(valid_mappings[v])
                 restriction = infixowl.Restriction(self.expand(spiking_edge), graph=self.graph.g, someValuesFrom=id_)
                 self.Class.subClassOf = [restriction]
-                self.labels_ephys = ['fast spiking' if v == 'Fast spiking' else 'regular spiking interneuron'] # TODO need the above as well but trickier to do that
+                self.labels_ephys = ['fast spiking' if v == 'Fast spiking' else 'regular spiking non pyramidal'] # TODO need the above as well but trickier to do that
 
             
             #if v not in self.phenotype_iri_map:
@@ -898,7 +985,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         for superClass, disjoint_things in self.mutually_disjoints.items():
             print(superClass)
             print(disjoint_things)
-            self._make_mutually_disjoint(sorted(disjoint_things))
+            make_mutually_disjoint(self.graph, sorted(disjoint_things))
 
 
 def make_table1(syn_mappings, ilx_start):
