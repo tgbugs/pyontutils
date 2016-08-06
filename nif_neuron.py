@@ -29,8 +29,8 @@ morpho_edge = 'ilx:hasMorphologicalPhenotype'
 ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
 ephys_edge = 'ilx:hasElectrophysiologicalPhenotype'
 spiking_phenotype = 'ilx:SpikingPhenotype'
-i_spiking_phenotype = 'ilx:PatillaInitialSpikingPhenotype'
-s_spiking_phenotype = 'ilx:PatillaSustainedSpikingPhenotype'
+i_spiking_phenotype = 'ilx:PetillaInitialSpikingPhenotype'
+s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
 spiking_edge = 'ilx:hasSpikingPhenotype'
 NIFCELL_NEURON = 'NIFCELL:sao1417703748'
 
@@ -510,22 +510,21 @@ def add_phenotypes(graph):
     neuron_phenotype = 'ilx:NeuronPhenotype'
     #ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
     #spiking_phenotype = 'ilx:SpikingPhenotype'
-    #i_spiking_phenotype = 'ilx:PatillaInitialSpikingPhenotype'
-    burst_p = 'ilx:PatillaInitialBurstSpikingPhenotype'
-    classical_p = 'ilx:PatillaInitialClassicalSpikingPhenotype'
-    delayed_p = 'ilx:PatillaInitialDelayedSpikingPhenotype'
-    #s_spiking_phenotype = 'ilx:PatillaSustainedSpikingPhenotype'
+    #i_spiking_phenotype = 'ilx:PetillaInitialSpikingPhenotype'
+    burst_p = 'ilx:PetillaInitialBurstSpikingPhenotype'
+    classical_p = 'ilx:PetillaInitialClassicalSpikingPhenotype'
+    delayed_p = 'ilx:PetillaInitialDelayedSpikingPhenotype'
+    #s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
     #morpho_phenotype = 'ilx:MorphologicalPhenotype'
-    ac_p = 'ilx:PatillaSustainedAccomodatingPhenotype'
-    nac_p = 'ilx:PatillaSustainedNonAccomodatingPhenotype'
-    st_p = 'ilx:PatillaSustainedStutteringPhenotype'
-    ir_p = 'ilx:PatillaSustainedIrregularPhenotype'
+    ac_p = 'ilx:PetillaSustainedAccomodatingPhenotype'
+    nac_p = 'ilx:PetillaSustainedNonAccomodatingPhenotype'
+    st_p = 'ilx:PetillaSustainedStutteringPhenotype'
+    ir_p = 'ilx:PetillaSustainedIrregularPhenotype'
 
     fast = 'ilx:FastSpikingPhenotype'
-    reg_int = 'ilx:RegularSpikingInterneuronPhenotype'
+    reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
 
     add_new(cell_phenotype)
-
     add_new(neuron_phenotype, cell_phenotype)
     add_new(ephys_phenotype, neuron_phenotype)
     add_new(spiking_phenotype, ephys_phenotype)
@@ -736,7 +735,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         b = self.syn_mappings['burst']
         c = self.syn_mappings['classical']  # XXX CHECK
         d = self.syn_mappings['delayed']
-        e_edge = 'ilx:hasInitialSpikingPhenotype'  # XXX edge level?
+        e_edge = 'ilx:hasSpikingPhenotype'
+        #e_edge = 'ilx:hasInitialSpikingPhenotype'  # XXX edge level?
         #e_edge = 'ilx:hasElectrophysiologicalPhenotype'
         e_map = {
             'b':b,
@@ -748,7 +748,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         NAC = self.syn_mappings['non accomodating']
         STUT = self.syn_mappings['stuttering']
         IR = self.syn_mappings['irregular']
-        l_edge = 'ilx:hasSustainedSpikingPhenotype'  # XXX these should not be handled at the edge level?
+        l_edge = 'ilx:hasSpikingPhenotype'
+        #l_edge = 'ilx:hasSustainedSpikingPhenotype'  # XXX these should not be handled at the edge level?
         #l_edge = 'ilx:hasElectrophysiologicalPhenotype'
         l_map = {
             'AC':AC,
