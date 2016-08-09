@@ -683,14 +683,14 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
         graph.g.remove((s, p, o))
 
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
-    species = 'NCBITaxon:10116'
+    #species = 'NCBITaxon:10116'
     brain_region = 'UBERON:0008933'
     citation = 'Markhram et al Cell 2015'
     pmid = 'PMID:26451489'
     _sep = '|'
     _edge = '\x00\x01\xde\xad\xee\xef\xfe'
 
-    def __init__(self, graph, rows, syn_mappings, ilx_start):
+    def __init__(self, graph, rows, syn_mappings, ilx_start, species=None):
         self.graph = graph
         self.expand = self.graph.expand
         self.ilx_start = ilx_start
@@ -699,6 +699,11 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         self.phenotype_iri_map = {}
         self.mutually_disjoints = defaultdict(set)
         self.pheno_bags = defaultdict(set)  # TODO this needs to become a dict to handle positive/negative and disjointness... :/
+
+        if species:
+            self.species = species
+        else:
+            self.species = 'NCBITaxon:10116'
 
         label_species = sgv.findById(self.species)['labels'][0]
         label_brain_region = sgv.findById(self.brain_region)['labels'][0]
@@ -1103,6 +1108,11 @@ def make_table1(syn_mappings, ilx_start):
     syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
     t = table1(graph, rows, syn_mappings, ilx_start)
+
+    with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
+        rows = [list(r) for r in zip(*csv.reader(f))]
+    #table2 = type('table2', (table1,), {'species':'NCBITaxon:10090'})
+    t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
 
     def do_graph(d):
         sgt = graph.expand(d['curie'])
