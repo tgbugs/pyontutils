@@ -187,6 +187,7 @@ class rowParse:
                 setattr(self, name, getunique)
 
         self._next_rows(rows)
+        self._end()
 
     def _order_enumerate(self, row):
         i = 0
@@ -213,5 +214,9 @@ class rowParse:
 
     def _row_post(self):
         """ Run this code after all columns have been parsed """
+        pass
+
+    def _end(self):
+        """ Run this code after all rows have been parsed """
         pass
 
