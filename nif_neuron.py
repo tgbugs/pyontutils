@@ -1196,10 +1196,21 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #
     # need a full type restriction... property chain?
 
+    graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
+
+    def add_new(id_, sco=None, syns=tuple(), lbl=None):
+        if lbl is None:
+            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_node(id_, rdflib.RDFS.label, lbl)
+        if sco:
+            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
+
+        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
+
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
-    graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -1257,24 +1268,25 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
     #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
-    graph.add_node(expression_defined, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(expression_defined, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
+    add_new(expression_defined, NIFCELL_NEURON)
+    add_new('ilx:NeuroTypeClass', NIFCELL_NEURON, lbl='Neuron TypeClass')
 
     graph.g.commit()
 
     phenotype_dju_dict = add_types(graph, phenotypes)
     for pheno, disjoints in phenotype_dju_dict.items():
-        name = pheno.split('base/')[-1]
+        name = ' '.join(re.findall(r'[A-Z][a-z]*', pheno.split(':')[1])[:-1])  #-1: drops Phenotype
         ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilx:hasPhenotype')
         id_ = graph.expand(ilx_base.format(ilx_start))
         typeclass = infixowl.Class(id_, graph=graph.g)
-        typeclass.label = rdflib.Literal(name + ' type')
+        typeclass.label = rdflib.Literal(name + ' neuron type')
 
         restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
         typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
 
         disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
         graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
+
 
     graph.write(delay=True)
     #print(t._set_Electrical_types)
