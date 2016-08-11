@@ -114,7 +114,7 @@ def make_mutually_disjoint(graph, members):
 def type_check(tup, types):
     return all([type(t) is ty for t, ty in zip(tup, types)])
 
-def add_types(graph, phenotypes):  # TODO missing expression phenotypes!
+def add_types(graph, phenotypes):  # TODO missing expression phenotypes! also basket type somehow :(
     """ Add disjoint union classes so that it is possible to see the invariants
         associated with individual phenotypes """
 
