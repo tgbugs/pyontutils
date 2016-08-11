@@ -220,3 +220,27 @@ class rowParse:
         """ Run this code after all rows have been parsed """
         pass
 
+class _TermColors:
+    ENDCOLOR = '\033[0m'
+    colors = dict(
+    BOLD = '\033[1m',
+    RED = '\033[91m',
+    GREEN = '\033[92m',
+    YELLOW = '\033[93m',
+    BLUE = '\033[94m',
+    )
+
+    def __init__(self):
+        for color, esc in self.colors.items():
+            def latebindingfix(string, e=esc):
+                return self.endcolor(e + string)
+            setattr(self, color.lower(), latebindingfix)
+
+    def endcolor(self, string):
+        if string.endswith(self.ENDCOLOR):
+            return string
+        else:
+            return string + self.ENDCOLOR
+
+TermColors = _TermColors()
+
