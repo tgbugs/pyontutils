@@ -421,6 +421,7 @@ def swanson():
     header = ['Depth', 'Name', 'Citation', 'NextSyn', 'Uberon']
     zoop = [header] + [r for r in zip(*zip(*data), output)] + \
             [(0, 'Appendix END None', None, None, None)]  # needed to add last appendix
+
     class SP(rowParse):
         def __init__(self):
             self.nodes = defaultdict(dict)
@@ -439,17 +440,22 @@ def swanson():
             else:
                 self.synonym = False
             self.depth = value
+
         def Name(self, value):
             self.name = value
+
         def Citation(self, value):
             self.citation = value
+
         def NextSyn(self, value):
             if value:
                 self.next_syn = self._rowind
             else:
                 self.next_syn = False
+
         def Uberon(self, value):
             self.uberon = value
+
         def _row_post(self):
             # check if we are in the next appendix
             # may want to xref ids between appendicies as well...
@@ -469,6 +475,13 @@ def swanson():
                         'name':apname,
                         'type':self.citation}
                     return
+                else:
+                    if ' [' in self.name:
+                        name, taxonB = self.name.split(' [')
+                        self.name = name
+                        self.appendicies[self._appendix]['taxon'] = taxonB.rstrip(']')
+                    else:  # top level is animalia
+                        self.appendicies[self._appendix]['taxon'] = 'ANIMALIA'
             # nodes
             if self.synonym:
                 self.nodes[self.synonym]['synonym'] = self.name
@@ -484,7 +497,6 @@ def swanson():
                 self.nodes[self._rowind]['label'] = self.name
                 self.nodes[self._rowind]['citation'] = self.citation
                 self.nodes[self._rowind]['uberon'] = self.uberon
-
             # edges
             self._last_at_level[self.depth] = self._rowind
             # TODO will need something to deal with the Lateral/
@@ -531,7 +543,9 @@ def swanson():
             self.nodes = dict(self.nodes)
 
     sp = SP()
-    embed()
+    tp = [_ for _ in sorted(['{: <50}'.format(n['label']) + n['uberon'] if n['uberon'] else n['label'] for n in sp.nodes.values()])]
+    print('\n'.join(tp))
+    #embed()
 
 def main():
     swanson()
