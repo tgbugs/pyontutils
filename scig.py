@@ -7,6 +7,7 @@ Usage:
     scig t [--local --verbose] <term>...
     scig s [--local --verbose] <term>...
     scig g [--local --verbose --rt=RELTYPE] <id>...
+    scig c
 
 Options:
     -l --local      hit the local scigraph server
@@ -66,6 +67,13 @@ def main():
                 for edge in out['edges']:
                     for key, value in sorted(edge.items()):
                         print('\t\t%s:' % key, value)
+    elif args['c']:
+        c = Cypher(server, quiet) if server else Cypher(quiet=quiet)
+        curies = c.getCuries()
+        align = max([len(c) for c in curies]) + 2
+        fmt = '{: <%s}' % align
+        for curie, iri in sorted(curies.items()):
+            print(fmt.format(repr(curie)), repr(iri))
 
 if __name__ == '__main__':
     main()
