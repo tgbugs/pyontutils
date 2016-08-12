@@ -1,12 +1,31 @@
+#!/usr/bin/env python3.5
 """
     A collection of reused functions and classes.
 """
 
 import os
+import asyncio
 import inspect
 from functools import wraps
 import rdflib
 from rdflib.extras import infixowl
+
+def async_getter(function, listOfArgs):
+    async def future_loop(future_):
+        loop = asyncio.get_event_loop()
+        futures = []
+        for args in listOfArgs:
+            future = loop.run_in_executor(None, function, *args)
+            futures.append(future)
+        print('Futures compiled')
+        responses = []
+        for f in futures:
+            responses.append(await f)
+        future_.set_result(responses)
+    future = asyncio.Future()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(future_loop(future))
+    return future.result()
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
