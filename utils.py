@@ -218,7 +218,7 @@ class rowParse:
             i += 1
 
     def _next_rows(self, rows):
-        for row in rows:
+        for self._rowind, row in enumerate(rows):
             skip = False
             for i, value in self._order_enumerate(row):
                 func = getattr(self, self.lookup[i], None)
