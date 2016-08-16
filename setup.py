@@ -11,7 +11,7 @@ setup(
     license='MIT',
     classifiers=[],
     keywords='nif nifstd ontology scigraph',
-    packages = find_packages(exclude=['tests*', 'resources*','complete*']),
+    py_modules = ['hierarchies', 'scigraph', 'scigraph_client', 'scig', 'utils'],
     install_requires=[
         'docopt',
         'numpy',
