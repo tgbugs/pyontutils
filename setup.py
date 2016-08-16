@@ -11,7 +11,9 @@ setup(
     license='MIT',
     classifiers=[],
     keywords='nif nifstd ontology scigraph',
-    py_modules = ['hierarchies', 'scigraph', 'scigraph_client', 'scig', 'utils'],
+    packages=['pyontutils'], #.hierarchies', 'pyontutils.scigraph_client', 'pyontutils.utils'],
+    package_dir={'pyontutils':'./'},
+    #scripts=['scigraph.py', 'scig.py',],
     install_requires=[
         'docopt',
         'numpy',
