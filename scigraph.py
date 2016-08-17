@@ -195,7 +195,7 @@ class State:
             dict_comp2 = 'kwargs'
 
         params_conditional = ''
-        for cond in 'id','url','relationshipType':
+        for cond in 'id','url':
             if cond in param_rest:
                 params_conditional += (
                     "{t}{t}if {cond} and {cond}.startswith('http:'):\n"

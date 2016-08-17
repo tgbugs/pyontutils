@@ -1,12 +1,31 @@
+#!/usr/bin/env python3.5
 """
     A collection of reused functions and classes.
 """
 
 import os
+import asyncio
 import inspect
 from functools import wraps
 import rdflib
 from rdflib.extras import infixowl
+
+def async_getter(function, listOfArgs):
+    async def future_loop(future_):
+        loop = asyncio.get_event_loop()
+        futures = []
+        for args in listOfArgs:
+            future = loop.run_in_executor(None, function, *args)
+            futures.append(future)
+        print('Futures compiled')
+        responses = []
+        for f in futures:
+            responses.append(await f)
+        future_.set_result(responses)
+    future = asyncio.Future()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(future_loop(future))
+    return future.result()
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
@@ -199,7 +218,7 @@ class rowParse:
             i += 1
 
     def _next_rows(self, rows):
-        for row in rows:
+        for self._rowind, row in enumerate(rows):
             skip = False
             for i, value in self._order_enumerate(row):
                 func = getattr(self, self.lookup[i], None)
@@ -219,4 +238,28 @@ class rowParse:
     def _end(self):
         """ Run this code after all rows have been parsed """
         pass
+
+class _TermColors:
+    ENDCOLOR = '\033[0m'
+    colors = dict(
+    BOLD = '\033[1m',
+    RED = '\033[91m',
+    GREEN = '\033[92m',
+    YELLOW = '\033[93m',
+    BLUE = '\033[94m',
+    )
+
+    def __init__(self):
+        for color, esc in self.colors.items():
+            def latebindingfix(string, e=esc):
+                return self.endcolor(e + string)
+            setattr(self, color.lower(), latebindingfix)
+
+    def endcolor(self, string):
+        if string.endswith(self.ENDCOLOR):
+            return string
+        else:
+            return string + self.ENDCOLOR
+
+TermColors = _TermColors()
 

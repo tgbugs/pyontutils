@@ -12,13 +12,9 @@ from IPython import embed
 from utils import makeGraph, add_hierarchy, rowParse
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
+from desc.prof import profile_me
 sgg = Graph(quiet=False)
 sgv = Vocabulary()
-
-# TODO
-# 1) hiearchy for ephys
-# 2) hiearchy for morpho
-# 3) ingest table 1
 
 # consts
 defined_class_parent = 'ilx:definedClassNeurons'
@@ -61,6 +57,11 @@ PREFIXES = {
     'PR':'http://purl.obolibrary.org/obo/PR_',
 }
 
+def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
+    find = graph.expand(find)
+    for s, p, o in graph.g.triples((None, None, find)):
+        graph.add_node(s, p, replace)
+        graph.g.remove((s, p, o))
 
 def make_defined(graph, ilx_start, label, phenotype_id, restriction_edge, parent=None):
     ilx_start += 1
@@ -110,6 +111,87 @@ def make_mutually_disjoint(graph, members):
     else:
         return members
 
+def type_check(tup, types):
+    return all([type(t) is ty for t, ty in zip(tup, types)])
+
+def add_types(graph, phenotypes):  # TODO missing expression phenotypes! also basket type somehow :(
+    """ Add disjoint union classes so that it is possible to see the invariants
+        associated with individual phenotypes """
+
+    collect = defaultdict(set)
+    def recurse(id_, start, level=0):
+        #print(level)
+        for t in graph.g.triples((None, None, id_)):
+            if level == 0:
+                if t[1] != rdflib.term.URIRef('http://www.w3.org/2002/07/owl#someValuesFrom'):
+                    continue
+            if type_check(t, (rdflib.term.URIRef, rdflib.term.URIRef, rdflib.term.BNode)):
+                #print(start, t[0])
+                collect[start].add(t[0])
+                return  #  we're done here, otherwise we hit instantiated subclasses
+            if level > 1:
+                if t[1] == rdflib.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#first') or \
+                   t[1] == rdflib.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest'):
+                    continue
+
+            recurse(t[0], start, level + 1)
+
+
+    for phenotype in phenotypes:
+        recurse(phenotype, phenotype)
+
+    return collect
+
+    #embed()
+
+def get_defined_classes(graph):
+    phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
+    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))
+    collect = []
+    def recurse(id_, start, level=0):
+        if type(id_) == rdflib.term.URIRef and id_ != start:
+            collect.append((start, id_))
+            return
+            #return start, id_
+        for t in graph.g.triples((None, None, id_)):
+            if level == 0 and type(t[0]) != rdflib.term.BNode:
+                continue
+            if level == 4:
+                if t[1] !=  rdflib.term.URIRef('http://www.w3.org/2002/07/owl#equivalentClass'):
+                    continue
+            result = recurse(t[0], start, level + 1)
+            #if result:  # this only works if there is a single equivalentClass axiom...
+                #return result
+
+    for id_ in inc:
+        recurse(id_, id_)
+
+    #for pheno, equiv in collect:
+        #print(pheno, equiv, [_ for _ in graph.g.objects(equiv, rdflib.RDFS.label)])
+
+    return collect
+
+def get_transitive_closure(graph, edge, root):
+    trips = set([t for t in graph.g.triples((None, edge, None))])
+    valid_parents = {root}
+    include = set()
+    new_vp = set()
+    old_len = -1
+    output = set()
+    output.update(valid_parents)
+    while len(trips) != old_len:
+        for t in trips:
+            if t[2] in valid_parents:
+                new_vp.add(t[0])
+                include.add(t)
+        valid_parents = new_vp
+        output.update(valid_parents)
+        old_len = len(trips)
+        trips = trips - include
+
+    return output
+
+@profile_me
 def make_phenotypes():
     ilx_start = 50114
     graph = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
@@ -287,6 +369,8 @@ def make_phenotypes():
     graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron phenotype ontology holds neuron phenotypes.')
     #graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
     #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
+    graph.g.commit()
+    get_defined_classes(graph)  # oops...
     graph.write(delay=True)  # moved below to incorporate uwotm8
     
     syn_mappings = {}
@@ -296,9 +380,11 @@ def make_phenotypes():
             print('ERROR duplicate synonym!', syn, sub)
         syn_mappings[syn] = sub
 
-    return syn_mappings, pedges, ilx_start
 
+    phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
+    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))  # FIXME not very configurable...
 
+    return syn_mappings, pedges, ilx_start, inc
 
 def _rest_make_phenotypes():
     #phenotype sources
@@ -519,6 +605,7 @@ def _rest_make_phenotypes():
     #embed()
     return syn_mappings, pedges, ilx_start
 
+@profile_me
 def make_neurons(syn_mappings, pedges, ilx_start_):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',}
@@ -719,13 +806,6 @@ def add_phenotypes(graph):
     add_new(ir_p, s_spiking_phenotype, ('irregular',))
     add_new(morpho_phenotype, neuron_phenotype)
 
-
-def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
-    find = graph.expand(find)
-    for s, p, o in graph.g.triples((None, None, find)):
-        graph.add_node(s, p, replace)
-        graph.g.remove((s, p, o))
-
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
     #species = 'NCBITaxon:10116'
     brain_region = 'UBERON:0008933'
@@ -813,6 +893,11 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         self.Class.subClassOf = [restriction]
 
         self.pheno_bags[id_].add(id_)
+
+        """
+        BREAKSTUFF
+        ARE YOU SURE?
+        """
 
         #restriction = infixowl.Restriction(self.expand(morpho_edge), graph=self.graph.g, someValuesFrom=id_)
         #self.Class.subClassOf = [restriction]
@@ -918,7 +1003,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
                 #restriction = infixowl.Restriction(self.expand(expression_edge), graph=self.graph.g, someValuesFrom=muri)
                 #defined = infixowl.Class(id_, graph=self.graph.g)
                 #defined.label = rdflib.Literal(abrv + '+ neuron')
-#
+
                 #intersection = infixowl.BooleanClass(members=(self.graph.expand(NIFCELL_NEURON), restriction), graph=self.graph.g)
                 ##intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
                 #defined.equivalentClass = [intersection]
@@ -993,11 +1078,6 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             e_res = infixowl.Restriction(self.expand(e_edge), graph=self.graph.g, someValuesFrom=early)
             l_res = infixowl.Restriction(self.expand(l_edge), graph=self.graph.g, someValuesFrom=late)
 
-            """
-            union = infixowl.BooleanClass(operator=rdflib.OWL.unionOf, members=(e_res, l_res), graph=self.graph.g)
-            self.Class.subClassOf = [union]
-
-            """
             self.ilx_start += 1  # FIXME the other option here is to try disjoint union???
             id_ = ilx_base.format(self.ilx_start)
             id_ = self.expand(id_)
@@ -1007,7 +1087,6 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             #c.subClassOf = [e_res, l_res]  # handy that...
             c.subClassOf = [intersection]
             self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
-            #"""
 
             #self.mutually_disjoints[i_spiking_phenotype].add(early)  # done in phenotypes
             #self.mutually_disjoints[s_spiking_phenotype].add(late)  # done in phenotypes
@@ -1095,7 +1174,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             make_mutually_disjoint(self.graph, sorted(disjoint_things))
 
 
-def make_table1(syn_mappings, ilx_start):
+@profile_me
+def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
     # it may turn out that things like the disjointness exist at a higher level while correlated properties
     # should be instantiated together as sub classes, for example if cck and 
@@ -1116,10 +1196,21 @@ def make_table1(syn_mappings, ilx_start):
     #
     # need a full type restriction... property chain?
 
+    graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
+
+    def add_new(id_, sco=None, syns=tuple(), lbl=None):
+        if lbl is None:
+            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_node(id_, rdflib.RDFS.label, lbl)
+        if sco:
+            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
+
+        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
+
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
-    graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -1140,6 +1231,7 @@ def make_table1(syn_mappings, ilx_start):
         rows = [list(r) for r in zip(*csv.reader(f))]
     #table2 = type('table2', (table1,), {'species':'NCBITaxon:10090'})
     t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
+    ilx_start = t2.ilx_start
 
     def do_graph(d):
         sgt = graph.expand(d['curie'])
@@ -1176,8 +1268,25 @@ def make_table1(syn_mappings, ilx_start):
     #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
     #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
-    graph.add_node(expression_defined, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(expression_defined, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
+    add_new(expression_defined, NIFCELL_NEURON)
+    add_new('ilx:NeuroTypeClass', NIFCELL_NEURON, lbl='Neuron TypeClass')
+
+    graph.g.commit()
+
+    phenotype_dju_dict = add_types(graph, phenotypes)
+    for pheno, disjoints in phenotype_dju_dict.items():
+        name = ' '.join(re.findall(r'[A-Z][a-z]*', pheno.split(':')[1])[:-1])  #-1: drops Phenotype
+        ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilx:hasPhenotype')
+        id_ = graph.expand(ilx_base.format(ilx_start))
+        typeclass = infixowl.Class(id_, graph=graph.g)
+        typeclass.label = rdflib.Literal(name + ' neuron type')
+
+        restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
+        typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
+
+        disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
+        graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
+
 
     graph.write(delay=True)
     #print(t._set_Electrical_types)
@@ -1185,10 +1294,10 @@ def make_table1(syn_mappings, ilx_start):
     #embed()
 
 def main():
-    with makeGraph('', {}) as _:
-        syn_mappings, pedge, ilx_start = make_phenotypes()
-        ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
-        make_table1(syn_mappings, ilx_start)
+    #with makeGraph('', {}) as _:
+    syn_mappings, pedge, ilx_start, phenotypes = make_phenotypes()
+    ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
+    make_table1(syn_mappings, ilx_start, phenotypes)
 
 if __name__ == '__main__':
     main()
