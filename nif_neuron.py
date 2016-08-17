@@ -34,6 +34,8 @@ s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
 spiking_edge = 'ilx:hasSpikingPhenotype'
 fast_phenotype = 'ilx:FastSpikingPhenotype'
 reg_phenotype = 'ilx:RegularSpikingNonPyramidalPhenotype'
+expression_edge = 'ilx:hasExpressionPhenotype'
+expression_defined = 'ilx:ExpressionClassifiedNeuron'
 NIFCELL_NEURON = 'NIFCELL:sao1417703748'
 
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
@@ -58,6 +60,26 @@ PREFIXES = {
     'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
     'PR':'http://purl.obolibrary.org/obo/PR_',
 }
+
+
+def make_defined(graph, ilx_start, label, phenotype_id, restriction_edge, parent=None):
+    ilx_start += 1
+    id_ = ilx_base.format(ilx_start)
+    id_ = graph.expand(id_)
+    restriction = infixowl.Restriction(graph.expand(restriction_edge), graph=graph.g, someValuesFrom=phenotype_id)
+    defined = infixowl.Class(id_, graph=graph.g)
+    defined.label = rdflib.Literal(label + ' neuron')
+
+    intersection = infixowl.BooleanClass(members=(graph.expand(NIFCELL_NEURON), restriction), graph=graph.g)
+    #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+    defined.equivalentClass = [intersection]
+    if parent is not None:
+        defined.subClassOf = [graph.expand(parent)]
+    return ilx_start
+
+    # TODO I think the defined class disjointness needs additional code... selecting from phenotype disjointness?
+    #for dj in self.:
+        #defined.disjointWith = [infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=dj)]
 
 def pprint(thing):
     for t in thing:
@@ -112,18 +134,21 @@ def make_phenotypes():
         def __init__(self):
             self.ilx_start = ilx_start
             self.parent_child_map = defaultdict(set)
+            self.child_parent_map = defaultdict(set)
             self.scd = set()
             super().__init__(rows)
 
         def ilx_id(self, value):
             self.id_ = graph.expand(value)
             self.Class = infixowl.Class(self.id_, graph=graph.g)
-            self._label = value.split(':',1)[1]  # TODO
+            label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
+            self._label = label
 
         def subClassOf(self, value):
             if value:
                 self.parent = graph.expand(value)
                 self.parent_child_map[self.parent].add(self.id_)
+                self.child_parent_map[self.id_].add(self.parent)
                 self.Class.subClassOf = [self.parent]
 
         def label(self, value):
@@ -145,14 +170,55 @@ def make_phenotypes():
                 [graph.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
 
         def _row_post(self):
-            #defined class
+            # defined class
+            lookup = {
+                graph.expand('ilx:AxonPhenotype'):rdflib.URIRef('http://axon.org'),
+                graph.expand('ilx:AxonMorphologicalPhenotype'):None,
+                graph.expand('ilx:DendritePhenotype'):rdflib.URIRef('http://dendrite.org'),
+                graph.expand('ilx:DendriteMorphologicalPhenotype'):None,
+                graph.expand('ilx:SomaPhenotype'):rdflib.URIRef('http://soma.org'),
+                graph.expand('ilx:SomaMorphologicalPhenotype'):None,
+                graph.expand('ilx:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),
+                graph.expand('ilx:CellPhenotype'):None,
+            }
+            if self.id_ in lookup:
+                return
+            #elif 'Petilla' in self.id_:
+                #return
+            #else:
+                #print(self.id_)
+
             self.ilx_start += 1
             id_ = graph.expand(ilx_base.format(self.ilx_start))
             defined = infixowl.Class(id_, graph=graph.g)
-            defined.label = rdflib.Literal(self._label + ' neuron')
+            #defined.label = rdflib.Literal(self._label.rstrip(' Phenotype') + ' neuron')  # the extra space in rstrip removes 'et ' as well WTF!
+            defined.label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
+            print(self._label)
 
-            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=id_)  #FIXME?
-            intersection = infixowl.BooleanClass(members=(graph.expand(NIFCELL_NEURON), restriction), graph=graph.g)
+            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=self.id_)  #FIXME?
+
+            parent = [p for p in self.child_parent_map[self.id_] if p]
+            if parent:
+                parent = parent[0]
+                while 1:
+                    if parent == graph.expand('ilx:NeuronPhenotype'):
+                        #defined.subClassOf = [graph.expand(defined_class_parent)]  # XXX this does not produce what we want
+                        break
+                    #else:
+                        #print(parent, graph.expand('ilx:NeuronPhenotype'))
+
+                    #print('xxxxxxxxxxxxxxxx', parent)
+                    new_parent = [p for p in self.child_parent_map[parent] if p]
+                    if new_parent:
+                        parent = new_parent[0]
+                    else:
+                        break
+                phenotype_equiv = lookup[parent]
+            else:
+                return
+
+
+            intersection = infixowl.BooleanClass(members=(phenotype_equiv, restriction), graph=graph.g)
             #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
             defined.equivalentClass = [intersection]
 
@@ -162,7 +228,30 @@ def make_phenotypes():
 
     pp = PP()
     ilx_start = pp.ilx_start
-    
+
+    to_add = {}
+    def lsn(word):
+        rank = defaultdict(lambda:0)
+        rank['PR'] = -100
+        rank['NIFMOL'] = -50
+        rank['UBERON'] = -10
+        rank['NCBITaxon'] = -9
+        rank['NIFCELL'] = -8
+        sort_rank = lambda r: rank[r['curie'].split(':')[0]]
+        to_add[word] = graph.expand(sorted(sgv.findByTerm(word), key=sort_rank)[0]['curie'])  # cheating
+
+    # FIXME naming
+    lsn('Parvalbumin')
+    lsn('neuropeptide Y')
+    lsn('VIP peptides')
+    lsn('somatostatin')
+    lsn('calbindin')
+    lsn('calretinin')
+    for name, iri in to_add.items():
+        ilx_start = make_defined(graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
+    #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
+    #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
+
     with open('neuron_phenotype_edges.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
     
@@ -468,7 +557,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     ontid = base + ng.name + '.ttl'
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
-    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
+    #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
@@ -638,21 +727,27 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
         graph.g.remove((s, p, o))
 
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
-    species = 'NCBITaxon:10116'
+    #species = 'NCBITaxon:10116'
     brain_region = 'UBERON:0008933'
     citation = 'Markhram et al Cell 2015'
     pmid = 'PMID:26451489'
     _sep = '|'
     _edge = '\x00\x01\xde\xad\xee\xef\xfe'
+    phenotype_iri_map = {}
 
-    def __init__(self, graph, rows, syn_mappings, ilx_start):
+    def __init__(self, graph, rows, syn_mappings, ilx_start, species=None):
         self.graph = graph
         self.expand = self.graph.expand
         self.ilx_start = ilx_start
         self.syn_mappings = syn_mappings
         self.plbls = set()
-        self.phenotype_iri_map = {}
         self.mutually_disjoints = defaultdict(set)
+        self.pheno_bags = defaultdict(set)  # TODO this needs to become a dict to handle positive/negative and disjointness... :/
+
+        if species:
+            self.species = species
+        else:
+            self.species = 'NCBITaxon:10116'
 
         label_species = sgv.findById(self.species)['labels'][0]
         label_brain_region = sgv.findById(self.brain_region)['labels'][0]
@@ -665,7 +760,6 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             'Electrical_types']
 
         super().__init__(rows, order=order)
-        self._end()
 
     def _make_label(self):
         LABEL = ' '.join(
@@ -683,6 +777,10 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         print('--------------------')
         self.ilx_start += 1
         self.id_ = ilx_base.format(self.ilx_start)
+
+        self.pheno_bags[self.expand(self.id_)].add(self.expand(self.species))
+        self.pheno_bags[self.expand(self.id_)].add(self.expand(self.brain_region))
+
         self.Class = infixowl.Class(self.expand(self.id_), graph=self.graph.g)
 
         species_rest = infixowl.Restriction(self.expand('ilx:hasInstanceInSpecies'),
@@ -705,16 +803,24 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
 
         v = syn.rstrip('cell').strip()
         if v not in self.phenotype_iri_map:
-            id_ = self._make_phenotype(v, morpho_phenotype, morpho_edge, morpho_defined)
+            id_ = self.graph.expand('ilx:' + ''.join([_.capitalize() for _ in v.split(' ')]) + 'Phenotype')
+            #id_ = self._make_phenotype(v, morpho_phenotype, morpho_edge, morpho_defined)
             self.phenotype_iri_map[v] = id_
         else:
             id_ = self.phenotype_iri_map[v]
-            restriction = infixowl.Restriction(self.expand(morpho_edge), graph=self.graph.g, someValuesFrom=id_)
-            self.Class.subClassOf = [restriction]
 
-        self.mutually_disjoints[morpho_phenotype].add(id_)
+        restriction = infixowl.Restriction(self.expand(morpho_edge), graph=self.graph.g, someValuesFrom=id_)
+        self.Class.subClassOf = [restriction]
+
+        self.pheno_bags[id_].add(id_)
+
+        #restriction = infixowl.Restriction(self.expand(morpho_edge), graph=self.graph.g, someValuesFrom=id_)
+        #self.Class.subClassOf = [restriction]
+
+        #self.mutually_disjoints[morpho_phenotype].add(id_)  # done in phenotypes
 
         self._morpho_parent_id = id_
+
 
     def Other_morphological_classifications(self, value):
         return  #  skipping all of this for now due to bitufted nonsense etc
@@ -802,6 +908,23 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             #muri = rdflib.URIRef('http://' + molecule.replace(' ','-') + '.org')  # FIXME rearchitect so that uris are already in place at map creation
             exists = e_map[score]
             score = s_map[score]
+
+            #if abrv not in table1.phenotype_iri_map:
+                #defined class
+                #self.ilx_start += 1
+                #id_ = ilx_base.format(self.ilx_start)
+                #id_ = self.expand(id_)
+                #self.phenotype_iri_map[abrv] = id_
+                #restriction = infixowl.Restriction(self.expand(expression_edge), graph=self.graph.g, someValuesFrom=muri)
+                #defined = infixowl.Class(id_, graph=self.graph.g)
+                #defined.label = rdflib.Literal(abrv + '+ neuron')
+#
+                #intersection = infixowl.BooleanClass(members=(self.graph.expand(NIFCELL_NEURON), restriction), graph=self.graph.g)
+                ##intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+                #defined.equivalentClass = [intersection]
+                #defined.subClassOf = [self.graph.expand('ilx:ExpressionClassifiedNeuron')]
+
+
             if exists:
                 restriction = infixowl.Restriction(self.expand(p_edge), graph=self.graph.g, someValuesFrom=muri)
                 self.Class.subClassOf = [restriction]
@@ -886,8 +1009,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             self.graph.add_node(id_, rdflib.RDFS.subClassOf, self.id_)  # how to do this with c.subClassOf...
             #"""
 
-            self.mutually_disjoints[i_spiking_phenotype].add(early)
-            self.mutually_disjoints[s_spiking_phenotype].add(late)
+            #self.mutually_disjoints[i_spiking_phenotype].add(early)  # done in phenotypes
+            #self.mutually_disjoints[s_spiking_phenotype].add(late)  # done in phenotypes
 
             # a terrible way to set labels here
             outer_ephys = tuple(self.labels_ephys)
@@ -935,6 +1058,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         print(output)
 
     def _make_phenotype(self, phenotype_lbl, parent_pheno, p_edge, p_defined):
+        return 'http://lolwut.com'
         # electrical here? or can we do those as needed above?
         self.ilx_start += 1
         id_ = ilx_base.format(self.ilx_start)
@@ -946,27 +1070,10 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         Class.subClassOf = [self.expand(parent_pheno)]
         Class.label =  rdflib.Literal(phenotype_lbl + ' phenotype')
 
-        restriction = infixowl.Restriction(self.expand(p_edge), graph=self.graph.g, someValuesFrom=id_)
-        self.Class.subClassOf = [restriction]
-
         pheno_iri = id_
-
-        #defined class
-        self.ilx_start += 1
-        id_ = ilx_base.format(self.ilx_start)
-        defined = infixowl.Class(self.expand(id_), graph=self.graph.g)
-        defined.label = rdflib.Literal(phenotype_lbl + ' neuron')
-
-        intersection = infixowl.BooleanClass(members=(self.graph.expand(NIFCELL_NEURON), restriction), graph=self.graph.g)
-        #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
-        defined.equivalentClass = [intersection]
-        defined.subClassOf = [self.graph.expand(p_defined)]
-
-        # TODO I think the defined class disjointness needs additional code... selecting from phenotype disjointness?
-        #for dj in self.:
-            #defined.disjointWith = [infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=dj)]
-
         return pheno_iri
+
+
 
     def _make_mutually_disjoint(self, things):
         if len(things) > 1:
@@ -1019,9 +1126,20 @@ def make_table1(syn_mappings, ilx_start):
     graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
     #graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
 
+    def lsn(word):
+        syn_mappings[word] = graph.expand(sgv.findByTerm(word)[0]['curie'])  # cheating
+    lsn('Parvalbumin')
+    lsn('neuropeptide Y')
+    lsn('VIP peptides')
+    lsn('somatostatin')
     syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
     t = table1(graph, rows, syn_mappings, ilx_start)
+
+    with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
+        rows = [list(r) for r in zip(*csv.reader(f))]
+    #table2 = type('table2', (table1,), {'species':'NCBITaxon:10090'})
+    t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
 
     def do_graph(d):
         sgt = graph.expand(d['curie'])
@@ -1049,14 +1167,17 @@ def make_table1(syn_mappings, ilx_start):
 
 
     # FIXME this is a dupe with defined_class
-    graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
-    graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
-    graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
-    graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
-    graph.add_node(morpho_defined, rdflib.RDFS.subClassOf, defined_class_parent)
-    graph.add_node(morpho_defined, rdflib.RDFS.label, 'Morphologically classified neuron')  # FIXME -- need asserted in here...
-    graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
-    graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
+    #graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
+    #graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
+    #graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
+    #graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
+    #graph.add_node(morpho_defined, rdflib.RDFS.subClassOf, defined_class_parent)
+    #graph.add_node(morpho_defined, rdflib.RDFS.label, 'Morphologically classified neuron')  # FIXME -- need asserted in here...
+    #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
+    #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
+
+    graph.add_node(expression_defined, rdflib.RDF.type, rdflib.OWL.Class)
+    graph.add_node(expression_defined, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
 
     graph.write(delay=True)
     #print(t._set_Electrical_types)
