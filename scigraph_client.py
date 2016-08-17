@@ -9,7 +9,7 @@
 import requests
 from json import dumps
 
-exten_mapping = {'application/graphml+xml': 'graphml+xml', 'text/plain': 'plain', 'application/xgmml': 'xgmml', 'text/tab-separated-values': 'tab-separated-values', 'text/csv': 'csv', 'text/plain; charset=utf-8': 'plain; charset=utf-8', 'text/gml': 'gml', 'application/json': 'json', 'image/jpeg': 'jpeg', 'text/html': 'html', 'application/graphson': 'graphson', 'image/png': 'png', 'application/xml': 'xml'}
+exten_mapping = {'image/jpeg': 'jpeg', 'text/html': 'html', 'image/png': 'png', 'text/tab-separated-values': 'tab-separated-values', 'application/graphml+xml': 'graphml+xml', 'text/plain; charset=utf-8': 'plain; charset=utf-8', 'text/plain': 'plain', 'application/json': 'json', 'text/csv': 'csv', 'application/xgmml': 'xgmml', 'application/xml': 'xml', 'application/graphson': 'graphson', 'text/gml': 'gml'}
 
 class restService:
     """ Base class for SciGraph rest services. """
@@ -180,8 +180,6 @@ class Graph(restService):
 
         if id and id.startswith('http:'):
             id = id.replace('/','%2F').replace('#','%23')
-        if relationshipType and relationshipType.startswith('http:'):
-            relationshipType = relationshipType.replace('/','%2F').replace('#','%23')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -217,8 +215,6 @@ class Graph(restService):
 
         if id and id.startswith('http:'):
             id = id.replace('/','%2F').replace('#','%23')
-        if relationshipType and relationshipType.startswith('http:'):
-            relationshipType = relationshipType.replace('/','%2F').replace('#','%23')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -554,20 +550,6 @@ class Lexical(restService):
         self._quiet = quiet
         super().__init__()
 
-    def getChunks(self, text):
-        """ Extract entities from text. from: /lexical/chunks
-
-            Arguments:
-            text: The text from which to extract chunks
-        """
-
-        kwargs = {'text':text}
-        kwargs = {k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/lexical/chunks').format(**kwargs)
-        requests_params = kwargs
-        return self._get('GET', url, requests_params)
-
     def getEntities(self, text):
         """ Extract entities from text. from: /lexical/entities
 
@@ -579,6 +561,20 @@ class Lexical(restService):
         kwargs = {k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/lexical/entities').format(**kwargs)
+        requests_params = kwargs
+        return self._get('GET', url, requests_params)
+
+    def getChunks(self, text):
+        """ Extract entities from text. from: /lexical/chunks
+
+            Arguments:
+            text: The text from which to extract chunks
+        """
+
+        kwargs = {'text':text}
+        kwargs = {k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/lexical/chunks').format(**kwargs)
         requests_params = kwargs
         return self._get('GET', url, requests_params)
 
