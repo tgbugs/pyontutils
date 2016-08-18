@@ -142,9 +142,9 @@ class makeGraph:
         if type(parent) != rdflib.URIRef:
             parent = self.expand(parent)
 
-        if type(child) != rdflib.URIRef:
-            child = self.expand(child)
         if type(child) != infixowl.Class:
+            if type(child) != rdflib.URIRef:
+                child = self.expand(child)
             child = infixowl.Class(child, graph=self.g)
 
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
