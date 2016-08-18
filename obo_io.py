@@ -59,12 +59,15 @@ import os
 import inspect
 from datetime import datetime
 from getpass import getuser
-from collections import OrderedDict as od
+from collections import OrderedDict
 from docopt import docopt
 from IPython import embed
 
 N = -1  # use to define 'many ' for tag counts
 TW = 4  # tab width
+
+class od(OrderedDict):
+    pass
 
 od.__repr__ = dict.__repr__
 
