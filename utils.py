@@ -4,6 +4,7 @@
 """
 
 import os
+import re
 import asyncio
 import inspect
 from functools import wraps
@@ -55,6 +56,8 @@ def mysql_conn_helper(host, db, user, port=3306):
     return kwargs
 
 class makeGraph:
+    SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
+
     def __init__(self, name, prefixes):
         self.name = name
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
@@ -100,6 +103,16 @@ class makeGraph:
                     raise TypeError('Unknown format:', thing)
         else:
             return thing
+
+    def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None):
+        if label is None:
+            label = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
+        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        self.add_node(id_, rdflib.RDFS.label, label)
+        if subClassOf:
+            self.add_node(id_, rdflib.RDFS.subClassOf, subClassOf)
+
+        [self.add_node(id_, self.SYNONYM, s) for s in synonyms]
 
     def add_node(self, target, edge, value):
         target = self.check_thing(target)
