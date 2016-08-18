@@ -9,7 +9,7 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import makeGraph, add_hierarchy, rowParse
+from utils import makeGraph, rowParse
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 from desc.prof import profile_me
@@ -655,7 +655,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
             if o in syn_mappings:
                 id_ = syn_mappings[o]
 
-                add_hierarchy(ng.g, id_, p, s)
+                ng.add_hierarchy(id_, p, s)
                 ng.g.remove((s, p, o_lit))
                 print('SUCCESS, substituting', o, 'for', id_)
                 success = True
@@ -664,7 +664,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
 
             elif 'Location' in p.toPython():
                 if o.startswith('http://'):
-                    add_hierarchy(ng.g, o_lit, p, s)
+                    ng.add_hierarchy(o_lit, p, s)
                     ng.g.remove((s, p, o_lit))
 
                     data = sgv.findById(o)
@@ -686,7 +686,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
                     for d in data:
                         if 'PR:' in d['curie']:
                             sgt = ng.expand(d['curie'])
-                            add_hierarchy(ng.g, sgt, p, s)
+                            ng.add_hierarchy(sgt, p, s)
                             ng.g.remove((s, p, o_lit))
 
                             label = d['labels'][0]
@@ -702,7 +702,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
                         for d in data:
                             if 'NIFMOL:' in d['curie']:
                                 sgt = ng.expand(d['curie'])
-                                add_hierarchy(ng.g, sgt, p, s)
+                                ng.add_hierarchy(sgt, p, s)
                                 ng.g.remove((s, p, o_lit))
 
                                 label = d['labels'][0]
