@@ -105,14 +105,24 @@ class makeGraph:
             return thing
 
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None):
+        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
         if label is None:
             label = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
-        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        self.add_node(id_, rdflib.RDFS.label, label)
+        if label:
+            self.add_node(id_, rdflib.RDFS.label, label)
         if subClassOf:
             self.add_node(id_, rdflib.RDFS.subClassOf, subClassOf)
 
         [self.add_node(id_, self.SYNONYM, s) for s in synonyms]
+
+    def add_op(self, id_, label=None, subPropertyOf=None, inverse=None):
+        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        if inverse:
+            self.add_node(id_, rdflib.OWL.inverseOf, inverse)
+        if subPropertyOf:
+            self.add_node(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
+        if label:
+            self.add_node(id_, rdflib.RDFS.label, label)
 
     def add_node(self, target, edge, value):
         target = self.check_thing(target)
@@ -125,21 +135,27 @@ class makeGraph:
             value = rdflib.Literal(value)  # trust autoconv
         self.g.add( (target, edge, value) )
 
+    def add_hierarchy(self, parent, edge, child):
+        """ Helper function to simplify the addition of part_of style
+            objectProperties to graphs. FIXME make a method of makeGraph?
+        """
+        if type(parent) != rdflib.URIRef:
+            parent = self.expand(parent)
+
+        if type(child) != rdflib.URIRef:
+            child = self.expand(child)
+        if type(child) != infixowl.Class:
+            child = infixowl.Class(child, graph=self.g)
+
+        restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
+        child.subClassOf = [restriction] + [c for c in child.subClassOf]
+
     def __enter__(self):
         self.reset_writeloc()
         return self
 
     def __exit__(self, type, value, traceback):
         self.owlapi_conversion()
-
-def add_hierarchy(graph, parent, edge, child):
-    """ Helper function to simplify the addition of part_of style
-        objectProperties to graphs. FIXME make a method of makeGraph?
-    """
-    if type(child) != infixowl.Class:
-        child = infixowl.Class(child, graph=graph)
-    restriction = infixowl.Restriction(edge, graph=graph, someValuesFrom=parent)
-    child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
