@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 import io
 import os
 import re
@@ -196,17 +196,6 @@ def make_phenotypes():
     ilx_start = 50114
     graph = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
 
-    def add_new(id_, sco=None, syns=tuple(), lbl=None):
-        if lbl is None:
-            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
-        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        graph.add_node(id_, rdflib.RDFS.label, lbl)
-        if sco:
-            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
-
-        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
-
-    
     with open('neuron_phenotype.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
 
@@ -756,15 +745,6 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     return ilx_start
 
 def add_phenotypes(graph):
-    def add_new(id_, sco=None, syns=tuple(), lbl=None):
-        if lbl is None:
-            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
-        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        graph.add_node(id_, rdflib.RDFS.label, lbl)
-        if sco:
-            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
-
-        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
 
     cell_phenotype = 'ilx:CellPhenotype'
     neuron_phenotype = 'ilx:NeuronPhenotype'
@@ -784,27 +764,27 @@ def add_phenotypes(graph):
     #fast = 'ilx:FastSpikingPhenotype'
     #reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
 
-    add_new(cell_phenotype)
-    add_new(neuron_phenotype, cell_phenotype)
-    add_new(ephys_phenotype, neuron_phenotype)
-    add_new(spiking_phenotype, ephys_phenotype)
-    add_new(fast_phenotype, spiking_phenotype,('Fast spiking'))
-    add_new(reg_phenotype, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
-    add_new(i_spiking_phenotype, spiking_phenotype)
+    graph.add_class(cell_phenotype)
+    graph.add_class(neuron_phenotype, cell_phenotype)
+    graph.add_class(ephys_phenotype, neuron_phenotype)
+    graph.add_class(spiking_phenotype, ephys_phenotype)
+    graph.add_class(fast_phenotype, spiking_phenotype,('Fast spiking'))
+    graph.add_class(reg_phenotype, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
+    graph.add_class(i_spiking_phenotype, spiking_phenotype)
     iClass = infixowl.Class(graph.expand(i_spiking_phenotype), graph=graph.g)
 
-    add_new(burst_p, i_spiking_phenotype, ('burst',))
-    add_new(classical_p, i_spiking_phenotype, ('classical',))
-    add_new(delayed_p, i_spiking_phenotype, ('delayed',))
-    add_new(s_spiking_phenotype, spiking_phenotype)
+    graph.add_class(burst_p, i_spiking_phenotype, ('burst',))
+    graph.add_class(classical_p, i_spiking_phenotype, ('classical',))
+    graph.add_class(delayed_p, i_spiking_phenotype, ('delayed',))
+    graph.add_class(s_spiking_phenotype, spiking_phenotype)
     sClass = infixowl.Class(graph.expand(s_spiking_phenotype), graph=graph.g)
     sClass.disjointWith = [iClass]
 
-    add_new(ac_p, s_spiking_phenotype, ('accomodating',))  # FIXME this is silly
-    add_new(nac_p, s_spiking_phenotype, ('non accomodating',))
-    add_new(st_p, s_spiking_phenotype, ('stuttering',))
-    add_new(ir_p, s_spiking_phenotype, ('irregular',))
-    add_new(morpho_phenotype, neuron_phenotype)
+    graph.add_class(ac_p, s_spiking_phenotype, ('accomodating',))  # FIXME this is silly
+    graph.add_class(nac_p, s_spiking_phenotype, ('non accomodating',))
+    graph.add_class(st_p, s_spiking_phenotype, ('stuttering',))
+    graph.add_class(ir_p, s_spiking_phenotype, ('irregular',))
+    graph.add_class(morpho_phenotype, neuron_phenotype)
 
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
     #species = 'NCBITaxon:10116'
@@ -1198,16 +1178,6 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
     graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
 
-    def add_new(id_, sco=None, syns=tuple(), lbl=None):
-        if lbl is None:
-            lbl = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
-        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        graph.add_node(id_, rdflib.RDFS.label, lbl)
-        if sco:
-            graph.add_node(id_, rdflib.RDFS.subClassOf, sco)
-
-        [graph.add_node(id_, 'OBOANN:synonym', s) for s in syns]
-
     with open('resources/26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
@@ -1268,8 +1238,8 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
     #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
-    add_new(expression_defined, NIFCELL_NEURON)
-    add_new('ilx:NeuroTypeClass', NIFCELL_NEURON, lbl='Neuron TypeClass')
+    graph.add_class(expression_defined, NIFCELL_NEURON)
+    graph.add_class('ilx:NeuroTypeClass', NIFCELL_NEURON, label='Neuron TypeClass')
 
     graph.g.commit()
 
