@@ -115,7 +115,7 @@ class makeGraph:
 
         [self.add_node(id_, self.SYNONYM, s) for s in synonyms]
 
-    def add_op(self, id_, label=None, subPropertyOf=None, inverse=None):
+    def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False):
         self.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if inverse:
             self.add_node(id_, rdflib.OWL.inverseOf, inverse)
@@ -123,6 +123,8 @@ class makeGraph:
             self.add_node(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
         if label:
             self.add_node(id_, rdflib.RDFS.label, label)
+        if transitive:
+            self.add_node(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
 
     def add_node(self, target, edge, value):
         target = self.check_thing(target)
@@ -140,11 +142,14 @@ class makeGraph:
             objectProperties to graphs. FIXME make a method of makeGraph?
         """
         if type(parent) != rdflib.URIRef:
-            parent = self.expand(parent)
+            parent = self.check_thing(parent)
+
+        if type(edge) != rdflib.URIRef:
+            edge = self.check_thing(edge)
 
         if type(child) != infixowl.Class:
             if type(child) != rdflib.URIRef:
-                child = self.expand(child)
+                child = self.check_thing(child)
             child = infixowl.Class(child, graph=self.g)
 
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
