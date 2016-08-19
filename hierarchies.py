@@ -4,6 +4,7 @@ from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
+from scigraph_client import Graph
 
 BLANK = '   '
 LEAF = '──'
@@ -259,22 +260,14 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo.org:9000', json=None):
-    query_string = 'http://{url_base}/scigraph/graph/neighbors/{root}?relationshipType={relationshipType}&direction={direction}&depth={depth}'
-
-    relationshipType = relationshipType.replace('#','%23')
-    query = query_string.format(root=root.replace('/','%2F').replace('#','%23'), relationshipType=relationshipType,
-                                direction=direction, depth=depth, url_base=url_base)
-
-    print(query)
+def creatTree(root, relationshipType, direction, depth, graph=Graph(), json=None):
     if json is None:
-        j = requests.get(query).json()
+        j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
     else:
         j = dict(json)
         j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
 
     print(len(j['nodes']))
-
 
     nodes = {n['id']:n['lbl'] for n in j['nodes']}
     nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
@@ -294,7 +287,8 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
     pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
 
-    Tree, _ = newTree(query, parent_dict=parents)
+    tree_name = root + relationshipType + direction + str(depth)
+    Tree, _ = newTree(tree_name, parent_dict=parents)
 
     def build_tree(obj, existing = {}, flat_tree = set()):
         subjects = objects[obj]
@@ -322,7 +316,7 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
         # but we are not guranteed to have started at the right place
         # and so we may need to reorder ?
 
-    _, nTreeNode = newTree('names' + query, parent_dict=pnames)  # FIXME pnames is wrong...
+    _, nTreeNode = newTree('names' + tree_name, parent_dict=pnames)  # FIXME pnames is wrong...
     def rename(tree):
         dict_ = nTreeNode()
         for k in tree:
