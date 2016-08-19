@@ -72,6 +72,32 @@ class CLASSNAME(restService):
         super().__init__(cache)
 
 
+class FAKECLASS:
+    def NICKNAME(selfPARAMSDEFAULT_OUTPUT):
+        """ DOCSTRING
+        """
+        {params_conditional}
+        kwargs = {param_rest}
+        kwargs = {dict_comp}
+        param_rest = self._make_rest({required}, **kwargs)
+        url = self._basePath + ('{path}').format(**kwargs)
+        requests_params = {dict_comp2}
+        output = self._get('{method}', url, requests_params, {output})
+        return output if output else {empty_return_type}
+
+    @staticmethod
+    def make():
+        code = inspect.getsource(FAKECLASS.NICKNAME)
+        code = code.replace('requests_params, ', 'requests_params')
+        code = code.replace('        {params_conditional}','{params_conditional}')
+        for name in ('NICKNAME','PARAMS','DEFAULT_OUTPUT', 'DOCSTRING'):
+            code = code.replace(name, '{' + name.lower() + '}')
+        return code
+
+
+operation_code = FAKECLASS.make()
+
+
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
@@ -214,20 +240,6 @@ class State:
         return None, ''
 
     def operation(self, api_dict):
-        code = (
-            '{t}def {nickname}(self{params}{default_output}):\n'
-            '{t}{t}""" {docstring}\n{t}{t}"""\n\n'
-            '{params_conditional}'
-            '{t}{t}kwargs = {param_rest}\n'
-            '{t}{t}kwargs = {dict_comp}\n'
-            '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
-            '{t}{t}url = self._basePath + (\'{path}\').format(**kwargs)\n'
-            '{t}{t}requests_params = {dict_comp2}\n'
-            '{t}{t}output = self._get(\'{method}\', url, requests_params{output})\n'
-            '{t}{t}return output if output else {empty_return_type}\n'
-        )
-
-
         dict_comp = '{k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
         empty_return_type = self.make_return(api_dict)
@@ -247,8 +259,8 @@ class State:
         for cond in 'id', 'url', 'type':
             if cond in param_rest:
                 params_conditional += (
-                    "{t}{t}if {cond} and {cond}.startswith('http:'):\n"
-                    "{t}{t}{t}{cond} = {cond}.replace('/','%2F').replace('#','%23')\n").format(cond=cond, t=self.tab)
+                    "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
+                    "{t}{t}{t}{cond} = {cond}.replace('/','%2F').replace('#','%23')").format(cond=cond, t=self.tab)
 
         if 'produces' in api_dict:  # ICK but the alt is nastier
             outputs, default_output = self.make_produces(api_dict['produces'])
@@ -260,7 +272,7 @@ class State:
 
         method = api_dict['method']
                 
-        formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
+        formatted = operation_code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
                             dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
                             docstring=docstring, required=required, default_output=default_output,
                             params_conditional=params_conditional, output=output, t=self.tab,
