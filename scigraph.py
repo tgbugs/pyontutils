@@ -27,7 +27,7 @@ class State:
         code += self.shebang
         code += self.make_doc()
         code += self.imports
-        code += "exten_mapping = %s\n\n" % repr(self.exten_mapping)
+        code += "exten_mapping = {%s}\n\n" % ', '.join(["'" + '\': \''.join(_) + "'" for _ in sorted(self.exten_mapping.items())])
         code += self.make_baseclass()
         code += self._code
         code += '\n'
