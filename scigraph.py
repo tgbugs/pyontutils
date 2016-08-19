@@ -111,7 +111,12 @@ class State:
                 try:
                     dv = int(dv)
                 except ValueError:
-                    dv = "'%s'" % dv
+                    if dv == 'true':
+                        dv = 'True'
+                    elif dv == 'false':
+                        dv = 'False'
+                    else:
+                        dv = "'%s'" % dv
             param_args = param_args.format(name=dict_['name'], defaultValue=dv)
             required = None
 
