@@ -45,14 +45,21 @@ class State:
         return code.format(swaggerVersion=swaggerVersion, apiVersion=apiVersion, api_url=self.api_url, t=self.tab)
 
     def make_baseclass(self):
+        # useful print(inspect.getsource(restService).replace(' '*4,'{t}').replace("'","\\'").replace('\n',"\\n'\n'"))
         code = (
             'class restService:\n'
             '{t}""" Base class for SciGraph rest services. """\n\n'
-            '{t}def __init__(self):\n'
+            '{t}def __init__(self, cache=False):\n'
             '{t}{t}self._session = requests.Session()\n'
             '{t}{t}adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)\n'
             '{t}{t}self._session.mount(\'http://\', adapter)\n\n'
-            '{t}def _get(self, method, url, params=None, output=None):\n'
+            '{t}{t}if cache:\n'
+            '{t}{t}{t}self.cache = dict()\n'
+            '{t}{t}{t}self._get = self._cache_get\n'
+            '{t}{t}else:\n'
+            '{t}{t}{t}self._get = self._normal_get\n'
+            '\n'
+            '{t}def _normal_get(self, method, url, params=None, output=None):\n'
             '{t}{t}s = self._session\n'
             '{t}{t}if method == \'POST\':\n'
             '{t}{t}{t}req = requests.Request(method=method, url=url, data=params)\n'
@@ -70,6 +77,20 @@ class State:
             '{t}{t}elif resp.headers[\'content-type\'].startswith(\'text/plain\'):\n'
             '{t}{t}{t}return resp.text\n'
             '{t}{t}else:\n'
+            '{t}{t}{t}return resp\n'
+            '\n'
+            '{t}def _cache_get(self, method, url, params=None, output=None):\n'
+            '{t}{t}if params:\n'
+            '{t}{t}{t}pkey = str(sorted(params.items()))\n'
+            '{t}{t}else:\n'
+            '{t}{t}{t}pkey = \'\'\n'
+            '{t}{t}key = method + url + pkey + str(output)\n'
+            '{t}{t}if  key in self.cache:\n'
+            '{t}{t}{t}print(\'cache hit\')\n'
+            '{t}{t}{t}return self.cache[key]\n'
+            '{t}{t}else:\n'
+            '{t}{t}{t}resp = self._normal_get(method, url, params, output)\n'
+            '{t}{t}{t}self.cache[key] = resp\n'
             '{t}{t}{t}return resp\n'
             '\n'
             '{t}def _make_rest(self, default=None, **kwargs):\n'
@@ -246,7 +267,6 @@ class State:
                             empty_return_type=empty_return_type)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
-
 
     def description(self, value):
         return None, ''
