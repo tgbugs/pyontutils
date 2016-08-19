@@ -9,7 +9,8 @@ import requests
 import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
-from utils import async_getter, add_hierarchy, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
+from hierarchies import creatTree
+from utils import async_getter, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
 from scigraph_client import Vocabulary
 from IPython import embed
 
@@ -156,7 +157,7 @@ def mouse_brain_atlas():
         if parent:
             parent = new_graph.namespaces['MBA'][str(parent)]
             #add_hierarchy(new_graph.g, parent, rdflib.URIRef('http://uri.interlex.org/base/proper_part_of'), cls)
-            add_hierarchy(new_graph.g, parent, rdflib.URIRef('http://purl.obolibrary.org/obo/BFO_0000050'), cls)
+            new_graph.add_hierarchy(parent, rdflib.URIRef('http://purl.obolibrary.org/obo/BFO_0000050'), cls)
 
         for t in aba_trips(node_d):
             new_graph.add_node(*t)
@@ -403,6 +404,12 @@ def swanson():
             
     with open('resources/swanson_aligned.txt', 'rt') as f:
         lines = [l.strip() for l in f.readlines()]
+
+    # join header on page 794
+    lines[635] += ' ' + lines.pop(636)
+    #fix for capitalization since this header is reused
+    fixed = ' or '.join([' ('.join([n.capitalize() for n in _.split(' (')]) for _ in lines[635].lower().split(' or ')]).replace('human','HUMAN')
+    lines[635] = fixed
     
     data = []
     for l in lines:
@@ -418,7 +425,7 @@ def swanson():
                     data.append(d)
                     print(tc.red(tc.bold(repr(d))))
 
-                area_name, citationP =  l.split(' (')
+                area_name, citationP =  l.strip().split(' (')
                 citation = citationP.rstrip(')')
             else:
                 area_name = l
@@ -490,24 +497,28 @@ def swanson():
                         'type':self.citation}
                     return
                 else:
+                    print('111111111111111', self.name)
                     if ' [' in self.name:
                         name, taxonB = self.name.split(' [')
                         self.name = name
                         self.appendicies[self._appendix]['taxon'] = taxonB.rstrip(']')
                     else:  # top level is animalia
                         self.appendicies[self._appendix]['taxon'] = 'ANIMALIA'
+                    print('xxxxxxxxxxxxxxx', self.name)
             # nodes
             if self.synonym:
                 self.nodes[self.synonym]['synonym'] = self.name
                 self.nodes[self.synonym]['syn-cite'] = self.citation
                 self.nodes[self.synonym]['syn-uberon'] = self.uberon
                 return
-            elif not self.citation:  # Transverse Longitudinal etc all @ lvl4
-                print(level, self.name)
-                # can't return here because they are their own level
             else:
+                if self.citation:  # Transverse Longitudinal etc all @ lvl4
+                    self.names[self.name + ' ' + self.citation].add(self._rowind)
+                else:
+                    self.name += str(self._appendix) + self.nodes[self._last_at_level[self.depth - 1]]['label']
+                    print(level, self.name)
+                    # can't return here because they are their own level
                 # replace with actually doing something...
-                self.names[self.name + ' ' + self.citation].add(self._rowind)
                 self.nodes[self._rowind]['label'] = self.name
                 self.nodes[self._rowind]['citation'] = self.citation
                 self.nodes[self._rowind]['uberon'] = self.uberon
@@ -530,8 +541,9 @@ def swanson():
                     replace[r] = replace_with
 
             for r, rw in replace.items():
-                print(self.nodes[rw])
-                print(self.nodes.pop(r))
+                #print(self.nodes[rw])
+                o = self.nodes.pop(r)
+                #print(o)
 
             for vals in self.appendicies.values():
                 children = vals['children']
@@ -558,11 +570,41 @@ def swanson():
 
     sp = SP()
     tp = [_ for _ in sorted(['{: <50}'.format(n['label']) + n['uberon'] if n['uberon'] else n['label'] for n in sp.nodes.values()])]
-    print('\n'.join(tp))
-    sp.appendicies
-    sp.nodes
-    #'http://swanson.org/' + number
-    #embed()
+    #print('\n'.join(tp))
+    #print(sp.appendicies[1].keys())
+    #print(sp.nodes[1].keys())
+    nbase = 'http://swanson.org/node/%s' 
+    json_ = {'nodes':[],'edges':[]}
+    for node, anns in sp.nodes.items():
+        nid = nbase % node
+        new_graph.add_class(nid, 'ilx:swansonBrainRegionConcept', label=anns['label'])
+        new_graph.add_node(nid, 'OBOANN:definingCitation', anns['citation'])
+        json_['nodes'].append({'lbl':anns['label'],'id':'SWA:' + str(node)})
+        #if anns['uberon']:
+            #new_graph.add_node(nid, rdflib.OWL.equivalentClass, anns['uberon'])  # issues arrise here...
+
+    for appendix, data in sp.appendicies.items():
+        aid = 'http://swanson.org/appendix/%s' % appendix
+        new_graph.add_class(aid, label=data['name'].capitalize())
+        new_graph.add_node(aid, 'ilx:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
+        children = data['children']
+        ahp = 'ilx:hasPart%s' % appendix
+        apo = 'ilx:partOf%s' % appendix
+        new_graph.add_op(ahp, transitive=True)
+        new_graph.add_op(apo, inverse=ahp, transitive=True)
+        for parent, childs in children.items():  # FIXME does this give complete coverage?
+            pid = nbase % parent
+            for child in childs:
+                cid = nbase % child
+                new_graph.add_hierarchy(cid, ahp, pid)  # note hierarhcy inverts direction
+                new_graph.add_hierarchy(pid, apo, cid)
+                json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
+
+    new_graph.write()
+    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+    query = Query('SWA:1', 'ilx:partOf1', 'INCOMING', 10)
+    a, b = creatTree(*query, json=json_)
+    embed()
 
 def main():
     swanson()
