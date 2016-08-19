@@ -14,7 +14,7 @@ from utils import async_getter, makeGraph, rowParse, TermColors as tc #TERMCOLOR
 from scigraph_client import Vocabulary
 from IPython import embed
 
-sgv = Vocabulary()
+sgv = Vocabulary(cache=True)
 
 PScheme = namedtuple('PScheme', ['curie', 'name', 'species', 'devstage', 'atlas'])
 PScheme('ilx:something','some parcellation scheme concept','NCBITaxon:1234','adult','Bob Jones Atlas')
