@@ -158,6 +158,27 @@ class State:
         pdocs = '\n'.join(pdocs)
         return pargs, prests, pdocs, required
 
+    def make_return(self, api_dict):
+        if 'type' in api_dict:
+            return_type = api_dict['type']  # array or other (Graph, etc)
+            print(return_type)
+        else:
+            return_type = None
+            print('NO TYPE')
+
+        type_return_dict = {
+            'array': '[]',
+            'string': None,
+            'Annotations': '[]',  # bug in docs
+            'Graph': "{'nodes':[], 'edges':[]}",  # risky
+            'ConceptDTO': None,  # better None than empty dict
+            'RefineResult': None,  # TODO
+            'AnalyzerResult' :None,  # TODO
+            None:None,
+        }
+
+        return type_return_dict[return_type]
+
     def apiVersion(self, value):
         self.globs['apiVersion'] = value
         return None, ''
@@ -176,12 +197,14 @@ class State:
             '{t}{t}param_rest = self._make_rest({required}, **kwargs)\n'
             '{t}{t}url = self._basePath + (\'{path}\').format(**kwargs)\n'
             '{t}{t}requests_params = {dict_comp2}\n'
-            '{t}{t}return self._get(\'{method}\', url, requests_params{output})\n'
+            '{t}{t}output = self._get(\'{method}\', url, requests_params{output})\n'
+            '{t}{t}return output if output else {empty_return_type}\n'
         )
 
 
         dict_comp = '{k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
+        empty_return_type = self.make_return(api_dict)
         nickname = api_dict['nickname']
         path = self.paths[nickname]
         docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
@@ -214,7 +237,8 @@ class State:
         formatted = code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
                             dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
                             docstring=docstring, required=required, default_output=default_output,
-                            params_conditional=params_conditional, output=output, t=self.tab)
+                            params_conditional=params_conditional, output=output, t=self.tab,
+                            empty_return_type=empty_return_type)
         self.dodict(api_dict)  # catch any stateful things we need, but we arent generating code from it
         return formatted
 
@@ -300,12 +324,13 @@ class State:
     def dodict(self, dict_):
         blocks = []
         for key, value in dict_.items():
-            print('trying with key:', key)
+            #print('trying with key:', key)
             if key in self.__class__.__dict__:
                 name, code = self.__class__.__dict__[key](self, value)
                 blocks.append(code)
             else:
-                print('METHOD', key, 'NOT FOUND')
+                #print('METHOD', key, 'NOT FOUND')
+                pass
 
         return '\n'.join([b for b in blocks if b])
 
