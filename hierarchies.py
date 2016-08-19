@@ -270,7 +270,8 @@ def creatTree(root, relationshipType, direction, depth, url_base='matrix.neuinfo
     if json is None:
         j = requests.get(query).json()
     else:
-        j = json
+        j = dict(json)
+        j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
 
     print(len(j['nodes']))
 
