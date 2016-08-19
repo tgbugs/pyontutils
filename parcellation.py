@@ -493,18 +493,19 @@ def swanson():
                         return
                     self._appendix = int(num)
                     self.appendicies[self._appendix] = {
-                        'name':apname,
-                        'type':self.citation}
+                        'name':apname.capitalize(),
+                        'type':self.citation.capitalize() if self.citation else None}
                     return
                 else:
-                    print('111111111111111', self.name)
                     if ' [' in self.name:
                         name, taxonB = self.name.split(' [')
                         self.name = name
-                        self.appendicies[self._appendix]['taxon'] = taxonB.rstrip(']')
+                        self.appendicies[self._appendix]['taxon'] = taxonB.rstrip(']').capitalize()
                     else:  # top level is animalia
-                        self.appendicies[self._appendix]['taxon'] = 'ANIMALIA'
-                    print('xxxxxxxxxxxxxxx', self.name)
+                        self.appendicies[self._appendix]['taxon'] = 'ANIMALIA'.capitalize()
+
+                    self.name = self.name.capitalize()
+                    self.citation = self.citation.capitalize()
             # nodes
             if self.synonym:
                 self.nodes[self.synonym]['synonym'] = self.name
@@ -602,8 +603,11 @@ def swanson():
 
     new_graph.write()
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
-    query = Query('SWA:1', 'ilx:partOf1', 'INCOMING', 10)
-    a, b = creatTree(*query, json=json_)
+    mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
+    for i, n in enumerate(mapping):
+        a, b = creatTree(*Query('SWA:' + str(n), 'ilx:partOf' + str(i + 1), 'INCOMING', 10), json=json_)
+        print(a)
+
     embed()
 
 def main():
