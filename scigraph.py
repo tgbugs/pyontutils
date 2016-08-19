@@ -110,10 +110,10 @@ class State:
             '\n'
             'class {classname}(restService):\n'
             '{t}""" {docstring} """\n\n'
-            '{t}def __init__(self, basePath=\'{basePath}\', quiet=True):\n'
+            '{t}def __init__(self, basePath=\'{basePath}\', quiet=True, cache=False):\n'
             '{t}{t}self._basePath = basePath\n'
             '{t}{t}self._quiet = quiet\n'
-            '{t}{t}super().__init__()\n\n'
+            '{t}{t}super().__init__(cache)\n\n'
         )
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
