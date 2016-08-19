@@ -4,7 +4,7 @@ from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
-from scigraph_client import Graph
+from pyontutils.scigraph_client import Graph
 
 BLANK = '   '
 LEAF = '──'
