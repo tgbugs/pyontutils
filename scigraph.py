@@ -3,7 +3,64 @@
     Client library generator for SciGraph REST api.
 """
 
+import inspect
 import requests
+
+
+class restService:
+    """ Base class for SciGraph rest services. """
+
+    def __init__(self, cache=False):
+        self._session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
+        self._session.mount('http://', adapter)
+
+        if cache:
+            self._cache = dict()
+            self._get = self._cache_get
+        else:
+            self._get = self._normal_get
+
+    def _normal_get(self, method, url, params=None, output=None):
+        s = self._session
+        if method == 'POST':
+            req = requests.Request(method=method, url=url, data=params)
+        else:
+            req = requests.Request(method=method, url=url, params=params)
+        if output:
+            req.headers['Accept'] = output
+        prep = req.prepare()
+        if self._verbose: print(prep.url)
+        resp = s.send(prep)
+        if not resp.ok:
+            return None
+        elif resp.headers['content-type'] == 'application/json':
+            return resp.json()
+        elif resp.headers['content-type'].startswith('text/plain'):
+            return resp.text
+        else:
+            return resp
+
+    def _cache_get(self, method, url, params=None, output=None):
+        if params:
+            pkey = '?' + '&'.join(['%s=%s' % (k,v) for k,v in sorted(params.items()) if v is not None])
+        else:
+            pkey = ''
+        key = url + pkey + ' ' + method + ' ' + str(output)
+        if  key in self._cache:
+            if self._verbose:
+                print('cache hit', key)
+            return self._cache[key]
+        else:
+            resp = self._normal_get(method, url, params, output)
+            self._cache[key] = resp
+            return resp
+
+    def _make_rest(self, default=None, **kwargs):
+        kwargs = {k:v for k, v in kwargs.items() if v}
+        param_rest = '&'.join(['%s={%s}' % (arg, arg) for arg in kwargs if arg != default])
+        param_rest = param_rest if param_rest else ''
+        return param_rest
 
 
 class State:
@@ -45,66 +102,7 @@ class State:
         return code.format(swaggerVersion=swaggerVersion, apiVersion=apiVersion, api_url=self.api_url, t=self.tab)
 
     def make_baseclass(self):
-        # useful print(inspect.getsource(restService).replace(' '*4,'{t}').replace("'","\\'").replace('\n',"\\n'\n'"))
-        code = (
-            'class restService:\n'
-            '{t}""" Base class for SciGraph rest services. """\n\n'
-            '{t}def __init__(self, cache=False):\n'
-            '{t}{t}self._session = requests.Session()\n'
-            '{t}{t}adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)\n'
-            '{t}{t}self._session.mount(\'http://\', adapter)\n\n'
-            '{t}{t}if cache:\n'
-            '{t}{t}{t}self._cache = dict()\n'
-            '{t}{t}{t}self._get = self._cache_get\n'
-            '{t}{t}else:\n'
-            '{t}{t}{t}self._get = self._normal_get\n'
-            '\n'
-            '{t}def _normal_get(self, method, url, params=None, output=None):\n'
-            '{t}{t}s = self._session\n'
-            '{t}{t}if method == \'POST\':\n'
-            '{t}{t}{t}req = requests.Request(method=method, url=url, data=params)\n'
-            '{t}{t}else:\n'
-            '{t}{t}{t}req = requests.Request(method=method, url=url, params=params)\n'
-            '{t}{t}if output:\n'
-            '{t}{t}{t}req.headers[\'Accept\'] = output\n'
-            '{t}{t}prep = req.prepare()\n'
-            '{t}{t}if self._verbose: print(prep.url)\n'
-            '{t}{t}resp = s.send(prep)\n'
-            '{t}{t}if not resp.ok:\n'
-            '{t}{t}{t}return None\n'
-            '{t}{t}elif resp.headers[\'content-type\'] == \'application/json\':\n'
-            '{t}{t}{t}return resp.json()\n'
-            '{t}{t}elif resp.headers[\'content-type\'].startswith(\'text/plain\'):\n'
-            '{t}{t}{t}return resp.text\n'
-            '{t}{t}else:\n'
-            '{t}{t}{t}return resp\n'
-            '\n'
-            '{t}def _cache_get(self, method, url, params=None, output=None):\n'
-            '{t}{t}if params:\n'
-            '{t}{t}{t}pkey = \'?\' + \'&\'.join([\'%s=%s\' % (k,v) for k,v in sorted(params.items()) if v is not None])\n'
-            '{t}{t}else:\n'
-            '{t}{t}{t}pkey = \'\'\n'
-            '{t}{t}key = url + pkey + \' \' + method + \' \' + str(output)\n'
-            '{t}{t}if  key in self._cache:\n'
-            '{t}{t}{t}if self._verbose:\n'
-            '{t}{t}{t}{t}print(\'cache hit\', key)\n'
-            '{t}{t}{t}return self._cache[key]\n'
-            '{t}{t}else:\n'
-            '{t}{t}{t}resp = self._normal_get(method, url, params, output)\n'
-            '{t}{t}{t}self._cache[key] = resp\n'
-            '{t}{t}{t}return resp\n'
-            '\n'
-            '{t}def _make_rest(self, default=None, **kwargs):\n'
-            '{t}{t}kwargs = {dict_comp}\n'
-            '{t}{t}param_rest = \'&\'.join([\'%s={STUPID}\' % (arg, arg) for arg in kwargs if arg != default])\n'
-            '{t}{t}param_rest = param_rest if param_rest else \'\'\n'
-            '{t}{t}return param_rest\n'
-            '\n'
-            
-        )
-        dict_comp = '{k:v for k, v in kwargs.items() if v}'
-        STUPID = '{%s}'
-        return code.format(t=self.tab, dict_comp=dict_comp, STUPID=STUPID)
+        return inspect.getsource(restService) + '\n'
 
     def make_class(self, dict_):
         code = (
