@@ -277,6 +277,24 @@ class _TermColors:
     ENDCOLOR = '\033[0m'
     colors = dict(
     BOLD = '\033[1m',
+    FAINT = '\033[2m',  # doesn't work on urxvt
+    IT = '\033[3m',
+    UL = '\033[4m',
+    BLINKS = '\033[5m',
+    BLINKF = '\033[6m',  # same as S?
+    REV = '\033[7m',
+    HIDE = '\033[8m',  # doesn't work on urxvt
+    XOUT = '\033[9m',  # doesn't work on urxvt
+    FONT1 = '\033[10m',  # doesn't work on urxvt use '\033]50;%s\007' % "fontspec"
+    FONT2 = '\033[11m',  # doesn't work on urxvt
+    FRAKTUR = '\033[20m',  # doesn't work on urxvt
+    OFF_BOLD = '\033[21m',
+    NORMAL = '\033[22m',
+    OFF_IT = '\033[23m',
+    OFF_UL = '\033[24m',
+    OFF_BLINK = '\033[25m',
+    POSITIVE = '\033[27m',
+    OFF_HIDE = '\033[28m',
     RED = '\033[91m',
     GREEN = '\033[92m',
     YELLOW = '\033[93m',
@@ -284,7 +302,7 @@ class _TermColors:
     )
 
     def __init__(self):
-        for color, esc in self.colors.items():
+        for color, esc in self.colors.items():  # esc blocks runtime changes
             def latebindingfix(string, e=esc):
                 return self.endcolor(e + string)
             setattr(self, color.lower(), latebindingfix)
