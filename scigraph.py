@@ -9,7 +9,7 @@ import requests
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
-        self.imports = "import requests\nfrom json import dumps\n\n"
+        self.imports = "import builtins\nimport requests\nfrom json import dumps\n\n"
         self.api_url = api_url
         self.current_path = self.api_url
         self.exten_mapping = {}
@@ -180,7 +180,7 @@ class State:
         )
 
 
-        dict_comp = '{k:dumps(v) if type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
+        dict_comp = '{k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
         nickname = api_dict['nickname']
         path = self.paths[nickname]
@@ -195,7 +195,7 @@ class State:
             dict_comp2 = 'kwargs'
 
         params_conditional = ''
-        for cond in 'id','url':
+        for cond in 'id', 'url', 'type':
             if cond in param_rest:
                 params_conditional += (
                     "{t}{t}if {cond} and {cond}.startswith('http:'):\n"
