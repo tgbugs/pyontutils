@@ -63,6 +63,15 @@ class restService:
         return param_rest
 
 
+class CLASSNAME(restService):
+    """ DOCSTRING """
+
+    def __init__(self, basePath='BASEPATH', verbose=False, cache=False):
+        self._basePath = basePath
+        self._verbose = verbose
+        super().__init__(cache)
+
+
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
@@ -105,19 +114,11 @@ class State:
         return inspect.getsource(restService) + '\n'
 
     def make_class(self, dict_):
-        code = (
-            '\n'
-            'class {classname}(restService):\n'
-            '{t}""" {docstring} """\n\n'
-            '{t}def __init__(self, basePath=\'{basePath}\', verbose=False, cache=False):\n'
-            '{t}{t}self._basePath = basePath\n'
-            '{t}{t}self._verbose = verbose\n'
-            '{t}{t}super().__init__(cache)\n\n'
-        )
+        code = '\n' + inspect.getsource(CLASSNAME) + '\n'
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
         _, basePath = self.basePath_(dict_['basePath'])
-        return code.format(classname=classname, docstring=docstring, basePath=basePath, t=self.tab)
+        return code.replace('CLASSNAME', classname).replace('DOCSTRING', docstring).replace('BASEPATH', basePath)
 
     def make_param_parts(self, dict_):
         if dict_['required']:
