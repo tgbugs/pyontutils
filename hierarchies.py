@@ -14,6 +14,9 @@ BOT_STEM = '└' + LEAF
 
 CYCLE = 'CYCLE DETECTED DERPS'
 
+sgg = Graph(cache=True)
+sgg_local = Graph('http://localhost:9000/scigraph', cache=True)
+
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
     #if type(item[1]) == type(base_dd):
@@ -260,7 +263,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=Graph(), json=None):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
     else:
@@ -375,35 +378,34 @@ def main():
     queries = ncbi_ins, ncbi_rod, uberon, nifga
     queries = uberon_ae,
 
-    url = 'localhost:9000'
     fma3_r = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
     fma3_c = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
-    #fma3_tree, fma3_extra = creatTree(*fma3_r, url_base=url)
+    #fma3_tree, fma3_extra = creatTree(*fma3_r, graph=sgg_local)
 
     fma_r = Query('FMA:50801', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
     fma_c = Query('FMA:50801', 'http://purl.org/sig/ont/fma/constitutional_part_of', 'INCOMING', 20)
     fma_rch_r = Query('FMA:61819', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
-    #fma_tree, fma_extra = creatTree(*fma_r, url_base=url)
-    #fma_tree, fma_extra = creatTree(*fma_rch_r, url_base=url)
+    #fma_tree, fma_extra = creatTree(*fma_r, graph=sgg_local)
+    #fma_tree, fma_extra = creatTree(*fma_rch_r, graph=sgg_local)
 
     fma_hip = Query('FMA:275020', 'http://purl.org/sig/ont/fma/regional_part_of', 'BOTH', 20)
     fma_hip = Query('FMA:275020', 'http://purl.org/sig/ont/fma/constitutional_part_of', 'BOTH', 20)
-    #fma_tree, fma_extra = creatTree(*fma_hip, url_base=url)
+    #fma_tree, fma_extra = creatTree(*fma_hip, graph=sgg_local)
 
     fma_mfg = Query('FMA:273103', 'http://purl.org/sig/ont/fma/regional_part_of', 'BOTH', 20)
-    #fma_tree, fma_extra = creatTree(*fma_mfg, url_base=url)
+    #fma_tree, fma_extra = creatTree(*fma_mfg, graph=sgg_local)
 
 
 
     ncbi_metazoa = Query('NCBITaxon:33208', 'subClassOf', 'INCOMING', 20)
     ncbi_vertebrata = Query('NCBITaxon:7742', 'subClassOf', 'INCOMING', 40)
-    #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, url_base=url)
+    #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, graph=sgg_local)
 
 
     fma_tel = Query('FMA:62000', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
     DOFMA = False
     if DOFMA:
-        fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, url_base=url)
+        fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, graph=sgg_local)
 
         childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
         from heatmaps.scigraph_client import Graph
@@ -420,7 +422,7 @@ def main():
         embed()
         return
 
-    uberon_tree, uberon_extra = creatTree(*uberon)  # ,url_base='localhost:9000')  # FIXME why does this crash?
+    uberon_tree, uberon_extra = creatTree(*uberon, graph=sgg)  # ,url_base='localhost:9000')  # FIXME why does this crash?
 
     print(uberon_tree)
     print(uberon_extra[0])
@@ -432,7 +434,7 @@ def main():
         f.writelines('\n'.join(uberon_flat))
 
     for query in queries:
-        tree, extra = creatTree(*query)
+        tree, extra = creatTree(*query, graph=sgg)
         dematerialize(list(tree.keys())[0], tree)
         print(tree)
         #print(extra[0])
@@ -445,19 +447,15 @@ def main():
         print('unique parent counts', parent_counts)
         print('num terms', len(extra[2]))
 
-
-
     embed()
 
 def _main():
-    from heatmaps.scigraph_client import Graph
-    g = Graph('http://localhost:9000/scigraph')
-    rtco = 'http://purl.org/sig/ont/fma/constitutional_part_of'.replace('/','%2F')
-    rtro = 'http://purl.org/sig/ont/fma/regional_part_of'.replace('/','%2F')
+    rtco = 'http://purl.org/sig/ont/fma/constitutional_part_of'
+    rtro = 'http://purl.org/sig/ont/fma/regional_part_of'
     #rtc = 'http://purl.org/sig/ont/fma/constitutional_part'.replace('/','%2F')  # FIXME the sub/pred relation is switched :/
     #rtr = 'http://purl.org/sig/ont/fma/regional_part'.replace('/','%2F')
-    json_co = g.getEdges(rtco, limit=9999999999)
-    json_ro = g.getEdges(rtro, limit=9999999999)
+    json_co = sgg_local.getEdges(rtco, limit=9999999999)
+    json_ro = sgg_local.getEdges(rtro, limit=9999999999)
     #json_c = g.getEdges(rtc, limit=9999999999)
     #json_r = g.getEdges(rtr, limit=9999999999)
     #inv_edges(json_c)
@@ -475,10 +473,9 @@ def _main():
 
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
-    url = 'localhost:9000'
     #fma = Query('FMA:50801', 'None', 'INCOMING', 20)
     fma = Query('FMA:61817', 'None', 'INCOMING', 20)  # Cerebral hemisphere
-    fma_tree, fma_extra = creatTree(*fma, url_base=url, json=json)
+    fma_tree, fma_extra = creatTree(*fma, json=json)
     with open('/tmp/rc_combo_tree', 'wt') as f: f.write(str(fma_tree))
 
     embed()
