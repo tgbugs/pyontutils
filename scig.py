@@ -21,15 +21,15 @@ def main():
     args = docopt(__doc__, version='scig 0')
     print(args)
     server = None
-    quiet = True
+    verbose = False
     if args['--local']:
         server = 'http://localhost:9000/scigraph'
     if args['--verbose']:
-        quiet = False
+        verbose = True
 
 
     if args['i'] or args['v']:
-        v = Vocabulary(server, quiet) if server else Vocabulary(quiet=quiet)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         for id_ in args['<id>']:
             out = v.findById(id_)
             if out:
@@ -37,7 +37,7 @@ def main():
                 for key, value in sorted(out.items()):
                     print('\t%s:' % key, value)
     elif args['s'] or args['t']:
-        v = Vocabulary(server, quiet) if server else Vocabulary(quiet=quiet)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         for term in args['<term>']:
             print(term)
             out = v.searchByTerm(term) if args['s'] else v.findByTerm(term)
@@ -49,7 +49,7 @@ def main():
                         print('\t\t%s:' % key, value)
                 print()
     elif args['g']:
-        g = Graph(server, quiet) if server else Graph(quiet=quiet)
+        g = Graph(server, verbose) if server else Graph(verbose=verbose)
         for id_ in args['<id>']:
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
@@ -68,7 +68,7 @@ def main():
                     for key, value in sorted(edge.items()):
                         print('\t\t%s:' % key, value)
     elif args['c']:
-        c = Cypher(server, quiet) if server else Cypher(quiet=quiet)
+        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         curies = c.getCuries()
         align = max([len(c) for c in curies]) + 2
         fmt = '{: <%s}' % align
