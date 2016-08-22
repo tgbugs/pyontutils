@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 """
     Sync the scicrunch registry to a ttl
     file for loading into scigraph for autocomplete. 
@@ -180,7 +180,7 @@ field_mapping = {
 def main():
     DB_URI = 'mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db}'
     #config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-    config = mysql_conn_helper('mysql5-1.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
+    config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
     engine = create_engine(DB_URI.format(**config))
     config = None  # all weakrefs should be gone by now?
     del(config)  # i wonder whether this actually cleans it up when using **config
