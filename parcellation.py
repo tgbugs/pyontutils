@@ -26,6 +26,8 @@ ATLAS_SUPER = 'ilx:parcellation_scheme_artifact' # 'NIFRES:nlx_res_20090402'  # 
 
 ABAROOT = namedtuple('ABAROOT', ['id', 'name', 'safe_name', 'acronym', 'prefix', 'labelprefix'])
 
+Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+
 TODAY = date.isoformat(date.today())
 
 #annotationProperties
@@ -38,8 +40,14 @@ EXSPECIES = 'ilx:hasInstanceInSpecies'
 DEFTAXON = 'ilx:definedForTaxon'
 DEFSPECIES = 'ilx:definedForSpecies'
 DEVSTAGE = 'ilx:definedForDevelopmentalStage'
+PARTOF = 'ilx:partOf'
+HASPART = 'ilx:hasPart'
 
 ADULT = 'NIFORG:birnlex_681'
+
+def check_hierarchy(new_graph, root, edge, label_edge=None):
+    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=new_graph.make_scigraph_json(edge, label_edge))
+    print(a)
 
 def add_ops(graph):
     graph.add_op(EXSPECIES)
@@ -101,7 +109,7 @@ def aba_base(new_graph, root, superclass):
     aba_map = {
         'acronym':new_graph.namespaces['OBOANN']['acronym'],  # FIXME all this is BAD WAY
         #'id':namespaces['ABA'],
-        'name':'ilx:parcellationLable', #rdflib.RDFS.label,
+        'name':PARCLAB, #rdflib.RDFS.label,
         #'parent_structure_id':rdflib.RDFS['subClassOf'],
         'safe_name':new_graph.namespaces['OBOANN']['synonym'],
     }
@@ -130,7 +138,7 @@ def aba_base(new_graph, root, superclass):
         parent = node_d['parent_structure_id']
         if parent:
             parent = new_graph.namespaces[root.prefix][str(parent)]
-            new_graph.add_hierarchy(parent, rdflib.URIRef('http://purl.obolibrary.org/obo/BFO_0000050'), ident)
+            new_graph.add_hierarchy(parent, PARTOF, ident)
 
         aba_trips(node_d, ident)
 
@@ -145,7 +153,7 @@ def mouse_brain_atlas():
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
         #'obo':'http://purl.obolibrary.org/obo/',
-        'BFO':'http://purl.obolibrary.org/obo/BFO_',
+        #'BFO':'http://purl.obolibrary.org/obo/BFO_',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         'ABA':'http://api.brain-map.org/api/v2/data/Structure/',
         'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
@@ -188,6 +196,7 @@ def mouse_brain_atlas():
                    'ABA',
                    '(%s) ' % SHORTNAME)  # FIXME
     aba_base(new_graph, root, superclass)
+    check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
 
 def human_brain_atlas():
@@ -198,7 +207,7 @@ def human_brain_atlas():
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
         #'obo':'http://purl.obolibrary.org/obo/',
-        'BFO':'http://purl.obolibrary.org/obo/BFO_',
+        #'BFO':'http://purl.obolibrary.org/obo/BFO_',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         'ABA':'http://api.brain-map.org/api/v2/data/Structure/',
         'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
@@ -241,6 +250,7 @@ def human_brain_atlas():
                    'ABA',
                    '(%s) ' % SHORTNAME)
     aba_base(new_graph, root, superclass)
+    check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
 
 class cocomac(rowParse):
@@ -527,7 +537,7 @@ def swanson():
                     citation = citationP.rstrip(')')
                     d = (level, area_name, citation, 'NEXT SYN')
                     data.append(d)
-                    print(tc.red(tc.bold(repr(d))))
+                    #print(tc.red(tc.bold(repr(d))))
 
                 area_name, citationP =  l.strip().split(' (')
                 citation = citationP.rstrip(')')
@@ -536,7 +546,7 @@ def swanson():
                 citation = None
             
             d = (level, area_name, citation, None)
-            print(d)
+            #print(d)
             data.append(d)
     results = async_getter(sgv.findByTerm, [(d[1],) for d in data])
     #results = [None] * len(data)
@@ -621,7 +631,7 @@ def swanson():
                     self.names[self.name + ' ' + self.citation].add(self._rowind)
                 else:
                     self.name += str(self._appendix) + self.nodes[self._last_at_level[self.depth - 1]]['label']
-                    print(level, self.name)
+                    #print(level, self.name)
                     # can't return here because they are their own level
                 # replace with actually doing something...
                 self.nodes[self._rowind]['label'] = self.name
@@ -693,8 +703,8 @@ def swanson():
         new_graph.add_class(aid, label=data['name'].capitalize())
         new_graph.add_node(aid, 'ilx:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
         children = data['children']
-        ahp = 'ilx:hasPart%s' % appendix
-        apo = 'ilx:partOf%s' % appendix
+        ahp = HASPART + str(appendix)
+        apo = PARTOF + str(appendix)
         new_graph.add_op(ahp, transitive=True)
         new_graph.add_op(apo, inverse=ahp, transitive=True)
         for parent, childs in children.items():  # FIXME does this give complete coverage?
@@ -706,7 +716,7 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(delay=True)
-    return
+    return ontid, None
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
     mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
     for i, n in enumerate(mapping):
@@ -719,13 +729,15 @@ def main():
     #return
     with makeGraph('', {}) as _:
         fs = fmri_atlases()
-        c = cocomac_make()
+        #c = cocomac_make()
         m = mouse_brain_atlas()
-        h_ = human_brain_atlas()
-        h = hcp2016_make()
-        fs.extend([c, m, h_, h])
+        h = human_brain_atlas()
+        hc = hcp2016_make()
+        fs.extend([m, h, hc])
         parcellation_schemes(fs)
-        swanson()
+
+        s = swanson()
+        fs.append(s)
 
     # make a protege catalog file to simplify life
     uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
