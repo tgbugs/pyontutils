@@ -13,8 +13,8 @@ from utils import makeGraph, rowParse
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 from desc.prof import profile_me
-sgg = Graph(quiet=False)
-sgv = Vocabulary()
+sgg = Graph(cache=True, verbose=True)
+sgv = Vocabulary(cache=True)
 
 # consts
 defined_class_parent = 'ilx:definedClassNeurons'
@@ -764,27 +764,27 @@ def add_phenotypes(graph):
     #fast = 'ilx:FastSpikingPhenotype'
     #reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
 
-    graph.add_class(cell_phenotype)
-    graph.add_class(neuron_phenotype, cell_phenotype)
-    graph.add_class(ephys_phenotype, neuron_phenotype)
-    graph.add_class(spiking_phenotype, ephys_phenotype)
-    graph.add_class(fast_phenotype, spiking_phenotype,('Fast spiking'))
-    graph.add_class(reg_phenotype, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'))
-    graph.add_class(i_spiking_phenotype, spiking_phenotype)
+    graph.add_class(cell_phenotype, autogen=True)
+    graph.add_class(neuron_phenotype, cell_phenotype, autogen=True)
+    graph.add_class(ephys_phenotype, neuron_phenotype, autogen=True)
+    graph.add_class(spiking_phenotype, ephys_phenotype, autogen=True)
+    graph.add_class(fast_phenotype, spiking_phenotype,('Fast spiking'), autogen=True)
+    graph.add_class(reg_phenotype, spiking_phenotype,('Non-fast spiking','Regular spiking non-pyramidal'), autogen=True)
+    graph.add_class(i_spiking_phenotype, spiking_phenotype, autogen=True)
     iClass = infixowl.Class(graph.expand(i_spiking_phenotype), graph=graph.g)
 
-    graph.add_class(burst_p, i_spiking_phenotype, ('burst',))
-    graph.add_class(classical_p, i_spiking_phenotype, ('classical',))
-    graph.add_class(delayed_p, i_spiking_phenotype, ('delayed',))
-    graph.add_class(s_spiking_phenotype, spiking_phenotype)
+    graph.add_class(burst_p, i_spiking_phenotype, ('burst',), autogen=True)
+    graph.add_class(classical_p, i_spiking_phenotype, ('classical',), autogen=True)
+    graph.add_class(delayed_p, i_spiking_phenotype, ('delayed',), autogen=True)
+    graph.add_class(s_spiking_phenotype, spiking_phenotype, autogen=True)
     sClass = infixowl.Class(graph.expand(s_spiking_phenotype), graph=graph.g)
     sClass.disjointWith = [iClass]
 
-    graph.add_class(ac_p, s_spiking_phenotype, ('accomodating',))  # FIXME this is silly
-    graph.add_class(nac_p, s_spiking_phenotype, ('non accomodating',))
-    graph.add_class(st_p, s_spiking_phenotype, ('stuttering',))
-    graph.add_class(ir_p, s_spiking_phenotype, ('irregular',))
-    graph.add_class(morpho_phenotype, neuron_phenotype)
+    graph.add_class(ac_p, s_spiking_phenotype, ('accomodating',), autogen=True)  # FIXME this is silly
+    graph.add_class(nac_p, s_spiking_phenotype, ('non accomodating',), autogen=True)
+    graph.add_class(st_p, s_spiking_phenotype, ('stuttering',), autogen=True)
+    graph.add_class(ir_p, s_spiking_phenotype, ('irregular',), autogen=True)
+    graph.add_class(morpho_phenotype, neuron_phenotype, autogen=True)
 
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
     #species = 'NCBITaxon:10116'
@@ -1238,7 +1238,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
     #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
-    graph.add_class(expression_defined, NIFCELL_NEURON)
+    graph.add_class(expression_defined, NIFCELL_NEURON, autogen=True)
     graph.add_class('ilx:NeuroTypeClass', NIFCELL_NEURON, label='Neuron TypeClass')
 
     graph.g.commit()
