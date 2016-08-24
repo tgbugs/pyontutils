@@ -10,6 +10,7 @@ import inspect
 from functools import wraps
 import rdflib
 from rdflib.extras import infixowl
+from IPython import embed
 
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
@@ -68,6 +69,7 @@ class makeGraph:
     def write(self, delay=False):
         with open('/tmp/' + self.name + '.ttl', 'wb') as f:
             f.write(self.g.serialize(format='turtle'))
+            print('yes we wrote the first version...', self.name)
         if delay:
             with open(self.write_loc, 'at') as f:
                 f.write('/tmp/' + self.name + '.ttl\n')
@@ -166,6 +168,33 @@ class makeGraph:
 
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
+
+    def make_scigraph_json(self, edge, label_edge=None):  # for checking trees
+        if label_edge is None:
+            label_edge = rdflib.RDFS.label
+        else:
+            label_edge = self.expand(label_edge)
+        json_ = {'nodes':[], 'edges':[]}
+        restriction = self.expand(edge)
+        linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
+        done = []
+        for linker in linkers:
+            obj = list(self.g.objects(linker, rdflib.OWL.someValuesFrom))[0]
+            olab = list(self.g.objects(obj, label_edge))[0].toPython()
+            obj = self.g.namespace_manager.qname(obj)
+            sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
+            # TODO lable
+            slab = list(self.g.objects(sub, label_edge))[0].toPython()
+            sub = self.g.namespace_manager.qname(sub)
+            json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
+            if sub not in done:
+                json_['nodes'].append({'lbl':slab,'id':sub})
+                done.append(sub)
+            if obj not in done:
+                json_['nodes'].append({'lbl':olab,'id':obj})
+                done.append(obj)
+
+        return json_
 
     def __enter__(self):
         self.reset_writeloc()
