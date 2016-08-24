@@ -104,6 +104,16 @@ class makeGraph:
         else:
             return thing
 
+    def add_ont(self, ontid, label, comment=None, version=None, shortName=None):
+        self.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+        self.add_node(ontid, rdflib.RDFS.label, label)
+        if comment:
+            self.add_node(ontid, rdflib.RDFS.comment, comment)
+        if version:
+            self.add_node(ontid, rdflib.OWL.versionInfo, version)
+        if shortName:
+            self.add_node(ontid, rdflib.namespace.SKOS.altLabel, shortName)
+
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None):
         self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
         if label is None:
@@ -127,6 +137,8 @@ class makeGraph:
             self.add_node(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
 
     def add_node(self, target, edge, value):
+        if not value:  # no empty values!
+            return
         target = self.check_thing(target)
         edge = self.check_thing(edge)
         try:
