@@ -13,6 +13,7 @@ from hierarchies import creatTree
 from utils import async_getter, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
 from scigraph_client import Vocabulary
 from IPython import embed
+from desc.util.process_fixed import ProcessPoolExecutor
 
 sgv = Vocabulary(cache=True)
 
@@ -44,6 +45,8 @@ PARTOF = 'ilx:partOf'
 HASPART = 'ilx:hasPart'
 
 ADULT = 'NIFORG:birnlex_681'
+
+VALIDATE = False  # FIXME :/
 
 def check_hierarchy(new_graph, root, edge, label_edge=None):
     a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=new_graph.make_scigraph_json(edge, label_edge))
@@ -196,7 +199,8 @@ def mouse_brain_atlas():
                    'ABA',
                    '(%s) ' % SHORTNAME)  # FIXME
     aba_base(new_graph, root, superclass)
-    check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
+    if VALIDATE:
+        check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
 
 def human_brain_atlas():
@@ -250,7 +254,8 @@ def human_brain_atlas():
                    'ABA',
                    '(%s) ' % SHORTNAME)
     aba_base(new_graph, root, superclass)
-    check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
+    if VALIDATE:
+        check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
 
 class cocomac(rowParse):
@@ -716,28 +721,30 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(delay=True)
+    if VALIDATE:
+        Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+        mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
+        for i, n in enumerate(mapping):
+            a, b = creatTree(*Query('SWA:' + str(n), 'ilx:partOf' + str(i + 1), 'INCOMING', 10), json=json_)
+            print(a)
     return ontid, None
-    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
-    mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
-    for i, n in enumerate(mapping):
-        a, b = creatTree(*Query('SWA:' + str(n), 'ilx:partOf' + str(i + 1), 'INCOMING', 10), json=json_)
-        print(a)
 
     #embed()
 
 def main():
-    #return
+    ppe = ProcessPoolExecutor(4)
     with makeGraph('', {}) as _:
-        fs = fmri_atlases()
-        #c = cocomac_make()
-        m = mouse_brain_atlas()
-        h = human_brain_atlas()
-        hc = hcp2016_make()
-        fs.extend([m, h, hc])
-        parcellation_schemes(fs)
-
-        s = swanson()
-        fs.append(s)
+        funs = [fmri_atlases,
+               cocomac_make,
+               mouse_brain_atlas,
+               human_brain_atlas,
+               hcp2016_make,
+               swanson]
+        futures = [ppe.submit(f) for f in funs]
+        print('futures compiled')
+        fs = [f.result() for f in futures]
+        fs = fs[0] + fs[1:]
+        parcellation_schemes(fs[:-1])
 
     # make a protege catalog file to simplify life
     uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
