@@ -107,7 +107,7 @@ def parcellation_schemes(ontids_atlases):
     new_graph.add_node(PARC_SUPER[0], rdflib.RDFS.label, PARC_SUPER[1])
     new_graph.write(delay=True)
 
-def aba_base(new_graph, root, superclass):
+def aba_base(new_graph, root, super_curie):
     url = 'http://api.brain-map.org/api/v2/tree_search/Structure/{root}.json?descendants=true'.format(root=root.id)
     aba_map = {
         'acronym':new_graph.namespaces['OBOANN']['acronym'],  # FIXME all this is BAD WAY
@@ -137,7 +137,7 @@ def aba_base(new_graph, root, superclass):
             node_d['acronym'] = root.acronym
 
         ident = new_graph.namespaces[root.prefix][str(node_d['id'])]
-        new_graph.add_class(ident, superclass)
+        new_graph.add_class(ident, super_curie)
         parent = node_d['parent_structure_id']
         if parent:
             parent = new_graph.namespaces[root.prefix][str(parent)]
@@ -186,19 +186,13 @@ def mouse_brain_atlas():
                    atlas_id)
     make_scheme(new_graph, meta)
 
-    #superclass = rdflib.URIRef('http://uri.interlex.org/base/ilx_allen_brain_parc_region')
-    #new_graph.add_node(superclass, rdflib.RDFS.label, 'Allen Mouse Brain Atlas brain region')
-    #new_graph.add_node(superclass, rdflib.RDFS.subClassOf, PARC_SUPER[0])
-    c_prefix, c_suffix = meta.curie.split(':')
-    superclass = new_graph.namespaces[c_prefix][c_suffix]
-
     root = ABAROOT(997,
                    'allen mouse brain atlas parcellation root',
                    'allen mouse brain atlas parcellation root',
                    'mbaroot',
                    'ABA',
                    '(%s) ' % SHORTNAME)  # FIXME
-    aba_base(new_graph, root, superclass)
+    aba_base(new_graph, root, meta.curie)
     if VALIDATE:
         check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
@@ -241,52 +235,16 @@ def human_brain_atlas():
                    atlas_id)
     make_scheme(new_graph, meta)
 
-    #superclass = rdflib.URIRef('http://uri.interlex.org/base/ilx_allen_brain_parc_region')
-    #new_graph.add_node(superclass, rdflib.RDFS.label, 'Allen Mouse Brain Atlas brain region')
-    #new_graph.add_node(superclass, rdflib.RDFS.subClassOf, PARC_SUPER[0])
-    c_prefix, c_suffix = meta.curie.split(':')
-    superclass = new_graph.namespaces[c_prefix][c_suffix]
-
     root = ABAROOT(3999,
                    'allen human brain atlas parcellation root',
                    'allen human brain atlas parcellation root',
                    'hbaroot',
                    'ABA',
                    '(%s) ' % SHORTNAME)
-    aba_base(new_graph, root, superclass)
+    aba_base(new_graph, root, meta.curie)
     if VALIDATE:
         check_hierarchy(new_graph, root.prefix + ':' + str(root.id), PARTOF, PARCLAB)
     return ontid, atlas
-
-class cocomac(rowParse):
-    superclass = rdflib.URIRef('http://uri.interlex.org/base/ilx_cocomac_parc_region')
-    def __init__(self, graph, rows, header):
-        self.g = graph
-        super().__init__(rows, header)#, order=[0])
-
-    def ID(self, value):
-        self.identifier = 'cocomac:' + value  # safe because reset every row (ish)
-        self.g.add_node(self.identifier, rdflib.RDF.type, rdflib.OWL.Class)
-        self.g.add_node(self.identifier, rdflib.RDFS.subClassOf, self.superclass)
-
-    def Key(self, value):
-        pass
-
-    def Summary(self, value):
-        pass
-
-    def Acronym(self, value):
-        self.g.add_node(self.identifier, 'OBOANN:acronym', value)
-
-    def FullName(self, value):
-        self.g.add_node(self.identifier, rdflib.RDFS.label, value)
-
-    def LegacyID(self, value):
-        if value:  # FIXME should fix in add_node
-            self.g.add_node(self.identifier, 'OBOANN:acronym', value)
-
-    def BrainInfoID(self, value):
-        pass
 
 def cocomac_make():
     ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
@@ -313,26 +271,43 @@ def cocomac_make():
                        'scholarly things',
                        tuple(),
                        tuple())
-    meta = PScheme(cocomac.superclass,
+    meta = PScheme('ilx:ilx_cocomac_parc_region',
                    'CoCoMac terminology parcellation concept',
                    'NCBITaxon:9544',
                    'ilx:various',  # FIXME
                    'problem')  # problems detected :/
     make_scheme(new_graph, meta)
-    #new_graph.add_node(cocomac.superclass, rdflib.RDFS.label, 'CoCoMac terminology brain region')
-    #new_graph.add_node(cocomac.superclass, rdflib.RDFS.subClassOf, PARC_SUPER[0])
 
-    #url = 'http://cocomac.g-node.org/services/search_wizard.php?T=BrainMaps_BrainSiteAcronyms&x0=&limit=3000&page=1&format=json'
-    #resp = json.loads(requests.get(url).json())  # somehow everything is double escaped :x
+    class cocomac(rowParse):
+        def ID(self, value):
+            self.identifier = 'cocomac:' + value  # safe because reset every row (ish)
+            new_graph.add_class(self.identifier, meta.curie)
+
+        def Key(self, value):
+            pass
+
+        def Summary(self, value):
+            pass
+
+        def Acronym(self, value):
+            new_graph.add_node(self.identifier, 'OBOANN:acronym', value)
+
+        def FullName(self, value):
+            new_graph.add_node(self.identifier, rdflib.RDFS.label, value)
+
+        def LegacyID(self, value):
+            new_graph.add_node(self.identifier, 'OBOANN:acronym', value)
+
+        def BrainInfoID(self, value):
+            pass
+
     url = 'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT * from BrainMaps_BrainSiteAcronyms;&format=json'
-    #url = 'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT%20*%20from%20BrainMaps_BrainSiteAcronyms;&format=json'
-    #tab_name = resp['resultTable']
-    #table = resp['tables'][tab_name]
     table = requests.get(url).json()
     fields = table['fields']
     data = table['data']
-    #rows = sorted(data.values())
-    cocomac(new_graph, data.values(), fields)
+    rows = [fields] + list(data.values())
+
+    cocomac(rows)
 
     add_ops(new_graph)
     new_graph.write(delay=True)
@@ -423,7 +398,6 @@ def hcp2016_make():
     filename = 'hcp_parcellation'
     ontid = ONT_PATH + filename + '.ttl'
     SHORTNAME = 'HCP-MMP1.0'
-    superclass = rdflib.URIRef('http://uri.interlex.org/base/ilx_hcp2016_parc_region')
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
@@ -448,7 +422,7 @@ def hcp2016_make():
                        'doi:10.1038/nature18933',
                        ('Human Connectome Project Multi-Modal Parcellation', 'HCP Multi-Modal Parcellation','Human Connectome Project Multi-Modal Parcellation version 1.0'),
                        ('HCP_MMP', SHORTNAME))
-    meta = PScheme(superclass,
+    meta = PScheme('ilx:ilx_hcp2016_parc_region',
                    'HCP parcellation concept',
                    'NCBITaxon:9606',
                    ADULT,
@@ -460,7 +434,7 @@ def hcp2016_make():
             self.id_ = value
             self.id_ = ':' + value  # safe because reset every row (ish)
             new_graph.add_node(self.id_, rdflib.RDF.type, rdflib.OWL.Class)
-            new_graph.add_node(self.id_, rdflib.RDFS.subClassOf, superclass)
+            new_graph.add_node(self.id_, rdflib.RDFS.subClassOf, meta.curie)
 
         def Area_Name(self, value):
             value = value.strip()
