@@ -10,7 +10,6 @@ import inspect
 from functools import wraps
 import rdflib
 from rdflib.extras import infixowl
-from IPython import embed
 
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
