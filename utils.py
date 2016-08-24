@@ -114,9 +114,9 @@ class makeGraph:
         if shortName:
             self.add_node(ontid, rdflib.namespace.SKOS.altLabel, shortName)
 
-    def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None):
+    def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None, autogen=False):
         self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        if label is None:
+        if autogen:
             label = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
         if label:
             self.add_node(id_, rdflib.RDFS.label, label)
