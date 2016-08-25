@@ -110,46 +110,6 @@ def parcellation_schemes(ontids_atlases):
     new_graph.add_node(PARC_SUPER[0], rdflib.RDFS.label, PARC_SUPER[1])
     new_graph.write(delay=True)
 
-def aba_base(new_graph, root, super_curie):
-    url = 'http://api.brain-map.org/api/v2/tree_search/Structure/{root}.json?descendants=true'.format(root=root.id)
-    aba_map = {
-        'acronym':new_graph.namespaces['OBOANN']['acronym'],  # FIXME all this is BAD WAY
-        #'id':namespaces['ABA'],
-        'name':PARCLAB, #rdflib.RDFS.label,
-        #'parent_structure_id':rdflib.RDFS['subClassOf'],
-        'safe_name':new_graph.namespaces['OBOANN']['synonym'],
-    }
-
-    def aba_trips(node_d, parent):
-        for key, edge in sorted(aba_map.items()):
-            value = node_d[key]
-            if not value:
-                continue
-            elif key == 'safe_name' and value == node_d['name']:
-                continue  # don't duplicate labels as synonyms
-            elif key == 'name':
-                val = root.labelprefix + ' ' + value
-                new_graph.add_node(parent, rdflib.RDFS.label, val)
-            new_graph.add_node(parent, edge, value)
-
-    resp = requests.get(url).json()
-    for node_d in resp['msg']:
-        if node_d['id'] == 997:  # turns out HBA root is actually brain... so don't want to overwrite
-            node_d['name'] = root.name
-            node_d['safe_name'] = root.safe_name
-            node_d['acronym'] = root.acronym
-
-        ident = new_graph.namespaces[root.prefix][str(node_d['id'])]
-        new_graph.add_class(ident, super_curie)
-        parent = node_d['parent_structure_id']
-        if parent:
-            parent = new_graph.namespaces[root.prefix][str(parent)]
-            new_graph.add_hierarchy(parent, PARTOF, ident)
-
-        aba_trips(node_d, ident)
-
-    add_ops(new_graph)
-    new_graph.write(delay=True)
 
 class makeGenericPScheme:
     ont = OntMeta
