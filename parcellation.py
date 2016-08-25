@@ -473,7 +473,7 @@ def fmri_atlases():
     for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
         tree = etree.parse(xmlfile)
         name = tree.xpath('header//name')[0].text
-        cname = name + 'concept' if name.endswith('parcellation') else name + ' parcellation concept'
+        cname = name + ' concept' if name.endswith('parcellation') else name + ' parcellation concept'
         shortname = tree.xpath('header//shortname')
         if shortname:
             shortname = shortname[0].text
