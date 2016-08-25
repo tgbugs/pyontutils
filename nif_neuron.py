@@ -98,6 +98,7 @@ def disjointUnionOf(graph, members):
         current = next_
 
     graph.add((current, rdflib.RDF.first, members[-1]))
+    graph.add((current, rdflib.RDF.rest, rdflib.RDF.nil))
 
     return start
 
@@ -191,7 +192,7 @@ def get_transitive_closure(graph, edge, root):
 
     return output
 
-@profile_me
+#@profile_me
 def make_phenotypes():
     ilx_start = 50114
     graph = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
@@ -594,7 +595,7 @@ def _rest_make_phenotypes():
     #embed()
     return syn_mappings, pedges, ilx_start
 
-@profile_me
+#@profile_me
 def make_neurons(syn_mappings, pedges, ilx_start_):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',}
@@ -1154,7 +1155,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             make_mutually_disjoint(self.graph, sorted(disjoint_things))
 
 
-@profile_me
+#@profile_me
 def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
     # it may turn out that things like the disjointness exist at a higher level while correlated properties
