@@ -120,7 +120,7 @@ def add_triples(graph, struct, struct_to_triples, parent=None):
         [graph.add_node(*triple) for triple in struct_to_triples(struct, parent)]
 
 def parcellation_schemes(ontids_atlases):
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
                   'parcellation',
                   'NIF collected parcellation schemes ontology',
                   'NIF Parcellations',
@@ -132,7 +132,7 @@ def parcellation_schemes(ontids_atlases):
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
     }
     graph = makeGraph(ont.filename, PREFIXES)
-    graph.add_ont(ontid, ont[2:])
+    graph.add_ont(ontid, *ont[2:])
 
     for import_id, atlas in sorted(ontids_atlases):
         graph.add_node(ontid, rdflib.OWL.imports, import_id)
