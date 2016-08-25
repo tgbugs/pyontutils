@@ -129,6 +129,8 @@ def parcellation_schemes(ontids_atlases):
     ontid = ont.path + ont.filename + '.ttl'
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
+        'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
+        'skos':'http://www.w3.org/2004/02/skos/core#',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
     }
     graph = makeGraph(ont.filename, PREFIXES)
