@@ -17,26 +17,58 @@ from desc.util.process_fixed import ProcessPoolExecutor
 
 sgv = Vocabulary(cache=True)
 
-OntMeta = namedtuple('OntMeta', ['path', 'filename', 'name', 'shortname', 'comment', 'version'])
-PScheme = namedtuple('PScheme', ['curie', 'name', 'species', 'devstage'])
-PScheme('ilx:something','some parcellation scheme concept','NCBITaxon:1234','adult')
-PARC_SUPER = ('ilx:ilx_brain_parcellation_scheme_concept', 'Brain parcellation scheme concept')
+OntMeta = namedtuple('OntMeta',
+                     ['path',
+                      'filename',
+                      'name',
+                      'shortname',
+                      'comment',
+                      'version'])
+OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+        'swallows.ttl',
+        'Python Ontology',
+        'PO',
+        'Tis a silly place.',
+        '-1')
 
-PSArtifact = namedtuple('PSArtifact', ['curie', 'name', 'version', 'date', 'link', 'citation', 'synonyms','acronyms'])
-PSArtifact('SCR:something', 'name name', 'v1', '01/01/01','http://wut.wut', 'scholarly things', tuple(), tuple())
-ATLAS_SUPER = 'ilx:parcellation_scheme_artifact' # 'NIFRES:nlx_res_20090402'  # alternatives?
+PScheme = namedtuple('PScheme',
+                     ['curie',
+                      'name',
+                      'species',
+                      'devstage'])
+PScheme('ilx:something',
+        'some parcellation scheme concept',
+        'NCBITaxon:1234',
+        'adult')
 
-ABAROOT = namedtuple('ABAROOT', ['id', 'name', 'safe_name', 'acronym', 'prefix', 'labelprefix'])
+
+PSArtifact = namedtuple('PSArtifact',
+                        ['curie',
+                         'name',
+                         'version',
+                         'date',
+                         'link',
+                         'citation',
+                         'synonyms',
+                         'acronyms'])
+PSArtifact('SCR:something',
+           'name name',
+           'v1',
+           '01/01/01',
+           'http://wut.wut',
+           'scholarly things',
+           tuple(),
+           tuple())
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
 TODAY = date.isoformat(date.today())
 
-#annotationProperties
+# annotationProperties
 PARCLAB = 'ilx:parcellationLabel'
 
-#objectProperties
+# objectProperties
 UNTAXON = 'ilx:ancestralInTaxon'
 EXTAXON = 'ilx:hasInstanceInTaxon'  # FIXME instances?
 EXSPECIES = 'ilx:hasInstanceInSpecies'
@@ -46,12 +78,13 @@ DEVSTAGE = 'ilx:definedForDevelopmentalStage'
 PARTOF = 'ilx:partOf'
 HASPART = 'ilx:hasPart'
 
+# classes
 ADULT = 'NIFORG:birnlex_681'
+ATLAS_SUPER = 'ilx:parcellation_scheme_artifact' # 'NIFRES:nlx_res_20090402'  # alternatives?
+PARC_SUPER = ('ilx:ilx_brain_parcellation_scheme_concept', 'Brain parcellation scheme concept')
 
-VALIDATE = False  # FIXME :/
-
-def check_hierarchy(new_graph, root, edge, label_edge=None):
-    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=new_graph.make_scigraph_json(edge, label_edge))
+def check_hierarchy(graph, root, edge, label_edge=None):
+    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.make_scigraph_json(edge, label_edge))
     print(a)
 
 def add_ops(graph):
@@ -123,7 +156,7 @@ class genericPScheme:
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
     }
 
-    def __new__(cls):
+    def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
         if type(cls.ont) != OntMeta:
             raise TypeError(error % (OntMeta, type(cls.ont)))
@@ -145,6 +178,8 @@ class genericPScheme:
         cls.dataproc(graph, data)
         add_ops(graph)
         graph.write(delay=True)
+        if validate or getattr(cls, 'VALIDATE', False):
+            cls.validate(graph)
         return ontid, cls.atlas 
 
     @classmethod
@@ -167,6 +202,11 @@ class genericPScheme:
         """ example datagetter function, make any local modifications here """
         for thing in data:
             graph.add_node(*thing)
+        raise NotImplementedError('You need to implement this yourlself!')
+
+    @classmethod
+    def validate(cls, graph):
+        """ Put any post validation here. """
         raise NotImplementedError('You need to implement this yourlself!')
 
 
@@ -193,6 +233,7 @@ class HBA(genericPScheme):
         'ABA':'http://api.brain-map.org/api/v2/data/Structure/',
     }
     ROOT = 3999
+    VALIDATE = True
 
     @classmethod
     def datagetter(cls):
@@ -215,6 +256,10 @@ class HBA(genericPScheme):
                 pcurie = graph.expand('ABA:' + str(parent))
                 graph.add_hierarchy(pcurie, PARTOF, curie)
 
+    @classmethod
+    def validate(cls, graph):
+        print('U WOT M8')
+        check_hierarchy(graph, 'ABA:' + str(cls.ROOT), PARTOF, PARCLAB)
 
 class MBA(HBA):
     ont = OntMeta(GENERATED,
@@ -309,6 +354,28 @@ class CoCoMac(genericPScheme):
         cocomac(data)
 
 
+class FMRI(genericPScheme):
+
+    PREFIXES = {
+        '':None,
+        'skos':'http://www.w3.org/2004/02/skos/core#',
+    }
+
+    @classmethod
+    def datagetter(cls):
+        data = cls.DATA
+        return data
+
+    @classmethod
+    def dataproc(cls, graph, data):
+        for node in data:
+            id_ = ':' + node.get('index')
+            label = node.text
+            display = '(%s) ' % cls.ont.shortname + label
+            graph.add_class(id_, cls.concept.curie, label=display)
+            graph.add_node(id_, PARCLAB, label)
+
+
 def fmri_atlases():
     ATLAS_PATH = '/usr/share/fsl/data/atlases/'
     ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
@@ -326,37 +393,33 @@ def fmri_atlases():
         'Juelich Histological Atlas':'Juelich',
         'MNI Structural Atlas':'MNI Struct',
     }
-    PREFIXES = {
-        'ilx':'http://uri.interlex.org/base/',
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
-        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-        'NIFORG':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Organism.owl#',
-    }
 
+    comment = 'This file is automatically generated from the %s file in the FSL atlas collection.'
     ontids = []
     atlases = []
     for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
         tree = etree.parse(xmlfile)
         name = tree.xpath('header//name')[0].text
-        sn = tree.xpath('header//shortname')
-        if sn:
-            sn = sn[0].text
+        cname = name + 'concept' if name.endswith('parcellation') else name + ' parcellation concept'
+        shortname = tree.xpath('header//shortname')
+        if shortname:
+            shortname = shortname[0].text
         else:
-            sn = shortnames[name]
+            shortname = shortnames[name]
 
         filename = os.path.splitext(os.path.basename(xmlfile))[0]
-        ontid = ONT_PATH + filename + '.ttl'
 
-        PREFIXES[''] = ontid+'/'
-        new_graph = makeGraph(filename, PREFIXES)
-        new_graph.add_ont(ontid,
-                          name,
-                          sn,
-                          ('This file is automatically generated from the'
-                           ' %s file in the FSL atlas collection.') % xmlfile,
-                          TODAY)
-
+        classdict = dict(
+        ont = OntMeta(GENERATED,
+                      filename,
+                      name, 
+                      shortname,
+                      comment % xmlfile,
+                      TODAY),
+        concept = PScheme('ilx:placeholder_' + name.replace(' ','_'),
+                          cname,
+                          'NCBITaxon:9606',
+                          ADULT),
         atlas = PSArtifact('ilx:placeholder_' + name.replace(' ','_') + '_atlas', # FIXME
                            name,
                            None, #'no version info',
@@ -364,28 +427,20 @@ def fmri_atlases():
                            'http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases',
                            None, #'http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases',  # TODO: there are MANY defining citations for these...
                            tuple(),
-                           (sn,) if sn else tuple())
-        pname = name + 'concept' if name.endswith('parcellation') else name + ' parcellation concept'
-        meta = PScheme('ilx:placeholder_' + name.replace(' ','_'),
-                       pname,
-                       'NCBITaxon:9606',
-                       ADULT)
-        make_scheme(new_graph, meta, atlas.curie)  # FIXME atlas.curie problem...
+                           (shortname,) if shortname else tuple()),
+        DATA = tree.xpath('data//label'))
 
-        for node in tree.xpath('data//label'):
-            id_ = ':' + node.get('index')
-            label = node.text
-            display = '(%s) ' % sn + label
-            new_graph.add_class(id_, meta.curie, label=display)
-            new_graph.add_node(id_, PARCLAB, label)
+        tempclass = type('tempclass', (FMRI,), classdict)
+        ontid, atlas_ = tempclass()
+
+
         #print([(l.get('index'),l.text) for l in tree.xpath('data//label')])
-        add_ops(new_graph)
-        new_graph.write(delay=True)
         ontids.append(ontid)
-        atlases.append(atlas)
+        atlases.append(atlas_)
 
     #embed()
     return [_ for _ in zip(ontids, atlases)]
+
 
 class HCP(genericPScheme):
     ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
@@ -678,7 +733,7 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(delay=True)
-    if VALIDATE:
+    if False:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
         for i, n in enumerate(mapping):
