@@ -105,7 +105,7 @@ class makeGraph:
         else:
             return thing
 
-    def add_ont(self, ontid, label, comment=None, version=None, shortName=None):
+    def add_ont(self, ontid, label, shortName=None, comment=None, version=None):
         self.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
         self.add_node(ontid, rdflib.RDFS.label, label)
         if comment:
