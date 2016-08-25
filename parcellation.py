@@ -41,7 +41,6 @@ PScheme('ilx:something',
         'NCBITaxon:1234',
         'adult')
 
-
 PSArtifact = namedtuple('PSArtifact',
                         ['curie',
                          'name',
@@ -166,11 +165,12 @@ class genericPScheme:
             raise TypeError(error % (PSArtifact, type(cls.atlas)))
             
         ontid = cls.ont.path + cls.ont.filename + '.ttl'
-        cls.PREFIXES.update(genericPScheme.PREFIXES)
+        PREFIXES = {k:v for k, v in cls.PREFIXES.items()}
+        PREFIXES.update(genericPScheme.PREFIXES)
         if '' in cls.PREFIXES:
-            if cls.PREFIXES[''] is None:
-                cls.PREFIXES[''] = ontid + '/'
-        graph = makeGraph(cls.ont.filename, cls.PREFIXES)
+            if PREFIXES[''] is None:
+                PREFIXES[''] = ontid + '/'
+        graph = makeGraph(cls.ont.filename, PREFIXES)
         graph.add_ont(ontid, *cls.ont[2:])
         make_scheme(graph, cls.concept, cls.atlas.curie)
         data = cls.datagetter()
@@ -233,7 +233,7 @@ class HBA(genericPScheme):
         'ABA':'http://api.brain-map.org/api/v2/data/Structure/',
     }
     ROOT = 3999
-    VALIDATE = True
+    #VALIDATE = True
 
     @classmethod
     def datagetter(cls):
@@ -260,6 +260,7 @@ class HBA(genericPScheme):
     def validate(cls, graph):
         print('U WOT M8')
         check_hierarchy(graph, 'ABA:' + str(cls.ROOT), PARTOF, PARCLAB)
+
 
 class MBA(HBA):
     ont = OntMeta(GENERATED,
@@ -355,7 +356,6 @@ class CoCoMac(genericPScheme):
 
 
 class FMRI(genericPScheme):
-
     PREFIXES = {
         '':None,
         'skos':'http://www.w3.org/2004/02/skos/core#',
@@ -430,8 +430,11 @@ def fmri_atlases():
                            (shortname,) if shortname else tuple()),
         DATA = tree.xpath('data//label'))
 
+        print(classdict['ont'])
+
         tempclass = type('tempclass', (FMRI,), classdict)
         ontid, atlas_ = tempclass()
+        print(ontid)
 
 
         #print([(l.get('index'),l.text) for l in tree.xpath('data//label')])
