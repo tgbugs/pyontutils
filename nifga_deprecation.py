@@ -8,6 +8,7 @@ import os
 from collections import defaultdict, namedtuple
 import rdflib
 from rdflib import URIRef, RDFS, RDF, OWL
+import requests
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
 from utils import scigPrint, makeGraph, async_getter, TermColors as tc
@@ -22,6 +23,7 @@ DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
 nifga_path = os.path.expanduser('~/git/NIF-Ontology/ttl/NIF-GrossAnatomy.ttl')
 uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
+uberon_bridge_path = 'http://berkeleybop.org/ontologies/uberon/bridge/uberon-bridge-to-nifstd.owl'
 #bridge_path = os.path.expanduser('~/git/NIF-Ontology/ttl/uberon-bridge-to-nifstd.ttl')  # scigraph's got us
 
 uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
@@ -35,6 +37,7 @@ manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, se
 
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
 wat = 'NIFGA:nlx_144456'
+
 
 def invert(dict_):
     output = defaultdict(list)
@@ -170,6 +173,10 @@ def do_deprecation(replaced_by, g):
 def main():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
+    SANITY = rdflib.Graph()
+    SANITY.parse(data=requests.get(uberon_bridge_path).text)
+    embed()
+    return
     g = rdflib.Graph()
     getQname = g.namespace_manager.qname
     g.parse(nifga_path, format='turtle')
