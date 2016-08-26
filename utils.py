@@ -178,11 +178,18 @@ class makeGraph:
         linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
         done = []
         for linker in linkers:
-            obj = list(self.g.objects(linker, rdflib.OWL.someValuesFrom))[0]
-            olab = list(self.g.objects(obj, label_edge))[0].toPython()
+            try:
+                obj = list(self.g.objects(linker, rdflib.OWL.someValuesFrom))[0]
+            except IndexError:
+                obj = list(self.g.objects(linker, rdflib.OWL.allValuesFrom))[0]
+            if type(obj) != rdflib.term.URIRef:
+                continue  # probably encountere a unionOf or something and don't want
+            try:
+                olab = list(self.g.objects(obj, label_edge))[0].toPython()
+            except IndexError:  # no label
+                olab = obj.toPython()
             obj = self.g.namespace_manager.qname(obj)
             sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
-            # TODO lable
             slab = list(self.g.objects(sub, label_edge))[0].toPython()
             sub = self.g.namespace_manager.qname(sub)
             json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
