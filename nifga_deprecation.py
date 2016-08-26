@@ -10,7 +10,7 @@ import rdflib
 from rdflib import URIRef, RDFS, RDF, OWL
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
-from utils import makeGraph, async_getter, TermColors as tc
+from utils import scigPrint, makeGraph, async_getter, TermColors as tc
 from hierarchies import creatTree
 
 sgg = Graph(cache=True)
@@ -25,8 +25,12 @@ uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
 #bridge_path = os.path.expanduser('~/git/NIF-Ontology/ttl/uberon-bridge-to-nifstd.ttl')  # scigraph's got us
 
 uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
+                   'UBERON:0014606',  # replaced by UBERON:0002434
                   }
+# TODO need to unpapck all the oboInOwl:hasAlternativeId entries for the purposes of resolution... (madness)
 manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, see note on UBERON:0034918
+          'NIFGA:birnlex_1248':'UBERON:0002434',  # fix for what is surely and outdated bridge
+          'NIFGA:nlx_anat_20081242':'UBERON:0004073',  # as of late latest version of uberon 'UBERON:0004073' replaces 'UBERON:0019281'
          }
 
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
@@ -53,6 +57,11 @@ def review_reps(dict_):
                 print(' ' * 8, v_, n['labels'][0])
                 for s in n['synonyms']:
                     print(' ' * 12, s)
+
+def review_norep(list_):
+    for curie in list_:
+        n = sgg.getNode(curie)
+        scigPrint.pprint_node(n)
 
 def do_deprecation(replaced_by, g):
     PREFIXES = {
@@ -116,7 +125,6 @@ def do_deprecation(replaced_by, g):
                 if hier:
                     if uberon not in uedges[obj][pred]:
                         uedges[obj][pred].add(uberon)
-                        print(obj, pred, uberon)
                         bridge.add_hierarchy(obj, pred, uberon)
                 else:
                     #bridge.add_node(uberon, pred, obj)
@@ -136,7 +144,12 @@ def do_deprecation(replaced_by, g):
                     pass
 
         if uberon not in udone and include:
-            bridge.add_class(uberon)
+            try:
+                label = sgv.findById(uberon)['labels'][0]
+            except IndexError:
+                WAT = sgv.findById(uberon)
+                embed()
+            bridge.add_class(uberon, label=label)
             udone.add(uberon)
 
     for nifga, uberon in replaced_by.items():
@@ -169,6 +182,7 @@ def main():
     internal_equivs = {}
     def equiv(curie, label):
         if curie in manual:
+            replaced_by[curie] = manual[curie]
             return manual[curie]
 
         ec = sgg.getNeighbors(curie, relationshipType='equivalentClass')
@@ -228,7 +242,9 @@ def main():
 
         return nodes
 
-    #print([(c['curie'], c['labels'][0]) for c in matches if c['deprecated']])
+    review_norep([m['curie'] for m in matches if m['deprecated']])
+    embed()
+    return
     equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches if not c['deprecated']])
 
     #review_reps(exact)  # these all look good
@@ -253,7 +269,7 @@ def main():
                      json=bridge.make_scigraph_json(HPP))
     print(a)
     print(c)
-    print(f[0])  # why all the stars....
+    print(e)
     embed()
 
 if __name__ == '__main__':
