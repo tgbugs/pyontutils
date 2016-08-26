@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 import requests
 from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
 from pyontutils.scigraph_client import Graph
+from pyontutils.utils import TermColors as tc
 
 BLANK = '   '
 LEAF = '──'
@@ -13,6 +14,8 @@ MID_STEM = '├' + LEAF
 BOT_STEM = '└' + LEAF
 
 CYCLE = 'CYCLE DETECTED DERPS'
+
+DEP = 'http://www.w3.org/2002/07/owl#deprecated'
 
 sgg = Graph(cache=True)
 sgg_local = Graph('http://localhost:9000/scigraph', cache=True)
@@ -59,6 +62,18 @@ def get_node(start, tree, pnames):
     print('branch', branch)
     return tree, branch
 
+def flag_dep(json_):
+    for node in json_['nodes']:
+        if DEP in node['meta']:
+            curie = node['id']
+            label = node['lbl']
+            node['id'] = tc.red(curie)
+            node['lbl'] = tc.red(label)
+            for edge in json_['edges']:
+                if edge['sub'] == curie:
+                    edge['sub'] = tc.red(curie)
+                elif edge['obj'] == curie:
+                    edge['obj'] = tc.red(curie)
 
 def cycle_check(puta_end, start, graph):  # XXX use the flat_tree trick!
     visited = []
@@ -266,6 +281,7 @@ def newTree(name, **kwargs):
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
+        flag_dep(j)
     else:
         j = dict(json)
         j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
