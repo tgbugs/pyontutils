@@ -519,9 +519,12 @@ def swanson():
     ontid = ONT_PATH + filename + '.ttl'
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
+        'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         '':ontid + '/',  # looking for better options
-        'UBERON':'http://purl.obolibrary.org/obo/UBERON_'
+        'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
+        'SWAN':'http://swanson.org/node/',
+        'SWAA':'http://swanson.org/appendix/',
     }
     new_graph = makeGraph(filename, PREFIXES)
     new_graph.add_ont(ontid,
@@ -741,7 +744,6 @@ def swanson():
     #embed()
 
 def main():
-    #return
     ppe = ProcessPoolExecutor(4)
     with makeGraph('', {}) as _:
         funs = [fmri_atlases,
