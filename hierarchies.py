@@ -285,6 +285,8 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     else:
         j = dict(json)
         j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
+        if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
+            flag_dep(j)
 
     print(len(j['nodes']))
 
