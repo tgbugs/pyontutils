@@ -191,7 +191,10 @@ class makeGraph:
             odep = True if list(self.g.objects(obj, rdflib.OWL.deprecated)) else False
             obj = self.g.namespace_manager.qname(obj)
             sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
-            slab = list(self.g.objects(sub, label_edge))[0].toPython()
+            try:
+                slab = list(self.g.objects(sub, label_edge))[0].toPython()
+            except IndexError:  # no label
+                slab = sub.toPython()
             sdep = True if list(self.g.objects(sub, rdflib.OWL.deprecated)) else False
             sub = self.g.namespace_manager.qname(sub)
             json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
