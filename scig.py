@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 """Look look up ontology terms on the command line.
 
 Usage:
@@ -16,6 +16,8 @@ Options:
 """
 from docopt import docopt
 from pyontutils.scigraph_client import *
+from pyontutils.utils import scigPrint
+
 
 def main():
     args = docopt(__doc__, version='scig 0')
@@ -56,13 +58,8 @@ def main():
                 print(id_,)
                 print('\tnodes')
                 for node in out['nodes']:
-                    for key, value in sorted(node.items()):
-                        if key == 'meta':
-                            print('\t\tmeta:')
-                            for mk, mv in value.items():
-                                print('\t\t\t%s:' % mk, mv)
-                        else:
-                            print('\t\t%s:' % key, value)
+                    scigPrint.pprint_node({'nodes':[node]})
+                    continue
                 print('\tedges')
                 for edge in out['edges']:
                     for key, value in sorted(edge.items()):
