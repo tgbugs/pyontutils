@@ -371,3 +371,67 @@ class _TermColors:
 
 TermColors = _TermColors()
 
+class scigPrint:
+
+    _shorten_ = {
+        'PR':'http://purl.obolibrary.org/obo/PR_',
+        'dc':'http://purl.org/dc/elements/1.1/',
+        'owl':'http://www.w3.org/2002/07/owl#',
+        'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
+        'skos':'http://www.w3.org/2004/02/skos/core#',
+        'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
+        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
+        'OBOOWL':'http://www.geneontology.org/formats/oboInOwl#',
+        'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
+        'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
+        'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
+        'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
+    }
+
+    shorten = {v:k for k, v in _shorten_.items()}
+
+    @staticmethod
+    def wrap(string, start, ind, wrap_=80):
+        if len(string) + start <= wrap_:
+            return string
+        else:
+            out = ''
+            ends = [_ for _ in range(wrap_ - start, len(string), wrap_ - ind - 4)] + [None]
+            starts = [0] + [e for e in ends]
+            blocks = [string[s:e] if e else string[s:] for s, e in zip(starts, ends)]
+            return ('\n' + ' ' * (ind + 4)).join(blocks)
+
+    @staticmethod
+    def sv(asdf, start, ind):
+        if type(asdf) is not bool and asdf.startswith('http'):
+            for iri, short in scigPrint.shorten.items():
+                if iri in asdf:
+                    return scigPrint.wrap(asdf.replace(iri, short + ':'), start, ind)
+            print('YOU HAVE FAILED!?', asdf)
+            return scigPrint.wrap(repr(asdf), start, ind)
+        else:
+            return scigPrint.wrap(repr(asdf), start, ind)
+
+    @staticmethod
+    def pprint_node(node):
+        node = node['nodes'][0]  # no edges here...
+        print('---------------------------------------------------')
+        print(node['id'], '  ', node['lbl'])
+        print()
+        for k, v in sorted(node['meta'].items()):
+            for iri, short in scigPrint.shorten.items():
+                if iri in k:
+                    k = k.replace(iri, short + ':')
+                    break
+            asdf = v[0]
+
+            if len(v) > 1:
+                print(' ' * 4 + '%s:' % k, '[')
+                _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
+                print(' ' * 4 + ']')
+            else:
+                base = ' ' * 4 + '%s:' % k
+                print(base, scigPrint.sv(asdf, len(base) + 1, 4))
+
+        print()
+
