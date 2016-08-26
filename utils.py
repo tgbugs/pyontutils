@@ -188,16 +188,22 @@ class makeGraph:
                 olab = list(self.g.objects(obj, label_edge))[0].toPython()
             except IndexError:  # no label
                 olab = obj.toPython()
+            odep = True if list(self.g.objects(obj, rdflib.OWL.deprecated)) else False
             obj = self.g.namespace_manager.qname(obj)
             sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
             slab = list(self.g.objects(sub, label_edge))[0].toPython()
+            sdep = True if list(self.g.objects(sub, rdflib.OWL.deprecated)) else False
             sub = self.g.namespace_manager.qname(sub)
             json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
             if sub not in done:
-                json_['nodes'].append({'lbl':slab,'id':sub})
+                node = {'lbl':slab,'id':sub, 'meta':{}}
+                if sdep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                json_['nodes'].append(node)
                 done.append(sub)
             if obj not in done:
-                json_['nodes'].append({'lbl':olab,'id':obj})
+                node = {'lbl':olab,'id':obj, 'meta':{}}
+                if odep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                json_['nodes'].append(node)
                 done.append(obj)
 
         return json_
