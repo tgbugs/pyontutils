@@ -1,19 +1,22 @@
 #!/usr/bin/env python3.5
 
-# this should be run at NIF-Ontology 9cce1401ea542be39408e2e46d85a9bae442faec
+# this should be run at NIF-Ontology f4e332f3089e7d0c4bb6759a1f66ff0038d0b295
 
 # TODO need to retrieve the FMA hierarchy...
 
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import rdflib
 from rdflib import URIRef, RDFS, RDF, OWL
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
 from utils import makeGraph, async_getter, TermColors as tc
+from hierarchies import creatTree
 
 sgg = Graph(cache=True)
 sgv = Vocabulary(cache=True)
+
+Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
 DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
@@ -26,7 +29,9 @@ uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
 manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, see note on UBERON:0034918
          }
 
-AAAAAAAAAAAAAAAAAAAAAA = {'NIFGA:birnlex_1557':'NIFGA:Class_4'} 
+cross_over_issues = 'NIFSUB:nlx_subcell_100205'
+wat = 'NIFGA:nlx_144456'
+
 def invert(dict_):
     output = defaultdict(list)
     for k,v in dict_.items():
@@ -54,13 +59,17 @@ def do_deprecation(replaced_by, g):
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
         'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
+        'RO':'http://www.obofoundry.org/ro/ro.owl#',
     }
     bridge = makeGraph('uberon-bridge', PREFIXES)
     graph = makeGraph('NIF-GrossAnatomy', PREFIXES)
     graph.g = g
     udone = set('NOREP')
+    uedges = defaultdict(lambda:defaultdict(set))
 
     def inner(nifga, uberon):
+
+        # check neuronames id TODO
 
         # add replaced by -> uberon
         graph.add_node(nifga, 'oboInOwl:replacedBy', uberon)
@@ -71,9 +80,12 @@ def do_deprecation(replaced_by, g):
         # put those relations on the uberon term in the 
         # if there is no uberon term raise an error so we can look into it
 
+        #if uberon not in uedges:
+            #uedges[uberon] = defaultdict(set)
         resp = sgg.getNeighbors(nifga)
         edges = resp['edges']
-        for edge in edges:  # FIXME TODO
+        include = False
+        for edge in edges:  # FIXME TODO hierarchy extraction and porting
             #print(edge)
             sub = edge['sub']
             obj = edge['obj']
@@ -90,32 +102,42 @@ def do_deprecation(replaced_by, g):
                 continue
             elif pred == 'http://www.obofoundry.org/ro/ro.owl#has_proper_part':
                 hier = True
+                include = True
             elif pred == 'http://www.obofoundry.org/ro/ro.owl#proper_part_of':
                 hier = True
+                include = True
 
             if sub == nifga:
                 try:
                     obj = replaced_by[obj]
                 except KeyError:
-                    embed()
+                    print('not in replaced_by', obj)
                 if type(obj) == tuple: continue  # TODO
                 if hier:
-                    bridge.add_hierarchy(obj, pred, uberon)
+                    if uberon not in uedges[obj][pred]:
+                        uedges[obj][pred].add(uberon)
+                        print(obj, pred, uberon)
+                        bridge.add_hierarchy(obj, pred, uberon)
                 else:
-                    bridge.add_node(uberon, pred, obj)
+                    #bridge.add_node(uberon, pred, obj)
+                    pass
             elif obj == nifga:
                 try:
                     sub = replaced_by[sub]
                 except KeyError:
-                    embed()
+                    print('not in replaced_by', sub)
                 if type(sub) == tuple: continue  # TODO
                 if hier:
-                    bridge.add_hierarchy(uberon, pred, sub)
+                    if sub not in uedges[uberon][pred]:
+                        uedges[uberon][pred].add(sub)
+                        bridge.add_hierarchy(uberon, pred, sub)
                 else:
-                    bridge.add_node(sub, pred, uberon)
+                    #bridge.add_node(sub, pred, uberon)
+                    pass
 
-        if uberon not in udone and edges:
+        if uberon not in udone and include:
             bridge.add_class(uberon)
+            udone.add(uberon)
 
     for nifga, uberon in replaced_by.items():
         if type(uberon) == tuple:
@@ -217,9 +239,21 @@ def main():
         replaced_by[k] = 'NOREP'
    
     graph, bridge = do_deprecation(replaced_by, g)
-    bridge.write(delay=True)
-    graph.write()
+    with makeGraph('',{}):
+        bridge.write(delay=True)
+        graph.write(delay=True)
 
+    PPO = 'RO:proper_part_of'
+    HPP = 'RO:has_proper_part'
+    hpp = HPP.replace('RO:', graph.namespaces['RO'])
+    a, b = creatTree(*Query(tc.red('birnlex_796'), HPP, 'OUTGOING', 10),
+                     json=graph.make_scigraph_json(HPP))
+    c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
+    e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10),
+                     json=bridge.make_scigraph_json(HPP))
+    print(a)
+    print(c)
+    print(f[0])  # why all the stars....
     embed()
 
 if __name__ == '__main__':
