@@ -168,13 +168,41 @@ class makeGraph:
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
-    def make_scigraph_json(self, edge, label_edge=None):  # for checking trees
+    def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
             label_edge = rdflib.RDFS.label
         else:
             label_edge = self.expand(label_edge)
         json_ = {'nodes':[], 'edges':[]}
         restriction = self.expand(edge)
+        if direct:
+            trips = list(self.g.triples((None, restriction, None)))
+            done = []
+            for obj, pred, sub in trips:
+                try:
+                    olab = list(self.g.objects(obj, label_edge))[0].toPython()
+                except IndexError:  # no label
+                    olab = obj.toPython()
+                try:
+                    slab = list(self.g.objects(sub, label_edge))[0].toPython()
+                except IndexError:  # no label
+                    slab = sub.toPython()
+
+                obj = self.g.namespace_manager.qname(obj)
+                sub = self.g.namespace_manager.qname(sub)
+                json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
+                if sub not in done:
+                    node = {'lbl':slab,'id':sub, 'meta':{}}
+                    #if sdep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                    json_['nodes'].append(node)
+                    done.append(sub)
+                if obj not in done:
+                    node = {'lbl':olab,'id':obj, 'meta':{}}
+                    #if odep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                    json_['nodes'].append(node)
+                    done.append(obj)
+            return json_
+
         linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
         done = []
         for linker in linkers:
