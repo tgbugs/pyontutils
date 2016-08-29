@@ -414,6 +414,7 @@ class scigPrint:
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
         'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
+        'BRAINInfo':'http://braininfo.rprc.washington.edu/centraldirectory.aspx?ID=',
     }
 
     shorten = {v:k for k, v in _shorten_.items()}
@@ -451,15 +452,16 @@ class scigPrint:
                 if iri in k:
                     k = k.replace(iri, short + ':')
                     break
-            asdf = v[0]
+            if v:
+                asdf = v[0]
 
-            if len(v) > 1:
-                print(' ' * 4 + '%s:' % k, '[')
-                _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
-                print(' ' * 4 + ']')
-            else:
-                base = ' ' * 4 + '%s:' % k
-                print(base, scigPrint.sv(asdf, len(base) + 1, 4))
+                if len(v) > 1:
+                    print(' ' * 4 + '%s:' % k, '[')
+                    _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
+                    print(' ' * 4 + ']')
+                else:
+                    base = ' ' * 4 + '%s:' % k
+                    print(base, scigPrint.sv(asdf, len(base) + 1, 4))
 
         print()
 
