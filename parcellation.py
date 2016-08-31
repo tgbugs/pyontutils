@@ -65,7 +65,10 @@ GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
 TODAY = date.isoformat(date.today())
 
 # annotationProperties
-PARCLAB = 'ilx:parcellationLabel'
+#PARCLAB = 'ilx:parcellationLabel'
+PARCLAB = 'skos:prefLabel'
+ACRONYM = 'OBOANN:acronym'
+SYNONYM = 'OBOANN:synonym'
 
 # objectProperties
 UNTAXON = 'ilx:ancestralInTaxon'
@@ -103,13 +106,13 @@ def make_atlas(atlas, parent=ATLAS_SUPER):
         (atlas.curie, rdflib.RDF.type, rdflib.OWL.Class),
         (atlas.curie, rdflib.RDFS.label, atlas.name),
         (atlas.curie, rdflib.RDFS.subClassOf, parent),
-        (atlas.curie, rdflib.OWL.versionInfo, atlas.version),
-        (atlas.curie, 'OBOANN:createdDate', atlas.date),  # FIXME incorrect usage for this edge
+        (atlas.curie, 'ilx:atlasVersion', atlas.version),  # FIXME
+        (atlas.curie, 'ilx:atlasDate', atlas.date),  # FIXME
         (atlas.curie, 'OBOANN:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
         (atlas.curie, 'OBOANN:definingCitation', atlas.citation),
     ] + \
-    [(atlas.curie, 'OBOANN:synonym', syn) for syn in atlas.synonyms] + \
-    [(atlas.curie, 'OBOANN:acronym', ac) for ac in atlas.acronyms]
+    [(atlas.curie, SYNONYM, syn) for syn in atlas.synonyms] + \
+    [(atlas.curie, ACRONYM, ac) for ac in atlas.acronyms]
 
     return out
 
@@ -151,6 +154,7 @@ class genericPScheme:
     PREFIXES = {
         'ilx':'http://uri.interlex.org/base/',
         'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
+        'skos':'http://www.w3.org/2004/02/skos/core#',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         'NIFORG':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Organism.owl#',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
@@ -250,9 +254,9 @@ class HBA(genericPScheme):
             parent = node['parent_structure_id']
             graph.add_node(curie, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + node['name'])
             graph.add_node(curie, PARCLAB, node['name'])
-            graph.add_node(curie, 'OBOANN:acronym', node['acronym'])
+            graph.add_node(curie, ACRONYM, node['acronym'])
             if node['safe_name'] != node['name']:
-                graph.add_node(curie, 'OBOANN:synonym', node['safe_name'])
+                graph.add_node(curie, SYNONYM, node['safe_name'])
             if parent:
                 pcurie = graph.expand('ABA:' + str(parent))
                 graph.add_hierarchy(pcurie, PARTOF, curie)
@@ -340,14 +344,14 @@ class CoCoMac(genericPScheme):
                 pass
 
             def Acronym(self, value):
-                graph.add_node(self.identifier, 'OBOANN:acronym', value)
+                graph.add_node(self.identifier, ACRONYM, value)
 
             def FullName(self, value):
                 graph.add_node(self.identifier, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
                 graph.add_node(self.identifier, PARCLAB, value)
 
             def LegacyID(self, value):
-                graph.add_node(self.identifier, 'OBOANN:acronym', value)
+                graph.add_node(self.identifier, ACRONYM, value)
 
             def BrainInfoID(self, value):
                 pass
@@ -370,7 +374,7 @@ class HCP(genericPScheme):
     atlas = PSArtifact('ilx:hcp_2016_atlas',
                        'Human Connectome Project Multi-Modal human cortical parcellation',
                        '1.0',
-                       '07-20-2016',
+                       '20-07-2016',  # d-m-y
                        'awaiting...',
                        'doi:10.1038/nature18933',
                        ('Human Connectome Project Multi-Modal Parcellation', 'HCP Multi-Modal Parcellation','Human Connectome Project Multi-Modal Parcellation version 1.0'),
@@ -396,7 +400,7 @@ class HCP(genericPScheme):
 
             def Area_Name(self, value):
                 value = value.strip()
-                graph.add_node(self.id_, 'OBOANN:acronym', value)
+                graph.add_node(self.id_, ACRONYM, value)
 
             def Area_Description(self, value):
                 value = value.strip()
@@ -415,9 +419,9 @@ class HCP(genericPScheme):
                     name = name.strip()
                     if name:
                         if len(name) <= 3:
-                            graph.add_node(self.id_, 'OBOANN:acronym', name)
+                            graph.add_node(self.id_, ACRONYM, name)
                         else:
-                            graph.add_node(self.id_, 'OBOANN:synonym', name)
+                            graph.add_node(self.id_, SYNONYM, name)
                 
             def Key_Studies(self, value):
                 for study in value.split(','):
@@ -426,6 +430,50 @@ class HCP(genericPScheme):
                         graph.add_node(self.id_, 'OBOANN:definingCitation', study)
 
         hcp2016(data)
+
+
+class PAX1(genericPScheme):
+    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+                  'paxinos_r_s_6',
+                  'Paxinos Rat Parcellation 6th',
+                  'PAXRSTER6',
+                  'This file is automatically generated from....',
+                  TODAY)
+    concept = PScheme('ilx:ilx_pax_rat_ster6_parc_region',
+                      'Paxinos Rat Stereological 6th Ed parcellation concept',
+                      'NCBITaxon:10116',
+                      ADULT)
+    atlas = PSArtifact('ilx:pax_rat_ster6_atlas',
+                       'The Rat Brain in Stereotaxic Coordinates 6th Edition',
+                       '6th',
+                       '02-11-2006',  # d-m-y
+                       None,  # the fact this is missing is very big problem :/
+                       ('Paxinos, George, Charles RR Watson, and Piers C. Emson.'
+                        ' "AChE-stained horizontal sections of the rat brain'
+                        ' in stereotaxic coordinates." Journal of neuroscience'
+                        ' methods 3, no. 2 (1980): 129-149.'),  # FIXME
+                       ('Paxinos Rat 6th',),
+                       tuple())
+    PREFIXES = {
+        'PAX09':'http://paxinos.org/ster6/',
+        '':'http://paxinos.org/ster6/',
+    }
+
+    @classmethod
+    def datagetter(cls):
+        with open('resources/paxinos09names.txt', 'rt') as f:
+            lines = [l.rsplit('#')[0].strip() for l in f.readlines() if not l.startswith('#')]
+
+        return [l.rsplit(' ',1) for l in lines]
+
+    @classmethod
+    def dataproc(cls, graph, data):
+        for i, (label, abrv) in enumerate(data):
+            id_ = ':' + str(i + 1)
+            display = '(%s) ' % cls.ont.shortname + label
+            graph.add_class(id_, cls.concept.curie, label=display)
+            graph.add_node(id_, PARCLAB, label)
+            graph.add_node(id_, ACRONYM, abrv)  # FIXME these are listed as abbreviations in the text
 
 
 class FMRI(genericPScheme):
@@ -743,6 +791,7 @@ def swanson():
 
     #embed()
 
+
 def main():
     ppe = ProcessPoolExecutor(4)
     with makeGraph('', {}) as _:
@@ -751,6 +800,7 @@ def main():
                 MBA, #mouse_brain_atlas,
                 HBA, #human_brain_atlas,
                 HCP, #hcp2016_make,
+                PAX1,
                 swanson]
         futures = [ppe.submit(f) for f in funs]
         print('futures compiled')
