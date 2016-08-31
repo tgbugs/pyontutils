@@ -797,7 +797,7 @@ ventral hippocampal commissure vhc
 ventral intermediate entorhinal cortex VIEnt
 ventral nucleus of the lat lemniscus VLL
 ventral orbital cortex VO
-ventralpallidum VP
+ventral pallidum VP
 ventral part ofclaustrum VCl
 ventral posterolateral thalamic nucleus VPL
 ventral posteromedial thalamic nucleus VPM
