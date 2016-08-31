@@ -455,8 +455,7 @@ class PAX1(genericPScheme):
                        ('Paxinos Rat 6th',),
                        tuple())
     PREFIXES = {
-        'PAX09':'http://paxinos.org/ster6/',
-        '':'http://paxinos.org/ster6/',
+        '':ont.path + ont.filename + '.ttl/',  # FIXME
     }
 
     @classmethod
