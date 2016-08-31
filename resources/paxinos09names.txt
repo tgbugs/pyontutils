@@ -136,7 +136,7 @@ central gray CG
 central gray of the pons CGPn
 central gray, alpha part CGA
 central gray, beta part CGB
-central gray, nucleus 0 CGO
+central gray, nucleus O CGO
 central medial thalamic nucleus CM
 central nucleus of the inferior colliculus CIC
 centrolateral thalamic nucleus CL
