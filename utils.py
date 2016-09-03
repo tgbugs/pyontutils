@@ -8,6 +8,7 @@ import re
 import asyncio
 import inspect
 from functools import wraps
+from multiprocessing import Manager
 import rdflib
 from rdflib.extras import infixowl
 
@@ -73,7 +74,7 @@ class makeGraph:
             f.write(self.g.serialize(format='turtle'))
             print('yes we wrote the first version...', self.name)
         if hasattr(self.__class__, '_to_convert'):
-            self.__class__._to_convert.add(self.filename)
+            self.__class__._to_convert.append(self.filename)
         elif convert:  # this will confuse everyone, convert=False still runs if in side the with block...
             self.owlapi_conversion((self.filename,))
 
@@ -236,11 +237,12 @@ class makeGraph:
         return json_
 
     def __enter__(self):
-        self.__class__._to_convert = set()
+        m = Manager()
+        self.__class__._to_convert = m.list()
         return self
 
     def __exit__(self, type, value, traceback):
-        self.owlapi_conversion(sorted(self.__class__._to_convert))
+        self.owlapi_conversion(sorted(set(self.__class__._to_convert)))
 
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
