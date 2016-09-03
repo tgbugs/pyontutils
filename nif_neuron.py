@@ -361,7 +361,7 @@ def make_phenotypes():
     #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     graph.g.commit()
     get_defined_classes(graph)  # oops...
-    graph.write(delay=True)  # moved below to incorporate uwotm8
+    graph.write(convert=False)  # moved below to incorporate uwotm8
     
     syn_mappings = {}
     for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('OBOANN:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
@@ -570,20 +570,20 @@ def _rest_make_phenotypes():
         elif 'MORPHOLOGY' in s or any(['MORPHOLOGY' in x for x in data['xrefs']]):
             dg.add_node(id_, rdflib.RDFS.subClassOf, morpho_phenotype)
 
-    #dg.write(delay=True)
-    xr.write(delay=True)
+    #dg.write(convert=False)
+    xr.write(convert=False)
 
     #skip this for now, we can use DG to do lookups later
     #for t in dg.g.triples((None, None, None)):
         #g.add_node(*t)  # only way to clean prefixes :/
     add_phenotypes(g)
-    g.write(delay=True)
+    g.write(convert=False)
 
     g2 = makeGraph('pheno-comp', PREFIXES)
     for t in ng.triples((None, None, None)):
         g2.add_node(*t)  # only way to clean prefixes :/
 
-    g2.write(delay=True)
+    g2.write(convert=False)
     
     syn_mappings = {}
     for sub, syn in [_ for _ in g.g.subject_objects(g.expand('OBOANN:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
@@ -734,8 +734,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand(NIFCELL_NEURON))
-    defined_graph.write(delay=True)
-    ng.write(delay=True)
+    defined_graph.write(convert=False)
+    ng.write(convert=False)
 
     for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('OBOANN:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -1259,16 +1259,16 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
         graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
 
 
-    graph.write(delay=True)
+    graph.write(convert=False)
     #print(t._set_Electrical_types)
     #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
     #embed()
 
 def main():
-    #with makeGraph('', {}) as _:
-    syn_mappings, pedge, ilx_start, phenotypes = make_phenotypes()
-    ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
-    make_table1(syn_mappings, ilx_start, phenotypes)
+    with makeGraph('', {}) as _:
+        syn_mappings, pedge, ilx_start, phenotypes = make_phenotypes()
+        ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
+        make_table1(syn_mappings, ilx_start, phenotypes)
 
 if __name__ == '__main__':
     main()
