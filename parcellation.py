@@ -144,7 +144,7 @@ def parcellation_schemes(ontids_atlases):
         add_triples(graph, atlas, make_atlas)
 
     graph.add_class(PARC_SUPER[0], label=PARC_SUPER[1])
-    graph.write(delay=True)
+    graph.write(convert=False)
 
 
 class genericPScheme:
@@ -182,7 +182,7 @@ class genericPScheme:
         cls.datamunge(data)
         cls.dataproc(graph, data)
         add_ops(graph)
-        graph.write(delay=True)
+        graph.write(convert=False)
         if validate or getattr(cls, 'VALIDATE', False):
             cls.validate(graph)
         return ontid, cls.atlas 
@@ -817,7 +817,7 @@ def swanson():
                 new_graph.add_hierarchy(pid, apo, cid)
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
-    new_graph.write(delay=True)
+    new_graph.write(convert=False)
     if False:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
@@ -830,8 +830,7 @@ def swanson():
 
 
 def main():
-    ppe = ProcessPoolExecutor(4)
-    with makeGraph('', {}) as _:
+    with makeGraph('', {}) as _, ProcessPoolExecutor(4) as ppe:
         funs = [fmri_atlases,
                 CoCoMac, #cocomac_make,
                 MBA, #mouse_brain_atlas,
