@@ -174,8 +174,21 @@ def main():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
     SANITY = rdflib.Graph()
-    SANITY.parse(data=requests.get(uberon_bridge_path).text)
-    embed()
+    ont = requests.get(uberon_bridge_path).text
+    split_on = 263
+    prefs = ('xmlns:NIFSTD="http://uri.neuinfo.org/nif/nifstd/"\n'
+             'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
+    ont = ont[:split_on] + prefs + ont[split_on:]
+    SANITY.parse(data=ont)
+    #embed()
+    u_replaced_by = {}
+    for s, o in SANITY.subject_objects(OWL.equivalentClass):
+        nif = SANITY.namespace_manager.qname(o)
+        uberon = SANITY.namespace_manager.qname(s)
+        u_replaced_by[nif] = uberon
+        print(s, o)
+        print(nif, uberon)
+    
     return
     g = rdflib.Graph()
     getQname = g.namespace_manager.qname
@@ -263,8 +276,8 @@ def main():
    
     graph, bridge = do_deprecation(replaced_by, g)
     with makeGraph('',{}):
-        bridge.write(delay=True)
-        graph.write(delay=True)
+        bridge.write(convert=False)
+        graph.write(convert=False)
 
     PPO = 'RO:proper_part_of'
     HPP = 'RO:has_proper_part'
