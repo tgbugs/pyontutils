@@ -63,29 +63,25 @@ class makeGraph:
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
         self.g = rdflib.Graph()
         [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
-        self.write_loc = '/tmp/ttl_files'
 
-    def write(self, delay=False):
-        with open('/tmp/' + self.name + '.ttl', 'wb') as f:
+    @property
+    def filename(self):
+        return '/tmp/' + self.name + '.ttl'
+
+    def write(self, convert=True):
+        with open(self.filename, 'wb') as f:
             f.write(self.g.serialize(format='turtle'))
             print('yes we wrote the first version...', self.name)
-        if delay:
-            with open(self.write_loc, 'at') as f:
-                f.write('/tmp/' + self.name + '.ttl\n')
-        else:
-            with open(self.write_loc, 'wt') as f:
-                f.write('/tmp/' + self.name + '.ttl\n')
-            self.owlapi_conversion()
+        if hasattr(self.__class__, '_to_convert'):
+            self.__class__._to_convert.add(self.filename)
+        elif convert:  # this will confuse everyone, convert=False still runs if in side the with block...
+            self.owlapi_conversion((self.filename,))
 
-    def owlapi_conversion(self):
+    def owlapi_conversion(self, files):
         os.system('java -cp ' +
             os.path.expanduser('~/git/ttl-convert/target/'
                                'ttl-convert-1.0-SNAPSHOT-jar-with-dependencies.jar') +
-                  ' scicrunch.App ' + self.write_loc)
-
-    def reset_writeloc(self):
-        with open(self.write_loc, 'wt') as f:
-            f.write('')
+                  ' scicrunch.App ' + ' '.join(files))
 
     def expand(self, curie):
         prefix, suffix = curie.split(':',1)
@@ -240,11 +236,11 @@ class makeGraph:
         return json_
 
     def __enter__(self):
-        self.reset_writeloc()
+        self.__class__._to_convert = set()
         return self
 
     def __exit__(self, type, value, traceback):
-        self.owlapi_conversion()
+        self.owlapi_conversion(sorted(self.__class__._to_convert))
 
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
