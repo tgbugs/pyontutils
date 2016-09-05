@@ -1289,8 +1289,30 @@ class neuronManager:
     def bag_existing(self):  # this reveals the ickyness of ontologies for this...
         reg_neurons = list(self.g.g.subjects(rdflib.RDFS.subClassOf, self.g.expand(NIFCELL_NEURON)))
         def_neurons = self.g.get_equiv_inter(NIFCELL_NEURON)
+        def get_equiv_pheno(n):
+            qname = self.g.g.namespace_manager.qname(n)
+            qstring = """
+            SELECT DISTINCT ?match WHERE {
+            %s owl:equivalentClass ?anon .
+            ?anon owl:intersectionOf/rdf:rest*/rdf:first ?item .
+            OPTIONAL { ?item owl:onProperty %s }
+            OPTIONAL { ?item owl:onProperty %s }
+            OPTIONAL { ?item owl:onProperty %s }
+            ?item owl:someValuesFrom ?match . }""" % (qname,
+                                                      'ilx:hasExpressionPhenotype',
+                                                      'ilx:hasPhenotype')
+            print(qstring)
+            test = list(self.g.g.query(qstring))
+            assert len(test) == 1, "%s" % test
+            return test[0]
+
         def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
         embed()
+
+#def pattern_match(start, chain):   # sparql?
+    # start -> predicate1 -> anon.Class -> predicate2 -> ( -> anon.Restriction -> predicate3 -> match
+    # match <- predicate3 <- [predicate2 <- ([predicate1 <- start
+
 
 
 def main():
