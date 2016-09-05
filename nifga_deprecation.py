@@ -62,6 +62,7 @@ def review_reps(dict_):
                     print(' ' * 12, s)
 
 def review_norep(list_):
+    print('List of norep (aka already deprecated) to review')
     for curie in list_:
         n = sgg.getNode(curie)
         scigPrint.pprint_node(n)
@@ -180,16 +181,19 @@ def main():
              'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
     ont = ont[:split_on] + prefs + ont[split_on:]
     SANITY.parse(data=ont)
-    #embed()
     u_replaced_by = {}
     for s, o in SANITY.subject_objects(OWL.equivalentClass):
         nif = SANITY.namespace_manager.qname(o)
         uberon = SANITY.namespace_manager.qname(s)
+        if nif in u_replaced_by:
+            one = u_replaced_by[nif]
+            u_replaced_by[nif] = one, uberon
+            print('WE GOT DUPES', nif, one, uberon)  # TODO
+
         u_replaced_by[nif] = uberon
         print(s, o)
         print(nif, uberon)
     
-    return
     g = rdflib.Graph()
     getQname = g.namespace_manager.qname
     g.parse(nifga_path, format='turtle')
@@ -263,8 +267,8 @@ def main():
         return nodes
 
     review_norep([m['curie'] for m in matches if m['deprecated']])
-    embed()
-    return
+    #embed()
+    #return
     equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches if not c['deprecated']])
 
     #review_reps(exact)  # these all look good
@@ -290,6 +294,20 @@ def main():
     print(a)
     print(c)
     print(e)
+
+    c1 = {k.split(':')[1]:v for k, v in replaced_by.items()}
+    c2 = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
+
+    for rb_nif, rb_ub in c1.items():
+        if rb_nif in c2:
+            urb_ub = c2[rb_nif]
+            if rb_ub != urb_ub:
+                print('ERROR uberon equiv does not match nif equiv! %s %s %s' % (rb_nif, rb_ub, urb_ub))
+                scigPrint.pprint_node(sgg.getNode(rb_ub))
+                scigPrint.pprint_node(sgg.getNode(urb_ub))
+        else:
+            print('WARNING id missing from uberon equivs', rb_nif, rb_ub)
+            scigPrint.pprint_node(sgg.getNode(rb_ub))
     embed()
 
 if __name__ == '__main__':
