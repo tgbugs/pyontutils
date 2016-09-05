@@ -1133,8 +1133,6 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
         pheno_iri = id_
         return pheno_iri
 
-
-
     def _make_mutually_disjoint(self, things):
         if len(things) > 1:
             first, rest = things[0], things[1:]
@@ -1264,7 +1262,40 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
     #embed()
 
+
+class neuronManager:
+    def __init__(self):#, phenotype_graph, neuron_graph):
+        g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/NIF-Neuron.ttl'))
+        self.g = g
+        self.bag_existing()
+        
+    def load_graph(self, name, prefixes, files):
+        g = makeGraph(name, prefixes)
+        g.g = rdflib.Graph()
+        for file in files:
+            g.g.parse(file, format='turtle')
+        return g
+
+    def make_neuron(self, graph, bag_of_phenotypes):
+        # 0) check that all phenotypes and edges are valid
+        # 1) create defined class (equivalentTo) if it does not exist already
+        # 2) create regular class (subClassOf) with collection of ALL phenoes
+        #       a) find existing superclass candidates, requires ability to 'rebag' phenotypes (set & == set)
+        # 3) create type class if not exists or update disjoint union if it does
+        #       a) need a flag to check?
+        for pheno in bag_of_phenotypes:
+            pass
+
+    def bag_existing(self):  # this reveals the ickyness of ontologies for this...
+        reg_neurons = list(self.g.g.subjects(rdflib.RDFS.subClassOf, self.g.expand(NIFCELL_NEURON)))
+        def_neurons = self.g.get_equiv_inter(NIFCELL_NEURON)
+        def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
+        embed()
+
+
 def main():
+    neuronManager()
+    return
     with makeGraph('', {}) as _:
         syn_mappings, pedge, ilx_start, phenotypes = make_phenotypes()
         ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
