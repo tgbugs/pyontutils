@@ -21,6 +21,10 @@ ids = [(r[Id],) for r in rows if r[Id] and r[Id] != 'Id' and 'Resource:' not in 
 items = tuple(curies.items())
 findById = v.findById
 def async_func(id_):
+    if ':' in id_:
+        out = findById(id_)
+        if out:
+            return id_, out['curie']
     for prefix, uri in items:
         curie = prefix + ':' + id_
         out = findById(curie)
