@@ -167,19 +167,12 @@ class makeGraph:
 
     def get_equiv_inter(self, curie):
         """ get equivelant classes where curie is in an intersection """
-        start = self.expand(curie)
-        linkers = [t[0] for t in self.g.triples((None, None, start)) if type(t[0]) is rdflib.BNode]  # RDF.first?
-        subjects = []
-        for linker in linkers:
-            linker2 = list(self.g.subjects(rdflib.OWL.intersectionOf, linker))
-            assert len(linker2) == 1
-            linker2 = linker2[0]
-            subject = list(self.g.subjects(rdflib.OWL.equivalentClass, linker2))
-            assert len(subject) == 1
-            subject = subject[0]
-            subjects.append(subject)
-
-        return subjects
+        start = self.g.namespace_manager.qname(self.expand(curie))  # in case something is misaligned
+        qstring = """
+        SELECT DISTINCT ?match WHERE {
+        ?match owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first %s .
+        }""" % start
+        return [_ for (_,) in self.g.query(qstring)]  # unpack...
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
