@@ -1265,7 +1265,8 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
 class neuronManager:
     def __init__(self):#, phenotype_graph, neuron_graph):
-        g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/NIF-Neuron.ttl'))
+        #g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/NIF-Neuron.ttl'))
+        g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/hbp-special.ttl'))
         self.g = g
         self.bag_existing()
         
@@ -1293,11 +1294,8 @@ class neuronManager:
             qname = self.g.g.namespace_manager.qname(n)
             qstring = """
             SELECT DISTINCT ?match WHERE {
-            %s owl:equivalentClass ?anon .
-            ?anon owl:intersectionOf/rdf:rest*/rdf:first ?item .
-            OPTIONAL { ?item owl:onProperty %s }
-            OPTIONAL { ?item owl:onProperty %s }
-            OPTIONAL { ?item owl:onProperty %s }
+            %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+            { ?item owl:onProperty %s } UNION { ?item owl:onProperty %s }
             ?item owl:someValuesFrom ?match . }""" % (qname,
                                                       'ilx:hasExpressionPhenotype',
                                                       'ilx:hasPhenotype')
@@ -1307,6 +1305,19 @@ class neuronManager:
             return test[0]
 
         def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
+        def get_reg_pheno(n):  # FIXME fails on intersecdtion of...
+            qname = self.g.g.namespace_manager.qname(n)
+            qstring = """
+            SELECT DISTINCT ?match ?edge WHERE {
+            %s rdfs:subClassOf ?item .
+            ?item owl:onProperty ?edge .
+            ?item owl:someValuesFrom ?match . }""" % qname
+            print(qstring)
+            test = list(self.g.g.query(qstring))
+            #assert len(test) == 1, "%s" % test
+            return test
+
+        reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
         embed()
 
 #def pattern_match(start, chain):   # sparql?
