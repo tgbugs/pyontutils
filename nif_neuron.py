@@ -1287,37 +1287,78 @@ class neuronManager:
         for pheno in bag_of_phenotypes:
             pass
 
+    def get_edge_for_pheno(self, pheno):
+        edge = None
+        # TODO use scigraph categories function for this?
+        # subClassOf UBERON:1?
+        #    hasSomaLocatedIn
+        #    hasSomaLocatedInLayer
+        # subClassOf PR:1?
+        #    ilx:hasExpressionPhenotype
+        # subClassOf NCBIGene:1?
+        #    ilx:hasExpressionPhenotype
+        # subClassOf Panther?
+        #    ilx:hasExpressionPhenotype
+        # subClassOf NCBITaxon:1?
+        #    ilx:hasInstanceInSpecies
+        # subClassOf ilx:MorphologicalPhenotype
+        # subClassOf ilx:ElectrophysiologicalPhenotype
+        # subClassOf ilx:parcellation_concept
+        return edge, pheno
+
     def bag_existing(self):  # this reveals the ickyness of ontologies for this...
         reg_neurons = list(self.g.g.subjects(rdflib.RDFS.subClassOf, self.g.expand(NIFCELL_NEURON)))
+        tc_neurons = [_ for (_,) in self.g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NIFCELL_NEURON)]
         def_neurons = self.g.get_equiv_inter(NIFCELL_NEURON)
+
         def get_equiv_pheno(n):
             qname = self.g.g.namespace_manager.qname(n)
             qstring = """
             SELECT DISTINCT ?match WHERE {
             %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+            ?item rdf:type owl:Restriction .
             { ?item owl:onProperty %s } UNION { ?item owl:onProperty %s }
             ?item owl:someValuesFrom ?match . }""" % (qname,
                                                       'ilx:hasExpressionPhenotype',
                                                       'ilx:hasPhenotype')
             print(qstring)
-            test = list(self.g.g.query(qstring))
-            assert len(test) == 1, "%s" % test
-            return test[0]
+            out = list(self.g.g.query(qstring))
+            assert len(out) == 1, "%s" % out
+            return out[0]
 
-        def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
         def get_reg_pheno(n):  # FIXME fails on intersecdtion of...
             qname = self.g.g.namespace_manager.qname(n)
             qstring = """
             SELECT DISTINCT ?match ?edge WHERE {
             %s rdfs:subClassOf ?item .
+            ?item rdf:type owl:Restriction .
             ?item owl:onProperty ?edge .
             ?item owl:someValuesFrom ?match . }""" % qname
             print(qstring)
-            test = list(self.g.g.query(qstring))
+            out = list(self.g.g.query(qstring))
             #assert len(test) == 1, "%s" % test
-            return test
+            if not out:
+                return get_intersection_phenos(qname)
+            else:
+                return out
+
+        def get_intersection_phenos(qname):  # composite phenos
+            qstring = """
+            SELECT DISTINCT ?match ?edge WHERE {
+            %s rdfs:subClassOf/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+            ?item rdf:type owl:Restriction .
+            ?item owl:onProperty ?edge .
+            ?item owl:someValuesFrom ?match . }""" % qname
+            print(qstring)
+            out = list(self.g.g.query(qstring))
+            print('------------------------')
+            print(out)
+            print('------------------------')
+            return out
 
         reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
+        tc_neuron_phenos = [(n, get_reg_pheno(n)) for n in tc_neurons]
+        def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
         embed()
 
 #def pattern_match(start, chain):   # sparql?
