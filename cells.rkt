@@ -11,8 +11,14 @@
 '(load-phenotypes)  ; load in all our phenotypes so they are known
 '(load-neurons)  ; load existing neurons
 
+;; auto-quote macro
+;(begin-for-syntax 
+; (define-syntax (define-quote-args stx)  ; to high level just at the moment...
+;   (syntax-parse stx
+;     [(_ name:id args body) #'(define-syntax (name stx) body)]
+;     [(_ name:id args doc:str body) #'(define-syntax name quote(args) doc body)])))
 
-; debug stuff
+;; debug stuff
 (begin-for-syntax
   (define-namespace-anchor a)                  ; <---
   (define ns (namespace-anchor->namespace a))  ; <---
@@ -33,23 +39,38 @@
   (list rest))
 
 ;; predicates
+(define edge-list '())
+
+(define (env-edge? env)
+  (define (edge? expr)
+    (member expr env)) ; syntax parse to make environment access to phenotypes nice?
+  edge?)
+
+(define edge? (env-edge? edge-list))
+
 (begin-for-syntax
   (define-syntax-class pred
     #:attributes (p s)  ; for the future...
     (pattern (p s))))
-
 
 (define-syntax (define-predicate stx) ; TODO need this to deal with conversion to intersections and restrictions...
   ;(displayln stx)
   (define (do-stx s)
     (displayln s)
     (syntax-parse s
-      [(_ predicate:id) #'(define (predicate id label) (format "~a ~a ~a" id `predicate label))]))
+      [(_ predicate:id) #'(define (predicate id label) (format "~a ~a ~a" id `predicate label))
+                        #'(set! edge-list (cons `predicate edge-list))]))
   (let ([dp (car (syntax-e stx))]
         [stx-e (cdr (syntax-e stx))])
     (datum->syntax stx (cons 'begin (for/list ([s stx-e]) (do-stx (datum->syntax stx (list dp s))))))))
 
-(define-predicate rdfs:label rdfs:subClassOf)
+(define-predicate
+  rdf:type
+  rdfs:label
+  rdfs:subClassOf
+  owl:onProperty)
+
+;(displayln rdfs:subClassOf) ; FIXME how is this out of phase...
 
 ;; identifiers
 (define-for-syntax (ilx-next-prod env)
@@ -221,3 +242,53 @@
       'p5
       '(edge2 . p2)
       '(edge1 . hello))))
+
+;; the pure function version makes a return!
+
+(define (restriction predicate object #:*ValuesFrom [*ValuesFrom 'owl:someValuesFrom])
+  (list (rdf:type 'linker owl:Restriction) ; TODO a way to pass out the linker value...?
+        (owl:onProperty 'linker predicate)
+        (*ValuesFrom 'linker object)))
+
+(define (lift-to-class triple)
+  "utility method for lifting direct predicate usage
+  to link classes, to the correct subClassOf Restriction
+  version, make sure the triple is quoted..."
+  ('rdfs:subClassOf (cadr triple) (restriction (car triple) (cddr triple))))
+
+(lift-to-class '(edge1 "ilx:ilx_1234567" 'p2))
+
+(define (phenotypes . rest)
+  "phenotypes data, checks all the edges and phenos are known
+  and then returns itself quoted"
+  (define (check-rest rest)
+    (cond ((empty? rest) '())
+          ((and (cons? (car rest))
+                (not (cons? (caar rest))))
+           (begin
+             (displayln (caar rest))
+             (check-rest (car rest))
+             (check-rest (cdr rest))))
+          ((and (edge? (car rest)) (phenotype? (cdr rest))) #t)
+          ((phenotype? (car rest)) (begin (check-rest (cdr rest)) #t))  ; we do not expand missing edges here
+          (#t (error (format "not pair or known phenotype ~a" rest)))))
+  (check-rest rest))
+  ;(if (check-rest rest)
+    ;(map (lambda (r) (pheno-do neuron-id r)) rest)  ; FIXME neuron-id passing ;_;
+    ;(error "phenotypes bad")))
+
+(define (expand-phenotypes phenotypes-data)
+  phenotypes-data)
+
+(define (expand-disjoint-union-of disjoint-union-of-data)
+  disjoint-union-of-data)
+
+(define (neuron #:id [id ilx-next] #:label [label '()] #:subClassOf [subClassOf NIFNEURON] . rest)
+  "this binds the defined phenotypes to an identifier
+  much better process allows reuse of phenotypes sections"
+  (when (procedure? id) (set! id (id)))
+  (for ([thing rest])
+    (if (and (list? thing) (member (car thing) ('phenotypes 'disjoint-union-of)))
+      (displayln "HI MOM")
+      (error ("~a not a list or not a phenotypes or disjoint-union-of object")))))
+
