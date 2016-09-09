@@ -74,12 +74,29 @@
         (#t (expand-triple predicate-name id object)))) ; TODO check for real object?
   ;(format "~a ~a ~a" id predicate-name object))
 
-;(define-predicate
-  ;rdf:type
-  ;rdfs:label
-  ;rdfs:subClassOf
-  ;owl:onProperty
-  ;owl:someValuesFrom)
+(define-predicate
+  rdf:type
+  rdfs:label
+  rdfs:subClassOf
+  owl:onProperty
+  owl:someValuesFrom)
+
+(define-syntax (define-class stx) ; oh look how easy that copy paste was, thanks racket for being a pita
+  ;(displayln stx)
+  (define (do-stx s)
+    (displayln s)
+    (syntax-parse s
+      ;[(_ predicate:id) #'(begin (define (predicate id object) (format "~a ~a ~a" id `predicate object))
+      [(_ predicate:id) #'(begin (define predicate (symbol->string `predicate))
+                                 (set! class-list (cons `predicate class-list)))]))
+  (let ([dp (car (syntax-e stx))]
+        [stx-e (cdr (syntax-e stx))])
+    (datum->syntax stx (cons 'begin
+                             (for/list ([s stx-e])
+                               (do-stx (datum->syntax stx (list dp s))))))))
+
+(define class-list '())
+(define-class n1 n2 n3 n4 n5 n6)
 
 (define-syntax (define-term stx)
   (define (define-and-set stx-list)
@@ -91,7 +108,7 @@
              (syntax-parse s [thing:id #'(begin (define (thing id object) (expand-predicate `thing id object))
                                                 (set! edge-list (cons `thing edge-list)))]))
             ((equal? (syntax->datum syntax-obj) ''class)  ; this is STUPID... there must be a better way to do this :/ urg continually fighting racket :/
-             (syntax-parse s [thing:id (list #'(define thing (datum->string `thing))
+             (syntax-parse s [thing:id (list #'(define thing (symbol->string 'thing))
                                                 #'(set! class-list (cons `thing class-list)))]))
             (#t (error (format "~a ~a wtf" (syntax->datum syntax-obj) s)))))
         ;[thing:id syntax-obj]))
@@ -114,7 +131,7 @@
   (displayln asdf)
   (datum->syntax stx (begin asdf)))
 
-(define-term #:syntax 'class rdf:type rdfs:label)
+;(define-term #:syntax 'class rdf:type rdfs:label)  ; time to cut our losses :/
 
 ;; identifiers
 (define-for-syntax (ilx-next-prod env)
