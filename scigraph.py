@@ -119,6 +119,7 @@ class State:
         code += self.shebang
         code += self.make_doc()
         code += self.imports
+        code += "BASEPATH = '%s'\n\n" % self.api_url.rsplit('/', 1)[0]
         code += "exten_mapping = {%s}\n\n" % ', '.join(["'" + '\': \''.join(_) + "'" for _ in sorted(self.exten_mapping.items())])
         code += self.make_baseclass()
         code += self._code
@@ -143,8 +144,8 @@ class State:
         code = '\n' + inspect.getsource(CLASSNAME) + '\n'
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
-        _, basePath = self.basePath_(dict_['basePath'])
-        return code.replace('CLASSNAME', classname).replace('DOCSTRING', docstring).replace('BASEPATH', basePath)
+        #_, basePath = self.basePath_(dict_['basePath'])
+        return code.replace('CLASSNAME', classname).replace('DOCSTRING', docstring).replace("'BASEPATH'", 'BASEPATH')
 
     def make_param_parts(self, dict_):
         if dict_['required']:
