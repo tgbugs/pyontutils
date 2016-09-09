@@ -3,7 +3,7 @@
 (require (for-syntax syntax/parse syntax/stx))
 (require (for-syntax racket/match))
 (require racket/trace)
-;(require macro-debugger/stepper) ; such wow, very amaze!
+(require macro-debugger/stepper) ; such wow, very amaze!
 
 ;; define some functions to retrieve data for us...
 (define-for-syntax NIFNEURON "NIFCELL:sao1417703748")
@@ -58,12 +58,14 @@
   (define (do-stx s)
     (displayln s)
     (syntax-parse s
-      [(_ predicate:id) #'(begin (define (predicate id object) (expand-predicate `predicate id object))
       ;[(_ predicate:id) #'(begin (define (predicate id object) (format "~a ~a ~a" id `predicate object))
+      [(_ predicate:id) #'(begin (define (predicate id object) (expand-predicate `predicate id object))
                                  (set! edge-list (cons `predicate edge-list)))]))
   (let ([dp (car (syntax-e stx))]
         [stx-e (cdr (syntax-e stx))])
-    (datum->syntax stx (cons 'begin (for/list ([s stx-e]) (do-stx (datum->syntax stx (list dp s))))))))
+    (datum->syntax stx (cons 'begin
+                             (for/list ([s stx-e])
+                               (do-stx (datum->syntax stx (list dp s))))))))
 
 (define (expand-predicate predicate-name id object) ; TODO make this flexible?
   (define (expand-triple p s o)
@@ -72,14 +74,47 @@
         (#t (expand-triple predicate-name id object)))) ; TODO check for real object?
   ;(format "~a ~a ~a" id predicate-name object))
 
-(define-predicate
-  rdf:type
-  rdfs:label
-  rdfs:subClassOf
-  owl:onProperty
-  owl:someValuesFrom)
+;(define-predicate
+  ;rdf:type
+  ;rdfs:label
+  ;rdfs:subClassOf
+  ;owl:onProperty
+  ;owl:someValuesFrom)
 
-;(displayln rdfs:subClassOf) ; FIXME how is this out of phase...
+(define-syntax (define-term stx)
+  (define (define-and-set stx-list)
+    (define syntax-obj #''predicate) ; default
+    (define (do-stx s)
+      (displayln (format "do-stx ~a" s))
+      ;(displayln (syntax-original? syntax-obj))
+      (cond ((equal? (syntax->datum syntax-obj) ''predicate)
+             (syntax-parse s [thing:id #'(begin (define (thing id object) (expand-predicate `thing id object))
+                                                (set! edge-list (cons `thing edge-list)))]))
+            ((equal? (syntax->datum syntax-obj) ''class)  ; this is STUPID... there must be a better way to do this :/ urg continually fighting racket :/
+             (syntax-parse s [thing:id (list #'(define thing (datum->string `thing))
+                                                #'(set! class-list (cons `thing class-list)))]))
+            (#t (error (format "~a ~a wtf" (syntax->datum syntax-obj) s)))))
+        ;[thing:id syntax-obj]))
+        ;[thing:id (datum->syntax stx syntax-obj)]))
+    (define (check-for-type sl)
+      (cond ((empty? sl) '())
+            ((keyword? (syntax->datum (car sl))) (begin (displayln (format "SUCCESS ~a" (cadr sl)))
+                                                        (set! syntax-obj (cadr sl)) ; FIXME kw name match?
+                                                        (cddr sl))) ; drop the kw
+            (#t (cons (car sl) (check-for-type (cdr sl))))))
+    (define asdf (check-for-type stx-list))
+    (displayln asdf)
+    (map do-stx asdf))
+    ;(map (lambda (s)
+           ;(do-stx (datum->syntax stx (list (car (syntax-e stx))
+                                            ;s))))
+         ;asdf))
+
+  (define asdf (define-and-set (cdr (syntax-e stx))))
+  (displayln asdf)
+  (datum->syntax stx (begin asdf)))
+
+(define-term #:syntax 'class rdf:type rdfs:label)
 
 ;; identifiers
 (define-for-syntax (ilx-next-prod env)
