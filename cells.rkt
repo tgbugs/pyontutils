@@ -39,14 +39,14 @@
   (list rest))
 
 ;; predicates
-(define edge-list '())
+(define edge-list '()) ; this is mutable so cannot pass it in as env...
 
 (define (env-edge? env)
   (define (edge? expr)
     (member expr env)) ; syntax parse to make environment access to phenotypes nice?
   edge?)
 
-(define edge? (env-edge? edge-list))
+(define (edge? expr) (member expr edge-list))
 
 (begin-for-syntax
   (define-syntax-class pred
@@ -58,17 +58,26 @@
   (define (do-stx s)
     (displayln s)
     (syntax-parse s
-      [(_ predicate:id) #'(define (predicate id label) (format "~a ~a ~a" id `predicate label))
-                        #'(set! edge-list (cons `predicate edge-list))]))
+      [(_ predicate:id) #'(begin (define (predicate id object) (expand-predicate `predicate id object))
+      ;[(_ predicate:id) #'(begin (define (predicate id object) (format "~a ~a ~a" id `predicate object))
+                                 (set! edge-list (cons `predicate edge-list)))]))
   (let ([dp (car (syntax-e stx))]
         [stx-e (cdr (syntax-e stx))])
     (datum->syntax stx (cons 'begin (for/list ([s stx-e]) (do-stx (datum->syntax stx (list dp s))))))))
+
+(define (expand-predicate predicate-name id object) ; TODO make this flexible?
+  (define (expand-triple p s o)
+    (list p s o))
+  (cond ((and (list? object) (edge? (car object))) (map expand-triple object))
+        (#t (expand-triple predicate-name id object)))) ; TODO check for real object?
+  ;(format "~a ~a ~a" id predicate-name object))
 
 (define-predicate
   rdf:type
   rdfs:label
   rdfs:subClassOf
-  owl:onProperty)
+  owl:onProperty
+  owl:someValuesFrom)
 
 ;(displayln rdfs:subClassOf) ; FIXME how is this out of phase...
 
@@ -125,7 +134,6 @@
   (if (do-rest rest)
     (map (lambda (r) (pheno-do neuron-id r)) rest)  ; FIXME neuron-id passing ;_;
     (error "phenotypes bad")))
-
 
 (define (-and . rest)
   (cons 'and rest))
@@ -245,18 +253,36 @@
 
 ;; the pure function version makes a return!
 
-(define (restriction predicate object #:*ValuesFrom [*ValuesFrom 'owl:someValuesFrom])
-  (list (rdf:type 'linker owl:Restriction) ; TODO a way to pass out the linker value...?
-        (owl:onProperty 'linker predicate)
-        (*ValuesFrom 'linker object)))
+(define (make-linker env)
+  (define start 0)
+  (lambda () (begin0 (format "linker_~a_~a" env start) (set! start (add1 start)))))
+    
+(define get-linker (make-linker 'env))
+
+(define (restriction predicate object #:*ValuesFrom [*ValuesFrom owl:someValuesFrom])
+  (define linker (get-linker))
+  (list linker
+        (rdf:type linker 'owl:Restriction) ; TODO a way to pass out the linker value...? also owl:Restriction type...
+        (owl:onProperty linker predicate)
+        (*ValuesFrom linker object)))
+
+;(define (restriction a b)
+ ;(list a b))
 
 (define (lift-to-class triple)
   "utility method for lifting direct predicate usage
   to link classes, to the correct subClassOf Restriction
   version, make sure the triple is quoted..."
-  ('rdfs:subClassOf (cadr triple) (restriction (car triple) (cddr triple))))
+  (let ([res (restriction (car triple) (cddr triple))])
+    (cons (rdfs:subClassOf (cadr triple) (car res))
+            (cdr res))))
 
 (lift-to-class '(edge1 "ilx:ilx_1234567" 'p2))
+
+(define (phenotypes-get-missing-edges phenotype)
+  (if (cons? phenotype)
+    phenotype
+    (cons 'ilx:hasPhenotype phenotype)))
 
 (define (phenotypes . rest)
   "phenotypes data, checks all the edges and phenos are known
@@ -272,10 +298,9 @@
           ((and (edge? (car rest)) (phenotype? (cdr rest))) #t)
           ((phenotype? (car rest)) (begin (check-rest (cdr rest)) #t))  ; we do not expand missing edges here
           (#t (error (format "not pair or known phenotype ~a" rest)))))
-  (check-rest rest))
-  ;(if (check-rest rest)
-    ;(map (lambda (r) (pheno-do neuron-id r)) rest)  ; FIXME neuron-id passing ;_;
-    ;(error "phenotypes bad")))
+  (if (check-rest rest)
+    (cons 'phenotypes (map phenotypes-get-missing-edges rest))  ; FIXME neuron-id passing ;_;
+    (error "phenotypes bad")))
 
 (define (expand-phenotypes phenotypes-data)
   phenotypes-data)
@@ -287,8 +312,22 @@
   "this binds the defined phenotypes to an identifier
   much better process allows reuse of phenotypes sections"
   (when (procedure? id) (set! id (id)))
-  (for ([thing rest])
-    (if (and (list? thing) (member (car thing) ('phenotypes 'disjoint-union-of)))
-      (displayln "HI MOM")
-      (error ("~a not a list or not a phenotypes or disjoint-union-of object")))))
+  (cons id
+        (cons (rdfs:label id label)
+              (cons (rdfs:subClassOf id subClassOf)
+                    (map expand-sections rest)))))
 
+(define (expand-sections section)
+  (if (list? section)
+    (cond ((equal? (car section) 'phenotypes) section)
+          ((equal? (car section) 'disjoint-union-of) section)
+          (#t (error (format "ERROR unknown section heading: ~a" section))))
+    (error (format "ERROR not a list: ~a" section))))
+
+(define phil
+  (neuron #:label "wheeeeeee" #:id "ilx:ilx_999999" #:subClassOf NIFNEURON
+    (disjoint-union-of 'n10)
+    (phenotypes 
+      'p5
+      '(edge2 . p2)
+      '(edge1 . hello))))
