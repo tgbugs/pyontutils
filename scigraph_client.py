@@ -10,6 +10,8 @@ import builtins
 import requests
 from json import dumps
 
+BASEPATH = 'http://matrix.neuinfo.org:9000/scigraph'
+
 exten_mapping = {'application/graphml+xml': 'graphml+xml', 'application/graphson': 'graphson', 'application/json': 'json', 'application/xgmml': 'xgmml', 'application/xml': 'xml', 'image/jpeg': 'jpeg', 'image/png': 'png', 'text/csv': 'csv', 'text/gml': 'gml', 'text/html': 'html', 'text/plain': 'plain', 'text/plain; charset=utf-8': 'plain; charset=utf-8', 'text/tab-separated-values': 'tab-separated-values'}
 
 class restService:
@@ -71,7 +73,7 @@ class restService:
 class Graph(restService):
     """ Graph services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -256,7 +258,7 @@ class Graph(restService):
 class Refine(restService):
     """ OpenRefine Reconciliation Services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -332,7 +334,7 @@ class Refine(restService):
 class Analyzer(restService):
     """ Analysis services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -363,7 +365,7 @@ class Analyzer(restService):
 class Cypher(restService):
     """ Cypher utility services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -408,7 +410,7 @@ class Cypher(restService):
 class Annotations(restService):
     """ Annotation services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -587,7 +589,7 @@ class Annotations(restService):
 class Lexical(restService):
     """ Lexical services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
@@ -656,7 +658,7 @@ class Lexical(restService):
 class Vocabulary(restService):
     """ Vocabulary services """
 
-    def __init__(self, basePath='http://matrix.neuinfo.org:9000/scigraph', verbose=False, cache=False):
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
