@@ -246,9 +246,9 @@
 (define (get-extras stx-list)
   (#f))
 
-(define-syntax (neuron stx)
+(define-syntax (neuron-old stx) ; FIXME why do i need this?
   "syntax to defer execution of parts of 'neuron until
-  id has been filled in (and fill it in automatically)"
+  id has been filled in (and fill it in automatically)"  ; we can do this more cleanly at run-time?
 
   (define id '())
   (define (set-id extras)
@@ -267,7 +267,7 @@
       (let* ([cars (car stx-list)]
              [dat (syntax->datum cars)]
              [d-func (lambda (x) (datum->syntax cars (ins-id x)))])
-        (cond ((equal? dat 'neuron) (level (lambda (x) 'neuron-do) dat stx-list))
+        (cond ((equal? dat 'neuron-old) (level (lambda (x) 'neuron-do) dat stx-list))
               ((equal? (car dat) 'extras) (level (lambda (x) (set-id (eval x))) dat stx-list))
               ((equal? (car dat) 'disjoint-union-of) (level d-func dat stx-list))
               ((equal? (car dat) 'phenotypes) (level d-func dat stx-list))
@@ -281,7 +281,7 @@
 
 ; data (example)
 (define syn (datum->syntax #f
-  '(neuron ; should be a macro i think... or just quoted... make code work later
+  '(neuron-old ; should be a macro i think... or just quoted... make code work later
     (extras #:label "name") ; short label usually you don't want/need this
     (disjoint-union-of ''n1 ''n2 ''n3)
     (phenotypes ; FIXME
@@ -295,7 +295,7 @@
 (define-predicate edge1 edge2 edge3)
 
 (define bob
-  (neuron
+  (neuron-old
     (extras #:label "wheeeeeee" #:id "ilx:ilx_999999" #:subClassOf NIFNEURON)
     (disjoint-union-of 'n10)
     (phenotypes 
@@ -341,6 +341,7 @@
   and then returns itself quoted"
   (define (check-rest rest)
     (cond ((empty? rest) '())
+          ((l-not? (car rest)) (check-l-not-inner check-rest (cdr rest))) ; but then we need to missing...
           ((and (cons? (car rest))
                 (not (cons? (caar rest))))
            (begin
@@ -353,6 +354,15 @@
   (if (check-rest rest)
     (cons 'phenotypes (map phenotypes-get-missing-edges rest))  ; FIXME neuron-id passing ;_;
     (error "phenotypes bad")))
+
+(define (l-not . rest)  ; this needs to be implemented so that l-not gets passed the checking function of the enclosing form...
+  "self evaluating: use is handled elsewhere (?seems like a bad idea...?)
+  logical not which lifts to a disjointness
+  statement for a phenotype expression"
+  (cons 'l-not rest))
+
+(define (check-l-not-inner check-function . inner)
+  (check-function inner))
 
 (define (expand-phenotypes phenotypes-data)
   phenotypes-data)
@@ -371,8 +381,8 @@
 
 (define (expand-sections section)
   (if (list? section)
-    (cond ((equal? (car section) 'phenotypes) section)
-          ((equal? (car section) 'disjoint-union-of) section)
+    (cond ((equal? (car section) 'phenotypes) (expand-phenotypes section))
+          ((equal? (car section) 'disjoint-union-of) (expand-disjoint-union-of section))
           (#t (error (format "ERROR unknown section heading: ~a" section))))
     (error (format "ERROR not a list: ~a" section))))
 
@@ -380,6 +390,7 @@
   (neuron #:label "wheeeeeee" #:id "ilx:ilx_999999" #:subClassOf NIFNEURON
     (disjoint-union-of 'n10)
     (phenotypes 
+      (l-not 'p3)
       'p5
       '(edge2 . p2)
       '(edge1 . hello))))
