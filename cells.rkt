@@ -1,4 +1,4 @@
-;#lang racket  ; reminder that this breaks the repl :/
+#lang racket  ; reminder that this breaks the repl :/
 (require (for-syntax racket))
 (require (for-syntax syntax/parse syntax/stx))
 (require (for-syntax racket/match))
@@ -78,8 +78,12 @@
   rdf:type
   rdfs:label
   rdfs:subClassOf
+  owl:disjointWith
   owl:onProperty
-  owl:someValuesFrom)
+  owl:someValuesFrom
+  ilx:hasExpressionPhenotype 
+  ilx:hasMorphologicalPhenotype 
+  )
 
 (define-syntax (define-class stx) ; oh look how easy that copy paste was, thanks racket for being a pita
   ;(displayln stx)
@@ -139,6 +143,7 @@
   (lambda () (begin0 (format "ilx:ilx_~a" ilx-start) (set! ilx-start (add1 ilx-start)))))
     
 (define-for-syntax ilx-next (ilx-next-prod 'env))
+(define ilx-next (ilx-next))
 
 ;; extras
 (define-for-syntax (extras #:label label #:id (id ilx-next) #:subClassOf [subClassOf NIFNEURON] . rest)
@@ -157,8 +162,12 @@
 (define pheno-list
   '( pyramidal
      basket
+     large-basket
+     parvalbumin
+     somatostatin
      UBERON:1234
      hello
+     fast-spiking
      p1
      p2
      p3
@@ -173,7 +182,7 @@
 
 (define phenotype? (env-phenotype? pheno-list))
 
-(define (phenotypes neuron-id . rest)
+(define (phenotypes- neuron-id . rest)
   "runtime function for phenotypes, neuron-id is filled in during phase1"
   (define (do-rest rest)
     (cond ((empty? rest) #t)
@@ -235,7 +244,7 @@
   (for ([prefix '(extras disjoint-union-of phenotypes)])
     (cond ((equal? #f #t) #f)
           (#t #f))
-    (displayln (format "---------------- ~a" section)))
+    (displayln (format "---------------- ~a" sections)))
   stx-list)
 
 (define test '(a (c 1) (b 2) (d 3)))
@@ -336,6 +345,14 @@
     phenotype
     (cons 'ilx:hasPhenotype phenotype)))
 
+(define (process-to-sub-or-dis . rest)
+  (cons (cond ((empty? rest) '())
+              ((cons? (car rest)) (rdfs:subClassOf (caar rest) (cdar rest)))
+              (phenotype? (car rest) (rdfs:subClassOf 'ilx:hasPhenotype (car rest)))
+              ((l-not? (caar rest)) (let ([pair (cdr (process-to-sub-or-dis (cdar rest)))])
+                                      (owl:disjointWith (car pair) (cdr pair)))))
+        (process-to-sub-or-dis (cdr rest))))
+
 (define (phenotypes . rest)
   "phenotypes data, checks all the edges and phenos are known
   and then returns itself quoted"
@@ -352,19 +369,44 @@
           ((phenotype? (car rest)) (begin (check-rest (cdr rest)) #t))  ; we do not expand missing edges here
           (#t (error (format "not pair or known phenotype ~a" rest)))))
   (if (check-rest rest)
-    (cons 'phenotypes (map phenotypes-get-missing-edges rest))  ; FIXME neuron-id passing ;_;
+    ;(cons 'phenotypes (map phenotypes-get-missing-edges rest))  ; FIXME neuron-id passing ;_;
+    (cons 'phenotypes (map process-to-sub-or-dis rest))
     (error "phenotypes bad")))
+
+; phenotypes expressions need to be more fully defined than just edge, target...
+; then we can have expansion rules
+'(phenotype edge target domain)
+'(phenotype (l-not (edge . target))) ; negation, disjoint-with restriction on properpety edge, values from target
+;'(phenotype (l-all (edge . target))) ; every, all, must, not actually possible to prove this... ever...
+'(phenotype (l-some (edge . target))) ; present-in, found-in, (not (not))
+;(phenotypes target) -> (list (phenotype target)) -> (list (l-some (restriction default-edge target))
+;(define (phenotype-to-triples pheno)
+  ;())
+
+(define (sub-class-of . rest)
+  ; context dependent predicate for making lists of subClassOf clauses
+  (cons 'sub-class-of rest))
+
+(define (disjoint-with . rest)
+  ; context dependent predicate for making lists of disjoint-with clauses
+  (cons 'disjoint-with rest))
+
+(disjoint-with (restriction 'edge1 'p1))
 
 (define (l-not . rest)  ; this needs to be implemented so that l-not gets passed the checking function of the enclosing form...
   "self evaluating: use is handled elsewhere (?seems like a bad idea...?)
   logical not which lifts to a disjointness
   statement for a phenotype expression"
-  (cons 'l-not rest))
+  (cons 'l-not rest)) ; lol performance
+
+(define (l-not? thing)
+  (equal? 'l-not thing))
 
 (define (check-l-not-inner check-function . inner)
   (check-function inner))
 
 (define (expand-phenotypes phenotypes-data)
+  ; to disjointWith or to subClassOf
   phenotypes-data)
 
 (define (expand-disjoint-union-of disjoint-union-of-data)
@@ -387,10 +429,16 @@
     (error (format "ERROR not a list: ~a" section))))
 
 (define phil
-  (neuron #:label "wheeeeeee" #:id "ilx:ilx_999999" #:subClassOf NIFNEURON
+  (neuron #:label "fast spiking interneuron" #:id "ilx:ilx_999999" #:subClassOf NIFNEURON
     (disjoint-union-of 'n10)
     (phenotypes 
-      (l-not 'p3)
-      'p5
-      '(edge2 . p2)
-      '(edge1 . hello))))
+      (l-not 'somatostatin) ; TODO -> put it in disjoint-with instead of sub-class-of
+                            ; we also need to be able to do a namespace check...
+      'fast-spiking ; these exist in the semi-namespace of phenotype classes
+      '(ilx:hasExpressionPhenotype . parvalbumin)
+      ;(cons 'ilx:hasExpressionPhenotype 'parvalbumin) ; ah the glories of a lisp-1
+      '(ilx:hasMorphologicalPhenotype . large-basket))))
+
+(define fully-expanded-neuron
+  'triples-yo)
+
