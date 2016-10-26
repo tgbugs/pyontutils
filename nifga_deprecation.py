@@ -279,9 +279,9 @@ def main():
         replaced_by[k] = 'NOREP'
    
     graph, bridge = do_deprecation(replaced_by, g)
-    with makeGraph('',{}):
-        bridge.write(convert=False)
-        graph.write(convert=False)
+    #with makeGraph('',{}):
+    bridge.write(convert=False)
+    graph.write(convert=False)
 
     PPO = 'RO:proper_part_of'
     HPP = 'RO:has_proper_part'
@@ -291,29 +291,83 @@ def main():
     c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
     j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
     e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
+    print('nifga dep')
     print(a)
+    print('nifga live')
     print(c)
+    print('new bridge')
     print(e)
 
-    c1 = {k.split(':')[1]:v for k, v in replaced_by.items()}
-    c2 = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
+    nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}
+    ub_bridge = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
-    for rb_nif, rb_ub in c1.items():  # rb -> replaced by
-        if rb_nif in c2:
-            urb_ub = c2[rb_nif]
-            if rb_ub != urb_ub:
-                print('ERROR uberon equiv does not match nif equiv! %s %s %s' % (rb_nif, rb_ub, urb_ub))
-                scigPrint.pprint_node(sgg.getNode(urb_ub))
-                if type(rb_ub) == tuple:
-                    if urb_ub in rb_ub:
-                        print('BUT: we are ok because %s matches' % urb_ub)
-                    for r in rb_ub:
-                        scigPrint.pprint_node(sgg.getNode(r))
+    def do_report():
+        report = {}
+        for existing_id, nif_uberon_id in nif_bridge.items():
+            cr = {}
+            cr['UDEP'] = ''
+            if nif_uberon_id == 'NOREP':
+                cr['NRID'] = ''
+            else:
+                cr['NRID'] = nif_uberon_id
+
+            if existing_id in ub_bridge:
+                ub_uberon_id = ub_bridge[existing_id]
+                cr['URID'] = ub_uberon_id
+                if type(nif_uberon_id) == tuple:
+                    if ub_uberon_id in nif_uberon_id:
+                        match = True
+                    else:
+                        match = False
+                elif ub_uberon_id != nif_uberon_id:
+                    match = False
                 else:
-                    scigPrint.pprint_node(sgg.getNode(rb_ub))
-        else:
-            print('WARNING id missing from uberon equivs', rb_nif, rb_ub)
-            scigPrint.pprint_node(sgg.getNode(rb_ub))
+                    match = True
+
+            else:
+                match = False
+                cr['URID'] = ''
+                if cr['NRID']:
+                    meta = sgg.getNode(nif_uberon_id)['nodes'][0]['meta']
+                    if 'http://www.w3.org/2002/07/owl#deprecated' in meta and meta['http://www.w3.org/2002/07/owl#deprecated']:
+                        cr['UDEP'] = 'Deprecated'
+
+            cr['MATCH'] = match
+            report[existing_id] = cr
+
+        return report
+
+    def print_report(report, fetch=False):
+        for eid, r in report.items():
+            out = ('**************** Report for {} ****************'
+                   '\n\tNRID: {NRID}\n\tURID: {URID} {UDEP}\n\tMATCH: {MATCH}\n')
+            if not r['MATCH']:
+                print(out.format(eid, **r))
+
+            if fetch:
+                scigPrint.pprint_node(sgg.getNode('NIFGA:' + eid))
+                if r['NRID']: scigPrint.pprint_node(sgg.getNode(r['NRID']))
+                if r['URID']: scigPrint.pprint_node(sgg.getNode(r['URID']))
+
+    report = do_report()
+
+    double_checked = {i:r for i, r in report.items() if r['MATCH']}
+    no_match = {i:r for i, r in report.items() if not r['MATCH']}
+    no_replacement = {i:r for i, r in report.items() if not r['NRID']}
+    very_bad = {i:r for i, r in report.items() if not r['MATCH'] and r['URID'] and not r['UDEP']}
+
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match reports\n')
+    print_report(no_match, True)
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
+    print_report(no_replacement, True)
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
+    print_report(very_bad, True)
+
+    print('Match count', len(double_checked))
+    print('No Match count', len(no_match))
+    print('No replace count', len(no_replacement))  # there are none with a URID and no NRID
+    print('No match not deprecated count', len(very_bad))
+
     embed()
 
 if __name__ == '__main__':
