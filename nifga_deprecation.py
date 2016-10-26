@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.5
 
-# this should be run at NIF-Ontology f4e332f3089e7d0c4bb6759a1f66ff0038d0b295
+# this should be run at NIF-Ontology 93bc1f9643d4ed2c9f14539adb8f3e8bc2df81c5
 
 # TODO need to retrieve the FMA hierarchy...
 
@@ -289,8 +289,8 @@ def main():
     a, b = creatTree(*Query(tc.red('birnlex_796'), HPP, 'OUTGOING', 10),
                      json=graph.make_scigraph_json(HPP))
     c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
-    e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10),
-                     json=bridge.make_scigraph_json(HPP))
+    j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
+    e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
     print(a)
     print(c)
     print(e)
@@ -298,13 +298,19 @@ def main():
     c1 = {k.split(':')[1]:v for k, v in replaced_by.items()}
     c2 = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
-    for rb_nif, rb_ub in c1.items():
+    for rb_nif, rb_ub in c1.items():  # rb -> replaced by
         if rb_nif in c2:
             urb_ub = c2[rb_nif]
             if rb_ub != urb_ub:
                 print('ERROR uberon equiv does not match nif equiv! %s %s %s' % (rb_nif, rb_ub, urb_ub))
-                scigPrint.pprint_node(sgg.getNode(rb_ub))
                 scigPrint.pprint_node(sgg.getNode(urb_ub))
+                if type(rb_ub) == tuple:
+                    if urb_ub in rb_ub:
+                        print('BUT: we are ok because %s matches' % urb_ub)
+                    for r in rb_ub:
+                        scigPrint.pprint_node(sgg.getNode(r))
+                else:
+                    scigPrint.pprint_node(sgg.getNode(rb_ub))
         else:
             print('WARNING id missing from uberon equivs', rb_nif, rb_ub)
             scigPrint.pprint_node(sgg.getNode(rb_ub))
