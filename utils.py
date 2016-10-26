@@ -165,6 +165,16 @@ class makeGraph:
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
+    def replace_object(self, find, replace):  # find and replace on the parsed graph
+        find = self.expand(find)
+        for i in range(3):
+            trip = [find if i == _ else None for _ in range(3)]
+            for s, p, o in graph.g.triples(trip):
+                rep = [s, p, o]
+                rep[i] = replace
+                graph.add_node(*rep)
+                graph.remove((s, p, o))
+
     def get_equiv_inter(self, curie):
         """ get equivelant classes where curie is in an intersection """
         start = self.g.namespace_manager.qname(self.expand(curie))  # in case something is misaligned
@@ -450,7 +460,11 @@ class scigPrint:
 
     @staticmethod
     def pprint_node(node):
-        node = node['nodes'][0]  # no edges here...
+        nodes = node['nodes']
+        if not nodes:
+            return  # no node... probably put a None into SciGraph
+        else:
+            node = nodes[0]  # no edges here...
         print('---------------------------------------------------')
         print(node['id'], '  ', node['lbl'])
         print()
@@ -470,5 +484,5 @@ class scigPrint:
                     base = ' ' * 4 + '%s:' % k
                     print(base, scigPrint.sv(asdf, len(base) + 1, 4))
 
-        print()
+        print('---------------------------------------------------')
 
