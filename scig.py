@@ -56,14 +56,7 @@ def main():
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
                 print(id_,)
-                print('\tnodes')
-                for node in out['nodes']:
-                    scigPrint.pprint_node({'nodes':[node]})
-                    continue
-                print('\tedges')
-                for edge in out['edges']:
-                    for key, value in sorted(edge.items()):
-                        print('\t\t%s:' % key, value)
+                scigPrint.pprint_neighbors(out)
     elif args['c']:
         c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         curies = c.getCuries()
