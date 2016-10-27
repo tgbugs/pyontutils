@@ -7,6 +7,7 @@ Usage:
     scig t [--local --verbose] <term>...
     scig s [--local --verbose] <term>...
     scig g [--local --verbose --rt=RELTYPE] <id>...
+    scig e [--local --verbose] <p> <s> <o>
     scig c
 
 Options:
@@ -57,6 +58,16 @@ def main():
             if out:
                 print(id_,)
                 scigPrint.pprint_neighbors(out)
+    elif args['e']:
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        p, s, o = args['<p>'], args['<s>'], args['<o>']
+        if ':' in p:
+            p = v.findById(p)['labels'][0]
+        if ':' in s:
+            s = v.findById(s)['labels'][0]
+        if ':' in o:
+            o = v.findById(o)['labels'][0]
+        print('(%s %s %s)' % tuple([_.replace(' ', '-') for _ in (p, s, o)]))
     elif args['c']:
         c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         curies = c.getCuries()
