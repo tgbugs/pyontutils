@@ -420,8 +420,9 @@ class scigPrint:
 
     _shorten_ = {
         'PR':'http://purl.obolibrary.org/obo/PR_',
-        'RO':'http://www.obofoundry.org/ro/ro.owl#',
+        'RO':'http://purl.obolibrary.org/obo/RO_',
         'dc':'http://purl.org/dc/elements/1.1/',
+        'BFO':'http://purl.obolibrary.org/obo/BFO_',
         'owl':'http://www.w3.org/2002/07/owl#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
         'skos':'http://www.w3.org/2004/02/skos/core#',
@@ -429,6 +430,7 @@ class scigPrint:
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         'OBOOWL':'http://www.geneontology.org/formats/oboInOwl#',
         'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
+        'RO_OLD':'http://www.obofoundry.org/ro/ro.owl#',
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
         'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
