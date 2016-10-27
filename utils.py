@@ -420,6 +420,7 @@ class scigPrint:
 
     _shorten_ = {
         'PR':'http://purl.obolibrary.org/obo/PR_',
+        'RO':'http://www.obofoundry.org/ro/ro.owl#',
         'dc':'http://purl.org/dc/elements/1.1/',
         'owl':'http://www.w3.org/2002/07/owl#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
@@ -485,4 +486,24 @@ class scigPrint:
                     print(base, scigPrint.sv(asdf, len(base) + 1, 4))
 
         print('---------------------------------------------------')
+
+    @staticmethod
+    def pprint_edge(edge):
+        def fix(value):
+            for iri, short in scigPrint.shorten.items():
+                if iri in value:
+                    return value.replace(iri, short + ':')
+            return value
+
+        e = {k:fix(v) for k, v in edge.items()}
+        print('({pred} {sub} {obj}) ; {meta}'.format(**e))
+
+    @staticmethod
+    def pprint_neighbors(result):
+        print('\tnodes')
+        for node in sorted(result['nodes'], key = lambda n: n['id']):
+            scigPrint.pprint_node({'nodes':[node]})
+        print('\tedges')
+        for edge in sorted(result['edges'], key = lambda e: e['pred']):
+            scigPrint.pprint_edge(edge)
 
