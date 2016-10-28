@@ -47,6 +47,11 @@ manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, se
           #'NIFGA:birnlex_1663':'UBERON:0002265',  # FIXME this is in hasDbXref ... AND equivalentClass... wat
           'NIFGA:birnlex_1191':'UBERON:0001885',  # this was already replaced by NIFGA:birnlex_1178, the existing equiv assertion to UBERON:0035560 is also obsolete, so we are overriding so we don't have to chase it all down again
 
+          'NIFGA:birnlex_2598':'UBERON:0000044',  # UBERON:0026602 is the alternative and is a bug from the old version of the uberon to nif bridge :/ this has been fixed in the nifgad branch of the ontology but has not been propagated to scigraph
+          'NIFGA:nlx_anat_20090702':'UBERON:0022327',  # UBERON:0032288 is an alternate id for UBERON:0022327
+          'NIFGA:birnlex_864':'UBERON:0014450',  # UBERON:0002994 is an alternate id for UBERON:0014450
+          'NIFGA:birnlex_2524':'UBERON:0006725',  # UBERON:0028186 is an alternate id for UBERON:0006725
+
          }
 
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
@@ -85,6 +90,8 @@ def do_deprecation(replaced_by, g):
     bridge = makeGraph('uberon-bridge', PREFIXES)
     graph = makeGraph('NIF-GrossAnatomy', PREFIXES)
     graph.g = g
+    graph.g.namespace_manager._NamespaceManager__cache = {}
+    g.namespace_manager.bind('UBERON','http://purl.obolibrary.org/obo/UBERON_')  # this has to go in again because we reset g FIXME
     udone = set('NOREP')
     uedges = defaultdict(lambda:defaultdict(set))
 
@@ -179,6 +186,18 @@ def do_deprecation(replaced_by, g):
 
     return graph, bridge
 
+def print_report(report, fetch=False):
+    for eid, r in report.items():
+        out = ('**************** Report for {} ****************'
+               '\n\tNRID: {NRID}\n\tURID: {URID} {UDEP}\n\tMATCH: {MATCH}\n')
+        if not r['MATCH']:
+            print(out.format(eid, **r))
+
+        if fetch:
+            scigPrint.pprint_node(sgg.getNode('NIFGA:' + eid))
+            if r['NRID']: scigPrint.pprint_node(sgg.getNode(r['NRID']))
+            if r['URID']: scigPrint.pprint_node(sgg.getNode(r['URID']))
+
 def main():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
@@ -215,14 +234,11 @@ def main():
     exact = {}
     internal_equivs = {}
     edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
-    rpob = [_['id'] for _ in sgg.getNeighbors('NIFGA:birnlex_1167', relationshipType='subClassOf')['nodes'] if 'UBERON:' not in _['id']]  # regional part of brain, used to flag things that don't actually need a replacement (or whose replacement is deprecated and points back to the now dead class) OR we don't deprecate these...
     def equiv(curie, label):
 
         if curie in manual:
             replaced_by[curie] = manual[curie]
             return manual[curie]
-        elif curie in rpob:  # for now do not deprecate regional parts of brain
-            return None  # FIXME this doesn't quite work as expected...
 
         ec = sgg.getNeighbors(curie, relationshipType='equivalentClass')
         nodes = [n for n in ec['nodes'] if n['id'] != curie]
@@ -322,6 +338,7 @@ def main():
     #review_reps(exact)  # these all look good
     #review_reps(replaced_by)  # as do these
 
+    #rpob = [_['id'] for _ in sgg.getNeighbors('NIFGA:birnlex_1167', relationshipType='subClassOf')['nodes'] if 'UBERON:' not in _['id']]  # these hit pretty much everything because of how the subclassing worked out, so can't use this
     regional_no_replace = {k:v for k,v in replaced_by.items() if not v and sgv.findById(k)['labels'][0].startswith('Regional')}
     for k in regional_no_replace:
         replaced_by[k] = 'NOREP'
@@ -348,6 +365,7 @@ def main():
         print('new bridge')
         print(e)
 
+    # we do this because each of these have different prefixes :(
     nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}  # some are still None
     ub_bridge = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
@@ -387,18 +405,6 @@ def main():
 
         return report
 
-    def print_report(report, fetch=False):
-        for eid, r in report.items():
-            out = ('**************** Report for {} ****************'
-                   '\n\tNRID: {NRID}\n\tURID: {URID} {UDEP}\n\tMATCH: {MATCH}\n')
-            if not r['MATCH']:
-                print(out.format(eid, **r))
-
-            if fetch:
-                scigPrint.pprint_node(sgg.getNode('NIFGA:' + eid))
-                if r['NRID']: scigPrint.pprint_node(sgg.getNode(r['NRID']))
-                if r['URID']: scigPrint.pprint_node(sgg.getNode(r['URID']))
-
     report = do_report()
 
     double_checked = {i:r for i, r in report.items() if r['MATCH']}  # aka exact from above
@@ -412,7 +418,7 @@ def main():
     print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
     #print_report(no_replacement, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
-    #print_report(very_bad, fetch)
+    print_report(very_bad, fetch)
 
     print('Match count', len(double_checked))
     print('No Match count', len(no_match))
