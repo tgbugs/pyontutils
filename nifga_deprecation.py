@@ -14,12 +14,21 @@ from scigraph_client import Vocabulary, Graph
 from utils import scigPrint, makeGraph, async_getter, TermColors as tc
 from hierarchies import creatTree
 
-sgg = Graph(cache=True)
-sgv = Vocabulary(cache=True)
+sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
+sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
-DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
+DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'  #FIXME also behaves as objectProperty :/
+AID =  'http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'
+IRBC = 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#isReplacedByClass'
+
+PREFIXES = {
+    'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
+    'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
+    'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
+    'RO':'http://www.obofoundry.org/ro/ro.owl#',
+}
 
 nifga_path = os.path.expanduser('~/git/NIF-Ontology/ttl/NIF-GrossAnatomy.ttl')
 uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
@@ -33,6 +42,11 @@ uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
 manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, see note on UBERON:0034918
           'NIFGA:birnlex_1248':'UBERON:0002434',  # fix for what is surely and outdated bridge
           'NIFGA:nlx_anat_20081242':'UBERON:0004073',  # as of late latest version of uberon 'UBERON:0004073' replaces 'UBERON:0019281'
+          'NIFGA:nlx_59721':'UBERON:0001944',  # (equivalentClass NIFGA:nlx_59721 NIFGA:birnlex_703) polutes
+          'NIFGA:birnlex_703':'UBERON:0001944',  # insurance
+          #'NIFGA:birnlex_1663':'UBERON:0002265',  # FIXME this is in hasDbXref ... AND equivalentClass... wat
+          'NIFGA:birnlex_1191':'UBERON:0001885',  # this was already replaced by NIFGA:birnlex_1178, the existing equiv assertion to UBERON:0035560 is also obsolete, so we are overriding so we don't have to chase it all down again
+
          }
 
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
@@ -68,12 +82,6 @@ def review_norep(list_):
         scigPrint.pprint_node(n)
 
 def do_deprecation(replaced_by, g):
-    PREFIXES = {
-        'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
-        'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
-        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-        'RO':'http://www.obofoundry.org/ro/ro.owl#',
-    }
     bridge = makeGraph('uberon-bridge', PREFIXES)
     graph = makeGraph('NIF-GrossAnatomy', PREFIXES)
     graph.g = g
@@ -177,6 +185,8 @@ def main():
     SANITY = rdflib.Graph()
     ont = requests.get(uberon_bridge_path).text
     split_on = 263
+    #with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
+    #split_on = 362
     prefs = ('xmlns:NIFSTD="http://uri.neuinfo.org/nif/nifstd/"\n'
              'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
     ont = ont[:split_on] + prefs + ont[split_on:]
@@ -191,8 +201,8 @@ def main():
             print('WE GOT DUPES', nif, one, uberon)  # TODO
 
         u_replaced_by[nif] = uberon
-        print(s, o)
-        print(nif, uberon)
+        #print(s, o)
+        #print(nif, uberon)
     
     g = rdflib.Graph()
     getQname = g.namespace_manager.qname
@@ -204,10 +214,15 @@ def main():
     replaced_by = {}
     exact = {}
     internal_equivs = {}
+    edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
+    rpob = [_['id'] for _ in sgg.getNeighbors('NIFGA:birnlex_1167', relationshipType='subClassOf')['nodes'] if 'UBERON:' not in _['id']]  # regional part of brain, used to flag things that don't actually need a replacement (or whose replacement is deprecated and points back to the now dead class) OR we don't deprecate these...
     def equiv(curie, label):
+
         if curie in manual:
             replaced_by[curie] = manual[curie]
             return manual[curie]
+        elif curie in rpob:  # for now do not deprecate regional parts of brain
+            return None  # FIXME this doesn't quite work as expected...
 
         ec = sgg.getNeighbors(curie, relationshipType='equivalentClass')
         nodes = [n for n in ec['nodes'] if n['id'] != curie]
@@ -227,6 +242,34 @@ def main():
                 else:
                     internal_equivs[curie] = id_
         elif not nodes:
+            # check if uberon has a xref edge that matches...
+            # seems like we already hit this in some other ways
+            #for e in edges:
+                #print(e, curie)
+                #if curie == 'NIFGA' + e['obj']:
+                    #print()
+                    #print('CANDIDATE EDGE REPLACE:')
+                    #print(e)
+                    #print()
+                    #break
+            # otherwise we go hunting
+            node = sgg.getNode(curie)['nodes'][0]
+            if OWL.deprecated.toPython() in node['meta']:
+                print('THIS CLASS IS DEPRECATED', curie)
+                if IRBC in node['meta']:
+                    existing_replaced = node['meta'][IRBC][0]
+                    ec2 = sgg.getNeighbors(existing_replaced, relationshipType='equivalentClass')
+                    print('FOUND ONE', existing_replaced)
+                    scigPrint.pprint_node(sgg.getNode(existing_replaced))
+                    if ec2['edges']:  # pass the buck if we can
+                        scigPrint.pprint_edge(ec2['edges'][0])
+                        rb = ec2['edges'][0]['obj']
+                        print('PASSING BUCK : (%s -> %s -> %s)' % (curie, existing_replaced, rb))
+                        replaced_by[curie] = rb
+                    else:
+                        print('ERROR: could not pass buck, we are at a dead end')  # TODO
+                    print()
+
             moar = [t for t in sgv.findByTerm(label) if t['curie'].startswith('UBERON')]
             if moar:
                 #print(moar)
@@ -243,10 +286,15 @@ def main():
                     if DBX in ns['meta']:
                         print(' ' * 8, node['curie'], ns['meta'][DBX],
                               node['labels'][0], node['synonyms'])
-                    else:
+
+                    if AID in ns['meta']:
+                        print(' ' * 8, node['curie'], ns['meta'][AID],
+                              node['labels'][0], node['synonyms'])
+
+                    #else:
                         #print(' ' * 8, 'NO DBXREF', node['curie'],
                               #node['labels'][0], node['synonyms'])
-                        pass  # these are all to obsolote uberon classes
+                        #pass  # these are all to obsolote uberon classes
                     replaced_by[curie] = ns['id']
             else:
                 replaced_by[curie] = None
@@ -266,11 +314,11 @@ def main():
 
         return nodes
 
-    review_norep([m['curie'] for m in matches if m['deprecated']])
-    #embed()
-    #return
-    equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches if not c['deprecated']])
+    #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches if not c['deprecated']])
+    #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches])  # give the deped a shot!
+    equivs = [equiv(c['curie'], c['labels'][0]) for c in matches]  # async causes print issues :/
 
+    #review_norep([m['curie'] for m in matches if m['deprecated']])
     #review_reps(exact)  # these all look good
     #review_reps(replaced_by)  # as do these
 
@@ -283,22 +331,24 @@ def main():
     bridge.write(convert=False)
     graph.write(convert=False)
 
-    PPO = 'RO:proper_part_of'
-    HPP = 'RO:has_proper_part'
-    hpp = HPP.replace('RO:', graph.namespaces['RO'])
-    a, b = creatTree(*Query(tc.red('birnlex_796'), HPP, 'OUTGOING', 10),
-                     json=graph.make_scigraph_json(HPP))
-    c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
-    j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
-    e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
-    print('nifga dep')
-    print(a)
-    print('nifga live')
-    print(c)
-    print('new bridge')
-    print(e)
+    if False:  # print trees
+        PPO = 'RO:proper_part_of'
+        HPP = 'RO:has_proper_part'
+        hpp = HPP.replace('RO:', graph.namespaces['RO'])
+        a, b = creatTree(*Query(tc.red('birnlex_796'), HPP, 'OUTGOING', 10),
+                         json=graph.make_scigraph_json(HPP))
+        c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
+        j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
+        e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
 
-    nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}
+        print('nifga dep')
+        print(a)
+        print('nifga live')
+        print(c)
+        print('new bridge')
+        print(e)
+
+    nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}  # some are still None
     ub_bridge = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
     def do_report():
@@ -351,17 +401,18 @@ def main():
 
     report = do_report()
 
-    double_checked = {i:r for i, r in report.items() if r['MATCH']}
+    double_checked = {i:r for i, r in report.items() if r['MATCH']}  # aka exact from above
     no_match = {i:r for i, r in report.items() if not r['MATCH']}
     no_replacement = {i:r for i, r in report.items() if not r['NRID']}
     very_bad = {i:r for i, r in report.items() if not r['MATCH'] and r['URID'] and not r['UDEP']}
 
+    fetch = False
     print('\n>>>>>>>>>>>>>>>>>>>>>> No match reports\n')
-    print_report(no_match, True)
+    #print_report(no_match, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
-    print_report(no_replacement, True)
+    #print_report(no_replacement, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
-    print_report(very_bad, True)
+    #print_report(very_bad, fetch)
 
     print('Match count', len(double_checked))
     print('No Match count', len(no_match))
