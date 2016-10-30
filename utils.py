@@ -12,6 +12,8 @@ from multiprocessing import Manager
 import rdflib
 from rdflib.extras import infixowl
 
+rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
+
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
         loop = asyncio.get_event_loop()
@@ -59,10 +61,10 @@ def mysql_conn_helper(host, db, user, port=3306):
 class makeGraph:
     SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes):
+    def __init__(self, name, prefixes, graph=rdflib.Graph()):
         self.name = name
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
-        self.g = rdflib.Graph()
+        self.g = graph
         [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
 
     @property
@@ -71,7 +73,7 @@ class makeGraph:
 
     def write(self, convert=True):
         with open(self.filename, 'wb') as f:
-            f.write(self.g.serialize(format='turtle'))
+            f.write(self.g.serialize(format='nifttl'))
             print('yes we wrote the first version...', self.name)
         if hasattr(self.__class__, '_to_convert'):
             self.__class__._to_convert.append(self.filename)
@@ -428,7 +430,8 @@ class scigPrint:
         'skos':'http://www.w3.org/2004/02/skos/core#',
         'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-        'OBOOWL':'http://www.geneontology.org/formats/oboInOwl#',
+        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
+        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
         'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
         'RO_OLD':'http://www.obofoundry.org/ro/ro.owl#',
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
