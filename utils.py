@@ -61,10 +61,14 @@ def mysql_conn_helper(host, db, user, port=3306):
 class makeGraph:
     SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes, graph=rdflib.Graph()):
+    def __init__(self, name, prefixes, graph=None):
         self.name = name
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
-        self.g = graph
+        if graph:
+            self.g = graph
+        else:
+            self.g = rdflib.Graph()  # default args issue
+
         [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
 
     @property
