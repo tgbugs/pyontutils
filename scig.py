@@ -9,6 +9,7 @@ Usage:
     scig g [--local --verbose --rt=RELTYPE] <id>...
     scig e [--local --verbose] <p> <s> <o>
     scig c
+    scig cy <query>
 
 Options:
     -l --local      hit the local scigraph server
@@ -22,7 +23,7 @@ from pyontutils.utils import scigPrint
 
 def main():
     args = docopt(__doc__, version='scig 0')
-    print(args)
+    #print(args)
     server = None
     verbose = False
     if args['--local']:
@@ -75,6 +76,14 @@ def main():
         fmt = '{: <%s}' % align
         for curie, iri in sorted(curies.items()):
             print(fmt.format(repr(curie)), repr(iri))
+    elif args['cy']:
+        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        out = c.execute(args['<query>'], 10)
+        if out:
+            out = '\n'.join([_.strip() for _ in out.split('|')[3:-1]])
+            print(out)
+        else:
+            print('Error?')
 
 if __name__ == '__main__':
     main()
