@@ -101,11 +101,6 @@ def do_deprecation(replaced_by, g, additional_edges):
     uedges = defaultdict(lambda:defaultdict(set))
 
     def inner(nifga, uberon):
-
-        # check for 'NODEP'
-        if uberon == 'NODEP':
-            return
-
         # check neuronames id TODO
 
         # add replaced by -> uberon
@@ -152,6 +147,8 @@ def do_deprecation(replaced_by, g, additional_edges):
             if sub == nifga:
                 try:
                     obj = replaced_by[obj]
+                    if obj == 'NOREP':
+                        hier = False
                 except KeyError:
                     print('not in replaced_by', obj)
                 if type(obj) == tuple: continue  # TODO
@@ -165,6 +162,8 @@ def do_deprecation(replaced_by, g, additional_edges):
             elif obj == nifga:
                 try:
                     sub = replaced_by[sub]
+                    if sub == 'NOREP':
+                        hier = False
                 except KeyError:
                     print('not in replaced_by', sub)
                 if type(sub) == tuple: continue  # TODO
@@ -320,8 +319,8 @@ def do_report(nif_bridge, ub_bridge):
         cr['UDEP'] = ''
         if nif_uberon_id == 'NOREP':
             cr['NRID'] = ''
-        elif nif_uberon_id == 'NODEP':
-            cr['NRID'] = ''
+        #elif nif_uberon_id == 'NODEP':
+            #cr['NRID'] = ''
         else:
             cr['NRID'] = nif_uberon_id
 
@@ -479,7 +478,10 @@ def main():
     #rpob = [_['id'] for _ in sgg.getNeighbors('NIFGA:birnlex_1167', relationshipType='subClassOf')['nodes'] if 'UBERON:' not in _['id']]  # these hit pretty much everything because of how the subclassing worked out, so can't use this
     regional_no_replace = {k:v for k,v in replaced_by.items() if not v and sgv.findById(k)['labels'][0].startswith('Regional')}
     for k in regional_no_replace:
-        replaced_by[k] = 'NODEP'  # do not deprecated these for the time being
+        replaced_by[k] = 'NOREP'  # yes, deprecate these
+
+    # TODO predominately gray region -> just deprecate completely these cause pretty much all of the no_match problems
+    # TODO add comments in do_deprecation
    
     graph, bridge = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
     bridge.write()
@@ -498,7 +500,7 @@ def main():
     no_replacement = {i:r for i, r in report.items() if not r['NRID']}
     very_bad = {i:r for i, r in report.items() if not r['MATCH'] and r['URID'] and not r['UDEP']}
 
-    fetch = False
+    fetch = True
     print('\n>>>>>>>>>>>>>>>>>>>>>> No match reports\n')
     #print_report(no_match, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
