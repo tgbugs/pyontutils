@@ -16,6 +16,7 @@ class restService:
         self._session.mount('http://', adapter)
 
         if cache:
+            print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
             self._cache = dict()
             self._get = self._cache_get
         else:
@@ -353,6 +354,17 @@ class State:
 
     def dolist(self, list_):
         blocks = []
+        def sortkey(d):
+            if 'path' in d:
+                return d['path']
+            elif 'nickname' in d:
+                return d['nickname']
+            elif 'name' in d:
+                return d['name']
+            else:
+                return 0
+
+        list_.sort(key=sortkey)
         for dict_ in list_:
             code = self.dodict(dict_)
             blocks.append(code)
