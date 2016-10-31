@@ -12,7 +12,7 @@ import requests
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
 from utils import scigPrint, makeGraph, async_getter, TermColors as tc
-from hierarchies import creatTree
+from hierarchies import creatTree, flatten
 
 sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
 sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
@@ -27,7 +27,7 @@ PREFIXES = {
     'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
     'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
     'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-    'RO':'http://www.obofoundry.org/ro/ro.owl#',
+    'ro':'http://www.obofoundry.org/ro/ro.owl#',
     'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
     'owl':'http://www.w3.org/2002/07/owl#',  # FIXME why is this missing?!
 
@@ -89,11 +89,16 @@ def review_norep(list_):
         n = sgg.getNode(curie)
         scigPrint.pprint_node(n)
 
-def do_deprecation(replaced_by, g):
-    bridge = makeGraph('uberon-bridge', PREFIXES)
+def do_deprecation(replaced_by, g, additional_edges):
+    ubpref = {'ilx':'http://uri.interlex.org/base/',
+              'NIFMOL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#',
+              'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
+              'NLXWIKI':'http://neurolex.org/wiki/'}
+    ubpref.update(PREFIXES)
+    bridge = makeGraph('uberon-bridge', ubpref)
     graph = makeGraph('NIF-GrossAnatomy', PREFIXES, graph=g)
-    graph.g.namespace_manager._NamespaceManager__cache = {}
-    g.namespace_manager.bind('UBERON','http://purl.obolibrary.org/obo/UBERON_')  # this has to go in again because we reset g FIXME
+    #graph.g.namespace_manager._NamespaceManager__cache = {}
+    #g.namespace_manager.bind('UBERON','http://purl.obolibrary.org/obo/UBERON_')  # this has to go in again because we reset g FIXME
     udone = set('NOREP')
     uedges = defaultdict(lambda:defaultdict(set))
 
@@ -114,6 +119,8 @@ def do_deprecation(replaced_by, g):
             #uedges[uberon] = defaultdict(set)
         resp = sgg.getNeighbors(nifga)
         edges = resp['edges']
+        if nifga in additional_edges:
+            edges.append(additional_edges[nifga])
         include = False
         for edge in edges:  # FIXME TODO hierarchy extraction and porting
             #print(edge)
@@ -134,6 +141,9 @@ def do_deprecation(replaced_by, g):
                 hier = True
                 include = True
             elif pred == 'http://www.obofoundry.org/ro/ro.owl#proper_part_of':
+                hier = True
+                include = True
+            elif pred == 'ilx:partOf':
                 hier = True
                 include = True
 
@@ -200,14 +210,54 @@ def print_report(report, fetch=False):
             if r['NRID']: scigPrint.pprint_node(sgg.getNode(r['NRID']))
             if r['URID']: scigPrint.pprint_node(sgg.getNode(r['URID']))
 
+def print_trees(graph, bridge):
+    PPO = 'ro:proper_part_of'
+    HPP = 'ro:has_proper_part'
+    hpp = HPP.replace('ro:', graph.namespaces['ro'])
+    ppo = PPO.replace('ro:', graph.namespaces['ro'])
+    a, b = creatTree(*Query(tc.red('birnlex_796'), HPP, 'OUTGOING', 10),  # FIXME seems to be a last one wins bug here with birnlex_796 vs NIFGA:birnlex_796 depending on the has seed...
+                     json=graph.make_scigraph_json(HPP))
+    c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
+    j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
+    e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
+    k_, l_ = creatTree(*Query('NIFGA:nlx_anat_101177', ppo, 'INCOMING', 10), graph=sgg)
+
+    merge = dict(d[-1])  # full tree with ppo converted to hpp
+    merge['nodes'].extend(l_[-1]['nodes'])
+    merge['edges'].extend([{'sub':e['obj'], 'pred':hpp, 'obj':e['sub']} for e in l_[-1]['edges']])
+    m_, n_ = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), json=merge)
+
+    print('nifga dep')
+    print(a)
+    print('nifga live')
+    print(c)
+    print('new bridge')
+    print(e)
+    print('nifga total (both directions)')
+    print(m_)
+
+    print('nifga white matter')
+    print(k_)
+
+    #embed()
+
+def new_replaced_by(ids, existing):
+    out = {}
+    for k in ids:
+        if k in existing:
+            out[k] = existing[k]
+        else:
+            out[k] = None
+    return out
+
 def main():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
     SANITY = rdflib.Graph()
-    ont = requests.get(uberon_bridge_path).text
+    #ont = requests.get(uberon_bridge_path).text
     split_on = 263
-    #with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
-    #split_on = 362
+    with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
+    split_on = 362
     prefs = ('xmlns:NIFSTD="http://uri.neuinfo.org/nif/nifstd/"\n'
              'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
     ont = ont[:split_on] + prefs + ont[split_on:]
@@ -225,11 +275,36 @@ def main():
         #print(s, o)
         #print(nif, uberon)
 
+    # neurolex test stuff
     nlxpref = {'ilx':'http://uri.interlex.org/base/'}
     nlxpref.update(PREFIXES)
     neurolex = makeGraph('neurolex-temp', nlxpref)
     neurolex.g.parse('/tmp/neurolex_basic.ttl', format='turtle')
-    
+
+    ILXPO = 'ilx:partOf'
+    nj = neurolex.make_scigraph_json(ILXPO)
+    g_, h = creatTree(*Query('NIFGA:birnlex_796', ILXPO, 'INCOMING', 10), json=nj)
+    i_, j_ = creatTree(*Query('NIFGA:nlx_412', ILXPO, 'INCOMING', 10), json=nj)
+
+    brht = sorted(set(flatten(h[0],[])))
+    wmht = sorted(set(flatten(j_[0],[])))
+    ufixedrb = {'NIFGA:' + k.split(':')[1]:v for k, v in u_replaced_by.items()}
+    b_nlx_replaced_by = new_replaced_by(brht, ufixedrb)
+    w_nlx_replaced_by = new_replaced_by(wmht, ufixedrb)
+    additional_edges = defaultdict(list)  # TODO this could be fun for the future but is a nightmare atm
+    for edge in h[-1]['edges'] + j_[-1]['edges']:
+        additional_edges[edge['sub']] = edge
+        additional_edges[edge['obj']] = edge
+
+    #filter out bad edges becase we are lazy
+    additional_edges = {k:v for k, v in additional_edges.items()
+                        if k in b_nlx_replaced_by or k in w_nlx_replaced_by}
+
+    print('neurolex tree')  # computed above
+    print(g_)
+    print(i_)
+
+    # use equivalent class mappings to build a replacement mapping
     g = rdflib.Graph()
     getQname = g.namespace_manager.qname
     g.parse(nifga_path, format='turtle')
@@ -350,36 +425,12 @@ def main():
     for k in regional_no_replace:
         replaced_by[k] = 'NOREP'
    
-    graph, bridge = do_deprecation(replaced_by, g)
+    graph, bridge = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
     #with makeGraph('',{}):
     bridge.write(convert=False)
     graph.write(convert=False)
 
-    if True:  # print trees
-        PPO = 'RO:proper_part_of'
-        HPP = 'RO:has_proper_part'
-        hpp = HPP.replace('RO:', graph.namespaces['RO'])
-        a, b = creatTree(*Query(tc.red('NIFGA:birnlex_796'), HPP, 'OUTGOING', 10),
-                         json=graph.make_scigraph_json(HPP))
-        c, d = creatTree(*Query('NIFGA:birnlex_796', hpp, 'OUTGOING', 10), graph=sgg)
-        j = bridge.make_scigraph_json(HPP)  # issue https://github.com/RDFLib/rdflib/pull/661
-        e, f = creatTree(*Query('UBERON:0000955', HPP, 'OUTGOING', 10), json=j)
-
-        # neurolex test stuff
-        ILXPO = 'ilx:partOf'
-        nj = neurolex.make_scigraph_json(ILXPO)
-        g_, h = creatTree(*Query('NIFGA:birnlex_796', ILXPO, 'INCOMING', 10), json=nj)
-        i_, j_ = creatTree(*Query('NIFGA:nlx_412', ILXPO, 'INCOMING', 10), json=nj)
-
-        print('nifga dep')
-        print(a)
-        print('nifga live')
-        print(c)
-        print('new bridge')
-        print(e)
-        print('neurolex tree')
-        print(g_)
-        print(i_)
+    tree_strings = print_trees(graph, bridge)
 
     # we do this because each of these have different prefixes :(
     nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}  # some are still None
@@ -442,6 +493,8 @@ def main():
     print('No match not deprecated count', len(very_bad))
 
     embed()
+
+
 
 if __name__ == '__main__':
     main()
