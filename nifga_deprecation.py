@@ -116,11 +116,18 @@ def do_deprecation(replaced_by, g, additional_edges):
             #uedges[uberon] = defaultdict(set)
         resp = sgg.getNeighbors(nifga)
         edges = resp['edges']
+        udepr = sgv.findById(uberon)['deprecated'] if uberon != 'NOREP' else False
+        if udepr:
+            print('Replacement is deprecated, not replacing:', uberon)
         if nifga in additional_edges:
             edges.append(additional_edges[nifga])
         include = False
         for edge in edges:  # FIXME TODO hierarchy extraction and porting
             #print(edge)
+            if udepr:  # skip everything if uberon is deprecated
+                include = False
+                hier = False
+                break
             sub = edge['sub']
             obj = edge['obj']
             pred = edge['pred']
@@ -143,6 +150,7 @@ def do_deprecation(replaced_by, g, additional_edges):
             elif pred == 'ilx:partOf':
                 hier = True
                 include = True
+
 
             if sub == nifga:
                 try:
@@ -481,6 +489,7 @@ def main():
         replaced_by[k] = 'NOREP'  # yes, deprecate these
 
     # TODO predominately gray region -> just deprecate completely these cause pretty much all of the no_match problems
+    # predominantly white regional part
     # TODO add comments in do_deprecation
    
     graph, bridge = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
