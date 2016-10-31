@@ -23,6 +23,7 @@ class restService:
         self._session.mount('http://', adapter)
 
         if cache:
+            print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
             self._cache = dict()
             self._get = self._cache_get
         else:
@@ -70,16 +71,226 @@ class restService:
         return param_rest
 
 
-class Graph(restService):
-    """ Graph services """
+class Analyzer(restService):
+    """ Analysis services """
 
     def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
 
-    def getProperties(self, callback=None, output='application/json'):
-        """ Get all property keys from: /graph/properties
+    def enrich(self, sample, ontologyClass, path, callback=None, output='application/json'):
+        """ Class Enrichment Service from: /analyzer/enrichment
+
+            Arguments:
+            sample: A list of CURIEs for nodes whose attributes are to be tested for enrichment. For example, a list of genes.
+            ontologyClass: CURIE for parent ontology class for the attribute to be tested. For example, GO biological process
+            path: A path expression that connects sample nodes to attribute class nodes
+            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
+            requesting a javascript media type will cause a JSONP response to be
+            rendered.
+            outputs:
+                application/json
+        """
+
+        kwargs = {'sample':sample, 'ontologyClass':ontologyClass, 'path':path, 'callback':callback}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+
+class Annotations(restService):
+    """ Annotation services """
+
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
+        self._basePath = basePath
+        self._verbose = verbose
+        super().__init__(cache)
+
+    def annotate(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, output='text/plain; charset=utf-8'):
+        """ Annotate text from: /annotations
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+            outputs:
+                text/plain; charset=utf-8
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def annotatePost(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None):
+        """ Annotate text from: /annotations
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+            ignoreTag: HTML tags that should not be annotated
+            stylesheet: CSS stylesheets to add to the HEAD
+            scripts: JavaScripts that should to add to the HEAD
+            targetId: A set of element IDs to annotate
+            targetClass: A set of CSS class names to annotate
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params)
+        return output if output else None
+
+    def getEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
+        """ Get embedded annotations as well as a separate list from: /annotations/complete
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/complete').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def postEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
+        """ Get embedded annotations as well as a separate list from: /annotations/complete
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/complete').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params)
+        return output if output else []
+
+    def getEntities(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
+        """ Get entities from text from: /annotations/entities
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/entities').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def postEntities(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
+        """ Get entities from text from: /annotations/entities
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/entities').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params)
+        return output if output else []
+
+    def annotateUrl(self, url, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None, output='text/html'):
+        """ Annotate a URL from: /annotations/url
+
+            Arguments:
+            url: 
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+            ignoreTag: HTML tags that should not be annotated
+            stylesheet: CSS stylesheets to add to the HEAD
+            scripts: JavaScripts that should to add to the HEAD
+            targetId: A set of element IDs to annotate
+            targetClass: A set of CSS class names to annotate
+            outputs:
+                text/html
+        """
+
+        if url and url.startswith('http:'):
+            url = url.replace('/','%2F').replace('#','%23')
+        kwargs = {'url':url, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/url').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+
+class Cypher(restService):
+    """ Cypher utility services """
+
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
+        self._basePath = basePath
+        self._verbose = verbose
+        super().__init__(cache)
+
+    def getCuries(self, callback=None, output='application/json'):
+        """ Get the curie map from: /cypher/curies
 
             Arguments:
             callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
@@ -92,42 +303,55 @@ class Graph(restService):
         kwargs = {'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/graph/properties').format(**kwargs)
+        url = self._basePath + ('/cypher/curies').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
-        return output if output else []
+        return output if output else None
 
-    def getNode(self, id, project='*', callback=None, output='application/json'):
-        """ Get all properties of a node from: /graph/{id}
+    def execute(self, cypherQuery, limit, output='text/plain'):
+        """ Execute an arbitrary Cypher query. from: /cypher/execute
 
             Arguments:
-            id: This ID should be either a CURIE or an IRI
-            project: Which properties to project. Defaults to '*'.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            cypherQuery: The cypher query to execute
+            limit: Limit
             outputs:
+                text/plain
                 application/json
-                application/graphson
-                application/xml
-                application/graphml+xml
-                application/xgmml
-                text/gml
-                text/csv
-                text/tab-separated-values
-                image/jpeg
-                image/png
         """
 
-        if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
-        kwargs = {'id':id, 'project':project, 'callback':callback}
+        kwargs = {'cypherQuery':cypherQuery, 'limit':limit}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
-        url = self._basePath + ('/graph/{id}').format(**kwargs)
-        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/cypher/execute').format(**kwargs)
+        requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
-        return output if output else {'nodes':[], 'edges':[]}
+        return output if output else None
+
+    def resolve(self, cypherQuery, output='text/plain'):
+        """ Cypher query resolver from: /cypher/resolve
+
+            Arguments:
+            cypherQuery: The cypher query to resolve
+            outputs:
+                text/plain
+        """
+
+        kwargs = {'cypherQuery':cypherQuery}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/cypher/resolve').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+
+class Graph(restService):
+    """ Graph services """
+
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
+        self._basePath = basePath
+        self._verbose = verbose
+        super().__init__(cache)
 
     def getEdges(self, type, entail=True, limit=100, skip=0, callback=None, output='application/json'):
         """ Get nodes connected by an edge type from: /graph/edges/{type}
@@ -160,61 +384,6 @@ class Graph(restService):
         param_rest = self._make_rest('type', **kwargs)
         url = self._basePath + ('/graph/edges/{type}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'type'}
-        output = self._get('GET', url, requests_params, output)
-        return output if output else {'nodes':[], 'edges':[]}
-
-    def getRelationships(self, callback=None, output='application/json'):
-        """ Get all relationship types from: /graph/relationship_types
-
-            Arguments:
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
-            outputs:
-                application/json
-        """
-
-        kwargs = {'callback':callback}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/graph/relationship_types').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else []
-
-    def getNeighbors(self, id, depth=1, blankNodes=False, relationshipType=None, direction='BOTH', project='*', callback=None, output='application/json'):
-        """ Get neighbors from: /graph/neighbors/{id}
-
-            Arguments:
-            id: This ID should be either a CURIE or an IRI
-            depth: How far to traverse neighbors
-            blankNodes: Traverse blank nodes
-            relationshipType: Which relationship to traverse
-            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default). Only used if relationshipType is specified.
-            project: Which properties to project. Defaults to '*'.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
-            outputs:
-                application/json
-                application/graphson
-                application/xml
-                application/graphml+xml
-                application/xgmml
-                text/gml
-                text/csv
-                text/tab-separated-values
-                image/jpeg
-                image/png
-        """
-
-        if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
-        kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'project':project, 'callback':callback}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
-        url = self._basePath + ('/graph/neighbors/{id}').format(**kwargs)
-        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else {'nodes':[], 'edges':[]}
 
@@ -253,6 +422,181 @@ class Graph(restService):
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else {'nodes':[], 'edges':[]}
+
+    def getNeighbors(self, id, depth=1, blankNodes=False, relationshipType=None, direction='BOTH', project='*', callback=None, output='application/json'):
+        """ Get neighbors from: /graph/neighbors/{id}
+
+            Arguments:
+            id: This ID should be either a CURIE or an IRI
+            depth: How far to traverse neighbors
+            blankNodes: Traverse blank nodes
+            relationshipType: Which relationship to traverse
+            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default). Only used if relationshipType is specified.
+            project: Which properties to project. Defaults to '*'.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
+            requesting a javascript media type will cause a JSONP response to be
+            rendered.
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = id.replace('/','%2F').replace('#','%23')
+        kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'project':project, 'callback':callback}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/graph/neighbors/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else {'nodes':[], 'edges':[]}
+
+    def getProperties(self, callback=None, output='application/json'):
+        """ Get all property keys from: /graph/properties
+
+            Arguments:
+            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
+            requesting a javascript media type will cause a JSONP response to be
+            rendered.
+            outputs:
+                application/json
+        """
+
+        kwargs = {'callback':callback}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/graph/properties').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else []
+
+    def getRelationships(self, callback=None, output='application/json'):
+        """ Get all relationship types from: /graph/relationship_types
+
+            Arguments:
+            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
+            requesting a javascript media type will cause a JSONP response to be
+            rendered.
+            outputs:
+                application/json
+        """
+
+        kwargs = {'callback':callback}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/graph/relationship_types').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else []
+
+    def getNode(self, id, project='*', callback=None, output='application/json'):
+        """ Get all properties of a node from: /graph/{id}
+
+            Arguments:
+            id: This ID should be either a CURIE or an IRI
+            project: Which properties to project. Defaults to '*'.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
+            requesting a javascript media type will cause a JSONP response to be
+            rendered.
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = id.replace('/','%2F').replace('#','%23')
+        kwargs = {'id':id, 'project':project, 'callback':callback}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/graph/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else {'nodes':[], 'edges':[]}
+
+
+class Lexical(restService):
+    """ Lexical services """
+
+    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
+        self._basePath = basePath
+        self._verbose = verbose
+        super().__init__(cache)
+
+    def getChunks(self, text):
+        """ Extract entities from text. from: /lexical/chunks
+
+            Arguments:
+            text: The text from which to extract chunks
+        """
+
+        kwargs = {'text':text}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/lexical/chunks').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def getEntities(self, text):
+        """ Extract entities from text. from: /lexical/entities
+
+            Arguments:
+            text: The text from which to extract entities
+        """
+
+        kwargs = {'text':text}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/lexical/entities').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def getPos(self, text):
+        """ Tag parts of speech. from: /lexical/pos
+
+            Arguments:
+            text: The text to tag
+        """
+
+        kwargs = {'text':text}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/lexical/pos').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def getSentences(self, text):
+        """ Split text into sentences. from: /lexical/sentences
+
+            Arguments:
+            text: The text to split
+        """
+
+        kwargs = {'text':text}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/lexical/sentences').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
 
 
 class Refine(restService):
@@ -331,330 +675,6 @@ class Refine(restService):
         return output if output else None
 
 
-class Analyzer(restService):
-    """ Analysis services """
-
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
-        self._basePath = basePath
-        self._verbose = verbose
-        super().__init__(cache)
-
-    def enrich(self, sample, ontologyClass, path, callback=None, output='application/json'):
-        """ Class Enrichment Service from: /analyzer/enrichment
-
-            Arguments:
-            sample: A list of CURIEs for nodes whose attributes are to be tested for enrichment. For example, a list of genes.
-            ontologyClass: CURIE for parent ontology class for the attribute to be tested. For example, GO biological process
-            path: A path expression that connects sample nodes to attribute class nodes
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
-            outputs:
-                application/json
-        """
-
-        kwargs = {'sample':sample, 'ontologyClass':ontologyClass, 'path':path, 'callback':callback}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-
-class Cypher(restService):
-    """ Cypher utility services """
-
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
-        self._basePath = basePath
-        self._verbose = verbose
-        super().__init__(cache)
-
-    def resolve(self, cypherQuery, output='text/plain'):
-        """ Cypher query resolver from: /cypher/resolve
-
-            Arguments:
-            cypherQuery: The cypher query to resolve
-            outputs:
-                text/plain
-        """
-
-        kwargs = {'cypherQuery':cypherQuery}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/cypher/resolve').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-    def getCuries(self, callback=None, output='application/json'):
-        """ Get the curie map from: /cypher/curies
-
-            Arguments:
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
-            outputs:
-                application/json
-        """
-
-        kwargs = {'callback':callback}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/cypher/curies').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-
-class Annotations(restService):
-    """ Annotation services """
-
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
-        self._basePath = basePath
-        self._verbose = verbose
-        super().__init__(cache)
-
-    def getEntities(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
-        """ Get entities from text from: /annotations/entities
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/entities').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def postEntities(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
-        """ Get entities from text from: /annotations/entities
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/entities').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params)
-        return output if output else []
-
-    def annotate(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, output='text/plain; charset=utf-8'):
-        """ Annotate text from: /annotations
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-            outputs:
-                text/plain; charset=utf-8
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-    def annotatePost(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None):
-        """ Annotate text from: /annotations
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-            ignoreTag: HTML tags that should not be annotated
-            stylesheet: CSS stylesheets to add to the HEAD
-            scripts: JavaScripts that should to add to the HEAD
-            targetId: A set of element IDs to annotate
-            targetClass: A set of CSS class names to annotate
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params)
-        return output if output else None
-
-    def annotateUrl(self, url, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None, output='text/html'):
-        """ Annotate a URL from: /annotations/url
-
-            Arguments:
-            url: 
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-            ignoreTag: HTML tags that should not be annotated
-            stylesheet: CSS stylesheets to add to the HEAD
-            scripts: JavaScripts that should to add to the HEAD
-            targetId: A set of element IDs to annotate
-            targetClass: A set of CSS class names to annotate
-            outputs:
-                text/html
-        """
-
-        if url and url.startswith('http:'):
-            url = url.replace('/','%2F').replace('#','%23')
-        kwargs = {'url':url, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/url').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-    def getEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
-        """ Get embedded annotations as well as a separate list from: /annotations/complete
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/complete').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def postEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=4, longestOnly=False, includeAbbrev=False, includeAcronym=False, includeNumbers=False):
-        """ Get embedded annotations as well as a separate list from: /annotations/complete
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/complete').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params)
-        return output if output else []
-
-
-class Lexical(restService):
-    """ Lexical services """
-
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False):
-        self._basePath = basePath
-        self._verbose = verbose
-        super().__init__(cache)
-
-    def getEntities(self, text):
-        """ Extract entities from text. from: /lexical/entities
-
-            Arguments:
-            text: The text from which to extract entities
-        """
-
-        kwargs = {'text':text}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/lexical/entities').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def getChunks(self, text):
-        """ Extract entities from text. from: /lexical/chunks
-
-            Arguments:
-            text: The text from which to extract chunks
-        """
-
-        kwargs = {'text':text}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/lexical/chunks').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def getSentences(self, text):
-        """ Split text into sentences. from: /lexical/sentences
-
-            Arguments:
-            text: The text to split
-        """
-
-        kwargs = {'text':text}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/lexical/sentences').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def getPos(self, text):
-        """ Tag parts of speech. from: /lexical/pos
-
-            Arguments:
-            text: The text to tag
-        """
-
-        kwargs = {'text':text}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/lexical/pos').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-
 class Vocabulary(restService):
     """ Vocabulary services """
 
@@ -662,6 +682,28 @@ class Vocabulary(restService):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache)
+
+    def findByPrefix(self, term, limit=20, searchSynonyms=True, searchAbbreviations=False, searchAcronyms=False, includeDeprecated=False, category=None, prefix=None):
+        """ Find a concept by its prefix from: /vocabulary/autocomplete/{term}
+
+            Arguments:
+            term: Term prefix to find
+            limit: Maximum result count
+            searchSynonyms: Should synonyms be matched
+            searchAbbreviations: Should abbreviations be matched
+            searchAcronyms: Should acronyms be matched
+            includeDeprecated: Should deprecated classes be included
+            category: Categories to search (defaults to all)
+            prefix: CURIE prefixes to search (defaults to all)
+        """
+
+        kwargs = {'term':term, 'limit':limit, 'searchSynonyms':searchSynonyms, 'searchAbbreviations':searchAbbreviations, 'searchAcronyms':searchAcronyms, 'includeDeprecated':includeDeprecated, 'category':category, 'prefix':prefix}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('term', **kwargs)
+        url = self._basePath + ('/vocabulary/autocomplete/{term}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
+        output = self._get('GET', url, requests_params)
+        return output if output else []
 
     def getCategories(self):
         """ Get all categories from: /vocabulary/categories
@@ -674,6 +716,38 @@ class Vocabulary(restService):
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/categories').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params)
+        return output if output else []
+
+    def findById(self, id):
+        """ Find a concept by its ID from: /vocabulary/id/{id}
+
+            Arguments:
+            id: ID to find
+        """
+
+        if id and id.startswith('http:'):
+            id = id.replace('/','%2F').replace('#','%23')
+        kwargs = {'id':id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/vocabulary/id/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params)
+        return output if output else None
+
+    def getCuriePrefixes(self):
+        """ Get all CURIE prefixes from: /vocabulary/prefixes
+
+            Arguments:
+
+        """
+
+        kwargs = {}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params)
         return output if output else []
@@ -699,21 +773,6 @@ class Vocabulary(restService):
         output = self._get('GET', url, requests_params)
         return output if output else []
 
-    def getCuriePrefixes(self):
-        """ Get all CURIE prefixes from: /vocabulary/prefixes
-
-            Arguments:
-
-        """
-
-        kwargs = {}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
     def suggestFromTerm(self, term, limit=1):
         """ Suggest terms from: /vocabulary/suggestions/{term}
 
@@ -726,45 +785,6 @@ class Vocabulary(restService):
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('term', **kwargs)
         url = self._basePath + ('/vocabulary/suggestions/{term}').format(**kwargs)
-        requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
-        output = self._get('GET', url, requests_params)
-        return output if output else []
-
-    def findById(self, id):
-        """ Find a concept by its ID from: /vocabulary/id/{id}
-
-            Arguments:
-            id: ID to find
-        """
-
-        if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
-        kwargs = {'id':id}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
-        url = self._basePath + ('/vocabulary/id/{id}').format(**kwargs)
-        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
-        output = self._get('GET', url, requests_params)
-        return output if output else None
-
-    def findByPrefix(self, term, limit=20, searchSynonyms=True, searchAbbreviations=False, searchAcronyms=False, includeDeprecated=False, category=None, prefix=None):
-        """ Find a concept by its prefix from: /vocabulary/autocomplete/{term}
-
-            Arguments:
-            term: Term prefix to find
-            limit: Maximum result count
-            searchSynonyms: Should synonyms be matched
-            searchAbbreviations: Should abbreviations be matched
-            searchAcronyms: Should acronyms be matched
-            includeDeprecated: Should deprecated classes be included
-            category: Categories to search (defaults to all)
-            prefix: CURIE prefixes to search (defaults to all)
-        """
-
-        kwargs = {'term':term, 'limit':limit, 'searchSynonyms':searchSynonyms, 'searchAbbreviations':searchAbbreviations, 'searchAcronyms':searchAcronyms, 'includeDeprecated':includeDeprecated, 'category':category, 'prefix':prefix}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('term', **kwargs)
-        url = self._basePath + ('/vocabulary/autocomplete/{term}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params)
         return output if output else []
