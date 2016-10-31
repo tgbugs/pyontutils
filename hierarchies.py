@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.5
+from copy import deepcopy
 import requests
 from collections import namedtuple
 from collections import defaultdict as base_dd
@@ -281,6 +282,8 @@ def newTree(name, **kwargs):
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
+        if graph._cache:
+            j = deepcopy(j)  # avoid dangers of mutable cache
         flag_dep(j)
     else:
         j = dict(json)
