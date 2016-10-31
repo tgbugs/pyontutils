@@ -91,8 +91,6 @@ def review_norep(list_):
 
 def do_deprecation(replaced_by, g, additional_edges):
     ubpref = {'ilx':'http://uri.interlex.org/base/',
-              'NIFMOL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#',
-              'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
               'NLXWIKI':'http://neurolex.org/wiki/'}
     ubpref.update(PREFIXES)
     bridge = makeGraph('uberon-bridge', ubpref)
@@ -103,6 +101,10 @@ def do_deprecation(replaced_by, g, additional_edges):
     uedges = defaultdict(lambda:defaultdict(set))
 
     def inner(nifga, uberon):
+
+        # check for 'NODEP'
+        if uberon == 'NODEP':
+            return
 
         # check neuronames id TODO
 
@@ -239,7 +241,7 @@ def print_trees(graph, bridge):
     print('nifga white matter')
     print(k_)
 
-    #embed()
+    return a, b, c, d, e, f, k_, l_, m_, n_
 
 def new_replaced_by(ids, existing):
     out = {}
@@ -250,14 +252,16 @@ def new_replaced_by(ids, existing):
             out[k] = None
     return out
 
-def main():
+def make_uberon_graph():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
     SANITY = rdflib.Graph()
     #ont = requests.get(uberon_bridge_path).text
+    with open('/home/tom/files/onts/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
     split_on = 263
-    with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
-    split_on = 362
+    #with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
+    #split_on = 362
+
     prefs = ('xmlns:NIFSTD="http://uri.neuinfo.org/nif/nifstd/"\n'
              'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
     ont = ont[:split_on] + prefs + ont[split_on:]
@@ -275,6 +279,9 @@ def main():
         #print(s, o)
         #print(nif, uberon)
 
+    return u_replaced_by
+
+def make_neurolex_graph():
     # neurolex test stuff
     nlxpref = {'ilx':'http://uri.interlex.org/base/'}
     nlxpref.update(PREFIXES)
@@ -304,20 +311,62 @@ def main():
     print(g_)
     print(i_)
 
+    return additional_edges
+
+def do_report(nif_bridge, ub_bridge):
+    report = {}
+    for existing_id, nif_uberon_id in nif_bridge.items():
+        cr = {}
+        cr['UDEP'] = ''
+        if nif_uberon_id == 'NOREP':
+            cr['NRID'] = ''
+        elif nif_uberon_id == 'NODEP':
+            cr['NRID'] = ''
+        else:
+            cr['NRID'] = nif_uberon_id
+
+        if existing_id in ub_bridge:
+            ub_uberon_id = ub_bridge[existing_id]
+            cr['URID'] = ub_uberon_id
+            if type(nif_uberon_id) == tuple:
+                if ub_uberon_id in nif_uberon_id:
+                    match = True
+                else:
+                    match = False
+            elif ub_uberon_id != nif_uberon_id:
+                match = False
+            else:
+                match = True
+
+        else:
+            match = False
+            cr['URID'] = ''
+            if cr['NRID']:
+                meta = sgg.getNode(nif_uberon_id)['nodes'][0]['meta']
+                if 'http://www.w3.org/2002/07/owl#deprecated' in meta and meta['http://www.w3.org/2002/07/owl#deprecated']:
+                    cr['UDEP'] = 'Deprecated'
+
+        cr['MATCH'] = match
+        report[existing_id] = cr
+
+    return report
+
+def make_nifga_graph():
     # use equivalent class mappings to build a replacement mapping
     g = rdflib.Graph()
-    getQname = g.namespace_manager.qname
     g.parse(nifga_path, format='turtle')
+
+    getQname = g.namespace_manager.qname
     classes = sorted([getQname(_) for _ in g.subjects(RDF.type, OWL.Class) if type(_) is URIRef])
     curies = ['NIFGA:' + n for n in classes if ':' not in n]
     matches = async_getter(sgv.findById, [(c,) for c in curies])
     #tests = [n for n,t in zip(curies, matches) if not t]  # passed
+
     replaced_by = {}
     exact = {}
     internal_equivs = {}
-    edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
+    #edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
     def equiv(curie, label):
-
         if curie in manual:
             replaced_by[curie] = manual[curie]
             return manual[curie]
@@ -416,6 +465,13 @@ def main():
     #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches])  # give the deped a shot!
     equivs = [equiv(c['curie'], c['labels'][0]) for c in matches]  # async causes print issues :/
 
+    return g, matches, exact, internal_equivs, replaced_by
+
+def main():
+    u_replaced_by = make_uberon_graph()
+    additional_edges = make_uberon_graph()
+    g, matches, exact, internal_equivs, replaced_by = make_nifga_graph()
+
     #review_norep([m['curie'] for m in matches if m['deprecated']])
     #review_reps(exact)  # these all look good
     #review_reps(replaced_by)  # as do these
@@ -423,56 +479,19 @@ def main():
     #rpob = [_['id'] for _ in sgg.getNeighbors('NIFGA:birnlex_1167', relationshipType='subClassOf')['nodes'] if 'UBERON:' not in _['id']]  # these hit pretty much everything because of how the subclassing worked out, so can't use this
     regional_no_replace = {k:v for k,v in replaced_by.items() if not v and sgv.findById(k)['labels'][0].startswith('Regional')}
     for k in regional_no_replace:
-        replaced_by[k] = 'NOREP'
+        replaced_by[k] = 'NODEP'  # do not deprecated these for the time being
    
     graph, bridge = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
-    #with makeGraph('',{}):
-    bridge.write(convert=False)
-    graph.write(convert=False)
+    bridge.write()
+    graph.write()
 
-    tree_strings = print_trees(graph, bridge)
+    trees = print_trees(graph, bridge)
 
     # we do this because each of these have different prefixes :(
     nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}  # some are still None
     ub_bridge = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
-    def do_report():
-        report = {}
-        for existing_id, nif_uberon_id in nif_bridge.items():
-            cr = {}
-            cr['UDEP'] = ''
-            if nif_uberon_id == 'NOREP':
-                cr['NRID'] = ''
-            else:
-                cr['NRID'] = nif_uberon_id
-
-            if existing_id in ub_bridge:
-                ub_uberon_id = ub_bridge[existing_id]
-                cr['URID'] = ub_uberon_id
-                if type(nif_uberon_id) == tuple:
-                    if ub_uberon_id in nif_uberon_id:
-                        match = True
-                    else:
-                        match = False
-                elif ub_uberon_id != nif_uberon_id:
-                    match = False
-                else:
-                    match = True
-
-            else:
-                match = False
-                cr['URID'] = ''
-                if cr['NRID']:
-                    meta = sgg.getNode(nif_uberon_id)['nodes'][0]['meta']
-                    if 'http://www.w3.org/2002/07/owl#deprecated' in meta and meta['http://www.w3.org/2002/07/owl#deprecated']:
-                        cr['UDEP'] = 'Deprecated'
-
-            cr['MATCH'] = match
-            report[existing_id] = cr
-
-        return report
-
-    report = do_report()
+    report = do_report(nif_bridge, ub_bridge)
 
     double_checked = {i:r for i, r in report.items() if r['MATCH']}  # aka exact from above
     no_match = {i:r for i, r in report.items() if not r['MATCH']}
@@ -493,6 +512,8 @@ def main():
     print('No match not deprecated count', len(very_bad))
 
     embed()
+
+
 
 
 
