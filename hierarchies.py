@@ -347,7 +347,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     hierarchy, dupes = build_tree(root)
     named_hierarchy = rename(hierarchy)
 
-    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames)
+    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames, j)
 
 def levels(tree, p, l = 0):
     if p == 0:
@@ -461,7 +461,7 @@ def main():
 
         level_sizes = [len(levels(tree, i)) for i in range(11)]
         print('level sizes', level_sizes)
-        parent_counts = np.unique([len(v) for v in extra[-3].values()])
+        parent_counts = np.unique([len(v) for v in extra[-4].values()])
         print('unique parent counts', parent_counts)
         print('num terms', len(extra[2]))
 
