@@ -75,7 +75,7 @@ class makeGraph:
     def filename(self):
         return '/tmp/' + self.name + '.ttl'
 
-    def write(self, convert=True):
+    def write(self, convert=False):
         with open(self.filename, 'wb') as f:
             f.write(self.g.serialize(format='nifttl'))
             print('yes we wrote the first version...', self.name)
