@@ -171,15 +171,21 @@ class makeGraph:
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
-    def replace_object(self, find, replace):  # find and replace on the parsed graph
+    def replace_uriref(self, find, replace):  # find and replace on the parsed graph
+        # XXX warning this does not update cases where an iri is in an annotation property!
+        # if you need that just use sed
         find = self.expand(find)
         for i in range(3):
             trip = [find if i == _ else None for _ in range(3)]
-            for s, p, o in graph.g.triples(trip):
+            for s, p, o in self.g.triples(trip):
                 rep = [s, p, o]
                 rep[i] = replace
-                graph.add_node(*rep)
-                graph.remove((s, p, o))
+                self.add_node(*rep)
+                self.g.remove((s, p, o))
+
+    def replace_subject_object(self, p, s, o, rs, ro):  # useful for porting edges to equivalent classes
+        self.add_node(rs, p, ro)
+        self.g.remove((s, p, o))
 
     def get_equiv_inter(self, curie):
         """ get equivelant classes where curie is in an intersection """
@@ -246,7 +252,11 @@ class makeGraph:
             except IndexError:  # no label
                 slab = sub.toPython()
             sdep = True if list(self.g.objects(sub, rdflib.OWL.deprecated)) else False
-            sub = self.g.namespace_manager.qname(sub)
+            try:
+                sub = self.g.namespace_manager.qname(sub)
+            except:  # rdflib has iffy error handling here so need to catch unsplitables
+                print('Could not split the following uri:', sub)
+
             json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
             if sub not in done:
                 node = {'lbl':slab,'id':sub, 'meta':{}}
