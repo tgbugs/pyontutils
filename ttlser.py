@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.5
 import re
 from rdflib.plugins.serializers.turtle import TurtleSerializer
-from rdflib import RDF, RDFS, OWL, BNode
+from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
@@ -58,8 +58,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                       SKOS.definition,
                       DC.description,
                       RDFS.subClassOf,
-                      OWL.intersectionOf
-                      OWL.unionOf
+                      OWL.intersectionOf,
+                      OWL.unionOf,
                       OWL.disjointWith,
                       OWL.disjointUnionOf,
                       OBOANN.createdDate,
@@ -74,6 +74,13 @@ class CustomTurtleSerializer(TurtleSerializer):
     def __init__(self, store):
         super(CustomTurtleSerializer, self).__init__(store)
         self._local_order = []  # for tracking non BNode sort values
+        self.object_rank = {u:i  # global rank for all URIRef that appear as objects
+                            for i, u in
+                            enumerate(
+                                sorted(set([_ for _ in self.store.objects(None, None)
+                                        if type(_) == URIRef]),
+                                       key=lambda _: natsort(self.store.qname(_))))}
+        [print(_) for _ in sorted([(v,k) for k, v in self.object_rank.items()])]
 
     def startDocument(self):
         self._started = True
