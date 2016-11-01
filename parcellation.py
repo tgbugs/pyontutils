@@ -10,7 +10,7 @@ import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree
-from utils import async_getter, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
+from utils import async_getter, makePrefixes, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
 from scigraph_client import Vocabulary
 from IPython import embed
 from desc.util.process_fixed import ProcessPoolExecutor
@@ -130,13 +130,8 @@ def parcellation_schemes(ontids_atlases):
                   'Brain parcellation schemes as represented by root concepts.',
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = {
-        'ilx':'http://uri.interlex.org/base/',
-        'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-    }
-    graph = makeGraph(ont.filename, PREFIXES)
+    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN')
+    graph = makeGraph(ont.filename, PREFIXES, writeloc = '/tmp/parc/')
     graph.add_ont(ontid, *ont[2:])
 
     for import_id, atlas in sorted(ontids_atlases):
@@ -151,14 +146,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = {
-        'ilx':'http://uri.interlex.org/base/',
-        'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-        'NIFORG':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Organism.owl#',
-        'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
-    }
+    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'NIFORG', 'NCBITaxon')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -175,7 +163,7 @@ class genericPScheme:
         if '' in cls.PREFIXES:
             if PREFIXES[''] is None:
                 PREFIXES[''] = ontid + '/'
-        graph = makeGraph(cls.ont.filename, PREFIXES)
+        graph = makeGraph(cls.ont.filename, PREFIXES, writeloc='/tmp/parc/')
         graph.add_ont(ontid, *cls.ont[2:])
         make_scheme(graph, cls.concept, cls.atlas.curie)
         data = cls.datagetter()
@@ -234,8 +222,9 @@ class HBA(genericPScheme):
                        'http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',
                        tuple(),
                        tuple())
+    PREFIX = 'HBA'
     PREFIXES = {
-        'ABA':'http://api.brain-map.org/api/v2/data/Structure/',
+        PREFIX:'http://api.brain-map.org:80/api/v2/data/Structure/',  # FIXME hack to allow both HBA and MBA 
     }
     ROOT = 3999
     #VALIDATE = True
@@ -249,7 +238,7 @@ class HBA(genericPScheme):
     @classmethod
     def dataproc(cls, graph, data):
         for node in data:
-            curie = graph.expand('ABA:' + str(node['id']))
+            curie = graph.expand(cls.PREFIX + ':' + str(node['id']))
             graph.add_class(curie, cls.concept.curie)
             parent = node['parent_structure_id']
             graph.add_node(curie, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + node['name'])
@@ -258,12 +247,12 @@ class HBA(genericPScheme):
             if node['safe_name'] != node['name']:
                 graph.add_node(curie, SYNONYM, node['safe_name'])
             if parent:
-                pcurie = graph.expand('ABA:' + str(parent))
+                pcurie = graph.expand(cls.PREFIX + ':' + str(parent))
                 graph.add_hierarchy(pcurie, PARTOF, curie)
 
     @classmethod
     def validate(cls, graph):
-        check_hierarchy(graph, 'ABA:' + str(cls.ROOT), PARTOF, PARCLAB)
+        check_hierarchy(graph, cls.PREFIX + ':' + str(cls.ROOT), PARTOF, PARCLAB)
 
 
 class MBA(HBA):
@@ -285,6 +274,10 @@ class MBA(HBA):
                        'http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                        tuple(),
                        tuple())
+    PREFIX = 'MBA'
+    PREFIXES = {
+        PREFIX:'http://api.brain-map.org/api/v2/data/Structure/',  # FIXME hack to allow both HBA and MBA 
+    }
     ROOT = 997
 
     @classmethod
@@ -514,10 +507,7 @@ class WHSSD(genericPScheme):
             graph.add_node(id_, PARCLAB, label)
 
 class FMRI(genericPScheme):
-    PREFIXES = {
-        '':None,
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-    }
+    PREFIXES = makePrefixes('', 'skos')
 
     @classmethod
     def datagetter(cls):
@@ -602,16 +592,13 @@ def swanson():
     ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = {
-        'ilx':'http://uri.interlex.org/base/',
-        'owl':'http://www.w3.org/2002/07/owl#',  # this should autoadd for prefixes but doesnt!?
-        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
+    PREFIXES = makePrefixes('ilx', 'owl', 'OBOANN', 'UBERON')
+    PREFIXES.update({
         '':ontid + '/',  # looking for better options
-        'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
         'SWAN':'http://swanson.org/node/',
         'SWAA':'http://swanson.org/appendix/',
-    }
-    new_graph = makeGraph(filename, PREFIXES)
+    })
+    new_graph = makeGraph(filename, PREFIXES, writeloc='/tmp/parc/')
     new_graph.add_ont(ontid,
                       'Swanson brain partomies',
                       'Swanson 2014 Partonomies',
@@ -830,7 +817,7 @@ def swanson():
 
 
 def main():
-    with makeGraph('', {}) as _, ProcessPoolExecutor(4) as ppe:
+    with ProcessPoolExecutor(4) as ppe:
         funs = [fmri_atlases,
                 CoCoMac, #cocomac_make,
                 MBA, #mouse_brain_atlas,
