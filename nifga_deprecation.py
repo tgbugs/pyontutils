@@ -30,8 +30,8 @@ PREFIXES = {
     'ro':'http://www.obofoundry.org/ro/ro.owl#',
     'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
     'owl':'http://www.w3.org/2002/07/owl#',  # FIXME why is this missing?!
-
 }
+
 
 nifga_path = os.path.expanduser('~/git/NIF-Ontology/ttl/NIF-GrossAnatomy.ttl')
 uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
@@ -103,8 +103,16 @@ def do_deprecation(replaced_by, g, additional_edges):
     def inner(nifga, uberon):
         # check neuronames id TODO
 
-        # add replaced by -> uberon
-        graph.add_node(nifga, 'replacedBy:', uberon)
+        udepr = sgv.findById(uberon)['deprecated'] if uberon != 'NOREP' else False
+        if udepr:
+            # add xref to the now deprecated uberon term
+            graph.add_node(nifga, 'oboInOwl:hasDbXref', uberon)
+            #print('Replacement is deprecated, not replacing:', uberon)
+            graph.add_node(nifga, RDFS.comment, 'xref %s is deprecated, so not using replacedBy:' % uberon)
+        else:
+            # add replaced by -> uberon
+            graph.add_node(nifga, 'replacedBy:', uberon)
+
         # add deprecated true (ok to do twice...)
         graph.add_node(nifga, OWL.deprecated, True)
 
@@ -116,9 +124,6 @@ def do_deprecation(replaced_by, g, additional_edges):
             #uedges[uberon] = defaultdict(set)
         resp = sgg.getNeighbors(nifga)
         edges = resp['edges']
-        udepr = sgv.findById(uberon)['deprecated'] if uberon != 'NOREP' else False
-        if udepr:
-            print('Replacement is deprecated, not replacing:', uberon)
         if nifga in additional_edges:
             edges.append(additional_edges[nifga])
         include = False
@@ -205,7 +210,7 @@ def do_deprecation(replaced_by, g, additional_edges):
         else:
             inner(nifga, uberon)
 
-    return graph, bridge
+    return graph, bridge, uedges
 
 def print_report(report, fetch=False):
     for eid, r in report.items():
@@ -488,11 +493,14 @@ def main():
     for k in regional_no_replace:
         replaced_by[k] = 'NOREP'  # yes, deprecate these
 
+   #or sgv.findById(k)['labels'][0].startswith('Predominantly white regional')
+   #or sgv.findById(k)['labels'][0].startswith('Predominantly gray regional')
+
     # TODO predominately gray region -> just deprecate completely these cause pretty much all of the no_match problems
     # predominantly white regional part
     # TODO add comments in do_deprecation
    
-    graph, bridge = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
+    graph, bridge, uedges = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
     bridge.write()
     graph.write()
 
@@ -506,12 +514,16 @@ def main():
 
     double_checked = {i:r for i, r in report.items() if r['MATCH']}  # aka exact from above
     no_match = {i:r for i, r in report.items() if not r['MATCH']}
+    no_match_udep = {i:r for i, r in no_match.items() if r['UDEP']}
+    no_match_no_udep = {i:r for i, r in no_match.items() if not r['UDEP']}
     no_replacement = {i:r for i, r in report.items() if not r['NRID']}
     very_bad = {i:r for i, r in report.items() if not r['MATCH'] and r['URID'] and not r['UDEP']}
 
     fetch = True
-    print('\n>>>>>>>>>>>>>>>>>>>>>> No match reports\n')
-    #print_report(no_match, fetch)
+    #print('\n>>>>>>>>>>>>>>>>>>>>>> No match uberon dep reports\n')
+    #print_report(no_match_udep, fetch)  # These are all dealt with correctly in do_deprecation
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match not dep reports\n')
+    print_report(no_match_no_udep, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
     #print_report(no_replacement, fetch)
     print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
@@ -519,6 +531,8 @@ def main():
 
     print('Match count', len(double_checked))
     print('No Match count', len(no_match))
+    print('No Match +udep count', len(no_match_udep))
+    print('No Match -udep count', len(no_match_no_udep))
     print('No replace count', len(no_replacement))  # there are none with a URID and no NRID
     print('No match not deprecated count', len(very_bad))
 
