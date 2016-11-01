@@ -58,11 +58,44 @@ def mysql_conn_helper(host, db, user, port=3306):
 
     return kwargs
 
+def _loadPrefixes():
+    try:
+        import yaml
+        with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+            curie_map = yaml.load(f)
+    except FileNotFoundError:
+        import requests
+        curie_map = requests.get('https://github.com/SciCrunch/NIF-Ontology/raw/master/scigraph/nifstd_curie_map.yaml').json()
+
+    # holding place for values that are not in the curie map
+    extras = {
+        '':None,  # safety
+        'FIXME':'http://FIXME.org/',
+        'ILX':'http://uri.interlex.org/base/ilx_', 
+        'NLXWIKI':'http://neurolex.org/wiki/',
+        'dc':'http://purl.org/dc/elements/1.1/',
+        'ilx':'http://uri.interlex.org/base/', 
+        'nsu':'http://www.FIXME.org/nsupper#',
+        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
+        'owl':'http://www.w3.org/2002/07/owl#',
+        'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
+        'ro':'http://www.obofoundry.org/ro/ro.owl#',
+        'skos':'http://www.w3.org/2004/02/skos/core#',
+    }
+    curie_map.update(extras)
+    return curie_map
+
+PREFIXES = _loadPrefixes()
+
+def makePrefixes(*prefixes):
+    return {k:PREFIXES[k] for k in prefixes}
+
 class makeGraph:
     SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes, graph=None):
+    def __init__(self, name, prefixes, graph=None, writeloc='/tmp/'):
         self.name = name
+        self.writeloc = writeloc
         self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
         if graph:
             self.g = graph
@@ -73,7 +106,7 @@ class makeGraph:
 
     @property
     def filename(self):
-        return '/tmp/' + self.name + '.ttl'
+        return self.writeloc + self.name + '.ttl'
 
     def write(self, convert=False):
         with open(self.filename, 'wb') as f:
