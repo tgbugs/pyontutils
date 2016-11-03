@@ -83,6 +83,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                             for i, o in
                             enumerate(
                                 sorted(set([_ for _ in self.store.objects(None, None)
+                                        if isinstance(_, URIRef)] +
+                                           [_ for _ in self.store.subjects(None, None)
                                         if isinstance(_, URIRef)]),
                                        key=lambda _: natsort(self.store.qname(_))))}
 
@@ -121,9 +123,14 @@ class CustomTurtleSerializer(TurtleSerializer):
         seen = {}
         subjects = []
 
+        def key(m):
+            if not isinstance(m, BNode):
+                m = self.store.qname(m)
+            return natsort(m)
+
         for classURI in self.topClasses:
             members = list(self.store.subjects(RDF.type, classURI))
-            members.sort(key=natsort)
+            members.sort(key=key)
 
             for member in members:
                 subjects.append(member)
