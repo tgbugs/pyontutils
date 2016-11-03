@@ -36,6 +36,17 @@ SUBJECT = 0
 VERB = 1
 OBJECT = 2
 
+def qname(self, uri):  # for monkey patching Graph
+    try:
+        prefix, namespace, name = self.compute_qname(uri, False)
+    except Exception:  # no prefix no problems
+        return uri
+
+    if prefix == "":
+        return name
+    else:
+        return ":".join((prefix, name))
+
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation """
 
@@ -76,18 +87,16 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OBOANN.modifiedDate,
                      ]
 
-    def __init__(self, store):  # for some reason this produces weird prefix errors!?
+    def __init__(self, store):
+        setattr(store.__class__, 'qname', qname)  # monkey patch to fix generate=True
         super(CustomTurtleSerializer, self).__init__(store)
-        self._local_order = []  # for tracking non BNode sort values
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
                                 sorted(set([_ for _ in self.store.objects(None, None)
-                                        if isinstance(_, URIRef)] +
+                                            if not isinstance(_, BNode)] +  # URIRef + Literal
                                            [_ for _ in self.store.subjects(None, None)
-                                        if isinstance(_, URIRef)] +
-                                           [_ for _ in self.store.predicates(None, None)
-                                        if isinstance(_, URIRef)]),
+                                            if isinstance(_, URIRef)]),
                                        key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
@@ -103,14 +112,11 @@ class CustomTurtleSerializer(TurtleSerializer):
         for o, r in self.object_rank.items():
             recurse(o, r)
 
-        #embed()
-
     def _bnKey(self, bnode):
         if isinstance(bnode, BNode):
             return self.node_rank[bnode]
-        elif isinstance(bnode, URIRef):
+        else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
-        return 0  # have we have previously sorted so alpha will be stable?
 
     def startDocument(self):
         self._started = True
@@ -166,7 +172,7 @@ class CustomTurtleSerializer(TurtleSerializer):
            Sort the lists of values.  Return a sorted list of properties."""
         # Sort object lists
         for prop, objects in properties.items():
-            objects.sort()  # correctly sorts Literals
+            #objects.sort()  # correctly sorts Literals
             objects.sort(key=self._bnKey)
 
         # Make sorted list of properties
@@ -258,11 +264,8 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(' .')
         return True
 
-    def genQname(self, uri, gen_prefix=False):
-        return super(CustomTurtleSerializer, self).genQname(uri, gen_prefix)
-
     def serialize(self, stream, base=None, encoding=None,
                   spacious=None, **args):
-        super(CustomTurtleSerializer, self).serialize(stream, base, encoding, spacious, **args)
+        super(CustomTurtleSerializer, self).serialize(stream, base, encoding, spacious, **args)  # FIXME in the super the call to serializer.get very first thing, is what is dumping unwanted namespaces in???
         stream.write(u"# serialized using the nifstd custom serializer\n".encode('ascii'))
 
