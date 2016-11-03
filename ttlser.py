@@ -3,9 +3,12 @@ import re
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
+from IPython import embed
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
+oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
+#IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
@@ -49,6 +52,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.someValuesFrom,
                       OWL.imports,
                       OWL.deprecated,
+                      URIRef('http://purl.obolibrary.org/obo/IAO_0100001'),  # replacedBy:
+                      oboInOwl.hasDbXref,
                       OWL.equivalentClass,
                       RDFS.label,
                       SKOS.prefLabel,
@@ -62,29 +67,51 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.unionOf,
                       OWL.disjointWith,
                       OWL.disjointUnionOf,
-                      OBOANN.createdDate,
-                      OBOANN.modifiedDate,
                       RDFS.comment,
                       SKOS.note,
                       SKOS.editorialNote,
                       SKOS.changeNote,
                       OWL.versionInfo,
+                      OBOANN.createdDate,
+                      OBOANN.modifiedDate,
                      ]
 
-    def __init__(self, store):
+    def __init__(self, store):  # for some reason this produces weird prefix errors!?
         super(CustomTurtleSerializer, self).__init__(store)
         self._local_order = []  # for tracking non BNode sort values
-        self.object_rank = {u:i  # global rank for all URIRef that appear as objects
-                            for i, u in
+        self.object_rank = {o:i  # global rank for all URIRef that appear as objects
+                            for i, o in
                             enumerate(
                                 sorted(set([_ for _ in self.store.objects(None, None)
-                                        if type(_) == URIRef]),
+                                        if isinstance(_, URIRef)]),
                                        key=lambda _: natsort(self.store.qname(_))))}
-        [print(_) for _ in sorted([(v,k) for k, v in self.object_rank.items()])]
+
+        self.node_rank = {}
+        def recurse(node, rank):  # XXX warning: cycles?
+            for s in self.store.subjects(None, node):
+                if isinstance(s, BNode):
+                    if s not in self.node_rank:
+                        self.node_rank[s] = rank
+                    else:
+                        self.node_rank[s] += rank
+                    recurse(s, rank)  # if we are retracing steps we already added previous ranks to upstream so don't need to propagate again
+
+        for o, r in self.object_rank.items():
+            recurse(o, r)
+
+        #embed()
+
+    def _bnKey(self, bnode):
+        if isinstance(bnode, BNode):
+            return self.node_rank[bnode]
+        elif isinstance(bnode, URIRef):
+            return self.object_rank[bnode]
+        #return sum([ord(_) / 26 * (i + 1) for i, _ in enumerate(bnode)])
+        return 0  # we have previously sorted so alpha should be stable?
 
     def startDocument(self):
         self._started = True
-        ns_list = sorted(self.namespaces.items(), key=lambda kv: natsort(kv[0]))
+        ns_list = sorted(self.namespaces.items(), key=lambda kv: (natsort(kv[0]), kv[1]))
         for prefix, uri in ns_list:
             self.write(self.indent() + '@prefix %s: <%s> .\n' % (prefix, uri))
         if ns_list and self._spacious:
@@ -108,12 +135,14 @@ class CustomTurtleSerializer(TurtleSerializer):
              self._references[subject], subject)
             for subject in self._subjects if subject not in seen]
 
+        recursable.sort(key=lambda t: self._bnKey(t[-1]))
+
         #recursable.sort(key=lambda r: natsort(r[-1]))
         subjects.extend([subject for (isbnode, refs, subject) in recursable])
 
         return subjects
 
-    def _predicateList(self, subject, newline=False):
+    def predicateList(self, subject, newline=False):
         properties = self.buildPredicateHash(subject)
         propList = self.sortProperties(properties)
         if len(propList) == 0:
@@ -123,14 +152,17 @@ class CustomTurtleSerializer(TurtleSerializer):
         for predicate in propList[1:]:
             self.write(' ;\n' + self.indent(1))
             self.verb(predicate, newline=True)
-            self.objectList(sorted(properties[predicate], key=natsort))
+            #self.objectList(sorted(properties[predicate], key=natsort))
+            self.objectList(properties[predicate])
 
-    def _sortProperties(self, properties):
+    def sortProperties(self, properties):
         """Take a hash from predicate uris to lists of values.
            Sort the lists of values.  Return a sorted list of properties."""
         # Sort object lists
         for prop, objects in properties.items():
-            objects.sort(key=natsort)
+            #objects.sort(key=natsort)
+            objects.sort()
+            objects.sort(key=self._bnKey)
 
         # Make sorted list of properties
         propList = []
@@ -147,7 +179,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 seen[prop] = True
         return propList
 
-    def _buildPredicateHash(self, subject):
+    def buildPredicateHash(self, subject):
         """
         Build a hash key by predicate to a list of objects for the given
         subject
@@ -158,10 +190,21 @@ class CustomTurtleSerializer(TurtleSerializer):
             oList.append(o)
             properties[p] = oList
 
-        for k in properties:
-            properties[k].sort(key=natsort)
+        #for k in properties:
+            #properties[k].sort(key=natsort)
+
+        #print(properties)
 
         return properties
+
+    def doList(self, l):
+        while l:
+            item = self.store.value(l, RDF.first)
+            if item is not None:
+                self.write('\n' + self.indent(1))
+                self.path(item, OBJECT)
+                self.subjectDone(l)
+            l = self.store.value(l, RDF.rest)
 
     def p_default(self, node, position, newline=False):
         if position != SUBJECT and not newline:
