@@ -14,7 +14,7 @@ def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
 
 
-# desired behavior
+# desired behavior (XXX does not match the implementation!
 # 1) if there is more than one entry at a level URIRef goes first natsorted then lists then predicate lists then subject lists
 # 2) sorting for nested structures in a list determined by
 #     a) rank of object attached to the highest ranked predicate (could just be alpha)
@@ -85,13 +85,15 @@ class CustomTurtleSerializer(TurtleSerializer):
                                 sorted(set([_ for _ in self.store.objects(None, None)
                                         if isinstance(_, URIRef)] +
                                            [_ for _ in self.store.subjects(None, None)
+                                        if isinstance(_, URIRef)] +
+                                           [_ for _ in self.store.predicates(None, None)
                                         if isinstance(_, URIRef)]),
                                        key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
         def recurse(node, rank):  # XXX warning: cycles?
             for s in self.store.subjects(None, node):
-                if isinstance(s, BNode):
+                if isinstance(s, BNode):  # w/o this we break recurnsion limit
                     if s not in self.node_rank:
                         self.node_rank[s] = rank
                     else:
@@ -108,8 +110,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             return self.node_rank[bnode]
         elif isinstance(bnode, URIRef):
             return self.object_rank[bnode]
-        #return sum([ord(_) / 26 * (i + 1) for i, _ in enumerate(bnode)])
-        return 0  # we have previously sorted so alpha should be stable?
+        return 0  # have we have previously sorted so alpha will be stable?
 
     def startDocument(self):
         self._started = True
@@ -144,7 +145,6 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         recursable.sort(key=lambda t: self._bnKey(t[-1]))
 
-        #recursable.sort(key=lambda r: natsort(r[-1]))
         subjects.extend([subject for (isbnode, refs, subject) in recursable])
 
         return subjects
@@ -159,7 +159,6 @@ class CustomTurtleSerializer(TurtleSerializer):
         for predicate in propList[1:]:
             self.write(' ;\n' + self.indent(1))
             self.verb(predicate, newline=True)
-            #self.objectList(sorted(properties[predicate], key=natsort))
             self.objectList(properties[predicate])
 
     def sortProperties(self, properties):
@@ -167,8 +166,7 @@ class CustomTurtleSerializer(TurtleSerializer):
            Sort the lists of values.  Return a sorted list of properties."""
         # Sort object lists
         for prop, objects in properties.items():
-            #objects.sort(key=natsort)
-            objects.sort()
+            objects.sort()  # correctly sorts Literals
             objects.sort(key=self._bnKey)
 
         # Make sorted list of properties
@@ -197,11 +195,6 @@ class CustomTurtleSerializer(TurtleSerializer):
             oList.append(o)
             properties[p] = oList
 
-        #for k in properties:
-            #properties[k].sort(key=natsort)
-
-        #print(properties)
-
         return properties
 
     def doList(self, l):
@@ -213,13 +206,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                 self.subjectDone(l)
             l = self.store.value(l, RDF.rest)
 
-    def p_default(self, node, position, newline=False):
+    def p_default(self, node, position, newline=False):  # XXX unmodified
         if position != SUBJECT and not newline:
             self.write(' ')
         self.write(self.label(node, position))
         return True
 
-    def p_squared(self, node, position, newline=False):
+    def p_squared(self, node, position, newline=False):  # XXX unmodified
         if (not isinstance(node, BNode)
                 or node in self._serialized
                 or self._references[node] > 1
@@ -250,20 +243,23 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return True
 
-    def s_default(self, subject):  # XXX ordering issues start here
+    def s_default(self, subject):  # XXX unmodified, ordering issues start here
         self.write('\n' + self.indent())
         self.path(subject, SUBJECT)
         self.predicateList(subject)
         self.write(' .')
         return True
 
-    def s_squared(self, subject):  # XXX ordering issues start here
+    def s_squared(self, subject):  # XXX unmodified, ordering issues start here
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         self.write('\n' + self.indent() + '[]')
         self.predicateList(subject)
         self.write(' .')
         return True
+
+    def genQname(self, uri, gen_prefix=False):
+        return super(CustomTurtleSerializer, self).genQname(uri, gen_prefix)
 
     def serialize(self, stream, base=None, encoding=None,
                   spacious=None, **args):
