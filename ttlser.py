@@ -3,7 +3,6 @@ import re
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
-from IPython import embed
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
@@ -12,7 +11,6 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
-
 
 # desired behavior (XXX does not match the implementation!
 # 1) if there is more than one entry at a level URIRef goes first natsorted then lists then predicate lists then subject lists
@@ -56,6 +54,14 @@ class CustomTurtleSerializer(TurtleSerializer):
                   OWL.AnnotationProperty,
                   OWL.Class,
                  ]
+
+    SECTIONS = {
+        0:'',
+        1:'',
+        2:'\n### Object Properties\n',
+        3:'\n### Annotation Properties\n',
+        4:'\n### Classes\n',
+    }
 
     predicateOrder = [RDF.type,
                       OWL.onProperty,
@@ -102,7 +108,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.node_rank = {}
         def recurse(node, rank):  # XXX warning: cycles?
             for s in self.store.subjects(None, node):
-                if isinstance(s, BNode):  # w/o this we break recurnsion limit
+                if isinstance(s, BNode):  # w/o this we break recursion limit
                     if s not in self.node_rank:
                         self.node_rank[s] = rank
                     else:
@@ -112,13 +118,13 @@ class CustomTurtleSerializer(TurtleSerializer):
         for o, r in self.object_rank.items():
             recurse(o, r)
 
-    def _bnKey(self, bnode):
+    def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
             return self.node_rank[bnode]
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
-    def startDocument(self):
+    def startDocument(self):  # modified to natural sort prefixes
         self._started = True
         ns_list = sorted(self.namespaces.items(), key=lambda kv: (natsort(kv[0]), kv[1]))
         for prefix, uri in ns_list:
@@ -126,7 +132,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if ns_list and self._spacious:
             self.write('\n')
 
-    def orderSubjects(self):  # copied over to enable natural sort of subjects
+    def orderSubjects(self):  # modified to enable natural sort of subjects
         seen = {}
         subjects = []
 
@@ -135,10 +141,12 @@ class CustomTurtleSerializer(TurtleSerializer):
                 m = self.store.qname(m)
             return natsort(m)
 
-        for classURI in self.topClasses:
+        for i, classURI in enumerate(self.topClasses):
             members = list(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
+            subjects.append(i)  # DANGER?
+            print(i)
             for member in members:
                 subjects.append(member)
                 self._topLevels[member] = True
@@ -149,13 +157,13 @@ class CustomTurtleSerializer(TurtleSerializer):
              self._references[subject], subject)
             for subject in self._subjects if subject not in seen]
 
-        recursable.sort(key=lambda t: self._bnKey(t[-1]))
+        recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
 
         subjects.extend([subject for (isbnode, refs, subject) in recursable])
 
         return subjects
 
-    def predicateList(self, subject, newline=False):
+    def _predicateList(self, subject, newline=False):  # XXX unmodified
         properties = self.buildPredicateHash(subject)
         propList = self.sortProperties(properties)
         if len(propList) == 0:
@@ -167,13 +175,12 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.verb(predicate, newline=True)
             self.objectList(properties[predicate])
 
-    def sortProperties(self, properties):
+    def sortProperties(self, properties):  # modified to sort objects using their global rank
         """Take a hash from predicate uris to lists of values.
            Sort the lists of values.  Return a sorted list of properties."""
         # Sort object lists
         for prop, objects in properties.items():
-            #objects.sort()  # correctly sorts Literals
-            objects.sort(key=self._bnKey)
+            objects.sort(key=self._globalSortKey)
 
         # Make sorted list of properties
         propList = []
@@ -190,7 +197,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 seen[prop] = True
         return propList
 
-    def buildPredicateHash(self, subject):
+    def _buildPredicateHash(self, subject):  # XXX unmodified
         """
         Build a hash key by predicate to a list of objects for the given
         subject
@@ -203,7 +210,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return properties
 
-    def doList(self, l):
+    def doList(self, l):  # modified to put rdf list items on new lines
         while l:
             item = self.store.value(l, RDF.first)
             if item is not None:
@@ -212,13 +219,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                 self.subjectDone(l)
             l = self.store.value(l, RDF.rest)
 
-    def p_default(self, node, position, newline=False):  # XXX unmodified
+    def _p_default(self, node, position, newline=False):  # XXX unmodified
         if position != SUBJECT and not newline:
             self.write(' ')
         self.write(self.label(node, position))
         return True
 
-    def p_squared(self, node, position, newline=False):  # XXX unmodified
+    def _p_squared(self, node, position, newline=False):  # XXX unmodified
         if (not isinstance(node, BNode)
                 or node in self._serialized
                 or self._references[node] > 1
@@ -249,14 +256,14 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return True
 
-    def s_default(self, subject):  # XXX unmodified, ordering issues start here
+    def _s_default(self, subject):  # XXX unmodified, ordering issues start here
         self.write('\n' + self.indent())
         self.path(subject, SUBJECT)
         self.predicateList(subject)
         self.write(' .')
         return True
 
-    def s_squared(self, subject):  # XXX unmodified, ordering issues start here
+    def _s_squared(self, subject):  # XXX unmodified, ordering issues start here
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         self.write('\n' + self.indent() + '[]')
@@ -264,8 +271,39 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(' .')
         return True
 
-    def serialize(self, stream, base=None, encoding=None,
+    def serialize(self, stream, base=None, encoding=None,  # modified to enable section headers
                   spacious=None, **args):
-        super(CustomTurtleSerializer, self).serialize(stream, base, encoding, spacious, **args)  # FIXME in the super the call to serializer.get very first thing, is what is dumping unwanted namespaces in???
-        stream.write(u"# serialized using the nifstd custom serializer\n".encode('ascii'))
+        self.reset()
+        self.stream = stream
+        self.base = base
+
+        if spacious is not None:
+            self._spacious = spacious
+
+        self.preprocess()
+        subjects_list = self.orderSubjects()
+
+        self.startDocument()
+
+        firstTime = True
+        sectionsDone = False
+        maxsec = max(self.SECTIONS)
+        for subject in subjects_list:
+            if not sectionsDone:
+                if subject in self.SECTIONS:
+                    self.write(self.SECTIONS[subject])
+                    if subject == maxsec:
+                        sectionsDone = True
+                    continue
+
+            if self.isDone(subject):
+                continue
+            if firstTime:
+                firstTime = False
+            if self.statement(subject) and not firstTime:
+                self.write('\n')
+
+        self.endDocument()
+        stream.write(u"\n".encode('ascii'))
+        stream.write(u"### Serialized using the nifstd custom serializer v1.0.0\n".encode('ascii'))
 
