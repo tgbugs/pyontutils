@@ -2,11 +2,12 @@
 """Format ontology files using a uniform ttl serializer from rdflib
 
 Usage:
-    ttlfmt <file>...
+    ttlfmt [-a] <file>...
 
 Options:
     -h --help       print this
     -v --verbose    do something fun!
+    -a --vanilla    use the regular rdflib turtle serializer
 
 """
 import os
@@ -20,6 +21,11 @@ def main():
     args = docopt(__doc__, version = "ttlfmt 0")
     print(args)
 
+    if args['--vanilla']:
+        outfmt = 'turtle'
+    else:
+        outfmt = 'nifttl'
+
     for file in args['<file>']:
         filepath = os.path.expanduser(file)
         _, ext = os.path.splitext(filepath)
@@ -31,7 +37,7 @@ def main():
         graph = rdflib.Graph()
         graph.parse(filepath, format=infmt)
         with open(filepath, 'wb') as f:
-            f.write(graph.serialize(format='nifttl'))
+            f.write(graph.serialize(format=outfmt))
     #embed()
     return
 
