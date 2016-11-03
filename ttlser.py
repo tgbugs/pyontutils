@@ -209,7 +209,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             item = self.store.value(l, RDF.first)
             if item is not None:
                 self.write('\n' + self.indent(1))
-                self.path(item, OBJECT)
+                self.path(item, OBJECT, newline=True)
                 self.subjectDone(l)
             l = self.store.value(l, RDF.rest)
 
