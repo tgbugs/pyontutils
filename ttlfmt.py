@@ -36,9 +36,9 @@ def main():
             infmt = None
         graph = rdflib.Graph()
         graph.parse(filepath, format=infmt)
+        out = graph.serialize(format=outfmt)
         with open(filepath, 'wb') as f:
-            f.write(graph.serialize(format=outfmt))
-    #embed()
+            f.write(out)
     return
 
 if __name__ == '__main__':
