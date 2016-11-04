@@ -19,6 +19,7 @@ sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
+CON = 'http://www.geneontology.org/formats/oboInOwl#consider'
 DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'  #FIXME also behaves as objectProperty :/
 AID =  'http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'
 IRBC = 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#isReplacedByClass'
@@ -55,6 +56,24 @@ manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, se
           'NIFGA:birnlex_864':'UBERON:0014450',  # UBERON:0002994 is an alternate id for UBERON:0014450
           'NIFGA:birnlex_2524':'UBERON:0006725',  # UBERON:0028186 is an alternate id for UBERON:0006725
 
+          'NIFGA:nlx_anat_20081245':'UBERON:0002613',  # was previously deprecated without a replaced by
+          'NIFGA:birnlex_726':'UBERON:0001954',  # 726 was already deped, this is a good match detect by moar
+          'NIFGA:nlx_anat_20081252':'UBERON:0014473',  # already deprecated, found via moar
+          'NIFGA:nifext_15':'NOREP',  # does not exist
+
+          'NIFGA:birnlex_9':'NOREP',   # unused biopysical imateral entitiy
+
+          # affernt roles that were never well developed
+          'NIFGA:nlx_anat_1010':'NOREP',
+          'NIFGA:nlx_anat_1011003':'NOREP',
+          'NIFGA:nlx_anat_1011004':'NOREP',
+          'NIFGA:nlx_anat_1011005':'NOREP',
+          'NIFGA:nlx_anat_1011006':'NOREP',
+          'NIFGA:nlx_anat_1011007':'NOREP',
+          'NIFGA:nlx_anat_1011008':'NOREP',
+          'NIFGA:nlx_anat_1011009':'NOREP',
+          'NIFGA:nlx_anat_1011010':'NOREP',
+          'NIFGA:nlx_anat_1011011':'NOREP',
          }
 
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
@@ -216,8 +235,8 @@ def print_report(report, fetch=False):
     for eid, r in report.items():
         out = ('**************** Report for {} ****************'
                '\n\tNRID: {NRID}\n\tURID: {URID} {UDEP}\n\tMATCH: {MATCH}\n')
-        if not r['MATCH']:
-            print(out.format(eid, **r))
+        #if not r['MATCH']:
+        print(out.format(eid, **r))
 
         if fetch:
             scigPrint.pprint_node(sgg.getNode('NIFGA:' + eid))
@@ -325,7 +344,7 @@ def make_neurolex_graph():
 
     return additional_edges
 
-def do_report(nif_bridge, ub_bridge):
+def do_report(nif_bridge, ub_bridge, irbcs):
     report = {}
     for existing_id, nif_uberon_id in nif_bridge.items():
         cr = {}
@@ -337,7 +356,13 @@ def do_report(nif_bridge, ub_bridge):
         else:
             cr['NRID'] = nif_uberon_id
 
-        if existing_id in ub_bridge:
+        if 'NIFGA:' + existing_id in manual:
+            cr['URID'] = ''
+            if nif_uberon_id == 'NOREP':
+                match = False
+            else:
+                match = 'MANUAL'
+        elif existing_id in ub_bridge:
             ub_uberon_id = ub_bridge[existing_id]
             cr['URID'] = ub_uberon_id
             if type(nif_uberon_id) == tuple:
@@ -349,6 +374,11 @@ def do_report(nif_bridge, ub_bridge):
                 match = False
             else:
                 match = True
+        elif 'NIFGA:' + existing_id in irbcs:
+            er, ub = irbcs['NIFGA:' + existing_id]
+            cr['NRID'] = er
+            cr['URID'] = ub
+            match = 'EXISTING REPLACED BY (%s -> %s -> %s)' % (existing_id, er, ub)
 
         else:
             match = False
@@ -363,7 +393,7 @@ def do_report(nif_bridge, ub_bridge):
 
     return report
 
-def make_nifga_graph():
+def make_nifga_graph(_doprint=False):
     # use equivalent class mappings to build a replacement mapping
     g = rdflib.Graph()
     g.parse(nifga_path, format='turtle')
@@ -377,6 +407,7 @@ def make_nifga_graph():
     replaced_by = {}
     exact = {}
     internal_equivs = {}
+    irbcs = {}
     #edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
     def equiv(curie, label):
         if curie in manual:
@@ -415,18 +446,31 @@ def make_nifga_graph():
             node = sgg.getNode(curie)['nodes'][0]
             if OWL.deprecated.toPython() in node['meta']:
                 print('THIS CLASS IS DEPRECATED', curie)
+                lbl = node['lbl']
+                if lbl.startswith('Predominantly white regional') or lbl.startswith('Predominantly gray regional'):
+                    print('\tHE\'S DEAD JIM!', lbl, node['id'])
+                    replaced_by[curie] = 'NOREP'
                 if IRBC in node['meta']:
                     existing_replaced = node['meta'][IRBC][0]
                     ec2 = sgg.getNeighbors(existing_replaced, relationshipType='equivalentClass')
-                    print('FOUND ONE', existing_replaced)
-                    scigPrint.pprint_node(sgg.getNode(existing_replaced))
+                    print('\tFOUND ONE', existing_replaced)
+                    #scigPrint.pprint_node(sgg.getNode(existing_replaced))
                     if ec2['edges']:  # pass the buck if we can
+                        print('\t',end='')
                         scigPrint.pprint_edge(ec2['edges'][0])
                         rb = ec2['edges'][0]['obj']
-                        print('PASSING BUCK : (%s -> %s -> %s)' % (curie, existing_replaced, rb))
+                        print('\tPASSING BUCK : (%s -> %s -> %s)' % (curie, existing_replaced, rb))
+                        irbcs[curie] = (existing_replaced, rb)
                         replaced_by[curie] = rb
+                        return nodes
                     else:
-                        print('ERROR: could not pass buck, we are at a dead end')  # TODO
+                        er_node = sgv.findById(existing_replaced)
+                        if not er_node['deprecated']:
+                            if not er_node['curie'].startswith('NIFGA:'):
+                                print('\tPASSING BUCK : (%s -> %s)' % (curie, er_node['curie']))
+                                return nodes
+
+                        print('\tERROR: could not pass buck, we are at a dead end at', er_node)  # TODO
                     print()
 
             moar = [t for t in sgv.findByTerm(label) if t['curie'].startswith('UBERON')]
@@ -442,13 +486,21 @@ def make_nifga_graph():
                     ns = sgg.getNode(node['curie'])
                     assert len(ns['nodes']) == 1, "WTF IS GOING ON %s" % node['curie']
                     ns = ns['nodes'][0]
-                    if DBX in ns['meta']:
-                        print(' ' * 8, node['curie'], ns['meta'][DBX],
-                              node['labels'][0], node['synonyms'])
+                    if _doprint:
+                        print('Found putative replacement in moar: (%s -> %s)' % (curie, ns['id']))
+                        if DBX in ns['meta']:
+                            print(' ' * 8, node['curie'], ns['meta'][DBX],
+                                  node['labels'][0], node['synonyms'])
 
-                    if AID in ns['meta']:
-                        print(' ' * 8, node['curie'], ns['meta'][AID],
-                              node['labels'][0], node['synonyms'])
+                        if AID in ns['meta']:
+                            print(' ' * 8, node['curie'], ns['meta'][AID],
+                                  node['labels'][0], node['synonyms'])
+
+                        if CON in ns['meta']:
+                            print(' ' * 8, node['curie'], ns['meta'][CON],
+                                  node['labels'][0], node['synonyms'])
+
+
 
                     #else:
                         #print(' ' * 8, 'NO DBXREF', node['curie'],
@@ -477,12 +529,12 @@ def make_nifga_graph():
     #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches])  # give the deped a shot!
     equivs = [equiv(c['curie'], c['labels'][0]) for c in matches]  # async causes print issues :/
 
-    return g, matches, exact, internal_equivs, replaced_by
+    return g, matches, exact, internal_equivs, irbcs, replaced_by
 
 def main():
     u_replaced_by = make_uberon_graph()
     additional_edges = make_uberon_graph()
-    g, matches, exact, internal_equivs, replaced_by = make_nifga_graph()
+    g, matches, exact, internal_equivs, irbcs, replaced_by = make_nifga_graph()
 
     #review_norep([m['curie'] for m in matches if m['deprecated']])
     #review_reps(exact)  # these all look good
@@ -504,43 +556,81 @@ def main():
     bridge.write()
     graph.write()
 
-    trees = print_trees(graph, bridge)
+    #trees = print_trees(graph, bridge)
 
     # we do this because each of these have different prefixes :(
     nif_bridge = {k.split(':')[1]:v for k, v in replaced_by.items()}  # some are still None
     ub_bridge = {k.split(':')[1]:v for k, v in u_replaced_by.items()}
 
-    report = do_report(nif_bridge, ub_bridge)
+    report = do_report(nif_bridge, ub_bridge, irbcs)
 
     double_checked = {i:r for i, r in report.items() if r['MATCH']}  # aka exact from above
+    dc_erb = {k:v for k, v in double_checked.items() if v['NRID'] != v['URID']}
+
     no_match = {i:r for i, r in report.items() if not r['MATCH']}
     no_match_udep = {i:r for i, r in no_match.items() if r['UDEP']}
-    no_match_no_udep = {i:r for i, r in no_match.items() if not r['UDEP']}
+    no_match_not_udep = {i:r for i, r in no_match.items() if not r['UDEP']}
+    no_match_not_udep_region = {i:r for i, r in no_match.items()
+                                   if not r['UDEP'] and (
+                               sgv.findById('NIFGA:' + i)['labels'][0].startswith('Regional') or
+                               sgv.findById('NIFGA:' + i)['labels'][0].startswith('Predominantly gray regional') or
+                               sgv.findById('NIFGA:' + i)['labels'][0].startswith('Predominantly white regional')
+                                   )}
+    no_match_not_udep_not_region = {i:r for i, r in no_match.items()
+                                   if not r['UDEP'] and (
+                                   not sgv.findById('NIFGA:' + i)['labels'][0].startswith('Regional') and
+                                   not sgv.findById('NIFGA:' + i)['labels'][0].startswith('Predominantly gray regional') and
+                                   not sgv.findById('NIFGA:' + i)['labels'][0].startswith('Predominantly white regional')
+                                  )}
     no_replacement = {i:r for i, r in report.items() if not r['NRID']}
     very_bad = {i:r for i, r in report.items() if not r['MATCH'] and r['URID'] and not r['UDEP']}
 
     fetch = True
     #print('\n>>>>>>>>>>>>>>>>>>>>>> No match uberon dep reports\n')
     #print_report(no_match_udep, fetch)  # These are all dealt with correctly in do_deprecation
-    print('\n>>>>>>>>>>>>>>>>>>>>>> No match not dep reports\n')
-    print_report(no_match_no_udep, fetch)
+
+    print('\n>>>>>>>>>>>>>>>>>>>>>> Existing Replaced by\n')
+    #print_report(dc_erb)
+
+    #print('\n>>>>>>>>>>>>>>>>>>>>>> No match not dep reports\n')
+    #print_report(no_match_not_udep, fetch)
+
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match not dep +region reports\n')
+    #print_report(no_match_not_udep_region, fetch)
+
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match not dep -region reports\n')
+    #print_report(no_match_not_udep_not_region, fetch)
+
     print('\n>>>>>>>>>>>>>>>>>>>>>> No replace reports\n')
     #print_report(no_replacement, fetch)
-    print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
-    print_report(very_bad, fetch)
 
+    print('\n>>>>>>>>>>>>>>>>>>>>>> No match and not deprecated reports\n')
+    #print_report(very_bad, fetch)
+
+    print('Total count', len(nif_bridge))
     print('Match count', len(double_checked))
     print('No Match count', len(no_match))
     print('No Match +udep count', len(no_match_udep))
-    print('No Match -udep count', len(no_match_no_udep))
+    print('No Match -udep count', len(no_match_not_udep))
+    print('No Match -udep +region count', len(no_match_not_udep_region))
+    print('No Match -udep -region count', len(no_match_not_udep_not_region))
     print('No replace count', len(no_replacement))  # there are none with a URID and no NRID
     print('No match not deprecated count', len(very_bad))
+    print('Mismatch between No match and No replace', set(no_match_not_udep) ^ set(no_replacement))
+
+    assert len(nif_bridge) == len(double_checked) + len(no_match)
+    assert len(no_match) == len(no_match_udep) + len(no_match_not_udep)
+    assert len(no_match_not_udep) == len(no_match_not_udep_region) + len(no_match_not_udep_not_region)
+
+    #[scigPrint.pprint_node(sgg.getNode('NIFGA:' + _)) for _ in no_match_not_udep_not_region]
+    print('>>>>>>>>>>>>> Deprecated')
+    [scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
+     for _ in no_match_not_udep_not_region if sgv.findById('NIFGA:' + _)['deprecated']]
+    print('>>>>>>>>>>>>> Not deprecated')
+    [scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
+     for _ in sorted(no_match_not_udep_not_region) if not sgv.findById('NIFGA:' + _)['deprecated']]
 
     embed()
-
-
-
-
 
 if __name__ == '__main__':
     main()
