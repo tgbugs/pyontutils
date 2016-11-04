@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.5
 import re
+from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
@@ -55,14 +56,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                   OWL.Class,
                  ]
 
-    SECTIONS = {
-        0:'',
-        1:'',
-        2:'\n### Object Properties\n',
-        3:'\n### Annotation Properties\n',
-        4:'\n### Classes\n',
-        5:'\n### Annotations\n',
-    }
+    SECTIONS = ('',
+                '',
+                '\n### Object Properties\n',
+                '\n### Annotation Properties\n',
+                '\n### Classes\n',
+                '\n### Annotations\n',
+               )
 
     predicateOrder = [RDF.type,
                       OWL.onProperty,
@@ -135,7 +135,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def orderSubjects(self):  # modified to enable natural sort of subjects
         seen = {}
-        subjects = []
+        sections = []
 
         def key(m):
             if not isinstance(m, BNode):
@@ -146,12 +146,12 @@ class CustomTurtleSerializer(TurtleSerializer):
             members = list(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
-            if members:
-                subjects.append(i)  #XXX DANGER?
+            subjects = []
             for member in members:
                 subjects.append(member)
                 self._topLevels[member] = True
                 seen[member] = True
+            sections.append(subjects)
 
         recursable = [
             (isinstance(subject, BNode),
@@ -160,16 +160,10 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
 
-        subjects.extend([subject for (isbnode, refs, subject) in recursable if isbnode])
-        annotation_targets = [subject for (isbnode, refs, subject) in recursable if not isbnode]
-        if annotation_targets:
-            self.maxsec = i + 1
-            subjects.append(self.maxsec)
-            subjects.extend(annotation_targets)
-        else:
-            self.maxsec = i
+        sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode])  # group bnodes with classes
+        sections.append([subject for (isbnode, refs, subject) in recursable if not isbnode])  # annotation targets
 
-        return subjects
+        return sections
 
     def _predicateList(self, subject, newline=False):  # XXX unmodified
         properties = self.buildPredicateHash(subject)
@@ -289,28 +283,24 @@ class CustomTurtleSerializer(TurtleSerializer):
             self._spacious = spacious
 
         self.preprocess()
-        subjects_list = self.orderSubjects()
+        sections_list = self.orderSubjects()
 
         self.startDocument()
 
         firstTime = True
-        sectionsDone = False
-        for subject in subjects_list:
-            if not sectionsDone:  # exceptionally inefficient :/
-                if subject in self.SECTIONS:
-                    self.write(self.SECTIONS[subject])
-                    if subject == self.maxsec:
-                        sectionsDone = True
+        for header, subjects_list in zip(self.SECTIONS, sections_list):
+            if subjects_list:
+                self.write(header)
+            for subject in subjects_list:
+                if self.isDone(subject):
                     continue
-
-            if self.isDone(subject):
-                continue
-            if firstTime:
-                firstTime = False
-            if self.statement(subject) and not firstTime:
-                self.write('\n')
+                if firstTime:
+                    firstTime = False
+                if self.statement(subject) and not firstTime:
+                    self.write('\n')
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write(u"### Serialized using the nifstd custom serializer v1.0.0\n".encode('ascii'))
+        NOW = datetime.isoformat(datetime.utcnow())
+        stream.write((u"### Serialized at %s using the nifstd custom serializer v1.0.0\n" % NOW).encode('ascii'))
 
