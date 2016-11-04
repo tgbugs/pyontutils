@@ -61,6 +61,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         2:'\n### Object Properties\n',
         3:'\n### Annotation Properties\n',
         4:'\n### Classes\n',
+        5:'\n### Annotations\n',
     }
 
     predicateOrder = [RDF.type,
@@ -141,7 +142,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 m = self.store.qname(m)
             return natsort(m)
 
-        for i, classURI in enumerate(self.topClasses):
+        for i, classURI in enumerate(self.topClasses):  # SECTIONS
             members = list(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
@@ -159,7 +160,14 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
 
-        subjects.extend([subject for (isbnode, refs, subject) in recursable])
+        subjects.extend([subject for (isbnode, refs, subject) in recursable if isbnode])
+        annotation_targets = [subject for (isbnode, refs, subject) in recursable if not isbnode]
+        if annotation_targets:
+            self.maxsec = i + 1
+            subjects.append(self.maxsec)
+            subjects.extend(annotation_targets)
+        else:
+            self.maxsec = i
 
         return subjects
 
@@ -287,12 +295,11 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         firstTime = True
         sectionsDone = False
-        maxsec = max(self.SECTIONS)
         for subject in subjects_list:
-            if not sectionsDone:
+            if not sectionsDone:  # exceptionally inefficient :/
                 if subject in self.SECTIONS:
                     self.write(self.SECTIONS[subject])
-                    if subject == maxsec:
+                    if subject == self.maxsec:
                         sectionsDone = True
                     continue
 
