@@ -56,6 +56,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     topClasses = [RDFS.Class,
                   OWL.Ontology,
                   OWL.ObjectProperty,
+                  RDFS.Datatype,
                   OWL.AnnotationProperty,
                   OWL.Class,
                  ]
@@ -63,6 +64,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     SECTIONS = ('',
                 '',
                 '\n### Object Properties\n',
+                '\n### Datatypes\n',
                 '\n### Annotation Properties\n',
                 '\n### Classes\n',
                 '\n### Annotations\n',
@@ -126,7 +128,14 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
-            return self.node_rank[bnode]
+            try:
+                return self.node_rank[bnode]
+            except KeyError as e : 
+                # This is what we have to contend with here :/
+                # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
+                print('WARNING: some node that is an object isnt really an object?')
+                print(e)
+                return -1
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
@@ -307,5 +316,5 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
         NOW = datetime.isoformat(datetime.utcnow())
-        stream.write((u"### Serialized at %s using the nifstd custom serializer v1.0.0\n" % NOW).encode('ascii'))
+        stream.write((u"### Serialized at %s using the nifstd custom serializer v1.0.1\n" % NOW).encode('ascii'))
 
