@@ -58,7 +58,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                   OWL.ObjectProperty,
                   RDFS.Datatype,
                   OWL.AnnotationProperty,
+                  OWL.DatatypeProperty,
                   OWL.Class,
+                  OWL.NamedIndividual,
+                  OWL.AllDifferent,
                  ]
 
     SECTIONS = ('',
@@ -66,7 +69,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                 '\n### Object Properties\n',
                 '\n### Datatypes\n',
                 '\n### Annotation Properties\n',
+                '\n### Data Properties\n',
                 '\n### Classes\n',
+                '\n### Individuals\n',
+                '\n### Axioms\n',
                 '\n### Annotations\n',
                )
 
