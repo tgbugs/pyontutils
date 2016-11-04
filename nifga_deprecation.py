@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.5
 
-# this should be run at NIF-Ontology 24a94ea70712b8084202e32eb9619a0237b89dc0
+# this should be run at NIF-Ontology 9ef5b9e63d60f92cd01733be9d480ac3e5aee31c
 
 # TODO need to retrieve the FMA hierarchy...
 
