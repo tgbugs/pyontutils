@@ -14,6 +14,7 @@ from IPython import embed
 from scigraph_client import Vocabulary, Graph
 from utils import scigPrint, makePrefixes, makeGraph, async_getter, TermColors as tc
 from hierarchies import creatTree, flatten
+from parcellation import OntMeta, TODAY
 
 sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
 sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
@@ -139,7 +140,17 @@ def review_norep(list_):
         scigPrint.pprint_node(n)
 
 def do_deprecation(replaced_by, g, additional_edges, conflated):
+    bmeta = OntMeta('http://ontology.neuinfo.org/NIF/ttl/bridge/',
+                  'uberon-bridge',
+                  'NIFSTD Uberon Bridge',
+                  'UBERON Bridge',
+                  ('This is the bridge file that holds local NIFSTD additions to uberon. '
+                   'This is also staging for any changes that we want to push upstream.'),
+                  TODAY)
+    ontid = bmeta.path + bmeta.filename + '.ttl'
     bridge = makeGraph('uberon-bridge', PREFIXES)
+    bridge.add_ont(ontid, *bmeta[2:])
+
     graph = makeGraph('NIF-GrossAnatomy', NIFPREFIXES, graph=g)
     #graph.g.namespace_manager._NamespaceManager__cache = {}
     #g.namespace_manager.bind('UBERON','http://purl.obolibrary.org/obo/UBERON_')  # this has to go in again because we reset g FIXME
