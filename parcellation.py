@@ -79,6 +79,7 @@ DEFSPECIES = 'ilx:definedForSpecies'
 DEVSTAGE = 'ilx:definedForDevelopmentalStage'
 PARTOF = 'ilx:partOf'
 HASPART = 'ilx:hasPart'
+DELINEATEDBY = 'ilx:delineatedBy'
 
 # classes
 ADULT = 'NIFORG:birnlex_681'
