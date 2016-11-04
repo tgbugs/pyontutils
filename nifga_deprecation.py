@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.5
 
-# this should be run at NIF-Ontology 93bc1f9643d4ed2c9f14539adb8f3e8bc2df81c5
+# this should be run at NIF-Ontology 24a94ea70712b8084202e32eb9619a0237b89dc0
 
 # TODO need to retrieve the FMA hierarchy...
 
@@ -8,10 +8,11 @@ import os
 from collections import defaultdict, namedtuple
 import rdflib
 from rdflib import URIRef, RDFS, RDF, OWL
+from rdflib.namespace import SKOS
 import requests
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
-from utils import scigPrint, makeGraph, async_getter, TermColors as tc
+from utils import scigPrint, makePrefixes, makeGraph, async_getter, TermColors as tc
 from hierarchies import creatTree, flatten
 
 sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
@@ -24,24 +25,26 @@ DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'  #FIXME also beha
 AID =  'http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'
 IRBC = 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#isReplacedByClass'
 
-PREFIXES = {
-    'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
-    'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
-    'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-    'ro':'http://www.obofoundry.org/ro/ro.owl#',
-    'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
-    'owl':'http://www.w3.org/2002/07/owl#',  # FIXME why is this missing?!
-}
+PREFIXES = makePrefixes('UBERON',
+                        'ro',
+                        'owl',
+                        'skos',
+                       )
+NIFPREFIXES = makePrefixes('NIFGA',
+                           'oboInOwl',
+                           'replacedBy',
+                          )
 
+NIFPREFIXES.update(PREFIXES)
 
 nifga_path = os.path.expanduser('~/git/NIF-Ontology/ttl/NIF-GrossAnatomy.ttl')
 uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
 uberon_bridge_path = 'http://berkeleybop.org/ontologies/uberon/bridge/uberon-bridge-to-nifstd.owl'
 #bridge_path = os.path.expanduser('~/git/NIF-Ontology/ttl/uberon-bridge-to-nifstd.ttl')  # scigraph's got us
 
-uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
-                   'UBERON:0014606',  # replaced by UBERON:0002434
-                  }
+#uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
+                   #'UBERON:0014606',  # replaced by UBERON:0002434
+                  #}
 # TODO need to unpapck all the oboInOwl:hasAlternativeId entries for the purposes of resolution... (madness)
 manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, see note on UBERON:0034918
           'NIFGA:birnlex_1248':'UBERON:0002434',  # fix for what is surely and outdated bridge
@@ -76,9 +79,36 @@ manual = {'NIFGA:nlx_144456':'UBERON:0034918',  # prefer over UBERON:0002565, se
           'NIFGA:nlx_anat_1011011':'NOREP',
          }
 
+preflabs = (  # pulled from conflated
+    'NIFGA:birnlex_2596',
+    'NIFGA:birnlex_4101',
+    'NIFGA:birnlex_1184',
+    'NIFGA:birnlex_703',
+    'NIFGA:birnlex_1117',
+    'NIFGA:nlx_143552',
+    'NIFGA:birnlex_1341',
+    'NIFGA:birnlex_1335',
+    'NIFGA:birnlex_1400',
+    'NIFGA:birnlex_1519',  # NOTE: nerve root and nerve fiber bundle are being conflated...
+    'NIFGA:birnlex_1277',
+    'NIFGA:birnlex_2523',
+    'NIFGA:birnlex_2528',  # a real exact duple with 2529 apparently
+    'NIFGA:birnlex_2651',  # a real exact duple with 2654 apparently
+    'NIFGA:nlx_anat_20081224',  # other option is 'NIFGA:birnlex_932' -> Lingula
+    'NIFGA:nlx_anat_20081235',  # other option is 'NIFGA:birnlex_1165' -> Nodulus
+    'NIFGA:birnlex_1588',
+    'NIFGA:birnlex_1106',
+    'NIFGA:birnlex_1582',
+    'NIFGA:birnlex_1589',
+    'NIFGA:birnlex_1414',
+    'NIFGA:birnlex_4081',
+)
+
+
 cross_over_issues = 'NIFSUB:nlx_subcell_100205'
 wat = 'NIFGA:nlx_144456'
 
+anns_to_port = []  # (SKOS.prefLabel, )  # skipping this for now :/
 
 def invert(dict_):
     output = defaultdict(list)
@@ -108,12 +138,9 @@ def review_norep(list_):
         n = sgg.getNode(curie)
         scigPrint.pprint_node(n)
 
-def do_deprecation(replaced_by, g, additional_edges):
-    ubpref = {'ilx':'http://uri.interlex.org/base/',
-              'NLXWIKI':'http://neurolex.org/wiki/'}
-    ubpref.update(PREFIXES)
-    bridge = makeGraph('uberon-bridge', ubpref)
-    graph = makeGraph('NIF-GrossAnatomy', PREFIXES, graph=g)
+def do_deprecation(replaced_by, g, additional_edges, conflated):
+    bridge = makeGraph('uberon-bridge', PREFIXES)
+    graph = makeGraph('NIF-GrossAnatomy', NIFPREFIXES, graph=g)
     #graph.g.namespace_manager._NamespaceManager__cache = {}
     #g.namespace_manager.bind('UBERON','http://purl.obolibrary.org/obo/UBERON_')  # this has to go in again because we reset g FIXME
     udone = set('NOREP')
@@ -145,7 +172,7 @@ def do_deprecation(replaced_by, g, additional_edges):
         edges = resp['edges']
         if nifga in additional_edges:
             edges.append(additional_edges[nifga])
-        include = False
+        include = False  # set this to True when running anns
         for edge in edges:  # FIXME TODO hierarchy extraction and porting
             #print(edge)
             if udepr:  # skip everything if uberon is deprecated
@@ -174,7 +201,6 @@ def do_deprecation(replaced_by, g, additional_edges):
             elif pred == 'ilx:partOf':
                 hier = True
                 include = True
-
 
             if sub == nifga:
                 try:
@@ -207,14 +233,29 @@ def do_deprecation(replaced_by, g, additional_edges):
                     #bridge.add_node(sub, pred, uberon)
                     pass
 
-        if uberon not in udone and include:
+        if False and uberon not in udone and include:  # skip porting annotations and labels for now
+            #udone.add(uberon)
             try:
                 label = sgv.findById(uberon)['labels'][0]
             except IndexError:
                 WAT = sgv.findById(uberon)
                 embed()
             bridge.add_class(uberon, label=label)
-            udone.add(uberon)
+
+            # annotations to port
+            for p in anns_to_port:
+                os_ = list(graph.g.objects(graph.expand(nifga), p))
+                for o in os_:
+                    if label.lower() != o.lower():  # we can simply capitalize labels
+                        print(label.lower())
+                        print(o.lower())
+                        print()
+                        bridge.add_node(uberon, p, o)
+
+                if p == SKOS.prefLabel and not os_:
+                    if uberon not in conflated or (uberon in conflated and nifga in preflabs):
+                        l = list(graph.g.objects(graph.expand(nifga), RDFS.label))[0]
+                        bridge.add_node(uberon, SKOS.prefLabel, l)  # port label to prefLabel if no prefLabel
 
     for nifga, uberon in replaced_by.items():
         if type(uberon) == tuple:
@@ -315,7 +356,7 @@ def make_uberon_graph():
 def make_neurolex_graph():
     # neurolex test stuff
     nlxpref = {'ilx':'http://uri.interlex.org/base/'}
-    nlxpref.update(PREFIXES)
+    nlxpref.update(NIFPREFIXES)
     neurolex = makeGraph('neurolex-temp', nlxpref)
     neurolex.g.parse('/tmp/neurolex_basic.ttl', format='turtle')
 
@@ -351,8 +392,6 @@ def do_report(nif_bridge, ub_bridge, irbcs):
         cr['UDEP'] = ''
         if nif_uberon_id == 'NOREP':
             cr['NRID'] = ''
-        #elif nif_uberon_id == 'NODEP':
-            #cr['NRID'] = ''
         else:
             cr['NRID'] = nif_uberon_id
 
@@ -402,13 +441,11 @@ def make_nifga_graph(_doprint=False):
     classes = sorted([getQname(_) for _ in g.subjects(RDF.type, OWL.Class) if type(_) is URIRef])
     curies = ['NIFGA:' + n for n in classes if ':' not in n]
     matches = async_getter(sgv.findById, [(c,) for c in curies])
-    #tests = [n for n,t in zip(curies, matches) if not t]  # passed
 
     replaced_by = {}
     exact = {}
     internal_equivs = {}
     irbcs = {}
-    #edges = [e for e in sgg.getEdges(DBX, limit=999999)['edges'] if e['obj'].startswith(':')]
     def equiv(curie, label):
         if curie in manual:
             replaced_by[curie] = manual[curie]
@@ -432,17 +469,6 @@ def make_nifga_graph(_doprint=False):
                 else:
                     internal_equivs[curie] = id_
         elif not nodes:
-            # check if uberon has a xref edge that matches...
-            # seems like we already hit this in some other ways
-            #for e in edges:
-                #print(e, curie)
-                #if curie == 'NIFGA' + e['obj']:
-                    #print()
-                    #print('CANDIDATE EDGE REPLACE:')
-                    #print(e)
-                    #print()
-                    #break
-            # otherwise we go hunting
             node = sgg.getNode(curie)['nodes'][0]
             if OWL.deprecated.toPython() in node['meta']:
                 print('THIS CLASS IS DEPRECATED', curie)
@@ -481,8 +507,8 @@ def make_nifga_graph(_doprint=False):
                     print('WARNING', curie, label, [(m['curie'], m['labels'][0]) for m in moar])
 
                 for node in moar:
-                    if node['curie'] in uberon_obsolete:  # node['deprecated']?
-                        continue
+                    #if node['curie'] in uberon_obsolete:  # node['deprecated']?
+                        #continue
                     ns = sgg.getNode(node['curie'])
                     assert len(ns['nodes']) == 1, "WTF IS GOING ON %s" % node['curie']
                     ns = ns['nodes'][0]
@@ -500,12 +526,6 @@ def make_nifga_graph(_doprint=False):
                             print(' ' * 8, node['curie'], ns['meta'][CON],
                                   node['labels'][0], node['synonyms'])
 
-
-
-                    #else:
-                        #print(' ' * 8, 'NO DBXREF', node['curie'],
-                              #node['labels'][0], node['synonyms'])
-                        #pass  # these are all to obsolote uberon classes
                     replaced_by[curie] = ns['id']
             else:
                 replaced_by[curie] = None
@@ -525,8 +545,6 @@ def make_nifga_graph(_doprint=False):
 
         return nodes
 
-    #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches if not c['deprecated']])
-    #equivs = async_getter(equiv, [(c['curie'], c['labels'][0]) for c in matches])  # give the deped a shot!
     equivs = [equiv(c['curie'], c['labels'][0]) for c in matches]  # async causes print issues :/
 
     return g, matches, exact, internal_equivs, irbcs, replaced_by
@@ -551,8 +569,20 @@ def main():
     # TODO predominately gray region -> just deprecate completely these cause pretty much all of the no_match problems
     # predominantly white regional part
     # TODO add comments in do_deprecation
+
+    asdf = {}
+    for n, u in replaced_by.items():
+        if u in asdf:
+            asdf[u].add(n)
+        else:
+            asdf[u] = {n}
+
+    deprecated = [_ for _ in replaced_by if sgv.findById(_)['deprecated']]
+    multi = {k:v for k, v in asdf.items() if len(v) > 1}
+    conflated = {k:[_ for _ in v if _ not in deprecated] for k, v in multi.items() if len([_ for _ in v if _ not in deprecated]) > 1 and k != 'NOREP'}
+    #_ = [print(k, sgv.findById(k)['labels'][0], '\n\t', [(_, sgv.findById(_)['labels'][0]) for _ in v]) for k, v in sorted(conflated.items())]
    
-    graph, bridge, uedges = do_deprecation(replaced_by, g, {})  # additional_edges)  # TODO
+    graph, bridge, uedges = do_deprecation(replaced_by, g, {}, conflated)  # additional_edges)  # TODO
     bridge.write()
     graph.write()
 
@@ -623,12 +653,12 @@ def main():
     assert len(no_match_not_udep) == len(no_match_not_udep_region) + len(no_match_not_udep_not_region)
 
     #[scigPrint.pprint_node(sgg.getNode('NIFGA:' + _)) for _ in no_match_not_udep_not_region]
-    print('>>>>>>>>>>>>> Deprecated')
-    [scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
-     for _ in no_match_not_udep_not_region if sgv.findById('NIFGA:' + _)['deprecated']]
-    print('>>>>>>>>>>>>> Not deprecated')
-    [scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
-     for _ in sorted(no_match_not_udep_not_region) if not sgv.findById('NIFGA:' + _)['deprecated']]
+    #print('>>>>>>>>>>>>> Deprecated')
+    #[scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
+     #for _ in no_match_not_udep_not_region if sgv.findById('NIFGA:' + _)['deprecated']]
+    #print('>>>>>>>>>>>>> Not deprecated')
+    #[scigPrint.pprint_node(sgg.getNode('NIFGA:' + _))
+     #for _ in sorted(no_match_not_udep_not_region) if not sgv.findById('NIFGA:' + _)['deprecated']]
 
     embed()
 

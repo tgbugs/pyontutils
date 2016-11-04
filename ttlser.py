@@ -13,6 +13,10 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
 
+# XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
+#     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
+#     will likely be the one that is called when NamespaceManager.compute_qname calls self.store.prefix
+
 # desired behavior (XXX does not match the implementation!
 # 1) if there is more than one entry at a level URIRef goes first natsorted then lists then predicate lists then subject lists
 # 2) sorting for nested structures in a list determined by
@@ -35,7 +39,7 @@ SUBJECT = 0
 VERB = 1
 OBJECT = 2
 
-def qname(self, uri):  # for monkey patching Graph
+def qname_mp(self, uri):  # for monkey patching Graph
     try:
         prefix, namespace, name = self.compute_qname(uri, False)
     except Exception:  # no prefix no problems
@@ -95,7 +99,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                      ]
 
     def __init__(self, store):
-        setattr(store.__class__, 'qname', qname)  # monkey patch to fix generate=True
+        setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         super(CustomTurtleSerializer, self).__init__(store)
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
