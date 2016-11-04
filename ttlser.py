@@ -100,6 +100,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def __init__(self, store):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
+        store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
