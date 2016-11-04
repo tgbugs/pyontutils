@@ -145,8 +145,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             members = list(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
-            subjects.append(i)  # DANGER?
-            print(i)
+            if members:
+                subjects.append(i)  #XXX DANGER?
             for member in members:
                 subjects.append(member)
                 self._topLevels[member] = True
