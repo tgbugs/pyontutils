@@ -19,7 +19,7 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 
 def main():
     args = docopt(__doc__, version = "ttlfmt 0")
-    print(args)
+    #print(args)
 
     if args['--vanilla']:
         outfmt = 'turtle'
@@ -34,6 +34,7 @@ def main():
             infmt = 'turtle'
         else:
             infmt = None
+        print(filepath)
         graph = rdflib.Graph()
         graph.parse(filepath, format=infmt)
         out = graph.serialize(format=outfmt)
