@@ -8,7 +8,7 @@ from utils import makeGraph, makePrefixes
 
 PREFIXES = makePrefixes('SCR', 'NIFMOL', 'NIFNEURON', 'NIFCELL', 'NIFGA', 'UBERON', 'PR', 'NIFNEURMOR', 'skos', 'owl')
 
-ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
               'ksdesc-defs',
               'Knolwedge Space Defs',
               'KSDEFS',
@@ -21,7 +21,6 @@ g.add_ont(ontid, *ont[2:])
 
 top_level = glob(os.path.expanduser('~/git/ksdesc/') + '*')
 
-id_def_dict = {}
 for putative_dir in top_level:
     if os.path.isdir(putative_dir):
         for putative_md in glob(putative_dir + '/*.md'):
