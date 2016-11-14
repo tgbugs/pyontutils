@@ -8,13 +8,14 @@ import requests
 from scigraph_client import Vocabulary, Graph
 from obo_io import OboFile, Header, Term, TVPair
 from IPython import embed
+from utils import makePrefixes, makeGraph
 
-v = Vocabulary()
-g = Graph()
+v = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
+g = Graph(cache=True, basePath='http://localhost:9000/scigraph')
 
 abagraph = rdflib.Graph()
-abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/abaslim.ttl'), format='turtle')
-abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/aba-bridge.ttl'), format='turtle')
+abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/generated/mbaslim.ttl'), format='turtle')
+abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/bridge/aba-bridge.ttl'), format='turtle')
 nses = {k:rdflib.Namespace(v) for k, v in abagraph.namespaces()}
 #nses['ABA'] = nses['MBA']  # enable quick check against the old xrefs
 syn_iri = nses['OBOANN']['synonym']
@@ -44,7 +45,7 @@ ids = set([ABA_PREFIX + str(r['id']) for r in resp['msg']])
 Query = namedtuple('Query', ['id','relationshipType', 'direction', 'depth'])
 #uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
 uberon = Query('UBERON:0001062', 'subClassOf', 'INCOMING', 10)  # anatomical entity
-output = g.getNeighbors(**uberon.__dict__)
+output = g.getNeighbors(**uberon._asdict())
 
 # TODO figure out the superclass that can actually get all the brain parts
 
@@ -159,5 +160,13 @@ print('total uberon terms checked:', len(uberon_labs))
 print('total aba terms:           ', len(abalabs))
 print('total uberon with aba xref:', len([a for a in u_a_map.values() if a]))
 
-#embed()
+ubridge = makeGraph('uberon-parcellation-mappings',prefixes=makePrefixes('ilx', 'UBERON', 'MBA'))
+for u, arefs in u_a_map.items():
+    if arefs:
+        # TODO check for bad assumptions here
+        ubridge.add_node(u, 'ilx:delineatedBy', arefs[0])
+        ubridge.add_node(arefs[0], 'ilx:delineates', u)
+
+ubridge.write()
+embed()
 
