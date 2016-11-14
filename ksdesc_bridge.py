@@ -6,7 +6,7 @@ from rdflib.namespace import SKOS
 from parcellation import OntMeta, TODAY
 from utils import makeGraph, makePrefixes
 
-PREFIXES = makePrefixes('SCR', 'NIFMOL', 'NIFNEURON', 'NIFCELL', 'NIFGA', 'UBERON', 'PR', 'NIFNEURMOR', 'skos', 'owl')
+PREFIXES = makePrefixes('SCR', 'MBA', 'NIFMOL', 'NIFNEURON', 'NIFCELL', 'NIFGA', 'UBERON', 'PR', 'NIFNEURMOR', 'skos', 'owl')
 
 ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
               'ksdesc-defs',
@@ -29,8 +29,10 @@ for putative_dir in top_level:
             with open(putative_md, 'rt') as f:
                 def_ = f.read()
 
-            if 'Definition' in def_:
-                def_ = def_.split('Definition', 1)[-1].strip().strip('=').strip()
+            for test in ('Description', 'Definition' ):
+                if test in def_:
+                    def_ = def_.split(test, 1)[-1].strip().strip('=').strip()
+                    break
 
             g.add_node(ident, SKOS.definition, def_)
 
