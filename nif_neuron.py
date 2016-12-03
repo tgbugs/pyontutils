@@ -19,6 +19,9 @@ sgv = Vocabulary(cache=True)
 
 # TODO future workflow: existing representation -> bags -> owl
 # vastly preferred to the current nightmare
+# the main things we need for the first arrow is a nice way to
+# map to names of known phenotypes, so we need to load NNP and make sure
+# for the second arrow we basically need to improve neuronManager
 
 # consts
 defined_class_parent = 'ilx:definedClassNeurons'
@@ -649,7 +652,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
     ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
-    replace_object('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype', ng)
+    ng.replace_uriref('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype')
 
     #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
     defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -744,8 +747,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand(NIFCELL_NEURON))
-    defined_graph.write(convert=False)
-    ng.write(convert=False)
+    defined_graph.write()
+    ng.write()
 
     for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('OBOANN:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -1327,12 +1330,13 @@ class neuronManager:
             SELECT DISTINCT ?match WHERE {
             %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
             ?item rdf:type owl:Restriction .
-            { ?item owl:onProperty %s } UNION { ?item owl:onProperty %s }
+            ?prop rdfs:subPropertyOf* %s .
+            ?item owl:onProperty ?prop .
             ?item owl:someValuesFrom ?match . }""" % (qname,
-                                                      'ilx:hasExpressionPhenotype',
-                                                      'ilx:hasPhenotype')
+                                                      'ilx:hasPhenotype',)
             print(qstring)
             out = list(self.g.g.query(qstring))
+            print(out)
             assert len(out) == 1, "%s" % out
             return out[0]
 
