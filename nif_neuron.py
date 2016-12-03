@@ -611,7 +611,9 @@ def _rest_make_phenotypes():
 #@profile_me
 def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     ilx_start = ilx_start_
-    cheating = {'vasoactive intestinal peptide':'VIP',}
+    cheating = {'vasoactive intestinal peptide':'VIP',
+                'star':None,  # is a morphological phen that is missing but hits scigraph
+               }
     ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
 
     #""" It seemed like a good idea at the time...
@@ -653,6 +655,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
+    ng.add_node(ontid, rdflib.OWL.imports, base + 'hbp-special.ttl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
@@ -1212,12 +1215,14 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
     t = table1(graph, rows, syn_mappings, ilx_start)
+    ilx_start = t.ilx_start
 
-    with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
-        rows = [list(r) for r in zip(*csv.reader(f))]
+    #with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
+        #rows = [list(r) for r in zip(*csv.reader(f))]
+    # adding fake mouse data
     #table2 = type('table2', (table1,), {'species':'NCBITaxon:10090'})
-    t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
-    ilx_start = t2.ilx_start
+    #t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
+    #ilx_start = t2.ilx_start
 
     def do_graph(d):
         sgt = graph.expand(d['curie'])
@@ -1338,9 +1343,8 @@ class neuronManager:
             ?item owl:onProperty ?prop .
             ?item owl:someValuesFrom ?match . }""" % (qname,
                                                       'ilx:hasPhenotype',)
-            print(qstring)
+            #print(qstring)
             out = list(self.g.g.query(qstring))
-            print(out)
             assert len(out) == 1, "%s" % out
             return out[0]
 
