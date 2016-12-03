@@ -643,15 +643,19 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #"""
 
     hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
+    ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
+    [ng.g.remove((s, p, o)) for s, p, o in
+     ng.g.triples((rdflib.URIRef('http://ontology.neuinfo.org/NIF/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'), None, None))]
+
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
+
     ontid = base + ng.name + '.ttl'
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
-    #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
+    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
-    ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
     ng.replace_uriref('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype')
 
     #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
@@ -731,14 +735,14 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
             if o not in done_ and success:
                 done_.add(o)
 
-                id_ = ng.expand(ilx_base.format(ilx_start))
                 ilx_start += 1
-                ng.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+                id_ = ng.expand(ilx_base.format(ilx_start))
+                defined_graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
                 restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
                 intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
                 this = infixowl.Class(id_, graph=defined_graph.g)
                 this.equivalentClass = [intersection]
-                this.subClassOf = [ng.expand(defined_class_parent)]
+                this.subClassOf = [defined_graph.expand(defined_class_parent)]
                 this.label = rdflib.Literal(true_o + ' neuron')
                 if not done:
                     embed()
