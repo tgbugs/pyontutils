@@ -9,12 +9,16 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import makeGraph, rowParse
+from utils import makePrefixes, makeGraph, rowParse
+from parcellation import OntMeta, TODAY
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 from desc.prof import profile_me
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
+
+# TODO future workflow: existing representation -> bags -> owl
+# vastly preferred to the current nightmare
 
 # consts
 defined_class_parent = 'ilx:definedClassNeurons'
@@ -37,25 +41,20 @@ NIFCELL_NEURON = 'NIFCELL:sao1417703748'
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
 
-PREFIXES = {
-    #'ILX':'http://uri.interlex.org/base/ilx_',
-    '':'http://FIXME.org/',
-    'ilx':'http://uri.interlex.org/base/',
-    'ILX':'http://uri.interlex.org/base/ilx_',
-    'skos':'http://www.w3.org/2004/02/skos/core#',
-    'owl':'http://www.w3.org/2002/07/owl#',
-    'dc':'http://purl.org/dc/elements/1.1/',
-    'nsu':'http://www.FIXME.org/nsupper#',
-
-    'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
-    'OBOOWL':'http://www.geneontology.org/formats/oboInOwl#',
-    'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-    'NIFQUAL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#',
-    'NIFCELL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#',
-    'NIFMOL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#',
-    'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
-    'PR':'http://purl.obolibrary.org/obo/PR_',
-}
+PREFIXES = makePrefixes('ilx',
+                        'ILX',
+                        'skos',
+                        'owl',
+                        'dc',
+                        'nsu',
+                        'NCBITaxon',
+                        'oboInOwl',
+                        'OBOANN',
+                        'NIFQUAL',
+                        'NIFCELL',
+                        'NIFMOL',
+                        'UBERON',
+                        'PR',)
 
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
@@ -195,7 +194,17 @@ def get_transitive_closure(graph, edge, root):
 #@profile_me
 def make_phenotypes():
     ilx_start = 50114
-    graph = makeGraph('NIF-Neuron-phenotypes', prefixes=PREFIXES)
+    graph = makeGraph('NIF-Neuron-Phenotype', prefixes=PREFIXES)
+
+    eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+                   'NIF-Neuron-Defined',
+                   'NIF Neuron Defined Classes',
+                   'NIFNEUDEF',
+                   'This file contains defined classes derived from neuron phenotypes.',
+                   TODAY)
+    defined_graph = makeGraph(eont.filename, prefixes=PREFIXES)
+    ontid = eont.path + eont.filename + '.ttl'
+    defined_graph.add_ont(ontid, *eont[2:])
 
     with open('neuron_phenotype.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
@@ -261,19 +270,19 @@ def make_phenotypes():
                 #print(self.id_)
 
             self.ilx_start += 1
-            id_ = graph.expand(ilx_base.format(self.ilx_start))
-            defined = infixowl.Class(id_, graph=graph.g)
+            id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
+            defined = infixowl.Class(id_, graph=defined_graph.g)
             #defined.label = rdflib.Literal(self._label.rstrip(' Phenotype') + ' neuron')  # the extra space in rstrip removes 'et ' as well WTF!
             defined.label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
             print(self._label)
 
-            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=self.id_)  #FIXME?
+            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=defined_graph.g, someValuesFrom=self.id_)  #FIXME?
 
             parent = [p for p in self.child_parent_map[self.id_] if p]
             if parent:
                 parent = parent[0]
                 while 1:
-                    if parent == graph.expand('ilx:NeuronPhenotype'):
+                    if parent == defined_graph.expand('ilx:NeuronPhenotype'):
                         #defined.subClassOf = [graph.expand(defined_class_parent)]  # XXX this does not produce what we want
                         break
                     #else:
@@ -290,7 +299,7 @@ def make_phenotypes():
                 return
 
 
-            intersection = infixowl.BooleanClass(members=(phenotype_equiv, restriction), graph=graph.g)
+            intersection = infixowl.BooleanClass(members=(phenotype_equiv, restriction), graph=defined_graph.g)
             #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
             defined.equivalentClass = [intersection]
 
@@ -319,8 +328,9 @@ def make_phenotypes():
     lsn('somatostatin')
     lsn('calbindin')
     lsn('calretinin')
+
     for name, iri in to_add.items():
-        ilx_start = make_defined(graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
+        ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
 
@@ -361,7 +371,7 @@ def make_phenotypes():
     #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     graph.g.commit()
     get_defined_classes(graph)  # oops...
-    graph.write(convert=False)  # moved below to incorporate uwotm8
+    graph.write()  # moved below to incorporate uwotm8
     
     syn_mappings = {}
     for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('OBOANN:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
@@ -374,7 +384,7 @@ def make_phenotypes():
     phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
     inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))  # FIXME not very configurable...
 
-    return syn_mappings, pedges, ilx_start, inc
+    return syn_mappings, pedges, ilx_start, inc, defined_graph
 
 def _rest_make_phenotypes():
     #phenotype sources
@@ -528,29 +538,29 @@ def _rest_make_phenotypes():
             d = s2[s]
             syns.update(d['syns'])
             new_terms[d['xrefs'][0]] = {'replaced_by':id_}
-            xr.add_node(d['xrefs'][0], 'OBOOWL:replacedBy', id_)
-            #dg.add_node(d['xrefs'][0], 'OBOOWL:replacedBy', id_)
+            xr.add_node(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
+            #dg.add_node(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
             new_terms[d['xrefs'][1]] = {'replaced_by':id_}
-            xr.add_node(d['xrefs'][1], 'OBOOWL:replacedBy', id_)
-            #dg.add_node(d['xrefs'][1], 'OBOOWL:replacedBy', id_)
+            xr.add_node(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
+            #dg.add_node(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
 
             data['labels'] = [d['label'], d['o']]
             #dg.add_node(id_, rdflib.RDFS.label, d['label'])
             dg.add_node(id_, rdflib.RDFS.label, d['o'])
             data['xrefs'] = d['xrefs']
             for x in d['xrefs']:  # FIXME... expecting order of evaluation errors here...
-                dg.add_node(id_, 'OBOOWL:hasDbXref', x)  # xr
-                xr.add_node(id_, 'OBOOWL:hasDbXref', x)  # x
+                dg.add_node(id_, 'oboInOwl:hasDbXref', x)  # xr
+                xr.add_node(id_, 'oboInOwl:hasDbXref', x)  # x
 
         elif spre.toPython() != 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#' or ng.namespace_manager.qname(s).replace('default1','NIFQUAL') in desired_nif_terms:  # skip non-xref quals
             #print(ng.namespace_manager.qname(s).replace('default1','NIFQUAL'))
             new_terms[s] = {'replaced_by':id_}
-            xr.add_node(s, 'OBOOWL:replacedBy', id_)
+            xr.add_node(s, 'oboInOwl:replacedBy', id_)
             data['labels'] = [o.toPython()]
             dg.add_node(id_, rdflib.RDFS.label, o.toPython())
             data['xrefs'] = [s]
-            dg.add_node(id_, 'OBOOWL:hasDbXref', s)  # xr
-            xr.add_node(id_, 'OBOOWL:hasDbXref', s)  # xr
+            dg.add_node(id_, 'oboInOwl:hasDbXref', s)  # xr
+            xr.add_node(id_, 'oboInOwl:hasDbXref', s)  # xr
         else:
             ilx_start -= 1
             continue
@@ -596,7 +606,7 @@ def _rest_make_phenotypes():
     return syn_mappings, pedges, ilx_start
 
 #@profile_me
-def make_neurons(syn_mappings, pedges, ilx_start_):
+def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',}
     ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
@@ -633,7 +643,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + ng.name + '.ttl'
     ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
@@ -641,9 +651,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_):
     ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
     replace_object('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype', ng)
 
-    defined_graph = makeGraph('NIF-Neuron-defined', prefixes=PREFIXES)
+    #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
     defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
-    defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+    defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
 
     done = True#False
     done_ = set()
@@ -1183,7 +1193,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-phenotypes.ttl')
+    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
     #graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
 
     def lsn(word):
@@ -1266,7 +1276,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 class neuronManager:
     def __init__(self):#, phenotype_graph, neuron_graph):
         #g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/NIF-Neuron.ttl'))
-        g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-phenotypes.ttl', '/tmp/hbp-special.ttl'))
+        g = self.load_graph('merged', PREFIXES, ('/tmp/NIF-Neuron-Phenotype.ttl', '/tmp/NIF-Neuron-Defined.ttl', '/tmp/hbp-special.ttl'))
         self.g = g
         self.bag_existing()
         
@@ -1326,7 +1336,7 @@ class neuronManager:
             assert len(out) == 1, "%s" % out
             return out[0]
 
-        def get_reg_pheno(n):  # FIXME fails on intersecdtion of...
+        def get_reg_pheno(n):  # FIXME fails on intersection of...
             qname = self.g.g.namespace_manager.qname(n)
             qstring = """
             SELECT DISTINCT ?match ?edge WHERE {
@@ -1334,7 +1344,7 @@ class neuronManager:
             ?item rdf:type owl:Restriction .
             ?item owl:onProperty ?edge .
             ?item owl:someValuesFrom ?match . }""" % qname
-            print(qstring)
+            #print(qstring)
             out = list(self.g.g.query(qstring))
             #assert len(test) == 1, "%s" % test
             if not out:
@@ -1349,11 +1359,11 @@ class neuronManager:
             ?item rdf:type owl:Restriction .
             ?item owl:onProperty ?edge .
             ?item owl:someValuesFrom ?match . }""" % qname
-            print(qstring)
+            #print(qstring)
             out = list(self.g.g.query(qstring))
-            print('------------------------')
-            print(out)
-            print('------------------------')
+            #print('------------------------')
+            #print(out)
+            #print('------------------------')
             return out
 
         reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
@@ -1368,12 +1378,12 @@ class neuronManager:
 
 
 def main():
+    #return
+    #with makeGraph('', {}) as _:
+    syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
+    ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
+    make_table1(syn_mappings, ilx_start, phenotypes)
     neuronManager()
-    return
-    with makeGraph('', {}) as _:
-        syn_mappings, pedge, ilx_start, phenotypes = make_phenotypes()
-        ilx_start = make_neurons(syn_mappings, pedge, ilx_start)
-        make_table1(syn_mappings, ilx_start, phenotypes)
 
 if __name__ == '__main__':
     main()
