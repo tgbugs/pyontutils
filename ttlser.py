@@ -309,7 +309,11 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         firstTime = True
         for header, subjects_list in zip(self.SECTIONS, sections_list):
-            if subjects_list:
+            if header == self.SECTIONS[-2]:  # Axioms need to not be bnodes...
+                if any([type(s) != BNode for s in subjects_list]):
+                    print('GOT ONE')
+                    self.write(header)
+            elif subjects_list:
                 self.write(header)
             for subject in subjects_list:
                 if self.isDone(subject):
@@ -321,6 +325,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        NOW = datetime.isoformat(datetime.utcnow())
-        stream.write((u"### Serialized at %s using the nifstd custom serializer v1.0.1\n" % NOW).encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.1\n").encode('ascii'))
 
