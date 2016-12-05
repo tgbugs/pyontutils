@@ -683,7 +683,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                 true_o = o_lit
                 true_id = id_
 
-            elif 'Location' in p.toPython():
+            elif 'Location' in p.toPython() or 'LocatedIn' in p.toPython():  # lift location to restrictions
                 if o.startswith('http://'):
                     ng.add_hierarchy(o_lit, p, s)
                     ng.g.remove((s, p, o_lit))
@@ -847,7 +847,7 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             self.labels_extrin + \
             self.labels_morpho + \
             self.labels_ephys + \
-            self.labels_expression + \
+            sorted(self.labels_expression) + \
             ['neuron'])  # switch on interneuron/ other...
         return rdflib.Literal(LABEL)
 
@@ -1020,7 +1020,8 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
                 self.Class.disjointWith = [restriction]  # TODO do we need to manually add existing?
             output.append((molecule, exists, score))
 
-            self.labels_expression.append(abrv)  # TODO
+            label = ('+' if exists else '-') + abrv
+            self.labels_expression.append(label)  # TODO
         #print(value)
         #print(output)
 
@@ -1092,9 +1093,9 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             #self.mutually_disjoints[i_spiking_phenotype].add(early)  # done in phenotypes
             #self.mutually_disjoints[s_spiking_phenotype].add(late)  # done in phenotypes
 
-            # a terrible way to set labels here
+            # a terrible way to set labels here  FIXME
             outer_ephys = tuple(self.labels_ephys)
-            self.labels_ephys.extend(names)
+            self.labels_ephys.append(''.join(names))  # join early and late into a single name
             c.label = self._make_label()
             self.labels_ephys = list(outer_ephys)
 
@@ -1275,14 +1276,15 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
         restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
         typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
 
-        disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
-        graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
+        # FIXME not clear that we should be doing typeclasses this way.... :/
+        # requires more thought
+        #disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
+        #graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
 
 
-    graph.write(convert=False)
+    graph.write()
     #print(t._set_Electrical_types)
     #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
-    #embed()
 
 
 class neuronManager:
@@ -1387,12 +1389,26 @@ class neuronManager:
     # start -> predicate1 -> anon.Class -> predicate2 -> ( -> anon.Restriction -> predicate3 -> match
     # match <- predicate3 <- [predicate2 <- ([predicate1 <- start
 
-
+def expand_syns(syn_mappings):
+    for syn, iri in list(syn_mappings.items()):
+        lower = syn.lower()
+        lower_less_phenotype = lower.rsplit(' phenotype')[0]
+        syn_mappings[lower] = iri
+        #print()
+        #print(lower)
+        #print(lower_less_phenotype)
+        #print()
+        if lower_less_phenotype != lower:
+            syn_mappings[lower_less_phenotype] = iri
 
 def main():
     #return
     #with makeGraph('', {}) as _:
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
+    syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
+    expand_syns(syn_mappings)
+    #embed()
+    #return
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     make_table1(syn_mappings, ilx_start, phenotypes)
     neuronManager()
