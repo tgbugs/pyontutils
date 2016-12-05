@@ -1,36 +1,36 @@
-ilx_id,subClassOf,label,synonyms,xrefs,rules,notes
-ilx:AxonPhenotype,,,,,,
-ilx:DendritePhenotype,,,,,,
-ilx:SomaPhenotype,,,,,,
-ilx:CellPhenotype,,,,,,
-ilx:NeuronPhenotype,ilx:CellPhenotype,,,,,
-ilx:MorphologicalPhenotype,ilx:NeuronPhenotype,,,,subClassesDisjoint,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite
-ilx:BasketPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,
-ilx:LargeBasketPhenotype,ilx:BasketPhenotype,,,,,
-ilx:NestBasketPhenotype,ilx:BasketPhenotype,,,,,
-ilx:SmallBasketPhenotype,ilx:BasketPhenotype,,,,,
-ilx:BituftedPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:BipolarPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:ChandelierPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:DoubleBouquetPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:MartinottiPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:NeurogliaformPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:PyramidalPhenotype,ilx:MorphologicalPhenotype,,,,,
-ilx:AxonMorphologicalPhenotype,ilx:AxonPhenotype,,,,subClassesDisjoint,
-ilx:DendriteMorphologicalPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,
-ilx:SomaMorphologicalPhenotype,ilx:SomaPhenotype,,,,subClassesDisjoint,
-ilx:ElectrophysiologicalPhenotype,ilx:NeuronPhenotype,,,,,
-ilx:SpikingPhenotype,ilx:ElectrophysiologicalPhenotype,,,,,
-ilx:PetillaInitialSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,
-ilx:PetillaInitialBurstSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla b,,,
-ilx:PetillaInitialClassicalSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla c,,,
-ilx:PetillaInitialDelayedSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla d,,,
-ilx:PetillaSustainedSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,
-ilx:PetillaSustainedAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes… multiple parent is annoying
-ilx:PetillaSustainedNonAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla nac,,,
-ilx:PetillaSustainedStutteringPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla stut,,,
-ilx:PetillaSustainedIrregularPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ir,,,
-ilx:FastSpikingPhenotype,ilx:SpikingPhenotype,,,,disjointWith ilx:RegularSpikingNonPyramidalPhenotype,
-ilx:RegularSpikingNonPyramidalPhenotype,ilx:SpikingPhenotype,,,,,
-ilx:AccomodatingSpikingPhenotype,ilx:SpikingPhenotype,,,,disjointWith ilx:NonAccomodatingSpikingPhenotype,
-ilx:NonAccomodatingSpikingPhenotype,ilx:SpikingPhenotype,,,,,
+ilx_id,subClassOf,label,synonyms,xrefs,rules,notes,use_edge
+ilx:AxonPhenotype,,,,,,,
+ilx:DendritePhenotype,,,,,,,
+ilx:SomaPhenotype,,,,,,,
+ilx:CellPhenotype,,,,,,,
+ilx:NeuronPhenotype,ilx:CellPhenotype,,,,,,hasPhenotype
+ilx:MorphologicalPhenotype,ilx:NeuronPhenotype,,,,subClassesDisjoint,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,hasMorphologicalPhenotype
+ilx:BasketPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilx:LargeBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NestBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:SmallBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:BituftedPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:BipolarPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:ChandelierPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:DoubleBouquetPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:MartinottiPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NeurogliaformPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:PyramidalPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:AxonMorphologicalPhenotype,ilx:AxonPhenotype,,,,subClassesDisjoint,,
+ilx:DendriteMorphologicalPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,
+ilx:SomaMorphologicalPhenotype,ilx:SomaPhenotype,,,,subClassesDisjoint,,
+ilx:ElectrophysiologicalPhenotype,ilx:NeuronPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilx:SpikingPhenotype,ilx:ElectrophysiologicalPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaInitialSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
+ilx:PetillaInitialBurstSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla b,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaInitialClassicalSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla c,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaInitialDelayedSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla d,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes… multiple parent is annoying,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedNonAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla nac,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedStutteringPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla stut,,,,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedIrregularPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ir,,,,hasElectrophysiologicalPhenotype
+ilx:FastSpikingPhenotype,ilx:SpikingPhenotype,,,,disjointWith ilx:RegularSpikingNonPyramidalPhenotype,,hasElectrophysiologicalPhenotype
+ilx:RegularSpikingNonPyramidalPhenotype,ilx:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilx:AccomodatingSpikingPhenotype,ilx:SpikingPhenotype,,,,disjointWith ilx:NonAccomodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
+ilx:NonAccomodatingSpikingPhenotype,ilx:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype

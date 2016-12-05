@@ -209,6 +209,37 @@ def make_phenotypes():
     ontid = eont.path + eont.filename + '.ttl'
     defined_graph.add_ont(ontid, *eont[2:])
 
+    # do edges first since we will need them for the phenotypes later
+    # TODO real ilx_ids and use prefixes to manage human readability
+    with open('neuron_phenotype_edges.csv', 'rt') as f:
+        rows = [r for r in csv.reader(f)]
+    
+    lookup = {
+        'asymmetric':'owl:AsymmetricProperty',
+        'irreflexive':'owl:IrreflexiveProperty',
+        'functional':'owl:FunctionalProperty',
+    }
+    pedges = set()
+    for row in rows[1:]:
+        if row[0].startswith('#') or not row[0]:
+            if row[0] == '#references':
+                break
+            print(row)
+            continue
+        id_ = PREFIXES['ilx'] + row[0]
+        pedges.add(graph.expand('ilx:' + row[0]))
+        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        if row[3]:
+            graph.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
+        if row[6]:
+            graph.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
+        if row[7]:
+            graph.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
+        if row[8]:
+            for t in row[8].split(','):
+                t = t.strip()
+                graph.add_node(id_, rdflib.RDF.type, lookup[t])
+
     with open('neuron_phenotype.csv', 'rt') as f:
         rows = [r for r in csv.reader(f)]
 
@@ -253,6 +284,10 @@ def make_phenotypes():
             elif value.startswith(PP.DJW):
                 [graph.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
 
+        def use_edge(self, value):
+            if value:
+                graph.add_node(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
+
         def _row_post(self):
             # defined class
             lookup = {
@@ -277,9 +312,15 @@ def make_phenotypes():
             defined = infixowl.Class(id_, graph=defined_graph.g)
             #defined.label = rdflib.Literal(self._label.rstrip(' Phenotype') + ' neuron')  # the extra space in rstrip removes 'et ' as well WTF!
             defined.label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
-            print(self._label)
+            #print(self._label)
+            print('_row_post ilx_start', self.ilx_start, list(defined.label)[0])
 
-            restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=defined_graph.g, someValuesFrom=self.id_)  #FIXME?
+            def getPhenotypeEdge(phenotype):
+                print(phenotype)
+                edge = 'ilx:hasPhenotype'  # TODO
+                return edge
+            edge = getPhenotypeEdge(self.id_)
+            restriction = infixowl.Restriction(graph.expand(edge), graph=defined_graph.g, someValuesFrom=self.id_)
 
             parent = [p for p in self.child_parent_map[self.id_] if p]
             if parent:
@@ -333,39 +374,11 @@ def make_phenotypes():
     lsn('calretinin')
 
     for name, iri in to_add.items():
+        print('make_phenotypes ilx_start', ilx_start, name)
         ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
+
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
-
-    with open('neuron_phenotype_edges.csv', 'rt') as f:
-        rows = [r for r in csv.reader(f)]
-    
-    lookup = {
-        'asymmetric':'owl:AsymmetricProperty',
-        'irreflexive':'owl:IrreflexiveProperty',
-        'functional':'owl:FunctionalProperty',
-    }
-    pedges = set()
-    for row in rows[1:]:
-        if row[0].startswith('#') or not row[0]:
-            if row[0] == '#references':
-                break
-            print(row)
-            continue
-        id_ = PREFIXES['ilx'] + row[0]
-        pedges.add(graph.expand('ilx:' + row[0]))
-        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
-        if row[3]:
-            graph.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
-        if row[6]:
-            graph.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
-        if row[7]:
-            graph.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
-        if row[8]:
-            for t in row[8].split(','):
-                t = t.strip()
-                graph.add_node(id_, rdflib.RDF.type, lookup[t])
-
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     graph.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron phenotypes')
@@ -645,9 +658,11 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #"""
 
     hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
-    ng.g.parse(os.path.expanduser(hbp_cell), format='turtle')
-    [ng.g.remove((s, p, o)) for s, p, o in
-     ng.g.triples((rdflib.URIRef('http://ontology.neuinfo.org/NIF/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'), None, None))]
+    _temp = rdflib.Graph()  # use a temp to strip nasty namespaces
+    _temp.parse(os.path.expanduser(hbp_cell), format='turtle')
+    for s, p, o in _temp.triples((None,None,None)):
+        if s != rdflib.URIRef('http://ontology.neuinfo.org/NIF/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'):
+            ng.g.add((s,p,o))
 
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
 
@@ -747,9 +762,11 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                 this.equivalentClass = [intersection]
                 this.subClassOf = [defined_graph.expand(defined_class_parent)]
                 this.label = rdflib.Literal(true_o + ' neuron')
+                print('make_neurons ilx_start', ilx_start, list(this.label)[0])
                 if not done:
                     embed()
                     done = True
+
     defined_graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
@@ -1277,9 +1294,9 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
         typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
 
         # FIXME not clear that we should be doing typeclasses this way.... :/
-        # requires more thought
-        #disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
-        #graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
+        # requires more thought, on the plus side you do get better reasoning...
+        disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
+        graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
 
 
     graph.write()
@@ -1347,6 +1364,7 @@ class neuronManager:
                                                       'ilx:hasPhenotype',)
             #print(qstring)
             out = list(self.g.g.query(qstring))
+            #print(out)
             assert len(out) == 1, "%s" % out
             return out[0]
 
