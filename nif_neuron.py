@@ -145,8 +145,6 @@ def add_types(graph, phenotypes):  # TODO missing expression phenotypes! also ba
 
     return collect
 
-    #embed()
-
 def get_defined_classes(graph):
     phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
     inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))
@@ -317,7 +315,7 @@ def make_phenotypes():
 
             def getPhenotypeEdge(phenotype):
                 print(phenotype)
-                edge = 'ilx:hasPhenotype'  # TODO
+                edge = 'ilx:hasPhenotype'  # TODO in neuronManager...
                 return edge
             edge = getPhenotypeEdge(self.id_)
             restriction = infixowl.Restriction(graph.expand(edge), graph=defined_graph.g, someValuesFrom=self.id_)
@@ -373,9 +371,9 @@ def make_phenotypes():
     lsn('calbindin')
     lsn('calretinin')
 
-    for name, iri in to_add.items():
-        print('make_phenotypes ilx_start', ilx_start, name)
-        ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
+    #for name, iri in to_add.items():  # XXX do not need, is already covered elsewhere
+        #print('make_phenotypes ilx_start', ilx_start, name)
+        #ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
 
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
@@ -750,7 +748,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                                 true_id = sgt
                                 break
 
-            if o not in done_ and success:
+            if o not in done_ and success:  # TODO FIXME check for dupes instead
                 done_.add(o)
 
                 ilx_start += 1
@@ -771,6 +769,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
     defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
     defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand(NIFCELL_NEURON))
+
     defined_graph.write()
     ng.write()
 
@@ -1222,7 +1221,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     ontid = base + graph.name + '.ttl'
     graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
-    #graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-defined.ttl')
+    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
 
     def lsn(word):
         syn_mappings[word] = graph.expand(sgv.findByTerm(word)[0]['curie'])  # cheating
@@ -1235,11 +1234,10 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     t = table1(graph, rows, syn_mappings, ilx_start)
     ilx_start = t.ilx_start
 
+    # adding fake mouse data
     #with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
         #rows = [list(r) for r in zip(*csv.reader(f))]
-    # adding fake mouse data
-    #table2 = type('table2', (table1,), {'species':'NCBITaxon:10090'})
-    #t2 = table1(graph, rows, syn_mappings, t.ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
+    #t2 = table1(graph, rows, syn_mappings, ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
     #ilx_start = t2.ilx_start
 
     def do_graph(d):
@@ -1403,6 +1401,140 @@ class neuronManager:
         def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
         embed()
 
+### new impl
+EXISTING_GRAPH = rdflib.Graph()
+sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
+           '/tmp/NIF-Neuron-Defined.ttl',
+           '/tmp/hbp-special.ttl')
+for file in sources:
+    EXISTING_GRAPH.parse(file, format='turtle')
+
+
+class graphThing:
+    def expand(self, putativeURI):
+        if type(putativeURI) == str:
+            try: prefix, suffix = putativeURI.split(':',1)
+            except ValueError:
+                return rdflib.URIRef(putativeURI)
+            if prefix in self._namespaces:
+                return self._namespaces[prefix][suffix]
+            else:
+                raise KeyError('Namespace prefix does exist:', prefix)
+        else:  # FIXME need another check probably...
+            return putativeURI
+
+
+class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...
+    graph = EXISTING_GRAPH  # this allows us to build load the graph a class time
+    local_names = {}  # set of local bindings for phenotype names
+    def __init__(self, phenotype, ObjectProperty=None):
+        self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
+        self.pheno = self.expand(phenotype)
+        op = self.expand(ObjectProperty)
+        if op:
+            if op in self.validEdges:
+                self.edge = op
+            else:
+                raise TypeError('Unknown ObjectProperty %s' % op)
+        else:
+            self.edge = self.getPhenotypeEdge(phenotype)
+
+    def getPhenotypeEdge(self, phenotype):
+        # TODO
+        edge = self.expand('ilx:hasPhenotype')
+        return edge
+
+    @property
+    def validEdges(self):
+        qstring = """SELECT DISTINCT ?prop WHERE { ?prop rdfs:subPropertyOf* ilx:hasPhenotype . }"""
+        out = [_[0] for _ in self.graph.query(qstring)]
+        return out
+
+    @property
+    def e(self):
+        return self.edge
+
+    @property
+    def p(self):
+        return self.pheno
+
+    def __repr__(self):
+        return "%s('%s', '%s')" % (self.__class__.__name__, self.p, self.e)
+
+
+class Neuron(graphThing):
+    graph = EXISTING_GRAPH
+    # FIXME it may make more sense to manage this in the NeuronArranger
+    # so that it can interconvert the two representations
+    def __init__(self, *phenotypeEdges, graph=None):
+        if graph: self.graph = graph
+        self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
+        self.id_ = None
+        self.temp_id = hash(phenotypeEdges)
+
+        self.phenotypes = set((pe.p for pe in phenotypeEdges))
+        self.edges = set((pe.e for pe in phenotypeEdges))
+        self.pes = phenotypeEdges
+
+    def label(self):
+        # species
+        # brain region
+        # morphology
+        # ephys
+        # expression
+        # projection
+        # cell type specific connectivity?
+        # circuit role? (principle interneuron...)
+        return 'Very Nice Neuron Label'
+        
+
+    def realize(self):
+        """ Get an identifier """
+        self.id_ = 'ILX:1234567'
+
+    def validate(self):
+        raise TypeError('Ur Neuron Sucks')
+
+
+class DefinedNeuron(Neuron):
+    """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
+
+    def graphStructure(self, graph=None):
+        graph = graph if graph else self.graph
+        class_ = infixowl.Class(self.id_, graph=graph)
+        members = [self.expand(NIFCELL_NEURON)]
+        for pe in self.pes:
+            restriction = infixowl.Restriction(pe.e, graph=graph, someValuesFrom=pe.p)
+            members.append(restriction)
+        intersection = infixowl.BooleanClass(members=members, graph=graph)
+        class_.equivalentClass = [intersection]
+        return class_
+
+
+class MeasuredNeuron(Neuron):
+    """ Class that takes a bag of phenotypes and adds subClassOf axioms"""
+    # these should probably require a species and brain region bare minimum?
+    # these need to check to make sure the species specific identifiers are being used
+    # and warn on mismatch
+
+    def graphStructure(self, graph=None):
+        graph = graph if graph else self.graph
+        class_ = infixowl.Class(self.id_, graph=graph)
+        for pe in self.pes:
+            restriction = infixowl.Restriction(pe.e, graph=graph, someValuesFrom=pe.p)
+            class_.subClassOf = [restriction]
+        return class_
+
+    def validate(self):
+        'I am validated'
+
+
+class NeuronArranger:  # TODO should this write the graph?
+    """ Class that takes a list of data neurons and optimizes their taxonomy."""
+    def __init__(self, *neurons):
+        pass
+
+
 #def pattern_match(start, chain):   # sparql?
     # start -> predicate1 -> anon.Class -> predicate2 -> ( -> anon.Restriction -> predicate3 -> match
     # match <- predicate3 <- [predicate2 <- ([predicate1 <- start
@@ -1420,13 +1552,13 @@ def expand_syns(syn_mappings):
             syn_mappings[lower_less_phenotype] = iri
 
 def main():
-    #return
-    #with makeGraph('', {}) as _:
+    pe = PhenotypeEdge
+    asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
+    embed()
+    return
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
-    #embed()
-    #return
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     make_table1(syn_mappings, ilx_start, phenotypes)
     neuronManager()
