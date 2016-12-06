@@ -1468,10 +1468,10 @@ class Neuron(graphThing):
     graph = EXISTING_GRAPH
     # FIXME it may make more sense to manage this in the NeuronArranger
     # so that it can interconvert the two representations
-    def __init__(self, *phenotypeEdges, graph=None):
+    def __init__(self, *phenotypeEdges, graph=None, id_=None):
         if graph: self.graph = graph
+        self.id_ = id_ if id_ else None
         self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
-        self.id_ = None
         self.temp_id = hash(phenotypeEdges)
 
         self.phenotypes = set((pe.p for pe in phenotypeEdges))
@@ -1501,7 +1501,7 @@ class Neuron(graphThing):
 class DefinedNeuron(Neuron):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
 
-    def graphStructure(self, graph=None):
+    def graphStructure(self, graph=None):  # FIXME calling this on existing classes is bad...
         graph = graph if graph else self.graph
         class_ = infixowl.Class(self.id_, graph=graph)
         members = [self.expand(NIFCELL_NEURON)]
@@ -1530,6 +1530,11 @@ class MeasuredNeuron(Neuron):
     def validate(self):
         'I am validated'
 
+    def addEvidence(self, pe, evidence):
+        # add an evidence structure...
+        # should also be possible to pass in a pee (phenotype edge evidence) structure at __ini__
+        pass
+
 
 class NeuronArranger:  # TODO should this write the graph?
     """ Class that takes a list of data neurons and optimizes their taxonomy."""
@@ -1556,8 +1561,6 @@ def expand_syns(syn_mappings):
 def main():
     pe = PhenotypeEdge
     asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
-    embed()
-    return
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
