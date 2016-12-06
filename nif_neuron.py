@@ -1424,8 +1424,9 @@ class graphThing:
             return putativeURI
 
 
-class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...
+class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too?
     graph = EXISTING_GRAPH  # this allows us to build load the graph a class time
+    phenoRoot = 'ilx:hasPhenotype'  # needs to be qname representation
     local_names = {}  # set of local bindings for phenotype names
     def __init__(self, phenotype, ObjectProperty=None):
         self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
@@ -1446,7 +1447,8 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...
 
     @property
     def validEdges(self):
-        qstring = """SELECT DISTINCT ?prop WHERE { ?prop rdfs:subPropertyOf* ilx:hasPhenotype . }"""
+        qstring = ('SELECT DISTINCT ?prop WHERE '
+                   '{ ?prop rdfs:subPropertyOf* %s . }') % self.phenoRoot
         out = [_[0] for _ in self.graph.query(qstring)]
         return out
 
