@@ -1290,7 +1290,11 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
         typeclass.label = rdflib.Literal(name + ' neuron type')
 
         restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
-        typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
+        #typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
+
+        ntc = graph.expand('ilx:NeuroTypeClass')
+        intersection = infixowl.BooleanClass(members=(ntc, restriction), graph=graph.g)
+        typeclass.equivalentClass = [intersection]
 
         # FIXME not clear that we should be doing typeclasses this way.... :/
         # requires more thought, on the plus side you do get better reasoning...
@@ -1400,6 +1404,9 @@ class neuronManager:
         #reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
         #tc_neuron_phenos = [(n, get_reg_pheno(n)) for n in tc_neurons]
         #def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
+        nodef = sorted(set(tc_neurons) - set(def_neurons))
+        mns = [MeasuredNeuron(id_=n) for n in nodef]
+        #dns = [DefinedNeuron(id_=n) for n in sorted(def_neurons)]
         embed()
 
 ### new impl
@@ -1408,18 +1415,21 @@ EXISTING_GRAPH = rdflib.Graph()
 sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
            '/tmp/NIF-Neuron-Defined.ttl',
            '/tmp/hbp-special.ttl')
-for file in sources:
-    EXISTING_GRAPH.parse(file, format='turtle')
+try:
+    for file in sources:
+            EXISTING_GRAPH.parse(file, format='turtle')
 
-# put existing predicate short names in the global namespace (TODO change the source for these...)
-qstring = ('SELECT DISTINCT ?prop WHERE '
-           '{ ?prop rdfs:subPropertyOf* %s . }') % 'ilx:hasPhenotype'
-out = [_[0] for _ in EXISTING_GRAPH.query(qstring)]
-gs = globals()
-for uri in out:
-    name = uri.rsplit('/',1)[-1]
-    gs[name] = uri
+    # put existing predicate short names in the global namespace (TODO change the source for these...)
+    qstring = ('SELECT DISTINCT ?prop WHERE '
+               '{ ?prop rdfs:subPropertyOf* %s . }') % 'ilx:hasPhenotype'
+    out = [_[0] for _ in EXISTING_GRAPH.query(qstring)]
+    gs = globals()
+    for uri in out:
+        name = uri.rsplit('/',1)[-1]
+        gs[name] = uri
 
+except FileNotFoundError:
+    print('missing', file, 'probably because this is the first time running this file')
 
 class graphThing:
     graph = EXISTING_GRAPH  # this allows us to build load the graph a class time
@@ -1480,6 +1490,9 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/
     def p(self):
         return self.pheno
 
+    def _graphify(self):
+        return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.graph)
+
     def __repr__(self):
         pn = self.graph.namespace_manager.qname(self.p)
         en = self.graph.namespace_manager.qname(self.e)
@@ -1510,6 +1523,13 @@ class LogicalPhenoEdge(graphThing):
     def e(self):
         return tuple((pe.e for pe in self.pes))
 
+    def _graphify(self):
+        members = []
+        for pe in self.pes:
+            members.append(pe._graphify())
+        intersection = infixowl.BooleanClass(operator=self.op, members=members, graph=self.graph)
+        return intersection
+
     def __repr__(self):
         op = self.local_names[self.graph.namespace_manager.qname(self.op)]
         pes = ", ".join([_.__repr__() for _ in self.pes])
@@ -1519,26 +1539,54 @@ class LogicalPhenoEdge(graphThing):
 class Neuron(graphThing):
     # FIXME it may make more sense to manage this in the NeuronArranger
     # so that it can interconvert the two representations
+    ORDER = [
+        hasInstanceInSpecies,
+        hasTaxonRank,
+        hasSomaLocatedIn,  # hasSomaLocation?
+        hasMorphologicalPhenotype,
+        hasElectrophysiologicalPhenotype,
+        hasExpressionPhenotype,
+        hasProjectionPhenotype,
+    ]
     def __init__(self, *phenotypeEdges, graph=None, id_=None):
         super().__init__()
+
         if graph: self.graph = graph
+
         self.id_ = self.expand(id_) if id_ else None
         self.Class = infixowl.Class(self.id_, graph=self.graph)
+
         if not phenotypeEdges and self.id_:
             # rebuild the bag from the -class- id
             phenotypeEdges = self.bagExisting()
 
         self.temp_id = hash(phenotypeEdges)
 
-        self.phenotypes = set((pe.p for pe in phenotypeEdges))
-        self.edges = set((pe.e for pe in phenotypeEdges))
         self.pes = phenotypeEdges
+        self.phenotypes = set((pe.p for pe in self.pes))
+        self.edges = set((pe.e for pe in self.pes))
+        self._pesDict = {}
+        for pe in self.pes:  # FIXME TODO
+            if type(pe) == LogicalPhenoEdge:
+                if pe.e in self._pesDict:
+                    self._pesDict[pe.e].append(pe.p)
+                else:
+                    self._pesDict[pe.e] = [pe.p]
+
+        if not self.id_:
+            self.Class = self.makeGraphStructure()
 
     def _tuplesToPes(self, pes):
         for p, e in pes:
             yield PhenotypeEdge(p, e)
 
     def label(self):
+        label = []
+        for edge in self.ORDER:
+            if edge in self._pesDict:
+                for pheno in self._pesDict[edge]:
+                    label.append(tuple(infixowl.Class(pheno, graph=self.graph).lable)[0])
+
         # species
         # brain region
         # morphology
@@ -1547,7 +1595,7 @@ class Neuron(graphThing):
         # projection
         # cell type specific connectivity?
         # circuit role? (principle interneuron...)
-        return 'Very Nice Neuron Label'
+        return ' '.join(label)
         
     def realize(self):
         """ Get an identifier """
@@ -1558,6 +1606,12 @@ class Neuron(graphThing):
 
     def __repr__(self):
         return self.Class.__repr__()
+
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.pes))
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
 
 
 class DefinedNeuron(Neuron):
@@ -1687,15 +1741,12 @@ class MeasuredNeuron(Neuron):
         graph = graph if graph else self.graph
         class_ = infixowl.Class(self.id_, graph=graph)
         for pe in self.pes:
-            restriction = infixowl.Restriction(pe.e, graph=graph, someValuesFrom=pe.p)
-            if type(pe) == PhenotypeEdge:
-                class_.subClassOf = [restriction]
-            elif type(pe) == NegPhenotypeEdge:
-                class_.disjointWith = [restriction]
-            elif type(pe) == LogicalPhenoEdge:
-                raise NotImplemented('FIXME :)')
+            target = pe._graphify()  # restriction or intersection
+            if type(pe) == NegPhenotypeEdge:
+                class_.disjointWith = [target]
             else:
-                raise TypeError('We should never get here...')
+                class_.subClassOf = [target]
+
         return class_
 
     def validate(self):
@@ -1731,9 +1782,9 @@ def expand_syns(syn_mappings):
 
 def main():
     neuronManager()
-    return
     pe = PhenotypeEdge
     asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
+    return
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
