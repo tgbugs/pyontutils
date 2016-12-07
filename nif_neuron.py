@@ -226,6 +226,7 @@ def make_phenotypes():
             continue
         id_ = PREFIXES['ilx'] + row[0]
         pedges.add(graph.expand('ilx:' + row[0]))
+        graph.add_node(id_, rdflib.RDFS.label, row[0])  # FIXME
         graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
             graph.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
@@ -1402,12 +1403,22 @@ class neuronManager:
         embed()
 
 ### new impl
+# load in our existing graph
 EXISTING_GRAPH = rdflib.Graph()
 sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
            '/tmp/NIF-Neuron-Defined.ttl',
            '/tmp/hbp-special.ttl')
 for file in sources:
     EXISTING_GRAPH.parse(file, format='turtle')
+
+# put existing predicate short names in the global namespace (TODO change the source for these...)
+qstring = ('SELECT DISTINCT ?prop WHERE '
+           '{ ?prop rdfs:subPropertyOf* %s . }') % 'ilx:hasPhenotype'
+out = [_[0] for _ in EXISTING_GRAPH.query(qstring)]
+gs = globals()
+for uri in out:
+    name = uri.rsplit('/',1)[-1]
+    gs[name] = uri
 
 
 class graphThing:
