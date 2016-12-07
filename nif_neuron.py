@@ -1396,9 +1396,9 @@ class neuronManager:
             #print('------------------------')
             return out
 
-        reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
-        tc_neuron_phenos = [(n, get_reg_pheno(n)) for n in tc_neurons]
-        def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
+        #reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
+        #tc_neuron_phenos = [(n, get_reg_pheno(n)) for n in tc_neurons]
+        #def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
         embed()
 
 ### new impl
@@ -1411,8 +1411,15 @@ for file in sources:
 
 
 class graphThing:
+    graph = EXISTING_GRAPH  # this allows us to build load the graph a class time
+    PHENO_ROOT = 'ilx:hasPhenotype'  # needs to be qname representation
+    def __init__(self):
+        self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
+
     def expand(self, putativeURI):
-        if type(putativeURI) == str:
+        if type(putativeURI) == infixowl.Class:
+            return putativeURI.identifier
+        elif type(putativeURI) == str:
             try: prefix, suffix = putativeURI.split(':',1)
             except ValueError:
                 return rdflib.URIRef(putativeURI)
@@ -1425,11 +1432,13 @@ class graphThing:
 
 
 class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too?
-    graph = EXISTING_GRAPH  # this allows us to build load the graph a class time
-    phenoRoot = 'ilx:hasPhenotype'  # needs to be qname representation
     local_names = {}  # set of local bindings for phenotype names
     def __init__(self, phenotype, ObjectProperty=None):
-        self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
+        super().__init__()
+        if type(phenotype) == PhenotypeEdge:  # simplifies negation of a phenotype
+            ObjectProperty = phenotype.e
+            phenotype = phenotype.p
+
         self.pheno = self.expand(phenotype)
         op = self.expand(ObjectProperty)
         if op:
@@ -1442,13 +1451,13 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/
 
     def getPhenotypeEdge(self, phenotype):
         # TODO
-        edge = self.expand('ilx:hasPhenotype')
+        edge = self.expand(self.PHENO_ROOT)
         return edge
 
     @property
     def validEdges(self):
         qstring = ('SELECT DISTINCT ?prop WHERE '
-                   '{ ?prop rdfs:subPropertyOf* %s . }') % self.phenoRoot
+                   '{ ?prop rdfs:subPropertyOf* %s . }') % self.PHENO_ROOT
         out = [_[0] for _ in self.graph.query(qstring)]
         return out
 
@@ -1461,22 +1470,62 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/
         return self.pheno
 
     def __repr__(self):
-        return "%s('%s', '%s')" % (self.__class__.__name__, self.p, self.e)
+        pn = self.graph.namespace_manager.qname(self.p)
+        en = self.graph.namespace_manager.qname(self.e)
+        return "%s('%s', '%s')" % (self.__class__.__name__, pn, en)
+
+
+class NegPhenotypeEdge(PhenotypeEdge):
+    """ Class for Negative Phenotypes to simplfy things """
+
+
+AND = 'owl:intersectionOf'
+OR = 'owl:unionOf'
+class LogicalPhenoEdge(graphThing):
+    local_names = {
+        AND:'AND',
+        OR:'OR',
+    }
+    def __init__(self, op, *edges):
+        super().__init__()
+        self.op = self.expand(op)  # TODO more with op
+        self.pes = edges
+
+    @property
+    def p(self):
+        return tuple((pe.p for pe in self.pes))
+
+    @property
+    def e(self):
+        return tuple((pe.e for pe in self.pes))
+
+    def __repr__(self):
+        op = self.local_names[self.graph.namespace_manager.qname(self.op)]
+        pes = ", ".join([_.__repr__() for _ in self.pes])
+        return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
 
 class Neuron(graphThing):
-    graph = EXISTING_GRAPH
     # FIXME it may make more sense to manage this in the NeuronArranger
     # so that it can interconvert the two representations
     def __init__(self, *phenotypeEdges, graph=None, id_=None):
+        super().__init__()
         if graph: self.graph = graph
-        self.id_ = id_ if id_ else None
-        self._namespaces = {k:rdflib.namespace.Namespace(v) for k,v in self.graph.namespaces()}
+        self.id_ = self.expand(id_) if id_ else None
+        self.Class = infixowl.Class(self.id_, graph=self.graph)
+        if not phenotypeEdges and self.id_:
+            # rebuild the bag from the -class- id
+            phenotypeEdges = self.bagExisting()
+
         self.temp_id = hash(phenotypeEdges)
 
         self.phenotypes = set((pe.p for pe in phenotypeEdges))
         self.edges = set((pe.e for pe in phenotypeEdges))
         self.pes = phenotypeEdges
+
+    def _tuplesToPes(self, pes):
+        for p, e in pes:
+            yield PhenotypeEdge(p, e)
 
     def label(self):
         # species
@@ -1489,7 +1538,6 @@ class Neuron(graphThing):
         # circuit role? (principle interneuron...)
         return 'Very Nice Neuron Label'
         
-
     def realize(self):
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -1497,11 +1545,45 @@ class Neuron(graphThing):
     def validate(self):
         raise TypeError('Ur Neuron Sucks')
 
+    def __repr__(self):
+        return self.Class.__repr__()
+
 
 class DefinedNeuron(Neuron):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
 
-    def graphStructure(self, graph=None):  # FIXME calling this on existing classes is bad...
+    def bagExisting(self):  # TODO intersections
+        qname = self.graph.namespace_manager.qname(self.id_)
+        qstring = """
+        SELECT DISTINCT ?match ?edge WHERE {
+        %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+        ?item rdf:type owl:Restriction .
+        ?edge rdfs:subPropertyOf* %s .
+        ?item owl:onProperty ?edge .
+        ?item owl:someValuesFrom ?match . }""" % (qname,
+                                                  self.PHENO_ROOT,)
+        #print(qstring)
+        pes = self.graph.query(qstring)
+        out = tuple(self._tuplesToPes(pes))
+        print(out)
+        return out
+        #assert len(out) == 1, "%s" % out
+        #return out[0]
+
+    def _unpackPheno(self, c):  # FIXME need to deal with intersections
+        if isinstance(c, infixowl.Class) and isinstance(c.identifier, rdflib.BNode):
+            putativeRestriction = infixowl.CastClass(c, graph=self.graph)
+            pr = putativeRestriction
+            p = pr.someValuesFrom
+            e = pr.onProperty
+            if p and e:
+                return PhenotypeEdge(p, e)
+            else:
+                print(putativeRestriction)
+        else:
+            print('what is this thing?', c)
+
+    def makeGraphStructure(self, graph=None):  # FIXME calling this on existing classes is bad...
         graph = graph if graph else self.graph
         class_ = infixowl.Class(self.id_, graph=graph)
         members = [self.expand(NIFCELL_NEURON)]
@@ -1519,12 +1601,90 @@ class MeasuredNeuron(Neuron):
     # these need to check to make sure the species specific identifiers are being used
     # and warn on mismatch
 
-    def graphStructure(self, graph=None):
+    def bagExisting(self):  # FIXME intersection an union?
+        out = []
+        for c in self.Class.subClassOf:
+            pe = self._unpackPheno(c)
+            if pe:
+                out.append(pe)
+        for c in self.Class.disjointWith:
+            pe = self._unpackPheno(c, NegPhenotypeEdge)
+            if pe:
+                out.append(pe)
+        print(tuple(self.Class.label)[0])
+        print(out)
+        return tuple(out)
+
+        # while using the qstring is nice from a documentation standpoint... it is sllllooowww
+        # check out infixowl Class.__repr__ for a potentially faster way use CastClass...
+        qname = self.graph.namespace_manager.qname(self.id_)
+        qstring = """
+        SELECT DISTINCT ?match ?edge WHERE {
+        %s rdfs:subClassOf ?item .
+        ?item rdf:type owl:Restriction .
+        ?item owl:onProperty ?edge .
+        ?item owl:someValuesFrom ?match . }""" % qname
+        #print(qstring)
+        pes = list(self.graph.query(qstring))
+        #assert len(test) == 1, "%s" % test
+        if not pes:
+            return self._getIntersectionPhenos(qname)
+        else:
+            out = tuple(self._tuplesToPes(pes))
+            #print(out)
+            return out
+
+    def _unpackPheno(self, c, type_=PhenotypeEdge):
+        if isinstance(c, infixowl.Class) and isinstance(c.identifier, rdflib.BNode):
+            putativeRestriction = infixowl.CastClass(c, graph=self.graph)
+            if isinstance(putativeRestriction, infixowl.BooleanClass):
+                bc = putativeRestriction
+                op = bc._operator
+                pes = []
+                for id_ in bc._rdfList:
+                    pr = infixowl.CastClass(id_, graph=self.graph)
+                    p = pr.someValuesFrom
+                    e = pr.onProperty
+                    pes.append(type_(p, e))
+                    #print(id_)
+                return LogicalPhenoEdge(op, *pes)
+            else:
+                pr = putativeRestriction
+                p = pr.someValuesFrom
+                e = pr.onProperty
+            if p and e:
+                return type_(p, e)
+            else:
+                raise TypeError('Something is wrong', putativeRestriction)
+
+    def _getIntersectionPhenos(self, qname):
+        qstring = """
+        SELECT DISTINCT ?match ?edge WHERE {
+        %s rdfs:subClassOf/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+        ?item rdf:type owl:Restriction .
+        ?item owl:onProperty ?edge .
+        ?item owl:someValuesFrom ?match . }""" % qname
+        #print(qstring)
+        pes = self.graph.query(qstring)
+        out = tuple(self._tuplesToPes(pes))
+        #print('------------------------')
+        print(out)
+        #print('------------------------')
+        return out
+
+    def makeGraphStructure(self, graph=None):
         graph = graph if graph else self.graph
         class_ = infixowl.Class(self.id_, graph=graph)
         for pe in self.pes:
             restriction = infixowl.Restriction(pe.e, graph=graph, someValuesFrom=pe.p)
-            class_.subClassOf = [restriction]
+            if type(pe) == PhenotypeEdge:
+                class_.subClassOf = [restriction]
+            elif type(pe) == NegPhenotypeEdge:
+                class_.disjointWith = [restriction]
+            elif type(pe) == LogicalPhenoEdge:
+                raise NotImplemented('FIXME :)')
+            else:
+                raise TypeError('We should never get here...')
         return class_
 
     def validate(self):
@@ -1559,6 +1719,8 @@ def expand_syns(syn_mappings):
             syn_mappings[lower_less_phenotype] = iri
 
 def main():
+    neuronManager()
+    return
     pe = PhenotypeEdge
     asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
