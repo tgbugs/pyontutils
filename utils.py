@@ -93,10 +93,17 @@ def makePrefixes(*prefixes):
 class makeGraph:
     SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes, graph=None, writeloc='/tmp/'):
+    def __init__(self, name, prefixes=None, graph=None, writeloc='/tmp/'):
         self.name = name
         self.writeloc = writeloc
-        self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
+        if prefixes:
+            self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
+        elif graph:
+            self.namespaces = {p:rdflib.Namespace(ns) for p, ns in graph.namespaces()}
+        else:
+            raise ValueError('No prefixes or graph specified.')
+
+
         if graph:
             self.g = graph
         else:
