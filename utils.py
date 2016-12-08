@@ -103,7 +103,6 @@ class makeGraph:
         else:
             raise ValueError('No prefixes or graph specified.')
 
-
         if graph:
             self.g = graph
         else:
