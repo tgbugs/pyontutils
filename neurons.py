@@ -27,6 +27,9 @@ PHENO_ROOT = 'ilx:hasPhenotype'  # needs to be qname representation
 DEF_ROOT = 'ilx:definedClassNeurons'
 
 # load in our existing graph
+# note: while it would be nice to allow specification of phenotypes to be decoupled
+# from insertion into the graph... maybe we could enable this, but it definitely seems
+# to break a number of nice features... and we would need the phenotype graph anyway
 EXISTING_GRAPH = rdflib.Graph()
 sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
            '/tmp/NIF-Neuron-Defined.ttl',
@@ -90,24 +93,20 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/
     def __init__(self, phenotype, ObjectProperty=None, label=None):
         # label blackholes
         super().__init__()
-        if type(phenotype) == PhenotypeEdge:  # simplifies negation of a phenotype
+        if isinstance(phenotype, PhenotypeEdge):  # simplifies negation of a phenotype
             ObjectProperty = phenotype.e
             phenotype = phenotype.p
 
         self.p = self.expand(phenotype)
-        op = self.expand(ObjectProperty)
-        if op:
-            if op in self.validEdges:
-                self.e = op
-            else:
-                raise TypeError('Unknown ObjectProperty %s' % op)
+        if ObjectProperty is None:
+            self.e = self.getObjectProperty(self.p)
         else:
-            self.e = self.getPhenotypeEdge(self.p)
+            self.e = self.checkObjectProperty(ObjectProperty)
 
         self._pClass = infixowl.Class(self.p, graph=self.graph)
         self._eClass = infixowl.Class(self.e, graph=self.graph)
 
-    def getPhenotypeEdge(self, phenotype):
+    def getObjectProperty(self, phenotype):
         edges = list(self.graph.objects(phenotype, self.expand('ilx:useObjectProperty')))
         if edges:
             return edges[0]
@@ -115,16 +114,16 @@ class PhenotypeEdge(graphThing):  # this is really just a 2 tuple...  # FIXME +/
             # TODO check if falls in one of the expression categories
             return self.expand(PHENO_ROOT)
 
-    @property
-    def validEdges(self):
-        qstring = ('SELECT DISTINCT ?prop WHERE '
-                   '{ ?prop rdfs:subPropertyOf* %s . }') % PHENO_ROOT
-        out = [_[0] for _ in self.graph.query(qstring)]
-        return out
+    def checkObjectProperty(self, ObjectProperty):
+        op = self.expand(ObjectProperty)
+        if op in phenoPreds.__dict__.values():
+            return op
+        else:
+            raise TypeError('Unknown ObjectProperty %s' % repr(op))
 
     @property
     def eLabel(self):
-        return tuple(self._eClass.label)[0]
+        return next(self._eClass.label)
 
     @property
     def pLabel(self):
@@ -261,9 +260,9 @@ class Neuron(graphThing):
             # rebuild the bag from the -class- id
             phenotypeEdges = self.bagExisting()
 
-        self.temp_id = rdflib.URIRef('http://TEMP.ORG/%s' % hash(tuple(sorted(phenotypeEdges))))
-
         self.pes = tuple(sorted(phenotypeEdges))
+        self.temp_id = rdflib.URIRef('http://TEMP.ORG/%s' % hash(self.pes))
+
         self.phenotypes = set((pe.p for pe in self.pes))
         self.edges = set((pe.e for pe in self.pes))
         self._pesDict = {}
@@ -322,8 +321,9 @@ class Neuron(graphThing):
         label.append(nin_switch)
 
         new_label = ' '.join(label)
-        #print(tuple(self.Class.label)[0])  # FIXME need to set the label once we generate it and overwrite the old one...
-        #print(new_label)
+        try: print(next(self.Class.label))  # FIXME need to set the label once we generate it and overwrite the old one...
+        except StopIteration: pass
+        print(new_label)
         return new_label
         
     def realize(self):
@@ -351,7 +351,7 @@ class DefinedNeuron(Neuron):
         for c in self.Class.equivalentClass:
             pe = self._unpackPheno(c)
             if pe:
-                if type(pe) == tuple:  # we hit a case where we need to inherit phenos from above
+                if isinstance(pe, tuple):  # we hit a case where we need to inherit phenos from above
                     out.update(pe)
                 else:
                     out.add(pe)
@@ -445,7 +445,7 @@ class MeasuredNeuron(Neuron):
         for c in self.Class.subClassOf:
             pe = self._unpackPheno(c)
             if pe:
-                if type(pe) == tuple:  # we hit a case where we need to inherit phenos from above
+                if isinstance(pe, tuple):  # we hit a case where we need to inherit phenos from above
                     out.update(pe)
                 else:
                     out.add(pe)
