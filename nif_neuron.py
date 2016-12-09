@@ -827,6 +827,7 @@ def add_phenotypes(graph):
     graph.add_class(ir_p, s_spiking_phenotype, ('irregular',), autogen=True)
     graph.add_class(morpho_phenotype, neuron_phenotype, autogen=True)
 
+
 class table1(rowParse):  # TODO decouple input -> tokenization to ontology structuring rules, also incremeting ilx_start is a HORRIBLE way to mint identifiers, holy crap, but to improve this we need all the edge structure and links in place so we can do a substitution
     #species = 'NCBITaxon:10116'
     brain_region = 'UBERON:0008933'
@@ -1304,6 +1305,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
 
     graph.write()
+    return t
     #print(t._set_Electrical_types)
     #_ = [[print(v) for v in [k] + list(v) + ['\n']] for k,v in t.__dict__.items() if '_set_' in k]
 
@@ -1328,7 +1330,8 @@ def main():
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
-    make_table1(syn_mappings, ilx_start, phenotypes)
+    t = make_table1(syn_mappings, ilx_start, phenotypes)
+    embed()
 
 if __name__ == '__main__':
     main()
