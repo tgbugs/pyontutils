@@ -410,7 +410,7 @@ class DefinedNeuron(Neuron):
             # TODO make sure that Neuron is in there somehwere...
             print('what is this thing?', c)
 
-    def makeGraphStructure(self):
+    def _graphify(self):
         """ Lift phenotypeEdges to Restrictions """
         id_ = self.id_ or self.temp_id
         class_ = infixowl.Class(id_, graph=self.graph)
@@ -434,7 +434,7 @@ class DefinedNeuron(Neuron):
         return class_
 
 
-class MeasuredNeuron(Neuron):
+class MeasuredNeuron(Neuron):  # FIXME we don't actually need these at all! they should all be created as equivalent classes?
     """ Class that takes a bag of phenotypes and adds subClassOf axioms"""
     # these should probably require a species and brain region bare minimum?
     # these need to check to make sure the species specific identifiers are being used
@@ -519,7 +519,7 @@ class MeasuredNeuron(Neuron):
         #print('------------------------')
         return out
 
-    def makeGraphStructure(self):
+    def _graphify(self):
         class_ = infixowl.Class(self.id_, graph=self.graph)
         class_.delete()  # delete any existing annotations to prevent duplication
         for pe in self.pes:
