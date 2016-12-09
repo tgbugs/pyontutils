@@ -345,7 +345,8 @@ def make_phenotypes():
 
 
             intersection = infixowl.BooleanClass(members=(phenotype_equiv, restriction), graph=defined_graph.g)
-            #intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+            ##intersection = infixowl.BooleanClass(members=(restriction,), graph=self.graph.g)
+
             defined.equivalentClass = [intersection]
 
         def _end(self):
@@ -693,7 +694,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                 ng.add_hierarchy(id_, p, s)
                 ng.g.remove((s, p, o_lit))
-                print('SUCCESS, substituting', o, 'for', id_)
+                #print('SUCCESS, substituting', o, 'for', id_)
                 success = True
                 true_o = o_lit
                 true_id = id_
@@ -750,27 +751,28 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                                 true_id = sgt
                                 break
 
-            if o not in done_ and success:  # TODO FIXME check for dupes instead
+            if o not in done_ and success:
                 done_.add(o)
+                t = tuple(defined_graph.g.triples((None, rdflib.OWL.someValuesFrom, true_id)))
+                if t:
+                    print('ALREADY IN', t)
+                else:
+                    ilx_start += 1
+                    id_ = ng.expand(ilx_base.format(ilx_start))
+                    defined_graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+                    restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
+                    intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
+                    this = infixowl.Class(id_, graph=defined_graph.g)
+                    this.equivalentClass = [intersection]
+                    this.subClassOf = [defined_graph.expand(defined_class_parent)]
+                    this.label = rdflib.Literal(true_o + ' neuron')
+                    print('make_neurons ilx_start', ilx_start, list(this.label)[0])
+                    if not done:
+                        embed()
+                        done = True
 
-                ilx_start += 1
-                id_ = ng.expand(ilx_base.format(ilx_start))
-                defined_graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-                restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
-                intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
-                this = infixowl.Class(id_, graph=defined_graph.g)
-                this.equivalentClass = [intersection]
-                this.subClassOf = [defined_graph.expand(defined_class_parent)]
-                this.label = rdflib.Literal(true_o + ' neuron')
-                print('make_neurons ilx_start', ilx_start, list(this.label)[0])
-                if not done:
-                    embed()
-                    done = True
-
-    defined_graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
-    defined_graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
-    defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
-    defined_graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, ng.expand(NIFCELL_NEURON))
+    defined_graph.add_class(defined_class_parent, NIFCELL_NEURON, label='defined class neuron')
+    defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
 
     defined_graph.write()
     ng.write()
@@ -1191,8 +1193,6 @@ class table1(rowParse):  # TODO decouple input -> tokenization to ontology struc
             print(disjoint_things)
             make_mutually_disjoint(self.graph, sorted(disjoint_things))
 
-
-#@profile_me
 def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
     # it may turn out that things like the disjointness exist at a higher level while correlated properties
