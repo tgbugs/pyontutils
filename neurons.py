@@ -310,6 +310,7 @@ class Neuron(graphThing):
                 label += sorted(sublab(logical))
 
         # species
+        # developmental stage
         # brain region
         # morphology
         # ephys
