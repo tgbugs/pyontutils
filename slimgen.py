@@ -149,7 +149,7 @@ def chebi_make():
         trips = list(g.triples((eid, None, None)))
         if not trips:
             #looks for the id_ as a literal
-            alts = list(chebi_graph.triples((None,
+            alts = list(g.triples((None,
                                              rdflib.term.URIRef('http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'),
                                              rdflib.Literal(id_, datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#string')))))
             if alts:
