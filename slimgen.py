@@ -117,11 +117,11 @@ def chebi_make():
     g.parse(data=raw)  # now _this_ is stupidly slow (like 20 minutes of slow) might make more sense to do the xml directly?
     PREFIXES = makePrefixes('definition',
                             'hasRole',
-                            'replacedBy',
                             'CHEBI',
                             'owl',
                             'skos',
                             'oboInOwl')
+    dPREFIXES = makePrefixes('CHEBI','replacedBy','owl','skos')
     ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
                   'chebislim',
                   'NIF CHEBI slim',
@@ -139,7 +139,7 @@ def chebi_make():
     new_graph = makeGraph(ont.filename, PREFIXES)
     ontid = ont.path + ont.filename + '.ttl'
     new_graph.add_ont(ontid, *ont[2:])
-    chebi_dead = makeGraph(dont.filename, PREFIXES)
+    chebi_dead = makeGraph(dont.filename, dPREFIXES)
     dontid = dont.path + dont.filename + '.ttl'
     chebi_dead.add_ont(dontid, *dont[2:])
     with open('chebi-subset-ids.txt', 'rt') as f:
