@@ -47,7 +47,7 @@ def main():
     if not filepaths:
         print('No files found! Exiting...')
         return
-    elif not head(GITHUB_BASE_URL + COMMIT + '/nif.owl').ok:
+    elif not head(GITHUB_BASE_URL + COMMIT + '/ttl/nif.ttl').ok:
         print('Commit or branch "%s" not found!' % COMMIT)
         return
 
