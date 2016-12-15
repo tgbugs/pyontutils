@@ -141,18 +141,19 @@ def chebi_make():
     rpl_check = t.xpath("/*[local-name()='RDF']/*[local-name()='Class']/*[local-name()='hasAlternativeId']")
     rpl_dict = {_.text:_.getparent() for _ in rpl_check if _.text in ids_raw } # we also need to have any new classes that have replaced old ids
     also_classes = list(rpl_dict.values())
-    def rec(start_set):
+    def rec(start_set, done):
         ids_ = set()
         for c in start_set:
             ids_.update([_.items()[0][1] for _ in etree.ElementTree(c).xpath("/*[local-name()='Class']/*[local-name()='subClassOf']") if _.items()])
-        supers = [_ for _ in cs if _.tag == '{http://www.w3.org/2002/07/owl#}Class' and _.values()[0] in ids_]
+            ids_.update([_.items()[0][1] for _ in etree.ElementTree(c).xpath("/*[local-name()='Class']/*[local-name()='subClassOf']/*[local-name()='Restriction']/*[local-name()='someValuesFrom']") if _.items()])
+        supers = [_ for _ in cs if _.tag == '{http://www.w3.org/2002/07/owl#}Class' and _.values()[0] in ids_ and _ not in done]
         if supers:
-            msup, mids = rec(supers)
+            msup, mids = rec(supers, done + supers)
             supers += msup
             ids_.update(mids)
         return supers, ids_
     a = ontology + ops + classes + also_classes
-    more, mids = rec(a)
+    more, mids = rec(a, a)
     all_ = set(a + more)
     r.clear()  # wipe all the stuff we don't need
     for c in all_:
