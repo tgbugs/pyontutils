@@ -212,6 +212,12 @@ class makeGraph:
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
+    def add_recursive(self, triple, source_graph):
+        self.g.add(triple)
+        if isinstance(triple[-1], rdflib.BNode):
+            for t_ in source_graph.triples((triple[-1], None, None)):
+                self.add_recursive(t_, source_graph)
+
     def replace_uriref(self, find, replace):  # find and replace on the parsed graph
         # XXX warning this does not update cases where an iri is in an annotation property!
         # if you need that just use sed
