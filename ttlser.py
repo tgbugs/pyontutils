@@ -113,10 +113,10 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
-                                sorted(set([_ for _ in self.store.objects(None, None)
+                                sorted(sorted(set([_ for _ in self.store.objects(None, None)
                                             if not isinstance(_, BNode)] +  # URIRef + Literal
                                            [_ for _ in self.store.subjects(None, None)
-                                            if isinstance(_, URIRef)]),
+                                            if isinstance(_, URIRef)])),
                                        key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
@@ -147,7 +147,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def startDocument(self):  # modified to natural sort prefixes
         self._started = True
-        ns_list = sorted(self.namespaces.items(), key=lambda kv: (natsort(kv[0]), kv[1]))
+        ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (natsort(kv[0]), kv[1]))
         for prefix, uri in ns_list:
             self.write(self.indent() + '@prefix %s: <%s> .\n' % (prefix, uri))
         if ns_list and self._spacious:
@@ -163,7 +163,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             return natsort(m)
 
         for i, classURI in enumerate(self.topClasses):  # SECTIONS
-            members = list(self.store.subjects(RDF.type, classURI))
+            members = sorted(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
             subjects = []
@@ -211,7 +211,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             if (prop in properties) and (prop not in seen):
                 propList.append(prop)
                 seen[prop] = True
-        props = list(properties.keys())
+        props = sorted(properties.keys())
         props.sort(key=natsort)
         for prop in props:
             if prop not in seen:
@@ -325,5 +325,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.1\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.2\n").encode('ascii'))
 
