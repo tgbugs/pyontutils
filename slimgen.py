@@ -127,10 +127,10 @@ def chebi_make():
         ids_raw = set((_.strip() for _ in f.readlines()))
         ids = set((ug.expand(_.strip()).toPython() for _ in ids_raw))
 
-    #gzed = requests.get('http://localhost:8000/chebi.owl')
-    #raw = BytesIO(gzed.content)
-    gzed = requests.get('http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz')
-    raw = BytesIO(gzip.decompress(gzed.content))
+    gzed = requests.get('http://localhost:8000/chebi.owl')
+    raw = BytesIO(gzed.content)
+    #gzed = requests.get('http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz')
+    #raw = BytesIO(gzip.decompress(gzed.content))
     t = etree.parse(raw)
     r = t.getroot()
     cs = r.getchildren()
@@ -141,8 +141,21 @@ def chebi_make():
     rpl_check = t.xpath("/*[local-name()='RDF']/*[local-name()='Class']/*[local-name()='hasAlternativeId']")
     rpl_dict = {_.text:_.getparent() for _ in rpl_check if _.text in ids_raw } # we also need to have any new classes that have replaced old ids
     also_classes = list(rpl_dict.values())
+    def rec(start_set):
+        ids_ = set()
+        for c in start_set:
+            ids_.update([_.items()[0][1] for _ in etree.ElementTree(c).xpath("/*[local-name()='Class']/*[local-name()='subClassOf']") if _.items()])
+        supers = [_ for _ in cs if _.tag == '{http://www.w3.org/2002/07/owl#}Class' and _.values()[0] in ids_]
+        if supers:
+            msup, mids = rec(supers)
+            supers += msup
+            ids_.update(mids)
+        return supers, ids_
+    a = ontology + ops + classes + also_classes
+    more, mids = rec(a)
+    all_ = set(a + more)
     r.clear()  # wipe all the stuff we don't need
-    for c in ontology + ops + classes + also_classes:
+    for c in all_:
         r.append(c)
     data = etree.tostring(r)
 
@@ -175,7 +188,7 @@ def chebi_make():
               'CHEBI:36809':'tricyclic antidepressant',
              }
 
-    for id_ in ids_raw:
+    for id_ in sorted(set(ids_raw) | set((ug.g.namespace_manager.qname(_) for _ in mids))):
         eid = ug.expand(id_)
         trips = list(g.triples((eid, None, None)))
         if not trips:
