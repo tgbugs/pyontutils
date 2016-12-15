@@ -113,7 +113,6 @@ def ncbigene_make():
     #embed()
 
 def chebi_make():
-    # rdflib is TOO SLOW for this :/ then again even owlapi takes 4 minutes just to parse
     PREFIXES = makePrefixes('definition',
                             'hasRole',
                             'CHEBI',
@@ -137,12 +136,13 @@ def chebi_make():
     cs = r.getchildren()
     classes = [_ for _ in cs if _.tag == '{http://www.w3.org/2002/07/owl#}Class' and _.values()[0] in ids]
     ontology = t.xpath("/*[local-name()='RDF']/*[local-name()='Ontology']")
+    ops = t.xpath("/*[local-name()='RDF']/*[local-name()='ObjectProperty']")  # TODO
     wanted = [etree.ElementTree(_) for _ in classes]
     rpl_check = t.xpath("/*[local-name()='RDF']/*[local-name()='Class']/*[local-name()='hasAlternativeId']")
     rpl_dict = {_.text:_.getparent() for _ in rpl_check if _.text in ids_raw } # we also need to have any new classes that have replaced old ids
     also_classes = list(rpl_dict.values())
     r.clear()  # wipe all the stuff we don't need
-    for c in ontology + classes + also_classes:
+    for c in ontology + ops + classes + also_classes:
         r.append(c)
     data = etree.tostring(r)
 
@@ -171,12 +171,6 @@ def chebi_make():
     dontid = dont.path + dont.filename + '.ttl'
     chebi_dead.add_ont(dontid, *dont[2:])
 
-    def recurse(t):
-        new_graph.g.add(t)
-        if isinstance(t[-1], rdflib.BNode):
-            for t_ in g.triples((t[-1], None, None)):
-                recurse(t_)
-
     depwor = {'CHEBI:33243':'natural product',  # FIXME remove these?
               'CHEBI:36809':'tricyclic antidepressant',
              }
@@ -194,7 +188,7 @@ def chebi_make():
                 if replaced_by.toPython() not in ids:  #  we need to add any replacment classes to the bridge
                     print('REPLACED BY NEW CLASS', id_)
                     for t in g.triples((replaced_by, None, None)):
-                        recurse(t)
+                        new_graph.add_recursive(t, g)
                 chebi_dead.add_class(id_)
                 chebi_dead.add_node(id_, 'replacedBy:', replaced_by)
                 chebi_dead.add_node(id_, rdflib.OWL.deprecated, True)
@@ -203,7 +197,7 @@ def chebi_make():
                     raise BaseException('wtf error', id_)
         else:
             for trip in trips:
-                recurse(trip)
+                new_graph.add_recursive(trip, g)
 
     new_graph.write()
     chebi_dead.write()
