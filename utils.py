@@ -72,6 +72,7 @@ def _loadPrefixes():
         '':None,  # safety
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 
+        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
         'NLXWIKI':'http://neurolex.org/wiki/',
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'dc':'http://purl.org/dc/elements/1.1/',
