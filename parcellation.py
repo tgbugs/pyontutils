@@ -15,7 +15,9 @@ from scigraph_client import Vocabulary
 from IPython import embed
 from desc.util.process_fixed import ProcessPoolExecutor
 
-sgv = Vocabulary(cache=True)
+WRITELOC = '/tmp/parc/'
+
+sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
 
 OntMeta = namedtuple('OntMeta',
                      ['path',
@@ -132,7 +134,7 @@ def parcellation_schemes(ontids_atlases):
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
     PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN')
-    graph = makeGraph(ont.filename, PREFIXES, writeloc = '/tmp/parc/')
+    graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
     graph.add_ont(ontid, *ont[2:])
 
     for import_id, atlas in sorted(ontids_atlases):
@@ -164,7 +166,7 @@ class genericPScheme:
         if '' in cls.PREFIXES:
             if PREFIXES[''] is None:
                 PREFIXES[''] = ontid + '/'
-        graph = makeGraph(cls.ont.filename, PREFIXES, writeloc='/tmp/parc/')
+        graph = makeGraph(cls.ont.filename, PREFIXES, writeloc=WRITELOC)
         graph.add_ont(ontid, *cls.ont[2:])
         make_scheme(graph, cls.concept, cls.atlas.curie)
         data = cls.datagetter()
@@ -599,7 +601,7 @@ def swanson():
         'SWAN':'http://swanson.org/node/',
         'SWAA':'http://swanson.org/appendix/',
     })
-    new_graph = makeGraph(filename, PREFIXES, writeloc='/tmp/parc/')
+    new_graph = makeGraph(filename, PREFIXES, writeloc=WRITELOC)
     new_graph.add_ont(ontid,
                       'Swanson brain partomies',
                       'Swanson 2014 Partonomies',
@@ -668,6 +670,7 @@ def swanson():
 
         def Name(self, value):
             self.name = value
+            print(self.name)
 
         def Citation(self, value):
             self.citation = value
@@ -806,7 +809,7 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(convert=False)
-    if False:
+    if True:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
         for i, n in enumerate(mapping):
@@ -818,6 +821,9 @@ def swanson():
 
 
 def main():
+    if not os.path.exists(WRITELOC):
+        os.mkdir(WRITELOC)
+
     with ProcessPoolExecutor(4) as ppe:
         funs = [fmri_atlases,
                 CoCoMac, #cocomac_make,
@@ -825,7 +831,8 @@ def main():
                 HBA, #human_brain_atlas,
                 HCP, #hcp2016_make,
                 PAX1,
-                WHSSD,
+                WHSSD,]
+        funs = [
                 swanson]
         futures = [ppe.submit(f) for f in funs]
         print('futures compiled')
