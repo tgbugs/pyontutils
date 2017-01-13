@@ -670,7 +670,6 @@ def swanson():
 
         def Name(self, value):
             self.name = value
-            print(self.name)
 
         def Citation(self, value):
             self.citation = value
@@ -809,7 +808,7 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(convert=False)
-    if True:
+    if False:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
         for i, n in enumerate(mapping):
@@ -824,6 +823,9 @@ def main():
     if not os.path.exists(WRITELOC):
         os.mkdir(WRITELOC)
 
+    swanson()
+    return
+
     with ProcessPoolExecutor(4) as ppe:
         funs = [fmri_atlases,
                 CoCoMac, #cocomac_make,
@@ -831,8 +833,7 @@ def main():
                 HBA, #human_brain_atlas,
                 HCP, #hcp2016_make,
                 PAX1,
-                WHSSD,]
-        funs = [
+                WHSSD,
                 swanson]
         futures = [ppe.submit(f) for f in funs]
         print('futures compiled')
