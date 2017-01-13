@@ -4,6 +4,7 @@ from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
+from desc.util.ipython import embed
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
@@ -113,21 +114,30 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
-                                sorted(sorted(set([_ for _ in self.store.objects(None, None)
-                                            if not isinstance(_, BNode)] +  # URIRef + Literal
-                                           [_ for _ in self.store.subjects(None, None)
-                                            if isinstance(_, URIRef)])),
-                                       key=lambda _: natsort(self.store.qname(_))))}
+                                sorted(
+                                    sorted(set(
+                                        [_ for _ in self.store.objects(None, None)
+                                         if not isinstance(_, BNode)] +  # URIRef + Literal
+                                        [_ for _ in self.store.subjects(None, None)
+                                         if isinstance(_, URIRef)])),
+                                    key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
         def recurse(node, rank):  # XXX warning: cycles?
+            eranks = 0
             for s in self.store.subjects(None, node):
                 if isinstance(s, BNode):  # w/o this we break recursion limit
                     if s not in self.node_rank:
                         self.node_rank[s] = rank
                     else:
                         self.node_rank[s] += rank
-                    recurse(s, rank)  # if we are retracing steps we already added previous ranks to upstream so don't need to propagate again
+                    eranks += recurse(s, rank)  # only propagate if erank comes from object_rank
+                elif isinstance(node, BNode):  # this is the terminal case
+                    eranks += self.object_rank[s]
+                    #print('incremented rank of', node, 'by rank for', s, 'which is', erank)
+            if isinstance(node, BNode):  # this is the terminal case
+                self.node_rank[node] += eranks
+            return eranks
 
         for o, r in self.object_rank.items():
             recurse(o, r)
