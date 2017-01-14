@@ -4,7 +4,6 @@ from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
-from desc.util.ipython import embed
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
@@ -111,9 +110,13 @@ class CustomTurtleSerializer(TurtleSerializer):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
+        max_pred = len(self.predicateOrder) + 1
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
+                                #sorted(set((_ for _ in self.store.predicates(None, None))),
+                                       #key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred # needed for owl:onProperty cases
+                                      #) +
                                 sorted(
                                     sorted(set(
                                         [_ for _ in self.store.objects(None, None)
@@ -123,24 +126,25 @@ class CustomTurtleSerializer(TurtleSerializer):
                                     key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
-        def recurse(node, rank):  # XXX warning: cycles?
-            eranks = 0
-            for s in self.store.subjects(None, node):
-                if isinstance(s, BNode):  # w/o this we break recursion limit
+        def recurse(node, rank):
+            for s, p in self.store.subject_predicates(node):  # doing subject_predicate for predicate ranking, walk backward up the tree?
+                if isinstance(s, BNode):
                     if s not in self.node_rank:
-                        self.node_rank[s] = rank
+                        self.node_rank[s] = [0, 0]
+                    if p == OWL.onProperty:
+                        self.node_rank[s][0] += rank
                     else:
-                        self.node_rank[s] += rank
-                    eranks += recurse(s, rank)  # only propagate if erank comes from object_rank
-                elif isinstance(node, BNode):  # this is the terminal case
-                    eranks += self.object_rank[s]
-                    #print('incremented rank of', node, 'by rank for', s, 'which is', erank)
-            if isinstance(node, BNode):  # this is the terminal case
-                self.node_rank[node] += eranks
-            return eranks
+                        self.node_rank[s][-1] += rank
+                    recurse(s, rank)
+                else:
+                    pass  # we have hit a top level
+                    #print(s, 'how did we get here from', node, '?', p)
 
         for o, r in self.object_rank.items():
             recurse(o, r)
+
+        self.node_rank = {k:tuple(v) for k, v in self.node_rank.items()}
+        self.object_rank = {k:(0, v) for k, v in self.object_rank.items()}
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
@@ -335,5 +339,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.2\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.3\n").encode('ascii'))
 
