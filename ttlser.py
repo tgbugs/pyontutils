@@ -127,18 +127,17 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.node_rank = {}
         def recurse(node, rank):
-            for s, p in self.store.subject_predicates(node):  # doing subject_predicate for predicate ranking, walk backward up the tree?
+            for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
                 if isinstance(s, BNode):
                     if s not in self.node_rank:
                         self.node_rank[s] = [0, 0]
-                    if p == OWL.onProperty:
-                        self.node_rank[s][0] += rank
+                    if p == OWL.someValuesFrom or p == OWL.allValuesFrom:  # second level sort
+                        self.node_rank[s][1] += rank
                     else:
-                        self.node_rank[s][-1] += rank
+                        self.node_rank[s][0] += rank
                     recurse(s, rank)
                 else:
                     pass  # we have hit a top level
-                    #print(s, 'how did we get here from', node, '?', p)
 
         for o, r in self.object_rank.items():
             recurse(o, r)
@@ -246,14 +245,18 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return properties
 
-    def doList(self, l):  # modified to put rdf list items on new lines
+    def doList(self, l):  # modified to put rdf list items on new lines and to sort by global rank
+        to_sort = []
         while l:
             item = self.store.value(l, RDF.first)
             if item is not None:
+                to_sort.append(item)
+            l = self.store.value(l, RDF.rest)
+
+        for item in sorted(to_sort, key=self._globalSortKey):
                 self.write('\n' + self.indent(1))
                 self.path(item, OBJECT, newline=True)
                 self.subjectDone(l)
-            l = self.store.value(l, RDF.rest)
 
     def _p_default(self, node, position, newline=False):  # XXX unmodified
         if position != SUBJECT and not newline:
@@ -339,5 +342,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.3\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.4\n").encode('ascii'))
 
