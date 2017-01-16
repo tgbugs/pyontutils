@@ -250,13 +250,13 @@ class CustomTurtleSerializer(TurtleSerializer):
         while l:
             item = self.store.value(l, RDF.first)
             if item is not None:
-                to_sort.append((item, l))
+                to_sort.append(item)
+            self.subjectDone(l)
             l = self.store.value(l, RDF.rest)
 
-        for item, l in sorted(to_sort, key=lambda _:self._globalSortKey(_[0])):
+        for item in sorted(to_sort, key=self._globalSortKey):
             self.write('\n' + self.indent(1))
             self.path(item, OBJECT, newline=True)
-            self.subjectDone(l)
 
     def _p_default(self, node, position, newline=False):  # XXX unmodified
         if position != SUBJECT and not newline:
