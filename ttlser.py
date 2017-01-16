@@ -4,6 +4,7 @@ from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef
 from rdflib.namespace import SKOS, DC, Namespace
+from IPython import embed
 
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
@@ -154,7 +155,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
                 print('WARNING: some node that is an object isnt really an object?')
                 print(e)
-                return -1
+                return (-1, -1)
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
@@ -191,7 +192,10 @@ class CustomTurtleSerializer(TurtleSerializer):
              self._references[subject], subject)
             for subject in self._subjects if subject not in seen]
 
-        recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
+        try:
+            recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
+        except TypeError as e:
+            embed()
 
         sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode])  # group bnodes with classes
         sections.append([subject for (isbnode, refs, subject) in recursable if not isbnode])  # annotation targets
