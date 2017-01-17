@@ -38,6 +38,7 @@ class TestTtlser(unittest.TestCase):
         graph = rdflib.Graph()
         graph.parse(self.badpath, format='turtle')
         actual = graph.serialize(format='nifttl')
+        actual = actual.rsplit(b'\n',2)[0]  # drop versioninfo
         return actual
 
     def test_ser(self):
