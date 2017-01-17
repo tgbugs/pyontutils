@@ -64,7 +64,6 @@ class TestTtlser(unittest.TestCase):
             out, err = p.communicate()
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
             out = out.split(b'\n', 1)[1]
-            print(out)
             actual2 = out
             if self.actual != actual2:
                 print('Determinism failure!')
