@@ -92,7 +92,10 @@ BLX:6 a owl:Class ;
     rdfs:range [ a rdfs:Datatype ;
         owl:oneOf ( A:1 A:2 A:3 ) ] .
 
-# general axioms
+# general axioms tests
+# this version will occasionally do some really weird things
 [ rdf:type owl:AllDifferent ;
-    owl:distinctMembers ( A:prefix_1 A:prefix_2 A:prefix_3 A:1 A:2 A:3 ) ] .
-
+    owl:distinctMembers ( A:prefix_4 A:prefix_5 A:prefix_6 A:4 A:5 A:6 ) ] .
+# this version will also sometimes do weird things as well, seeminly more rarely
+[ rdf:type owl:AllDifferent ;
+    owl:distinctMembers ( A:0 A:prefix_1 A:prefix_2 A:prefix_3 A:1 A:2 A:3 ) ] .
