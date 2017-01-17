@@ -252,6 +252,26 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return properties
 
+
+    def isValidList(self, l):  # modified to flatten lists specified using [ a rdf:List; ] syntax
+        """
+        Checks if l is a valid RDF list, i.e. no nodes have other properties.
+        """
+        try:
+            if self.store.value(l, RDF.first) is None:
+                return False
+        except:
+            return False
+        while l:
+            if l != RDF.nil:
+                po = list(self.store.predicate_objects(l))
+                if (RDF.type, RDF.List) in po and len(po) == 3:
+                    pass
+                elif len(po) != 2:
+                    return False
+            l = self.store.value(l, RDF.rest)
+        return True
+
     def doList(self, l):  # modified to put rdf list items on new lines and to sort by global rank
         to_sort = []
         while l:
