@@ -4,7 +4,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix blx: <http://uri.binterlex.org/base/> .
-@prefix BLX: <http://uri.binterlex.org/base/blx_> .
+@prefix BLX: <http://uri.binterlex.org/base/blx_> .  # test for longest prefix wins
 @prefix other: <http://FIXME.org/other_> .
 @prefix A: <http://Z.org/prefix_> .
 @prefix B: <http://X.org/prefix_> .
@@ -35,16 +35,33 @@ BLX:2 a owl:Class ;
     rdfs:subClassOf BLX:1234567,
         [ a owl:Restirction ;
             owl:onProperty other:a1 ;
-            owl:someValuesFrom other:2 ],
+            owl:someValuesFrom other:3 ],
         [ a owl:Restirction ;
             owl:onProperty other:a1 ;
-            owl:someValuesFrom other:1 ],
-        [ a owl:Restirction ;
-            owl:onProperty other:b1 ;
             owl:someValuesFrom other:4 ],
         [ a owl:Restirction ;
             owl:onProperty other:b1 ;
-            owl:someValuesFrom other:3 ] .
+            owl:allValuesFrom other:6 ],
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:5 ],
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ],
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:1 ] .
+
+# test whether restrictions flip
+
+BLX:0 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:2 ],
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
 
 # test that we are ordering classes based on their qname not their uri
 B:1 a owl:Class .
@@ -74,3 +91,8 @@ BLX:5 a owl:Class ;
 BLX:6 a owl:Class ;
     rdfs:range [ a rdfs:Datatype ;
         owl:oneOf ( A:1 A:2 A:3 ) ] .
+
+# general axioms
+[ rdf:type owl:AllDifferent ;
+    owl:distinctMembers ( A:prefix_1 A:prefix_2 A:prefix_3 A:1 A:2 A:3 ) ] .
+
