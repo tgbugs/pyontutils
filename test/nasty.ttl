@@ -10,7 +10,7 @@
 @prefix B: <http://X.org/prefix_> .
 
 <http://testurl.org/filename.ttl> a owl:Ontology ;
-    rdfs:label "U WOT M8" ;
+    rdfs:label "U WOT M8" .
 
 # test consistent ordering with respect to case
 BLX:AA a owl:Class .
@@ -68,7 +68,7 @@ BLX:4 a owl:Class ;
 BLX:5 a owl:Class ;
     owl:oneOf [ rdf:fist "true"^^xsd:boolean ;
                 rdf:rest [ rdf:first "false"^^xsd:boolean ;
-                    rdf:rest rdf:nil ] ] ] .
+                    rdf:rest rdf:nil ] ] .
 
 # make sure rdfs:Datatype is not pulled out to the top level
 BLX:6 a owl:Class ;
