@@ -33,8 +33,8 @@ class TestTtlser(unittest.TestCase):
     def serialize(self):
         graph = rdflib.Graph()
         graph.parse(self.badpath, format='turtle')
-        #actual = graph.serialize(format='nifttl')
-        actual = graph.serialize(format='turtle')  # no change when the file is identical
+        actual = graph.serialize(format='nifttl')
+        #actual = graph.serialize(format='turtle')  # no change when the file is identical
         return actual
 
     def make_ser(self):
