@@ -8,9 +8,17 @@
 @prefix other: <http://FIXME.org/other_> .
 @prefix A: <http://Z.org/prefix_> .
 @prefix B: <http://X.org/prefix_> .
+@prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
 
 <http://testurl.org/filename.ttl> a owl:Ontology ;
     rdfs:label "U WOT M8" .
+
+# test annotation properties
+requestedBy: a owl:AnnotationProperty .
+
+# test full uri shortening
+BLX:BB a owl:Class ;
+    <http://uri.binterlex.org/base/blx_999> "DIO!" .
 
 # test consistent ordering with respect to case
 BLX:AA a owl:Class .
@@ -83,7 +91,7 @@ BLX:4 a owl:Class ;
 
 # test booleans in list
 BLX:5 a owl:Class ;
-    owl:oneOf [ rdf:fist "true"^^xsd:boolean ;
+    owl:oneOf [ rdf:first "true"^^xsd:boolean ;
                 rdf:rest [ rdf:first "false"^^xsd:boolean ;
                     rdf:rest rdf:nil ] ] .
 
