@@ -57,7 +57,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     topClasses = [RDFS.Class,
                   OWL.Ontology,
                   OWL.ObjectProperty,
-                  RDFS.Datatype,
+                  RDFS.Datatype,  # FIXME order in this list matters, so we need to skip BNode cases
                   OWL.AnnotationProperty,
                   OWL.DatatypeProperty,
                   OWL.Class,
@@ -177,14 +177,14 @@ class CustomTurtleSerializer(TurtleSerializer):
             return natsort(m)
 
         for i, classURI in enumerate(self.topClasses):  # SECTIONS
-            #FIXME why are embedded datatypes getting pulled up to top level?
             members = sorted(self.store.subjects(RDF.type, classURI))
             members.sort(key=key)
 
             subjects = []
             for member in members:
-                if isinstance(member, BNode):
-                    continue # do not put top classes with BNodes in this list... not sure why rdfs:Datatype and owl:Class seem to have different behavior here...
+                if classURI == RDFS.Datatype:
+                    if isinstance(member, BNode):
+                        continue  # rdfs:Datatype shows up before owl:Class in the topClasses list, so we need to avoid pulling anon members out by accident
                 subjects.append(member)
                 self._topLevels[member] = True
                 seen[member] = True
