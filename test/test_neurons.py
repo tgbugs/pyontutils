@@ -4,7 +4,7 @@ import unittest
 from pyontutils.neurons import *
 
 class TestNeurons(unittest.TestCase):
-    def setup(self):
+    def setUp(self):
         print('hello')
 
     def test_thing(self):
