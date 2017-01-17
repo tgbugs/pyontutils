@@ -17,8 +17,6 @@ class TestTtlser(unittest.TestCase):
         actualpath = 'test/actual.ttl'
         self.actualpath2 = 'test/actual2.ttl'
 
-        print(self.make_ser())
-
         with open(goodpath, 'rb') as f:
             self.good = f.read()
 
@@ -26,17 +24,6 @@ class TestTtlser(unittest.TestCase):
         with open(actualpath, 'wb') as f:
             f.write(self.actual)
         
-
-    def test_ser(self):
-        assert self.actual == self.good
-
-    def serialize(self):
-        graph = rdflib.Graph()
-        graph.parse(self.badpath, format='turtle')
-        actual = graph.serialize(format='nifttl')
-        #actual = graph.serialize(format='turtle')  # no change when the file is identical
-        return actual
-
     def make_ser(self):
         header = ('import rdflib\n'
                   'import sys\n'
@@ -47,6 +34,14 @@ class TestTtlser(unittest.TestCase):
         after =  't = Thing()\nsys.stdout.buffer.write(t.serialize())\n'
         return header + src + after
 
+    def serialize(self):
+        graph = rdflib.Graph()
+        graph.parse(self.badpath, format='turtle')
+        actual = graph.serialize(format='nifttl')
+        return actual
+
+    def test_ser(self):
+        assert self.actual == self.good
 
     def test_deterministic(self):
         nofail = True
