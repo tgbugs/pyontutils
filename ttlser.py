@@ -329,12 +329,12 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(' .')
         return True
 
-    def _s_squared(self, subject):  # XXX unmodified, ordering issues start here
+    def s_squared(self, subject):  # modified to make anon topClasses behave like anon nested classes
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
-        self.write('\n' + self.indent() + '[]')
+        self.write('\n' + self.indent() + '[')
         self.predicateList(subject)
-        self.write(' .')
+        self.write(' ] .')
         return True
 
     def serialize(self, stream, base=None, encoding=None,  # modified to enable section headers
@@ -353,11 +353,11 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         firstTime = True
         for header, subjects_list in zip(self.SECTIONS, sections_list):
-            if header == self.SECTIONS[-2]:  # Axioms need to not be bnodes...
-                if any([type(s) != BNode for s in subjects_list]):
-                    print('GOT ONE')
-                    self.write(header)
-            elif subjects_list:
+            #if header == self.SECTIONS[-2]:  # Axioms can be BNodes as it turns out...
+                #if any([not isinstance(s, BNode) for s in subjects_list]):
+                    #print('GOT ONE')
+                #self.write(header)
+            if subjects_list:
                 self.write(header)
             for subject in subjects_list:
                 if self.isDone(subject):
