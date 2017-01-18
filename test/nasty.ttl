@@ -89,6 +89,16 @@ BLX:4 a owl:Class ;
             rdf:rest [ rdf:first A:1 ;
                 rdf:rest rdf:nil ] ] ] .
 
+# test conversion of unpacked lists with explitic rdf:List
+BLX:4.5 a owl:Class ;
+    owl:disjointUnionOf [ a rdf:List ;
+        rdf:first B:1 ;
+        rdf:rest [ a rdf:List ;
+            rdf:first A:2 ;
+            rdf:rest [ a rdf:List ;
+                rdf:first A:1 ;
+                rdf:rest rdf:nil ] ] ] .
+
 # test booleans in list
 BLX:5 a owl:Class ;
     owl:oneOf [ rdf:first "true"^^xsd:boolean ;
