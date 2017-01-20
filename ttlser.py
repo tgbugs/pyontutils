@@ -112,12 +112,13 @@ class CustomTurtleSerializer(TurtleSerializer):
         store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
         max_pred = len(self.predicateOrder) + 1
+        pr = sorted(self.store.predicates(None, None), key=natsort)
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
-                                #sorted(set((_ for _ in self.store.predicates(None, None))),
-                                       #key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred # needed for owl:onProperty cases
-                                      #) +
+                                sorted(set((_ for _ in self.store.predicates(None, None))),
+                                       key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
+                                      ) +
                                 sorted(
                                     sorted(set(
                                         [_ for _ in self.store.objects(None, None)
@@ -127,16 +128,33 @@ class CustomTurtleSerializer(TurtleSerializer):
                                     key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
+        rests = set()
         def recurse(node, rank):
             for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
                 if isinstance(s, BNode):
                     if s not in self.node_rank:
-                        self.node_rank[s] = [0, 0]
-                    if p == OWL.someValuesFrom or p == OWL.allValuesFrom:  # second level sort
-                        self.node_rank[s][1] += rank
+                        self.node_rank[s] = [0, 0, 0, 0]
+
+                    isrest = False
+                    if s not in rests:
+                        if OWL.Restriction in set(self.store.objects(s, RDF.type)):
+                            rests.add(s)
+                            isrest = True
                     else:
-                        self.node_rank[s][0] += rank
-                    recurse(s, rank)
+                        isrest = True
+
+                    if isrest:
+                        if p == RDF.type:
+                            self.node_rank[s][0] += rank
+                        elif p == OWL.onProperty:  # properties are the first field to sort on
+                            self.node_rank[s][1] += rank
+                        else:  # someValuesFrom, allValuesFrom, etc
+                            self.node_rank[s][2] += self.object_rank[p]
+                            self.node_rank[s][3] += rank
+                    else:
+                        self.node_rank[s][3] += rank
+
+                    recurse(s, rank)  # in theory the recurse gets smaller since we go up...
                 else:
                     pass  # we have hit a top level
 
@@ -144,7 +162,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             recurse(o, r)
 
         self.node_rank = {k:tuple(v) for k, v in self.node_rank.items()}
-        self.object_rank = {k:(0, v) for k, v in self.object_rank.items()}
+        self.object_rank = {k:(0, 0, 0, v) for k, v in self.object_rank.items()}
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
@@ -155,7 +173,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
                 print('WARNING: some node that is an object isnt really an object?')
                 print(e)
-                return (-1, -1)
+                return (-1, -1, -1, -1)
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
@@ -369,5 +387,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.4\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.5\n").encode('ascii'))
 
