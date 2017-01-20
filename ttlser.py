@@ -223,7 +223,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         except TypeError as e:
             embed()
 
-        sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode])  # group bnodes with classes
+        sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode and not refs])  # group bnodes with classes only if they have no refs
         sections.append([subject for (isbnode, refs, subject) in recursable if not isbnode])  # annotation targets
 
         return sections
