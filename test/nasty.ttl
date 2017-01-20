@@ -130,4 +130,4 @@ BLX:6 a owl:Class ;
 
 # test the effect of types on strings
 BLX:7 a owl:Class ;
-    rdfs:label "label1", "label1"^^xsd:string .
+    rdfs:label "label1", "label1"^^xsd:string, "label1"@en .
