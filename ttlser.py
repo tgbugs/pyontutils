@@ -103,6 +103,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.unionOf,
                       OWL.disjointWith,
                       OWL.disjointUnionOf,
+                      OWL.distinctMembers,
                       RDFS.comment,
                       SKOS.note,
                       SKOS.editorialNote,
@@ -139,7 +140,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         rests = set()
         def recurse(node, rank):
             for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
-                if isinstance(s, BNode) or s in (RDF.first, RDF.rest):
+                if isinstance(s, BNode):
                     if s not in self.node_rank:
                         self.node_rank[s] = [0, 0, 0, 0]
 
@@ -197,14 +198,9 @@ class CustomTurtleSerializer(TurtleSerializer):
         seen = {}
         sections = []
 
-        def key(m):
-            if not isinstance(m, BNode):
-                m = self.store.qname(m)
-            return natsort(m)
-
         for i, classURI in enumerate(self.topClasses):  # SECTIONS
             members = sorted(self.store.subjects(RDF.type, classURI))
-            members.sort(key=key)
+            members.sort(key=self._globalSortKey)
 
             subjects = []
             for member in members:
@@ -379,10 +375,6 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         firstTime = True
         for header, subjects_list in zip(self.SECTIONS, sections_list):
-            #if header == self.SECTIONS[-2]:  # Axioms can be BNodes as it turns out...
-                #if any([not isinstance(s, BNode) for s in subjects_list]):
-                    #print('GOT ONE')
-                #self.write(header)
             if subjects_list:
                 self.write(header)
             for subject in subjects_list:
