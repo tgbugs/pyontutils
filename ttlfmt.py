@@ -23,12 +23,6 @@ if args['--vanilla']:
 else:
     outfmt = 'nifttl'
 
-if args['--parse'] or args['--check'] or args['--nowrite']:
-    nowrite = True
-else:
-    nowrite = False
-
-
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
 def convert(file):
@@ -47,7 +41,7 @@ def convert(file):
         print('PARSING FAILED', filepath)
         raise e
     out = graph.serialize(format=outfmt)
-    if nowrite:
+    if args['--nowrite']:
         print('PARSING Success', filepath)
     else:
         with open(filepath, 'wb') as f:
