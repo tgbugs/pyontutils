@@ -2,7 +2,7 @@
 import re
 from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
-from rdflib import RDF, RDFS, OWL, BNode, URIRef
+from rdflib import RDF, RDFS, OWL, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from IPython import embed
 
@@ -13,6 +13,11 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
+
+def litsort(l):
+    dt = l.datatype if l.datatype is not None else ''
+    lang = l.language if l.language is not None else ''
+    return (natsort(l), dt, lang)
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
@@ -119,10 +124,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                                 sorted(set((_ for _ in self.store.predicates(None, None))),
                                        key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
                                       ) +
+                                sorted((_ for _ in self.store.objects(None, None)
+                                        if isinstance(_, Literal)),
+                                      key=litsort) +
                                 sorted(
                                     sorted(set(
                                         [_ for _ in self.store.objects(None, None)
-                                         if not isinstance(_, BNode)] +  # URIRef + Literal
+                                         if isinstance(_, URIRef)] +
                                         [_ for _ in self.store.subjects(None, None)
                                          if isinstance(_, URIRef)])),
                                     key=lambda _: natsort(self.store.qname(_))))}
@@ -131,7 +139,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         rests = set()
         def recurse(node, rank):
             for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
-                if isinstance(s, BNode):
+                if isinstance(s, BNode) or s in (RDF.first, RDF.rest):
                     if s not in self.node_rank:
                         self.node_rank[s] = [0, 0, 0, 0]
 
