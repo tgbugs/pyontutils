@@ -125,9 +125,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                                 sorted(set((_ for _ in self.store.predicates(None, None))),
                                        key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
                                       ) +
-                                sorted((_ for _ in self.store.objects(None, None)
-                                        if isinstance(_, Literal)),
-                                      key=litsort) +
+                                sorted(  # doublesort needed for stability wrt case for literals
+                                    sorted((_ for _ in self.store.objects(None, None)
+                                            if isinstance(_, Literal)),
+                                           key=litsort)) +
                                 sorted(
                                     sorted(set(
                                         [_ for _ in self.store.objects(None, None)
