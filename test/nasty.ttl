@@ -9,6 +9,7 @@
 @prefix A: <http://Z.org/prefix_> .
 @prefix B: <http://X.org/prefix_> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
+@base <http://ihavenoqname.org/> .  # this will be stripped and we prefer proper prefixes
 
 <http://testurl.org/filename.ttl> a owl:Ontology ;
     rdfs:label "U WOT M8" .
@@ -37,6 +38,12 @@ blx:1234567 a owl:Class .
 # test generating qnames from iris
 <http://uri.binterlex.org/base/123> a owl:Class .
 <http://uri.binterlex.org/base/blx_123> a owl:Class .
+
+# test for iris with no qname
+<http://ihavenoqname.org/heuhuehue_12345678> a owl:Class .
+<http://ihavenoqname.org/heuhuehue_1234567> a owl:Class .
+<bbbbbbbb> a owl:Class .
+<aaaaaaaa> a owl:Class .
 
 # test ordering of multiple restrictions
 BLX:2 a owl:Class ;
