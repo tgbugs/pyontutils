@@ -9,9 +9,7 @@ Options:
     -v --verbose    do something fun!
     -a --vanilla    use the regular rdflib turtle serializer
     -s --slow       do not use a process pool
-    -p --parse      just try to parse the file
-    -c --check      same as --parse useful for hand-edited files
-    -n --nowrite    same as -c and -p
+    -n --nowrite    parse the file and reserialize it but do not write changes
 
 """
 import os
@@ -48,10 +46,10 @@ def convert(file):
     except rdflib.plugins.parsers.notation3.BadSyntax as e:
         print('PARSING FAILED', filepath)
         raise e
+    out = graph.serialize(format=outfmt)
     if nowrite:
         print('PARSING Success', filepath)
     else:
-        out = graph.serialize(format=outfmt)
         with open(filepath, 'wb') as f:
             f.write(out)
 
