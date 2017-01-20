@@ -71,6 +71,16 @@ BLX:0 a owl:Class ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom other:2 ] .
 
+# test whether classes can flip (the actual construction is nonsense, and not valid owl...)
+BLX:0.5 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Restirction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ],
+        [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
 # test that we are ordering classes based on their qname not their uri
 B:1 a owl:Class .
 A:1 a owl:Class .
