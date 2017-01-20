@@ -134,3 +134,8 @@ BLX:7 a owl:Class ;
 # test for literal ordering
 BLX:8 a owl:Class ;
     rdfs:label "Label2", "label2" .
+
+# test for classes missing a owl:Class decleration
+BLX:9 rdfs:subClassOf [ a owl:Restriction ;
+    owl:someValuesFrom B:1 ;
+    owl:onProperty other:b1 ] .
