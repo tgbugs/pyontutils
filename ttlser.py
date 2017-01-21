@@ -97,6 +97,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OBOANN.abbrev,
                       DC.title,
                       SKOS.definition,
+                      SKOS.related,
                       DC.description,
                       RDFS.subClassOf,
                       OWL.intersectionOf,
@@ -104,6 +105,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.disjointWith,
                       OWL.disjointUnionOf,
                       OWL.distinctMembers,
+                      OWL.inverseOf,
                       RDFS.comment,
                       SKOS.note,
                       SKOS.editorialNote,
@@ -118,7 +120,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
         max_pred = len(self.predicateOrder) + 1
-        pr = sorted(self.store.predicates(None, None), key=natsort)
+        pr = sorted(sorted(self.store.predicates(None, None)), key=natsort)
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
@@ -228,17 +230,17 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return sections
 
-    def _predicateList(self, subject, newline=False):  # XXX unmodified
+    def predicateList(self, subject, newline=False):  # modified to sort object lists
         properties = self.buildPredicateHash(subject)
         propList = self.sortProperties(properties)
         if len(propList) == 0:
             return
         self.verb(propList[0], newline=newline)
-        self.objectList(properties[propList[0]])
+        self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:Type
         for predicate in propList[1:]:
             self.write(' ;\n' + self.indent(1))
             self.verb(predicate, newline=True)
-            self.objectList(properties[predicate])
+            self.objectList(sorted(sorted(properties[predicate])[::-1], key=self._globalSortKey))
 
     def sortProperties(self, properties):  # modified to sort objects using their global rank
         """Take a hash from predicate uris to lists of values.
