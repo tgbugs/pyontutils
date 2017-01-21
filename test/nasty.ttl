@@ -6,6 +6,8 @@
 @prefix blx: <http://uri.binterlex.org/base/> .
 @prefix BLX: <http://uri.binterlex.org/base/blx_> .  # test for longest prefix wins
 @prefix other: <http://FIXME.org/other_> .
+@prefix a: <http://a.org/prefix_> .
+@prefix b: <http://b.org/prefix_> .
 @prefix A: <http://Z.org/prefix_> .
 @prefix B: <http://X.org/prefix_> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
@@ -30,6 +32,16 @@ blx:AA a owl:Class .
 BLX:aa a owl:Class .
 blx:aA a owl:Class .
 BLX:aA a owl:Class .
+BLX:a a owl:Class .
+BLX:b a owl:Class .
+BLX:ab a owl:Class .
+BLX:Ab a owl:Class .
+BLX:AB a owl:Class .
+blx:a a owl:Class .
+blx:b a owl:Class .
+blx:ab a owl:Class .
+blx:Ab a owl:Class .
+blx:AB a owl:Class .
 
 # test qnames where the fragment is only numbers
 BLX:1234567 a owl:Class .
@@ -44,6 +56,10 @@ blx:1234567 a owl:Class .
 <http://ihavenoqname.org/heuhuehue_1234567> a owl:Class .
 <bbbbbbbb> a owl:Class .
 <aaaaaaaa> a owl:Class .
+
+# test ordering for capitalization
+b:1 a owl:Class .
+a:1 a owl:Class .
 
 # test ordering of multiple restrictions
 BLX:2 a owl:Class ;
