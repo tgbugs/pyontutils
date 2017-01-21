@@ -134,7 +134,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                                         [_ for _ in self.store.objects(None, None)
                                          if isinstance(_, URIRef)] +
                                         [_ for _ in self.store.subjects(None, None)
-                                         if isinstance(_, URIRef)])),
+                                         if isinstance(_, URIRef)]), key=self.store.qname),
                                     key=lambda _: natsort(self.store.qname(_))))}
 
         self.node_rank = {}
