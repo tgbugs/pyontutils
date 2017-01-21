@@ -4,7 +4,7 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix ns1: <http://myduplicateprefix.org/> .
-@prefix ns2: <http://myduplicateprefix.org/> .  # test for choosing a namespace consistently (I though I had fixed this?!) and warning about duplicate prefixes
+#@prefix ns2: <http://myduplicateprefix.org/> .  # test for choosing a namespace consistently (I though I had fixed this?!) and warning about duplicate prefixes
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix blx: <http://uri.binterlex.org/base/> .
 @prefix BLX: <http://uri.binterlex.org/base/blx_> .  # test for longest prefix wins
@@ -66,13 +66,14 @@ a:1 a owl:Class .
 
 # test ordering of multiple restrictions
 BLX:2 a owl:Class ;
-    rdfs:subClassOf BLX:1234567,
+    rdfs:subClassOf 
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:allValuesFrom other:4 ],
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:allValuesFrom other:3 ],
+        BLX:1234567,
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom other:6 ],
