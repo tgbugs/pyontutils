@@ -595,7 +595,7 @@ def swanson():
     ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('ilx', 'owl', 'OBOANN', 'UBERON')
+    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'UBERON')
     PREFIXES.update({
         '':ontid + '/',  # looking for better options
         'SWAN':'http://swanson.org/node/',
