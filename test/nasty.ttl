@@ -160,7 +160,7 @@ BLX:7 a owl:Class ;
 
 # test for literal ordering
 BLX:8 a owl:Class ;
-    rdfs:label "Label2", "label2" .
+    rdfs:label "Label2", "label2" , "one should come?", "Two should come?" .
 
 # test for classes missing a owl:Class decleration
 BLX:9 rdfs:subClassOf [ a owl:Restriction ;
