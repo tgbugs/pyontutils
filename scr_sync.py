@@ -61,7 +61,7 @@ def make_records(resources, res_cols, field_mapping):
     output = {}
         #rc_query = conn.execute('SELECT rid, name, value FROM resource_columns as rc WHERE rc.name IN %s' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
     #for rid, original_id, type_, value_name, value in join_results:
-    for rid, value_name, value in res_cols:
+    def internal(rid, value_name, value):
         #print(rid, value_name, value)
         scrid, oid, type_, status = resources[rid]
         if scrid.startswith('SCR_'):
@@ -80,6 +80,10 @@ def make_records(resources, res_cols, field_mapping):
             values = [v.strip() for v in value.split(',')]  # XXX DANGER ZONE
             name = field_mapping['MULTI'][value_name]
             for v in values:
+                if value_name == 'Abbreviation' and (('label', v) in output[scrid] or ('synonym', v) in output[scrid]):
+                    continue
+                elif name == 'synonym' and ('label', v) in output[scrid]:
+                    continue
                 output[scrid].append((name, v))  # TODO we may want functions here
         else:
             if field_mapping[value_name] == 'definition':
@@ -88,6 +92,13 @@ def make_records(resources, res_cols, field_mapping):
                 if value in remap_supers:
                     value = remap_supers[value]
             output[scrid].append((field_mapping[value_name], value))  # TODO we may want functions here
+
+    for rid, value_name, value in (_ for _ in res_cols if _[1] == 'Resource Name'):
+        internal(rid, value_name, value)
+    for rid, value_name, value in (_ for _ in res_cols if _[1] == 'Synonyms'):
+        internal(rid, value_name, value)
+    for rid, value_name, value in (_ for _ in res_cols if _[1] != 'Resource Name' and _[1] != 'Synonyms'):
+        internal(rid, value_name, value)
 
     return output
 
@@ -119,6 +130,7 @@ def make_node(id_, field, value):
 field_mapping = {
     'Resource Name':'label',
     'Description':'definition',
+    'Abbreviation':'abbrev',
     'Synonyms':'synonyms',
     'Alternate IDs':'alt_ids',
     'Supercategory':'superclass',
