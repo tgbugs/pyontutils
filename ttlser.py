@@ -129,8 +129,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                                       ) +
                                 sorted(  # doublesort needed for stability wrt case for literals
                                     sorted((_ for _ in self.store.objects(None, None)
-                                            if isinstance(_, Literal)),
-                                           key=litsort)) +
+                                            if isinstance(_, Literal))),
+                                       key=litsort) +
                                 sorted(
                                     sorted(set(
                                         [_ for _ in self.store.objects(None, None)
