@@ -118,8 +118,9 @@ class makeGraph:
         return self.writeloc + self.name + '.ttl'
 
     def write(self, convert=False):
+        ser = self.g.serialize(format='nifttl')
         with open(self.filename, 'wb') as f:
-            f.write(self.g.serialize(format='nifttl'))
+            f.write(ser)
             print('yes we wrote the first version...', self.name)
         if hasattr(self.__class__, '_to_convert'):
             self.__class__._to_convert.append(self.filename)
