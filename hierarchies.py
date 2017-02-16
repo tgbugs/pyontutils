@@ -18,8 +18,7 @@ CYCLE = 'CYCLE DETECTED DERPS'
 
 DEP = 'http://www.w3.org/2002/07/owl#deprecated'
 
-sgg = Graph(cache=True)
-sgg_local = Graph('http://localhost:9000/scigraph', cache=True)
+Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
@@ -385,7 +384,8 @@ def inv_edges(json):
 
 
 def main():
-    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+    sgg = Graph(cache=True)
+    sgg_local = Graph('http://localhost:9000/scigraph', cache=True)
 
     cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
     nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
@@ -492,7 +492,6 @@ def _main():
     #json['edges'].extend(json_r['edges'])
     #embed()
 
-    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
     #fma = Query('FMA:50801', 'None', 'INCOMING', 20)
     fma = Query('FMA:61817', 'None', 'INCOMING', 20)  # Cerebral hemisphere
