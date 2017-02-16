@@ -22,7 +22,7 @@ setup(
         'ipython',
         'rdflib',
         'sqlalchemy',
-        'yaml',
+        'pyyaml',
         'lxml',
     ],
     #extras_require
@@ -31,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'scig=scig:main',
+            'ttlfmt=ttlfmt:main',
         ],
     },
 )
