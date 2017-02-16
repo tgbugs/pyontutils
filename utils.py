@@ -70,6 +70,7 @@ def _loadPrefixes():
     # holding place for values that are not in the curie map
     extras = {
         '':None,  # safety
+        'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
