@@ -90,10 +90,13 @@ ATLAS_SUPER = 'ilx:parcellation_scheme_artifact' # 'NIFRES:nlx_res_20090402'  # 
 
 psname = 'Brain parcellation scheme concept'
 
+TO_REPLACE = set()
 def ILXREPLACE(seed):
     h = md5()
     h.update(seed.encode())
-    return 'ILXREPLACE:' + h.hexdigest()
+    torep = 'ILXREPLACE:' + h.hexdigest()
+    TO_REPLACE.add((torep, seed))
+    return torep
 
 PARC_SUPER = (ILXREPLACE(psname), psname)
 
@@ -836,9 +839,6 @@ def main():
     if not os.path.exists(WRITELOC):
         os.mkdir(WRITELOC)
 
-    #swanson()
-    #return
-
     with ProcessPoolExecutor(4) as ppe:
         funs = [fmri_atlases,
                 CoCoMac, #cocomac_make,
@@ -865,9 +865,9 @@ def main():
     with open('/tmp/catalog-v001.xml','wt') as f:
         f.write(xml)
 
-    # be sure to run
-    # find -name '*.ttl.ttl' -exec sh -c 'a=$(echo "$0" | sed -r "s/.ttl$//") && mv "$0" "$a"' {}  \;
-    # to move the converted files
+    # write TO_REPLACE
+    with open('/tmp/parc_ids_to_replace.txt', 'wt') as f:
+        f.write('\n'.join('%s, %s' % _ for _ in sorted(TO_REPLACE, key=lambda a:a[1])))
 
 if __name__ == '__main__':
     main()
