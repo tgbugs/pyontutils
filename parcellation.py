@@ -19,6 +19,7 @@ from desc.util.process_fixed import ProcessPoolExecutor
 
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
+PARC = GENERATED + 'parcellation/'
 TODAY = date.isoformat(date.today())
 commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode()
 NOTICE = ' Please see https://github.com/tgbugs/pyontutils/tree/{commit}/parcellation.py for details.'.format(commit=commit)
@@ -138,7 +139,7 @@ def add_triples(graph, struct, struct_to_triples, parent=None):
         [graph.add_node(*triple) for triple in struct_to_triples(struct, parent)]
 
 def parcellation_schemes(ontids_atlases):
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+    ont = OntMeta(GENERATED,
                   'parcellation',
                   'NIF collected parcellation schemes ontology',
                   'NIF Parcellations',
@@ -219,7 +220,7 @@ class genericPScheme:
 
 
 class HBA(genericPScheme):
-    ont = OntMeta(GENERATED,
+    ont = OntMeta(PARC,
                   'hbaslim',
                   'Allen Human Brain Atlas Ontology',
                   'HBA 2013 v2',
@@ -271,7 +272,7 @@ class HBA(genericPScheme):
 
 
 class MBA(HBA):
-    ont = OntMeta(GENERATED,
+    ont = OntMeta(PARC,
                   'mbaslim',
                   'Allen Mouse Brain Atlas Ontology',
                   'MBA 2011 v2',
@@ -306,7 +307,7 @@ class MBA(HBA):
 
 
 class CoCoMac(genericPScheme):
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+    ont = OntMeta(PARC,
                   'cocomacslim',
                   'CoCoMac terminology',
                   'CoCoMac',
@@ -369,7 +370,7 @@ class CoCoMac(genericPScheme):
 
 class HCP(genericPScheme):
     source = 'resources/human_connectome_project_2016.csv'
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+    ont = OntMeta(PARC,
                   'hcp_parcellation',
                   ('Human Connectome Project Multi-Modal '
                    'human cortical parcellation'),
@@ -443,7 +444,7 @@ class HCP(genericPScheme):
 
 class PAX1(genericPScheme):
     source = 'resources/paxinos09names.txt'
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+    ont = OntMeta(PARC,
                   'paxinos_r_s_6',
                   'Paxinos Rat Parcellation 6th',
                   'PAXRSTER6',
@@ -487,7 +488,7 @@ class PAX1(genericPScheme):
 
 class WHSSD(genericPScheme):
     source = 'resources/WHS_SD_rat_atlas_v2.label'
-    ont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/generated/',
+    ont = OntMeta(PARC,
                   'whs_sd_2',
                   'Waxholm Space Sprague Dawley Ontology',
                   'WHS SD v2',
@@ -576,7 +577,7 @@ def fmri_atlases():
         filename = os.path.splitext(os.path.basename(xmlfile))[0]
 
         classdict = dict(
-        ont = OntMeta(GENERATED,
+        ont = OntMeta(PARC,
                       filename,
                       name, 
                       shortname,
@@ -608,7 +609,7 @@ def fmri_atlases():
 def swanson():
     """ not really a parcellation scheme """
     source = 'resources/swanson_aligned.txt'
-    ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
+    ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
     PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'UBERON','ILXREPLACE')
@@ -824,7 +825,7 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write(convert=False)
-    if True:#False:
+    if False:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
         for i, n in enumerate(mapping):
