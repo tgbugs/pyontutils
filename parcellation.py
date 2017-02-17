@@ -85,11 +85,6 @@ PARTOF = 'ilx:partOf'
 HASPART = 'ilx:hasPart'
 DELINEATEDBY = 'ilx:delineatedBy'
 
-# classes
-ADULT = 'NIFORG:birnlex_681'
-ATLAS_SUPER = 'ilx:parcellation_scheme_artifact' # 'NIFRES:nlx_res_20090402'  # alternatives?
-
-psname = 'Brain parcellation scheme concept'
 
 TO_REPLACE = set()
 def ILXREPLACE(seed):
@@ -99,7 +94,13 @@ def ILXREPLACE(seed):
     TO_REPLACE.add((torep, seed))
     return torep
 
-PARC_SUPER = (ILXREPLACE(psname), psname)
+# classes
+
+ADULT = 'NIFORG:birnlex_681'
+atname = 'Parcellation scheme artifact'
+ATLAS_SUPER = ILXREPLACE(atname) # 'NIFRES:nlx_res_20090402'  # alternatives?
+psname = 'Brain parcellation scheme concept'
+PARC_SUPER = ILXREPLACE(psname)
 
 def check_hierarchy(graph, root, edge, label_edge=None):
     a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.make_scigraph_json(edge, label_edge))
@@ -110,7 +111,7 @@ def add_ops(graph):
     graph.add_op(DEFSPECIES)
     graph.add_op(DEVSTAGE)
 
-def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER[0]):
+def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER):
     graph.add_class(scheme.curie, parent, label=scheme.name)
     graph.add_hierarchy(scheme.species, DEFSPECIES, scheme.curie)
     graph.add_hierarchy(scheme.devstage, DEVSTAGE, scheme.curie)
@@ -154,7 +155,9 @@ def parcellation_schemes(ontids_atlases):
         graph.add_node(ontid, rdflib.OWL.imports, import_id)
         add_triples(graph, atlas, make_atlas)
 
-    graph.add_class(PARC_SUPER[0], label=PARC_SUPER[1])
+    graph.add_class(ATLAS_SUPER, label=atname)
+
+    graph.add_class(PARC_SUPER, label=psname)
     graph.write(convert=False)
 
 
