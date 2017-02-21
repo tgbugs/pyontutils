@@ -112,7 +112,7 @@ class makeGraph:
         else:
             self.g = rdflib.Graph()  # default args issue
 
-        [self.g.namespace_manager.bind(p, ns) for p, ns in prefixes.items()]
+        [self.g.namespace_manager.bind(p, ns) for p, ns in self.namespaces.items()]
 
     @property
     def filename(self):
