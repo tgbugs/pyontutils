@@ -5,7 +5,6 @@ import csv
 import glob
 import subprocess
 from datetime import date
-from hashlib import md5
 from collections import namedtuple, defaultdict
 import requests
 import rdflib
@@ -13,6 +12,7 @@ from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
 from utils import async_getter, makePrefixes, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
+from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
 from desc.util.process_fixed import ProcessPoolExecutor
@@ -85,17 +85,7 @@ PARTOF = 'ilx:partOf'
 HASPART = 'ilx:hasPart'
 DELINEATEDBY = 'ilx:delineatedBy'
 
-
-TO_REPLACE = set()
-def ILXREPLACE(seed):
-    h = md5()
-    h.update(seed.encode())
-    torep = 'ILXREPLACE:' + h.hexdigest()
-    TO_REPLACE.add((torep, seed))
-    return torep
-
 # classes
-
 ADULT = 'NIFORG:birnlex_681'
 atname = 'Parcellation scheme artifact'
 ATLAS_SUPER = ILXREPLACE(atname) # 'NIFRES:nlx_res_20090402'  # alternatives?
@@ -802,9 +792,10 @@ def swanson():
     #print(sp.nodes[1].keys())
     nbase = PREFIXES['SWAN'] + '%s' 
     json_ = {'nodes':[],'edges':[]}
+    parent = ILXREPLACE('swansonBrainRegionConcept')
     for node, anns in sp.nodes.items():
         nid = nbase % node
-        new_graph.add_class(nid, 'ILXREPLACE:swansonBrainRegionConcept', label=anns['label'])
+        new_graph.add_class(nid, parent, label=anns['label'])
         new_graph.add_node(nid, 'OBOANN:definingCitation', anns['citation'])
         json_['nodes'].append({'lbl':anns['label'],'id':'SWA:' + str(node)})
         #if anns['uberon']:
@@ -868,10 +859,6 @@ def main():
     xml = '\n'.join(xmllines)
     with open('/tmp/catalog-v001.xml','wt') as f:
         f.write(xml)
-
-    # write TO_REPLACE
-    with open('/tmp/parc_ids_to_replace.txt', 'wt') as f:
-        f.write('\n'.join('%s, %s' % _ for _ in sorted(TO_REPLACE, key=lambda a:a[1])))
 
 if __name__ == '__main__':
     main()
