@@ -7,7 +7,25 @@ from hashlib import md5
 from functools import wraps
 import rdflib
 from pyontutils.utils import makePrefixes, makeGraph
+
+# ilx api implementation (will change)
+import csv
+import requests
+from io import StringIO
+
+#debug
 from IPython import embed
+
+# interlex api (temp version)
+ILX_ENDPOINT = 'https://test.neuinfo.org/'
+CID = 72
+def getNewIlxId(temp_id, seed, ontology):
+    sio = StringIO
+    writer = csv.writer(sio, lineterminator='\n', separator='\t')
+    requests.post()
+    return 'ILX:1234567'
+
+# file handling
 
 __FILENAME = 'resources/ilx-replace.json'
 def managed(mode='rt+'):
@@ -18,56 +36,53 @@ def managed(mode='rt+'):
     def managed_(function):
         function.__globals__['FIRST'] = True
         @wraps(function)
-        def inner(*args, TO_REPLACE=None, **kwargs):
+        def inner(*args, TEMP_INDEX=None, **kwargs):
             with open(__FILENAME, mode) as f:  # + maintains a lock
-                if TO_REPLACE is None:
-                    TO_REPLACE = json.load(f)
+                if TEMP_INDEX is None:
+                    TEMP_INDEX = json.load(f)
                     f.seek(0)
-                output = function(*args, TO_REPLACE=TO_REPLACE, **kwargs)
+                output = function(*args, TEMP_INDEX=TEMP_INDEX, **kwargs)
                 if f.writable():
-                    json.dump(TO_REPLACE, f, sort_keys=True, indent=4)
+                    json.dump(TEMP_INDEX, f, sort_keys=True, indent=4)
             return output
         return inner
     if func is not None:
         return managed_(func)
     else:
         return managed_
-    
 
+# check temp_id status
 @managed
-def ilxGetRealId(temp_id, ontid, TO_REPLACE=None):
+def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
     # NOTE run on files after creation, ontid doesn't always exist before
-    if temp_id not in TO_REPLACE:
+    if temp_id not in TEMP_INDEX:
         print('temp_id %s found that is not in %s where did it come from?' % (temp_id, __FILENAME))
-        ilxLookupOrAdd(temp_id, TO_REPLACE=TO_REPLACE)
-    record = TO_REPLACE[temp_id]
+        ilxLookupOrAdd(temp_id, TEMP_INDEX=TEMP_INDEX)
+    record = TEMP_INDEX[temp_id]
     if not record['ilx']:
         record['ontid'] = ontid
         real_id = getNewIlxId(temp_id, record['seed'], ontid)
         record['ilx'] = real_id
 
-def getNewIlxId(temp_id, seed, ontology):
-    return 'ILX:1234567'
-
 @managed
-def ilxRepAdd(torep, seed=None, ontid=None, TO_REPLACE=None):
-    if torep in TO_REPLACE:
-        record = TO_REPLACE[torep]
+def ilxTempAdd(temp_id, seed=None, ontid=None, TEMP_INDEX=None):
+    if temp_id in TEMP_INDEX:
+        record = TEMP_INDEX[temp_id]
         if record['ilx']:
             return record['ilx']  # return the real identifier
         elif ontid and not record['ontid']:
             record['ontid'] = ontid
     else:
-        TO_REPLACE[torep] = {'ilx':None, 'seed':seed, 'ontid':ontid}
+        TEMP_INDEX[temp_id] = {'ilx':None, 'seed':seed, 'ontid':ontid}
 
-    return torep
+    return temp_id
 
 def ILXREPLACE(seed):
     h = md5()
     h.update(seed.encode())
-    torep = 'ILXREPLACE:' + h.hexdigest()
-    ilxRepAdd(torep, seed)
-    return torep
+    temp_id = 'ILXREPLACE:' + h.hexdigest()
+    ilxTempAdd(temp_id, seed)
+    return temp_id
 
 def ilxGet(filename):
     graph = rdflib.Graph()
@@ -83,17 +98,17 @@ def ilxGet(filename):
     vals = graph.query(query)
     for val, in vals:
         qn = graph.namespace_manager.qname(val)
-        ilxRepAdd(qn, ontid=mg.ontid)
+        ilxTempAdd(qn, ontid=mg.ontid)
         print(qn, mg.ontid)
         ilxGetRealId(qn, mg.ontid)
 
     ilxDoReplace(mg)
     
 @managed('rt')
-def ilxDoReplace(mg, TO_REPLACE=None):
+def ilxDoReplace(mg, TEMP_INDEX=None):
     mg.add_namespace('ILX', makePrefixes('ILX')['ILX'])
     mg.del_namespace('ILXREPLACE')
-    for temp_id, record in TO_REPLACE.items():
+    for temp_id, record in TEMP_INDEX.items():
         if not record['ilx']:
             print('%s is missing a real ilx id. Please make sure you have run ilxGetRealId on all entires for %s' % (temp_id, mg.ontid))
         mg.replace_uriref(temp_id, record['ilx'])
