@@ -73,6 +73,7 @@ def _loadPrefixes():
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 
+        'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
         'NLXWIKI':'http://neurolex.org/wiki/',
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
@@ -100,11 +101,12 @@ class makeGraph:
     def __init__(self, name, prefixes=None, graph=None, writeloc='/tmp/'):
         self.name = name
         self.writeloc = writeloc
+        self.namespaces = {}
         if prefixes:
-            self.namespaces = {p:rdflib.Namespace(ns) for p, ns in prefixes.items()}
-        elif graph:
-            self.namespaces = {p:rdflib.Namespace(ns) for p, ns in graph.namespaces()}
-        else:
+            self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in prefixes.items()})
+        if graph:  # graph takes precidence
+            self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in graph.namespaces()})
+        if not graph and not prefixes:
             raise ValueError('No prefixes or graph specified.')
 
         if graph:
