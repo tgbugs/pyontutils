@@ -114,9 +114,24 @@ class makeGraph:
 
         [self.g.namespace_manager.bind(p, ns) for p, ns in self.namespaces.items()]
 
+    def add_namespace(self, prefix, namespace):
+        self.namespaces[prefix] = rdflib.Namespace(namespace)
+        self.g.namespace_manager.bind(prefix, namespace)
+
+    def del_namespace(self, prefix):
+        self.g.store._IOMemory__namespace.pop(prefix)
+
     @property
     def filename(self):
         return self.writeloc + self.name + '.ttl'
+
+    @property
+    def ontid(self):
+        ontids = list(self.g.subjects(rdflib.RDF.type, rdflib.OWL.Ontology))
+        if len(ontids) > 1:
+            raise TypeError('There is more than one ontid in this graph!'
+                            ' The graph is not isomorphic to a single ontology!')
+        return ontids[0]
 
     def write(self, convert=False):
         ser = self.g.serialize(format='nifttl')
