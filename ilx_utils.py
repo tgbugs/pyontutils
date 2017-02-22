@@ -7,8 +7,7 @@ from hashlib import md5
 from functools import wraps
 import rdflib
 from pyontutils.utils import makePrefixes, makeGraph
-
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
+from IPython import embed
 
 __FILENAME = 'resources/ilx-replace.json'
 def managed(mode='rt+'):
@@ -17,6 +16,7 @@ def managed(mode='rt+'):
         func = mode
         mode = 'rt+'
     def managed_(function):
+        function.__globals__['FIRST'] = True
         @wraps(function)
         def inner(*args, TO_REPLACE=None, **kwargs):
             with open(__FILENAME, mode) as f:  # + maintains a lock
@@ -47,7 +47,7 @@ def ilxGetRealId(temp_id, ontid, TO_REPLACE=None):
         record['ilx'] = real_id
 
 def getNewIlxId(temp_id, seed, ontology):
-    return 'FAKE:1234567'
+    return 'ILX:1234567'
 
 @managed
 def ilxRepAdd(torep, seed=None, ontid=None, TO_REPLACE=None):
@@ -74,7 +74,7 @@ def ilxGet(filename):
     graph.parse(filename, format='turtle')
     fn = os.path.splitext(filename)[0]
     print(fn)
-    mg = makeGraph(fn, graph=graph)
+    mg = makeGraph(fn, graph=graph, writeloc='')
     namespace = str(mg.namespaces['ILXREPLACE'])
     query = ("SELECT DISTINCT ?v "
              "WHERE { {?v ?p ?o} UNION {?s ?v ?o} UNION {?s ?p ?v} . "
@@ -91,11 +91,17 @@ def ilxGet(filename):
     
 @managed('rt')
 def ilxDoReplace(mg, TO_REPLACE=None):
+    mg.add_namespace('ILX', makePrefixes('ILX')['ILX'])
+    mg.del_namespace('ILXREPLACE')
     for temp_id, record in TO_REPLACE.items():
         if not record['ilx']:
-            raise ValueError('%s is missing a real ilx id. Please make sure you have run ilxGetRealId on all entires for %s' % (record, mg.ontid))
+            print('%s is missing a real ilx id. Please make sure you have run ilxGetRealId on all entires for %s' % (temp_id, mg.ontid))
         mg.replace_uriref(temp_id, record['ilx'])
     mg.write()
+
+    if ilxDoReplace.__globals__['FIRST']:
+        ilxDoReplace.__globals__['FIRST'] = False
+        #embed()
 
 def main():
     if not os.path.exists(__FILENAME):
@@ -105,7 +111,8 @@ def main():
     ILXREPLACE('wowzers')
     ILXREPLACE('are you joking')
     ilxGetRealId(ILXREPLACE('wowzers'), 'http://FIXME.org/thing.ttl')
-    [ilxGet(_) for _ in glob('/home/tom/git/NIF-Ontology/ttl/generated/parcellation/*.ttl')]
+    for file in glob('/home/tom/git/NIF-Ontology/ttl/generated/parcellation/*.ttl'):
+        ilxGet(file)
     ilxGet('/home/tom/git/NIF-Ontology/ttl/generated/parcellation.ttl')
 
 if __name__ == '__main__':
