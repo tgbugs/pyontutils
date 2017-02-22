@@ -17,13 +17,24 @@ from io import StringIO
 from IPython import embed
 
 # interlex api (temp version)
-ILX_ENDPOINT = 'https://test.neuinfo.org/'
-CID = 72
-def getNewIlxId(temp_id, seed, ontology):
-    sio = StringIO
-    writer = csv.writer(sio, lineterminator='\n', separator='\t')
-    requests.post()
-    return 'ILX:1234567'
+ILX_ENDPOINT = 'https://test.scicrunch.org/forms/term-forms/term-bulk-upload.php'
+CID = 72  # SciCrunch community id
+ilx_session = requests.Session()
+ILX_USER, ILX_PASS = os.environ.get('ILX_USER'), os.environ.get('ILX_PASS')
+ilx_session.auth = (ILX_USER, ILX_PASS)  # basic auth but fails?
+def getNewIlxId(temp_id, seed, ontid):
+    # Label[tab] Type[tab] Definition[tab] OntologyURLs[tab] Comment[tab] Synonym::Type[tab] Curie::Iri::Preferred[tab] Superclasses[new line]
+    row = 'TOM TEST TERM', 'term', None, ontid, temp_id, None, None, None
+    sio = StringIO()
+    writer = csv.writer(sio, lineterminator='\n', delimiter='\t')
+    writer.writerow(row)
+    data = {'file':sio, 'cid':CID}
+    req = requests.Request(method='POST', url=ILX_ENDPOINT, data=data)
+    req.headers
+    prep = req.prepare()
+    resp = ilx_session.send(prep, verify=False)
+    embed()
+    #return 'ILX:1234567'
 
 # file handling
 
@@ -100,7 +111,7 @@ def ilxGet(filename):
         qn = graph.namespace_manager.qname(val)
         ilxTempAdd(qn, ontid=mg.ontid)
         print(qn, mg.ontid)
-        ilxGetRealId(qn, mg.ontid)
+        #ilxGetRealId(qn, mg.ontid)
 
     ilxDoReplace(mg)
     
@@ -126,6 +137,7 @@ def main():
     ILXREPLACE('wowzers')
     ILXREPLACE('are you joking')
     ilxGetRealId(ILXREPLACE('wowzers'), 'http://FIXME.org/thing.ttl')
+    return
     for file in glob('/home/tom/git/NIF-Ontology/ttl/generated/parcellation/*.ttl'):
         ilxGet(file)
     ilxGet('/home/tom/git/NIF-Ontology/ttl/generated/parcellation.ttl')
