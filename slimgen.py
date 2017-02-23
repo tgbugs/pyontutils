@@ -13,6 +13,7 @@ import rdflib
 from rdflib.extras import infixowl
 import requests
 from utils import makePrefixes, makeGraph, chunk_list, dictParse
+from ilx_utils import ILXREPLACE
 from parcellation import OntMeta, TODAY
 from IPython import embed
 from lxml import etree
@@ -27,7 +28,7 @@ from lxml import etree
 #}
 
 class ncbi(dictParse):
-    superclass = rdflib.URIRef('http://uri.interlex.org/base/ilx_gene_concept')
+    superclass = ILXREPLACE('ilx_gene_concept')
     def __init__(self, thing, graph):
         self.g = graph
         super().__init__(thing, order=['uid'])
@@ -37,7 +38,7 @@ class ncbi(dictParse):
 
     def description(self, value):
         #if value:
-        self.g.add_node(self.identifier, 'ilx:display_label', value)
+        self.g.add_node(self.identifier, 'skos:prefLabel', value)
 
     def uid(self, value):
         self.identifier = 'NCBIGene:' + str(value)
@@ -49,7 +50,7 @@ class ncbi(dictParse):
 
     def taxid(self, value):
         tax = 'NCBITaxon:' + str(value)
-        self.g.add_node(self.identifier, 'ilx:has_taxon', tax)
+        self.g.add_node(self.identifier, 'ilx:definedForTaxon', tax)  # FIXME species or taxon???
 
     def otheraliases(self, value):
         if value:
@@ -69,7 +70,7 @@ def ncbigene_make():
     #url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?retmode=json&retmax=5000&db=gene&id='
     #for id_ in ids:
         #data = requests.get(url + id_).json()['result'][id_]
-    url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
+    url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
     data = {
         'db':'gene',
         'retmode':'json',
@@ -92,13 +93,7 @@ def ncbigene_make():
     #base['uids'] = uids  # i mean... its just the keys
     base.pop('uids')
  
-    prefixes = {
-        'ilx':'http://uri.interlex.org/base/',
-        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-        'NCBIGene':'http://www.ncbi.nlm.nih.gov/gene/',
-        'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
-    }
-    ng = makeGraph('ncbigeneslim', prefixes)
+    ng = makeGraph('ncbigeneslim', makePrefixes('ILXREPLACE', 'ilx', 'OBOANN', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'))
 
     for k, v in base.items():
         #if k != 'uids':
@@ -218,8 +213,8 @@ def chebi_make():
     embed()
 
 def main():
-    #ncbigene_make()
-    chebi_make()
+    ncbigene_make()
+    #chebi_make()
 
 if __name__ == '__main__':
     main()
