@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3.6
 """Look look up ontology terms on the command line.
 
 Usage:

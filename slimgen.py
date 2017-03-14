@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 """
     Build lightweight slims from curie lists.
     Used for sources that don't have an owl ontology floating.

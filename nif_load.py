@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3.6
 """ Run in NIF-Ontology/ttl/ """
 from glob import glob
 import rdflib
