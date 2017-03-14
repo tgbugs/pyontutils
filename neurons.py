@@ -2,8 +2,8 @@
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from scigraph_client import Graph, Vocabulary
-from utils import makeGraph
+from pyontutils.scigraph_client import Graph, Vocabulary
+from pyontutils.utils import makeGraph
 
 __all__ = [
     'AND',
