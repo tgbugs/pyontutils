@@ -319,7 +319,7 @@ class Neuron(graphBase):
             else:
                 self._pesDict[pe.e] = [pe]
 
-        if not self.id_:
+        if not id_:
             self.Class = self._graphify()
             self.Class.label = rdflib.Literal(self.label)
 
