@@ -109,7 +109,7 @@ class makeGraph:
         if not graph and not prefixes:
             raise ValueError('No prefixes or graph specified.')
 
-        if graph:
+        if graph is not None:
             self.g = graph
         else:
             self.g = rdflib.Graph()  # default args issue
