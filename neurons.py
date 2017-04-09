@@ -747,14 +747,19 @@ def main():
             raise e
     #"""
 
-    wat = makeGraph('outtest', prefixes=PREFIXES)
-    dw = dns[-1]._graphify(graph=wat.g)
-    wat.write()
+    #wat = makeGraph('outtest', prefixes=PREFIXES)
+    #dw = dns[-1]._graphify(graph=wat.g)
+    #wat.write()
 
     pe = PhenotypeEdge
     #asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
     mn = MeasuredNeuron(id_=rdflib.term.URIRef('http://uri.interlex.org/base/ilx_0050205'))
     asdf = DefinedNeuron(pe('ILXREPLACE:asdf1', 'ilx:hasPhenotype'), pe('ILXREPLACE:asdf2', 'ilx:hasPhenotype'))
+
+    ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
+               'VERY EXPERIMENTAL', '0.0.0.1a')
+    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Phenotype.ttl')
+    ng.write()
     embed()
 
 if __name__ == '__main__':
