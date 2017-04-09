@@ -3,7 +3,8 @@ import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
 from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.utils import makeGraph
+from pyontutils.utils import makeGraph, makePrefixes
+from pyontutils.ilx_utils import ILXREPLACE
 
 __all__ = [
     'AND',
@@ -13,7 +14,7 @@ __all__ = [
     'NegPhenotypeEdge',
     'LogicalPhenoEdge',
     'DefinedNeuron',
-    'MeasuredNeuron',
+    #'MeasuredNeuron',  # we don't need this
     'NeuronArranger',
 ]
 
@@ -37,6 +38,7 @@ sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
            '/tmp/hbp-special.ttl')
 for file in sources:
         EXISTING_GRAPH.parse(file, format='turtle')
+EXISTING_GRAPH.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])
 
 # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
 qstring = ('SELECT DISTINCT ?prop WHERE '
@@ -56,7 +58,7 @@ class graphThing:
             return putativeURI.identifier
         elif type(putativeURI) == str:
             try: prefix, suffix = putativeURI.split(':',1)
-            except ValueError:
+            except ValueError:  # FIXME this is wrong...
                 return rdflib.URIRef(putativeURI)
             if prefix in self._namespaces:
                 return self._namespaces[prefix][suffix]
@@ -234,6 +236,7 @@ class LogicalPhenoEdge(graphThing):
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
 
+hashes = []
 class Neuron(graphThing):
     # FIXME it may make more sense to manage this in the NeuronArranger
     # so that it can interconvert the two representations
@@ -253,15 +256,27 @@ class Neuron(graphThing):
 
         if graph: self.graph = graph
 
-        self.id_ = self.expand(id_) if id_ else None
+        if id_:
+            self.id_ = self.expand(id_)
+        else:
+            self.id_ = None
+        #elif phenotypeEdges:
+            #self.id_ = self.expand(ILXREPLACE(str(hash(tuple(sorted(phenotypeEdges))))))  # FIXME make sure this is deterministic
+            #hashes.append(self.id_)
+        #else:
+            #raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
+
         self.Class = infixowl.Class(self.id_, graph=self.graph)
 
-        if not phenotypeEdges and self.id_:
+        if not phenotypeEdges and id_ is not None:
             # rebuild the bag from the -class- id
             phenotypeEdges = self.bagExisting()
+            #if not phenotypeEdges:  # we should still be able to handle poorely defined neurons and alert on them
+                #raise ValueError(f'No phenotypes found for {self.id_}')
 
         self.pes = tuple(sorted(phenotypeEdges))
-        self.temp_id = rdflib.URIRef('http://TEMP.ORG/%s' % hash(self.pes))
+        self.temp_id = self.expand(ILXREPLACE(str(hash(tuple(sorted(phenotypeEdges))))))  # FIXME make sure this is deterministic
+        hashes.append(self.temp_id)
 
         self.phenotypes = set((pe.p for pe in self.pes))
         self.edges = set((pe.e for pe in self.pes))
@@ -273,7 +288,7 @@ class Neuron(graphThing):
                 self._pesDict[pe.e] = [pe]
 
         if not self.id_:
-            self.Class = self.makeGraphStructure()
+            self.Class = self._graphify()
             self.Class.label = rdflib.Literal(self.label)
 
     def _tuplesToPes(self, pes):
@@ -327,7 +342,7 @@ class Neuron(graphThing):
         print(new_label)
         return new_label
         
-    def realize(self):
+    def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
 
@@ -416,15 +431,16 @@ class DefinedNeuron(Neuron):
         id_ = self.id_ or self.temp_id
         class_ = infixowl.Class(id_, graph=self.graph)
         #class_.delete()  # this doesn't actually work... it polutes the graph :/????
-        class_.subClassOf = [self.expand(DEF_ROOT)]  # convenience
+        #class_.subClassOf = [self.expand(DEF_ROOT)]  # convenience
         members = [self.expand(NIFCELL_NEURON)]
         anon = infixowl.Class(graph=self.graph)  # for disjointness
         for pe in self.pes:
             target = pe._graphify()
-            if isinstance(pe, NegPhenotypeEdge):
-                members.append(target)
+            if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
+                class_.disjointWith = [target]
             else:
-                anon.disjointWith = [target]
+                members.append(target)
+                #anon.disjointWith = [target]
         intersection = infixowl.BooleanClass(members=members, graph=self.graph)
         if tuple(anon.disjointWith):
             ec = [intersection, anon]
@@ -644,13 +660,34 @@ class neuronManager:
         nodef = sorted(set(tc_neurons) - set(def_neurons))
         mns = [MeasuredNeuron(id_=n) for n in nodef]
         dns = [DefinedNeuron(id_=n) for n in sorted(def_neurons)]
+        dns += [DefinedNeuron(*m.pes) for m in mns]
+        for d in dns:
+            print(d)
         embed()
 
 
 def main():
-    neuronManager()
+    g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
+    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(NIFCELL_NEURON)))
+    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NIFCELL_NEURON)]
+    def_neurons = g.get_equiv_inter(NIFCELL_NEURON)
+
+    nodef = sorted(set(tc_neurons) - set(def_neurons))
+    mns = [MeasuredNeuron(id_=n) for n in nodef]
+    dns = [DefinedNeuron(id_=n) for n in sorted(def_neurons)]
+    dns += [DefinedNeuron(*m.pes) if m.pes else DefinedNeuron(id_=m.id_) for m in mns]
+    for d in dns:
+        try:
+            print(d)
+        except TypeError as e:
+            print(d.pes)
+            embed()
+            raise e
+
     pe = PhenotypeEdge
-    asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
+    #asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
+    asdf = DefinedNeuron(pe('ILXREPLACE:asdf1', 'ilx:hasPhenotype'), pe('ILXREPLACE:asdf2', 'ilx:hasPhenotype'))
+    embed()
 
 if __name__ == '__main__':
     main()
