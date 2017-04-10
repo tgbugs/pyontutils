@@ -10,14 +10,13 @@ __all__ = [
     'AND',
     'OR',
     'getPhenotypePredicates',
+    'graphBase',
     'PhenotypeEdge',
     'NegPhenotypeEdge',
     'LogicalPhenoEdge',
     'DefinedNeuron',
-    #'MeasuredNeuron',  # we don't need this
+    #'MeasuredNeuron',  # we do not want this used
     'NeuronArranger',
-    #'EXISTING_GRAPH',  # don't need this
-    'graphBase',
 ]
 
 # language constructes
@@ -365,6 +364,8 @@ class Neuron(graphBase):
         # projection
         # cell type specific connectivity?
         # circuit role? (principle interneuron...)
+        if not label:
+            label.append('????')
         nin_switch = 'neuron' if True else 'interneuron'
         label.append(nin_switch)
 
@@ -699,7 +700,6 @@ class neuronManager:
 
 
 def main():
-
     # load in our existing graph
     # note: while it would be nice to allow specification of phenotypes to be decoupled
     # from insertion into the graph... maybe we could enable this, but it definitely seems
@@ -760,6 +760,8 @@ def main():
                'VERY EXPERIMENTAL', '0.0.0.1a')
     ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Phenotype.ttl')
     ng.write()
+    bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
+            if len(list(ng.g.predicate_objects(n))) == 1]
     embed()
 
 if __name__ == '__main__':
