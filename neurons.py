@@ -17,6 +17,7 @@ __all__ = [
     'DefinedNeuron',
     #'MeasuredNeuron',  # we do not want this used
     'NeuronArranger',
+    'NIFCELL_NEURON',
 ]
 
 # language constructes
@@ -318,9 +319,9 @@ class Neuron(graphBase):
             else:
                 self._pesDict[pe.e] = [pe]
 
-        if not id_:
-            self.Class = self._graphify()
-            self.Class.label = rdflib.Literal(self.label)
+        #if not id_:  # we simply do not need this, it should run every time
+        self.Class = self._graphify()
+        self.Class.label = rdflib.Literal(self.label)
 
     def _tuplesToPes(self, pes):
         for p, e in pes:
@@ -433,6 +434,10 @@ class DefinedNeuron(Neuron):
                 for id_ in bc._rdfList:
                     print(id_)
                     pr = infixowl.CastClass(id_, graph=self.in_graph)
+                    if isinstance(pr, infixowl.BooleanClass):
+                        lpe = self._unpackLogical(pr)
+                        pes.append(lpe)
+                        continue
                     if isinstance(pr, infixowl.Class):
                         if id_ == self.expand(NIFCELL_NEURON):
                             print('we got neuron root', id_)
@@ -458,6 +463,17 @@ class DefinedNeuron(Neuron):
         else:
             # TODO make sure that Neuron is in there somehwere...
             print('what is this thing?', c)
+
+    def _unpackLogical(self, bc, type_=PhenotypeEdge):  # TODO this will be needed for disjoint as well
+        op = bc._operator
+        pes = []
+        for id_ in bc._rdfList:
+            pr = infixowl.CastClass(id_, graph=self.in_graph)
+            p = pr.someValuesFrom
+            e = pr.onProperty
+            pes.append(type_(p, e))
+            #print(id_)
+        return LogicalPhenoEdge(op, *pes)
 
     def _graphify(self, *args, graph=None): #  defined
         """ Lift phenotypeEdges to Restrictions """
