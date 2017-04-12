@@ -45,9 +45,9 @@ class graphBase:
     in_graph = 'ASSIGN ME AFTER IMPORT!'
     out_graph = 'ASSIGN ME AFTER IMPORT'
 
-    predicates = 'ASSIGN ME AFTER IMPORT'
+    _predicates = 'ASSIGN ME AFTER IMPORT'
 
-    sgv = Vocabulary(cache=True)
+    _sgv = Vocabulary(cache=True)
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -81,6 +81,7 @@ class graphBase:
 
         self._namespaces = {p:rdflib.Namespace(ns) for p, ns in self.in_graph.namespaces()}
         #self._namespaces = {}
+        self._graphed = False
 
     def expand(self, putativeURI):
         if type(putativeURI) == infixowl.Class:
@@ -97,8 +98,9 @@ class graphBase:
             return putativeURI
 
 
-class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too?
+class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     local_names = {
+        'NCBITaxon:10116':'Rat',
         'PR:000004967':'CB',
         'PR:000004968':'CR',
         'PR:000011387':'NPY',
@@ -113,16 +115,21 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         'ilx:PetillaInitialBurstSpikingPhenotype':'b',
         'ilx:PetillaInitialClassicalSpikingPhenotype':'c',
         'ilx:PetillaInitialDelayedSpikingPhenotype':'d',
-        'UBERON:0005390':'Layer 1',
-        'UBERON:0005391':'Layer 2',
-        'UBERON:0005392':'Layer 3',
-        'UBERON:0005393':'Layer 4',
-        'UBERON:0005394':'Layer 5',
-        'UBERON:0005396':'Layer 6',
-
+        'UBERON:0005390':'L1',
+        'UBERON:0005391':'L2',
+        'UBERON:0005392':'L3',
+        'UBERON:0005393':'L4',
+        'UBERON:0005394':'L5',
+        'UBERON:0005395':'L6',
+        'UBERON:0003881':'CA1',
+        'UBERON:0003882':'CA2',
+        'UBERON:0003883':'CA3',
+        'UBERON:0001950':'Neocortex',
+        'UBERON:0008933':'S1',
     }
     def __init__(self, phenotype, ObjectProperty=None, label=None):
         # label blackholes
+        # TODO implement local names here? or at a layer above? (above)
         super().__init__()
         if isinstance(phenotype, PhenotypeEdge):  # simplifies negation of a phenotype
             ObjectProperty = phenotype.e
@@ -138,16 +145,18 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
 
     def getObjectProperty(self, phenotype):
-        edges = list(self.in_graph.objects(phenotype, self.expand('ilx:useObjectProperty')))
-        if edges:
-            return edges[0]
+        predicates = list(self.in_graph.objects(phenotype, self.expand('ilx:useObjectProperty')))  # useObjectProperty works for phenotypes we control
+
+        if predicates:
+            return predicates[0]
         else:
             # TODO check if falls in one of the expression categories
+            predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.values()]
             return self.expand(PHENO_ROOT)
 
     def checkObjectProperty(self, ObjectProperty):
         op = self.expand(ObjectProperty)
-        if op in self.predicates.__dict__.values():
+        if op in self._predicates.__dict__.values():
             return op
         else:
             raise TypeError('Unknown ObjectProperty %s' % repr(op))
@@ -160,7 +169,10 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
     def pLabel(self):
         l = tuple(self._pClass.label)
         if not l:  # we don't want to load the whole ontology
-            l = self.sgv.findById(self.p)['labels'][0]
+            try:
+                l = self._sgv.findById(self.p)['labels'][0]
+            except TypeError:
+                l = self.p
         else:
             l = l[0]
         return l
@@ -178,7 +190,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
     @property
     def pShortName(self):
         pn = self.in_graph.namespace_manager.qname(self.p)
-        resp = self.sgv.findById(pn)
+        resp = self._sgv.findById(pn)
         if resp:  # DERP
             abvs = resp['abbreviations']
         else:
@@ -189,10 +201,14 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         elif pn in self.local_names:
             return self.local_names[pn]
         else:
-            return None
+            return ''
 
     def _graphify(self):
-        return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
+        if self._graphed:
+            return self._graphed
+        else:
+            self._graphed = infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
+            return self._graphed
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -217,7 +233,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         pn = self.in_graph.namespace_manager.qname(self.p)
         en = self.in_graph.namespace_manager.qname(self.e)
         lab = self.pLabel
-        return "%s('%s', '%s', '%s')" % (self.__class__.__name__, pn, en, lab)
+        return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
 
 
 class NegPhenotypeEdge(PhenotypeEdge):
@@ -253,11 +269,36 @@ class LogicalPhenoEdge(graphBase):
         return ''.join([pe.pShortName for pe in self.pes])
 
     def _graphify(self):
-        members = []
-        for pe in self.pes:
-            members.append(pe._graphify())
-        intersection = infixowl.BooleanClass(operator=self.op, members=members, graph=self.out_graph)
-        return intersection
+        if self._graphed:
+            return self._graphed
+        else:
+
+            members = []
+            for pe in self.pes:
+                members.append(pe._graphify())
+            self._graphed = infixowl.BooleanClass(operator=self.op, members=members, graph=self.out_graph)
+            return self._graphed
+
+    def __lt__(self, other):
+        if type(other) == type(self):
+            return sorted((self.p, other.p))[0] == self.p  # FIXME bad...
+        else:
+            return False
+
+    def __gt__(self, other):
+        return not self.__lt__(other)
+
+    def __eq__(self, other):
+        if type(other) == type(self):
+            for a, b in zip(sorted(self.pes), sorted(other.pes)):
+                if a != b:
+                    return False
+            return True
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
         op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
@@ -278,15 +319,15 @@ class Neuron(graphBase):
         # FIXME it may make more sense to manage this in the NeuronArranger
         # so that it can interconvert the two representations
         # this is really high overhead to load this here
-        self.predicates.hasInstanceInSpecies,
-        self.predicates.hasTaxonRank,
-        self.predicates.hasSomaLocatedIn,  # hasSomaLocation?
-        self.predicates.hasLayerLocationPhenotype,  # TODO soma naming...
-        self.predicates.hasMorphologicalPhenotype,
-        self.predicates.hasElectrophysiologicalPhenotype,
-        self.predicates.hasSpikingPhenotype,
-        self.predicates.hasExpressionPhenotype,
-        self.predicates.hasProjectionPhenotype,
+        self._predicates.hasInstanceInSpecies,
+        self._predicates.hasTaxonRank,
+        self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
+        self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
+        self._predicates.hasMorphologicalPhenotype,
+        self._predicates.hasElectrophysiologicalPhenotype,
+        self._predicates.hasSpikingPhenotype,
+        self._predicates.hasExpressionPhenotype,
+        self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
 
         if id_:
@@ -331,7 +372,8 @@ class Neuron(graphBase):
             yield PhenotypeEdge(p, e)
 
     @property
-    def label(self):
+    def label(self):  # FIXME for some reasons this doesn't always make it to the end?
+        # TODO predicate actions are the right way to implement the transforms here
         def sublab(edge):
             sublabs = []
             if edge in self._pesDict:
@@ -342,11 +384,14 @@ class Neuron(graphBase):
                     if not l:
                         l = pe.pLabel
 
-                    if pe.e == self.predicates.hasExpressionPhenotype:
+                    if pe.e == self._predicates.hasExpressionPhenotype:
                         if type(pe) == NegPhenotypeEdge:
                             l = '-' + l
                         else:
                             l = '+' + l
+                    elif pe.e == self._predicates.hasProjectionPhenotype:
+                        l = 'Projecting To ' + l
+
 
                     sublabs.append(l)
 
@@ -370,13 +415,15 @@ class Neuron(graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = 'neuron' if True else 'interneuron'
+        nin_switch = 'Neuron' if True else 'Interneuron'
         label.append(nin_switch)
 
         new_label = ' '.join(label)
-        try: print(next(self.Class.label))  # FIXME need to set the label once we generate it and overwrite the old one...
-        except StopIteration: pass
-        print(new_label)
+        self.Class.label = (rdflib.Literal(new_label),)
+        #try:
+            #print(next(self.Class.label))  # FIXME need to set the label once we generate it and overwrite the old one...
+        #except StopIteration:
+            #print(new_label)
         return new_label
         
     def realize(self):  # TODO use ilx_utils
@@ -408,6 +455,13 @@ class DefinedNeuron(Neuron):
                     out.update(pe)
                 else:
                     out.add(pe)
+
+        for c in self.Class.disjointWith:
+            print(c)
+            pe = self._unpackPheno(c, NegPhenotypeEdge)
+            if pe:
+                out.add(pe)
+
         return tuple(out)
 
         qname = self.out_graph.namespace_manager.qname(self.id_)
@@ -435,7 +489,7 @@ class DefinedNeuron(Neuron):
                 op = bc._operator
                 pes = []
                 for id_ in bc._rdfList:
-                    print(id_)
+                    #print(id_)
                     pr = infixowl.CastClass(id_, graph=self.in_graph)
                     if isinstance(pr, infixowl.BooleanClass):
                         lpe = self._unpackLogical(pr)
@@ -443,7 +497,7 @@ class DefinedNeuron(Neuron):
                         continue
                     if isinstance(pr, infixowl.Class):
                         if id_ == self.expand(NIFCELL_NEURON):
-                            print('we got neuron root', id_)
+                            #print('we got neuron root', id_)
                             continue
                         else:
                             pass  # it is a restriction
@@ -460,7 +514,7 @@ class DefinedNeuron(Neuron):
                 p = pr.someValuesFrom
                 e = pr.onProperty
                 if p and e:
-                    return PhenotypeEdge(p, e)
+                    return type_(p, e)
                 else:
                     print(putativeRestriction)
         else:
@@ -483,11 +537,11 @@ class DefinedNeuron(Neuron):
         #id_ = self.id_ #or self.temp_id
         if graph is None:
             graph = self.out_graph
-        class_ = infixowl.Class(self.id_, graph=graph)
+        class_ = infixowl.Class(self.id_, graph=graph)  # FIXME redundants...
         #class_.delete()  # this doesn't actually work... it polutes the graph :/????
         #class_.subClassOf = [self.expand(DEF_ROOT)]  # convenience
         members = [self.expand(NIFCELL_NEURON)]
-        anon = infixowl.Class(graph=graph)  # for disjointness
+        #anon = infixowl.Class(graph=graph)  # for disjointness
         for pe in self.pes:
             target = pe._graphify()
             if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
@@ -495,11 +549,11 @@ class DefinedNeuron(Neuron):
             else:
                 members.append(target)  # fixme negative logical phenotypes :/
                 #anon.disjointWith = [target]
-        intersection = infixowl.BooleanClass(members=members, graph=graph)
-        if tuple(anon.disjointWith):
-            ec = [intersection, anon]
-        else:
-            ec = [intersection]
+        #if tuple(anon.disjointWith):
+            #ec = [intersection, anon]
+        #else:
+        intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
+        ec = [intersection]
         class_.equivalentClass = ec
         #self.Class.replace(class_)  # delete any existing annotations to prevent duplication does this work?
         return class_
@@ -744,7 +798,7 @@ def main():
                             'NIFMOL',)
     graphBase.core_graph = EXISTING_GRAPH
     graphBase.out_graph = rdflib.Graph()
-    graphBase.predicates = getPhenotypePredicates(EXISTING_GRAPH)
+    graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
     ng = makeGraph('output', prefixes=PREFIXES, graph=graphBase.out_graph)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
@@ -753,9 +807,14 @@ def main():
     def_neurons = g.get_equiv_inter(NIFCELL_NEURON)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))
+    MeasuredNeuron.out_graph = rdflib.Graph()
+    DefinedNeuron.out_graph = rdflib.Graph()
     mns = [MeasuredNeuron(id_=n) for n in nodef]
     dns = [DefinedNeuron(id_=n) for n in sorted(def_neurons)]
-    dns += [DefinedNeuron(*m.pes) if m.pes else m.id_ for m in mns]
+    #dns += [DefinedNeuron(*m.pes) if m.pes else m.id_ for m in mns]
+    dns += [DefinedNeuron(*m.pes) for m in mns if m.pes]
+    DefinedNeuron.out_graph = graphBase.out_graph
+    dns = [DefinedNeuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
     """
     for d in dns:
         try:
@@ -770,10 +829,10 @@ def main():
     #dw = dns[-1]._graphify(graph=wat.g)
     #wat.write()
 
-    pe = PhenotypeEdge
+    #pe = PhenotypeEdge
     #asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
-    mn = MeasuredNeuron(id_=rdflib.term.URIRef('http://uri.interlex.org/base/ilx_0050205'))
-    asdf = DefinedNeuron(pe('ILXREPLACE:asdf1', 'ilx:hasPhenotype'), pe('ILXREPLACE:asdf2', 'ilx:hasPhenotype'))
+    #mn = MeasuredNeuron(id_=rdflib.term.URIRef('http://uri.interlex.org/base/ilx_0050205'))
+    #asdf = DefinedNeuron(pe('ILXREPLACE:asdf1', 'ilx:hasPhenotype'), pe('ILXREPLACE:asdf2', 'ilx:hasPhenotype'))
 
     ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
