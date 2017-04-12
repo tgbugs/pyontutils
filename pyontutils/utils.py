@@ -14,6 +14,9 @@ from rdflib.extras import infixowl
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
+def refile(thisFile, path):
+    return os.path.join(os.path.dirname(thisFile), path)
+
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
         loop = asyncio.get_event_loop()
