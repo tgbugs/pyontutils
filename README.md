@@ -7,6 +7,7 @@ Follow the steps below in your preferred python environment. You may need to run
 1. `git clone https://github.com/tgbugs/rdflib.git && cd rdflib && python3 setup.py bdist_wheel && pip3 install dist/rdflib*.whl`
 2. If you have not done so already `git clone https://github.com/tgbugs/pyontutils`
 3. `cd pyontutils && python3 setup.py bdist_wheel && pip3 install dist/pyontutils*.whl`
+
 Alternately, if want a development setup or need to use these tools for working directly
 with the NIF-Ontology repo you can add this folder to your `PYTHONPATH` environment
 variable using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
