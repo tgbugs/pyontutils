@@ -476,7 +476,7 @@ class DefinedNeuron(Neuron):
         #print(qstring)
         pes = self.in_graph.query(qstring)
         out = tuple(self._tuplesToPes(pes))
-        print(out)
+        #print(out)
         return out
         #assert len(out) == 1, "%s" % out
         #return out[0]
@@ -504,12 +504,12 @@ class DefinedNeuron(Neuron):
                             #print('what is going on here?', pr)
                             #print(dir(pr))
 
-                    p = pr.someValuesFrom
+                    p = pr.someValuesFrom  # if NIFCELL_NEURON is not a owl:Class > problems
                     e = pr.onProperty
                     pes.append(type_(p, e))
                 return tuple(pes)
             else:
-                print('WHAT')
+                print('WHAT')  # FIXME something is wrong for negative phenotypes...
                 pr = putativeRestriction
                 p = pr.someValuesFrom
                 e = pr.onProperty
