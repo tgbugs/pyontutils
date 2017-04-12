@@ -9,7 +9,8 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import makePrefixes, makeGraph, rowParse
+from utils import makePrefixes, makeGraph, rowParse, refile
+from ilx_utils import ILXREPLACE
 from parcellation import OntMeta, TODAY
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
@@ -46,6 +47,7 @@ ilx_base = 'ILX:{:0>7}'
 
 PREFIXES = makePrefixes('ilx',
                         'ILX',
+                        'ILXREPLACE',
                         'skos',
                         'owl',
                         'dc',
@@ -194,7 +196,9 @@ def get_transitive_closure(graph, edge, root):
 
 def make_phenotypes():
     ilx_start = 50114
-    graph = makeGraph('NIF-Neuron-Phenotype', prefixes=PREFIXES)
+    graph = makeGraph('NIF-Phenotype-Core', prefixes=PREFIXES)
+    graph2 = makeGraph('NIF-Phenotypes', prefixes=PREFIXES)
+    
 
     eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
                    'NIF-Neuron-Defined',
@@ -208,7 +212,7 @@ def make_phenotypes():
 
     # do edges first since we will need them for the phenotypes later
     # TODO real ilx_ids and use prefixes to manage human readability
-    with open('neuron_phenotype_edges.csv', 'rt') as f:
+    with open(refile(__file__, 'resources/neuron_phenotype_edges.csv'), 'rt') as f:
         rows = [r for r in csv.reader(f)]
     
     lookup = {
@@ -217,6 +221,7 @@ def make_phenotypes():
         'functional':'owl:FunctionalProperty',
     }
     pedges = set()
+    def irn(inp): return ILXREPLACE(__name__ + inp)
     for row in rows[1:]:
         if row[0].startswith('#') or not row[0]:
             if row[0] == '#references':
@@ -238,7 +243,7 @@ def make_phenotypes():
                 t = t.strip()
                 graph.add_node(id_, rdflib.RDF.type, lookup[t])
 
-    with open('neuron_phenotype.csv', 'rt') as f:
+    with open(refile(__file__, 'resources/neuron_phenotype.csv'), 'rt') as f:
         rows = [r for r in csv.reader(f)]
 
     class PP(rowParse):  # FIXME use add_new in _row_post?
@@ -252,14 +257,14 @@ def make_phenotypes():
             super().__init__(rows)
 
         def ilx_id(self, value):
-            self.id_ = graph.expand(value)
-            self.Class = infixowl.Class(self.id_, graph=graph.g)
+            self.id_ = graph2.expand(value)
+            self.Class = infixowl.Class(self.id_, graph=graph2.g)
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
             self._label = label
 
         def subClassOf(self, value):
             if value:
-                self.parent = graph.expand(value)
+                self.parent = graph2.expand(value)
                 self.parent_child_map[self.parent].add(self.id_)
                 self.child_parent_map[self.id_].add(self.parent)
                 self.Class.subClassOf = [self.parent]
@@ -274,17 +279,17 @@ def make_phenotypes():
         def synonyms(self, value):
             if value:
                 for v in value.split(','):
-                    graph.add_node(self.id_, 'OBOANN:synonym', v)
+                    graph2.add_node(self.id_, 'OBOANN:synonym', v)
 
         def rules(self, value):
             if value == PP.SCD:
                 self.scd.add(self.id_)
             elif value.startswith(PP.DJW):
-                [graph.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
+                [graph2.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
 
         def use_edge(self, value):
             if value:
-                graph.add_node(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
+                graph2.add_node(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
 
         def _row_post(self):
             # defined class
@@ -306,7 +311,7 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            graph.add_node(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
+            graph2.add_node(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
 
             self.ilx_start += 1
             id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
@@ -351,7 +356,7 @@ def make_phenotypes():
 
         def _end(self):
             for parent in self.scd:
-                make_mutually_disjoint(graph, list(self.parent_child_map[parent]))
+                make_mutually_disjoint(graph2, list(self.parent_child_map[parent]))
 
     pp = PP()
     ilx_start = pp.ilx_start
@@ -365,7 +370,7 @@ def make_phenotypes():
         rank['NCBITaxon'] = -9
         rank['NIFCELL'] = -8
         sort_rank = lambda r: rank[r['curie'].split(':')[0]]
-        to_add[word] = graph.expand(sorted(sgv.findByTerm(word), key=sort_rank)[0]['curie'])  # cheating
+        to_add[word] = graph2.expand(sorted(sgv.findByTerm(word), key=sort_rank)[0]['curie'])  # cheating
 
     # FIXME naming
     lsn('Parvalbumin')
@@ -382,14 +387,20 @@ def make_phenotypes():
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
-    graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    graph.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron phenotypes')
-    graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron phenotype ontology holds neuron phenotypes.')
+    graph.add_ont(ontid, 'NIF Phenotype core', comment= 'This is the core set of predicates used to model phenotypes and the parent class for phenotypes.')
+    graph.add_class('ilx:Phenotype', label='Phenotype')
+    graph.add_node('ilx:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possilbe. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental contidions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxillary variable that we think accounts for the difference.')
     #graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
     #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
-    graph.g.commit()
-    get_defined_classes(graph)  # oops...
+    #graph.g.commit()
+    #get_defined_classes(graph)  # oops...
     graph.write()  # moved below to incorporate uwotm8
+    
+    ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
+    graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
+    graph2.add_node(ontid2, 'owl:imports', ontid)
+    graph2.add_node('ilx:CellPhenotype', rdflib.RDFS.subClassOf, 'ilx:Phenotype')
+    graph2.write()
     
     syn_mappings = {}
     for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('OBOANN:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
@@ -1217,7 +1228,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
     graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
 
-    with open('resources/26451489 table 1.csv', 'rt') as f:
+    with open(refile(__file__, 'resources/26451489 table 1.csv'), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
@@ -1238,7 +1249,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     ilx_start = t.ilx_start
 
     # adding fake mouse data
-    #with open('resources/26451489 table 1.csv', 'rt') as f:  # FIXME annoying
+    #with open(refile(__file__, 'resources/26451489 table 1.csv'), 'rt') as f:  # FIXME annoying
         #rows = [list(r) for r in zip(*csv.reader(f))]
     #t2 = table1(graph, rows, syn_mappings, ilx_start, species='NCBITaxon:10090')  # FIXME double SOM+ phenos etc
     #ilx_start = t2.ilx_start
@@ -1325,8 +1336,25 @@ def expand_syns(syn_mappings):
         if lower_less_phenotype != lower:
             syn_mappings[lower_less_phenotype] = iri
 
+def predicate_disambig(graph):
+    # the useful idiot holds 'appriopriate' predicate/phenotype mappings where there may be some ambiguity (e.g. brain region vs layer) it is OK to hardcode these
+    # the ui is not an owl:Class
+    ui = ILXREPLACE('phenotype predicate disambiguation')
+    def uit(p, o):
+        out = (ui, graph.expand(p), graph.expand(o))
+        graph.add_node(*out)
+        return out
+        
+    uit('ilx:hasLayerLocation', 'UBERON:0005390')
+    uit('ilx:hasLayerLocation', 'UBERON:0005391')
+    uit('ilx:hasLayerLocation', 'UBERON:0005392')
+    uit('ilx:hasLayerLocation', 'UBERON:0005393')
+    uit('ilx:hasLayerLocation', 'UBERON:0005394')
+    uit('ilx:hasLayerLocation', 'UBERON:0005395')
+
 def main():
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
+    return 
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
