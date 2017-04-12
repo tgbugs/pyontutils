@@ -36,25 +36,6 @@ setup(
     keywords='nif nifstd ontology scigraph',
     package_dir=['pyontutils', 'export'],
     packages=['pyontutils'],
-    #package_data={
-        #'pyontutils' : ['pyontutils.hierarchies',
-                        #'pyontutils.scigraph',
-                        #'pyontutils.neurons',
-                        #'pyontutils.utils'
-                       #]
-    #},
-    #packages=find_packages(exclude=['test',
-                                    #'aba_uberon.py',
-                                    #'hbp_cells.py',
-                                   #]),
-    #scripts=['pyontutils/scigraph.py',
-             #'pyontutils/scig.py',
-             #'pyontutils/ttlfmt.py',
-             #'pyontutils/ttlser.py',
-             #'pyontutils/',
-             #'pyontutils/',
-             #'pyontutils/',
-            ],
     install_requires=[
         'docopt',
         'numpy',
