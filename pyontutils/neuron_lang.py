@@ -1,34 +1,64 @@
 #!/usr/bin/env python3
-from pyontutils.neurons import *
 from rdflib import Graph
+from pyontutils.neurons import *
+from pyontutils.utils import makeGraph, makePrefixes
 
 __all__ = [
     'AND',
     'OR',
-    #'graphBase',
-    'PhenotypeEdge',
-    'NegPhenotypeEdge',
-    'LogicalPhenoEdge',
+    'graphBase',
+    'Phenotype',
+    'NegPhenotype',
+    'LogicalPhenotype',
     'Neuron',
     'pred',
+    'WRITE',
 ]
 
-Neuron = DefinedNeuron
+# quick way to do renaming during dev and testing
+g = globals()
+def rename(classname, newname):
+    cls = g[classname]
+    setattr(cls, '__name__', newname)
+    g[newname] = cls
+
+_ = [rename(old, new) for old, new in (
+    ('DefinedNeuron','Neuron'),
+    ('PhenotypeEdge','Phenotype'),
+    ('NegPhenotypeEdge','NegPhenotype'),
+    ('LogicalPhenoEdge','LogicalPhenotype'),
+)]
 
 core_graph_path = '/tmp/NIF-Neuron-Phenotype.ttl'  # TODO these will be split
-in_graph_path =  '/tmp/NIF-Neuron-Phenotype.ttl'
+in_graph_path =  '/tmp/output.ttl'
+out_graph_path =  '_Neurons'  # TODO actually make it a path...
 
 graphBase.core_graph = Graph()
 graphBase.core_graph.parse(core_graph_path, format='turtle')
 graphBase.in_graph = Graph()
 graphBase.in_graph.parse(core_graph_path, format='turtle')
 graphBase.in_graph.parse(in_graph_path, format='turtle')
+graphBase.in_graph.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])  # FIXME annoying
+graphBase.out_graph = Graph()
+graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
+pred = graphBase._predicates  # keep the predicates in their own namespace
 
-graphBase.predicates = getPhenotypePredicates(graphBase.core_graph)
-pred = graphBase.predicates  # keep the predicates in their own namespace
+newGraph = makeGraph(out_graph_path,
+                     prefixes=makePrefixes('owl',
+                                           'PR',
+                                           'UBERON',
+                                           'NCBITaxon',
+                                           'ILXREPLACE',
+                                           'ilx',
+                                           'ILX',
+                                           'NIFCELL',
+                                           'NIFMOL',),
+                     graph=graphBase.out_graph)
 
-# including predicates this way polutes the namespace
-#globs = globals()
-#for literal, value in graphBase.predicates._litmap.items():
-    #globs[literal] = value
-    #__all__.append(literal)
+tg = makeGraph('NONE', graph=graphBase.in_graph)
+e = tg.get_equiv_inter(NIFCELL_NEURON)  # FIXME do this on demand
+graphBase.existing_ids = e
+
+def WRITE():
+    newGraph.write()
+
