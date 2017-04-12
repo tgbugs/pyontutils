@@ -38,7 +38,7 @@ def getNewIlxId(temp_id, seed, ontid):
 
 # file handling
 
-__FILENAME = 'resources/ilx-replace.json'
+__FILENAME = os.path.join(os.path.dirname(__file__), 'resources/ilx-replace.json')
 def managed(mode='rt+'):
     func = None
     if callable(mode):
