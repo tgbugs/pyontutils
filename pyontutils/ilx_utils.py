@@ -129,7 +129,29 @@ def ilxDoReplace(mg, TEMP_INDEX=None):
         ilxDoReplace.__globals__['FIRST'] = False
         #embed()
 
+def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be exported as a relationship or an anotation
+    g = makeGraph('do not write me', prefixes=makePrefixes('ILX', 'ilx', 'owl', 'skos', 'OBOANN'))
+    def pref(inp): return makePrefixes('ilx')['ilx'] + inp
+    id_ =  pref(j['ilx'])
+    type_ = {'term':'owl:Class','relationship':'owl:ObjectProperty','annotation':'owl:AnnotationProperty'}[j['type']]
+    out = []  # TODO need to expand these
+    out.append( (id_, rdflib.RDF.type, type_) )
+    out.append( (id_, rdflib.RDFS.label, j['label']) )
+    out.append( (id_, 'skos:definition', j['definition']) )
+    for syndict in j['synonyms']:
+        out.append( (id_, 'OBOANN:synonym', syndict['literal']) )
+    for superdict in j['superclasses']:  # should we be returning the preferred id here not the ilx? or maybe that is a different json output?
+        out.append( (id_, rdflib.RDFS.subClassOf, pref(superdict['ilx'])) )
+    for eid in j['existing_ids']:
+        out.append( (id_, 'ilx:someOtherId', eid['iri']) )  # predicate TODO
+    [g.add_node(*o) for o in out]
+    return g.g.serialize(format='nifttl')  # other formats can be choosen
+
 def main():
+    with open('ilxjson.json', 'rt') as f:
+        a = ilx_json_to_tripples(json.load(f))
+        print(a.decode())
+    return
     if not os.path.exists(__FILENAME):
         with open(__FILENAME, 'wt') as f:
             json.dump({}, f)
