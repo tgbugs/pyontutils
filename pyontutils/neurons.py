@@ -33,7 +33,10 @@ def getPhenotypePredicates(graph):
     qstring = ('SELECT DISTINCT ?prop WHERE '
                '{ ?prop rdfs:subPropertyOf* %s . }') % PHENO_ROOT
     out = [_[0] for _ in graph.query(qstring)]
-    phenoPreds = type('PhenoPreds', (object,), {uri.rsplit('/',1)[-1]:uri for uri in out})
+    literal_map = {uri.rsplit('/',1)[-1]:uri for uri in out}  # FIXME this will change
+    classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
+    classDict['_litmap'] = literal_map
+    phenoPreds = type('PhenoPreds', (object,), classDict)
     return phenoPreds
 
 
