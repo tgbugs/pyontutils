@@ -29,14 +29,16 @@ _ = [rename(old, new) for old, new in (
     ('LogicalPhenoEdge','LogicalPhenotype'),
 )]
 
-core_graph_path = '/tmp/NIF-Neuron-Phenotype.ttl'  # TODO these will be split
+core_graph_path = '/tmp/NIF-Phenotype-Core.ttl'
+pheno_graph_path = '/tmp/NIF-Phenotypes.ttl'
+
 in_graph_path =  '/tmp/output.ttl'
 out_graph_path =  '_Neurons'  # TODO actually make it a path...
 
 graphBase.core_graph = Graph()
 graphBase.core_graph.parse(core_graph_path, format='turtle')
-graphBase.in_graph = Graph()
-graphBase.in_graph.parse(core_graph_path, format='turtle')
+graphBase.core_graph.parse(pheno_graph_path, format='turtle')
+graphBase.in_graph = graphBase.core_graph
 graphBase.in_graph.parse(in_graph_path, format='turtle')
 graphBase.in_graph.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])  # FIXME annoying
 graphBase.out_graph = Graph()

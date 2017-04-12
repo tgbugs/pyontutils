@@ -836,7 +836,8 @@ def main():
 
     ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
-    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Phenotype.ttl')
+    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
+    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
     ng.write()
     bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]
