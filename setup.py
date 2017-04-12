@@ -1,8 +1,31 @@
+import os
+import shutil
 from setuptools import setup, find_packages
+
+# since setuptools is stupid and cannot actually exclude files...
+
+files = [
+    'pyontutils/__init__.py',
+    'pyontutils/hierarchies.py',
+    'pyontutils/ilx_utils.py',
+    'pyontutils/neurons.py',
+    'pyontutils/nif_load.py',
+    'pyontutils/obo_io.py',
+    'pyontutils/scig.py',
+    'pyontutils/scigraph.py',
+    'pyontutils/scigraph_client.py',
+    'pyontutils/ttlfmt.py',
+    'pyontutils/ttlser.py',
+    'pyontutils/utils.py',
+]
+
+os.mkdir('export')
+for f in files:
+    shutil.copyfile(f, f.replace('pyontutils','export'))
 
 setup(
     name='pyontutils',
-    version='0',
+    version='0.0.1',
     description='utilities for working with the NIFSTD ontology and SciGraph',
     long_description=' ',
     url='https://github.com/tgbugs/pyontutils',
@@ -11,9 +34,27 @@ setup(
     license='MIT',
     classifiers=[],
     keywords='nif nifstd ontology scigraph',
-    packages=['pyontutils'], #.hierarchies', 'pyontutils.scigraph_client', 'pyontutils.utils'],
-    package_dir={'pyontutils':'./'},
-    #scripts=['scigraph.py', 'scig.py',],
+    package_dir=['pyontutils', 'export'],
+    packages=['pyontutils'],
+    #package_data={
+        #'pyontutils' : ['pyontutils.hierarchies',
+                        #'pyontutils.scigraph',
+                        #'pyontutils.neurons',
+                        #'pyontutils.utils'
+                       #]
+    #},
+    #packages=find_packages(exclude=['test',
+                                    #'aba_uberon.py',
+                                    #'hbp_cells.py',
+                                   #]),
+    #scripts=['pyontutils/scigraph.py',
+             #'pyontutils/scig.py',
+             #'pyontutils/ttlfmt.py',
+             #'pyontutils/ttlser.py',
+             #'pyontutils/',
+             #'pyontutils/',
+             #'pyontutils/',
+            ],
     install_requires=[
         'docopt',
         'numpy',
@@ -27,11 +68,14 @@ setup(
     ],
     #extras_require
     #package_data
-    #data_files
+    #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
     entry_points={
         'console_scripts': [
-            'scig=scig:main',
-            'ttlfmt=ttlfmt:main',
+            'scigraph-codegen=pyontutils.scigraph:main',
+            'scig=pyontutils.scig:main',
+            'ttlfmt=pyontutils.ttlfmt:main',
         ],
     },
 )
+
+shutil.rmtree('export')
