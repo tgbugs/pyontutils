@@ -17,7 +17,7 @@ hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a de
 hasExtrinsicPhenotype,,,,,,hasPhenotype,,
 hasProjectionPhenotype,Has role,,Expresses a relationship between a neuron type and a brain region that said neuron type sends axons to.,,"this might be clearer  than hasCircuitRole… but might confuse with projectsTo or the like…, excitatory/inhibitory shouldn't be handled here?",hasPhenotype,,"asymmetric, irreflexive"
 hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a laminer brain region.,,May need hasSomaLayerLocation or something,hasLocationPhenotype,,"asymmetric, irreflexive"
-hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region. This is a superProperty and should not be used directly.,,,hasExtrinsicPhenotype,,"asymmetric, irreflexive"
+hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly.,,,hasExtrinsicPhenotype,,"asymmetric, irreflexive"
 hasSomaLocatedIn,Located in,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasDendriteLocatedIn,DendriteLocation,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
