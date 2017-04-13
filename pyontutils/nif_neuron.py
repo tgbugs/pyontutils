@@ -14,7 +14,6 @@ from ilx_utils import ILXREPLACE
 from parcellation import OntMeta, TODAY
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
-from desc.prof import profile_me
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
 

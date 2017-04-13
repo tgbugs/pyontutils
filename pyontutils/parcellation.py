@@ -15,7 +15,7 @@ from utils import async_getter, makePrefixes, makeGraph, rowParse, TermColors as
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
-from desc.util.process_fixed import ProcessPoolExecutor
+from process_fixed import ProcessPoolExecutor
 
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'

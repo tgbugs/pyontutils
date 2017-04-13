@@ -1,7 +1,6 @@
 #!/usr/bin/env python3.5
 
 from lxml import etree
-from desc.prof import profile_me
 from utils import makePrefixes, makeGraph
 import rdflib
 from IPython import embed
