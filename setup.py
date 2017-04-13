@@ -9,6 +9,7 @@ files = [
     'pyontutils/hierarchies.py',
     'pyontutils/ilx_utils.py',
     'pyontutils/neurons.py',
+    'pyontutils/neuron_lang.py',
     'pyontutils/nif_load.py',
     'pyontutils/obo_io.py',
     'pyontutils/scig.py',
