@@ -204,7 +204,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
             return ''
 
     def _graphify(self):
-        if self._graphed:
+        if 0 :#self._graphed:  # FIXME this is the wrong place to fix the 'duplicates' problem we have been having
             return self._graphed
         else:
             self._graphed = infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
@@ -269,7 +269,7 @@ class LogicalPhenoEdge(graphBase):
         return ''.join([pe.pShortName for pe in self.pes])
 
     def _graphify(self):
-        if self._graphed:
+        if 0: #self._graphed:
             return self._graphed
         else:
 
@@ -335,7 +335,8 @@ class Neuron(graphBase):
         #else:
             #self.id_ = None
         elif phenotypeEdges:
-            self.id_ = self.expand(ILXREPLACE(str(hash(tuple(sorted(phenotypeEdges))))))  # FIXME make sure this is deterministic
+            #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
+            self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this 
             hashes.append(self.id_)
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
@@ -433,8 +434,10 @@ class Neuron(graphBase):
     def validate(self):
         raise TypeError('Ur Neuron Sucks')
 
-    def __repr__(self):
-        return self.Class.__repr__()
+    def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
+        return "%s%s" % (self.__class__.__name__, self.pes)
+        #return self.Class.__repr__()
+
 
     def __hash__(self):
         return hash((self.__class__.__name__, self.pes))

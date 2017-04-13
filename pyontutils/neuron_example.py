@@ -7,19 +7,21 @@ context = (
     Phenotype('UBERON:0008933', 'ilx:hasSomaLocatedIn', label='primary somatosensory cortex')
 )
 
-P = PC = Phenotype('ilx:PyramidalPhenotype', pred.hasMorphologicalPhenotype)
-BP = BPC = Phenotype('ilx:BiopolarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision
-IP = IPC = Phenotype('ilx:InvertedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-NP = NPC = Phenotype('ilx:NarrowPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-NTP = NTPC = TPC_C = Phenotype('ilx:NarrowTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # are this different?
-TP = TPC = Phenotype('ilx:TuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-STP = STPC = Phenotype('ilx:SlenderTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-TTP = TTPC = Phenotype('ilx:ThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-TTPLB = TTPCLB = TTPC1 = Phenotype('ilx:LateBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-TTPEB = TTPCEB = TTPC2 = Phenotype('ilx:EarlyBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-TPLB = TPCLB = TPC_A = Phenotype('ilx:LateBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype) # these are inconsistent with usages like NGC_DA NGC_SA recomend the NGCDA NGCSA versions since the acronym is better than a/b 1/2
-TPEB = TPCEB = TPC_B = Phenotype('ilx:EarlyBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-UP = UPC = Phenotype('ilx:UntuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+#'(Rat S1 L4 P bIR) '(LB Th Tu)
+P = P = PC = Phenotype('ilx:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  # 
+PB = BP = BPC = Phenotype('ilx:BiopolarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision
+PI = IP = IPC = Phenotype('ilx:InvertedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PN = NP = NPC = Phenotype('ilx:NarrowPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PS = SP = SPC = Phenotype('ilx:StarPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTN = NTP = NTPC = TPC_C = Phenotype('ilx:NarrowTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # are this different?
+PT = TP = TPC = Phenotype('ilx:TuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTS = STP = STPC = Phenotype('ilx:SlenderTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTT = TTP = TTPC = Phenotype('ilx:ThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTTLB = TTPLB = TTPCLB = TTPC1 = Phenotype('ilx:LateBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTTEB = TTPEB = TTPCEB = TTPC2 = Phenotype('ilx:EarlyBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTLB = TPLB = TPCLB = TPC_A = Phenotype('ilx:LateBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype) # these are inconsistent with usages like NGC_DA NGC_SA recomend the NGCDA NGCSA versions since the acronym is better than a/b 1/2
+PTEB = TPEB = TPCEB = TPC_B = Phenotype('ilx:EarlyBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PU = UP = UPC = Phenotype('ilx:UntuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
 
 BT = BTC = Phenotype('ilx:BituftedPhenotype', pred.hasMorphologicalPhenotype)
 B = BP = Phenotype('ilx:BipolarPhenotype', pred.hasMorphologicalPhenotype)  # NOTE disjoint from biopolar pyramidal... also collision
@@ -31,8 +33,8 @@ LA = LAC = Phenotype('ilx:LargeAxonPhenotype', pred.hasMorphologicalPhenotype)
 SA = SAC = Phenotype('ilx:SmallAxonPhenotype', pred.hasMorphologicalPhenotype)
 M = MC = Phenotype('ilx:MartinottiPhenotype', pred.hasMorphologicalPhenotype)
 NG = NGC = Phenotype('ilx:NeurogliaformPhenotype', pred.hasMorphologicalPhenotype)
-NGDA = NGCDA = Phenotype('ilx:NeurogliaformPhenotype', pred.hasMorphologicalPhenotype)
-NGSA = NGCSA = Phenotype('ilx:NeurogliaformPhenotype', pred.hasMorphologicalPhenotype)
+NGDA = NGCDA = NGC_DA = Phenotype('ilx:NeurogliaformDenseAxonsPhenotype', pred.hasMorphologicalPhenotype)
+NGSA = NGCSA = NGC_SA = Phenotype('ilx:NeurogliaformSparseAxonsPhenotype', pred.hasMorphologicalPhenotype)
 B = BC = Phenotype('ilx:BasketPhenotype', pred.hasMorphologicalPhenotype)
 SB = SBC = Phenotype('ilx:SmallBasketPhenotype', pred.hasMorphologicalPhenotype)
 LB = LBC = Phenotype('ilx:LargeBasketPhenotype', pred.hasMorphologicalPhenotype)
@@ -63,7 +65,7 @@ CA2 = Phenotype('UBERON:0003882', pred.hasSomaLocatedIn)
 CA3 = Phenotype('UBERON:0003883', pred.hasSomaLocatedIn)
 
 SO = Phenotype('UBERON:0005371', pred.hasLayerLocationPhenotype)  # WARNING: uberon has precomposed these, which is annoying
-SP = Phenotype('UBERON:0002313', pred.hasLayerLocationPhenotype)
+SPy = Phenotype('UBERON:0002313', pred.hasLayerLocationPhenotype)
 SLA = Phenotype('UBERON:0005370', pred.hasLayerLocationPhenotype)
 SLM = Phenotype('UBERON:0007640', pred.hasLayerLocationPhenotype)
 SLU = Phenotype('UBERON:0007637', pred.hasLayerLocationPhenotype)
@@ -77,7 +79,7 @@ neurons = {
     'HBP_CELL:0000018': NeuronC(PC),
     'HBP_CELL:0000024': NeuronC(UPC),  # untufted... dendrite phenotype?? or what
     'HBP_CELL:0000025': NeuronC(SS),
-    'HBP_CELL:0000027': NeuronC(Phenotype('ilx:StarPyramidalPhenotype', pred.hasMorphologicalPhenotype)),
+    'HBP_CELL:0000027': NeuronC(SPC),
     'HBP_CELL:0000028': NeuronC(L23, PC),
     'HBP_CELL:0000030': NeuronC(Phenotype('ilx:HorizontalPyramidalPhenotype', pred.hasMorphologicalPhenotype)),  # are phenotypes like this modifiers on _pyramidal_ or are they on the _cell_
     'HBP_CELL:0000031': NeuronC(BPC),  # AAAAAA
