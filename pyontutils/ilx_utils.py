@@ -38,7 +38,11 @@ def getNewIlxId(temp_id, seed, ontid):
 
 # file handling
 
-__FILENAME = os.path.join(os.path.dirname(__file__), 'resources/ilx-replace.json')
+__FILENAME = os.path.join(os.path.dirname(__file__), 'resources/nif-ilx-replace.json')
+if not os.path.exists(__FILENAME):
+    with open(__FILENAME, 'wt') as f:
+        f.write('{}\n')
+
 def managed(mode='rt+'):
     func = None
     if callable(mode):
@@ -76,7 +80,7 @@ def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
         record['ilx'] = real_id
 
 @managed
-def ilxTempAdd(temp_id, seed=None, ontid=None, TEMP_INDEX=None):
+def ilxAddTempId(temp_id, seed=None, ontid=None, TEMP_INDEX=None):  # FIXME simplify
     if temp_id in TEMP_INDEX:
         record = TEMP_INDEX[temp_id]
         if record['ilx']:
@@ -88,14 +92,26 @@ def ilxTempAdd(temp_id, seed=None, ontid=None, TEMP_INDEX=None):
 
     return temp_id
 
+@managed
+def ilxLookupExisting(temp_id, TEMP_INDEX=None):
+    return TEMP_INDEX[temp_id]  # KeyError ok here
+
 def ILXREPLACE(seed):
     h = md5()
     h.update(seed.encode())
     temp_id = 'ILXREPLACE:' + h.hexdigest()
-    ilxTempAdd(temp_id, seed)
+    try:
+        e = ilxLookupExisting(temp_id)
+        if e is not None:
+            return e
+        else:
+            print(temp_id, 'has been read from a file but has not been replaced.')
+    except KeyError:
+        pass
+
     return temp_id
 
-def ilxGet(filename):
+def readFile(filename):
     graph = rdflib.Graph()
     graph.parse(filename, format='turtle')
     fn = os.path.splitext(filename)[0]
@@ -109,11 +125,16 @@ def ilxGet(filename):
     vals = graph.query(query)
     for val, in vals:
         qn = graph.namespace_manager.qname(val)
-        ilxTempAdd(qn, ontid=mg.ontid)
+        ilxAddTempId(qn, ontid=mg.ontid)
         print(qn, mg.ontid)
         #ilxGetRealId(qn, mg.ontid)
 
-    ilxDoReplace(mg)
+    # TODO warn on existing entry
+
+    #ilxDoReplace(mg)
+
+def replaceFile(filename):
+    readFile(filename)
     
 @managed('rt')
 def ilxDoReplace(mg, TEMP_INDEX=None):
@@ -148,10 +169,10 @@ def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be ex
     return g.g.serialize(format='nifttl')  # other formats can be choosen
 
 def main():
-    with open('ilxjson.json', 'rt') as f:
-        a = ilx_json_to_tripples(json.load(f))
-        print(a.decode())
-    return
+    #with open('ilxjson.json', 'rt') as f:
+        #a = ilx_json_to_tripples(json.load(f))
+        #print(a.decode())
+    #return
     if not os.path.exists(__FILENAME):
         with open(__FILENAME, 'wt') as f:
             json.dump({}, f)
@@ -159,7 +180,7 @@ def main():
     ILXREPLACE('wowzers')
     ILXREPLACE('are you joking')
     ilxGetRealId(ILXREPLACE('wowzers'), 'http://FIXME.org/thing.ttl')
-    return
+    #return
     for file in glob('/home/tom/git/NIF-Ontology/ttl/generated/parcellation/*.ttl'):
         ilxGet(file)
     ilxGet('/home/tom/git/NIF-Ontology/ttl/generated/parcellation.ttl')
