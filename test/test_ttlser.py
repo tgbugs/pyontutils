@@ -59,7 +59,7 @@ class TestTtlser(unittest.TestCase):
                                  env=env)
             out, err = p.communicate()
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
-            out = out.split(b'\n', 1)[1]
+            #out = out.split(b'\n', 1)[1]  # don't need to remove the rdflib noise if using >=rdflib-5.0.0
             actual2 = out
             if self.actual != actual2:
                 print('Determinism failure!')
