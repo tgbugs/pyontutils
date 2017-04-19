@@ -1,15 +1,22 @@
 import unittest
-#from pyontutils.nif_neuron import main as make_neurons
-#make_neurons()
-from pyontutils.neurons import *
+import rdflib
+import pyontutils.neuron_lang as nl
+import test.example_neurons as en
 
 class TestNeurons(unittest.TestCase):
     def setUp(self):
         print('hello')
 
-    def test_thing(self):
-        assert False
+    def test_ttl(self):  # roundtrip from ttl
+        example_ttl = 'test/example_neurons.ttl'
+        nl.graphBase.in_graph.parse(example_ttl, format='turtle')
+        nl.newGraph.filename = 'test/example_neurons2.ttl'
+        nl.WRITE()
+        assert True
 
-    def test_thing2(self):
+    def test_py(self):  # direct to ttl + roundtrip to python
+        en.newGraph.filename = 'test/example_neurons3.ttl'
+        en.WRITE()
+        print('WHAT IS GOING ON')
         assert True
 
