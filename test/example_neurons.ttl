@@ -1,0 +1,38 @@
+@prefix ilx: <http://uri.interlex.org/base/> .
+@prefix ILX: <http://uri.interlex.org/base/ilx_> .
+@prefix ILXREPLACE: <http://ILXREPLACE.org/> .
+@prefix NCBITaxon: <http://purl.obolibrary.org/obo/NCBITaxon_> .
+@prefix NIFCELL: <http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#> .
+@prefix NIFMOL: <http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix PR: <http://purl.obolibrary.org/obo/PR_> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix UBERON: <http://purl.obolibrary.org/obo/UBERON_> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+### Classes
+
+ILXREPLACE:32ca1f40a6fac29e768c045da1993032 a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    NIFCELL:sao1417703748
+                    [ a owl:Class ;
+                        owl:unionOf (
+                                [ a owl:Class ;
+                                    owl:disjointWith [ a owl:Restriction ;
+                                            owl:onProperty ilx:hasElectrophysiologicalPhenotype ;
+                                            owl:someValuesFrom ilx:PetillaInitialClassicalSpikingPhenotype ] ]
+                                [ a owl:Restriction ;
+                                    owl:onProperty ilx:hasElectrophysiologicalPhenotype ;
+                                    owl:someValuesFrom ilx:PetillaInitialBurstSpikingPhenotype ] ) ]
+                    [ a owl:Restriction ;
+                        owl:onProperty ilx:hasMorphologicalPhenotype ;
+                        owl:someValuesFrom ilx:PyramidalPhenotype ] ) ] ;
+    rdfs:label "Pyramidal Fast Spiking bc Neuron" ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty ilx:hasElectrophysiologicalPhenotype ;
+            owl:someValuesFrom ilx:FastSpikingPhenotype ] .
+
+### Serialized using the nifstd custom serializer v1.0.5
