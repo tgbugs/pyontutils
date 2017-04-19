@@ -1,0 +1,219 @@
+@prefix A: <http://Z.org/prefix_> .
+@prefix a: <http://a.org/prefix_> .
+@prefix B: <http://X.org/prefix_> .
+@prefix b: <http://b.org/prefix_> .
+@prefix blx: <http://uri.binterlex.org/base/> .
+@prefix BLX: <http://uri.binterlex.org/base/blx_> .
+@prefix ns1: <http://myduplicateprefix.org/> .
+@prefix other: <http://FIXME.org/other_> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix requestedBy: <http://uri.binterlex.org/base/blx_999> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://testurl.org/filename.ttl> a owl:Ontology ;
+    rdfs:label "U WOT M8" .
+
+### Object Properties
+
+skos:related a owl:ObjectProperty ;
+    owl:inverseOf skos:related,
+        [ owl:inverseOf skos:related ] .
+
+### Annotation Properties
+
+requestedBy: a owl:AnnotationProperty .
+
+### Classes
+
+A:1 a owl:Class .
+
+a:1 a owl:Class .
+
+B:1 a owl:Class .
+
+b:1 a owl:Class .
+
+BLX:0 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:2 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
+BLX:0.5 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
+BLX:1 a owl:Class ;
+    rdfs:subClassOf A:1,
+        B:1 .
+
+BLX:2 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:1 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:2 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:3 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:4 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:5 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:6 ] .
+
+BLX:3 a owl:Class ;
+    owl:disjointUnionOf (
+            A:1
+            A:2
+            A:3
+            A:4
+            A:5
+            B:1
+            B:2
+            B:3
+            B:4
+            B:5
+            BLX:AA
+            BLX:aA
+            blx:Aa
+            blx:aa ) .
+
+BLX:4 a owl:Class ;
+    owl:disjointUnionOf (
+            A:1
+            A:2
+            B:1 ) .
+
+BLX:4.5 a owl:Class ;
+    owl:disjointUnionOf (
+            A:1
+            A:2
+            B:1 ) .
+
+BLX:5 a owl:Class ;
+    owl:oneOf (
+            false
+            true ) .
+
+BLX:6 a owl:Class ;
+    rdfs:range [ a rdfs:Datatype ;
+            owl:oneOf (
+                    A:1
+                    A:2
+                    A:3 ) ] .
+
+BLX:7 a owl:Class ;
+    rdfs:label "label1",
+        "label1"@en,
+        "label1"^^xsd:string .
+
+BLX:8 a owl:Class ;
+    rdfs:label "Label2",
+        "label2",
+        "one should come?",
+        "Two should come?" .
+
+BLX:123 a owl:Class .
+
+blx:123 a owl:Class .
+
+BLX:1234567 a owl:Class .
+
+blx:1234567 a owl:Class .
+
+BLX:a a owl:Class .
+
+blx:a a owl:Class .
+
+BLX:AA a owl:Class .
+
+BLX:Aa a owl:Class .
+
+BLX:aA a owl:Class .
+
+BLX:aa a owl:Class .
+
+blx:AA a owl:Class .
+
+blx:Aa a owl:Class .
+
+blx:aA a owl:Class .
+
+blx:aa a owl:Class .
+
+BLX:AB a owl:Class .
+
+BLX:Ab a owl:Class .
+
+BLX:ab a owl:Class .
+
+blx:AB a owl:Class .
+
+blx:Ab a owl:Class .
+
+blx:ab a owl:Class .
+
+BLX:b a owl:Class .
+
+blx:b a owl:Class .
+
+BLX:BB a owl:Class ;
+    requestedBy: "DIO!" .
+
+<http://ihavenoqname.org/aaaaaaaa> a owl:Class .
+
+<http://ihavenoqname.org/bbbbbbbb> a owl:Class .
+
+<http://ihavenoqname.org/heuhuehue_1234567> a owl:Class .
+
+<http://ihavenoqname.org/heuhuehue_12345678> a owl:Class .
+
+ns1:1234 a owl:Class .
+
+ns1:12345 a owl:Class .
+
+### Axioms
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            A:4
+            A:5
+            A:6
+            A:prefix_4
+            A:prefix_5
+            A:prefix_6 ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            A:0
+            A:1
+            A:2
+            A:3
+            A:prefix_1
+            A:prefix_2
+            A:prefix_3 ) ] .
+
+### Annotations
+
+BLX:9 rdfs:subClassOf [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom B:1 ] .
