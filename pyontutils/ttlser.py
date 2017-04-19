@@ -23,24 +23,6 @@ def litsort(l):
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
 #     will likely be the one that is called when NamespaceManager.compute_qname calls self.store.prefix
 
-# desired behavior (XXX does not match the implementation!
-# 1) if there is more than one entry at a level URIRef goes first natsorted then lists then predicate lists then subject lists
-# 2) sorting for nested structures in a list determined by
-#     a) rank of object attached to the highest ranked predicate (could just be alpha)
-#     b) rank of object attached to the second highest ranked predicate
-#     c) where there are multiple of the same predicate their own rank is determined by the ranks of their objects
-#     d) predicate lists are ranked -2 and subject (proper?) lists are ranked -1 as predicates
-#     e) sorting proper lists... get the predicate rank and then the rank of the value
-# object type ranks:
-#  1 URIRef
-#  2 predicate list []
-#  3 proper list ()
-# object value ranks:
-#  1 URIRef -> alphabetical
-#  2 lists -> object type ranks of their nth elements
-#
-# a nice example is NIF-Cell:nlx_cell_091210 in NIF-Neuron-BrainRegion-Bridge.ttl
-
 SUBJECT = 0
 VERB = 1
 OBJECT = 2
@@ -57,7 +39,7 @@ def qname_mp(self, uri):  # for monkey patching Graph
         return ":".join((prefix, name))
 
 class CustomTurtleSerializer(TurtleSerializer):
-    """ NIFSTD custom ttl serliziation """
+    """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
     topClasses = [RDFS.Class,
                   OWL.Ontology,
