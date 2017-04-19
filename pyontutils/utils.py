@@ -130,6 +130,11 @@ class makeGraph:
     def filename(self):
         return self.writeloc + self.name + '.ttl'
 
+    @filename.setter
+    def filename(self, filepath):
+        self.writeloc = os.path.dirname(filepath) + '/'
+        self.name = os.path.splitext(os.path.basename(filepath))[0]
+
     @property
     def ontid(self):
         ontids = list(self.g.subjects(rdflib.RDF.type, rdflib.OWL.Ontology))
