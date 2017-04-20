@@ -160,7 +160,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         if l:
             l = l[0]
         else:
-            l = None
+            l = self.pShortName  # FIXME
 
         return l
 
@@ -296,7 +296,7 @@ class Neuron(graphBase):
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
         self._predicates.hasMorphologicalPhenotype,
         self._predicates.hasElectrophysiologicalPhenotype,
-        self._predicates.hasSpikingPhenotype,
+        #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
         self._predicates.hasExpressionPhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
@@ -358,7 +358,7 @@ class Neuron(graphBase):
                         if type(pe) == NegPhenotypeEdge:
                             l = '-' + l
                         else:
-                            l = '+' + l
+                            l = '+' + l  # this is backward from the 'traditional' placement of the + but it makes this visually much cleaner and eaiser to understand
                     elif pe.e == self._predicates.hasProjectionPhenotype:
                         l = 'Projecting To ' + l
 
