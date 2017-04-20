@@ -52,7 +52,7 @@ d = Phenotype('ilx:PetillaInitialDelayedSpikingPhenotype', pred.hasElectrophysio
 L1 = Phenotype('UBERON:0005390', pred.hasSomaLocatedIn)
 L2 = Phenotype('UBERON:0005391', pred.hasSomaLocatedIn)
 L3 = Phenotype('UBERON:0005392', pred.hasSomaLocatedIn)
-L23 = LogicalPhenotype(AND, L2, L3)  # if you try to do this inside a dict definition it will fail :/
+L23 = LogicalPhenotype(OR, L2, L3)  # if you try to do this inside a dict definition it will fail :/
 L4 = Phenotype('UBERON:0005393', pred.hasSomaLocatedIn)
 L5 = Phenotype('UBERON:0005394', pred.hasSomaLocatedIn)
 L6 = Phenotype('UBERON:0005395', pred.hasSomaLocatedIn)
@@ -74,6 +74,8 @@ SR = Phenotype('UBERON:0005372', pred.hasLayerLocationPhenotype)
 def NeuronC(*args, **kwargs):
     return Neuron(*args, *context, **kwargs)
 
+contn = Neuron(*context)
+
 # TODO switch over to rat parcellation concepts
 neurons = {
     'HBP_CELL:0000018': NeuronC(PC),
@@ -89,7 +91,8 @@ neurons = {
     'HBP_CELL:0000035': NeuronC(TPC, L4P),
     'HBP_CELL:0000036': NeuronC(TPC, L1P),
     'HBP_CELL:0000038': NeuronC(STPC),
-    'HBP_CELL:0000039': NeuronC(),  # can we identify early/late in other cells?
+    'HBP_CELL:0000039': Neuron(*contn.pes, TTPCEB),  # can we identify early/late in other cells?
+    #'HBP_CELL:0000039': NeuronC(TTPCEB),  # can we identify early/late in other cells?
     'HBP_CELL:0000040': NeuronC(),
     'HBP_CELL:0000042': NeuronC(),
     'HBP_CELL:0000051': NeuronC(),
@@ -139,5 +142,9 @@ neurons = {
 
 #Neuron(Phenotype())
 
+def main():
+    WRITE()
+    embed()
 
-embed()
+if __name__ == '__main__':
+    main()
