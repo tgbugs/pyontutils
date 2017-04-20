@@ -507,7 +507,7 @@ class DefinedNeuron(Neuron):
             if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
                 #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
-                djc.complementOf = infixowl.Restriction(onProperty=pe.e, someValuesFrom=pe.p, graph=graph)
+                djc.complementOf = target
                 members.append(djc)
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
