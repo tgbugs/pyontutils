@@ -46,7 +46,7 @@ class graphBase:
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
-    _sgv = Vocabulary(cache=True)
+    _sgv = Vocabulary(cache=True, basePath='http://localhost:9001/scigraph')
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -297,6 +297,7 @@ class Neuron(graphBase):
         self._predicates.hasMorphologicalPhenotype,
         self._predicates.hasElectrophysiologicalPhenotype,
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
+        self.expand('ilx:hasSpikingPhenotype'),  # legacy support
         self._predicates.hasExpressionPhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
@@ -504,7 +505,10 @@ class DefinedNeuron(Neuron):
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
-                self.Class.disjointWith = [target]
+                #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
+                djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
+                djc.complementOf = infixowl.Restriction(onProperty=pe.e, someValuesFrom=pe.p, graph=graph)
+                members.append(djc)
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
