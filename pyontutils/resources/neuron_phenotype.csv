@@ -11,14 +11,43 @@ ilx:NestBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:SmallBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:BituftedPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:BipolarPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-ilx:ChandelierPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:ChandelierPhenotype,ilx:MorphologicalPhenotype,,AxoAxonicPhenotype,,,,hasMorphologicalPhenotype
 ilx:DoubleBouquetPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:MartinottiPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:NeurogliaformPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-ilx:PyramidalPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NeurogliaformDenseAxonPhenotype,ilx:NeurogliaformPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NeurogliaformSparseAxonPhenotype,ilx:NeurogliaformPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:PyramidalPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilx:BiopolarPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:HorizontalPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:InvertedPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NarrowPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:StarPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:TuftedPyramidalPhenotype,ilx:PyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilx:SlenderTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:ThickTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilx:EarlyBifurcatingThickTuftedPyramidalPhenotype,ilx:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:LateBifurcatingThickTuftedPyramidalPhenotype,ilx:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:BistratifiedPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:GranulePhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:DescendingAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:HorizontalAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:SmallAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:IvyPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:MediumSpinyPhenotype,ilx:MorphologicalPhenotype,,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype
+ilx:SpinyStellatePhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:TrilaminarPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+,,,,,,,
+ilx:InterneuronPhenotype,ilx:NeuronPhenotype,,,,,,
+ilx:ProjectionPhenotype,ilx:NeuronPhenotype,,,,,,
+,,,,,,,
+ilx:PerforantPathwayAssociated,,,,,,,
+ilx:DirectPathway,,,,,,,
+,,,,,,,
 ilx:AxonMorphologicalPhenotype,ilx:AxonPhenotype,,,,subClassesDisjoint,,
 ilx:DendriteMorphologicalPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,
 ilx:SomaMorphologicalPhenotype,ilx:SomaPhenotype,,,,subClassesDisjoint,,
+,,,,,,,
 ilx:ElectrophysiologicalPhenotype,ilx:NeuronPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ilx:SpikingPhenotype,ilx:ElectrophysiologicalPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaInitialSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
@@ -26,7 +55,7 @@ ilx:PetillaInitialBurstSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,peti
 ilx:PetillaInitialClassicalSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla c,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaInitialDelayedSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla d,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaSustainedSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
-ilx:PetillaSustainedAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes… multiple parent is annoying,hasElectrophysiologicalPhenotype
+ilx:PetillaSustainedAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes‚ multiple parent is annoying,hasElectrophysiologicalPhenotype
 ilx:PetillaSustainedNonAccomodatingPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla nac,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaSustainedStutteringPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla stut,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaSustainedIrregularPhenotype,ilx:PetillaSustainedSpikingPhenotype,,petilla ir,,,,hasElectrophysiologicalPhenotype
