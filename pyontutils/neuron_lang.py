@@ -32,8 +32,8 @@ _ = [rename(old, new) for old, new in (
 core_graph_path = '/tmp/NIF-Phenotype-Core.ttl'
 pheno_graph_path = '/tmp/NIF-Phenotypes.ttl'
 
-in_graph_path =  '/tmp/output.ttl'
-out_graph_path =  '_Neurons'  # TODO actually make it a path...
+in_graph_path = core_graph_path #/tmp/output.ttl'
+out_graph_path =  '/tmp/_Neurons.ttl'
 
 graphBase.core_graph = Graph()
 graphBase.core_graph.parse(core_graph_path, format='turtle')
@@ -41,12 +41,14 @@ graphBase.core_graph.parse(pheno_graph_path, format='turtle')
 graphBase.in_graph = graphBase.core_graph
 graphBase.in_graph.parse(in_graph_path, format='turtle')
 graphBase.in_graph.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])  # FIXME annoying
+graphBase.in_graph.namespace_manager.bind('GO', makePrefixes('GO')['GO'])  # FIXME annoying
 graphBase.out_graph = Graph()
 graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
 pred = graphBase._predicates  # keep the predicates in their own namespace
 
-newGraph = makeGraph(out_graph_path,
+newGraph = makeGraph('',
                      prefixes=makePrefixes('owl',
+                                           'GO',
                                            'PR',
                                            'UBERON',
                                            'NCBITaxon',
@@ -56,6 +58,7 @@ newGraph = makeGraph(out_graph_path,
                                            'NIFCELL',
                                            'NIFMOL',),
                      graph=graphBase.out_graph)
+newGraph.filename = out_graph_path
 
 tg = makeGraph('NONE', graph=graphBase.in_graph)
 e = tg.get_equiv_inter(NIFCELL_NEURON)  # FIXME do this on demand
