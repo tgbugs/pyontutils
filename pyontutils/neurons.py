@@ -15,7 +15,6 @@ __all__ = [
     'NegPhenotypeEdge',
     'LogicalPhenoEdge',
     'DefinedNeuron',
-    #'MeasuredNeuron',  # we do not want this used
     'NeuronArranger',
     'NIFCELL_NEURON',
 ]
@@ -58,30 +57,7 @@ class graphBase:
         if type(self.out_graph) == str:
             self.out_graph = self.in_graph
 
-        """
-        if self.core_graph_path:
-            self.core_graph = rdflib.Graph()
-            self.core_graph.parse(self.core_graph_path, format='turtle')
-
-        if self.in_graph_path:
-            self.in_graph = rdflib.Graph()
-            self.in_graph.parse(self.core_graph_path, format='turtle')
-            self.in_graph.parse(self.in_graph_path, format='turtle')
-        else:
-            self.in_graph = self.core_graph
-            self.in_graph_path = self.core_graph_path
-
-        if self.out_graph_path:
-            self.out_graph = rdflib.Graph()
-        else:
-            self.out_graph = self.in_graph
-            self.out_graph_path = self.in_graph_path
-
-        #"""
-
         self._namespaces = {p:rdflib.Namespace(ns) for p, ns in self.in_graph.namespaces()}
-        #self._namespaces = {}
-        self._graphed = False
 
     def expand(self, putativeURI):
         if type(putativeURI) == infixowl.Class:
@@ -139,7 +115,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         if ObjectProperty is None:
             self.e = self.getObjectProperty(self.p)
         else:
-            self.e = self.checkObjectProperty(ObjectProperty)
+            self.e = self.checkObjectProperty(ObjectProperty)  # FIXME this doesn't seem to work
 
         self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
@@ -155,7 +131,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
             predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.values()]
             return self.expand(PHENO_ROOT)
 
-    def checkObjectProperty(self, ObjectProperty):
+    def checkObjectProperty(self, ObjectProperty):  # FIXME this doesn't seem to work
         op = self.expand(ObjectProperty)
         if op in self._predicates.__dict__.values():
             return op
@@ -207,11 +183,6 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
     def _graphify(self, graph=None):
         if graph is None:
             graph = self.out_graph
-        #if 0: #self._graphed:  # FIXME this is the wrong place to fix the 'duplicates' problem we have been having
-            #return self._graphed
-        #else:
-        #self._graphed = infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
-        #return self._graphed
         return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
 
     def __lt__(self, other):
@@ -273,16 +244,11 @@ class LogicalPhenoEdge(graphBase):
         return ''.join([pe.pShortName for pe in self.pes])
 
     def _graphify(self, graph=None):
-        #if self._graphed:
-            #return self._graphed
-        #else:
         if graph is None:
             graph = self.out_graph
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
             members.append(pe._graphify(graph=graph))
-        #self._graphed = infixowl.BooleanClass(operator=self.op, members=members, graph=self.out_graph)
-        #return self._graphed
         return infixowl.BooleanClass(operator=self.op, members=members, graph=graph)
 
     def __lt__(self, other):
@@ -318,7 +284,6 @@ class Neuron(graphBase):
     existing_ids = {}
     ids_pes = {}
     pes_ids = {}
-    #def __new__(cls, *phenotypeEdges, id_=None):
     def __init__(self, *phenotypeEdges, id_=None):
         super().__init__()
         self.ORDER = [
@@ -349,17 +314,12 @@ class Neuron(graphBase):
 
 
         if not phenotypeEdges and id_ is not None:
-            # rebuild the bag from the -class- id
             self.Class = infixowl.Class(self.id_, graph=self.in_graph)  # IN
-            phenotypeEdges = self.bagExisting()
-            #if not phenotypeEdges:  # we should still be able to handle poorely defined neurons and alert on them
-                #raise ValueError(f'No phenotypes found for {self.id_}')
+            phenotypeEdges = self.bagExisting()  # rebuild the bag from the -class- id
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
         self.pes = tuple(sorted(phenotypeEdges))
-        #self.temp_id = self.expand(ILXREPLACE(str(hash(tuple(sorted(phenotypeEdges))))))  # FIXME make sure this is deterministic
-        #hashes.append(self.temp_id)
 
         self.phenotypes = set((pe.p for pe in self.pes))
         self.edges = set((pe.e for pe in self.pes))
@@ -445,7 +405,6 @@ class Neuron(graphBase):
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
         return "%s%s" % (self.__class__.__name__, self.pes)
-        #return self.Class.__repr__()
 
 
     def __hash__(self):
@@ -476,22 +435,18 @@ class DefinedNeuron(Neuron):
 
         return tuple(out)
 
-        qname = self.out_graph.namespace_manager.qname(self.id_)
-        qstring = """
-        SELECT DISTINCT ?match ?edge WHERE {
-        %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
-        ?item rdf:type owl:Restriction .
-        ?edge rdfs:subPropertyOf* %s .
-        ?item owl:onProperty ?edge .
-        ?item owl:someValuesFrom ?match . }""" % (qname,
-                                                  PHENO_ROOT,)
-        #print(qstring)
-        pes = self.in_graph.query(qstring)
-        out = tuple(self._tuplesToPes(pes))
-        #print(out)
-        return out
-        #assert len(out) == 1, "%s" % out
-        #return out[0]
+        # the SPARQL equivalent that we are not using
+        # qname = self.out_graph.namespace_manager.qname(self.id_)
+        # qstring = """
+        # SELECT DISTINCT ?match ?edge WHERE {
+        # %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
+        # ?item rdf:type owl:Restriction .
+        # ?edge rdfs:subPropertyOf* %s .
+        # ?item owl:onProperty ?edge .
+        # ?item owl:someValuesFrom ?match . }""" % (qname, PHENO_ROOT)
+        # pes = self.in_graph.query(qstring)
+        # out = tuple(self._tuplesToPes(pes))
+        # return out
 
     def _unpackPheno(self, c, type_=PhenotypeEdge):  # FIXME need to deal with intersections
         if isinstance(c.identifier, rdflib.BNode):
@@ -513,8 +468,6 @@ class DefinedNeuron(Neuron):
                             continue
                         else:
                             pass  # it is a restriction
-                            #print('what is going on here?', pr)
-                            #print(dir(pr))
 
                     p = pr.someValuesFrom  # if NIFCELL_NEURON is not a owl:Class > problems
                     e = pr.onProperty
@@ -541,37 +494,26 @@ class DefinedNeuron(Neuron):
             p = pr.someValuesFrom
             e = pr.onProperty
             pes.append(type_(p, e))
-            #print(id_)
         return LogicalPhenoEdge(op, *pes)
 
     def _graphify(self, *args, graph=None): #  defined
         """ Lift phenotypeEdges to Restrictions """
-        #id_ = self.id_ #or self.temp_id
         if graph is None:
             graph = self.out_graph
-        #class_ = infixowl.Class(self.id_, graph=graph)  # FIXME redundants...
-        #class_.delete()  # this doesn't actually work... it polutes the graph :/????
-        #class_.subClassOf = [self.expand(DEF_ROOT)]  # convenience
         members = [self.expand(NIFCELL_NEURON)]
-        #anon = infixowl.Class(graph=graph)  # for disjointness
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
                 self.Class.disjointWith = [target]
             else:
-                members.append(target)  # fixme negative logical phenotypes :/
-                #anon.disjointWith = [target]
-        #if tuple(anon.disjointWith):
-            #ec = [intersection, anon]
-        #else:
+                members.append(target)  # FIXME negative logical phenotypes :/
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
         ec = [intersection]
         self.Class.equivalentClass = ec
-        #self.Class.replace(class_)  # delete any existing annotations to prevent duplication does this work?
         return self.Class
 
 
-class MeasuredNeuron(Neuron):  # FIXME we don't actually need these at all! they should all be created as equivalent classes?
+class MeasuredNeuron(Neuron):  # XXX DEPRECATED retained for loading from some existing ontology files
     """ Class that takes a bag of phenotypes and adds subClassOf axioms"""
     # these should probably require a species and brain region bare minimum?
     # these need to check to make sure the species specific identifiers are being used
@@ -590,28 +532,27 @@ class MeasuredNeuron(Neuron):  # FIXME we don't actually need these at all! they
             pe = self._unpackPheno(c, NegPhenotypeEdge)
             if pe:
                 out.add(pe)
-        #print(tuple(self.Class.label)[0])  # FIXME not all classes have labels...
-        #print(out)
         return tuple(out)
 
+        # alternate SPARQL version
         # while using the qstring is nice from a documentation standpoint... it is sllllooowww
         # check out infixowl Class.__repr__ for a potentially faster way use CastClass...
-        qname = self.in_graph.namespace_manager.qname(self.id_)
-        qstring = """
-        SELECT DISTINCT ?match ?edge WHERE {
-        %s rdfs:subClassOf ?item .
-        ?item rdf:type owl:Restriction .
-        ?item owl:onProperty ?edge .
-        ?item owl:someValuesFrom ?match . }""" % qname
-        #print(qstring)
-        pes = list(self.in_graph.query(qstring))
-        #assert len(test) == 1, "%s" % test
-        if not pes:
-            return self._getIntersectionPhenos(qname)
-        else:
-            out = tuple(self._tuplesToPes(pes))
-            #print(out)
-            return out
+        # qname = self.in_graph.namespace_manager.qname(self.id_)
+        # qstring = """
+        # SELECT DISTINCT ?match ?edge WHERE {
+        # %s rdfs:subClassOf ?item .
+        # ?item rdf:type owl:Restriction .
+        # ?item owl:onProperty ?edge .
+        # ?item owl:someValuesFrom ?match . }""" % qname
+        # #print(qstring)
+        # pes = list(self.in_graph.query(qstring))
+        # #assert len(test) == 1, "%s" % test
+        # if not pes:
+        #     return self._getIntersectionPhenos(qname)
+        # else:
+        #     out = tuple(self._tuplesToPes(pes))
+        #     #print(out)
+        #     return out
 
     def _unpackPheno(self, c, type_=PhenotypeEdge):
         if isinstance(c.identifier, rdflib.BNode):
@@ -685,105 +626,6 @@ class NeuronArranger:  # TODO should this write the graph?
         pass
 
 
-class neuronManager:
-    def __init__(self):
-        g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-        self.g = g
-        self.bag_existing()
-        
-    def make_neuron(self, graph, bag_of_phenotypes):
-        # 0) check that all phenotypes and edges are valid
-        # 1) create defined class (equivalentTo) if it does not exist already
-        # 2) create regular class (subClassOf) with collection of ALL phenoes
-        #       a) find existing superclass candidates, requires ability to 'rebag' phenotypes (set & == set)
-        # 3) create type class if not exists or update disjoint union if it does
-        #       a) need a flag to check?
-        for pheno in bag_of_phenotypes:
-            pass
-
-    def get_edge_for_pheno(self, pheno):
-        edge = None
-        # TODO use scigraph categories function for this?
-        # subClassOf UBERON:1?
-        #    hasSomaLocatedIn
-        #    hasSomaLocatedInLayer
-        # subClassOf PR:1?
-        #    ilx:hasExpressionPhenotype
-        # subClassOf NCBIGene:1?
-        #    ilx:hasExpressionPhenotype
-        # subClassOf Panther?
-        #    ilx:hasExpressionPhenotype
-        # subClassOf NCBITaxon:1?
-        #    ilx:hasInstanceInSpecies
-        # subClassOf ilx:MorphologicalPhenotype
-        # subClassOf ilx:ElectrophysiologicalPhenotype
-        # subClassOf ilx:parcellation_concept
-        return edge, pheno
-
-    def bag_existing(self):  # this reveals the ickyness of ontologies for this...
-        reg_neurons = list(self.g.g.subjects(rdflib.RDFS.subClassOf, self.g.expand(NIFCELL_NEURON)))
-        tc_neurons = [_ for (_,) in self.g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NIFCELL_NEURON)]
-        def_neurons = self.g.get_equiv_inter(NIFCELL_NEURON)
-
-        def get_equiv_pheno(n):
-            qname = self.g.g.namespace_manager.qname(n)
-            qstring = """
-            SELECT DISTINCT ?match WHERE {
-            %s owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first ?item .
-            ?item rdf:type owl:Restriction .
-            ?prop rdfs:subPropertyOf* %s .
-            ?item owl:onProperty ?prop .
-            ?item owl:someValuesFrom ?match . }""" % (qname,
-                                                      'ilx:hasPhenotype',)
-            #print(qstring)
-            out = list(self.g.g.query(qstring))
-            #print(out)
-            assert len(out) == 1, "%s" % out
-            return out[0]
-
-        def get_reg_pheno(n):  # FIXME fails on intersection of...
-            qname = self.g.g.namespace_manager.qname(n)
-            qstring = """
-            SELECT DISTINCT ?match ?edge WHERE {
-            %s rdfs:subClassOf ?item .
-            ?item rdf:type owl:Restriction .
-            ?item owl:onProperty ?edge .
-            ?item owl:someValuesFrom ?match . }""" % qname
-            #print(qstring)
-            out = list(self.g.g.query(qstring))
-            #assert len(test) == 1, "%s" % test
-            if not out:
-                return get_intersection_phenos(qname)
-            else:
-                return out
-
-        def get_intersection_phenos(qname):  # composite phenos
-            qstring = """
-            SELECT DISTINCT ?match ?edge WHERE {
-            %s rdfs:subClassOf/owl:intersectionOf/rdf:rest*/rdf:first ?item .
-            ?item rdf:type owl:Restriction .
-            ?item owl:onProperty ?edge .
-            ?item owl:someValuesFrom ?match . }""" % qname
-            #print(qstring)
-            out = list(self.g.g.query(qstring))
-            #print('------------------------')
-            #print(out)
-            #print('------------------------')
-            return out
-
-        #reg_neuron_phenos = [(n, get_reg_pheno(n)) for n in reg_neurons]
-        #tc_neuron_phenos = [(n, get_reg_pheno(n)) for n in tc_neurons]
-        #def_neuron_phenos = [(n, get_equiv_pheno(n)) for n in def_neurons]
-
-        nodef = sorted(set(tc_neurons) - set(def_neurons))
-        mns = [MeasuredNeuron(id_=n) for n in nodef]
-        dns = [DefinedNeuron(id_=n) for n in sorted(def_neurons)]
-        dns += [DefinedNeuron(*m.pes) for m in mns]
-        for d in dns:
-            print(d)
-        embed()
-
-
 def main():
     # load in our existing graph
     # note: while it would be nice to allow specification of phenotypes to be decoupled
@@ -825,30 +667,11 @@ def main():
     #dns += [DefinedNeuron(*m.pes) if m.pes else m.id_ for m in mns]
     dns += [DefinedNeuron(*m.pes) for m in mns if m.pes]
 
-    # reset everything
-    DefinedNeuron.out_graph = rdflib.Graph()  # FIXME when we do this if the PhenotypeEdges aren't on the same graph they poof...
+    # reset everything for export
+    DefinedNeuron.out_graph = rdflib.Graph()
     ng = makeGraph('output', prefixes=PREFIXES, graph=DefinedNeuron.out_graph)
     DefinedNeuron.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [DefinedNeuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
-    """
-    for d in dns:
-        try:
-            print(d)
-        except TypeError as e:
-            print(d.pes)
-            embed()
-            raise e
-    #"""
-
-    #wat = makeGraph('outtest', prefixes=PREFIXES)
-    #dw = dns[-1]._graphify(graph=wat.g)
-    #wat.write()
-
-    #pe = PhenotypeEdge
-    #asdf = MeasuredNeuron(pe('asdf1', 'ilx:hasPhenotype'), pe('asdf2', 'ilx:hasPhenotype'))
-    #mn = MeasuredNeuron(id_=rdflib.term.URIRef('http://uri.interlex.org/base/ilx_0050205'))
-    #asdf = DefinedNeuron(pe('ILXREPLACE:asdf1', 'ilx:hasPhenotype'), pe('ILXREPLACE:asdf2', 'ilx:hasPhenotype'))
-
     ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
     ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
