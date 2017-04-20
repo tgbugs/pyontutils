@@ -204,13 +204,15 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         else:
             return ''
 
-    def _graphify(self):
+    def _graphify(self, graph=None):
+        if graph is None:
+            graph = self.out_graph
         #if 0: #self._graphed:  # FIXME this is the wrong place to fix the 'duplicates' problem we have been having
             #return self._graphed
         #else:
         #self._graphed = infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
         #return self._graphed
-        return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=self.out_graph)
+        return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -270,16 +272,18 @@ class LogicalPhenoEdge(graphBase):
     def pShortName(self):
         return ''.join([pe.pShortName for pe in self.pes])
 
-    def _graphify(self):
+    def _graphify(self, graph=None):
         #if self._graphed:
             #return self._graphed
         #else:
+        if graph is None:
+            graph = self.out_graph
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
-            members.append(pe._graphify())
+            members.append(pe._graphify(graph=graph))
         #self._graphed = infixowl.BooleanClass(operator=self.op, members=members, graph=self.out_graph)
         #return self._graphed
-        return infixowl.BooleanClass(operator=self.op, members=members, graph=self.out_graph)
+        return infixowl.BooleanClass(operator=self.op, members=members, graph=graph)
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -551,7 +555,7 @@ class DefinedNeuron(Neuron):
         members = [self.expand(NIFCELL_NEURON)]
         #anon = infixowl.Class(graph=graph)  # for disjointness
         for pe in self.pes:
-            target = pe._graphify()
+            target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotypeEdge):  # isinstance will match NegPhenotypeEdge -> PhenotypeEdge
                 self.Class.disjointWith = [target]
             else:
