@@ -122,6 +122,9 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
+        # use this specify consistent patterns for modifying labels 
+        self.labelPostRule = lambda l: l
+
     def checkPhenotype(self, phenotype):
         p = self.expand(phenotype)
         try: next(self.core_graph.predicate_objects(p))
@@ -161,7 +164,8 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
                 l = self.p
         else:
             l = l[0]
-        return l
+        return self.labelPostRule(l)
+
 
     @property
     def pHiddenLabel(self):
@@ -171,7 +175,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         else:
             l = self.pShortName  # FIXME
 
-        return l
+        return self.labelPostRule(l)
 
     @property
     def pShortName(self):
@@ -233,6 +237,7 @@ class LogicalPhenoEdge(graphBase):
         super().__init__()
         self.op = self.expand(op)  # TODO more with op
         self.pes = edges
+        self.labelPostRule = lambda l: l
 
     @property
     def p(self):
@@ -246,11 +251,11 @@ class LogicalPhenoEdge(graphBase):
     def pHiddenLabel(self):
         label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
-        return '(%s %s)' % (op, label)
+        return self.labelPostRule('(%s %s)' % (op, label))
 
     @property
     def pShortName(self):
-        return ''.join([pe.pShortName for pe in self.pes])
+        return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
 
     def _graphify(self, graph=None):
         if graph is None:
@@ -303,6 +308,7 @@ class Neuron(graphBase):
         self._predicates.hasTaxonRank,
         self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
+        self._predicates.hasDendriteMorphologicalPhenotype,
         self._predicates.hasMorphologicalPhenotype,
         self._predicates.hasElectrophysiologicalPhenotype,
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
@@ -648,6 +654,8 @@ def main():
     sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
                '/tmp/NIF-Neuron-Defined.ttl',
                '/tmp/NIF-Neuron.ttl',
+               '/tmp/NIF-Phenotype-Core.ttl',
+               '/tmp/NIF-Phenotypes.ttl',
                '/tmp/hbp-special.ttl')
     for file in sources:
             EXISTING_GRAPH.parse(file, format='turtle')
