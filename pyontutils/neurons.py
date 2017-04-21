@@ -46,7 +46,7 @@ class graphBase:
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
-    _sgv = Vocabulary(cache=True, basePath='http://localhost:9001/scigraph')
+    _sgv = Vocabulary(cache=True)
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -81,7 +81,8 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         'PR:000004968':'CR',
         'PR:000011387':'NPY',
         'PR:000015665':'SOM',
-        'NIFMOL:nifext_6':'PV',
+        #'NIFMOL:nifext_6':'PV',
+        'PR:000013502':'PV',
         'PR:000017299':'VIP',
         'PR:000005110':'CCK',
         'ilx:PetillaSustainedAccomodatingPhenotype':'AC',
@@ -111,7 +112,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
             ObjectProperty = phenotype.e
             phenotype = phenotype.p
 
-        self.p = self.expand(phenotype)
+        self.p = self.checkPhenotype(phenotype)
         if ObjectProperty is None:
             self.e = self.getObjectProperty(self.p)
         else:
@@ -120,6 +121,14 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
+
+    def checkPhenotype(self, phenotype):
+        p = self.expand(phenotype)
+        try: next(self.core_graph.predicate_objects(p))
+        except StopIteration:
+            if not self._sgv.findById(p):
+                print('WARNING: unknown phenotype ', p)
+        return p
 
     def getObjectProperty(self, phenotype):
         predicates = list(self.in_graph.objects(phenotype, self.expand('ilx:useObjectProperty')))  # useObjectProperty works for phenotypes we control
