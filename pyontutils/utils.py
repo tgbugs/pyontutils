@@ -62,13 +62,14 @@ def mysql_conn_helper(host, db, user, port=3306):
     return kwargs
 
 def _loadPrefixes():
+    import yaml
     try:
-        import yaml
         with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'), 'rt') as f:
             curie_map = yaml.load(f)
     except FileNotFoundError:
         import requests
-        curie_map = requests.get('https://github.com/SciCrunch/NIF-Ontology/raw/master/scigraph/nifstd_curie_map.yaml').json()
+        curie_map = requests.get('https://github.com/SciCrunch/NIF-Ontology/raw/master/scigraph/nifstd_curie_map.yaml')
+        curie_map = yaml.load(curie_map.text)
 
     # holding place for values that are not in the curie map
     extras = {
