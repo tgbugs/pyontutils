@@ -1,8 +1,22 @@
 ilx_id,subClassOf,label,synonyms,xrefs,rules,notes,use_edge
-ilx:AxonPhenotype,,,,,,,
-ilx:DendritePhenotype,,,,,,,
-ilx:SomaPhenotype,,,,,,,
-ilx:CellPhenotype,,,,,,,
+ilx:AxonPhenotype,ilx:Phenotype,,,,,,
+ilx:DendritePhenotype,ilx:Phenotype,,,,,,hasDendriteMorphologicalPhenotype
+ilx:BranchingPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,hasDendriteMorphologicalPhenotype
+ilx:EarlyBifurcatingPhenotype,ilx:BranchingPhenotype,,,,,,hasDendriteMorphologicalPhenotype
+ilx:LateBifurcatingPhenotype,ilx:BranchingPhenotype,,,,,,hasDendriteMorphologicalPhenotype
+ilx:TrunkPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,hasDendriteMorphologicalPhenotype
+ilx:NarrowPhenotype,ilx:TrunkPhenotype,,,,,"I get the feeling that this is actually a synonym for slender, ma2015sup uses 'thin' but that has nasty collsions with 'thick' for short naming (sigh)",hasDendriteMorphologicalPhenotype
+ilx:SlenderPhenotype,ilx:TrunkPhenotype,,,,,is this a synonym for narrow?,hasDendriteMorphologicalPhenotype
+ilx:ThickPhenotype,ilx:TrunkPhenotype,,,,,,hasDendriteMorphologicalPhenotype
+,,,,,,,
+ilx:TuftedPhenotype,ilx:DendritePhenotype,,,,,to get Untufted use the negative phenotype of this and add a naming rule,hasDendriteMorphologicalPhenotype
+,,,,,,,
+ilx:SpinyPhenotype,ilx:DendritePhenotype,,,,,"Aspiny can be modelled as (not ilx:SpinyPhenotype), this will be needed for Allen's scheme",hasDendriteMorphologicalPhenotype
+,,,,,,,
+,,,,,,,
+ilx:SomaPhenotype,ilx:Phenotype,,,,,,
+ilx:CellPhenotype,ilx:Phenotype,,,,,,
+,,,,,,,
 ilx:NeuronPhenotype,ilx:CellPhenotype,,,,,,hasPhenotype
 ilx:MorphologicalPhenotype,ilx:NeuronPhenotype,,,,subClassesDisjoint,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,hasMorphologicalPhenotype
 ilx:BasketPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
@@ -21,17 +35,23 @@ ilx:PyramidalPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,,hasMorp
 ilx:BiopolarPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:HorizontalPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:InvertedPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
-ilx:NarrowPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NarrowPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,"this class is circumspect, and may actually be NarrowTuftedPyramidalPhenotype",hasMorphologicalPhenotype
 ilx:StarPyramidalPhenotype,ilx:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:TuftedPyramidalPhenotype,ilx:PyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
-ilx:SlenderTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:EarlyBifurcatingTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,we are not modelling dendrite phenotypes directly at the moment so we cant break about EB/LB,hasMorphologicalPhenotype
+ilx:LateBifurcatingTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:NarrowTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,issues with NarowPyramidalPhenotype,hasMorphologicalPhenotype
+ilx:SlenderTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,,note that there is also an 'untufted slender' classification so we probably do need to break these out,hasMorphologicalPhenotype
 ilx:ThickTuftedPyramidalPhenotype,ilx:TuftedPyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
 ilx:EarlyBifurcatingThickTuftedPyramidalPhenotype,ilx:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:LateBifurcatingThickTuftedPyramidalPhenotype,ilx:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:UntuftedPyramidalPhenotype,ilx:MorphologicalPhenotype,,,,,,
 ilx:BistratifiedPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:GranulePhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:DescendingAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+,,,,,,,
 ilx:HorizontalAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilx:LargeAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,
 ilx:SmallAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:IvyPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:MediumSpinyPhenotype,ilx:MorphologicalPhenotype,,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype
@@ -41,8 +61,8 @@ ilx:TrilaminarPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotyp
 ilx:InterneuronPhenotype,ilx:NeuronPhenotype,,,,,,
 ilx:ProjectionPhenotype,ilx:NeuronPhenotype,,,,,,
 ,,,,,,,
-ilx:PerforantPathwayAssociated,,,,,,,
-ilx:DirectPathway,,,,,,,
+ilx:PerforantPathwayAssociated,,,,,,Needs work,
+ilx:DirectPathway,,,,,,Needs work,
 ,,,,,,,
 ilx:AxonMorphologicalPhenotype,ilx:AxonPhenotype,,,,subClassesDisjoint,,
 ilx:DendriteMorphologicalPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,
