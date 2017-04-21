@@ -40,6 +40,9 @@ def getNewIlxId(temp_id, seed, ontid):
 
 __FILENAME = os.path.join(os.path.dirname(__file__), 'resources/nif-ilx-replace.json')
 if not os.path.exists(__FILENAME):
+    dn = os.path.dirname(__FILENAME)
+    if not os.path.exists(dn):
+        os.mkdir(dn)  # hack for creating resources inside site-packages which will likely fail with permissions errors if --user was not installed by pip :/
     with open(__FILENAME, 'wt') as f:
         f.write('{}\n')
 
