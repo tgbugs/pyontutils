@@ -1,5 +1,5 @@
 edge,neurolex names,existing equiv,definition,label,notes,subPropertyOf,inverse,types
-hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive"
+hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive, functional"
 phenotypeOf,,,,,,,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
@@ -8,6 +8,7 @@ hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterR
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type. This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need this one,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
+hasDendriteMorphologicalPhenotype,,,Expresses a relationship between a neuron and a dendrite phenotype. This should be used when a neuron type is described by the morphology of its dendrites.,,,hasMorphologicalPhenotype,,"asymmetric, irreflexive"
 hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron type and an electrophysiological phenotype concept. This should be used when a neuron type is described using a high level electrophysiological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
 #hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
 #hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
