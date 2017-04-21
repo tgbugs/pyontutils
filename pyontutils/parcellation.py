@@ -24,7 +24,7 @@ TODAY = date.isoformat(date.today())
 commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode()
 NOTICE = ' Please see https://github.com/tgbugs/pyontutils/tree/{commit}/parcellation.py for details.'.format(commit=commit)
 
-sgv = Vocabulary(cache=True, basePath='http://localhost:9001/scigraph')
+sgv = Vocabulary(cache=True)
 
 OntMeta = namedtuple('OntMeta',
                      ['path',
