@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from pyontutils.utils import makeGraph, makePrefixes
 
@@ -42,6 +42,7 @@ graphBase.in_graph = graphBase.core_graph
 graphBase.in_graph.parse(in_graph_path, format='turtle')
 graphBase.in_graph.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])  # FIXME annoying
 graphBase.in_graph.namespace_manager.bind('GO', makePrefixes('GO')['GO'])  # FIXME annoying
+graphBase.in_graph.namespace_manager.bind('CHEBI', makePrefixes('CHEBI')['CHEBI'])  # FIXME annoying
 graphBase.out_graph = Graph()
 graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
 pred = graphBase._predicates  # keep the predicates in their own namespace
@@ -50,6 +51,7 @@ newGraph = makeGraph('',
                      prefixes=makePrefixes('owl',
                                            'GO',
                                            'PR',
+                                           'CHEBI',
                                            'UBERON',
                                            'NCBITaxon',
                                            'ILXREPLACE',
@@ -59,6 +61,9 @@ newGraph = makeGraph('',
                                            'NIFMOL',),
                      graph=graphBase.out_graph)
 newGraph.filename = out_graph_path
+ontid = URIRef('file://' + out_graph_path)
+newGraph.add_ont(ontid, 'Some Neurons')
+newGraph.add_node(ontid, 'owl:imports', URIRef('file://' + pheno_graph_path))  # core should be in the import closure
 
 tg = makeGraph('NONE', graph=graphBase.in_graph)
 e = tg.get_equiv_inter(NIFCELL_NEURON)  # FIXME do this on demand
