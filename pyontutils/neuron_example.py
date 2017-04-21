@@ -2,18 +2,14 @@
 from pyontutils.neuron_lang import *
 from IPython import embed
 
-context = (
-    Phenotype('NCBITaxon:10116', 'ilx:hasInstanceInSpecies', label='Rattus norvegicus'),
-    Phenotype('UBERON:0008933', 'ilx:hasSomaLocatedIn', label='primary somatosensory cortex')
-)
-ca1_cont = (
-    Phenotype('NCBITaxon:10116', 'ilx:hasInstanceInSpecies', label='Rattus norvegicus'),
-    Phenotype('UBERON:0003881', pred.hasSomaLocatedIn, label='CA1 field of hippocampus')
-)
+Rat = Phenotype('NCBITaxon:10116', pred.hasInstanceInSpecies, label='Rattus norvegicus')
+S1 = Phenotype('UBERON:0008933', pred.hasSomaLocatedIn, label='primary somatosensory cortex')
+CA1 = Phenotype('UBERON:0003881', pred.hasSomaLocatedIn)
+context = (Rat, S1)
+ca1_cont = (Rat, CA1)
 
 #'(Rat S1 L4 P bIR) '(LB Th Tu)
 # organism
-Rat = Phenotype('NCBITaxon:10116', 'ilx:hasInstanceInSpecies', label='Rattus norvegicus')
 
 # pyramidal phenotypes (cortex)
 P = P = PC = Phenotype('ilx:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  # 
@@ -51,6 +47,7 @@ LB = LBC = Phenotype('ilx:LargeBasketPhenotype', pred.hasMorphologicalPhenotype)
 NB = NBC = Phenotype('ilx:NestBasketPhenotype', pred.hasMorphologicalPhenotype)
 SS = SSC = Phenotype('ilx:SpinyStellatePhenotype', pred.hasMorphologicalPhenotype)  # SS is used on the website, SSC is used on the spreadsheet
 
+# e-types
 AC = Phenotype('ilx:PetillaSustainedAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
 NAC = Phenotype('ilx:PetillaSustainedNonAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
 STUT = Phenotype('ilx:PetillaSustainedStutteringPhenotype', pred.hasElectrophysiologicalPhenotype)
@@ -59,6 +56,11 @@ b = Phenotype('ilx:PetillaInitialBurstSpikingPhenotype', pred.hasElectrophysiolo
 c = Phenotype('ilx:PetillaInitialClassicalSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
 d = Phenotype('ilx:PetillaInitialDelayedSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
 
+# other e-types
+FS = Phenotype('ilx:FastSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
+RSNP = Phenotype('ilx:RegularSpikingNonPyramidalPhenotype', pred.hasElectrophysiologicalPhenotype)
+
+# layers
 L1 = Phenotype('UBERON:0005390', pred.hasLayerLocationPhenotype)
 L2 = Phenotype('UBERON:0005391', pred.hasLayerLocationPhenotype)
 L3 = Phenotype('UBERON:0005392', pred.hasLayerLocationPhenotype)
@@ -71,7 +73,6 @@ L6 = Phenotype('UBERON:0005395', pred.hasLayerLocationPhenotype)
 L1P = Phenotype('UBERON:0005390', pred.hasProjectionPhenotype)
 L4P = Phenotype('UBERON:0005393', pred.hasProjectionPhenotype)
 
-CA1 = Phenotype('UBERON:0003881', pred.hasSomaLocatedIn)
 CA2 = Phenotype('UBERON:0003882', pred.hasSomaLocatedIn)
 CA3 = Phenotype('UBERON:0003883', pred.hasSomaLocatedIn)
 
@@ -204,6 +205,12 @@ neurons = {
     'HBP_CELL:0000153': Neuron(Rat, CA2, PC),
 }
 
+generic_neurons = {
+    '0':NeuronC(BC),
+    '1':Neuron(Rat, CA1),
+    '2':Neuron(NPY, NegPhenotype(PV)),
+    '3':Neuron(PV),
+    }
 
 #"""
 
@@ -221,7 +228,6 @@ neurons = {
 #Neuron(Phenotype())
 
 def main():
-    NeuronC(BC)
     WRITE()
     embed()
 
