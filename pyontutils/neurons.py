@@ -77,6 +77,7 @@ class graphBase:
 class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     local_names = {
         'NCBITaxon:10116':'Rat',
+        'CHEBI:16865':'GABA',
         'PR:000004967':'CB',
         'PR:000004968':'CR',
         'PR:000011387':'NPY',
