@@ -243,7 +243,7 @@ def make_phenotypes():
                 graph.add_node(id_, rdflib.RDF.type, lookup[t])
 
     with open(refile(__file__, 'resources/neuron_phenotype.csv'), 'rt') as f:
-        rows = [r for r in csv.reader(f)]
+        rows = [r for r in csv.reader(f) if any(r)]
 
     class PP(rowParse):  # FIXME use add_new in _row_post?
         SCD = 'subClassesDisjoint'
@@ -301,6 +301,7 @@ def make_phenotypes():
                 graph.expand('ilx:SomaMorphologicalPhenotype'):None,
                 graph.expand('ilx:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),
                 graph.expand('ilx:CellPhenotype'):None,
+                graph.expand('ilx:Phenotype'):graph.expand('ilx:Phenotype'),
             }
             if self.id_ in lookup:
                 return
@@ -398,7 +399,6 @@ def make_phenotypes():
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_node(ontid2, 'owl:imports', ontid)
-    graph2.add_node('ilx:CellPhenotype', rdflib.RDFS.subClassOf, 'ilx:Phenotype')
     graph2.write()
     
     syn_mappings = {}
