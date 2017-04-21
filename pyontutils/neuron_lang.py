@@ -29,8 +29,8 @@ _ = [rename(old, new) for old, new in (
     ('LogicalPhenoEdge','LogicalPhenotype'),
 )]
 
-core_graph_path = '/tmp/NIF-Phenotype-Core.ttl'
-pheno_graph_path = '/tmp/NIF-Phenotypes.ttl'
+core_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotype-Core.ttl'
+pheno_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotypes.ttl'
 
 in_graph_path = core_graph_path #/tmp/output.ttl'
 out_graph_path =  '/tmp/_Neurons.ttl'
@@ -63,7 +63,7 @@ newGraph = makeGraph('',
 newGraph.filename = out_graph_path
 ontid = URIRef('file://' + out_graph_path)
 newGraph.add_ont(ontid, 'Some Neurons')
-newGraph.add_node(ontid, 'owl:imports', URIRef('file://' + pheno_graph_path))  # core should be in the import closure
+newGraph.add_node(ontid, 'owl:imports', URIRef(pheno_graph_path))  # core should be in the import closure
 
 tg = makeGraph('NONE', graph=graphBase.in_graph)
 e = tg.get_equiv_inter(NIFCELL_NEURON)  # FIXME do this on demand
