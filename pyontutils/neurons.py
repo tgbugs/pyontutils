@@ -402,7 +402,7 @@ class Neuron(graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = 'Neuron' if True else 'Interneuron'
+        nin_switch = 'Interneuron' if PhenotypeEdge('ilx:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'Neuron'
         label.append(nin_switch)
 
         new_label = ' '.join(label)
