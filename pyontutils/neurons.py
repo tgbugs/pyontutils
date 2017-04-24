@@ -327,6 +327,8 @@ class Neuron(graphBase):
         self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
         self._predicates.hasDendriteMorphologicalPhenotype,
+        self._predicates.hasDendriteLocatedIn,
+        self._predicates.hasAxonLocatedIn,
         self._predicates.hasMorphologicalPhenotype,
         self._predicates.hasElectrophysiologicalPhenotype,
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
@@ -395,7 +397,6 @@ class Neuron(graphBase):
                             l = '+' + l  # this is backward from the 'traditional' placement of the + but it makes this visually much cleaner and eaiser to understand
                     elif pe.e == self._predicates.hasProjectionPhenotype:
                         l = 'Projecting To ' + l
-
 
                     sublabs.append(l)
 
