@@ -2,6 +2,7 @@
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from pyontutils.utils import makeGraph, makePrefixes
+from IPython import embed
 
 __all__ = [
     'AND',
@@ -13,6 +14,7 @@ __all__ = [
     'Neuron',
     'pred',
     'WRITE',
+    'WRITEPYTHON',
 ]
 
 # quick way to do renaming during dev and testing
@@ -29,8 +31,10 @@ _ = [rename(old, new) for old, new in (
     ('LogicalPhenoEdge','LogicalPhenotype'),
 )]
 
-core_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotype-Core.ttl'
-pheno_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotypes.ttl'
+#core_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotype-Core.ttl'
+#pheno_graph_path = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/NIF-Phenotypes.ttl'
+core_graph_path = '/home/tom/git/NIF-Ontology/ttl/NIF-Phenotype-Core.ttl'
+pheno_graph_path = '/home/tom/git/NIF-Ontology/ttl/NIF-Phenotypes.ttl'
 
 in_graph_path = core_graph_path #/tmp/output.ttl'
 out_graph_path =  '/tmp/_Neurons.ttl'
@@ -71,4 +75,11 @@ graphBase.existing_ids = e
 
 def WRITE():
     newGraph.write()
+
+def WRITEPYTHON(neurons):
+    out = '#!/usr/bin/env python3\n'
+    out += 'from %s import *\n\n' % __name__
+    out += '\n\n'.join(str(n) for n in neurons)
+    with open('/tmp/_Neurons.py', 'wt') as f:
+        f.write(out)
 
