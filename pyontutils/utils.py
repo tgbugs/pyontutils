@@ -125,6 +125,7 @@ class makeGraph:
         self.g.namespace_manager.bind(prefix, namespace)
 
     def del_namespace(self, prefix):
+        self.namespaces.pop(prefix)
         self.g.store._IOMemory__namespace.pop(prefix)
 
     @property
