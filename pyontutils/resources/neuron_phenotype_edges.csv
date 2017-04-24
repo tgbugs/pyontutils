@@ -4,7 +4,10 @@ phenotypeOf,,,,,,,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
 #hasIntrinsicPhenotype,,,,,,hasPhenotype,,"asymmetric, irreflexive"
-hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type. This should be used for direct detection of the molecule, whether it is a small molecule or a peptide.",,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+#hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type. This should be used for direct detection of the molecule, whether it is a small molecule or a peptide.",,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasSmallMoleculeExpressionPhenotype,,,,,,,,
+hasProteinExpressionPhenotype,,,,,,,,
+hasNucleicAcidExpressionPhenotype,,,,,,,,
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type. This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need this one,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
@@ -21,11 +24,15 @@ hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a
 hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasSomaLocatedIn,Located in,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasDendriteLocatedIn,DendriteLocation,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
+,,,,,,,,
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
-hasPresynapticTerminalsIn,,,,,,,,"asymmetric, irreflexive"
+#projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments",,,
+hasPresynapticTerminalsIn,,,,,projectsTo?,,,"asymmetric, irreflexive"
 hasCircuitRolePhenotype,,,,needs work,,hasPhenotype,,"asymmetric, irreflexive"
+,,,,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasTaxonRank,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,isAncestralInTaxon (because convergent evolution is SOOO likely…),hasPhenotype,,"asymmetric, irreflexive"
+,,,,,,,,
 phenotypeObservedInBrainRegion,,Located in?,Expresses a relationship between a phenotype and a brain region. This should be used when a neuron phenotype is observed in specific brain regions.,,existential not universal,,,
 phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,"this is not the right way to pull this off, need something akin to disjointness",,,
 #references,,,,,,,,

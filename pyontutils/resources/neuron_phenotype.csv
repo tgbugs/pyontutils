@@ -17,8 +17,8 @@ ilx:SpinyPhenotype,ilx:DendritePhenotype,,,,,"Aspiny can be modelled as (not ilx
 ilx:SomaPhenotype,ilx:Phenotype,,,,,,
 ilx:CellPhenotype,ilx:Phenotype,,,,,,
 ,,,,,,,
-ilx:NeuronPhenotype,ilx:CellPhenotype,,,,,,hasPhenotype
-ilx:MorphologicalPhenotype,ilx:NeuronPhenotype,,,,subClassesDisjoint,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,hasMorphologicalPhenotype
+#ilx:NeuronPhenotype,ilx:CellPhenotype,,,,,skipping the neuron level since many other cells can be measured in a similar way,hasPhenotype
+ilx:MorphologicalPhenotype,ilx:CellPhenotype,,,,subClassesDisjoint,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,hasMorphologicalPhenotype
 ilx:BasketPhenotype,ilx:MorphologicalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
 ilx:LargeBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:NestBasketPhenotype,ilx:BasketPhenotype,,,,,,hasMorphologicalPhenotype
@@ -48,18 +48,26 @@ ilx:LateBifurcatingThickTuftedPyramidalPhenotype,ilx:ThickTuftedPyramidalPhenoty
 ilx:UntuftedPyramidalPhenotype,ilx:MorphologicalPhenotype,,,,,,
 ilx:BistratifiedPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:GranulePhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-ilx:DescendingAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
-ilx:HorizontalAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-ilx:LargeAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,
-ilx:SmallAxonPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+,,,,,,,
+ilx:DenseAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilx:SparseAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilx:DescendingAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilx:HorizontalAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilx:LargeAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+ilx:SmallAxonPhenotype,ilx:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
+,,,,,,,
 ilx:IvyPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:MediumSpinyPhenotype,ilx:MorphologicalPhenotype,,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype
 ilx:SpinyStellatePhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilx:TrilaminarPhenotype,ilx:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
-ilx:InterneuronPhenotype,ilx:NeuronPhenotype,,,,,,
-ilx:ProjectionPhenotype,ilx:NeuronPhenotype,,,,,,
+ilx:InterneuronPhenotype,ilx:AxonPhenotype,,,,,local projections only? (define local),
+ilx:ProjectionPhenotype,ilx:AxonPhenotype,,,,,"we don’t always have target location information, sometimes the best we get is ‘the axon leaves the section’",
+ilx:LocalAxon,ilx:AxonPhenotype,,,,,,
+ilx:RemoteAxon,ilx:AxonPhenotype,,,,,hasProjectionPhenotype (some (class brainRegion (not (brainRegion containing this neruon)))),
+ilx:LocalAxonOnly,ilx:AxonPhenotype,,,,,model this as NegPhenotype(ilx:RemoteAxon)? This really feels like we are overcomplicating things… all we should need to know is that in projects to its own brain region… or better to a specific cell population that has a known location,
+ilx:RemoteAxonOnly,ilx:AxonPhenotype,,,,,model this as NegPhenotype(ilx:LocalAxon) except that this entails boutons/terminals,
 ,,,,,,,
 ilx:PerforantPathwayAssociated,,,,,,Needs work,
 ilx:DirectPathway,,,,,,Needs work,
@@ -68,7 +76,7 @@ ilx:AxonMorphologicalPhenotype,ilx:AxonPhenotype,,,,subClassesDisjoint,,
 ilx:DendriteMorphologicalPhenotype,ilx:DendritePhenotype,,,,subClassesDisjoint,,
 ilx:SomaMorphologicalPhenotype,ilx:SomaPhenotype,,,,subClassesDisjoint,,
 ,,,,,,,
-ilx:ElectrophysiologicalPhenotype,ilx:NeuronPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilx:ElectrophysiologicalPhenotype,ilx:CellPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ilx:SpikingPhenotype,ilx:ElectrophysiologicalPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ilx:PetillaInitialSpikingPhenotype,ilx:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
 ilx:PetillaInitialBurstSpikingPhenotype,ilx:PetillaInitialSpikingPhenotype,,petilla b,,,,hasElectrophysiologicalPhenotype
