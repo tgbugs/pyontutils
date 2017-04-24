@@ -14,7 +14,6 @@ from ilx_utils import ILXREPLACE
 from parcellation import OntMeta, TODAY
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
-from neuron_ma2015 import table1
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
 
@@ -837,6 +836,9 @@ def add_phenotypes(graph):
     graph.add_class(st_p, s_spiking_phenotype, ('stuttering',), autogen=True)
     graph.add_class(ir_p, s_spiking_phenotype, ('irregular',), autogen=True)
     graph.add_class(morpho_phenotype, neuron_phenotype, autogen=True)
+
+class table1:
+    pass # dead
 
 def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
