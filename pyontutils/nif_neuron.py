@@ -244,7 +244,7 @@ def make_phenotypes():
                 graph.add_node(id_, rdflib.RDF.type, lookup[t])
 
     with open(refile(__file__, 'resources/neuron_phenotype.csv'), 'rt') as f:
-        rows = [r for r in csv.reader(f) if any(r)]
+        rows = [r for r in csv.reader(f) if any(r) and not r[0].startswith('#')]
 
     class PP(rowParse):  # FIXME use add_new in _row_post?
         SCD = 'subClassesDisjoint'
