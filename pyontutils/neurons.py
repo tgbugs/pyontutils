@@ -163,6 +163,8 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
                 l = self._sgv.findById(self.p)['labels'][0]
             except TypeError:
                 l = self.p
+            except IndexError:
+                l = self.p
         else:
             l = l[0]
         return self.labelPostRule(l)
@@ -223,6 +225,14 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         en = self.in_graph.namespace_manager.qname(self.e)
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
+
+    def __str__(self):
+        pn = self.in_graph.namespace_manager.qname(self.p)
+        en = self.in_graph.namespace_manager.qname(self.e)
+        lab = self.pLabel
+        t = ' ' * (len(self.__class__.__name__) + 1)
+        return "%s('%s',\n%s'%s',\n%slabel='%s')" % (self.__class__.__name__, pn, t, en, t, lab)
+
 
 
 class NegPhenotypeEdge(PhenotypeEdge):
@@ -291,6 +301,13 @@ class LogicalPhenoEdge(graphBase):
         op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
+
+    def __str__(self):
+        op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
+        t =  ' ' * (len(self.__class__.__name__) + 1)
+        base =',\n%s' % t
+        pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
+        return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
 
 
 hashes = []
@@ -421,14 +438,30 @@ class Neuron(graphBase):
         raise TypeError('Ur Neuron Sucks')
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
-        return "%s%s" % (self.__class__.__name__, self.pes)
+        return '%s%s' % (self.__class__.__name__, self.pes)
 
+    def __str__(self):
+        asdf = '%s(' % self.__class__.__name__
+        for i, pe in enumerate(self.pes):
+            t = ' ' * (len(self.__class__.__name__) + 1)
+            if i:
+                asdf += ',\n' + t + ('%s' % pe).replace('\n', '\n' + t)
+            else:
+                asdf += ('%s' % pe).replace('\n', '\n' + t)
+        asdf += ')'
+        return asdf
 
     def __hash__(self):
         return hash((self.__class__.__name__, self.pes))
 
     def __eq__(self, other):
         return hash(self) == hash(other)
+
+    def __lt__(self, other):
+        return repr(self.pes) < repr(other.pes)
+
+    def __gt__(self, other):
+        return not self.__lt__(other)
 
 
 class DefinedNeuron(Neuron):
