@@ -167,6 +167,7 @@ class Controller:
 Controller()
 
 pred = Controller()._predicates
+# ideally what we want is a class pred that looks up the id of Controller() every time a method is called and if it has changed updates its class dict..., of course this means we have to throw an error if the called name no longer exists...
 
 def WRITE():
     Controller().ng.write()  # singleton works
