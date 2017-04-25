@@ -44,6 +44,7 @@ try:
             'psycopg2',
             'requests',
             'ipython',
+            'git-python'
             'rdflib',
             'sqlalchemy',
             'pyyaml',
