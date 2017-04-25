@@ -141,7 +141,7 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
             return predicates[0]
         else:
             # TODO check if falls in one of the expression categories
-            predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.values()]
+            predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
             return self.expand(PHENO_ROOT)
 
     def checkObjectProperty(self, ObjectProperty):  # FIXME this doesn't seem to work
