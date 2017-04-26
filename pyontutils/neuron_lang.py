@@ -175,7 +175,8 @@ def WRITE():
 def WRITEPYTHON(neurons):
     out = '#!/usr/bin/env python3\n'
     out += 'from %s import *\n\n' % __name__
-    out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
+    #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
+    out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in neurons)
     with open('/tmp/_Neurons.py', 'wt') as f:
         f.write(out)
 
