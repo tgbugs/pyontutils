@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python
 
 from __future__ import print_function
 import os
@@ -8,6 +8,7 @@ import rdflib
 import cProfile
 import pstats
 import subprocess
+from ast import literal_eval
 from ttlser import CustomTurtleSerializer
 from IPython import embed
 
@@ -27,7 +28,7 @@ class CustomTurtleSerializer_prof(CustomTurtleSerializer):
         _ = [print(v[:4], ',') for k, v in ps.stats.items()
              if self.filters[0] in k[0] and self.filters[1] == k[2]]
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.rdflib_profile', 'CustomTurtleSerializer_prof')
+rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'rdflib_profile', 'CustomTurtleSerializer_prof')
 
 def do_serialize(graph, reps, filename):
     sys.stdout.write('["' + filename + '",' + str(CustomTurtleSerializer_prof.filters) + ' , [')
@@ -37,7 +38,7 @@ def do_serialize(graph, reps, filename):
     return out
 
 def run(reps=2):
-    filenames = "~/git/NIF-Ontology/ttl/NIF-Chemical.ttl", "~/git/NIF-Ontology/ttl/NIF-Molecule.ttl",
+    filenames = "~/git/NIF-Ontology/ttl/NIF-Chemical.ttl", "~/git/NIF-Ontology/ttl/NIF-Molecule.ttl", "/tmp/uberon.ttl"
     sys.stdout.write('[')
     for filename in filenames:
         filename = os.path.expanduser(filename)
@@ -66,11 +67,14 @@ def constructed(reps=2):
     return out
 
 def main():
+    # To use this file all you need to do is have the versions of rdflib you
+    # want to test set up in the requisite venvs and have all the filenames
+    # listed in run extant on your filesystem
     REPS = 10
     if 'TESTING' in os.environ:
         run(REPS)
     else:
-        venvs = '~/files/venvs/35_rdflib_upstream', '~/files/venvs/35_rdflib_tgbugs_master', '~/files/venvs/35_rdflib_tgbugs_inner',
+        venvs = '~/files/venvs/35_rdflib_upstream', '~/files/venvs/35_rdflib_tgbugs_master',
         data = {}
         for venv in venvs:
             env = os.environ.copy()
@@ -81,10 +85,21 @@ def main():
             p = subprocess.Popen(['./rdflib_profile.py'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
             out, err = p.communicate()
-            asdf = eval(out)
+            asdf = literal_eval(out.decode())
             data[os.path.basename(venv)] = asdf  # nclass, ncalls, tottime, cumtime
 
         avg_cumtime = [{k:sum([_[3] for _ in v[i][2]])/REPS for k,v in data.items()} for i in range(3)]
+
+        asdf = []
+        for i in range(4):
+            z = {}
+            for k, v in data.items():
+                nv = 0
+                for q in v[i][2]:
+                    nv += q[3]
+                nv = nv/REPS
+                z[k] = nv
+            asdf.append(z)
         embed()
 
 if __name__ == '__main__':
