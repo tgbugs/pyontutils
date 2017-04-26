@@ -73,6 +73,9 @@ L6 = Phenotype('UBERON:0005395', pred.hasLayerLocationPhenotype)
 L1P = Phenotype('UBERON:0005390', pred.hasProjectionPhenotype)
 L4P = Phenotype('UBERON:0005393', pred.hasProjectionPhenotype)
 
+L1D = Phenotype('UBERON:0005390', pred.hasDendriteLocatedIn)
+L4D = Phenotype('UBERON:0005393', pred.hasDendriteLocatedIn)
+
 CA2 = Phenotype('UBERON:0003882', pred.hasSomaLocatedIn)
 CA3 = Phenotype('UBERON:0003883', pred.hasSomaLocatedIn)
 
@@ -147,14 +150,14 @@ neurons = {
     'HBP_CELL:0000030': NeuronC(HPC),  # are phenotypes like this modifiers on _pyramidal_ or are they on the _cell_
     'HBP_CELL:0000031': NeuronC(BPC),  # AAAAAA
     'HBP_CELL:0000032': NeuronC(NPC, ThalP),
-    'HBP_CELL:0000035': NeuronC(Tu, PC, L4P), #NeuronC(TPC, L4P),  # looking over the 2015 paper this is ok
-    'HBP_CELL:0000036': NeuronC(Tu, PC, L1P), #NeuronC(TPC, L1P),  # looking over the 2015 paper this is ok
+    'HBP_CELL:0000035': NeuronC(Tu, PC, L4D), #NeuronC(TPC, L4D),  # looking over the 2015 paper this is ok
+    'HBP_CELL:0000036': NeuronC(Tu, PC, L1D), #NeuronC(TPC, L1D),  # looking over the 2015 paper this is ok
     'HBP_CELL:0000038': NeuronC(S, Tu, PC), #NeuronC(STPC),
     'HBP_CELL:0000039': NeuronC(Th, Tu, PC, EB), #NeuronC(TTPC2),  # can we identify early/late in other cells?
     'HBP_CELL:0000040': NeuronC(Th, Tu, PC, LB), #NeuronC(TTPC1),
     'HBP_CELL:0000042': NeuronC(IPC),
     'HBP_CELL:0000044': NeuronC(L5, Th, Tu, PC), # NeuronC(L5, TTPC),
-    'HBP_CELL:0000051': NeuronC(L6, Tu, PC, L1P), #NeuronC(L6, TPC, L1P),  # looking over the 2015 paper this is ok
+    'HBP_CELL:0000051': NeuronC(L6, Tu, PC, L1D), #NeuronC(L6, TPC, L1D),  # looking over the 2015 paper this is ok
     'HBP_CELL:0000053': NeuronC(BP),
     'HBP_CELL:0000054': NeuronC(BTC),
     'HBP_CELL:0000055': NeuronC(MC),
