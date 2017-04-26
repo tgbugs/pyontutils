@@ -397,6 +397,8 @@ class Neuron(graphBase):
                             l = '+' + l  # this is backward from the 'traditional' placement of the + but it makes this visually much cleaner and eaiser to understand
                     elif pe.e == self._predicates.hasProjectionPhenotype:
                         l = 'Projecting To ' + l
+                    elif pe.e == self._predicates.hasDendriteLocatedIn:
+                        l = 'With dendrite in ' + l  # 'Toward' in bbp speak
 
                     sublabs.append(l)
 
@@ -415,6 +417,7 @@ class Neuron(graphBase):
         # morphology
         # ephys
         # expression
+        # dendrites
         # projection
         # cell type specific connectivity?
         # circuit role? (principle interneuron...)
@@ -698,6 +701,7 @@ def main():
     #EXISTING_GRAPH.namespace_manager.bind('PR', makePrefixes('PR')['PR'])
 
     PREFIXES = makePrefixes('owl',
+                            'skos',
                             'PR',
                             'UBERON',
                             'NCBITaxon',
@@ -728,6 +732,8 @@ def main():
     ng = makeGraph('output', prefixes=PREFIXES, graph=DefinedNeuron.out_graph)
     DefinedNeuron.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [DefinedNeuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
+    from neuron_lang import WRITEPYTHON
+    WRITEPYTHON(sorted(dns))
     ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
     ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
