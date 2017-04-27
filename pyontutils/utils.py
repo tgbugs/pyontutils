@@ -79,6 +79,7 @@ def _loadPrefixes():
         'ILX':'http://uri.interlex.org/base/ilx_', 
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
+        'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'dc':'http://purl.org/dc/elements/1.1/',
@@ -90,6 +91,7 @@ def _loadPrefixes():
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
         'skos':'http://www.w3.org/2004/02/skos/core#',
+        'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
     }
     curie_map.update(extras)
