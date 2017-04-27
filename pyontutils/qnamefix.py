@@ -12,19 +12,21 @@ from IPython import embed
 
 def main():
     PREFIXES.pop('OIO')  # prefer oboInOwl
+    ps = {'NIFFIXME':'http://ontology.neuinfo.org/NIF/#',
+          'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
+          'DCFIXME':'http://purl.org/dc/terms/', }
+    PREFIXES.update(ps)
     pi = {v:k for k, v in PREFIXES.items()}
     pi.pop(None)
     missing = []
     for f in glob('*/*.ttl') + glob('*.ttl'):
-        ps = {'NIFFIXME':'http://ontology.neuinfo.org/NIF/#',
-              'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
-              'DCFIXME':'http://purl.org/dc/terms/', }
         graph = rdflib.Graph()
         graph.parse(f, format='turtle')
         namespaces = [str(n) for p, n in graph.namespaces()]
         prefs = []
-        ps.update(pi)
-        for rn, rp in ps.items():
+        asdf = {v:k for k, v in ps.items()}
+        asdf.update(pi)
+        for rn, rp in asdf.items():
             for uri in list(graph.subjects()) + list(graph.predicates()) + list(graph.objects()):
                 if type(uri) == rdflib.BNode:
                     continue
