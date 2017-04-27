@@ -90,6 +90,7 @@ def _loadPrefixes():
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
         'skos':'http://www.w3.org/2004/02/skos/core#',
+        'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
     }
     curie_map.update(extras)
     return curie_map
@@ -294,7 +295,10 @@ class makeGraph:
                     slab = sub.toPython()
 
                 obj = self.g.namespace_manager.qname(obj)
-                sub = self.g.namespace_manager.qname(sub)
+                try:
+                    sub = self.g.namespace_manager.qname(sub)
+                except ValueError:
+                    pass
                 json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
                 if sub not in done:
                     node = {'lbl':slab,'id':sub, 'meta':{}}
