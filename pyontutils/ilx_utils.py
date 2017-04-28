@@ -39,12 +39,20 @@ def getNewIlxId(temp_id, seed, ontid):
 # file handling
 
 __FILENAME = os.path.join(os.path.dirname(__file__), 'resources/nif-ilx-replace.json')
-if not os.path.exists(__FILENAME):
-    dn = os.path.dirname(__FILENAME)
-    if not os.path.exists(dn):
-        os.mkdir(dn)  # hack for creating resources inside site-packages which will likely fail with permissions errors if --user was not installed by pip :/
-    with open(__FILENAME, 'wt') as f:
-        f.write('{}\n')
+
+def setfilename(filepath):
+    if not os.path.exists(filepath):
+        dn = os.path.dirname(filepath)
+        if dn and not os.path.exists(dn):
+            os.mkdir(dn)  # hack for creating resources inside site-packages which will likely fail with permissions errors if --user was not installed by pip :/
+        with open(filepath, 'wt') as f:
+            f.write('{}\n')
+    global __FILENAME
+    __FILENAME = filepath
+
+# check temp_id status
+
+setfilename(__FILENAME)
 
 def managed(mode='rt+'):
     func = None
@@ -55,6 +63,7 @@ def managed(mode='rt+'):
         function.__globals__['FIRST'] = True
         @wraps(function)
         def inner(*args, TEMP_INDEX=None, **kwargs):
+            print(__FILENAME)
             with open(__FILENAME, mode) as f:  # + maintains a lock
                 if TEMP_INDEX is None:
                     TEMP_INDEX = json.load(f)
@@ -69,7 +78,42 @@ def managed(mode='rt+'):
     else:
         return managed_
 
-# check temp_id status
+class RecMan:
+    """ A completely unsafe way to read and write
+        python dicts to json on disk """
+    def __init__(self, recfilepath):
+        self._check_exists_or_create(recfilepath)
+        self.filepath = recfilepath
+        self._file = None
+        self.DATA = {}
+
+    def write(self):
+        with open(self.filepath, 'wt') as f:
+            json.dump(self.DATA, f, sort_keys=True, indent=4)
+
+    def read(self):
+        with open(self.filepath, 'rt') as f:
+            self.DATA = json.load(f)
+
+def makeIlxRec(label,
+               definition='',
+               type='term',
+               comment='',
+               synonyms=tuple(),
+               existing_ids=tuple(),
+               superclass=None,
+               ontologies=tuple()):
+        out = {'label':label,
+               'definition':definition,
+               'type':type,
+               'comment':comment,
+               'synonyms':[{'literal':s, 'type':''} for s in synonyms],
+               'existing_ids':[{'curie':c, 'iri':'', 'preferred':'0'} for c in existing_ids],
+               'superclass':{'label':superclass}, 'ontologies':[{'url':u} for u in ontologies]}
+        return out
+
+
+
 @managed
 def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
     # NOTE run on files after creation, ontid doesn't always exist before
@@ -79,11 +123,11 @@ def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
     record = TEMP_INDEX[temp_id]
     if not record['ilx']:
         record['ontid'] = ontid
-        real_id = getNewIlxId(temp_id, record['seed'], ontid)
+        real_id = getNewIlxId(temp_id, ontid)
         record['ilx'] = real_id
 
 @managed
-def ilxAddTempId(temp_id, seed=None, ontid=None, TEMP_INDEX=None):  # FIXME simplify
+def ilxAddTempId(temp_id, ontid=None, TEMP_INDEX=None):  # FIXME simplify
     if temp_id in TEMP_INDEX:
         record = TEMP_INDEX[temp_id]
         if record['ilx']:
@@ -91,7 +135,7 @@ def ilxAddTempId(temp_id, seed=None, ontid=None, TEMP_INDEX=None):  # FIXME simp
         elif ontid and not record['ontid']:
             record['ontid'] = ontid
     else:
-        TEMP_INDEX[temp_id] = {'ilx':None, 'seed':seed, 'ontid':ontid}
+        TEMP_INDEX[temp_id] = {'ilx':None, 'ontid':ontid}
 
     return temp_id
 
@@ -120,7 +164,11 @@ def readFile(filename):
     fn = os.path.splitext(filename)[0]
     print(fn)
     mg = makeGraph(fn, graph=graph, writeloc='')
-    namespace = str(mg.namespaces['ILXREPLACE'])
+    if 'ILXREPLACE' in mg.namespaces:
+        namespace = str(mg.namespaces['ILXREPLACE'])
+    else:
+        print('Nothing needs to be replaced in', filename)
+        return 
     query = ("SELECT DISTINCT ?v "
              "WHERE { {?v ?p ?o} UNION {?s ?v ?o} UNION {?s ?p ?v} . "
              "FILTER("
@@ -128,6 +176,17 @@ def readFile(filename):
     vals = graph.query(query)
     for val, in vals:
         qn = graph.namespace_manager.qname(val)
+        try:
+            label = str(list(graph.objects(val, rdflib.RDFS.label))[0])
+        except IndexError:
+            continue  # this id is not defined here, but we probably will want to replace it
+        definition = list(graph.objects(val, rdflib.namespace.SKOS.definition))
+        if definition: definition = definition[0]
+        s = mg.expand('OBOANN:synonym')
+        synonyms = list(graph.objects(val, s))
+        superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))[0]
+        rec = makeIlxRec(label, definition, synonyms, superclass=superclass,ontologies=[mg.ontid])
+        print(rec)
         ilxAddTempId(qn, ontid=mg.ontid)
         print(qn, mg.ontid)
         #ilxGetRealId(qn, mg.ontid)
