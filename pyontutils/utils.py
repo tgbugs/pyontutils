@@ -113,7 +113,7 @@ class makeGraph:
             self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in prefixes.items()})
         if graph:  # graph takes precidence
             self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in graph.namespaces()})
-        if not graph and not prefixes:
+        if graph is None and not prefixes:
             raise ValueError('No prefixes or graph specified.')
 
         if graph is not None:
