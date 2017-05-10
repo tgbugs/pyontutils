@@ -37,7 +37,7 @@ def convert(f):
                 if rp == 'OBO' or rp == 'IAO' or rp == 'NIFTTL':
                     if rp == 'IAO' and 'IAO_0000412' in uri:
                         pass
-                    elif f == 'NIF-Dysfunction.ttl':  # only case where OBO is needed by itself
+                    elif rp == 'OBO' and f == 'NIF-Dysfunction.ttl':  # only case where OBO is needed by itself
                         pass
                     else:
                         continue
