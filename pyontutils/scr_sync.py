@@ -79,6 +79,7 @@ def make_records(resources, res_cols, field_mapping):
         
         if value_name in field_mapping['MULTI']:
             values = [v.strip() for v in value.split(',')]  # XXX DANGER ZONE
+            values = [v for v in values if v != 'Inc' and v != 'Inc.']  # XXX temporary fix for a common misuse of commas
             name = field_mapping['MULTI'][value_name]
             for v in values:
                 if value_name == 'Abbreviation' and (('label', v) in output[scrid] or ('synonym', v) in output[scrid]):
