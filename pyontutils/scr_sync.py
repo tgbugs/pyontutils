@@ -10,20 +10,21 @@ from datetime import date
 import rdflib
 from IPython import embed
 from sqlalchemy import create_engine, inspect
-from utils import makeGraph, mysql_conn_helper
+from utils import makePrefixes, makeGraph, mysql_conn_helper
 
-PREFIXES = {
-    'owl':'http://www.w3.org/2002/07/owl#',
-    'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-    'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
-    'skos':'http://www.w3.org/2004/02/skos/core#',
-    '':'http://scicrunch.org/resolver/',  # generate base from this directly?
-    'obo':'http://purl.obolibrary.org/obo/',
+PREFIXES = makePrefixes(
+    'owl',
+    'rdf',
+    'rdfs',
+    'skos',
+    'SCR',  # generate base from this directly?
+    #'obo':'http://purl.obolibrary.org/obo/',
     #'FIXME':'http://fixme.org/',
-    'NIF':'http://uri.neuinfo.org/nif/nifstd/',  # for old ids??
-    'obo_annot':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  #FIXME OLD??
-    'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',  # these aren't really from OBO files but they will be friendly known identifiers to people in the community
-}
+    'NIFSTD',  # for old ids??
+    #'obo_annot':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  #FIXME OLD??
+    'OBOANN',
+    'oboInOwl',  # these aren't really from OBO files but they will be friendly known identifiers to people in the community
+)
 
 ONTOLOGY_BASE = 'some silly iri'
 
