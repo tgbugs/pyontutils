@@ -36,14 +36,14 @@ ONTOLOGY_DEF = {
 }
 
 remap_supers = {
-    'Resource':'NIF:nlx_63400',  # FIXME do not want to use : but broken because of defaulting to add : to all scr ids (can fix just not quite yet)
-    'Commercial Organization':'NIF:nlx_152342',
-    'Organization':'NIF:nlx_152328',
-    'University':'NIF:NEMO_0569000',  # UWOTM8
+    'Resource':'NIFSTD:nlx_63400',  # FIXME do not want to use : but broken because of defaulting to add : to all scr ids (can fix just not quite yet)
+    'Commercial Organization':'NIFSTD:nlx_152342',
+    'Organization':'NIFSTD:nlx_152328',
+    'University':'NIFSTD:NEMO_0569000',  # UWOTM8
 
-    'Institution':'NIF:birnlex_2085',
-    'Institute':'NIF:SIO_000688',
-    'Government granting agency':'NIF:birnlex_2431',
+    'Institution':'NIFSTD:birnlex_2085',
+    'Institute':'NIFSTD:SIO_000688',
+    'Government granting agency':'NIFSTD:birnlex_2431',
 }
 
 def make_records(resources, res_cols, field_mapping):
@@ -66,7 +66,7 @@ def make_records(resources, res_cols, field_mapping):
         #print(rid, value_name, value)
         scrid, oid, type_, status = resources[rid]
         if scrid.startswith('SCR_'):
-            scrid = ':' + scrid  # FIXME
+            scrid = scrid.replace('_',':')
         if scrid not in output:
             output[scrid] = []
         #if 'id' not in [a for a in zip(*output[rid])][0]:
@@ -104,7 +104,7 @@ def make_records(resources, res_cols, field_mapping):
     return output
 
 field_to_edge = {
-    'abbrev':'obo_annot:abbrev',
+    'abbrev':'OBOANN:abbrev',
     'alt_id':'oboInOwl:hasDbXref',
     #'definition':'obo:IAO_0000115',  # FIXME alternate is skos:definition...
     'definition':'skos:definition',
@@ -113,7 +113,7 @@ field_to_edge = {
     'old_id':'oboInOwl:hasDbXref',  # old vs alt id?
     'deprecated':'owl:deprecated',
     'superclass':'rdfs:subClassOf',  # translation required
-    'synonym':'obo_annot:synonym',  # FIXME
+    'synonym':'OBOANN:synonym',  # FIXME
     'type':'FIXME:type',  # bloody type vs superclass :/ ask james
 }
 
@@ -188,13 +188,13 @@ def main():
         #embed()
         #return
 
-    r.append( (-100, 'NIF:nlx_63400', 'nlx_63400', 'Resource', 'Curated') )
-    r.append( (-101, 'NIF:nlx_152342', 'nlx_152342', 'Organization', 'Curated') )
-    r.append( (-102, 'NIF:nlx_152328', 'nlx_152328', 'Organization', 'Curated') )
-    r.append( (-103, 'NIF:NEMO_0569000', 'NEMO_0569000', 'Institution', 'Curated') )
-    r.append( (-104, 'NIF:birnlex_2431', 'birnlex_2431', 'Institution', 'Curated') )
-    r.append( (-105, 'NIF:SIO_000688', 'SIO_000688', 'Institution', 'Curated') )
-    r.append( (-106, 'NIF:birnlex_2085', 'birnlex_2085', 'Institution', 'Curated') )
+    r.append( (-100, 'NIFSTD:nlx_63400', 'nlx_63400', 'Resource', 'Curated') )
+    r.append( (-101, 'NIFSTD:nlx_152342', 'nlx_152342', 'Organization', 'Curated') )
+    r.append( (-102, 'NIFSTD:nlx_152328', 'nlx_152328', 'Organization', 'Curated') )
+    r.append( (-103, 'NIFSTD:NEMO_0569000', 'NEMO_0569000', 'Institution', 'Curated') )
+    r.append( (-104, 'NIFSTD:birnlex_2431', 'birnlex_2431', 'Institution', 'Curated') )
+    r.append( (-105, 'NIFSTD:SIO_000688', 'SIO_000688', 'Institution', 'Curated') )
+    r.append( (-106, 'NIFSTD:birnlex_2085', 'birnlex_2085', 'Institution', 'Curated') )
     rc.append( (-100, 'Resource Name', 'Resource', 1) )
     rc.append( (-101, 'Resource Name', 'Commercial Organization', 1) )
     rc.append( (-102, 'Resource Name', 'Organization', 1) )
@@ -202,7 +202,7 @@ def main():
     rc.append( (-104, 'Resource Name', 'Government granting agency', 1) )
     rc.append( (-105, 'Resource Name', 'Institute', 1) )
     rc.append( (-106, 'Resource Name', 'Institution', 1) )
-    rc.append( (-101, 'Supercategory', 'NIF:nlx_152328', 1) )  # TODO extract this more intelligently from remap supers please
+    rc.append( (-101, 'Supercategory', 'NIFSTD:nlx_152328', 1) )  # TODO extract this more intelligently from remap supers please
 
     output = make_records(r, rc, field_mapping)
     print('Fetching and data prep done.')
@@ -221,7 +221,7 @@ def main():
             if not value:  # don't add empty edges  # FIXME issue with False literal
                 print('caught an empty value on field', id_, field)
                 continue
-            if field != 'id' and str(value) in id_:
+            if field != 'id' and (str(value).replace('_',':') in id_ or str(value) in id_):
             #if field == 'alt_id' and id_[1:] == value:
                 print('caught a mainid appearing as altid', field, value)
                 continue
