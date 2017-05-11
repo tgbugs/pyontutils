@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
     This file should be run in NIF-Ontology/ttl
-    Run at NIF-Ontology 0f1f95c25cc46b8953f115705031919485cfc42f
+    Run at NIF-Ontology 5dd555fcbacf515a475ff1fe47aed06d93cce61e
 """
 
 import os
@@ -31,7 +31,12 @@ def convert(f):
 
     if f == 'NIF-Dysfunction.ttl':
         prefs.append('OBO')
-
+    elif f == 'NIF-Eagle-I-Bridge.ttl':
+        prefs.append('IAO')
+    elif f == 'resources.ttl':
+        prefs.append('IAO')
+    elif f == 'NIF-Investigation.ttl':
+        prefs.append('IAO')
 
     asdf = {v:k for k, v in ps.items()}
     asdf.update(pi)
@@ -76,6 +81,7 @@ def main():
     with ProcessPoolExecutor(8) as ppe:
         futures = [ppe.submit(convert, f) for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')]
         #futures = [ppe.submit(convert, f) for f in glob('generated/parcellation/*.ttl')]
+        #futures = [ppe.submit(convert, f) for f in glob('nif.ttl')]
     for f in futures:
         if f.exception():
             print(f)
