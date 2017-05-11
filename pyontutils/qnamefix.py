@@ -13,7 +13,12 @@ from IPython import embed
 
 PREFIXES.pop('OIO')  # prefer oboInOwl
 
+exclude = 'generated/swanson_hierarchies.ttl',
+
 def convert(f):
+    if f in exclude:
+        print('skipping', f)
+        return 
     ps = {'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#', }
     PREFIXES.update(ps)
     pi = {v:k for k, v in PREFIXES.items()}
@@ -38,7 +43,10 @@ def convert(f):
                 continue
             elif uri.startswith(rn):
                 if rp == 'OBO' or rp == 'IAO' or rp == 'NIFTTL':
-                    continue
+                    if rp == 'IAO' and 'IAO_0000412' in uri:  # for sequence_slim
+                        pass
+                    else:
+                        continue
                 prefs.append(rp)
                 break
 
@@ -67,6 +75,7 @@ def main():
     with ProcessPoolExecutor(8) as ppe:
         futures = [ppe.submit(convert, f) for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')]
         #futures = [ppe.submit(convert, f) for f in glob('generated/parcellation/*.ttl')]
+    embed()
 
 if __name__ == '__main__':
     main()
