@@ -18,7 +18,7 @@ exclude = 'generated/swanson_hierarchies.ttl',
 def convert(f):
     if f in exclude:
         print('skipping', f)
-        return 
+        return f
     ps = {'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#', }
     PREFIXES.update(ps)
     pi = {v:k for k, v in PREFIXES.items()}
@@ -70,12 +70,16 @@ def convert(f):
     [ng.add_node(*n) for n in graph.triples([None]*3)]
     #print(f, len(ng.g))
     ng.write()
+    return f
 
 def main():
     with ProcessPoolExecutor(8) as ppe:
         futures = [ppe.submit(convert, f) for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')]
         #futures = [ppe.submit(convert, f) for f in glob('generated/parcellation/*.ttl')]
-    embed()
+    for f in futures:
+        if f.exception():
+            print(f)
+    #embed()
 
 if __name__ == '__main__':
     main()
