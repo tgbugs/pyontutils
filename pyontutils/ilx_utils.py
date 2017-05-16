@@ -105,11 +105,11 @@ def makeIlxRec(label,
                ontologies=tuple()):
         out = {'label':label,
                'definition':definition,
-               'type':type,
-               'comment':comment,
-               'synonyms':[{'literal':s, 'type':''} for s in synonyms],
+               'type':str(type),
+               'comment':str(comment),
+               'synonyms':[{'literal':str(s), 'type':''} for s in synonyms],
                'existing_ids':[{'curie':c, 'iri':'', 'preferred':'0'} for c in existing_ids],
-               'superclass':{'label':superclass}, 'ontologies':[{'url':u} for u in ontologies]}
+               'superclass':{'label':superclass}, 'ontologies':[{'url':str(u)} for u in ontologies]}
         return out
 
 
@@ -158,12 +158,12 @@ def ILXREPLACE(seed):
 
     return temp_id
 
-def readFile(filename):
+def readFile(filename, existing):
     graph = rdflib.Graph()
     graph.parse(filename, format='turtle')
     fn = os.path.splitext(filename)[0]
     print(fn)
-    mg = makeGraph(fn, graph=graph, writeloc='')
+    mg = makeGraph(fn, prefixes=makePrefixes('OBOANN'), graph=graph, writeloc='')
     if 'ILXREPLACE' in mg.namespaces:
         namespace = str(mg.namespaces['ILXREPLACE'])
     else:
@@ -174,20 +174,40 @@ def readFile(filename):
              "FILTER("
              "strstarts(str(?v), '%s') )}") % namespace
     vals = graph.query(query)
+    #existing = {}  # TODO this needs to populate from an existing source ie the ontology, and a tempid -> realid map?
     for val, in vals:
         qn = graph.namespace_manager.qname(val)
         try:
-            label = str(list(graph.objects(val, rdflib.RDFS.label))[0])
+            labs = list(graph.objects(val, rdflib.RDFS.label))
+            print(labs)
+            label = str(labs[0])
         except IndexError:
-            continue  # this id is not defined here, but we probably will want to replace it
+            label = None
+            pass  # not defined here but we need to collect info here anyway
+            #continue  # this id is not defined here, but we probably will want to replace it
         definition = list(graph.objects(val, rdflib.namespace.SKOS.definition))
         if definition: definition = definition[0]
         s = mg.expand('OBOANN:synonym')
         synonyms = list(graph.objects(val, s))
-        superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))[0]
-        rec = makeIlxRec(label, definition, synonyms, superclass=superclass,ontologies=[mg.ontid])
+        superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))
+        superclass = superclass[0] if superclass else None
+        rec = makeIlxRec(label, definition, type='term', comment=qn, synonyms=synonyms, existing_ids=[], superclass=superclass, ontologies=[mg.ontid])
         print(rec)
-        ilxAddTempId(qn, ontid=mg.ontid)
+        #ilxAddTempId(qn, ontid=mg.ontid)
+        if qn in existing:
+            existing[qn]['files'].append(filename)
+            existing[qn]['rec'].update(rec)  # XXX probably want warnings on change here, esp if from something to nothing...
+            newrec = {}
+            for k, v in existing[qn]['rec'].items():
+                if v:
+                    newrec[k] = v
+                else:
+                    newrec[k] = rec[k]
+            existing[qn]['rec'] = newrec
+
+        else:
+            existing[qn] = {'id':None, 'files':[filename], 'rec':rec}
+            print('NEW')
         print(qn, mg.ontid)
         #ilxGetRealId(qn, mg.ontid)
 
