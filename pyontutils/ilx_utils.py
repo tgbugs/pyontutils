@@ -196,7 +196,6 @@ def readFile(filename, existing):
         #ilxAddTempId(qn, ontid=mg.ontid)
         if qn in existing:
             existing[qn]['files'].append(filename)
-            existing[qn]['rec'].update(rec)  # XXX probably want warnings on change here, esp if from something to nothing...
             newrec = {}
             for k, v in existing[qn]['rec'].items():
                 if v:
