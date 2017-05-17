@@ -7,6 +7,7 @@ from hashlib import md5
 from functools import wraps
 import rdflib
 from pyontutils.utils import makePrefixes, makeGraph
+from pyontutils.scigraph_client import Vocabulary
 
 # ilx api implementation (will change)
 import csv
@@ -15,6 +16,8 @@ from io import StringIO
 
 #debug
 from IPython import embed
+
+sgv = Vocabulary()
 
 # interlex api (temp version)
 ILX_ENDPOINT = 'https://test.scicrunch.org/forms/term-forms/term-bulk-upload.php'
@@ -164,6 +167,7 @@ def readFile(filename, existing):
     fn = os.path.splitext(filename)[0]
     print(fn)
     mg = makeGraph(fn, prefixes=makePrefixes('OBOANN'), graph=graph, writeloc='')
+    s = mg.expand('OBOANN:synonym')
     if 'ILXREPLACE' in mg.namespaces:
         namespace = str(mg.namespaces['ILXREPLACE'])
     else:
@@ -179,15 +183,11 @@ def readFile(filename, existing):
         qn = graph.namespace_manager.qname(val)
         try:
             labs = list(graph.objects(val, rdflib.RDFS.label))
-            #print(labs)
             label = str(labs[0])
         except IndexError:
-            label = None
-            pass  # not defined here but we need to collect info here anyway
-            #continue  # this id is not defined here, but we probably will want to replace it
+            label = None  # not defined here but we need to collect info here anyway
         definition = list(graph.objects(val, rdflib.namespace.SKOS.definition))
         if definition: definition = definition[0]
-        s = mg.expand('OBOANN:synonym')
         synonyms = list(graph.objects(val, s))
         superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))
         superclass = superclass[0] if superclass else None
@@ -197,8 +197,6 @@ def readFile(filename, existing):
             superclass = None
             #print('ERROR: superclass of', qn, 'not a proper uri', superclass)
         rec = makeIlxRec(label, definition, type='term', comment=qn, synonyms=synonyms, existing_ids=[], superclass=superclass, ontologies=[mg.ontid])
-        #print(rec)
-        #ilxAddTempId(qn, ontid=mg.ontid)
         if qn in existing:
             existing[qn]['files'].append(filename)
             newrec = {}
@@ -214,26 +212,22 @@ def readFile(filename, existing):
                             'sc':superclass,  # make sorting easier
                             'files':[filename],
                             'rec':rec}
-            #print('NEW')
-        #print(qn, mg.ontid)
-        #ilxGetRealId(qn, mg.ontid)
-
-    # TODO warn on existing entry
-
-    #ilxDoReplace(mg)
 
 def superToLabel(existing):
     for v in existing.values():
         sc = v['rec']['superclass']['label']
 
         if sc:
-            l = existing[sc]['rec']['label']
+            try:
+                l = existing[sc]['rec']['label']
+            except KeyError:  # FIXME this happens when the superclass is not to a tempid, using sc breaks tests
+                l = sgv.findById(sc)['labels'][0]  # pull the label out of scigraph so that the interlex api can match it by label as well
             v['rec']['superclass']['label'] = l
             if not l:
                 print('WARNING! class', sc, 'has no label!')
 
 def getSubOrder(existing):
-    # these only need to be locally ordered
+    # these only need to be locally ordered, sadly we need a global rule for it to work out correctly
     class Pair:
         def __init__(self, c, sc):
             self.c = c

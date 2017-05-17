@@ -18,9 +18,9 @@ def test(order, recordDict):
     already_in = [None]
     for k in order:
         already_in.append(recordDict[k]['rec']['label'])
-        sc = recordDict[k]['rec']['superclass']['label']
-        if sc not in already_in:
-            raise ValueError(sc, 'not in', already_in)
+        scl = recordDict[k]['rec']['superclass']['label']
+        if scl not in already_in and recordDict[k]['sc'].startswith('ILXREPLACE'):  # dont check cases where super already exists
+            raise ValueError(scl, 'not in', already_in)
 
 def main():
     # build complete list of ilx replace occurences for all ttl files in the ontology
@@ -39,6 +39,12 @@ def main():
     iu.superToLabel(output)
     order = iu.getSubOrder(output)
     test(order, output)
+    while 0:  # ah crappy non deterministic programming that doesnt work because no rng with a very very nasty worst case
+        try:
+            print('got a good ordering')
+            break
+        except ValueError:
+            pass
     embed()
 
 if __name__ == '__main__':
