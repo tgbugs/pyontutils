@@ -179,7 +179,7 @@ def readFile(filename, existing):
         qn = graph.namespace_manager.qname(val)
         try:
             labs = list(graph.objects(val, rdflib.RDFS.label))
-            print(labs)
+            #print(labs)
             label = str(labs[0])
         except IndexError:
             label = None
@@ -191,8 +191,13 @@ def readFile(filename, existing):
         synonyms = list(graph.objects(val, s))
         superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))
         superclass = superclass[0] if superclass else None
+        try:
+            superclass = graph.namespace_manager.qname(superclass)
+        except (TypeError, ValueError) as e:
+            superclass = None
+            #print('ERROR: superclass of', qn, 'not a proper uri', superclass)
         rec = makeIlxRec(label, definition, type='term', comment=qn, synonyms=synonyms, existing_ids=[], superclass=superclass, ontologies=[mg.ontid])
-        print(rec)
+        #print(rec)
         #ilxAddTempId(qn, ontid=mg.ontid)
         if qn in existing:
             existing[qn]['files'].append(filename)
@@ -205,14 +210,60 @@ def readFile(filename, existing):
             existing[qn]['rec'] = newrec
 
         else:
-            existing[qn] = {'id':None, 'files':[filename], 'rec':rec}
-            print('NEW')
-        print(qn, mg.ontid)
+            existing[qn] = {'id':None,
+                            'sc':superclass,  # make sorting easier
+                            'files':[filename],
+                            'rec':rec}
+            #print('NEW')
+        #print(qn, mg.ontid)
         #ilxGetRealId(qn, mg.ontid)
 
     # TODO warn on existing entry
 
     #ilxDoReplace(mg)
+
+def superToLabel(existing):
+    for v in existing.values():
+        sc = v['rec']['superclass']['label']
+
+        if sc:
+            l = existing[sc]['rec']['label']
+            v['rec']['superclass']['label'] = l
+            if not l:
+                print('WARNING! class', sc, 'has no label!')
+
+def getSubOrder(existing):
+    # these only need to be locally ordered
+    class Pair:
+        def __init__(self, c, sc):
+            self.c = c
+            self.sc = sc
+        def __gt__(self, other):
+            if self.sc is None and other.sc is None:
+                return False
+            elif self.sc is None:
+                return False
+            elif other.sc is None:
+                return True
+            elif self.c == other.sc:
+                return True
+            elif self.sc == other.c:
+                return False
+            else:
+                return None  # sigh :/ this is where we will fail
+        def __lt__(self, other):
+            if self.sc is None and other.sc is None:
+                return False
+            else:
+                return not self.__gt__(other)
+
+    pairs = []
+    for c, v in existing.items():
+        pairs.append(Pair(c, v['sc']))
+
+    order = [p.c for p in sorted(pairs)]
+            
+    return order
 
 def replaceFile(filename):
     readFile(filename)

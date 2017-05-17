@@ -14,6 +14,14 @@ from docopt import docopt
 from pyontutils import ilx_utils as iu
 from IPython import embed
 
+def test(order, recordDict):
+    already_in = [None]
+    for k in order:
+        already_in.append(recordDict[k]['rec']['label'])
+        sc = recordDict[k]['rec']['superclass']['label']
+        if sc not in already_in:
+            raise ValueError(sc, 'not in', already_in)
+
 def main():
     # build complete list of ilx replace occurences for all ttl files in the ontology
     # load all relevant files into one graph and extract the info we need to insert stuff into interlex
@@ -28,6 +36,9 @@ def main():
     output = {}
     for f in files:
         iu.readFile(f, output)
+    iu.superToLabel(output)
+    order = iu.getSubOrder(output)
+    test(order, output)
     embed()
 
 if __name__ == '__main__':
