@@ -2,14 +2,18 @@
 """Given a ttl file get ILX ids for ILXREPLACE terms.
 
 Usage:
-    ilxcli [--replace --logfile=LOG] <file>...
+    ilxcli [options] <file>...
 
 Options:
-    -l --logfile=LOG    the file mapping ILXREPLACE to ILX [default: ilx-log.json]
+    -l --logfile=LOG    the file mapping ILXREPLACE to ILX [default: ilx-records.json]
+    -o --ontology=ONT   manually set the ontology where ILX identifiers will live
     -r --replace    do the replacement on the file as well
+    -x --overwrite  overwrite the logfile
     -h --help       print this
 
 """
+import os
+import json
 from docopt import docopt
 from pyontutils import ilx_utils as iu
 from IPython import embed
@@ -32,13 +36,17 @@ def main():
     args = docopt(__doc__, version='ilxcli 0')
     print(args)
     files = args['<file>']
-    iu.setfilename(args['--logfile'])
-    output = {}
-    for f in files:
-        iu.readFile(f, output)
-    iu.superToLabel(output)
-    order = iu.getSubOrder(output)
-    test(order, output)
+    target_file = args['--ontology']  # target ontology file where the 'real' classes will be inserted
+    #iu.setfilename(args['--logfile'])
+    # if the logfile already exists read from it XXX THIS DOES NOT SUPPORT CONCURRENT MODIFICATION!
+    if os.path.exists(args['--logfile']) and not args['--overwrite']:
+        with open(args['--logfile'], 'rt') as f:
+            existing = json.load(f)
+    else:
+        existing = {}
+    iu.wholeProcess(files, existing, target_file, args['--logfile'])
+    order = iu.getSubOrder(existing)
+    test(order, existing)
     while 0:  # ah crappy non deterministic programming that doesnt work because no rng with a very very nasty worst case
         try:
             print('got a good ordering')

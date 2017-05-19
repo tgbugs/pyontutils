@@ -161,17 +161,54 @@ def ILXREPLACE(seed):
 
     return temp_id
 
-def readFile(filename, existing):
+def loadGraphFromFile(filename, prefixes=None):
     graph = rdflib.Graph()
     graph.parse(filename, format='turtle')
     fn = os.path.splitext(filename)[0]
     print(fn)
-    mg = makeGraph(fn, prefixes=makePrefixes('OBOANN'), graph=graph, writeloc='')
-    s = mg.expand('OBOANN:synonym')
+    mg = makeGraph(fn, prefixes=prefixes, graph=graph, writeloc='')
+    return mg
+
+def getIlxForRecords(existing):  # FIXME ordering issues :/
+    order = getSubOrder(existing)
+
+def saveRecords(existing, json_location):
+    with open(json_location, 'wt') as f:
+        json.dump(existing, f, sort_keys=True, indent=4)
+
+def writeGraph(graph, target_graph, existing):
+    if target_graph is None:
+        target_graph = graph
+
+def wholeProcess(filenames, existing, target_filename=None, json_location='ilx-records.json', getIlx=False, write=True): # FIXME when dealing with multiple files we need to collect all the files in the set :/ this can't operate on a single file
+    # load all graphs
+    graphs = [loadGraphFromFile(f) for f in filenames]
+    target_graph = loadGraphFromFile(target_filename) if target_filename is not None else None
+    # create records for all files
+    for graph in graphs:
+        createRecordsFromGraph(graph, existing, target_graph)
+    # get ilx for all the records
+    if getIlx:
+        getIlxForRecords(existing)
+    saveRecords(existing, json_location)
+    # write the records for all graph-target pairs, if a single output target is specified it will be used for all input files
+    # TODO how to cope with using
+    if write:
+        writeGraph(graph, target_graph, existing)
+
+def createRecordsFromGraph(graph, existing, target_graph=None):
+    mg = graph
+    graph = mg.g
+    s = rdflib.URIRef(makePrefixes('OBOANN')['OBOANN'] + 'synonym')
+    if target_graph is None:
+        target_ontology_iri = mg.ontid
+    else:
+        target_ontology_iri = target_graph.ontid
+
     if 'ILXREPLACE' in mg.namespaces:
         namespace = str(mg.namespaces['ILXREPLACE'])
     else:
-        print('Nothing needs to be replaced in', filename)
+        print('Nothing needs to be replaced in', mg.filename)
         return 
     query = ("SELECT DISTINCT ?v "
              "WHERE { {?v ?p ?o} UNION {?s ?v ?o} UNION {?s ?p ?v} . "
@@ -189,16 +226,18 @@ def readFile(filename, existing):
         definition = list(graph.objects(val, rdflib.namespace.SKOS.definition))
         if definition: definition = definition[0]
         synonyms = list(graph.objects(val, s))
-        superclass = list(graph.objects(val, rdflib.RDFS.subClassOf))
+        superclass = [_ for _ in graph.objects(val, rdflib.RDFS.subClassOf) if type(_) == rdflib.URIRef]
         superclass = superclass[0] if superclass else None
         try:
             superclass = graph.namespace_manager.qname(superclass)
         except (TypeError, ValueError) as e:
+            print('ERROR: superclass of', qn, 'not a proper uri', superclass)
             superclass = None
-            #print('ERROR: superclass of', qn, 'not a proper uri', superclass)
-        rec = makeIlxRec(label, definition, type='term', comment=qn, synonyms=synonyms, existing_ids=[], superclass=superclass, ontologies=[mg.ontid])
+        rec = makeIlxRec(label, definition, type='term', comment=qn, synonyms=synonyms, existing_ids=[], superclass=superclass, ontologies=[target_ontology_iri])
         if qn in existing:
-            existing[qn]['files'].append(filename)
+            _tmp = set(existing[qn]['files'])
+            _tmp.add(mg.filename)  # prevent duplicate files from multiple runs
+            existing[qn]['files'] = list(_tmp)
             newrec = {}
             for k, v in existing[qn]['rec'].items():
                 if v:
@@ -210,12 +249,14 @@ def readFile(filename, existing):
         else:
             existing[qn] = {'id':None,
                             'sc':superclass,  # make sorting easier
-                            'files':[filename],
+                            'files':[mg.filename],
                             'rec':rec}
+
+    superToLabel(existing)
 
 def superToLabel(existing):
     for v in existing.values():
-        sc = v['rec']['superclass']['label']
+        sc = v['sc']
 
         if sc:
             try:
@@ -228,6 +269,7 @@ def superToLabel(existing):
 
 def getSubOrder(existing):
     # these only need to be locally ordered, sadly we need a global rule for it to work out correctly
+    # submit alpha so that at least locally each batch will get ILX in super then alpha order
     class Pair:
         def __init__(self, c, sc):
             self.c = c
