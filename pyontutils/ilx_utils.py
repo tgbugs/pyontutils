@@ -268,38 +268,30 @@ def superToLabel(existing):
                 print('WARNING! class', sc, 'has no label!')
 
 def getSubOrder(existing):
-    # these only need to be locally ordered, sadly we need a global rule for it to work out correctly
-    # submit alpha so that at least locally each batch will get ILX in super then alpha order
-    class Pair:
-        def __init__(self, c, sc):
-            self.c = c
-            self.sc = sc
-        def __gt__(self, other):
-            if self.sc is None and other.sc is None:
-                return False
-            elif self.sc is None:
-                return False
-            elif other.sc is None:
-                return True
-            elif self.c == other.sc:
-                return True
-            elif self.sc == other.c:
-                return False
+    """ Rank nodes by number of parents to get something
+        that approximates a topological sort. Also alpha sort. """
+    alpha = list(zip(*sorted(((k, v['rec']['label']) for k, v in existing.items()), key=lambda a: a[1])))[0]
+    depths = {}
+    def getDepth(id_, existing_):
+        if id_ in depths:
+            return depths[id_]
+        else:
+            if id_ in existing:
+                depths[id_] = 0
+                number_above = getDepth(existing[id_]['sc'], existing)
+                depths[id_] = 1 + number_above
+                return depths[id_]
             else:
-                return None  # sigh :/ this is where we will fail
-        def __lt__(self, other):
-            if self.sc is None and other.sc is None:
-                return False
-            else:
-                return not self.__gt__(other)
+                return 0
 
-    pairs = []
-    for c, v in existing.items():
-        pairs.append(Pair(c, v['sc']))
+    for id_ in existing:
+        getDepth(id_, existing)
 
-    order = [p.c for p in sorted(pairs)]
-            
-    return order
+    def key_(id_):
+        return depths[id_], alpha.index(id_)
+
+    return sorted(depths, key=key_)
+    #return list(zip(*sorted(depths.items(), key=lambda a: a[1])))[0]
 
 def replaceFile(filename):
     readFile(filename)
