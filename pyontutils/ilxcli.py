@@ -7,9 +7,12 @@ Usage:
 Options:
     -l --logfile=LOG    the file mapping ILXREPLACE to ILX [default: ilx-records.json]
     -o --ontology=ONT   manually set the ontology where ILX identifiers will live
-    -r --replace    do the replacement on the file as well
-    -x --overwrite  overwrite the logfile
-    -h --help       print this
+    -g --get            actually get the ILX ids instead of just building records
+    -r --replace        do the replacement on the file as well
+    -x --overwrite      overwrite the logfile
+    -u --user=USER      user to get session cookie
+    -p --password=PASS  password to get sessions cookie
+    -h --help           print this
 
 """
 import os
@@ -35,6 +38,10 @@ def main():
 
     args = docopt(__doc__, version='ilxcli 0')
     print(args)
+    SC_EM = args['--user']
+    SC_PASS = args['--password']
+    iu.SESS_COOKIE = iu.getSessionCookie(SC_EM, SC_PASS)
+
     files = args['<file>']
     target_file = args['--ontology']  # target ontology file where the 'real' classes will be inserted
     #iu.setfilename(args['--logfile'])
@@ -44,7 +51,7 @@ def main():
             existing = json.load(f)
     else:
         existing = {}
-    iu.wholeProcess(files, existing, target_file, args['--logfile'])
+    iu.wholeProcess(files, existing, target_file, args['--logfile'], args['--get'])
     order = iu.getSubOrder(existing)
     test(order, existing)
     while 0:  # ah crappy non deterministic programming that doesnt work because no rng with a very very nasty worst case

@@ -5,6 +5,7 @@ import json
 from glob import glob
 from hashlib import md5
 from functools import wraps
+import robobrowser
 import rdflib
 from pyontutils.utils import makePrefixes, makeGraph
 from pyontutils.scigraph_client import Vocabulary
@@ -19,8 +20,15 @@ from IPython import embed
 
 sgv = Vocabulary()
 
+# scicrunch login stuff
+#SC_EM = os.environ.get('SC_EM', None)
+#SC_PASS = os.environ.get('SC_PASS', None)
+SESS_COOKIE = None  # getSessionCookie(SC_EM, SC_PASS)
+
+
 # interlex api (temp version)
-ILX_ENDPOINT = 'https://test.scicrunch.org/forms/term-forms/term-bulk-upload.php'
+ILX_SERVER = 'https://beta.scicrunch.org/'
+ILX_ENDPOINT = 'forms/term-forms/term-bulk-upload.php'  # test.scicrunch.org will create real records
 CID = 72  # SciCrunch community id
 ilx_session = requests.Session()
 ILX_USER, ILX_PASS = os.environ.get('ILX_USER'), os.environ.get('ILX_PASS')
@@ -115,8 +123,6 @@ def makeIlxRec(label,
                'superclass':{'label':superclass}, 'ontologies':[{'url':str(u)} for u in ontologies]}
         return out
 
-
-
 @managed
 def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
     # NOTE run on files after creation, ontid doesn't always exist before
@@ -169,8 +175,32 @@ def loadGraphFromFile(filename, prefixes=None):
     mg = makeGraph(fn, prefixes=prefixes, graph=graph, writeloc='')
     return mg
 
-def getIlxForRecords(existing):  # FIXME ordering issues :/
+def getSessionCookie(username, password):
+    url = ILX_SERVER
+    br = robobrowser.RoboBrowser()
+    br.open(url)
+    form = br.get_form(id=0)
+    form['email'].value = username
+    form['password'].value = password
+    br.submit_form(form)
+    session_cookie = br.session.cookies['PHPSESSID']
+    return {'Cookie': 'PHPSESSID=%s' % session_cookie}
+
+def getIlxForRecords(existing):
     order = getSubOrder(existing)
+    recs = [existing[id_]['rec'] for id_ in order]
+    file = json.dumps(recs).encode()
+    data = {'file':file, 'cid':CID}
+    session = requests.Session()
+    req = requests.Request(method='POST', url=ILX_SERVER + ILX_ENDPOINT, data=data)
+    req.headers.update(SESS_COOKIE)
+    prep = req.prepare()
+    embed()
+    return
+    resp = session.send(prep)
+    embed()
+    # update the existing with the ids that should come back in resp
+    return resp
 
 def saveRecords(existing, json_location):
     with open(json_location, 'wt') as f:
