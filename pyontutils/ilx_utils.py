@@ -272,26 +272,26 @@ def getSubOrder(existing):
         that approximates a topological sort. Also alpha sort. """
     alpha = list(zip(*sorted(((k, v['rec']['label']) for k, v in existing.items()), key=lambda a: a[1])))[0]
     depths = {}
-    def getDepth(id_, existing_):
+    def getDepth(id_):
         if id_ in depths:
             return depths[id_]
         else:
             if id_ in existing:
-                depths[id_] = 0
-                number_above = getDepth(existing[id_]['sc'], existing)
-                depths[id_] = 1 + number_above
+                names_above = getDepth(existing[id_]['sc'])
+                depths[id_] = names_above + [existing[id_]['rec']['label']]
                 return depths[id_]
             else:
-                return 0
+                return ['']
 
     for id_ in existing:
-        getDepth(id_, existing)
+        getDepth(id_)
+
+    print(sorted(depths.values()))
 
     def key_(id_):
-        return depths[id_], alpha.index(id_)
+        return depths[id_]
 
     return sorted(depths, key=key_)
-    #return list(zip(*sorted(depths.items(), key=lambda a: a[1])))[0]
 
 def replaceFile(filename):
     readFile(filename)
