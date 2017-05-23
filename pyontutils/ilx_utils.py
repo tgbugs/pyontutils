@@ -268,8 +268,7 @@ def superToLabel(existing):
                 print('WARNING! class', sc, 'has no label!')
 
 def getSubOrder(existing):
-    """ Rank nodes by number of parents to get something
-        that approximates a topological sort. Also alpha sort. """
+    """ Alpha sort by the full chain of parents. """
     alpha = list(zip(*sorted(((k, v['rec']['label']) for k, v in existing.items()), key=lambda a: a[1])))[0]
     depths = {}
     def getDepth(id_):
