@@ -186,17 +186,22 @@ def getSessionCookie(username, password):
     session_cookie = br.session.cookies['PHPSESSID']
     return {'Cookie': 'PHPSESSID=%s' % session_cookie}
 
-def getIlxForRecords(existing):
+def makeJsonFromExisting(existing):
     order = getSubOrder(existing)
     recs = [existing[id_]['rec'] for id_ in order]
-    file = json.dumps(recs).encode()
-    data = {'file':file, 'cid':CID}
+    return recs
+
+def getIlxForRecords(existing):
+    recs = makeJsonFromExisting(existing)
+    with open('/tmp/externaltest.json', 'wt') as f:
+        json.dump(recs, f, sort_keys=True, indent=4)
+    file = json.dumps(recs, sort_keys=True).encode()
+    data = {'cid':b'NaN'}
     session = requests.Session()
-    req = requests.Request(method='POST', url=ILX_SERVER + ILX_ENDPOINT, data=data)
+    req = requests.Request(method='POST', url=ILX_SERVER + ILX_ENDPOINT, data=data, files={'file': ('ilx_utils_upload.json', file, 'application/json')})  # the 'file' keyword is required to get all of this to work
     req.headers.update(SESS_COOKIE)
+    req.headers['Connection'] = 'keep-alive'
     prep = req.prepare()
-    embed()
-    return
     resp = session.send(prep)
     embed()
     # update the existing with the ids that should come back in resp
