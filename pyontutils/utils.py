@@ -123,6 +123,9 @@ class makeGraph:
 
         [self.g.namespace_manager.bind(p, ns) for p, ns in self.namespaces.items()]
 
+    def add_known_namespace(self, prefix):
+        self.add_namespace(prefix, PREFIXES[prefix])
+
     def add_namespace(self, prefix, namespace):
         self.namespaces[prefix] = rdflib.Namespace(namespace)
         self.g.namespace_manager.bind(prefix, namespace)
