@@ -52,15 +52,6 @@ def main():
     else:
         existing = {}
     iu.wholeProcess(files, existing, target_file, args['--logfile'], args['--get'])
-    order = iu.getSubOrder(existing)
-    test(order, existing)
-    while 0:  # ah crappy non deterministic programming that doesnt work because no rng with a very very nasty worst case
-        try:
-            print('got a good ordering')
-            break
-        except ValueError:
-            pass
-    embed()
 
 if __name__ == '__main__':
     main()

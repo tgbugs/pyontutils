@@ -186,13 +186,15 @@ def getSessionCookie(username, password):
     session_cookie = br.session.cookies['PHPSESSID']
     return {'Cookie': 'PHPSESSID=%s' % session_cookie}
 
-def makeJsonFromExisting(existing):
-    order = getSubOrder(existing)
+def makeJsonFromExisting(existing, order=None):
+    if order is None:
+        order = getSubOrder(existing)
     recs = [existing[id_]['rec'] for id_ in order]
     return recs
 
 def getIlxForRecords(existing):
-    recs = makeJsonFromExisting(existing)
+    order = getSubOrder(existing)
+    recs = makeJsonFromExisting(existing, order)
     with open('/tmp/externaltest.json', 'wt') as f:
         json.dump(recs, f, sort_keys=True, indent=4)
     file = json.dumps(recs, sort_keys=True).encode()
@@ -203,33 +205,88 @@ def getIlxForRecords(existing):
     req.headers['Connection'] = 'keep-alive'
     prep = req.prepare()
     resp = session.send(prep)
-    embed()
-    # update the existing with the ids that should come back in resp
+    tuples = decodeIlxResp(resp)
+    mergeIds(existing, order, tuples)  #  FIXME once the API works as designed we need to refactor so we dont mutate state here, but for now there isn't really an option because of all the checks we need to do extracting ids from text :/
+    if existing[order[0]]['id'] is None:
+        raise ValueError('The call to the interlex API does not seem to have worked!')
     return resp
+
+def mergeIds(existing, order, tuples):
+    for temp_id, (label, id_) in zip(order, tuples):
+        elabel = existing[temp_id]['rec']['label']
+        if elabel != label:
+            raise ValueError('%s does not match %s! The order of ids is probably incorrect.')
+        existing[temp_id]['id'] = id_
+
+def ilxIdFix(id_):  # TODO have to deal with namespaces (e.g. uri.interlex.org/tgbugs/ilx_1234567)
+    if 'beta' in ILX_SERVER:
+        return id_.replace('tmp_','ILX:')
+    else:
+        return id_.replace('ilx_','ILX:')
+
+def decodeIlxResp(resp):
+    """ We need this until we can get json back directly and this is SUPER nasty"""
+    lines = [_ for _ in resp.text.split('\n') if _]  # strip empties
+
+    if 'successfull' in lines[0]:
+        return [(_.split('"')[1],
+                 ilxIdFix(_.split(': ')[-1]))
+                for _ in lines[1:]]
+    elif 'errors' in lines[0]:
+        return [(_.split('"')[1],
+                 ilxIdFix(_.split('(')[1].split(')')[0]))
+                for _ in lines[1:]]
 
 def saveRecords(existing, json_location):
     with open(json_location, 'wt') as f:
         json.dump(existing, f, sort_keys=True, indent=4)
 
-def writeGraph(graph, target_graph, existing):
+def writeGraph(graph, target_graph, temp_ids_ids):
     if target_graph is None:
         target_graph = graph
 
+    graph.add_known_namespace('ILX')
+    target_graph.add_known_namespace('ILX')
+    for prefix in graph.namespaces:
+        if prefix not in target_graph.namespaces and prefix != 'ILXREPLACE':
+            target_graph.add_known_namespace(prefix)
+    for temp_id, id_ in temp_ids_ids:
+        graph.replace_uriref(temp_id, id_)
+        s = graph.expand(id_)
+        for p, o in graph.g.predicate_objects(s):
+            target_graph.add_recursive((s, p, o), graph)
+
+    graph.write()
+    target_graph.write()
+
+def buildReplaceStruct(existing, graphs_files):
+    graph_temp_id_map = {}
+    fg = {file:graph for graph, file in graphs_files}
+    for temp_id, dict_ in existing.items():
+        for f in dict_['files']:
+            if fg[f] not in graph_temp_id_map:
+                graph_temp_id_map[fg[f]] = []
+            graph_temp_id_map[fg[f]].append((temp_id, existing[temp_id]['id']))
+    return graph_temp_id_map
+
 def wholeProcess(filenames, existing, target_filename=None, json_location='ilx-records.json', getIlx=False, write=True): # FIXME when dealing with multiple files we need to collect all the files in the set :/ this can't operate on a single file
     # load all graphs
-    graphs = [loadGraphFromFile(f) for f in filenames]
+    graphs_files = [(loadGraphFromFile(f), f) for f in filenames]
     target_graph = loadGraphFromFile(target_filename) if target_filename is not None else None
     # create records for all files
-    for graph in graphs:
+    for graph, _ in graphs_files:
         createRecordsFromGraph(graph, existing, target_graph)
+    if not existing:
+        raise TypeError('Graphs do not contain any temporary identifiers.')
     # get ilx for all the records
     if getIlx:
         getIlxForRecords(existing)
     saveRecords(existing, json_location)
     # write the records for all graph-target pairs, if a single output target is specified it will be used for all input files
-    # TODO how to cope with using
     if write:
-        writeGraph(graph, target_graph, existing)
+        gtim = buildReplaceStruct(existing, graphs_files)
+        for g, temp_ids_ids in gtim.items():
+            writeGraph(g, target_graph, temp_ids_ids)
 
 def createRecordsFromGraph(graph, existing, target_graph=None):
     mg = graph
@@ -285,6 +342,7 @@ def createRecordsFromGraph(graph, existing, target_graph=None):
             existing[qn] = {'id':None,
                             'sc':superclass,  # make sorting easier
                             'files':[mg.filename],
+                            #'done':False,  # we probably don't need this
                             'rec':rec}
 
     superToLabel(existing)
@@ -332,7 +390,7 @@ def replaceFile(filename):
     
 @managed('rt')
 def ilxDoReplace(mg, TEMP_INDEX=None):
-    mg.add_namespace('ILX', makePrefixes('ILX')['ILX'])
+    mg.add_known_namespace('ILX')
     mg.del_namespace('ILXREPLACE')
     for temp_id, record in TEMP_INDEX.items():
         if not record['ilx']:
