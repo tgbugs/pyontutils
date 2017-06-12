@@ -28,83 +28,9 @@ SESS_COOKIE = None  # getSessionCookie(SC_EM, SC_PASS)
 
 # interlex api (temp version)
 ILX_SERVER = 'https://beta.scicrunch.org/'
+#ILX_SERVER = 'https://scicrunch.org/'
 ILX_ENDPOINT = 'forms/term-forms/term-bulk-upload.php'  # test.scicrunch.org will create real records
 CID = 72  # SciCrunch community id
-ilx_session = requests.Session()
-ILX_USER, ILX_PASS = os.environ.get('ILX_USER'), os.environ.get('ILX_PASS')
-ilx_session.auth = (ILX_USER, ILX_PASS)  # basic auth but fails?
-def getNewIlxId(temp_id, seed, ontid):
-    # Label[tab] Type[tab] Definition[tab] OntologyURLs[tab] Comment[tab] Synonym::Type[tab] Curie::Iri::Preferred[tab] Superclasses[new line]
-    row = 'TOM TEST TERM', 'term', None, ontid, temp_id, None, None, None
-    sio = StringIO()
-    writer = csv.writer(sio, lineterminator='\n', delimiter='\t')
-    writer.writerow(row)
-    data = {'file':sio, 'cid':CID}
-    req = requests.Request(method='POST', url=ILX_ENDPOINT, data=data)
-    req.headers
-    prep = req.prepare()
-    resp = ilx_session.send(prep, verify=False)
-    embed()
-    #return 'ILX:1234567'
-
-# file handling
-
-__FILENAME = os.path.join(os.path.dirname(__file__), 'resources/nif-ilx-replace.json')
-
-def setfilename(filepath):
-    if not os.path.exists(filepath):
-        dn = os.path.dirname(filepath)
-        if dn and not os.path.exists(dn):
-            os.mkdir(dn)  # hack for creating resources inside site-packages which will likely fail with permissions errors if --user was not installed by pip :/
-        with open(filepath, 'wt') as f:
-            f.write('{}\n')
-    global __FILENAME
-    __FILENAME = filepath
-
-# check temp_id status
-
-setfilename(__FILENAME)
-
-def managed(mode='rt+'):
-    func = None
-    if callable(mode):
-        func = mode
-        mode = 'rt+'
-    def managed_(function):
-        function.__globals__['FIRST'] = True
-        @wraps(function)
-        def inner(*args, TEMP_INDEX=None, **kwargs):
-            print(__FILENAME)
-            with open(__FILENAME, mode) as f:  # + maintains a lock
-                if TEMP_INDEX is None:
-                    TEMP_INDEX = json.load(f)
-                    f.seek(0)
-                output = function(*args, TEMP_INDEX=TEMP_INDEX, **kwargs)
-                if f.writable():
-                    json.dump(TEMP_INDEX, f, sort_keys=True, indent=4)
-            return output
-        return inner
-    if func is not None:
-        return managed_(func)
-    else:
-        return managed_
-
-class RecMan:
-    """ A completely unsafe way to read and write
-        python dicts to json on disk """
-    def __init__(self, recfilepath):
-        self._check_exists_or_create(recfilepath)
-        self.filepath = recfilepath
-        self._file = None
-        self.DATA = {}
-
-    def write(self):
-        with open(self.filepath, 'wt') as f:
-            json.dump(self.DATA, f, sort_keys=True, indent=4)
-
-    def read(self):
-        with open(self.filepath, 'rt') as f:
-            self.DATA = json.load(f)
 
 def makeIlxRec(label,
                definition='',
@@ -123,46 +49,25 @@ def makeIlxRec(label,
                'superclass':{'label':superclass}, 'ontologies':[{'url':str(u)} for u in ontologies]}
         return out
 
-@managed
-def ilxGetRealId(temp_id, ontid, TEMP_INDEX=None):
-    # NOTE run on files after creation, ontid doesn't always exist before
-    if temp_id not in TEMP_INDEX:
-        print('temp_id %s found that is not in %s where did it come from?' % (temp_id, __FILENAME))
-        ilxLookupOrAdd(temp_id, TEMP_INDEX=TEMP_INDEX)
-    record = TEMP_INDEX[temp_id]
-    if not record['ilx']:
-        record['ontid'] = ontid
-        real_id = getNewIlxId(temp_id, ontid)
-        record['ilx'] = real_id
-
-@managed
-def ilxAddTempId(temp_id, ontid=None, TEMP_INDEX=None):  # FIXME simplify
-    if temp_id in TEMP_INDEX:
-        record = TEMP_INDEX[temp_id]
-        if record['ilx']:
-            return record['ilx']  # return the real identifier
-        elif ontid and not record['ontid']:
-            record['ontid'] = ontid
+def ilxLookupExisting(temp_id, existing=None):
+    if existing:
+        return existing[temp_id]['id']  # key error OK to distinguish from None
     else:
-        TEMP_INDEX[temp_id] = {'ilx':None, 'ontid':ontid}
-
-    return temp_id
-
-@managed
-def ilxLookupExisting(temp_id, TEMP_INDEX=None):
-    return TEMP_INDEX[temp_id]  # KeyError ok here
+        raise ValueError('No existing records have been defined.')
 
 def ILXREPLACE(seed):
     h = md5()
     h.update(seed.encode())
     temp_id = 'ILXREPLACE:' + h.hexdigest()
     try:
-        e = ilxLookupExisting(temp_id)
+        e = ilxLookupExisting(temp_id, existing={})
         if e is not None:
             return e
         else:
             print(temp_id, 'has been read from a file but has not been replaced.')
     except KeyError:
+        pass
+    except ValueError:  # TODO need a way to get existing in
         pass
 
     return temp_id
@@ -209,7 +114,11 @@ def getIlxForRecords(existing):
     req.headers['Connection'] = 'keep-alive'
     prep = req.prepare()
     resp = session.send(prep)
-    tuples = decodeIlxResp(resp)
+    try:
+        tuples = decodeIlxResp(resp)
+    except IndexError as e:
+        print(resp.text)
+        raise e
     mergeIds(existing, order, tuples)  #  FIXME once the API works as designed we need to refactor so we dont mutate state here, but for now there isn't really an option because of all the checks we need to do extracting ids from text :/
     if existing[order[0]]['id'] is None:
         raise ValueError('The call to the interlex API does not seem to have worked!')
@@ -398,20 +307,6 @@ def getSubOrder(existing):
 def replaceFile(filename):
     readFile(filename)
     
-@managed('rt')
-def ilxDoReplace(mg, TEMP_INDEX=None):
-    mg.add_known_namespace('ILX')
-    mg.del_namespace('ILXREPLACE')
-    for temp_id, record in TEMP_INDEX.items():
-        if not record['ilx']:
-            print('%s is missing a real ilx id. Please make sure you have run ilxGetRealId on all entires for %s' % (temp_id, mg.ontid))
-        mg.replace_uriref(temp_id, record['ilx'])
-    mg.write()
-
-    if ilxDoReplace.__globals__['FIRST']:
-        ilxDoReplace.__globals__['FIRST'] = False
-        #embed()
-
 def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be exported as a relationship or an anotation
     g = makeGraph('do not write me', prefixes=makePrefixes('ILX', 'ilx', 'owl', 'skos', 'OBOANN'))
     def pref(inp): return makePrefixes('ilx')['ilx'] + inp
@@ -435,17 +330,8 @@ def main():
         #a = ilx_json_to_tripples(json.load(f))
         #print(a.decode())
     #return
-    if not os.path.exists(__FILENAME):
-        with open(__FILENAME, 'wt') as f:
-            json.dump({}, f)
-
     ILXREPLACE('wowzers')
     ILXREPLACE('are you joking')
-    ilxGetRealId(ILXREPLACE('wowzers'), 'http://FIXME.org/thing.ttl')
-    #return
-    for file in glob('/home/tom/git/NIF-Ontology/ttl/generated/parcellation/*.ttl'):
-        ilxGet(file)
-    ilxGet('/home/tom/git/NIF-Ontology/ttl/generated/parcellation.ttl')
 
 if __name__ == '__main__':
     main()
