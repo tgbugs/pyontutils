@@ -177,12 +177,16 @@ def loadGraphFromFile(filename, prefixes=None):
 
 def getSessionCookie(username, password):
     url = ILX_SERVER
-    br = robobrowser.RoboBrowser()
+    br = robobrowser.RoboBrowser(parser="lxml")
     br.open(url)
     form = br.get_form(id=0)
     form['email'].value = username
     form['password'].value = password
-    br.submit_form(form)
+    try:
+        br.submit_form(form)
+    except requests.exceptions.TooManyRedirects:
+        raise ValueError('You probably have the wrong username (email) or password.')
+
     session_cookie = br.session.cookies['PHPSESSID']
     return {'Cookie': 'PHPSESSID=%s' % session_cookie}
 
@@ -250,9 +254,12 @@ def writeGraph(graph, target_graph, temp_ids_ids):
     for prefix in graph.namespaces:
         if prefix not in target_graph.namespaces and prefix != 'ILXREPLACE':
             target_graph.add_known_namespace(prefix)
+    subjects = []
     for temp_id, id_ in temp_ids_ids:
         graph.replace_uriref(temp_id, id_)
         s = graph.expand(id_)
+        subjects.append(s)
+    for s in subjects:  # prevent half replaced triples from insertion
         for p, o in graph.g.predicate_objects(s):
             target_graph.add_recursive((s, p, o), graph)
 
@@ -281,6 +288,9 @@ def wholeProcess(filenames, existing, target_filename=None, json_location='ilx-r
     # get ilx for all the records
     if getIlx:
         getIlxForRecords(existing)
+    else:
+        raise Exception('Under the current implementation you need to'
+                        'specify get ilx otherwise this will break.')
     saveRecords(existing, json_location)
     # write the records for all graph-target pairs, if a single output target is specified it will be used for all input files
     if write:
