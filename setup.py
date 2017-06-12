@@ -7,6 +7,7 @@ from setuptools import setup, find_packages
 files = [
     'pyontutils/__init__.py',
     'pyontutils/hierarchies.py',
+    'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
     'pyontutils/neurons.py',
     'pyontutils/neuron_lang.py',
@@ -55,6 +56,7 @@ try:
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={
             'console_scripts': [
+                'ilxcli=pyontutils.ilxcli:main',
                 'scigraph-codegen=pyontutils.scigraph:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',
