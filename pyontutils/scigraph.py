@@ -5,6 +5,7 @@
 
 import inspect
 import requests
+from  IPython import embed
 
 
 class restService:
@@ -106,12 +107,11 @@ class State:
         self.api_url = api_url
         self.current_path = self.api_url
         self.exten_mapping = {}
-        self.paths = {}
+        self._paths = {}
         self.globs = {}
         self.tab = '    '
         self.gencode()
 
-    @property
     def code(self):
         return self.make_main()
 
@@ -145,6 +145,7 @@ class State:
         code = '\n' + inspect.getsource(CLASSNAME) + '\n'
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
+        print('HELLO', classname)
         #_, basePath = self.basePath_(dict_['basePath'])
         return code.replace('CLASSNAME', classname).replace('DOCSTRING', docstring).replace("'BASEPATH'", 'BASEPATH')
 
@@ -192,6 +193,8 @@ class State:
         pargs_list, prests, pdocs = [], [], []
         required = None
         for param in list_:
+            if 'schema' in param:  # skip 'body' entries, they cause problems
+                continue
             parg, prest, pdoc, put_required = self.make_param_parts(param)
             if put_required:
                 required = "'%s'" % put_required  # XXX fail for multi required?
@@ -213,15 +216,23 @@ class State:
         return pargs, prests, pdocs, required
 
     def make_return(self, api_dict):
+        return_type = None
         if 'type' in api_dict:
             return_type = api_dict['type']  # array or other (Graph, etc)
             print(return_type)
-        else:
-            return_type = None
+        elif 'responses' in api_dict:
+            resps = api_dict['responses']
+            if '200' in resps:
+                scm = resps['200']['schema']
+                if 'type' in scm:
+                    return_type = scm['type']
+
+        if return_type is None:
             print('NO TYPE')
 
-        type_return_dict = {
+        type_return_dict = {  # TODO source from asdf['definitions'] for 2.0
             'array': '[]',
+            'object': '{}',
             'string': None,
             'Annotations': '[]',  # bug in docs
             'Graph': "{'nodes':[], 'edges':[]}",  # risky
@@ -246,8 +257,8 @@ class State:
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
         empty_return_type = self.make_return(api_dict)
         nickname = api_dict['nickname']
-        path = self.paths[nickname]
-        docstring = api_dict['summary'] + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        path = self._paths[nickname]
+        docstring = api_dict.get('summary', '') + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
         # handle whether required is in the url
         if required:
             if '{' + required.strip("'") + '}' not in path:
@@ -299,11 +310,12 @@ class State:
         return None, ''
 
     def apis(self, list_):
+        print('TRYING')
         try:
             for api in list_:
                 if 'operations' in api:
                     for operation in api['operations']:
-                        self.paths[operation['nickname']] = api['path']
+                        self._paths[operation['nickname']] = api['path']
         except:
             raise BaseException
         return None, self.dolist(list_)
@@ -373,10 +385,12 @@ class State:
 
     def dodict(self, dict_):
         blocks = []
+        methods = {k:v for k, v in inspect.getmembers(self) if k != 'code' and inspect.ismethod(v)}  # ismethod calls properties :/
         for key, value in dict_.items():
-            #print('trying with key:', key)
-            if key in self.__class__.__dict__:
-                name, code = self.__class__.__dict__[key](self, value)
+            print('trying with key:', key)
+            if key in methods:
+                #name, code = methods[key](self, value)
+                name, code = methods[key](value)
                 blocks.append(code)
             else:
                 #print('METHOD', key, 'NOT FOUND')
@@ -403,10 +417,74 @@ class State:
         out = self.dodict(ledict)
         self._code = out
 
+class State2(State):
+    def dotopdict(self, dict_):
+        """ Rewrite the 2.0 json to match what we feed the code for 1.2 """
+        mlookup = {'get':'GET', 'post':'POST'}
+        def rearrange(path, method_dict, method):
+            oid = method_dict['operationId']
+            self._paths[oid] = path
+            method_dict['nickname'] = oid
+            method_dict['method'] = mlookup[method]
+
+        paths = dict_['paths']
+        for path, path_dict in paths.items():
+            path_dict['operations'] = []
+            for method, method_dict in path_dict.items():
+                if method == 'operations':
+                    continue
+                rearrange(path, method_dict, method)
+                #print(self.operation(method_dict))
+                path_dict['operations'].append(method_dict)
+            path_dict['path'] = path
+
+        dict_['apis'] = []
+        for tag_dict in dict_['tags']:
+            path = '/' + tag_dict['name']
+            d = {'path':path,
+                 'description':tag_dict['description'],
+                 'class_json':{
+                     'docstring':tag_dict['description'],
+                     'resourcePath':path,
+                     'apis':[v for k, v in paths.items() if k.startswith(path)]},
+                }
+            dict_['apis'].append(d)
+
+        # make sure this is run first so we don't get key errors
+        self._swagger(dict_['swagger'])
+        self._info(dict_['info'])
+        self._definitions(dict_['definitions'])
+
+        return dict_
+
+    def _swagger(self, string):
+        self.globs['swaggerVersion'] = string
+        return None, ''
+    def _info(self, dict_):
+        self._version(dict_['version'])
+        return None, ''
+
+    def _version(self, string):
+        self.globs['apiVersion'] = string
+        return None, ''
+
+    def _definitions(self, dict_):
+        self._return_defs = dict_
+        return None, ''
+
+    def title(self, string):
+        return None, ''
+
+    def tags(self, list_):
+        return None, ''
+
+
 def main():
     target = '/tmp/scigraph_client.py'
-    s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
-    code = s.code
+    #s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
+    #s = State('http://localhost:9000/scigraph/api-docs')
+    s = State2('http://localhost:9000/scigraph/swagger.json')  # 2.0
+    code = s.code()  # had to change this because inspect.getmembers breaks properties :/
     with open(target, 'wt') as f:
         f.write(code)
 
