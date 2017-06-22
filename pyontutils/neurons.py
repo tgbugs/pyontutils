@@ -142,6 +142,18 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
         else:
             # TODO check if falls in one of the expression categories
             predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
+            mapping = {
+                'NCBITaxon':self._predicates.hasInstanceInSpecies,
+                'CHEBI':self._predicates.hasExpressionPhenotype,
+                'PR':self._predicates.hasExpressionPhenotype,
+                'NCBIGene':self._predicates.hasExpressionPhenotype,
+                'UBERON':self._predicates.hasSomaLocatedIn,
+                #'UBERON':self._predicates.hasLayerLocationPhenotype,  # a very short list is needed here
+            }
+            prefix = self.in_graph.namespace_manager.qname(phenotype).split(':')[0]  # FIXME DANGERZONE
+            print(prefix, phenotype)
+            if prefix in mapping:
+                return mapping[prefix]
             return self.expand(PHENO_ROOT)
 
     def checkObjectProperty(self, ObjectProperty):  # FIXME this doesn't seem to work
@@ -316,6 +328,7 @@ class Neuron(graphBase):
     existing_ids = {}
     ids_pes = {}
     pes_ids = {}
+    context = tuple()  # this works...
     def __init__(self, *phenotypeEdges, id_=None):
         super().__init__()
         self.ORDER = [
@@ -337,6 +350,8 @@ class Neuron(graphBase):
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
 
+        phenotypeEdges = self.context + phenotypeEdges
+
         if id_ and phenotypeEdges:
             raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
         elif id_:
@@ -355,7 +370,7 @@ class Neuron(graphBase):
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
-        self.pes = tuple(sorted(phenotypeEdges))
+        self.pes = tuple(sorted(sorted(phenotypeEdges), key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
 
         self.phenotypes = set((pe.p for pe in self.pes))
         self.edges = set((pe.e for pe in self.pes))
