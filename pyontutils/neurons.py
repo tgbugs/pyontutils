@@ -1,6 +1,8 @@
 #!/usr/bin/env python3.6
+import os
 import rdflib
 from rdflib.extras import infixowl
+from git.repo import Repo
 from IPython import embed
 from pyontutils.scigraph_client import Graph, Vocabulary
 from pyontutils.utils import makeGraph, makePrefixes
@@ -11,6 +13,7 @@ __all__ = [
     'OR',
     'getPhenotypePredicates',
     'graphBase',
+    'setLocalContext',
     'PhenotypeEdge',
     'NegPhenotypeEdge',
     'LogicalPhenoEdge',
@@ -46,7 +49,7 @@ class graphBase:
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
-    _sgv = Vocabulary(cache=True)
+    #_sgv = Vocabulary(cache=True)
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -69,9 +72,158 @@ class graphBase:
             if prefix in self._namespaces:
                 return self._namespaces[prefix][suffix]
             else:
-                raise KeyError('Namespace prefix does exist:', prefix)
+                raise KeyError('Namespace prefix does not exist:', prefix)
         else:  # FIXME need another check probably...
             return putativeURI
+
+    @staticmethod
+    def configGraphIO(remote_base,
+                      local_base,
+                      branch,
+                      core_graph_paths=  tuple(),
+                      core_graph=        None,
+                      in_graph_paths=    tuple(),
+                      out_graph_path=    None,
+                      out_imports=       tuple(),
+                      out_graph=         None,
+                      force_remote=      False,
+                      scigraph=          None):
+        """ We set this up to work this way because we can't
+            instantiate graphBase, it is a super class that needs
+            to be configurable and it needs to do so globally.
+            All the default values here are examples and not real.
+            You should write a local `def config` function as part
+            of your local setup that replicates that arguments of
+            configureGraphIO.
+
+            Example:
+            def config(remote_base=       'http://someurl.org/remote/ontology/',
+                       local_base=        '/home/user/git/ontology/',
+                       branch=            'master',
+                       core_graph_paths= ['local/path/localCore.ttl',
+                                          'local/path/localClasses.ttl'],
+                       core_graph=        None,
+                       in_graph_paths=    tuple(),
+                       out_graph_path=    '/tmp/outputGraph.ttl',
+                       out_imports=      ['local/path/localCore.ttl'],
+                       out_graph=         None,
+                       force_remote=      False,
+                       scigraph=          'scigraph.mydomain.org:9000'):
+            graphBase.configGraphIO(remote_base, local_base, branch,
+                                    core_graph_paths, core_graph,
+                                    in_graph_paths,
+                                    out_graph_path, out_imports, out_graph,
+                                    force_remote, scigraph)
+
+        """
+
+        def makeLocalRemote(suffixes):
+            local = [local_base + s for s in suffixes]
+            remote = [remote_base + branch + '/' + s for s in suffixes]
+            return local, remote
+        def attachPrefixes(*prefixes, graph=None):
+            return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
+        
+        # file location setup
+        remote_core_paths,  local_core_paths =  makeLocalRemote(core_graph_paths)
+        remote_in_paths,    local_in_paths =    makeLocalRemote(in_graph_paths)
+        remote_out_imports, local_out_imports = makeLocalRemote(out_imports)
+
+        out_graph_paths = [out_graph_path]
+        remote_out_paths, local_out_paths = makeLocalRemote(out_graph_paths)  # XXX fail w/ tmp
+        remote_out_paths = local_out_paths  # can't write to a remote server without magic
+
+        if not force_remote and os.path.exists(local_base):
+            repo = Repo(local_base)
+            if repo.active_branch.name != branch:
+                raise FileNotFoundError('Local git repo not on %s branch! Please run `git checkout %s` in %s' % (branch, branch, local_base))
+            use_core_paths = local_core_paths
+            use_in_paths = local_in_paths
+        else:
+            if not force_remote:
+                print("Warning local ontology path '%s' not found!" % local_base)
+            use_core_paths = remote_core_paths
+            use_in_paths = remote_in_paths
+
+        # core graph setup
+        if core_graph is None:
+            core_graph = rdflib.Graph()
+        for cg in use_core_paths:
+            core_graph.parse(cg, format='turtle')
+        graphBase.core_graph = core_graph
+
+        # input graph setup
+        in_graph = core_graph
+        for ig in use_in_paths:
+            in_graph.parse(ig, format='turtle')
+        nin_graph = attachPrefixes('ILXREPLACE',
+                                   'GO',
+                                   'CHEBI',
+                                   graph=in_graph)
+        graphBase.in_graph = in_graph
+
+        # output graph setup
+        if out_graph is None:
+            out_graph = rdflib.Graph()
+            # in thise case we also want to wipe any existing python Neuron entires
+            # that we use to serialize so that behavior is consistent
+            NeuronBase.existing_pes = {}
+            NeuronBase.existing_ids = {}
+        new_graph = attachPrefixes('owl',
+                                   'GO',
+                                   'PR',
+                                   'CHEBI',
+                                   'UBERON',
+                                   'NCBITaxon',
+                                   'ILXREPLACE',
+                                   'ilx',
+                                   'ILX',
+                                   'NIFCELL',
+                                   'NIFMOL',
+                                   graph=out_graph)
+        graphBase.out_graph = out_graph
+
+        # makeGraph setup
+        new_graph.filename = out_graph_path
+        ontid = rdflib.URIRef('file://' + out_graph_path)
+        new_graph.add_ont(ontid, 'Some Neurons')
+        for remote_out_import in remote_out_imports:
+            new_graph.add_node(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
+        graphBase.ng = new_graph
+
+        # set predicates
+        graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
+
+        # scigraph setup
+        if scigraph is not None:
+            graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
+        else:
+            graphBase._sgv = Vocabulary(cache=True)
+
+    @staticmethod
+    def write():
+        graphBase.ng.write()
+
+    @staticmethod
+    def write_python():
+        with open(graphBase.out_graph_path, 'wt') as f:
+            f.write(graphBase.python())
+
+    @staticmethod
+    def python():
+        out = '#!/usr/bin/env python3\n'
+        out += 'from %s import *\n\n' % __name__
+        #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
+        out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
+        return out
+
+    @staticmethod
+    def ttl():
+        return graphBase.out_graph.serialize(format='nifttl').decode()
+
+    @staticmethod
+    def neurons():
+        return sorted(NeuronBase.existing_pes)
 
 
 class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
@@ -151,7 +303,6 @@ class PhenotypeEdge(graphBase):  # this is really just a 2 tuple...  # FIXME +/-
                 #'UBERON':self._predicates.hasLayerLocationPhenotype,  # a very short list is needed here
             }
             prefix = self.in_graph.namespace_manager.qname(phenotype).split(':')[0]  # FIXME DANGERZONE
-            print(prefix, phenotype)
             if prefix in mapping:
                 return mapping[prefix]
             return self.expand(PHENO_ROOT)
@@ -323,12 +474,12 @@ class LogicalPhenoEdge(graphBase):
 
 
 hashes = []
-class Neuron(graphBase):
+class NeuronBase(graphBase):
     existing_pes = {}
     existing_ids = {}
     ids_pes = {}
     pes_ids = {}
-    context = tuple()  # this works...
+    __context = tuple()  # this cannot be changed after __init__, neurons are not dynamic
     def __init__(self, *phenotypeEdges, id_=None):
         super().__init__()
         self.ORDER = [
@@ -350,7 +501,8 @@ class Neuron(graphBase):
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
 
-        phenotypeEdges = self.context + phenotypeEdges
+        self._localContext = self.__context
+        phenotypeEdges = self.__context + phenotypeEdges
 
         if id_ and phenotypeEdges:
             raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
@@ -391,6 +543,11 @@ class Neuron(graphBase):
     def _tuplesToPes(self, pes):
         for p, e in pes:
             yield PhenotypeEdge(p, e)
+
+    @property
+    def context(self):
+        """ No touching! """
+        return self._localContext
 
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
@@ -457,7 +614,8 @@ class Neuron(graphBase):
         raise TypeError('Ur Neuron Sucks')
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
-        return '%s%s' % (self.__class__.__name__, self.pes)
+        args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
+        return '%s%s' % (self.__class__.__name__, args)
 
     def __str__(self):
         asdf = '%s(' % self.__class__.__name__
@@ -483,7 +641,7 @@ class Neuron(graphBase):
         return not self.__lt__(other)
 
 
-class DefinedNeuron(Neuron):
+class DefinedNeuron(NeuronBase):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
 
     def bagExisting(self):  # TODO intersections
@@ -585,7 +743,7 @@ class DefinedNeuron(Neuron):
         return self.Class
 
 
-class MeasuredNeuron(Neuron):  # XXX DEPRECATED retained for loading from some existing ontology files
+class MeasuredNeuron(NeuronBase):  # XXX DEPRECATED retained for loading from some existing ontology files
     """ Class that takes a bag of phenotypes and adds subClassOf axioms"""
     # these should probably require a species and brain region bare minimum?
     # these need to check to make sure the species specific identifiers are being used
@@ -696,6 +854,19 @@ class NeuronArranger:  # TODO should this write the graph?
 
     def loadDefined(self):
         pass
+
+
+
+def setLocalContext(*phenotypeEdges):
+    # this is a trade off, depending on what was passed in here when it
+    # was last called the same 'looking' neuron definition will produce
+    # a different result
+    # of course this can be very powerful if we have a set of neurons that
+    # we want to instantiate in different contexts
+    
+    # we are implementing this in this way so that it is clear that you cannot
+    # change the context of a neuron after it has been created
+    NeuronBase._NeuronBase__context = phenotypeEdges
 
 
 def main():

@@ -9,13 +9,16 @@ from IPython import embed
 __all__ = [
     'AND',
     'OR',
-    #'graphBase',
-    'Controller',
+    'graphBase',
+    'config',
+    'pred',
+    'setLocalContext',
+    #'Controller',
     'Phenotype',
     'NegPhenotype',
     'LogicalPhenotype',
     'Neuron',
-    'getPredicates',  # set globally when Controller is instantiated
+    #'getPredicates',  # set globally when Controller is instantiated
 ]
 
 # quick way to do renaming during dev and testing
@@ -32,10 +35,34 @@ _ = [rename(old, new) for old, new in (
     ('LogicalPhenoEdge','LogicalPhenotype'),
 )]
 
+def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
+           local_base=        os.path.expanduser('~/git/NIF-Ontology/'),
+           branch=            'neurons',
+           core_graph_paths= ['ttl/NIF-Phenotype-Core.ttl',
+                              'ttl/NIF-Phenotypes.ttl'],
+           core_graph=        None,
+           in_graph_paths=    tuple(),
+           out_graph_path=    '/tmp/_Neurons.ttl',
+           out_imports=      ['ttl/NIF-Phenotype-Core.ttl'],
+           out_graph=         None,
+           force_remote=      False,
+           scigraph=          'localhost:9000'):
+    graphBase.configGraphIO(remote_base, local_base, branch,
+                            core_graph_paths, core_graph,
+                            in_graph_paths,
+                            out_graph_path, out_imports, out_graph,
+                            force_remote, scigraph)
 
-def getPredicates():
-    return graphBase._predicates
+config()
+pred = graphBase._predicates
 
+try:
+    ip = get_ipython()
+    def scig_func(val):
+        ip.find_cell_magic('python')(os.path.expanduser('~/git/pyontutils/pyontutils/scig.py') + ' %s' % val, '')
+    ip.register_magic_function(scig_func, 'line', 'scig')
+except NameError:
+    pass  # not in an IPython environment so can't register magics
 
 class Controller:
     remote_base = 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/'
@@ -171,3 +198,18 @@ class Controller:
     def ttl(self):
         return self.ng.g.serialize(format='nifttl').decode()
 
+
+def main():
+    config(out_graph_path='/tmp/youcalled.ttl')
+    setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
+    Neuron(Phenotype('UBERON:0001950', 'ilx:hasLocationPhenotype', label='neocortex'))
+    Neuron(Phenotype('UBERON:0000955'), Phenotype('PR:000013502'))
+    Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'))
+    Neuron(Phenotype('UBERON:0001950', 'ilx:hasLocationPhenotype'))
+    Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'), Phenotype('PR:000013502'))
+    print(graphBase.neurons())
+    #return
+    embed()
+
+if __name__ == '__main__':
+    main()
