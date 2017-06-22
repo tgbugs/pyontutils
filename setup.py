@@ -41,15 +41,16 @@ try:
         packages=['pyontutils'],
         install_requires=[
             'docopt',
+            'gitpython',
+            'ipython',
+            'lxml',
             'numpy',
             'psycopg2',
-            'requests',
-            'ipython',
-            'gitpython',
-            'rdflib',
-            'sqlalchemy',
             'pyyaml',
-            'lxml',
+            'rdflib',
+            'requests',
+            'robobrowser',
+            'sqlalchemy',
         ],
         #extras_require
         #package_data
