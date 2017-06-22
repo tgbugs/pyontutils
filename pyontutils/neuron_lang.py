@@ -19,20 +19,6 @@ __all__ = [
     'Neuron',
 ]
 
-# quick way to do renaming during dev and testing
-g = globals()
-def rename(classname, newname):
-    cls = g[classname]
-    setattr(cls, '__name__', newname)
-    g[newname] = cls
-
-_ = [rename(old, new) for old, new in (
-    ('DefinedNeuron','Neuron'),
-    ('PhenotypeEdge','Phenotype'),
-    ('NegPhenotypeEdge','NegPhenotype'),
-    ('LogicalPhenoEdge','LogicalPhenotype'),
-)]
-
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
            local_base=        os.path.expanduser('~/git/NIF-Ontology/'),
            branch=            'neurons',
