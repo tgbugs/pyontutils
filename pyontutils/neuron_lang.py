@@ -151,6 +151,14 @@ class Controller:
             graphBase.outGraph = Graph()
             self.ng = makeGraph('', prefixes=makePrefixes(*self.ng.namespaces), graph=graphBase.outGraph)
 
+
+        def write(self):
+            self.ng.write()
+
+        def ttl(self):
+            return self.ng.g.serialize(format='nifttl').decode()
+
+
     def __new__(cls, *args, **kwargs):
         if Controller.instance is None:
             Controller.instance = Controller.__Controller(**kwargs)
@@ -170,7 +178,10 @@ pred = Controller()._predicates
 # ideally what we want is a class pred that looks up the id of Controller() every time a method is called and if it has changed updates its class dict..., of course this means we have to throw an error if the called name no longer exists...
 
 def WRITE():
-    Controller().ng.write()  # singleton works
+    Controller().ng.write()  # singleton does not work correctly
+    # if we do c = Controller() and then add or remove lines after writing
+    # then the original state is retained when we first called write and
+    # we cannot recover it
 
 def WRITEPYTHON(neurons):
     out = '#!/usr/bin/env python3\n'

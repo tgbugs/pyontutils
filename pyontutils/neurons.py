@@ -366,7 +366,7 @@ class Neuron(graphBase):
             else:
                 self._pesDict[pe.e] = [pe]
 
-        if self in self.existing_pes:
+        if 0:  # self in self.existing_pes:  # FIXME this doesn't work because the graph could have changed :/ urg
             self.Class = self.existing_pes[self]
         else:
             self.Class = self._graphify()
