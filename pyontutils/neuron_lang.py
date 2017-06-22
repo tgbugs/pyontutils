@@ -51,9 +51,11 @@ class Controller:
         local_base = os.path.expanduser('~/git/NIF-Ontology/')
         branch = 'neurons'
         def __init__(self, *args,
+                     core_graph=None,  # FIXME why do I think that I'm just slightly shifting the api here and duplicating everything... sigh
                      core_graph_paths=['ttl/NIF-Phenotype-Core.ttl',
                                        'ttl/NIF-Phenotypes.ttl'],
                      in_graph_paths=tuple(),
+                     out_graph=None,
                      out_graph_path='/tmp/_Neurons.ttl',
                      out_imports=['ttl/NIF-Phenotype-Core.ttl'],
                      force_remote = False):
@@ -85,7 +87,10 @@ class Controller:
                     #pass
 
             # core graph setup
-            graphBase.core_graph = Graph()
+            if core_graph is None:
+                graphBase.core_graph = Graph()
+            else:
+                graphBase.core_graph = core_graph
             for cg in use_core_paths:
                 graphBase.core_graph.parse(cg, format='turtle')
 
@@ -101,7 +106,10 @@ class Controller:
                            graph=graphBase.in_graph)
 
             # output graph setup
-            graphBase.out_graph = Graph()
+            if out_graph is None:
+                graphBase.out_graph = Graph()
+            else:
+                graphBase.out_graph = out_graph
             self.ng = makeGraph('',
                                 prefixes=makePrefixes('owl',
                                                       'GO',
