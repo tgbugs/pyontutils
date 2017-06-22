@@ -17,7 +17,7 @@ class restService:
         self._session.mount('http://', adapter)
 
         if cache:
-            print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
+            #print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
             self._cache = dict()
             self._get = self._cache_get
         else:
