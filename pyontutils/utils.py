@@ -542,6 +542,7 @@ class scigPrint:
         'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
         'BRAINInfo':'http://braininfo.rprc.washington.edu/centraldirectory.aspx?ID=',
+        'PMID':'http://www.ncbi.nlm.nih.gov/pubmed/',
     }
 
     shorten = {v:k for k, v in _shorten_.items()}
@@ -578,23 +579,32 @@ class scigPrint:
         print('---------------------------------------------------')
         print(node['id'], '  ', node['lbl'])
         print()
-        for k, v in sorted(node['meta'].items()):
+        scigPrint.pprint_meta(node['meta'])
+        print('---------------------------------------------------')
+
+    @staticmethod
+    def pprint_meta(meta):
+        for k, v in sorted(meta.items()):
+            if k in ('curie', 'iri'):
+                continue
             for iri, short in scigPrint.shorten.items():
                 if iri in k:
                     k = k.replace(iri, short + ':')
                     break
-            if v:
-                asdf = v[0]
-
-                if len(v) > 1:
-                    print(' ' * 4 + '%s:' % k, '[')
-                    _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
-                    print(' ' * 4 + ']')
+            if v is not None:
+                base = ' ' * 4 + '%s:' % k
+                if hasattr(v, '__iter__'):
+                    if len(v) > 1:
+                        print(base, '[')
+                        _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
+                        print(' ' * 4 + ']')
+                    elif len(v) == 1:
+                        asdf = v[0]
+                        print(base, scigPrint.sv(asdf, len(base) + 1, 4))
+                    else:
+                        pass
                 else:
-                    base = ' ' * 4 + '%s:' % k
-                    print(base, scigPrint.sv(asdf, len(base) + 1, 4))
-
-        print('---------------------------------------------------')
+                    print(base, scigPrint.sv(v, len(base) + 1, 4))
 
     @staticmethod
     def pprint_edge(edge):
