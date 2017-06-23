@@ -14,6 +14,7 @@ __all__ = [
     'getPhenotypePredicates',
     'graphBase',
     'setLocalContext',
+    'setLocalNameBase',
     'Phenotype',
     'NegPhenotype',
     'LogicalPhenotype',
@@ -41,6 +42,7 @@ def getPhenotypePredicates(graph):
     phenoPreds = type('PhenoPreds', (object,), classDict)
     return phenoPreds
 
+# neuron and phenotype representations
 
 class graphBase:
     core_graph = 'ASSIGN ME AFTER IMPORT!'
@@ -378,16 +380,23 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return not self.__lt__(other)
 
     def __eq__(self, other):
-        return self.p == other.p and self.e == other.e
+        return type(self) == type(other) and self.p == other.p and self.e == other.e
 
     def __hash__(self):
         return hash((self.p, self.e))
 
-    def __repr__(self):
+    def __expanded__(self):
         pn = self.in_graph.namespace_manager.qname(self.p)
         en = self.in_graph.namespace_manager.qname(self.e)
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
+
+    def __repr__(self):
+        #inj = {v:k for k, v in LocalNames.items()}  # XXX very slow...
+        #if self in inj:
+            #return inj[self]
+        #else:
+        return self.__expanded__()
 
     def __str__(self):
         pn = self.in_graph.namespace_manager.qname(self.p)
@@ -613,8 +622,14 @@ class NeuronBase(graphBase):
     def validate(self):
         raise TypeError('Ur Neuron Sucks')
 
+    def __expanded__(self):
+        args = '(' + ', '.join([_.__expanded__() for _ in self.pes]) + ')'
+        return '%s%s' % (self.__class__.__name__, args)
+
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
-        args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
+        inj = {v:k for k, v in LocalNames.items()}  # XXX very slow...
+        args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + ')'
+        #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
         return '%s%s' % (self.__class__.__name__, args)
 
     def __str__(self):
@@ -854,6 +869,19 @@ class NeuronArranger:  # TODO should this write the graph?
 
     def loadDefined(self):
         pass
+
+# local naming and ordering
+LocalNames = {}
+def setLocalNameBase(LocalName, phenotype, g=None):
+    inj = {v:k for k, v in LocalNames.items()}
+    if g is None:
+        raise TypeError('please pass in the globals for the calling scope')
+    if LocalName in g:
+        raise NameError('%r is already in use as a LocalName for %r' % (LocalName, g[LocalName]))
+    elif phenotype in inj:
+        raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
+    g[LocalName] = phenotype
+    LocalNames[LocalName] = phenotype
 
 
 def setLocalContext(*phenotypeEdges):
