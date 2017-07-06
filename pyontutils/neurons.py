@@ -15,9 +15,6 @@ __all__ = [
     'getPhenotypePredicates',
     'graphBase',
     'setLocalContext',
-    #'setLocalNameBase',
-    #'setLocalName',
-    #'setLocalNameTrip',
     'LocalNameManager',
     'addLN',
     'addLNT',
@@ -909,12 +906,12 @@ def addLNBase(LocalName, phenotype, g=None):
 
 def addLN(LocalName, phenotype, g=None):
     if g is None:
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        g = inspect.stack()[1][0].f_locals  # get globals of calling scope
     addLNBase(LocalName, phenotype, g)
 
 def addLNT(LocalName, phenoId, predicate, g=None):
     if g is None:
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        g = inspect.stack()[1][0].f_locals  # get globals of calling scope
     addLN(LocalName, Phenotype(phenoId, predicate), g)
 
 def setLocalNameBase(LocalName, phenotype, g=None):
@@ -948,7 +945,7 @@ def loadNames(names, g=None):
             raise TypeError('loadNames can only be called at the top level of a program')
     for k in dir(names):
         v = getattr(names, k)  # use this instead of __dict__ to get parents
-        if isinstance(v, Phenotype):
+        if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
             setLocalName(k, v, glob)
 
 def resetLocalNames(g=None):

@@ -23,7 +23,6 @@ def inner():
     Neuron(SOM, Phenotype('PR:000013502'))
 inner()
 
-
 #resetLocalNames()  # works as expected at the top level
 #resetLocalNames(globals())  # works as expected
 Neuron(brain, Phenotype('PR:000013502'))

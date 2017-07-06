@@ -4,20 +4,20 @@ from pyontutils.neurons import *  # namesets can only be effectively defined ove
 from pyontutils.neuron_lang import config  # annoying, but works
 
 class TestNames(LocalNameManager):
-    addLNT('LOOK_AT_THE_CUTE_LITTLE_GUY','NCBITaxon:10116', 'ilx:hasInstanceInSpecies')  # FIXME no spaces and also setLocalNameTrip does not defer binding so graphBase.LocalNames is already populated by everything here :/
+    addLNT('LOOK_AT_THE_CUTE_LITTLE_GUY','NCBITaxon:10116', 'ilx:hasInstanceInSpecies')
 
 class LayerNames(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
     addLNT('L1','UBERON:0005390', 'ilx:hasLayerLocationPhenotype')
     addLNT('L2','UBERON:0005391', 'ilx:hasLayerLocationPhenotype')
     addLNT('L3','UBERON:0005392', 'ilx:hasLayerLocationPhenotype')
-    addLN('L23', LogicalPhenotype(OR, L2, L3))
+    addLN('L23', LogicalPhenotype(OR, L2, L3))  # FIXME why does this fail?
     addLNT('L4','UBERON:0005393', 'ilx:hasLayerLocationPhenotype')
     addLNT('L5','UBERON:0005394', 'ilx:hasLayerLocationPhenotype')
     addLNT('L6','UBERON:0005395', 'ilx:hasLayerLocationPhenotype')
 
     addLNT('SO','UBERON:0005371', 'ilx:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
-    addLNT('SP','UBERON:0002313', 'ilx:hasLayerLocationPhenotype')
+    addLNT('SPy','UBERON:0002313', 'ilx:hasLayerLocationPhenotype')  # SP
     addLNT('SLA','UBERON:0005370', 'ilx:hasLayerLocationPhenotype')
     addLNT('SLM','UBERON:0007640', 'ilx:hasLayerLocationPhenotype')
     addLNT('SLU','UBERON:0007637', 'ilx:hasLayerLocationPhenotype')
@@ -62,13 +62,13 @@ class BBPNames(LayerNames, RegionNames):
     addLNT('SAC','ilx:SmallAxonPhenotype', 'ilx:hasMorphologicalPhenotype')
     addLNT('MC','ilx:MartinottiPhenotype', 'ilx:hasMorphologicalPhenotype')
     addLNT('NGC','ilx:NeurogliaformPhenotype', 'ilx:hasMorphologicalPhenotype')
-    addLNT('NGC_DA','ilx:NeurogliaformDenseAxonPhenotype', 'ilx:hasMorphologicalPhenotype')
-    addLNT('NGC_SA','ilx:NeurogliaformSparseAxonPhenotype', 'ilx:hasMorphologicalPhenotype')
+    addLNT('NGCDA','ilx:NeurogliaformDenseAxonPhenotype', 'ilx:hasMorphologicalPhenotype')  # NGC_DA
+    addLNT('NGCSA','ilx:NeurogliaformSparseAxonPhenotype', 'ilx:hasMorphologicalPhenotype')  # NGC_SA
     addLNT('BC','ilx:BasketPhenotype', 'ilx:hasMorphologicalPhenotype')
     addLNT('SBC','ilx:SmallBasketPhenotype', 'ilx:hasMorphologicalPhenotype')
     addLNT('LBC','ilx:LargeBasketPhenotype', 'ilx:hasMorphologicalPhenotype')
     addLNT('NBC','ilx:NestBasketPhenotype', 'ilx:hasMorphologicalPhenotype')
-    addLNT('SSC','ilx:SpinyStellatePhenotype', 'ilx:hasMorphologicalPhenotype')  # SS is used on the website, SSC is used on the spreadsheet
+    addLNT('SS','ilx:SpinyStellatePhenotype', 'ilx:hasMorphologicalPhenotype')  # SS is used on the website, SSC is used on the spreadsheet TODO usecase for non-injective naming...
     addLNT('AC','ilx:PetillaSustainedAccomodatingPhenotype', 'ilx:hasElectrophysiologicalPhenotype')
     addLNT('NAC','ilx:PetillaSustainedNonAccomodatingPhenotype', 'ilx:hasElectrophysiologicalPhenotype')
     addLNT('STUT','ilx:PetillaSustainedStutteringPhenotype', 'ilx:hasElectrophysiologicalPhenotype')
