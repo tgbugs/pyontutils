@@ -19,6 +19,7 @@ __all__ = [
     'setLocalName',
     'setLocalNameTrip',
     #'injectLocalNamesIntoScope,
+    'LocalNameManager',
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
@@ -44,7 +45,7 @@ def getPhenotypePredicates(graph):
     literal_map = {uri.rsplit('/',1)[-1]:uri for uri in out}  # FIXME this will change
     classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
     classDict['_litmap'] = literal_map
-    phenoPreds = type('PhenoPreds', (object,), classDict)
+    phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
     return phenoPreds
 
 # neuron and phenotype representations
@@ -56,9 +57,11 @@ class graphBase:
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
+    __init_local_names = False
     LocalNames = {}
 
-    #_sgv = Vocabulary(cache=True)
+    _sgv = Vocabulary(cache=True)
+
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -208,6 +211,11 @@ class graphBase:
             graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
         else:
             graphBase._sgv = Vocabulary(cache=True)
+
+        # process stored local names
+        if graphBase.__init_local_names:
+            graphBase.LocalNames.update({k:eval(v) for k, v in graphBase.LocalNames.items()})  # XXX DANGERZONE
+            graphBase.__init_local_names = False
 
     @staticmethod
     def write():
@@ -425,7 +433,7 @@ class LogicalPhenotype(graphBase):
     }
     def __init__(self, op, *edges):
         super().__init__()
-        self.op = self.expand(op)  # TODO more with op
+        self.op = op  # TODO more with op
         self.pes = edges
         self.labelPostRule = lambda l: l
 
@@ -440,7 +448,7 @@ class LogicalPhenotype(graphBase):
     @property
     def pHiddenLabel(self):
         label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
-        op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
+        op = self.local_names[self.op]
         return self.labelPostRule('(%s %s)' % (op, label))
 
     @property
@@ -453,7 +461,7 @@ class LogicalPhenotype(graphBase):
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
             members.append(pe._graphify(graph=graph))
-        return infixowl.BooleanClass(operator=self.op, members=members, graph=graph)
+        return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -477,12 +485,12 @@ class LogicalPhenotype(graphBase):
         return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
-        op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
+        op = self.local_names[self.op]
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
     def __str__(self):
-        op = self.local_names[self.in_graph.namespace_manager.qname(self.op)]
+        op = self.local_names[self.op]
         t =  ' ' * (len(self.__class__.__name__) + 1)
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
@@ -878,6 +886,10 @@ class NeuronArranger:  # TODO should this write the graph?
         pass
 
 # local naming and ordering
+class LocalNameManager:
+    pred = graphBase._predicates  # FIXME this won't work til post init :/ probably don't want this at all :/
+    # better to use strings and then validate that those predicates are ok once they are paired with a lang spec
+
 def setLocalNameBase(LocalName, phenotype, g=None):
     inj = {v:k for k, v in graphBase.LocalNames.items()}
     if g is None:
@@ -891,10 +903,14 @@ def setLocalNameBase(LocalName, phenotype, g=None):
 
 def setLocalNameTrip(LocalName, phenoId, predicate, g=None):
     if g is None:
-        raise TypeError('please pass in the globals for the calling scope')
-        #g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        #raise TypeError('please pass in the globals for the calling scope')
     #g = inspect.stack()[2][0].f_locals  #  get globals of calling scope (if inside a listcomp :/)
+    #try:
     setLocalName(LocalName, Phenotype(phenoId, predicate), g)
+    #except TypeError:  # in the event we don't have a core graph yet
+        #graphBase.__init_local_names = True
+        #setLocalName(LocalName, 'Phenotype(%s, %s)' % (phenoId, predicate), g)
 
 def setLocalName(LocalName, phenotype, g=None):
     if g is None:
