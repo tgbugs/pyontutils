@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 import os
+import inspect
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
@@ -15,6 +16,10 @@ __all__ = [
     'graphBase',
     'setLocalContext',
     'setLocalNameBase',
+    'setLocalName',
+    'setLocalNameTrip',
+    #'injectLocalNamesIntoScope,
+    'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
     'LogicalPhenotype',
@@ -50,6 +55,8 @@ class graphBase:
     out_graph = 'ASSIGN ME AFTER IMPORT'
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
+
+    LocalNames = {}
 
     #_sgv = Vocabulary(cache=True)
     def __init__(self):
@@ -392,7 +399,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
 
     def __repr__(self):
-        #inj = {v:k for k, v in LocalNames.items()}  # XXX very slow...
+        #inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
         #if self in inj:
             #return inj[self]
         #else:
@@ -627,7 +634,7 @@ class NeuronBase(graphBase):
         return '%s%s' % (self.__class__.__name__, args)
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
-        inj = {v:k for k, v in LocalNames.items()}  # XXX very slow...
+        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
         args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + ')'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
         return '%s%s' % (self.__class__.__name__, args)
@@ -871,9 +878,8 @@ class NeuronArranger:  # TODO should this write the graph?
         pass
 
 # local naming and ordering
-LocalNames = {}
 def setLocalNameBase(LocalName, phenotype, g=None):
-    inj = {v:k for k, v in LocalNames.items()}
+    inj = {v:k for k, v in graphBase.LocalNames.items()}
     if g is None:
         raise TypeError('please pass in the globals for the calling scope')
     if LocalName in g:
@@ -881,8 +887,32 @@ def setLocalNameBase(LocalName, phenotype, g=None):
     elif phenotype in inj:
         raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
     g[LocalName] = phenotype
-    LocalNames[LocalName] = phenotype
+    graphBase.LocalNames[LocalName] = phenotype
 
+def setLocalNameTrip(LocalName, phenoId, predicate, g=None):
+    if g is None:
+        raise TypeError('please pass in the globals for the calling scope')
+        #g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    #g = inspect.stack()[2][0].f_locals  #  get globals of calling scope (if inside a listcomp :/)
+    setLocalName(LocalName, Phenotype(phenoId, predicate), g)
+
+def setLocalName(LocalName, phenotype, g=None):
+    if g is None:
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    setLocalNameBase(LocalName, phenotype, g)
+
+def injectLocalNamesIntoScope():
+    g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    g.update(graphBase.LocalNames)
+
+def resetLocalNames(g=None):
+    """ WARNING: Only call from top level!
+        Remove any local names that have already been defined. """
+    if g is None:
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    for k in list(graphBase.LocalNames.keys()):
+        g.pop(k)
+        graphBase.LocalNames.pop(k)
 
 def setLocalContext(*phenotypeEdges):
     # this is a trade off, depending on what was passed in here when it
