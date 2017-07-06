@@ -896,7 +896,7 @@ def setLocalNameBase(LocalName, phenotype, g=None):
         raise TypeError('please pass in the globals for the calling scope')
     if LocalName in g:
         raise NameError('%r is already in use as a LocalName for %r' % (LocalName, g[LocalName]))
-    elif phenotype in inj:
+    elif phenotype in inj and inj[phenotype] != LocalName:
         raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
     g[LocalName] = phenotype
     graphBase.LocalNames[LocalName] = phenotype

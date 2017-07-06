@@ -10,28 +10,32 @@ from IPython import embed
 #config(out_graph_path='/tmp/youcalled.ttl')
 
 #pythonSucks(pred, setLocalName, setLocalNameTrip, NegPhenotype, LogicalPhenotype)
-lines = inspect.getsource(bbp_names.BBPNames).split('\n')
-nl = []
-for line in lines:  # XXX this who approach is monumentally stupid and trying to bind names so they can be used in more than one place is annoying :/
-    line = line.replace('\'),','\')')
-    line = line.replace(')),','))')
-    if line.strip().startswith('('):
-        line = line.split('#',1)[0]  # this is dumb
-        if line.count(',') == 2:
-            line = line.replace(' (\'',' setLocalNameTrip(\'')
-        elif line.count(',') == 1:
-            line = line.replace(' (\'',' setLocalName(\'')
-    elif 'set' in line:
-        pass
-    else:
-        line = ''
-    line = line.strip()
-    if line:
+def loadNames(names, glob, loc):
+    lines = inspect.getsource(names).split('\n')
+    nl = []
+    for line in lines:  # XXX this who approach is monumentally stupid and trying to bind names so they can be used in more than one place is annoying :/
+        line = line.strip()
+        if line.startswith('('):
+            try:
+                l = len(eval(line)[0]) 
+            except NameError:  # ICK
+                l = 2  # only time we encounter this is if we are actually constructing a phenotype
+            if l == 2:
+                line = 'setLocalName' + line
+            elif l == 3:
+                line = 'setLocalNameTrip' + line
+        elif line.startswith('set'):
+            pass
+        else:
+            continue
         nl.append(line)
 
-asdf = '\n'.join(nl)
-print(asdf)
-#eval(asdf, globals(), locals())
+    asdf = '\n'.join(nl)
+    print(asdf)
+    for l in nl:
+        eval(l, glob, loc)
+
+loadNames(bbp_names.BBPNames, globals(), locals())
 
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn', label='neocortex'))
@@ -45,4 +49,4 @@ Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'), Phenotype('PR:0000
 #Neuron(brain, Phenotype('PR:000013502'))
 
 print(graphBase.neurons())
-#embed()
+embed()
