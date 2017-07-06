@@ -18,8 +18,8 @@ __all__ = [
     'setLocalNameBase',
     'setLocalName',
     'setLocalNameTrip',
-    #'injectLocalNamesIntoScope,
     'LocalNameManager',
+    'loadNames',
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
@@ -526,7 +526,7 @@ class NeuronBase(graphBase):
         ]
 
         self._localContext = self.__context
-        phenotypeEdges = self.__context + phenotypeEdges
+        phenotypeEdges = tuple(set(self.__context + phenotypeEdges))  # remove dupes
 
         if id_ and phenotypeEdges:
             raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
@@ -894,7 +894,7 @@ def setLocalNameBase(LocalName, phenotype, g=None):
     inj = {v:k for k, v in graphBase.LocalNames.items()}
     if g is None:
         raise TypeError('please pass in the globals for the calling scope')
-    if LocalName in g:
+    if LocalName in g and g[LocalName] != phenotype:
         raise NameError('%r is already in use as a LocalName for %r' % (LocalName, g[LocalName]))
     elif phenotype in inj and inj[phenotype] != LocalName:
         raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
@@ -917,12 +917,45 @@ def setLocalName(LocalName, phenotype, g=None):
         g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
     setLocalNameBase(LocalName, phenotype, g)
 
-def injectLocalNamesIntoScope():
-    g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-    g.update(graphBase.LocalNames)
+def loadNames(names, g=None):
+    if g is not None:
+        glob = g
+        loc = g  # needed to work inside ipython which does weird things with the stack
+    else:
+        glob = inspect.stack()[1][0].f_globals  #  get globals of calling scope
+        loc = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        if glob != loc:
+            raise TypeError('loadNames can only be called at the top level of a program')
+        #print(glob)
+    #s = inspect.stack()
+    #f = s[1][0]
+    #embed()
+    lines = inspect.getsource(names).split('\n')
+    nl = []
+    for line in lines:  # XXX this who approach is monumentally stupid and trying to bind names so they can be used in more than one place is annoying :/
+        line = line.strip()
+        if line.startswith('('):
+            try:
+                l = len(eval(line)) 
+            except NameError:  # ICK
+                l = 2  # only time we encounter this is if we are actually constructing a phenotype
+            if l == 2:
+                line = 'setLocalName' + line
+            elif l == 3:
+                line = 'setLocalNameTrip' + line
+        elif line.startswith('set'):
+            pass
+        else:
+            continue
+        nl.append(line)
+
+    #asdf = '\n'.join(nl)
+    #print(asdf)
+    for l in nl:
+        eval(l, glob, loc)
 
 def resetLocalNames(g=None):
-    """ WARNING: Only call from top level!
+    """ WARNING: Only call from top level! THIS DOES NOT RESET NAMES in an embeded IPython!!!
         Remove any local names that have already been defined. """
     if g is None:
         g = inspect.stack()[1][0].f_locals  #  get globals of calling scope

@@ -9,34 +9,11 @@ from IPython import embed
 
 #config(out_graph_path='/tmp/youcalled.ttl')
 
-#pythonSucks(pred, setLocalName, setLocalNameTrip, NegPhenotype, LogicalPhenotype)
-def loadNames(names, glob, loc):
-    lines = inspect.getsource(names).split('\n')
-    nl = []
-    for line in lines:  # XXX this who approach is monumentally stupid and trying to bind names so they can be used in more than one place is annoying :/
-        line = line.strip()
-        if line.startswith('('):
-            try:
-                l = len(eval(line)[0]) 
-            except NameError:  # ICK
-                l = 2  # only time we encounter this is if we are actually constructing a phenotype
-            if l == 2:
-                line = 'setLocalName' + line
-            elif l == 3:
-                line = 'setLocalNameTrip' + line
-        elif line.startswith('set'):
-            pass
-        else:
-            continue
-        nl.append(line)
+def messup():
+    loadNames(bbp_names.BBPNames)  # testing to make sure we get an error if we call this in a function
+    Neuron(brain, Phenotype('PR:000013502'))
 
-    asdf = '\n'.join(nl)
-    print(asdf)
-    for l in nl:
-        eval(l, glob, loc)
-
-loadNames(bbp_names.BBPNames, globals(), locals())
-
+loadNames(bbp_names.BBPNames)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn', label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))
@@ -44,9 +21,14 @@ Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn'))
 Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'), Phenotype('PR:000013502'))
 
+def inner():
+    Neuron(SOM, Phenotype('PR:000013502'))
+inner()
+
+
 #resetLocalNames()  # works as expected at the top level
 #resetLocalNames(globals())  # works as expected
-#Neuron(brain, Phenotype('PR:000013502'))
+Neuron(brain, Phenotype('PR:000013502'))
 
 print(graphBase.neurons())
 embed()

@@ -14,7 +14,8 @@ __all__ = [
     'pred',
     'setLocalContext',
     'setLocalName',
-    'setLocalNameTrip',
+    'setLocalNameTrip',  # needs to be in globals for loadNames to work properly
+    'loadNames',
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
