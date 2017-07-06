@@ -5,7 +5,7 @@ from IPython import embed
 from rdflib import Graph
 from pyontutils.utils import makeGraph
 from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
-from neuron_lang import config
+from pyontutils.neuron_lang import config
 #from pyontutils.neuron_lang import *  # namesets can only be effectively defined over a specific base...
 # FIXME however it does not help with cases where we want to use someone elses definitions (local) withour own
 #  translated naming scheme :/
@@ -130,5 +130,5 @@ class BBPNames(LocalNameManager):
         self.setLocalName('L23', LogicalPhenotype(OR, L2, L3), __g)  # __g is infuriating...
         self.setLocalName('ASp', NegPhenotype(Sp), __g)
 
-print(inspect.getsource(BBPNames).replace(' (\'',' setLocalNameTrip(\''))
-embed()
+#print(inspect.getsource(BBPNames).replace(' (\'',' setLocalNameTrip(\''))
+#embed()
