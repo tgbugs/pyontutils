@@ -2,18 +2,16 @@
 
 import inspect
 from pyontutils.neuron_lang import *
-import bbp_names
-#from bbp_names import pythonSucks
-#from pyontutils.neuron_names_nif import *
+from pyontutils import neuron_names
 from IPython import embed
 
 #config(out_graph_path='/tmp/youcalled.ttl')
 
 def messup():
-    loadNames(bbp_names.BBPNames)  # testing to make sure we get an error if we call this in a function
+    loadNames(neuron_names.BBPNames)  # testing to make sure we get an error if we call this in a function
     Neuron(brain, Phenotype('PR:000013502'))
 
-loadNames(bbp_names.BBPNames)
+loadNames(neuron_names.BBPNames)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn', label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))

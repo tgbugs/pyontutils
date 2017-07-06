@@ -13,8 +13,6 @@ __all__ = [
     'config',
     'pred',
     'setLocalContext',
-    'setLocalName',
-    'setLocalNameTrip',  # needs to be in globals for loadNames to work properly
     'loadNames',
     'resetLocalNames',
     'Phenotype',

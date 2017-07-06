@@ -15,10 +15,12 @@ __all__ = [
     'getPhenotypePredicates',
     'graphBase',
     'setLocalContext',
-    'setLocalNameBase',
-    'setLocalName',
-    'setLocalNameTrip',
+    #'setLocalNameBase',
+    #'setLocalName',
+    #'setLocalNameTrip',
     'LocalNameManager',
+    'addLN',
+    'addLNT',
     'loadNames',
     'resetLocalNames',
     'Phenotype',
@@ -887,11 +889,16 @@ class NeuronArranger:  # TODO should this write the graph?
 
 # local naming and ordering
 class LocalNameManager:
-    pred = graphBase._predicates  # FIXME this won't work til post init :/ probably don't want this at all :/
-    # better to use strings and then validate that those predicates are ok once they are paired with a lang spec
+    """ Base class for sets of local names for phenotypes.
+        Children should be passed to loadNames to make the names available.
+        It is possible to subclass to add your custom names to a core.
+        Using addLN or addLNT is advised since it will make sure the name
+        set remains injective. """
 
-def setLocalNameBase(LocalName, phenotype, g=None):
+def addLNBase(LocalName, phenotype, g=None):
     inj = {v:k for k, v in graphBase.LocalNames.items()}
+    if not LocalName.isidentifier():
+        raise NameError('LocalName \'%s\' is no a valid python identifier' % LocalName)
     if g is None:
         raise TypeError('please pass in the globals for the calling scope')
     if LocalName in g and g[LocalName] != phenotype:
@@ -899,6 +906,19 @@ def setLocalNameBase(LocalName, phenotype, g=None):
     elif phenotype in inj and inj[phenotype] != LocalName:
         raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
     g[LocalName] = phenotype
+
+def addLN(LocalName, phenotype, g=None):
+    if g is None:
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    addLNBase(LocalName, phenotype, g)
+
+def addLNT(LocalName, phenoId, predicate, g=None):
+    if g is None:
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+    addLN(LocalName, Phenotype(phenoId, predicate), g)
+
+def setLocalNameBase(LocalName, phenotype, g=None):
+    addLNBase(LocalName, phenotype, g)
     graphBase.LocalNames[LocalName] = phenotype
 
 def setLocalNameTrip(LocalName, phenoId, predicate, g=None):
@@ -926,33 +946,10 @@ def loadNames(names, g=None):
         loc = inspect.stack()[1][0].f_locals  #  get globals of calling scope
         if glob != loc:
             raise TypeError('loadNames can only be called at the top level of a program')
-        #print(glob)
-    #s = inspect.stack()
-    #f = s[1][0]
-    #embed()
-    lines = inspect.getsource(names).split('\n')
-    nl = []
-    for line in lines:  # XXX this who approach is monumentally stupid and trying to bind names so they can be used in more than one place is annoying :/
-        line = line.strip()
-        if line.startswith('('):
-            try:
-                l = len(eval(line)) 
-            except NameError:  # ICK
-                l = 2  # only time we encounter this is if we are actually constructing a phenotype
-            if l == 2:
-                line = 'setLocalName' + line
-            elif l == 3:
-                line = 'setLocalNameTrip' + line
-        elif line.startswith('set'):
-            pass
-        else:
-            continue
-        nl.append(line)
-
-    #asdf = '\n'.join(nl)
-    #print(asdf)
-    for l in nl:
-        eval(l, glob, loc)
+    for k in dir(names):
+        v = getattr(names, k)  # use this instead of __dict__ to get parents
+        if isinstance(v, Phenotype):
+            setLocalName(k, v, glob)
 
 def resetLocalNames(g=None):
     """ WARNING: Only call from top level! THIS DOES NOT RESET NAMES in an embeded IPython!!!
@@ -960,7 +957,10 @@ def resetLocalNames(g=None):
     if g is None:
         g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
     for k in list(graphBase.LocalNames.keys()):
-        g.pop(k)
+        try:
+            g.pop(k)
+        except KeyError:
+            raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
         graphBase.LocalNames.pop(k)
 
 def setLocalContext(*phenotypeEdges):
@@ -973,7 +973,6 @@ def setLocalContext(*phenotypeEdges):
     # we are implementing this in this way so that it is clear that you cannot
     # change the context of a neuron after it has been created
     NeuronBase._NeuronBase__context = phenotypeEdges
-
 
 def main():
     # load in our existing graph
