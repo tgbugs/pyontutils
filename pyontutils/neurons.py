@@ -56,7 +56,6 @@ class graphBase:
 
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
-    __init_local_names = False
     LocalNames = {}
 
     #_sgv = Vocabulary(cache=True)
@@ -210,11 +209,6 @@ class graphBase:
             graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
         else:
             graphBase._sgv = Vocabulary(cache=True)
-
-        # process stored local names
-        if graphBase.__init_local_names:
-            graphBase.LocalNames.update({k:eval(v) for k, v in graphBase.LocalNames.items()})  # XXX DANGERZONE
-            graphBase.__init_local_names = False
 
     @staticmethod
     def write():
@@ -424,7 +418,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return "%s('%s',\n%s'%s',\n%slabel='%s')" % (self.__class__.__name__, pn, t, en, t, lab)
 
 
-
 class NegPhenotype(Phenotype):
     """ Class for Negative Phenotypes to simplfy things """
 
@@ -503,7 +496,6 @@ class LogicalPhenotype(graphBase):
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
 
 
-hashes = []
 class NeuronBase(graphBase):
     existing_pes = {}
     existing_ids = {}
@@ -541,7 +533,6 @@ class NeuronBase(graphBase):
         elif phenotypeEdges:
             #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
             self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this 
-            hashes.append(self.id_)
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
@@ -891,7 +882,9 @@ class NeuronArranger:  # TODO should this write the graph?
     def loadDefined(self):
         pass
 
+
 # local naming and ordering
+
 class LocalNameManager:
     """ Base class for sets of local names for phenotypes.
         Children should be passed to loadNames to make the names available.
@@ -905,7 +898,7 @@ class LocalNameManager:
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
             if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-                setLocalName(k, v, g)
+                setLocalNameBase(k, v, g)
         return self
 
     @classmethod
@@ -947,32 +940,13 @@ def setLocalNameBase(LocalName, phenotype, g=None):
     addLNBase(LocalName, phenotype, g)
     graphBase.LocalNames[LocalName] = phenotype
 
-def setLocalNameTrip(LocalName, phenoId, predicate, g=None):
-    if g is None:
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-        #raise TypeError('please pass in the globals for the calling scope')
-    #g = inspect.stack()[2][0].f_locals  #  get globals of calling scope (if inside a listcomp :/)
-    #try:
-    setLocalName(LocalName, Phenotype(phenoId, predicate), g)
-    #except TypeError:  # in the event we don't have a core graph yet
-        #graphBase.__init_local_names = True
-        #setLocalName(LocalName, 'Phenotype(%s, %s)' % (phenoId, predicate), g)
-
-def setLocalName(LocalName, phenotype, g=None):
-    if g is None:
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-    setLocalNameBase(LocalName, phenotype, g)
-
 def loadNames(names, g=None):
-    if g is not None:
-        glob = g
-        loc = g  # needed to work inside ipython which does weird things with the stack
-    else:
-        glob = inspect.stack()[1][0].f_globals  #  get globals of calling scope
+    if g is None:
+        g = inspect.stack()[1][0].f_globals  # get globals of calling scope
     for k in dir(names):
         v = getattr(names, k)  # use this instead of __dict__ to get parents
         if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-            setLocalName(k, v, glob)
+            setLocalNameBase(k, v, g)
 
 def resetLocalNames(g=None):
     """ WARNING: Only call from top level! THIS DOES NOT RESET NAMES in an embeded IPython!!!
