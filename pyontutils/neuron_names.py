@@ -3,10 +3,10 @@
 from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
 from pyontutils.neuron_lang import config  # annoying, but works
 
-class TestNames(LocalNameManager):
+class Test(LocalNameManager):
     addLNT('LOOK_AT_THE_CUTE_LITTLE_GUY','NCBITaxon:10116', 'ilx:hasInstanceInSpecies')
 
-class LayerNames(LocalNameManager):
+class Layers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
     addLNT('L1','UBERON:0005390', 'ilx:hasLayerLocationPhenotype')
     addLNT('L2','UBERON:0005391', 'ilx:hasLayerLocationPhenotype')
@@ -23,7 +23,7 @@ class LayerNames(LocalNameManager):
     addLNT('SLU','UBERON:0007637', 'ilx:hasLayerLocationPhenotype')
     addLNT('SR','UBERON:0005372', 'ilx:hasLayerLocationPhenotype')
 
-class RegionNames(LocalNameManager):
+class Regions(LocalNameManager):
     #('brain', 'UBERON:0000955', 'ilx:hasLocationPhenotype')  # hasLocationPhenotype a high level
     addLNT('brain', 'UBERON:0000955', 'ilx:hasSomaLocatedIn')
     addLNT('CTX', 'UBERON:0001950', 'ilx:hasSomaLocatedIn')
@@ -32,10 +32,12 @@ class RegionNames(LocalNameManager):
     addLNT('S1','UBERON:0008933', 'ilx:hasSomaLocatedIn')
     addLNT('CA1','UBERON:0003881', 'ilx:hasSomaLocatedIn')
 
-class BBPNames(LayerNames, RegionNames):
-    # cat neuron_example.py | grep -v ^# | grep -o "\w\+\ \=\ Pheno.\+" | sed "s/^/('/" | sed "s/\ \=\ /',/" | sed 's/Phenotype(//' | sed 's/)/)/'
+class Species(LocalNameManager):
     addLNT('Rat','NCBITaxon:10116', 'ilx:hasInstanceInSpecies')
     addLNT('Mouse','NCBITaxon:10090', 'ilx:hasInstanceInSpecies')
+
+class BBP(Layers, Regions, Species):
+    # cat neuron_example.py | grep -v ^# | grep -o "\w\+\ \=\ Pheno.\+" | sed "s/^/('/" | sed "s/\ \=\ /',/" | sed 's/Phenotype(//' | sed 's/)/)/'
     addLNT('PC','ilx:PyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')  # 
     addLNT('BPC','ilx:BiopolarPyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')  # collision
     addLNT('HPC','ilx:HorizontalPyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')

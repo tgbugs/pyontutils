@@ -59,7 +59,7 @@ class graphBase:
     __init_local_names = False
     LocalNames = {}
 
-    _sgv = Vocabulary(cache=True)
+    #_sgv = Vocabulary(cache=True)
 
     def __init__(self):
         if type(self.core_graph) == str:
@@ -361,6 +361,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     @property
     def pShortName(self):
+        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+        if self in inj:
+            return inj[self]
+
         pn = self.in_graph.namespace_manager.qname(self.p)
         resp = self._sgv.findById(pn)
         if resp:  # DERP
@@ -452,6 +456,9 @@ class LogicalPhenotype(graphBase):
 
     @property
     def pShortName(self):
+        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+        if self in inj:
+            return inj[self]
         return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
 
     def _graphify(self, graph=None):
@@ -891,6 +898,28 @@ class LocalNameManager:
         It is possible to subclass to add your custom names to a core.
         Using addLN or addLNT is advised since it will make sure the name
         set remains injective. """
+    @classmethod
+    def __enter__(self):
+        #loadNames(self)
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        for k in dir(self):
+            v = getattr(self, k)  # use this instead of __dict__ to get parents
+            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                setLocalName(k, v, g)
+        return self
+
+    @classmethod
+    def __exit__(self, exc_type, exc_value, traceback):
+        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        for k in dir(self):
+            v = getattr(self, k)  # use this instead of __dict__ to get parents
+            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                try:
+                    g.pop(k)
+                except KeyError:
+                    raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
+                graphBase.LocalNames.pop(k)
+
 
 def addLNBase(LocalName, phenotype, g=None):
     inj = {v:k for k, v in graphBase.LocalNames.items()}
@@ -940,9 +969,6 @@ def loadNames(names, g=None):
         loc = g  # needed to work inside ipython which does weird things with the stack
     else:
         glob = inspect.stack()[1][0].f_globals  #  get globals of calling scope
-        loc = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-        if glob != loc:
-            raise TypeError('loadNames can only be called at the top level of a program')
     for k in dir(names):
         v = getattr(names, k)  # use this instead of __dict__ to get parents
         if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
