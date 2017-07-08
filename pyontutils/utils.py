@@ -7,12 +7,15 @@ import os
 import re
 import asyncio
 import inspect
+from datetime import date
 from functools import wraps
 from multiprocessing import Manager
 import rdflib
 from rdflib.extras import infixowl
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
+
+TODAY = date.isoformat(date.today())
 
 def refile(thisFile, path):
     return os.path.join(os.path.dirname(thisFile), path)
@@ -74,6 +77,7 @@ def _loadPrefixes():
     # holding place for values that are not in the curie map
     extras = {
         '':None,  # safety
+        #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 
@@ -368,6 +372,23 @@ class makeGraph:
 
     def __exit__(self, type, value, traceback):
         self.owlapi_conversion(sorted(set(self.__class__._to_convert)))
+
+def createOntology(filename=    'temp-graph',
+                   name=        'Temp Ontology',
+                   prefixes=    None,  # is a dict
+                   shortname=   None,  # 'TO'
+                   comment=     None,  # 'This is a temporary ontology.'
+                   version=     TODAY,
+                   path=        'ttl/generated/',
+                   local_base=  os.path.expanduser('~/git/NIF-Ontology/'),
+                   remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/'):
+    writeloc = local_base + path
+    ontid = remote_base + path + filename + '.ttl'
+    if shortname is not None and prefixes is not None and 'skos' not in prefixes:
+        prefixes.update(makePrefixes('skos'))
+    graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
+    graph.add_ont(ontid, name, shortname, comment, version)
+    return graph
 
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
