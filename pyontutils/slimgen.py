@@ -108,6 +108,7 @@ def ncbigene_make():
 def chebi_make():
     PREFIXES = makePrefixes('definition',
                             'hasRole',
+                            'BFO',
                             'CHEBI',
                             'owl',
                             'skos',
