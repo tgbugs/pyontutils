@@ -12,9 +12,9 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makePrefixes, makeGraph, chunk_list, dictParse
+from utils import TODAY, makePrefixes, makeGraph, chunk_list, dictParse
 from ilx_utils import ILXREPLACE
-from parcellation import OntMeta, TODAY
+from parcellation import OntMeta
 from IPython import embed
 from lxml import etree
 

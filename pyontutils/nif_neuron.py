@@ -9,9 +9,9 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import makePrefixes, makeGraph, rowParse, refile
+from utils import TODAY, makePrefixes, makeGraph, rowParse, refile
 from ilx_utils import ILXREPLACE
-from parcellation import OntMeta, TODAY
+from parcellation import OntMeta
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 sgg = Graph(cache=True, verbose=True)

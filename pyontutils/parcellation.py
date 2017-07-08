@@ -11,7 +11,7 @@ import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import async_getter, makePrefixes, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
+from utils import TODAY, async_getter, makePrefixes, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
@@ -20,8 +20,8 @@ from process_fixed import ProcessPoolExecutor
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
 PARC = GENERATED + 'parcellation/'
-TODAY = date.isoformat(date.today())
-commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode()
+
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode()  # FIXME this breaks scripts that import from this file
 NOTICE = ' Please see https://github.com/tgbugs/pyontutils/tree/{commit}/parcellation.py for details.'.format(commit=commit)
 
 sgv = Vocabulary(cache=True)

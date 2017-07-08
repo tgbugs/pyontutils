@@ -3,8 +3,8 @@
 import os
 from glob import glob
 from rdflib.namespace import SKOS
-from parcellation import OntMeta, TODAY
-from utils import makeGraph, makePrefixes
+from parcellation import OntMeta
+from utils import TODAY, makeGraph, makePrefixes
 
 PREFIXES = makePrefixes('SCR', 'MBA', 'NIFMOL', 'NIFNEURON', 'NIFCELL', 'NIFGA', 'UBERON', 'PR', 'NIFNEURMOR', 'skos', 'owl')
 
