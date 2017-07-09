@@ -177,7 +177,6 @@ def chebi_make():
               'CHEBI:36809':'tricyclic antidepressant',
              }
 
-    madness = new_graph.expand('oboInOwl:hasRelatedSynonym'), rdflib.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#string'))
     for id_ in sorted(set(ids_raw) | set((ug.g.namespace_manager.qname(_) for _ in mids))):
         eid = ug.expand(id_)
         trips = list(g.triples((eid, None, None)))
@@ -200,9 +199,12 @@ def chebi_make():
                     raise BaseException('wtf error', id_)
         else:
             for trip in trips:
-                if trip[1:] == madness:  # https://github.com/ebi-chebi/ChEBI/issues/3294
-                    continue
                 new_graph.add_recursive(trip, g)
+
+    # https://github.com/ebi-chebi/ChEBI/issues/3294
+    madness = new_graph.expand('oboInOwl:hasRelatedSynonym'), rdflib.Literal('0', datatype=rdflib.namespace.XSD.string)
+    for a in new_graph.g.subjects(*madness):
+        new_graph.g.remove((a,) + madness)
 
     new_graph.write()
     chebi_dead.write()
