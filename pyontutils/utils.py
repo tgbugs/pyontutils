@@ -210,6 +210,13 @@ class makeGraph:
 
         [self.add_node(id_, self.SYNONYM, s) for s in synonyms]
 
+    def del_class(self, id_):
+        id_ = self.check_thing(id_)
+        for p, o in self.g.predicate_objects(id_):
+            self.g.remove((id_, p, o))
+            if type(o) == rdflib.BNode():
+                self.del_class(o)
+
     def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False):
         self.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if inverse:
@@ -265,8 +272,7 @@ class makeGraph:
         #  set first, and THEN transfer those, otherwise you will insert half replaced
         #  triples into a graph!
 
-        if not isinstance(find, rdflib.URIRef):
-            find = self.expand(find)
+        find = self.check_thing(find)
 
         for i in range(3):
             trip = [find if i == _ else None for _ in range(3)]
@@ -383,13 +389,16 @@ def createOntology(filename=    'temp-graph',
                    version=     TODAY,
                    path=        'ttl/generated/',
                    local_base=  os.path.expanduser('~/git/NIF-Ontology/'),
-                   remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/'):
+                   remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
+                   imports=     tuple()):
     writeloc = local_base + path
     ontid = remote_base + path + filename + '.ttl'
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
     graph.add_ont(ontid, name, shortname, comment, version)
+    for import_ in imports:
+        graph.add_node(ontid, rdflib.OWL.imports, import_)
     return graph
 
 def chunk_list(list_, size):
