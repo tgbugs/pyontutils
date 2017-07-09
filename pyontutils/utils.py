@@ -265,7 +265,9 @@ class makeGraph:
         #  set first, and THEN transfer those, otherwise you will insert half replaced
         #  triples into a graph!
 
-        find = self.expand(find)
+        if not isinstance(find, rdflib.URIRef):
+            find = self.expand(find)
+
         for i in range(3):
             trip = [find if i == _ else None for _ in range(3)]
             for s, p, o in self.g.triples(trip):
