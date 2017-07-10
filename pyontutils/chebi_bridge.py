@@ -2,6 +2,7 @@
 
 from lxml import etree
 from utils import makePrefixes, makeGraph, createOntology
+from scigraph_client import Vocabulary
 import rdflib
 from IPython import embed
 
@@ -10,6 +11,8 @@ from IPython import embed
 # find edges not currently in move to chebi-bridge
 
 # run at commit?
+
+sgv = Vocabulary(cache=True)
 
 
 def chebi_imp():
@@ -117,6 +120,8 @@ def chebi_imp():
                          ' included in NIF-Chemical or NIF-Molecule that have'
                          ' not since been added to CHEBI upstream'),
                         path='ttl/bridge/',
+                        #imports=('https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/ttl/generated/chebislim.ttl',
+                                 #'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/ttl/generated/chebi-dead.ttl'))
                         imports=('http://ontology.neuinfo.org/NIF/ttl/generated/chebislim.ttl',
                                  'http://ontology.neuinfo.org/NIF/ttl/generated/chebi-dead.ttl'))
 
@@ -138,6 +143,13 @@ def chebi_imp():
             elif hasImplicitSuperclass(super_, o):
                 return True
 
+    # curation decisions after review (see outtc for full list)
+    cb.del_trip('CHEBI:6887', 'rdfs:subClassOf', 'CHEBI:23367')  # defer to the chebi choice of chemical substance over molecular entity since it is classified as a racemate which doesn't quite match the mol ent def
+    'CHEBI:18248'  # edges currently attached to this wrt Iron (2+) should be on 'CHEBI:29033' (!)
+
+
+
+    # review hold over subClassOf statements
     intc = []
     outtc = []
     for s, o in cb.g.subject_objects(rdflib.RDFS.subClassOf):
@@ -149,6 +161,22 @@ def chebi_imp():
             intc.append((s, rdflib.RDFS.subClassOf, o))
         else:
             outtc.append((s, rdflib.RDFS.subClassOf, o))
+
+    def qname(trips):
+        return tuple(tuple(cb.g.namespace_manager.qname(_) for _ in t) for t in trips)
+
+    for a, p, b in sorted(qname(outtc)):
+        if 'NIFMOL' in b:
+            continue  # not considering cases where NIFMOL/NIFCHEM ids are used, that can come later
+        s = sgv.findById(a)
+        o = sgv.findById(b)
+        print(s['labels'], s['curie'])
+        print('subClassOf')
+        print(o['labels'], o['curie'])
+        print((a, p, b))
+        print('---------------------')
+
+
 
     cb.write()  # re-add only the missing edges so that we can zap them from NIF-Molecule and NIF-Chemical (recurse is needed...)
 
@@ -170,9 +198,6 @@ def chebi_imp():
     mmc = getChebis((((nodt(molg) - nodt(cb.g)) - nodt(cg)) - nodt(cd)) - nodt(intc))
     mmc = sorted(t for s, o in mmc for t in molg.triples((s, None, o)))
 
-    def qname(trips):
-        return tuple(tuple(cb.g.namespace_manager.qname(_) for _ in t) for t in trips)
-
     # remove chebi classes from nifchem and nifmol
     def remstuff(sources, targets):
         for source in sources:
@@ -181,6 +206,8 @@ def chebi_imp():
                     target.del_class(id_)
 
     remstuff((cg, cd), (chemgg, molgg))
+
+
     chemgg.write()
     molgg.write()
 
