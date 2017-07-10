@@ -126,6 +126,7 @@ class makeGraph:
             self.g = rdflib.Graph()  # default args issue
 
         [self.g.namespace_manager.bind(p, ns) for p, ns in self.namespaces.items()]
+        self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in self.g.namespaces()})  # catchall for namespaces in self.g
 
     def add_known_namespace(self, prefix):
         self.add_namespace(prefix, PREFIXES[prefix])
@@ -240,6 +241,9 @@ class makeGraph:
         except (TypeError, AttributeError) as e:
             value = rdflib.Literal(value)  # trust autoconv
         self.g.add( (target, edge, value) )
+
+    def del_trip(self, s, p, o):
+        self.g.remove(tuple(self.check_thing(_) for _ in (s, p, o)))
 
     def add_hierarchy(self, parent, edge, child):
         """ Helper function to simplify the addition of part_of style
@@ -389,7 +393,8 @@ def createOntology(filename=    'temp-graph',
                    version=     TODAY,
                    path=        'ttl/generated/',
                    local_base=  os.path.expanduser('~/git/NIF-Ontology/'),
-                   remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
+                   #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
+                   remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
     writeloc = local_base + path
     ontid = remote_base + path + filename + '.ttl'
