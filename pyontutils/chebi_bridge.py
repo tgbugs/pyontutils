@@ -145,7 +145,10 @@ def chebi_imp():
 
     # curation decisions after review (see outtc for full list)
     cb.del_trip('CHEBI:6887', 'rdfs:subClassOf', 'CHEBI:23367')  # defer to the chebi choice of chemical substance over molecular entity since it is classified as a racemate which doesn't quite match the mol ent def
+    # there are a series of atom/ion confusions that shall be dealt with
     'CHEBI:18248'  # edges currently attached to this wrt Iron (2+) should be on 'CHEBI:29033' (!)
+
+    cb.del_trip('CHEBI:26519', 'rdfs:subClassOf', 'CHEBI:24870')  # some ions may also be free radicals, but all free radicals are not ions!
 
 
 
