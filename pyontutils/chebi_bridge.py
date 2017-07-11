@@ -37,28 +37,46 @@ def chebi_imp():
             a.append(ll)
         return a
 
+    def fixIons(g):
+        # there are a series of atom/ion confusions that shall be dealt with, solution is to add 'iron' as a synonym to the charged form since that is what the biologists are usually referring to...
+        ng = makeGraph('', graph=g, prefixes=makePrefixes('CHEBI'))
+        # atom           ion
+        None, 'CHEBI:29108'  # calcium is ok
+        ng.replace_uriref('CHEBI:30145', 'CHEBI:49713')  # lithium
+        ng.replace_uriref('CHEBI:18248', 'CHEBI:29033')  # iron
+        ng.replace_uriref('CHEBI:26216', 'CHEBI:29103')  # potassium
+        ng.replace_uriref('CHEBI:26708', 'CHEBI:29101')  # sodium
+        None, 'CHEBI:29105'  # zinc is ok
+
+
     g = rdflib.Graph()
     cg = rdflib.Graph()
     cd = rdflib.Graph()
     chemg = rdflib.Graph()
     molg = rdflib.Graph()
 
-    g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebislim.ttl', format='turtle')
+    #g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebislim.ttl', format='turtle')
     cg.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebislim.ttl', format='turtle')
+    list(g.add(t) for t in cg)
     a1 = check_chebis(g)
 
-    g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebi-dead.ttl', format='turtle')
+    #g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebi-dead.ttl', format='turtle')
     cd.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebi-dead.ttl', format='turtle')
+    list(g.add(t) for t in cd)
     a2 = check_chebis(g)
 
-    g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Chemical.ttl', format='turtle')
+    #g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Chemical.ttl', format='turtle')
     chemg.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Chemical.ttl', format='turtle')
     chemgg = makeGraph('NIF-Chemical', graph=chemg)
+    fixIons(chemg)
+    list(g.add(t) for t in chemg)
     a3 = check_chebis(g)
 
-    g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Molecule.ttl', format='turtle')
+    #g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Molecule.ttl', format='turtle')
     molg.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Molecule.ttl', format='turtle')
     molgg = makeGraph('NIF-Molecule', graph=molg)
+    fixIons(molg)
+    list(g.add(t) for t in molg)
     a4 = check_chebis(g)
 
     replacedBy = ug.expand('replacedBy:')
@@ -67,7 +85,7 @@ def chebi_imp():
         ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl'))
         for f, r in deads.items():
             ng.replace_uriref(f, r)
-            ng.add_node(r, 'oboInOwl:hasAlternateId', rdflib.Literal(f, datatype=rdflib.namespace.XSD.string))
+            ng.add_node(r, 'oboInOwl:hasAlternateId', rdflib.Literal(f, datatype=rdflib.XSD.string))
             g.remove((r, replacedBy, r))  # in case the replaced by was already in
     
     switch_dead(g)
@@ -76,17 +94,29 @@ def chebi_imp():
     switch_dead(molg)
 
     def fixHasAltId(g):
-        ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl', 'NIFCHEM'))
+        ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl', 'NIFCHEM', 'BIRNANN'))
         ng.replace_uriref('NIFCHEM:hasAlternativeId', 'oboInOwl:hasAlternativeId')
+        ng.replace_uriref('BIRNANN:ChEBIid', 'oboInOwl:id')
 
     list(map(fixHasAltId, (g, cg, chemg)))
 
     def fixAltIdIsURIRef(g):
         hai = ug.expand('oboInOwl:hasAlternativeId')
-        for s, o in g.subject_objects(hai):
+        i = ug.expand('oboInOwl:id')
+        makeGraph('', graph=g, prefixes=makePrefixes('CHEBI'))  # amazlingly sometimes this is missing...
+
+        def inner(s, p, o):
             if type(o) == rdflib.URIRef:
-                g.add((s, hai, rdflib.Literal(g.namespace_manager.qname(o), datatype=rdflib.namespace.XSD.string)))
-                g.remove((s, hai, o))
+                qn = g.namespace_manager.qname(o)
+                g.add((s, p, rdflib.Literal(qn, datatype=rdflib.XSD.string)))
+                if 'ns' in qn:
+                    print('WARNING UNKNOWN NAMESPACE BEING SHORTENED', str(o), qn)
+                g.remove((s, p, o))
+
+        for s, o in g.subject_objects(hai):
+            inner(s, hai, o)
+        for s, o in g.subject_objects(i):
+            inner(s, i, o)
 
     list(map(fixAltIdIsURIRef, (g, cg, chemg)))
 
@@ -144,13 +174,27 @@ def chebi_imp():
                 return True
 
     # curation decisions after review (see outtc for full list)
-    cb.del_trip('CHEBI:6887', 'rdfs:subClassOf', 'CHEBI:23367')  # defer to the chebi choice of chemical substance over molecular entity since it is classified as a racemate which doesn't quite match the mol ent def
-    # there are a series of atom/ion confusions that shall be dealt with
-    'CHEBI:18248'  # edges currently attached to this wrt Iron (2+) should be on 'CHEBI:29033' (!)
+    curatedOut = []
+    def curateOut(*t):
+        curatedOut.append(tuple(ug.expand(_) if type(_) is not rdflib.Literal else _ for _ in t))
+        cb.del_trip(*t)
 
-    cb.del_trip('CHEBI:26519', 'rdfs:subClassOf', 'CHEBI:24870')  # some ions may also be free radicals, but all free radicals are not ions!
+    curateOut('CHEBI:6887', 'rdfs:subClassOf', 'CHEBI:23367')  # defer to the chebi choice of chemical substance over molecular entity since it is classified as a racemate which doesn't quite match the mol ent def
+    curateOut('CHEBI:26519', 'rdfs:subClassOf', 'CHEBI:24870')  # some ions may also be free radicals, but all free radicals are not ions!
+    #natural product removal since natural product should probably be a role if anything...
+    curateOut('CHEBI:18059', 'rdfs:subClassOf', 'CHEBI:33243')
+    curateOut('CHEBI:24921', 'rdfs:subClassOf', 'CHEBI:33243')
+    curateOut('CHEBI:37332', 'rdfs:subClassOf', 'CHEBI:33243')
 
-
+    curateOut('CHEBI:50906', 'rdfs:label', rdflib.Literal('Chemical role', datatype=rdflib.XSD.string))  # chebi already has a chemical role...
+    curateOut('CHEBI:22586', 'rdfs:subClassOf', 'CHEBI:24432')  # antioxidant is already modelled as a chemical role instead of a biological role, the distinction is that the biological roles affect biological processes/property, not chemical processes/property
+    curateOut('CHEBI:22720', 'rdfs:subClassOf', 'CHEBI:27171')  # not all children are bicyclic
+    curateOut('CHEBI:23447', 'rdfs:subClassOf', 'CHEBI:17188')  # this one seems obviously flase... all cyclic nucleotides are not nucleoside 5'-monophosphate...
+    curateOut('CHEBI:24922', 'rdfs:subClassOf', 'CHEBI:27171')  # not all children are bicyclic, some may be poly, therefore removing
+    curateOut('CHEBI:48706', 'rdfs:subClassOf', 'CHEBI:33232')  # removing since antagonist is more incidental and pharmacological role is more appropriate (as chebi has it)
+    curateOut('CHEBI:51064', 'rdfs:subClassOf', 'CHEBI:35338')  # removing since chebi models this with has part
+    curateOut('CHEBI:8247', 'rdfs:subClassOf', 'CHEBI:22720')  # the structure is 'fused to' a benzo, but it is not a benzo, chebi has the correct
+    #curateOut('CHEBI:9463', 'rdfs:subClassOf', 'CHEBI:50786')  # not sure what to make of this wikipedia says one thing, but chebi says another, very strange... not an anabolic agent?!??! wat no idea
 
     # review hold over subClassOf statements
     intc = []
@@ -173,10 +217,14 @@ def chebi_imp():
             continue  # not considering cases where NIFMOL/NIFCHEM ids are used, that can come later
         s = sgv.findById(a)
         o = sgv.findById(b)
-        print(s['labels'], s['curie'])
-        print('subClassOf')
-        print(o['labels'], o['curie'])
-        print((a, p, b))
+        if s is None or o is None:
+            print(a, '=>', s)
+            print(b, '=>', o)
+        else:
+            print(s['labels'], s['curie'])
+            print('subClassOf')
+            print(o['labels'], o['curie'])
+            print((a, p, b))
         print('---------------------')
 
 
@@ -196,9 +244,9 @@ def chebi_imp():
     def nodt(graph):
         return set((s, str(o) if type(o) is rdflib.Literal else o) for s, p, o in graph)
 
-    cmc = getChebis((((nodt(chemg) - nodt(cb.g)) - nodt(cg)) - nodt(cd)) - nodt(intc))
+    cmc = getChebis(((((nodt(chemg) - nodt(cb.g)) - nodt(cg)) - nodt(cd)) - nodt(intc)) - nodt(curatedOut))
     cmc = sorted(t for s, o in cmc for t in chemg.triples((s, None, o)))
-    mmc = getChebis((((nodt(molg) - nodt(cb.g)) - nodt(cg)) - nodt(cd)) - nodt(intc))
+    mmc = getChebis(((((nodt(molg) - nodt(cb.g)) - nodt(cg)) - nodt(cd)) - nodt(intc)) - nodt(curatedOut))
     mmc = sorted(t for s, o in mmc for t in molg.triples((s, None, o)))
 
     # remove chebi classes from nifchem and nifmol
