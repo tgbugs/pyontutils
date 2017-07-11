@@ -5,9 +5,12 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix ns1: <http://myduplicateprefix.org/> .
 #@prefix ns2: <http://myduplicateprefix.org/> .  # test for choosing a namespace consistently (I though I had fixed this?!) and warning about duplicate prefixes
+@prefix obo: <http://purl.obolibrary.org/obo/> .
+@prefix oboInOwl: <http://www.geneontology.org/formats/oboInOwl#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix blx: <http://uri.binterlex.org/base/> .
 @prefix BLX: <http://uri.binterlex.org/base/blx_> .  # test for longest prefix wins
+@prefix doid: <http://purl.obolibrary.org/obo/doid#> .
 @prefix other: <http://FIXME.org/other_> .
 @prefix a: <http://a.org/prefix_> .
 @prefix b: <http://b.org/prefix_> .
@@ -175,3 +178,58 @@ skos:related a owl:ObjectProperty ;
 # duplicate prefixes
 ns1:1234 a owl:Class .
 ns1:12345 a owl:Class .
+
+# axiom ordering
+
+[ a owl:Axiom ;
+    BLX:hasDbXref "A"^^xsd:string,
+        "D"^^xsd:string ;
+    owl:annotatedProperty BLX:00 ;
+    owl:annotatedSource BLX:10 ;
+    owl:annotatedTarget "A"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    BLX:hasDbXref "B"^^xsd:string,
+        "D"^^xsd:string ;
+    owl:annotatedProperty BLX:01 ;
+    owl:annotatedSource BLX:11 ;
+    owl:annotatedTarget "B"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    BLX:hasDbXref "C"^^xsd:string,
+        "D"^^xsd:string ;
+    owl:annotatedProperty BLX:02 ;
+    owl:annotatedSource BLX:12 ;
+    owl:annotatedTarget "C"^^xsd:string ] .
+
+# more axiom ordering
+
+[ a owl:Axiom ;
+    oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedSource obo:DOID_65 ;
+    owl:annotatedTarget "connective tissue disorder"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedSource obo:DOID_1595 ;
+    owl:annotatedTarget "clinical depression"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedSource obo:DOID_11394 ;
+    owl:annotatedTarget "ARDS"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedSource obo:DOID_3820 ;
+    owl:annotatedTarget "chlamydiaceae infection"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedSource obo:DOID_3669 ;
+    owl:annotatedTarget "Charcot's syndrome"^^xsd:string ] .
