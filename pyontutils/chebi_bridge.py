@@ -10,7 +10,7 @@ from IPython import embed
 # replace identiferis that are in chebi-dead with their new id
 # find edges not currently in move to chebi-bridge
 
-# run at commit?
+# run at commit 5f02b1c5d6bd90401c386ea23f08b29cbf8f6262
 
 sgv = Vocabulary(cache=True)
 
