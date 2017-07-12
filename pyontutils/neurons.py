@@ -891,6 +891,22 @@ class LocalNameManager:
         It is possible to subclass to add your custom names to a core.
         Using addLN or addLNT is advised since it will make sure the name
         set remains injective. """
+
+    ORDER = (
+    'ilx:hasInstanceInSpecies',
+    'ilx:hasTaxonRank',
+    'ilx:hasSomaLocatedIn',  # hasSomaLocation?
+    'ilx:hasLayerLocationPhenotype',  # TODO soma naming...
+    'ilx:hasDendriteMorphologicalPhenotype',
+    'ilx:hasDendriteLocatedIn',
+    'ilx:hasAxonLocatedIn',
+    'ilx:hasMorphologicalPhenotype',
+    'ilx:hasElectrophysiologicalPhenotype',
+    'ilx:hasSpikingPhenotype',  # legacy support
+    'ilx:hasExpressionPhenotype',
+    'ilx:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+    )
+
     @classmethod
     def __enter__(self):
         #loadNames(self)
