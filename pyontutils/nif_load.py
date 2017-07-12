@@ -33,8 +33,22 @@ def repeat():
 for i in range(4):
     repeat()
 
+with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+    wat = yaml.load(f)
+vals = set(wat.values())
+
 mg = makeGraph('nifall', makePrefixes('NIFTTL', 'owl', 'skos'), graph=graph)
 j = mg.make_scigraph_json('owl:imports', direct=True)
-embed()
+#asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
+#asdf = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
+asdf = set(_ for t in graph.subject_predicates() for _ in t if type(_) == rdflib.URIRef)
+prefs = set(_.rsplit('#', 1)[0] + '#' if '#' in _
+                   else (_.rsplit('_',1)[0] + '_' if '_' in _
+                         else _.rsplit('/',1)[0] + '/') for _ in asdf)
+nots = set(_ for _ in prefs if _ not in vals)
+sos = set(prefs) - set(nots)
+
+print(len(prefs))
 t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'outgoing', 30), json=j)
+embed()
 print(t)
