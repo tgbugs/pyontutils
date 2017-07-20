@@ -309,9 +309,11 @@ class makeGraph:
         json_ = {'nodes':[], 'edges':[]}
         restriction = self.expand(edge)
         if direct:
-            trips = list(self.g.triples((None, restriction, None)))
+            #trips = list(self.g.triples((None, restriction, None)))
+            pred = restriction
             done = []
-            for obj, pred, sub in trips:
+            #for obj, sub in self.g.subject_objects(pred):  # yes these are supposed to be flipped?
+            for sub, obj in self.g.subject_objects(pred):  # or maybe they aren't?? which would explain some of my confusion
                 try:
                     olab = list(self.g.objects(obj, label_edge))[0].toPython()
                 except IndexError:  # no label
@@ -339,9 +341,9 @@ class makeGraph:
                     done.append(obj)
             return json_
 
-        linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
+        #linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
         done = []
-        for linker in linkers:
+        for linker in self.g.subjects(rdflib.OWL.onProperty, restriction):
             try:
                 obj = list(self.g.objects(linker, rdflib.OWL.someValuesFrom))[0]
             except IndexError:
