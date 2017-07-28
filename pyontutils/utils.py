@@ -323,7 +323,10 @@ class makeGraph:
                 except IndexError:  # no label
                     slab = sub.toPython()
 
-                obj = self.g.namespace_manager.qname(obj)
+                try:
+                    obj = self.g.namespace_manager.qname(obj)
+                except ValueError:  # FIXME splitting failed
+                    pass
                 try:
                     sub = self.g.namespace_manager.qname(sub)
                 except ValueError:
