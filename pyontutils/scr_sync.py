@@ -40,8 +40,8 @@ _field_mapping = {
 _column_to_predicate = {
     'abbrev':'OBOANN:abbrev',
     'alt_id':'oboInOwl:hasDbXref',
-    #'definition':'definition:',
-    'definition':'skos:definition',
+    'definition':'definition:',
+    #'definition':'skos:definition',
     'id':'rdf:type',
     'label':'rdfs:label',
     'old_id':'oboInOwl:hasDbXref',  # old vs alt id?
