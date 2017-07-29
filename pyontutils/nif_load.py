@@ -6,10 +6,13 @@ import json
 import yaml
 from glob import glob
 import rdflib
-from pyontutils.utils import makeGraph, makePrefixes  # TODO make prefixes needs an all...
+from pyontutils.utils import makeGraph, makePrefixes, memoryCheck  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
+
+if os.getcwd() == os.path.expanduser('~/git/NIF-Ontology/ttl'):
+    memoryCheck(2665488384)
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
@@ -39,7 +42,7 @@ with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'
     wat = yaml.load(f)
 vals = set(wat.values())
 
-mg = makeGraph('nifall', makePrefixes('NIFTTL', 'owl', 'skos', 'oboInOwl'), graph=graph)
+mg = makeGraph('nifall', makePrefixes('owl', 'skos', 'oboInOwl'), graph=graph)
 mg.del_namespace('')
 
 old_namespaces = list(graph.namespaces())
@@ -79,16 +82,16 @@ def for_burak():
                         prefix, namespace, name = graph.namespace_manager.compute_qname(o, False)
                         o = ':'.join((prefix, name))
                     except (KeyError, ValueError) as e:
-                        o = str(o)
+                        o = o.toPython()
                     parents.append(o)
             yield [curie, labels, synonyms, parents]
 
 #globals()['for_burak'] = for_burak
-#embed()
 records = {c:[l, s, p] for c, l, s, p in for_burak() if l or s}
 with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
           json.dump(records, f, sort_keys=True, indent=2)
 
+mg.add_known_namespace('NIFTTL')
 j = mg.make_scigraph_json('owl:imports', direct=True)
 #asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
 #asdf = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
@@ -100,6 +103,6 @@ nots = set(_ for _ in prefs if _ not in vals)
 sos = set(prefs) - set(nots)
 
 print(len(prefs))
-t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'outgoing', 30), json=j)
+t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j)
 embed()
 print(t)
