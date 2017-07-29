@@ -6,7 +6,7 @@ import json
 import yaml
 from glob import glob
 import rdflib
-from pyontutils.utils import makeGraph, makePrefixes, memoryCheck  # TODO make prefixes needs an all...
+from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
@@ -24,7 +24,7 @@ for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl'):
     done.append(os.path.basename(f))
     graph.parse(f, format='turtle')
 
-def repeat():
+def repeat(dobig=False):  # we don't really know when to stop, so just adjust
     for s, o in graph.subject_objects(rdflib.OWL.imports):
         if os.path.basename(o) not in done and o not in done:
         #if (o, rdflib.RDF.type, rdflib.OWL.Ontology) not in graph:
@@ -32,8 +32,8 @@ def repeat():
             done.append(o)
             ext = os.path.splitext(o)[1]
             fmt = 'turtle' if ext == '.ttl' else 'xml'
-            #if 'go.owl' not in o and 'uberon.owl' not in o:  # NOPE
-            graph.parse(o, format=fmt)
+            if noneMembers(o, 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl') or dobig:
+                graph.parse(o, format=fmt)
 
 for i in range(4):
     repeat()
@@ -52,42 +52,32 @@ old_namespaces = list(graph.namespaces())
 #graph.namespace_manager.reset()
 #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
 
-def for_burak():
-    syn_predicates = (mg.expand('OBOANN:synonym'),
-                      mg.expand('OBOANN:acronym'),
-                      mg.expand('OBOANN:abbrev'),
-                      mg.expand('oboInOwl:hasExactSynonym'),
-                      mg.expand('oboInOwl:hasNarrowSynonym'),
-                      mg.expand('oboInOwl:hasBroadSynonym'),
-                      mg.expand('oboInOwl:hasRelatedSynonym'),
-                      mg.expand('skos:prefLabel'),
+def for_burak(ng):
+    syn_predicates = (ng.expand('OBOANN:synonym'),
+                      ng.expand('OBOANN:acronym'),
+                      ng.expand('OBOANN:abbrev'),
+                      ng.expand('oboInOwl:hasExactSynonym'),
+                      ng.expand('oboInOwl:hasNarrowSynonym'),
+                      ng.expand('oboInOwl:hasBroadSynonym'),
+                      ng.expand('oboInOwl:hasRelatedSynonym'),
+                      ng.expand('skos:prefLabel'),
                       rdflib.URIRef('http://purl.obolibrary.org/obo/go#systematic_synonym'),
                      )
     lab_predicates = rdflib.RDFS.label,
+    graph = ng.g
     for s in graph.subjects(rdflib.RDF.type, rdflib.OWL.Class):
         if not isinstance(s, rdflib.BNode):
-            try:
-                prefix, namespace, name = graph.namespace_manager.compute_qname(s, False)
-                curie = ':'.join((prefix, name))
-            except (KeyError, ValueError) as e:
-                curie = str(s)
-            labels = list(o for p in lab_predicates for o in graph.objects(s, p)
-                          if not isinstance(o, rdflib.BNode))
-            synonyms = list(o for p in syn_predicates for o in graph.objects(s, p)
-                            if not isinstance(o, rdflib.BNode))
-            parents = []
-            for o in graph.objects(s, rdflib.RDFS.subClassOf):
-                if not isinstance(o, rdflib.BNode):
-                    try:
-                        prefix, namespace, name = graph.namespace_manager.compute_qname(o, False)
-                        o = ':'.join((prefix, name))
-                    except (KeyError, ValueError) as e:
-                        o = o.toPython()
-                    parents.append(o)
+            curie = ng.qname(s)
+            labels = [o for p in lab_predicates for o in graph.objects(s, p)
+                      if not isinstance(o, rdflib.BNode)]
+            synonyms = [o for p in syn_predicates for o in graph.objects(s, p)
+                        if not isinstance(o, rdflib.BNode)]
+            parents = [ng.qname(o) for o in graph.objects(s, rdflib.RDFS.subClassOf)
+                       if not isinstance(o, rdflib.BNode)]
             yield [curie, labels, synonyms, parents]
 
 #globals()['for_burak'] = for_burak
-records = {c:[l, s, p] for c, l, s, p in for_burak() if l or s}
+records = {c:[l, s, p] for c, l, s, p in for_burak(mg) if l or s}
 with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
           json.dump(records, f, sort_keys=True, indent=2)
 

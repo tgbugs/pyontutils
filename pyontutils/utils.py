@@ -34,6 +34,15 @@ def memoryCheck(vms_max_kb):
     if vm.free < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
 
+def noneMembers(container, *args):
+    for a in args:
+        if a in container:
+            return False
+    return True
+
+def allMembers(container, *args):
+    return all(a in container for a in args)
+
 def coln(n, iterable):
     """ Return an iterator on the nth column. """
     for rec in iterable:
@@ -336,7 +345,7 @@ class makeGraph:
             qname = ':'.join((prefix, name))
             return qname
         except (KeyError, ValueError) as e :
-            return uri
+            return uri.toPython() if isinstance(uri, rdflib.URIRef) else uri
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
