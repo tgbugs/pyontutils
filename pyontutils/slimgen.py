@@ -12,10 +12,12 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makePrefixes, makeGraph, createOntology, chunk_list, dictParse
+from utils import makePrefixes, makeGraph, createOntology, chunk_list, dictParse, memoryCheck
 from ilx_utils import ILXREPLACE
 from IPython import embed
 from lxml import etree
+
+memoryCheck(7300000000)
 
 #ncbi_map = {
     #'name':,
