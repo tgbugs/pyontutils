@@ -10,12 +10,29 @@ import inspect
 from datetime import date
 from functools import wraps
 from multiprocessing import Manager
+import psutil
 import rdflib
 from rdflib.extras import infixowl
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
 TODAY = date.isoformat(date.today())
+
+def getCurrentVMSKb():
+    p = psutil.Process(os.getpid())
+    return p.memory_info().vms
+
+def memoryCheck(vms_max_kb):
+    """ Lookup vms_max using getCurrentVMSKb """
+    safety_factor = 1.2
+    vms_max = vms_max_kb
+    vms_gigs = vms_max / 1024 ** 2
+    buffer = safety_factor * vms_max
+    buffer_gigs = buffer / 1024 ** 2
+    vm = psutil.virtual_memory()
+    free_gigs = vm.free / 1024 ** 2
+    if vm.free < buffer:
+        raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
 
 def refile(thisFile, path):
     return os.path.join(os.path.dirname(thisFile), path)
