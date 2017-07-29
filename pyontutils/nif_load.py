@@ -36,7 +36,7 @@ def repeat(dobig=False):  # we don't really know when to stop, so just adjust
                 graph.parse(o, format=fmt)
 
 for i in range(4):
-    repeat()
+    repeat(True)
 
 with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'), 'rt') as f:
     wat = yaml.load(f)
@@ -46,7 +46,9 @@ mg = makeGraph('nifall', makePrefixes('owl', 'skos', 'oboInOwl'), graph=graph)
 mg.del_namespace('')
 
 old_namespaces = list(graph.namespaces())
-# may have to copy to a new graph instead
+ng_ = makeGraph('', prefixes=makePrefixes('oboInOwl', 'skos'), graph=rdflib.Graph())
+[ng_.g.add(t) for t in mg.g]
+[ng_.add_namespace(n, p) for n, p in wat.items() if n != '']
 #[mg.add_namespace(n, p) for n, p in old_namespaces if n.startswith('ns') or n.startswith('default')]
 #[mg.del_namespace(n) for n in list(mg.namespaces)]
 #graph.namespace_manager.reset()
@@ -77,7 +79,7 @@ def for_burak(ng):
             yield [curie, labels, synonyms, parents]
 
 #globals()['for_burak'] = for_burak
-records = {c:[l, s, p] for c, l, s, p in for_burak(mg) if l or s}
+records = {c:[l, s, p] for c, l, s, p in for_burak(ng_) if l or s}
 with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
           json.dump(records, f, sort_keys=True, indent=2)
 
