@@ -78,6 +78,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OBOANN.synonym,
                       OBOANN.abbrev,
                       DC.title,
+                      URIRef('http://purl.obolibrary.org/obo/IAO_0000115'),  # definition:
                       SKOS.definition,
                       SKOS.related,
                       DC.description,
@@ -372,5 +373,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.5\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.6\n").encode('ascii'))
 
