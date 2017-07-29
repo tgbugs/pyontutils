@@ -125,15 +125,17 @@ class makeGraph:
         else:
             self.g = rdflib.Graph()  # default args issue
 
-        [self.g.namespace_manager.bind(p, ns) for p, ns in self.namespaces.items()]
-        self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in self.g.namespaces()})  # catchall for namespaces in self.g
+        for p, ns in self.namespaces.items():
+            self.add_namespace(p, ns)
+        self.namespaces.update({p:rdflib.Namespace(ns)
+                                for p, ns in self.g.namespaces()})  # catchall for namespaces in self.g
 
     def add_known_namespace(self, prefix):
         self.add_namespace(prefix, PREFIXES[prefix])
 
     def add_namespace(self, prefix, namespace):
         self.namespaces[prefix] = rdflib.Namespace(namespace)
-        self.g.namespace_manager.bind(prefix, namespace)
+        self.g.bind(prefix, namespace)
 
     def del_namespace(self, prefix):
         self.namespaces.pop(prefix)
@@ -294,12 +296,21 @@ class makeGraph:
 
     def get_equiv_inter(self, curie):
         """ get equivelant classes where curie is in an intersection """
-        start = self.g.namespace_manager.qname(self.expand(curie))  # in case something is misaligned
+        start = self.qname(self.expand(curie))  # in case something is misaligned
         qstring = """
         SELECT DISTINCT ?match WHERE {
         ?match owl:equivalentClass/owl:intersectionOf/rdf:rest*/rdf:first %s .
         }""" % start
         return [_ for (_,) in self.g.query(qstring)]  # unpack...
+
+    def qname(self, uri, generate=False):
+        """ Given a uri return the qname if it exists, otherwise return the uri. """
+        try:
+            prefix, namespace, name = self.g.namespace_manager.compute_qname(uri, generate=generate)
+            qname = ':'.join((prefix, name))
+            return qname
+        except ValueError:
+            return url
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
@@ -324,11 +335,11 @@ class makeGraph:
                     slab = sub.toPython()
 
                 try:
-                    obj = self.g.namespace_manager.qname(obj)
+                    obj = self.qname(obj)
                 except ValueError:  # FIXME splitting failed
                     pass
                 try:
-                    sub = self.g.namespace_manager.qname(sub)
+                    sub = self.qname(sub)
                 except ValueError:
                     pass
                 json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
@@ -358,7 +369,7 @@ class makeGraph:
             except IndexError:  # no label
                 olab = obj.toPython()
             odep = True if list(self.g.objects(obj, rdflib.OWL.deprecated)) else False
-            obj = self.g.namespace_manager.qname(obj)
+            obj = self.qname(obj)
             sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
             try:
                 slab = list(self.g.objects(sub, label_edge))[0].toPython()
@@ -366,7 +377,7 @@ class makeGraph:
                 slab = sub.toPython()
             sdep = True if list(self.g.objects(sub, rdflib.OWL.deprecated)) else False
             try:
-                sub = self.g.namespace_manager.qname(sub)
+                sub = self.qname(sub)
             except:  # rdflib has iffy error handling here so need to catch unsplitables
                 print('Could not split the following uri:', sub)
 
