@@ -45,6 +45,7 @@ try:
             'ipython',
             'lxml',
             'numpy',
+            'psutil',
             'psycopg2',
             'pyyaml',
             'rdflib',
