@@ -18,7 +18,7 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 
 TODAY = date.isoformat(date.today())
 
-def getCurrentVMSKb():
+def currentVMSKb():
     p = psutil.Process(os.getpid())
     return p.memory_info().vms
 
@@ -33,6 +33,15 @@ def memoryCheck(vms_max_kb):
     free_gigs = vm.free / 1024 ** 2
     if vm.free < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
+
+def coln(n, iterable):
+    """ Return an iterator on the nth column. """
+    for rec in iterable:
+        yield rec[n]
+
+def setPS1(script__file__):
+    text = 'Running ' + os.path.basename(script__file__)
+    os.sys.stdout.write('\x1b]2;{}\x07'.format(text))
 
 def refile(thisFile, path):
     return os.path.join(os.path.dirname(thisFile), path)
@@ -326,8 +335,8 @@ class makeGraph:
             prefix, namespace, name = self.g.namespace_manager.compute_qname(uri, generate=generate)
             qname = ':'.join((prefix, name))
             return qname
-        except ValueError:
-            return url
+        except (KeyError, ValueError) as e :
+            return uri
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
@@ -351,14 +360,8 @@ class makeGraph:
                 except IndexError:  # no label
                     slab = sub.toPython()
 
-                try:
-                    obj = self.qname(obj)
-                except ValueError:  # FIXME splitting failed
-                    pass
-                try:
-                    sub = self.qname(sub)
-                except ValueError:
-                    pass
+                obj = self.qname(obj)
+                sub = self.qname(sub)
                 json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
                 if sub not in done:
                     node = {'lbl':slab,'id':sub, 'meta':{}}
