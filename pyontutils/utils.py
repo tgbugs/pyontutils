@@ -40,6 +40,9 @@ def noneMembers(container, *args):
             return False
     return True
 
+def anyMembers(container, *args):
+    return not noneMembers(container, *args)
+
 def allMembers(container, *args):
     return all(a in container for a in args)
 
