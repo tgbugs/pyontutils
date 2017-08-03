@@ -126,7 +126,7 @@ caudal interstitial nucleus of the medial longitudinal fasciculus CI
 caudal linear nucleus of the raphe CLi
 caudal periolivary nucleus CPO
 caudate putamen (striatum) CPu
-caudomedial entothinal cortex CEnt
+caudomedial entorhinal cortex CEnt
 cell bridges of the ventral striatum CB
 central amygdaloid nucleus Ce
 central amygdaloid nucleus, capsular part CeC
@@ -384,7 +384,7 @@ latera reticular nucleus LRt
 latera reticular nucleus, parvicellular part LRtPC
 latera reticular nucleus, subtrigeminal part LRtS5
 latera septal nucleus LS
-latera septal nucleus, dorsalpart LSD
+latera septal nucleus, dorsal part LSD
 latera septal nucleus,ventral part LSV
 latera spinal nucleus LSp
 latera stripe of the striatum LSS
@@ -425,7 +425,7 @@ medial amygdaloid nucleus, anterior part MeA
 medial amygdaloid nucleus, anteroventral part MeAV
 medial amygdaloid nucleus, posterodorsal part MePD
 medial amygdaloid nucleus, posteroventral part MePV
-medial cerebellar nucleus, caudomedialpart MedCM
+medial cerebellar nucleus, caudomedial part MedCM
 medial cerebellar nucleus, dorsolateral protuberance MedDL
 medial cerebellar nucleus, lateral part MedL
 medial corticohypothalamic tract mch
