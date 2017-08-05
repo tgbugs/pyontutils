@@ -384,7 +384,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
         return dict_
 
     htmlNodes = {k:"<a target='_blank' href='{}'>{}</a>".format(k, v) for k, v in nodes.items()}
-    hpnames = {nodes[k]:[htmlNodes[s] for s in v] for k,v in parents.items()}
+    hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k,v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames)
     def htmlTree(tree):
         dict_ = hTreeNode()
