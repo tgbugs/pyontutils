@@ -149,7 +149,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
     #existing = {}  # FIXME CAREFUL WITH THIS
     #current_parent = None
 
-    def print_tree(self, level = 0):
+    def print_tree(self, level = 0, html=False):
         output = ''
 
         if level == 0:
@@ -158,7 +158,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                 item = [k for k in self.keys()][0]
                 output += str(item)
                 self.__class__.current_parent = item
-                output += ''.join([v.print_tree(1) for v in self.values()])
+                output += ''.join([v.print_tree(1, html) for v in self.values()])
                 #self.__class__.prefix.pop()  # FIXME causes errors???
                 self.__class__.existing = {}  # clean up new mess
                 self.__class__.current_parent = None
@@ -190,31 +190,38 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     if cend == MID_STEM:
                         self.__class__.prefix[-1] = symboltype
                     self.__class__.current_parent = key
-                    value = __t.print_tree(level)
+                    value = __t.print_tree(level, html)
                     items.append((str(key), value))
                     self.__class__.prefix[-1] = cend
                 else:
                     items.append((str(key), ' *'))  # wait... how the hell...
                 return
 
+            first_occurance = True
             if key in self.parent_dict:  # XXX FIXME XXX
                 if len(self.parent_dict[key]) > 1:  # XXX FIXME XXX parents not avail in m cases!
                     #print('MORE THAN ONE PARENT')
+                    first_occurance = not key in self.existing
                     self.existing[key] = self.current_parent
                     key += ' *'  # mark that it will appear elsewhere
 
+            ds = ''
             if type(value) == type(self):
                 cend = self.__class__.prefix[-1]
                 if cend == MID_STEM:
                     self.__class__.prefix[-1] = symboltype
 
                 self.__class__.current_parent = key
-                v = value.print_tree(level + 1)  # recurse here XXX
+                v = value.print_tree(level + 1, html)  # recurse here XXX
+                if html and v and not first_occurance:
+                    ds = '<details><summary>'
+                    key += ' ... <br></summary>'
+                    v += '</details>'
                 self.__class__.prefix[-1] = cend
             else:
                 v = str(value)
 
-            items.append((str(key), v))
+            items.append((str(key), v, ds))
             
         # FIXME ideally want to sort by length of the transitive closure :/
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=tcsort))]
@@ -229,17 +236,17 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
         switch(BLANK, *items_list[-1])  # need to put blanks after BOT_STEM
 
-        output += '\n'.join(['{}{}{}'.format(''.join(self.prefix), k, v) for k, v in items[:-1]])
+        output += '\n'.join(['{3}{0}{1}{2}'.format(''.join(self.prefix), k, v, ds) for k, v, ds in items[:-1]])
         self.__class__.prefix[-1] = BOT_STEM
-        output += '\n' + '{}{}{}'.format(''.join(self.prefix), *items[-1])
+        output += '\n' + '{3}{0}{1}{2}'.format(''.join(self.prefix), *items[-1])
         
         if len(self.__class__.prefix) > 1:
             self.__class__.prefix.pop()
 
         return output
 
-    def __str__(self):
-        output = self.print_tree()
+    def __str__(self, html=False):
+        output = self.print_tree(html=html)
         # FIXME gotta do cleanup here for now :/
         self.__class__.prefix = []   
         self.__class__.existing = {}  # clean up new mess
@@ -269,7 +276,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         return output
 
     def __html__(self):
-        output = str(self)
+        output = self.__str__(html=True)
         lines = output.split('\n')
         new_lines = []
         for line in lines:
@@ -287,6 +294,8 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             new_lines.append(line)
         output = '\n'.join(new_lines)
         output = output.replace('\n', ' <br>\n')
+        output = output.replace('</summary> <br>', '</summary>')
+        output = output.replace('</details> <br>', '</details>')
         output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
                   '"http://www.w3.org/TR/html4/loose.dtd">\n'
                   '<html>\n'
@@ -297,6 +306,8 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                   '           font-size: 10pt; }\n'
                   '    a:link { color: black; }\n'
                   '    a:visited { color: grey; }\n'
+                  '    details summary::-webkit-details-marker { display: none; }\n'
+                  '    details > summary:first-of-type { list-style-type: none; }\n'
                   '    </style>\n'
                   '  </head>\n'
                   '  <body>\n'
