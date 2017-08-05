@@ -21,6 +21,11 @@ CYCLE = 'CYCLE DETECTED DERPS'
 DEP = 'http://www.w3.org/2002/07/owl#deprecated'
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
+                               'dupes', 'nodes', 'edgerep',
+                               'objects', 'parents',
+                               'names', 'pnames', 'hpnames',
+                               'json', 'html', 'text'])
 
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
@@ -355,7 +360,26 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     if direction == 'OUTGOING' or direction == 'BOTH':  # flip for the tree  # FIXME BOTH needs help!
         objects, parents = parents, objects
 
-    names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}
+    def pruneOutOfTree(n):
+        testk = len(n)
+        test = sum(len(v) for v in n.values())
+        while True:
+            print(test)
+            n = {k:[s for s in v if s in n or s == 'ROOT'] for k, v in n.items() if v}
+            ntestk = len(n)
+            ntest = sum(len(v) for v in n.values())
+            if ntest == test and ntestk == testk:
+                print('done')
+                return n
+            else:
+                test = ntest
+                testk = ntestk
+
+    parents[root] = ['ROOT']
+    parents = pruneOutOfTree(parents)
+    parents[root] = []
+
+    names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}  # children don't need filtering
     pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
 
     tree_name = root + relationshipType + direction + str(depth)
@@ -395,7 +419,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
         return dict_
 
     htmlNodes = {k:"<a target='_blank' href='{}'>{}</a>".format(k, v) for k, v in nodes.items()}
-    hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k,v in parents.items()}
+    hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames)
     def htmlTree(tree):
         dict_ = hTreeNode()
@@ -406,12 +430,17 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
     hierarchy, dupes = build_tree(root)
     try:
         named_hierarchy = rename(hierarchy)
-        html = htmlTree(hierarchy)
+        html_hierarchy = htmlTree(hierarchy)
     except KeyError as e:
         embed()
         raise e
 
-    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames, j, html)
+    extras = Extras(hierarchy, html_hierarchy,
+                    dupes, nodes, edgerep,
+                    objects, parents,
+                    names, pnames, hpnames, j,
+                    html_hierarchy.__html__(), str(named_hierarchy))
+    return named_hierarchy, extras
 
 def levels(tree, p, l = 0):
     if p == 0:
