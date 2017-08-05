@@ -11,8 +11,10 @@ from pyontutils.utils import TermColors as tc
 BLANK = '   '
 LEAF = '──'
 BRANCH = '│  '
-MID_STEM = '├' + LEAF
-BOT_STEM = '└' + LEAF
+MID_CON = '├'
+MID_STEM = MID_CON + LEAF
+BOT_CON = '└'
+BOT_STEM = BOT_CON + LEAF
 
 CYCLE = 'CYCLE DETECTED DERPS'
 
@@ -113,7 +115,7 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
     children_ord = reversed(sorted([(k, v) for k, v in children.items()], key=tcsort))  # make sure we hit deepest first
     
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
-        print(child_name)
+        #print(child_name)
         new_lleaves = dematerialize(child_name, children)
         if child_name == 'Fornix':  # debugging failing demat
             pass
@@ -121,9 +123,9 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
             
         if child_name in new_lleaves:  # if it is a leaf!
             if child_name in lleaves:  # if it has previously been identified as a leaf!
-                print('MATERIALIZATION DETECTED! LOWER PARENT:',
-                      lleaves[child_name],'ZAPPING!:', child_name,
-                      'OF PARENT:', parent_name)
+                #print('MATERIALIZATION DETECTED! LOWER PARENT:',
+                      #lleaves[child_name],'ZAPPING!:', child_name,
+                      #'OF PARENT:', parent_name)
                 children.pop(child_name)
                 #print('cn', child_name, 'pn', parent_name, 'BOTTOM')
             #else:  # if it has NOT previously been identified as a leaf, add the parent!
@@ -266,6 +268,41 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             
         return output
 
+    def __html__(self):
+        output = str(self)
+        lines = output.split('\n')
+        new_lines = []
+        for line in lines:
+            if MID_CON in line:
+                splitter = MID_CON
+            elif BOT_CON in line:
+                splitter = BOT_CON
+            else:
+                splitter = None
+
+            if splitter:
+                prefix, suffix = line.split(splitter)
+                prefix = prefix.replace(' ', '\xa0')  # nbsp
+                line = splitter.join((prefix, suffix))
+            new_lines.append(line)
+        output = '\n'.join(new_lines)
+        output = output.replace('\n', ' <br>\n')
+        output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
+                  '"http://www.w3.org/TR/html4/loose.dtd">\n'
+                  '<html>\n'
+                  '  <head>\n'
+                  '    <meta charset="UTF-8">\n'
+                  '    <style>\n'
+                  '    body { font-family: Dejavu Sans Mono;\n'
+                  '           font-size: 10pt; }\n'
+                  '    a:link { color: black; }\n'
+                  '    a:visited { color: grey; }\n'
+                  '    </style>\n'
+                  '  </head>\n'
+                  '  <body>\n'
+                  + output + '\n'
+                  '  </body>\n</html>')
+        return output
 
 def tree():
     return TreeNode(tree)
@@ -346,10 +383,24 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
             dict_[nodes[k]] = rename(tree[k])
         return dict_
 
-    hierarchy, dupes = build_tree(root)
-    named_hierarchy = rename(hierarchy)
+    htmlNodes = {k:"<a target='_blank' href='{}'>{}</a>".format(k, v) for k, v in nodes.items()}
+    hpnames = {nodes[k]:[htmlNodes[s] for s in v] for k,v in parents.items()}
+    _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames)
+    def htmlTree(tree):
+        dict_ = hTreeNode()
+        for k in tree:
+            dict_[htmlNodes[k]] = htmlTree(tree[k])
+        return dict_
 
-    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames, j)
+    hierarchy, dupes = build_tree(root)
+    try:
+        named_hierarchy = rename(hierarchy)
+        html = htmlTree(hierarchy)
+    except KeyError as e:
+        embed()
+        raise e
+
+    return named_hierarchy, (hierarchy, dupes, nodes, edgerep, objects, parents, names, pnames, j, html)
 
 def levels(tree, p, l = 0):
     if p == 0:
