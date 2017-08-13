@@ -331,7 +331,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, prefixes=None):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
         if graph._cache:
@@ -435,11 +435,18 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None):
         embed()
         raise e
 
+    def sub_prefixes(h):
+        if prefixes is not None:
+            for n, p in prefixes.items():
+                h = h.replace("href='" + n + ':', "href='" + p)
+        return h
+
+    html = sub_prefixes(html_hierarchy.__html__())
     extras = Extras(hierarchy, html_hierarchy,
                     dupes, nodes, edgerep,
                     objects, parents,
                     names, pnames, hpnames, j,
-                    html_hierarchy.__html__(), str(named_hierarchy))
+                    html, str(named_hierarchy))
     return named_hierarchy, extras
 
 def levels(tree, p, l = 0):
