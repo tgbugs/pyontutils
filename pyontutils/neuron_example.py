@@ -7,29 +7,64 @@ from IPython import embed
 
 #config(out_graph_path='/tmp/youcalled.ttl')
 
-def messup():
+def messup(outer_n):
+    print('neurons defined outside local scope')
+    print(repr(outer_n))
+    print(outer_n)
     loadNames(phenotype_namespaces.BBP)  # testing to make sure we get an error if we call this in a function
-    Neuron(brain, Phenotype('PR:000013502'))
+    # there is no error and the names stick around after the function returns
+    print(repr(outer_n), outer_n)
+    print('neurons defined in local scope')
+    n = Neuron(brain, Phenotype('PR:000013502'))
+    print(repr(n))
+    print(n)
 
 with phenotype_namespaces.Layers():
     L23
     try: brain
-    except NameError: print('working')
+    except NameError: print('brain fails as expected')
     with phenotype_namespaces.Regions():
         L23
         brain
         Neuron(L23, brain)
+        try: Mouse
+        except NameError: print('Mouse fails as expected')
         with phenotype_namespaces.Species():
             Neuron(Mouse, L23, CTX)
+        try: Mouse
+        except NameError: print('Mouse fails as expected')
     try: brain
-    except NameError: print('working')
+    except NameError: print('brain fails as expected')
     L1
+try: L1
+except NameError: print('L1 fails as expected')
 
 with phenotype_namespaces.Layers(), phenotype_namespaces.Regions(), phenotype_namespaces.Species():
     # including phenotype_namespaces.Test() raises and error as expected
+    try:
+        with phenotype_namespaces.Test():
+            Neuron(Rat)
+    except ValueError as e: print('Test namespace has conflicts and fails as expected.', e)
     Neuron(Rat, L23, CTX)
 
-print(graphBase.neurons())
+with phenotype_namespaces.BBP():
+    myFirstNeuron = Neuron(Rat, CTX, L23, PV)
+    mySecondNeuron = Neuron(Mouse, CA1, SO, PV)
+    with myFirstNeuron:  # TODO __add__ for neurons that fails on disjointness
+        myThirdNeuron = Neuron(LBC)
+        with mySecondNeuron:  # contexts are mutually exclusive even when nested WARNING MAY CHANGE!
+            myFourthNeuron = Neuron(LBC)
+        with myThirdNeuron:  # use a neuron defined in a context as context to simulate nesting
+            myFifthNeuron = Neuron(SBC)  # trivia: this neuron can't actually exist as defined
+    mySixthNeuron = Neuron(brain)
+    print('first ', repr(myFirstNeuron))
+    print('second', repr(mySecondNeuron))
+    print('third ', repr(myThirdNeuron))
+    print('fourth', repr(myFourthNeuron))
+    print('fifth ', repr(myFifthNeuron))
+    print('sixth ', repr(mySixthNeuron))
+
+#print(graphBase.neurons())
 
 loadNames(phenotype_namespaces.BBP)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
@@ -45,7 +80,12 @@ inner()
 
 #resetLocalNames()  # works as expected at the top level
 #resetLocalNames(globals())  # works as expected
-Neuron(brain, Phenotype('PR:000013502'))
+pv = Neuron(brain, Phenotype('PR:000013502'))
+
+resetLocalNames()
+messup(pv)  # the localNames call inside here persists
+print('testing printing pv after localNames is called inside messup')
+print(repr(pv))
 
 print(graphBase.neurons())
 embed()
