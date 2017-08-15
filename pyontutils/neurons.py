@@ -985,6 +985,29 @@ class LocalNameManager:
                 graphBase.LocalNames.pop(k)
 
 
+def checkCalledInside(classname, stack):
+    """ Fantastically inefficient! """
+    ok = False
+    for s in stack[1:]:
+        cc = s.code_context[0]
+        if 'class' in cc:
+            if '(' in cc:
+                bases = [b.strip() for b in cc.split('(')[1].split(')')[0].split(',')]
+                for base_name in bases:
+                    if base_name in s.frame.f_globals:
+                        base = s.frame.f_globals[base_name]
+                        for cls in base.__class__.mro(base):
+                            if cls.__name__ == classname:
+                                ok = True
+                                break
+                        if ok:
+                            break
+                if ok:
+                    break
+    if not ok:
+        name = stack[0].function
+        raise SyntaxError('%s not called inside a class inheriting from LocalNameManager' % name)
+
 def addLNBase(LocalName, phenotype, g=None):
     inj = {v:k for k, v in graphBase.LocalNames.items()}
     if not LocalName.isidentifier():
@@ -1001,13 +1024,18 @@ def addLNBase(LocalName, phenotype, g=None):
 
 def addLN(LocalName, phenotype, g=None):
     if g is None:
-        g = inspect.stack()[1][0].f_locals  # get globals of calling scope
+        s = inspect.stack()  # horribly inefficient
+        checkCalledInside('LocalNameManager', s)
+        g = s[1][0].f_locals  # get globals of calling scope
     addLNBase(LocalName, phenotype, g)
 
 def addLNT(LocalName, phenoId, predicate, g=None):
     """ Add a local name for a phenotype from a pair of identifiers """ 
     if g is None:
-        g = inspect.stack()[1][0].f_locals  # get globals of calling scope
+        s = inspect.stack()  # horribly inefficient
+        print(*(sf.function for sf in s))
+        checkCalledInside('LocalNameManager', s)
+        g = s[1][0].f_locals  # get globals of calling scope
     addLN(LocalName, Phenotype(phenoId, predicate), g)
 
 def setLocalNameBase(LocalName, phenotype, g=None):
