@@ -4,8 +4,8 @@
 ttlser is the product of long frustration with the majority of commonly used
 turtle serializers due to their reordering of triples on additions or deletions
 which leads to spurious diffs (see
-[this blog post](https://douroucouli.wordpress.com/2014/03/30/the-perils-of-managing-owl-in-a-version-control-system/))
-for an overview of the issues.
+[this blog post](https://douroucouli.wordpress.com/2014/03/30/the-perils-of-managing-owl-in-a-version-control-system/)
+for an overview of the issues).
 The main use case motivating ttlser is to produce human readable diffs of ontology
 files that display the meaningful changes and not reorderings. Specifically ttlser
 was developed to minimize diffs for ttl files that are stored in git.
