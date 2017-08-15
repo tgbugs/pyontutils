@@ -1033,7 +1033,6 @@ def addLNT(LocalName, phenoId, predicate, g=None):
     """ Add a local name for a phenotype from a pair of identifiers """ 
     if g is None:
         s = inspect.stack()  # horribly inefficient
-        print(*(sf.function for sf in s))
         checkCalledInside('LocalNameManager', s)
         g = s[1][0].f_locals  # get globals of calling scope
     addLN(LocalName, Phenotype(phenoId, predicate), g)
