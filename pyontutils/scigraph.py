@@ -33,7 +33,11 @@ class restService:
             req.headers['Accept'] = output
         prep = req.prepare()
         if self._verbose: print(prep.url)
-        resp = s.send(prep)
+        try:
+            resp = s.send(prep)
+        except requests.exceptions.ConnectionError as e:
+            host_port = prep.url.split(prep.path_url)[0]
+            raise ConnectionError('Could not connect to %s are SciGraph services running?' % host_port) from e
         if not resp.ok:
             return None
         elif resp.headers['content-type'] == 'application/json':
@@ -400,7 +404,11 @@ class State:
 
     def class_json(self, dict_):
         code = self.make_class(dict_)
-        code += self.dodict(dict_)
+        methods = self.dodict(dict_)
+        if methods:
+            code += methods
+        else:
+            code += '    # No methods exist for this API endpoint.\n'
         return None, code
 
     def dotopdict(self, dict_):
@@ -460,6 +468,7 @@ class State2(State):
     def _swagger(self, string):
         self.globs['swaggerVersion'] = string
         return None, ''
+
     def _info(self, dict_):
         self._version(dict_['version'])
         return None, ''
