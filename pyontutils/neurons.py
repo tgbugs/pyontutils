@@ -15,6 +15,7 @@ __all__ = [
     'getPhenotypePredicates',
     'graphBase',
     'setLocalContext',
+    'getLocalContext',
     'LocalNameManager',
     'addLN',
     'addLNT',
@@ -531,7 +532,7 @@ class NeuronBase(graphBase):
         ]
 
         self._localContext = self.__context
-        phenotypeEdges = tuple(set(self.__context + phenotypeEdges))  # remove dupes
+        phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
 
         if id_ and phenotypeEdges:
             raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
@@ -572,10 +573,46 @@ class NeuronBase(graphBase):
         for p, e in pes:
             yield Phenotype(p, e)
 
+    @staticmethod
+    def setContext(*neuron_or_phenotypeEdges):
+        # this is a trade off, depending on what was passed in here when it
+        # was last called the same 'looking' neuron definition will produce
+        # a different result
+        # of course this can be very powerful if we have a set of neurons that
+        # we want to instantiate in different contexts
+        
+        # we are implementing this in this way so that it is clear that you cannot
+        # change the context of a neuron after it has been created
+        if not neuron_or_phenotypeEdges:
+            NeuronBase._NeuronBase__context = tuple()
+        else:
+            def getPhenotypeEdges(thing):
+                if isinstance(thing, NeuronBase):
+                    return (*thing.pes,)
+                elif isinstance(thing, Phenotype) or isinstance(thing, LogicalPhenotype):
+                    return thing,
+                else:
+                    raise TypeError('%s is neither a Neuron nor a Phenotype.' % thing)
+
+            if hasattr(neuron_or_phenotypeEdges, '__iter__'):
+                pes = tuple(pe for nope in neuron_or_phenotypeEdges for pe in getPhenotypeEdges(nope))
+            else:
+                pes = getPhenotypeEdges(neuron_or_phenotypeEdges)
+
+            NeuronBase._NeuronBase__context = pes
+
+    @staticmethod
+    def getContext():
+        return NeuronBase.__context
+
     @property
     def context(self):
         """ No touching! """
         return self._localContext
+
+    @context.setter
+    def context(self, neuron_or_phenotypeEdges):
+        raise TypeError('Cannot change the context of an instantiated neuron.')
 
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
@@ -673,6 +710,15 @@ class NeuronBase(graphBase):
 
     def __gt__(self, other):
         return not self.__lt__(other)
+
+    def __enter__(self):
+        """ Using a neuron in a context manager treats it as context! """
+        self._old_context = self.getContext()
+        self.setContext(self)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.setContext(*self._old_context)
+        del self._old_context
 
 
 class Neuron(NeuronBase):
@@ -983,16 +1029,11 @@ def resetLocalNames(g=None):
             raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
         graphBase.LocalNames.pop(k)
 
-def setLocalContext(*phenotypeEdges):
-    # this is a trade off, depending on what was passed in here when it
-    # was last called the same 'looking' neuron definition will produce
-    # a different result
-    # of course this can be very powerful if we have a set of neurons that
-    # we want to instantiate in different contexts
-    
-    # we are implementing this in this way so that it is clear that you cannot
-    # change the context of a neuron after it has been created
-    NeuronBase._NeuronBase__context = phenotypeEdges
+def setLocalContext(*neuron_or_phenotypeEdges):
+    NeuronBase.setContext(*neuron_or_phenotypeEdges)
+
+def getLocalContext():
+    return NeuronBase.getContext()
 
 def main():
     # load in our existing graph
