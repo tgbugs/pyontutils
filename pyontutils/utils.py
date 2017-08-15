@@ -185,7 +185,8 @@ class makeGraph:
 
     @filename.setter
     def filename(self, filepath):
-        self.writeloc = os.path.dirname(filepath) + '/'
+        dirname = os.path.dirname(filepath)
+        self.writeloc = dirname + '/' if dirname else dirname  # allow local paths
         self.name = os.path.splitext(os.path.basename(filepath))[0]
 
     @property
@@ -200,7 +201,7 @@ class makeGraph:
         ser = self.g.serialize(format='nifttl')
         with open(self.filename, 'wb') as f:
             f.write(ser)
-            print('yes we wrote the first version...', self.name)
+            #print('yes we wrote the first version...', self.name)
         if hasattr(self.__class__, '_to_convert'):
             self.__class__._to_convert.append(self.filename)
         elif convert:  # this will confuse everyone, convert=False still runs if in side the with block...
@@ -361,6 +362,7 @@ class makeGraph:
             #trips = list(self.g.triples((None, restriction, None)))
             pred = restriction
             done = []
+            print(repr(pred))
             #for obj, sub in self.g.subject_objects(pred):  # yes these are supposed to be flipped?
             for sub, obj in self.g.subject_objects(pred):  # or maybe they aren't?? which would explain some of my confusion
                 try:
