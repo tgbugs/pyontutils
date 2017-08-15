@@ -22,7 +22,7 @@ was developed to minimize diffs for ttl files that are stored in git.
 	3. There shall be no indentation for section header lines.
 	4. Lines representing triples with lower priority predicates (e.g. `rdfs:subClassOf`) shall have one additional indentation block of 4 spaces preceeding them in addition to the number of indentation blocks preceeding the line for the highest priority triple with which they share their subject. For example a `rdfs:subClassOf` triple line sharing a subject with a top level `owl:Class` triple line should have exactly 1 indentation block of 4 spaces preceeding the `r` in `rdfs:subClassOf`.
 	5. Elements of an `rdf:List` shall all have only 1 additional indentation block beyond that of a normal object.
-4. All opening parenthesis shall occur on the same line is the subject they represent.
+4. All opening parenthesis shall occur on the same line as the subject they represent.
 5. All closing parenthesis and brackets shall occur on the same line, each separated by a single space (lisp style).
 6. Opening parenthesis of an `rdf:List` shall be follow by a newline.
 7. Opening brackets shall NOT be followed by a newline.
