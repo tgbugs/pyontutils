@@ -19,6 +19,7 @@ def messup(outer_n):
     print(repr(n))
     print(n)
 
+# namespace example
 with phenotype_namespaces.Layers():
     L23
     try: brain
@@ -40,13 +41,14 @@ try: L1
 except NameError: print('L1 fails as expected')
 
 with phenotype_namespaces.Layers(), phenotype_namespaces.Regions(), phenotype_namespaces.Species():
-    # including phenotype_namespaces.Test() raises and error as expected
     try:
         with phenotype_namespaces.Test():
-            Neuron(Rat)
-    except ValueError as e: print('Test namespace has conflicts and fails as expected.', e)
+            pass
+    except ValueError as e:
+        print('Test namespace has conflicts and fails as expected.', e)
     Neuron(Rat, L23, CTX)
 
+# context example
 with phenotype_namespaces.BBP():
     myFirstNeuron = Neuron(Rat, CTX, L23, PV)
     mySecondNeuron = Neuron(Mouse, CA1, SO, PV)
