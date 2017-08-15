@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 import os
 import inspect
+from collections import MutableMapping
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
@@ -17,8 +18,6 @@ __all__ = [
     'setLocalContext',
     'getLocalContext',
     'LocalNameManager',
-    'addLN',
-    'addLNT',
     'setLocalNames',
     'getLocalNames',
     'resetLocalNames',
@@ -940,7 +939,53 @@ class NeuronArranger:  # TODO should this write the graph?
 
 # local naming and ordering
 
-class LocalNameManager:
+class injective_dict(MutableMapping):
+    def __init__(self, *args, **kwargs):
+        self._dict = dict(*args, **kwargs)
+        self._inj = {v:k for k, v in self._dict.items()}
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def __delitem__(self, key):
+        value = self._dict[key]
+        del self._inj[value]
+        del self._dict[key]
+        del value
+
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return '{}({!r})'.format(self.__class__.__name__, self._dict)
+
+    def __setitem__(self, key, value):
+        if key in self._dict and self._dict[key] != value:
+            raise NameError('%r is already in use as a LocalName for %r' % (key, self._dict[key]))
+        if key in self._dict:
+            raise ValueError(('Mapping between LocalNames and phenotypes must be injective.\n'
+                              'Cannot cannot bind %r to %r.\n'
+                              'It is already bound to %r') % (key, value, self._inj[value]))
+        self._dict[key] = value
+        self._inj[value] = key
+
+
+class injective(type):
+    @classmethod
+    def __prepare__(cls, name, bases, **kwargs):
+        return injective_dict()
+
+    def __new__(cls, name, bases, inj_dict):
+        return super().__new__(cls, name, bases, dict(inj_dict))
+
+
+class LocalNameManager(metaclass=injective):
     """ Base class for sets of local names for phenotypes.
         Children should be passed to loadNames to make the names available.
         It is possible to subclass to add your custom names to a core.
