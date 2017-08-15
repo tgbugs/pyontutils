@@ -5,15 +5,16 @@ Usage:
     scig v [--local --verbose] <id>...
     scig i [--local --verbose] <id>...
     scig t [--local --verbose] <term>...
-    scig s [--local --verbose] <term>...
+    scig s [--local --verbose --limit=LIMIT] <term>...
     scig g [--local --verbose --rt=RELTYPE] <id>...
     scig e [--local --verbose] <p> <s> <o>
     scig c
     scig cy <query>
 
 Options:
-    -l --local      hit the local scigraph server
-    -v --verbose    print the full uri
+    -l --local          hit the local scigraph server
+    -v --verbose        print the full uri
+    -t --limit=LIMIT    limit number of results [default: 10]
 
 """
 from docopt import docopt
@@ -44,10 +45,13 @@ def main():
         v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         for term in args['<term>']:
             print(term)
-            out = v.searchByTerm(term) if args['s'] else v.findByTerm(term)
+            out = v.searchByTerm(term, limit=args['--limit']) if args['s'] else v.findByTerm(term)
             if out:
                 for resp in sorted(out, key=lambda t: t['labels'][0]):
-                    curie = resp.pop('curie')
+                    try:
+                        curie = resp.pop('curie')
+                    except KeyError:
+                        curie = resp.pop('iri')  # GRRRRRRRRRRRRRR
                     print('\t%s' % curie)
                     for key, value in sorted(resp.items()):
                         print('\t\t%s:' % key, value)
