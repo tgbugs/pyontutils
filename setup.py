@@ -13,6 +13,7 @@ files = [
     'pyontutils/neuron_lang.py',
     'pyontutils/nif_load.py',
     'pyontutils/obo_io.py',
+    'pyontutils/phenotype_namespaces.py',
     'pyontutils/scig.py',
     'pyontutils/scigraph.py',
     'pyontutils/scigraph_client.py',

@@ -2,36 +2,36 @@
 
 import inspect
 from pyontutils.neuron_lang import *
-from pyontutils import neuron_names
+from pyontutils import phenotype_namespaces
 from IPython import embed
 
 #config(out_graph_path='/tmp/youcalled.ttl')
 
 def messup():
-    loadNames(neuron_names.BBP)  # testing to make sure we get an error if we call this in a function
+    loadNames(phenotype_namespaces.BBP)  # testing to make sure we get an error if we call this in a function
     Neuron(brain, Phenotype('PR:000013502'))
 
-with neuron_names.Layers():
+with phenotype_namespaces.Layers():
     L23
     try: brain
     except NameError: print('working')
-    with neuron_names.Regions():
+    with phenotype_namespaces.Regions():
         L23
         brain
         Neuron(L23, brain)
-        with neuron_names.Species():
+        with phenotype_namespaces.Species():
             Neuron(Mouse, L23, CTX)
     try: brain
     except NameError: print('working')
     L1
 
-with neuron_names.Layers(), neuron_names.Regions(), neuron_names.Species():
-    # including neuron_names.Test() raises and error as expected
+with phenotype_namespaces.Layers(), phenotype_namespaces.Regions(), phenotype_namespaces.Species():
+    # including phenotype_namespaces.Test() raises and error as expected
     Neuron(Rat, L23, CTX)
 
 print(graphBase.neurons())
 
-loadNames(neuron_names.BBP)
+loadNames(phenotype_namespaces.BBP)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn', label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))
