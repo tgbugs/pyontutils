@@ -37,7 +37,7 @@ class Species(LocalNameManager):
     addLNT('Mouse', 'NCBITaxon:10090', 'ilx:hasInstanceInSpecies')
 
 class BBP(Layers, Regions, Species):
-    # cat neuron_example.py | grep -v ^# | grep -o "\w\+\ \=\ Pheno.\+" | sed "s/^/('/" | sed "s/\ \=\ /',/" | sed 's/Phenotype(//' | sed 's/)/)/'
+    # cat old_neuron_example.py | grep -v ^# | grep -o "\w\+\ \=\ Pheno.\+" | sed "s/^/('/" | sed "s/\ \=\ /',/" | sed 's/Phenotype(//' | sed 's/)/)/'
     addLNT('PC', 'ilx:PyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')  # 
     addLNT('BPC', 'ilx:BiopolarPyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')  # collision
     addLNT('HPC', 'ilx:HorizontalPyramidalPhenotype', 'ilx:hasMorphologicalPhenotype')
