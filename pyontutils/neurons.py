@@ -19,7 +19,8 @@ __all__ = [
     'LocalNameManager',
     'addLN',
     'addLNT',
-    'loadNames',
+    'setLocalNames',
+    'getLocalNames',
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
@@ -217,7 +218,7 @@ class graphBase:
 
     @staticmethod
     def write_python():
-        with open(graphBase.out_graph_path, 'wt') as f:
+        with open(os.path.splitext(graphBase.ng.filename)[0] + '.py', 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
@@ -715,6 +716,7 @@ class NeuronBase(graphBase):
         """ Using a neuron in a context manager treats it as context! """
         self._old_context = self.getContext()
         self.setContext(self)
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.setContext(*self._old_context)
@@ -960,22 +962,22 @@ class LocalNameManager:
     'ilx:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
     )
 
-    @classmethod
     def __enter__(self):
-        #loadNames(self)
         g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        self._existing = set()
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
             if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                if k in graphBase.LocalNames:  # name was in enclosing scope
+                    self._existing.add(k)
                 setLocalNameBase(k, v, g)
         return self
 
-    @classmethod
     def __exit__(self, exc_type, exc_value, traceback):
         g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
-            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+            if k not in self._existing and (isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)):
                 try:
                     g.pop(k)
                 except KeyError:
@@ -992,7 +994,9 @@ def addLNBase(LocalName, phenotype, g=None):
     if LocalName in g and g[LocalName] != phenotype:
         raise NameError('%r is already in use as a LocalName for %r' % (LocalName, g[LocalName]))
     elif phenotype in inj and inj[phenotype] != LocalName:
-        raise ValueError('Mapping between LocalNames and phenotypes must be injective. %r is already bound to %r' % (phenotype, inj[phenotype]))
+        raise ValueError(('Mapping between LocalNames and phenotypes must be injective.\n'
+                          'Cannot cannot bind %r to %r.\n'
+                          'It is already bound to %r') % (LocalName, phenotype, inj[phenotype]))
     g[LocalName] = phenotype
 
 def addLN(LocalName, phenotype, g=None):
@@ -1001,6 +1005,7 @@ def addLN(LocalName, phenotype, g=None):
     addLNBase(LocalName, phenotype, g)
 
 def addLNT(LocalName, phenoId, predicate, g=None):
+    """ Add a local name for a phenotype from a pair of identifiers """ 
     if g is None:
         g = inspect.stack()[1][0].f_locals  # get globals of calling scope
     addLN(LocalName, Phenotype(phenoId, predicate), g)
@@ -1009,13 +1014,16 @@ def setLocalNameBase(LocalName, phenotype, g=None):
     addLNBase(LocalName, phenotype, g)
     graphBase.LocalNames[LocalName] = phenotype
 
-def loadNames(names, g=None):
+def setLocalNames(*LNMClass, g=None):
     if g is None:
         g = inspect.stack()[1][0].f_globals  # get globals of calling scope
-    for k in dir(names):
-        v = getattr(names, k)  # use this instead of __dict__ to get parents
-        if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-            setLocalNameBase(k, v, g)
+    if not LNMClass:
+        resetLocalNames(g)
+    for names in LNMClass:
+        for k in dir(names):
+            v = getattr(names, k)  # use this instead of __dict__ to get parents
+            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                setLocalNameBase(k, v, g)
 
 def resetLocalNames(g=None):
     """ WARNING: Only call from top level! THIS DOES NOT RESET NAMES in an embeded IPython!!!
@@ -1028,6 +1036,9 @@ def resetLocalNames(g=None):
         except KeyError:
             raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
         graphBase.LocalNames.pop(k)
+
+def getLocalNames():
+    return {k:v for k, v in graphBase.LocalNames.items()}
 
 def setLocalContext(*neuron_or_phenotypeEdges):
     NeuronBase.setContext(*neuron_or_phenotypeEdges)

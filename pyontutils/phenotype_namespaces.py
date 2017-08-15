@@ -3,6 +3,12 @@
 from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
 from pyontutils.neuron_lang import config  # annoying, but works
 
+__all__ = ['Test',
+           'Layers',
+           'Regions',
+           'Species',
+           'BBP']
+
 class Test(LocalNameManager):
     addLNT('LOOK_AT_THE_CUTE_LITTLE_GUY', 'NCBITaxon:10116', 'ilx:hasInstanceInSpecies')
 

@@ -14,8 +14,8 @@ __all__ = [
     'pred',
     'setLocalContext',
     'getLocalContext',
-    'loadNames',
-    'resetLocalNames',
+    'setLocalNames',
+    'getLocalNames',
     'Phenotype',
     'NegPhenotype',
     'LogicalPhenotype',
@@ -50,8 +50,8 @@ pred = graphBase._predicates
 try:
     ip = get_ipython()
     python_magic = ip.find_cell_magic('python')
-    def scig_func(val):
-        python_magic('-m pyontutils.scig' + ' %s' % val, '')
+    def scig_func(*vals):
+        python_magic('-m pyontutils.scig ' + ' '.join(vals), '')
     ip.register_magic_function(scig_func, 'line', 'scig')
 except NameError:
     pass  # not in an IPython environment so can't register magics
