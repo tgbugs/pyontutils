@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 
 import inspect
+from pyontutils.neurons import *  # always import via pyontutils or you will get errors
 from pyontutils.neuron_lang import *
 from pyontutils import phenotype_namespaces
 from IPython import embed
-
-#config(out_graph_path='/tmp/youcalled.ttl')
 
 def messup(outer_n):
     print('neurons defined outside local scope')
     print(repr(outer_n))
     print(outer_n)
-    loadNames(phenotype_namespaces.BBP)  # testing to make sure we get an error if we call this in a function
+    setLocalNames(phenotype_namespaces.BBP)  # testing to make sure we get an error if we call this in a function
     # there is no error and the names stick around after the function returns
     print(repr(outer_n), outer_n)
     print('neurons defined in local scope')
     n = Neuron(brain, Phenotype('PR:000013502'))
     print(repr(n))
-    print(n)
 
 # namespace example
 with phenotype_namespaces.Layers():
@@ -68,7 +66,7 @@ with phenotype_namespaces.BBP():
 
 #print(graphBase.neurons())
 
-loadNames(phenotype_namespaces.BBP)
+setLocalNames(phenotype_namespaces.BBP)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
 Neuron(Phenotype('UBERON:0001950', 'ilx:hasSomaLocatedIn', label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))
@@ -84,7 +82,7 @@ inner()
 #resetLocalNames(globals())  # works as expected
 pv = Neuron(brain, Phenotype('PR:000013502'))
 
-resetLocalNames()
+setLocalNames()
 messup(pv)  # the localNames call inside here persists
 print('testing printing pv after localNames is called inside messup')
 print(repr(pv))
