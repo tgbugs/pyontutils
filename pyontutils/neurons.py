@@ -289,12 +289,16 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self.labelPostRule = lambda l: l
 
     def checkPhenotype(self, phenotype):
-        p = self.expand(phenotype)
-        try: next(self.core_graph.predicate_objects(p))
-        except StopIteration:
-            if not self._sgv.findById(p):
-                print('WARNING: unknown phenotype ', p)
-        return p
+        subject = self.expand(phenotype)
+        try: next(self.core_graph.predicate_objects(subject))
+        except StopIteration:  # is a phenotype derived from an external class
+            try:
+                if not self._sgv.findById(subject):
+                    print('WARNING: Unknown phenotype ', subject)
+            except ConnectionError:
+                print('WARNING: Phenotype unvalidated. No SciGraph was instance found at',
+                      self._sgv._basePath)
+        return subject
 
     def getObjectProperty(self, phenotype):
         predicates = list(self.in_graph.objects(phenotype, self.expand('ilx:useObjectProperty')))  # useObjectProperty works for phenotypes we control
@@ -334,6 +338,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if not l:  # we don't want to load the whole ontology
             try:
                 l = self._sgv.findById(self.p)['labels'][0]
+            except ConnectionError as e:
+                print(e)
+                l = self.p
             except TypeError:
                 l = self.p
             except IndexError:
