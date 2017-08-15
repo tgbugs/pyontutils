@@ -13,6 +13,7 @@ __all__ = [
     'config',
     'pred',
     'setLocalContext',
+    'getLocalContext',
     'loadNames',
     'resetLocalNames',
     'Phenotype',
@@ -48,8 +49,9 @@ pred = graphBase._predicates
 # add a handy ipython line magic for scig to look up terms
 try:
     ip = get_ipython()
+    python_magic = ip.find_cell_magic('python')
     def scig_func(val):
-        ip.find_cell_magic('python')(os.path.expanduser('~/git/pyontutils/pyontutils/scig.py') + ' %s' % val, '')
+        python_magic('-m pyontutils.scig' + ' %s' % val, '')
     ip.register_magic_function(scig_func, 'line', 'scig')
 except NameError:
     pass  # not in an IPython environment so can't register magics
