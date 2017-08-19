@@ -348,7 +348,7 @@ def main():
         remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
         def post_clone():
             print('Retrieving go.owl since it is not in the repo.')
-            os.system('wget O' + local_go + ' ' + remote_go)
+            os.system('wget -O' + local_go + ' ' + remote_go)
     else:
         post_clone = lambda : None
 
