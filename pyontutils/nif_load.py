@@ -40,6 +40,7 @@ def getBranch(repo, branch):
         raise IOError('No branch %s found, options are %s' % (branch, branches))
 
 def repro_loader():
+    repo_name = os.path.basename(local_base)
     if not os.path.exists(local_base):
         repo = Repo.clone_from(github_base + '.git', local_base)
     else:
@@ -51,14 +52,15 @@ def repro_loader():
     # TODO consider dumping metadata in a file in the folder too?
     def folder_name(scigraph_commit):
         ontology_commit = repo.head.object.hexsha[:7]
-        return ('graph-' + TODAY +
+        return (repo_name +
+                '-graph' +
+                '-' + TODAY +
                 '-' + scigraph_commit[:7] +
-                '-' + ontology_commit)  # + 
-                #'-' + pyontutils_commit)
+                '-' + ontology_commit)
 
-    graphload_config_location = '/tmp/graphload-' + TODAY + '.yaml'
+    config_path = '/tmp/graphload-' + TODAY + '.yaml'
 
-    scigraph_commit, load_command = scigraph_build(graphload_config_location)
+    scigraph_commit, load_command = scigraph_build(config_path)
 
     folder = folder_name(scigraph_commit)
     graph_path = os.path.join('/tmp', folder)
@@ -66,11 +68,12 @@ def repro_loader():
         print('Graph already loaded at', graph_path)
         return
 
+    zip_path = graph_path + '.zip'
+    zip_name = os.path.basename(zip_path)
+    zip_dir = os.path.dirname(zip_path)
+    zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
 
-
-    zip_command = 'cd /tmp/; zip ' + folder
-
-    # configure the graph load template
+    # config graphload.yaml from template
     with open(os.path.join(local_base, 'scigraph/graphload-template.yaml'), 'rt') as f:
         config = yaml.load(f)
 
@@ -81,15 +84,18 @@ def repro_loader():
                              for k, v in ont.items()}
                             for ont in config['ontologies']]
 
-    with open(graphload_config_location, 'wt') as f:
+    with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
 
-    # do stuff
-    local_imports()
+    # main
+    local_imports()  # SciGraph doesn't support catalog.xml right now
     failure = os.system(load_command)
     if failure:
         shutil.rmtree(graph_path)
     else:
+        os.rename(config_path,  # save the config for eaiser debugging
+                  os.path.join(graph_path,
+                               os.path.basename(config_path)))
         failure = os.system(zip_command)
 
     # return to original state
@@ -97,7 +103,7 @@ def repro_loader():
     if nab != nob:
         nob.checkout()
 
-    embed()
+    return zip_path
 
 def scigraph_build(config_path, clean=False):  # TODO allow exact commit?
     COMMIT_LOG = 'last-built-commit.log'

@@ -55,8 +55,8 @@ def setPS1(script__file__):
     text = 'Running ' + os.path.basename(script__file__)
     os.sys.stdout.write('\x1b]2;{}\x07'.format(text))
 
-def refile(thisFile, path):
-    return os.path.join(os.path.dirname(thisFile), path)
+def refile(script__file__, path):
+    return os.path.join(os.path.dirname(script__file__), path)
 
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
