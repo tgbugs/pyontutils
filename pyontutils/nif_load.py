@@ -1,5 +1,20 @@
 #!/usr/bin/env python3.6
-""" Run in NIF-Ontology/ttl/ """
+""" Use SciGraph to load an ontology. NIF -> http://ontology.neuinfo.org/NIF
+
+Usage:
+    ontload [options] <repo> <remote_base>
+
+Options:
+    -c --config-template=CFG        relative path to template [default: scigraph/graphload-template.yaml]
+    -g --git-remote=GBASE           remote git hosting [default: https://github.com/]
+    -o --org=ORG                    user/org where the repo lives [default: SciCrunch]
+    -l --git-local=LBASE            local path to look for <repo> [default: ~/git]
+    -b --branch=BRANCH              specify branch to load [default: master]
+    -so --scigraph-org=SORG         which org to clone/build scigraph from [default: SciCrunch]
+    -sb --scigraph-branch=SBRANCH   which branch to build scigrpah from [default: upstream]
+    -f --logfile=LOG                log output here [default: ontload.log]
+    -e --extra                      run a full graph load and other utils
+"""
 import os
 import shutil
 import json
@@ -10,6 +25,7 @@ from git.repo import Repo
 from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
+from docopt import docopt
 from IPython import embed
 
 setPS1(__file__)
@@ -39,10 +55,11 @@ def getBranch(repo, branch):
         branches = [b.name for b in repo.branches]
         raise IOError('No branch %s found, options are %s' % (branch, branches))
 
-def repro_loader():
-    repo_name = os.path.basename(local_base)
+def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, load_base, config_template, scigraph_commit):
+    local_base = os.path.join(git_local, repo_name)
+    git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
-        repo = Repo.clone_from(github_base + '.git', local_base)
+        repo = Repo.clone_from(git_base + '.git', local_base)
     else:
         repo = Repo(local_base)
     nob = repo.active_branch
@@ -54,28 +71,22 @@ def repro_loader():
     def folder_name(scigraph_commit):
         ontology_commit = repo.head.object.hexsha[:7]
         return (repo_name +
+                '-' + branch +
                 '-graph' +
                 '-' + TODAY +
                 '-' + scigraph_commit[:7] +
                 '-' + ontology_commit)
 
-    config_path = '/tmp/graphload-' + TODAY + '.yaml'
-
-    scigraph_commit, load_command = scigraph_build(config_path)
-
     folder = folder_name(scigraph_commit)
     graph_path = os.path.join('/tmp', folder)
-    if os.path.exists(graph_path):
-        print('Graph already loaded at', graph_path)
-        return
-
     zip_path = graph_path + '.zip'
+
     zip_name = os.path.basename(zip_path)
     zip_dir = os.path.dirname(zip_path)
     zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
 
     # config graphload.yaml from template
-    with open(os.path.join(local_base, 'scigraph/graphload-template.yaml'), 'rt') as f:
+    with open(os.path.join(local_base, config_template), 'rt') as f:
         config = yaml.load(f)
 
     config['graphConfiguration']['location'] = graph_path
@@ -85,43 +96,50 @@ def repro_loader():
                              for k, v in ont.items()}
                             for ont in config['ontologies']]
 
+    config_path = '/tmp/graphload-' + TODAY + '.yaml'
     with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
+    ontologies = [ont['url'] for ont in config['ontologies']]
+    load_command = load_base.format(config_path=config_path)
 
     # main
-    local_imports()  # SciGraph doesn't support catalog.xml right now
-    failure = os.system(load_command)
-    if failure:
-        shutil.rmtree(graph_path)
+    import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
+    if not os.path.exists(graph_path):
+
+        failure = os.system(load_command)
+        if failure:
+            shutil.rmtree(graph_path)
+        else:
+            os.rename(config_path,  # save the config for eaiser debugging
+                      os.path.join(graph_path,
+                                   os.path.basename(config_path)))
+            failure = os.system(zip_command)
     else:
-        os.rename(config_path,  # save the config for eaiser debugging
-                  os.path.join(graph_path,
-                               os.path.basename(config_path)))
-        failure = os.system(zip_command)
+        print('Graph already loaded at', graph_path)
 
     # return to original state
     repo.head.reset(index=True, working_tree=True)
     if nab != nob:
         nob.checkout()
 
-    return zip_path
+    return zip_path, import_triples
 
-def scigraph_build(config_path, clean=False):  # TODO allow exact commit?
+def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO allow exact commit?
     COMMIT_LOG = 'last-built-commit.log'
 
     # scigraph setup
-    org = 'SciCrunch'
+    #org = 'SciCrunch'
     repo_name = 'SciGraph'
-    branch = 'upstream'
-    remote = os.path.join('https://github.com/', org, repo_name)
-    local = os.path.expanduser('~/git/SciGraph')
+    #branch = 'upstream'
+    remote = os.path.join(git_remote, org, repo_name)
+    local = os.path.join(git_local, repo_name)
     commit_log_path = os.path.join(local, COMMIT_LOG)
 
-    load_command = (
+    load_base = (
         'cd {}; '.format(os.path.join(local, 'SciGraph-core')) + 
         'mvn exec:java '
         '-Dexec.mainClass="io.scigraph.owlapi.loader.BatchOwlLoader" '
-        '-Dexec.args="-c {}"'.format(config_path))
+        '-Dexec.args="-c {config_path}"')
 
     if not os.path.exists(local):
         repo = Repo.clone_from(remote + '.git', local)
@@ -152,11 +170,12 @@ def scigraph_build(config_path, clean=False):  # TODO allow exact commit?
     else:
         print('SciGraph already built at commit', commit)
 
-    return commit, load_command
+    return commit, load_base
 
-def local_imports(dobig=False):
+def local_imports(remote_base, local_base, ontologies, dobig=False):
     """ Read the import closure and use the local versions of the files. """
     done = []
+    triples = set()
     p = rdflib.OWL.imports
     oi = b'owl:imports'
     def inner(local_filepath):
@@ -173,7 +192,7 @@ def local_imports(dobig=False):
                     raw = f.read()
             except FileNotFoundError as e:
                 if local_filepath.startswith('file://'):
-                    raise IOError('local_imports has already been run') from e
+                    raise ValueError('local_imports has already been run') from e
             if oi in raw:  # we only care if there are imports
                 start, ont_rest = raw.split(oi, 1)
                 ont, rest = ont_rest.split(b'###', 1)
@@ -181,6 +200,7 @@ def local_imports(dobig=False):
                 scratch.parse(data=data, format=infmt)
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
+                    triples.add((s, p, o))
                     if local_base in nlfp:
                         scratch.add((s, p, rdflib.URIRef('file://' + nlfp)))
                         scratch.remove((s, p, o))
@@ -194,11 +214,11 @@ def local_imports(dobig=False):
                 with open(local_filepath, 'wb') as f:
                     f.write(out)
 
-    start = os.path.join(local_base, 'ttl/nif.ttl')
-    print('START', start)
-    done.append(start)
-    inner(start)
-    return done
+    for start in ontologies:
+        print('START', start)
+        done.append(start)
+        inner(start)
+    return sorted(triples)
 
 def loadall():
     if cwd != local_base:
@@ -242,8 +262,9 @@ def normalize_prefixes(graph):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph, mg):
-
+def import_tree(graph):
+    mg = makeGraph('', graph=graph)
+    mg.add_known_namespace('owl')
     mg.add_known_namespace('NIFTTL')
     j = mg.make_scigraph_json('owl:imports', direct=True)
     #asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
@@ -290,16 +311,40 @@ def for_burak(ng_):
               json.dump(records, f, sort_keys=True, indent=2)
 
 def main():
-    repro_loader()
-    return
-    tc = local_imports()
-    return
-    graph = loadall()
-    mg, ng_ = normalize_prefixes(graph)
-    tree, extra = import_tree(graph, mg)
-    with open('/tmp/nifstd-import-closure.html', 'wt') as f:
-        f.write(extra.html)
-    for_burak(ng_)
+    args = docopt(__doc__, version='nif_load 0')
+    print(args)
+    if args['--extra']:
+        graph = loadall()
+        mg, ng_ = normalize_prefixes(graph)
+        for_burak(ng_)
+        embed()
+        return
+
+    repo_name = args['<repo>']
+    remote_base = args['<remote_base>']
+    if remote_base == 'NIF':
+        remote_base = 'http://ontology.neuinfo.org/NIF'
+    config_template = args['--config-template']
+    git_remote = args['--git-remote']
+    org = args['--org']
+    git_local = args['--git-local']
+    if '~' in git_local:
+        git_local = os.path.expanduser(git_local)
+    branch = args['--branch']
+    sorg = args['--scigraph-org']
+    sbranch = args['--scigraph-branch']
+
+    scigraph_commit, load_base = scigraph_build(git_remote, sorg, git_local, sbranch)
+    zip_path, itrips = repro_loader(git_remote, org, git_local,
+                                    repo_name, branch, remote_base,
+                                    load_base, config_template, scigraph_commit)
+
+    if itrips:
+        import_graph = rdflib.Graph()
+        [import_graph.add(t) for t in itrips]
+        tree, extra = import_tree(import_graph)
+        with open('/tmp/nifstd-import-closure.html', 'wt') as f:
+            f.write(extra.html)
     embed()
 
 if __name__ == '__main__':
