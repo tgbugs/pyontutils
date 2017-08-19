@@ -48,6 +48,7 @@ def repro_loader():
     nob = repo.active_branch
     nab = getBranch(repo, branch)
     nab.checkout()
+    repo.remote().pull()  # make sure we are up to date
 
     # TODO consider dumping metadata in a file in the folder too?
     def folder_name(scigraph_commit):
@@ -136,6 +137,7 @@ def scigraph_build(config_path, clean=False):  # TODO allow exact commit?
     sob = repo.active_branch
     sab = getBranch(repo, branch)
     sab.checkout()
+    repo.remote().pull()
     commit = repo.head.object.hexsha
 
     if commit != last_commit:
