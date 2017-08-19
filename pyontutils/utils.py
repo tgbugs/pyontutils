@@ -30,8 +30,8 @@ def memoryCheck(vms_max_kb):
     buffer = safety_factor * vms_max
     buffer_gigs = buffer / 1024 ** 2
     vm = psutil.virtual_memory()
-    free_gigs = vm.free / 1024 ** 2
-    if vm.free < buffer:
+    free_gigs = vm.available / 1024 ** 2
+    if vm.available < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
 
 def noneMembers(container, *args):
@@ -176,8 +176,12 @@ class makeGraph:
         self.g.bind(prefix, namespace)
 
     def del_namespace(self, prefix):
-        self.namespaces.pop(prefix)
-        self.g.store._IOMemory__namespace.pop(prefix)
+        try:
+            self.namespaces.pop(prefix)
+            self.g.store._IOMemory__namespace.pop(prefix)
+        except KeyError:
+            print('Namespace (%s) does not exist!' % prefix)
+            pass
 
     @property
     def filename(self):
