@@ -55,7 +55,7 @@ def getBranch(repo, branch):
         branches = [b.name for b in repo.branches]
         raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
-def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, load_base, config_template, scigraph_commit):
+def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, load_base, config_template, scigraph_commit, post_clone=lambda: None):
     local_base = os.path.join(git_local, repo_name)
     git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
@@ -70,6 +70,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
         repo.git.checkout(branch)
         nab = repo.active_branch
     repo.remote().pull()  # make sure we are up to date
+    post_clone()
 
     # TODO consider dumping metadata in a file in the folder too?
     def folder_name(scigraph_commit):
@@ -342,10 +343,20 @@ def main():
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
 
+    local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
+    if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
+        remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
+        def post_clone():
+            print('Retrieving go.owl since it is not in the repo.')
+            os.system('wget ' + remote_go + ' ' + local_go)
+    else:
+        post_clone = lambda : None
+
     scigraph_commit, load_base = scigraph_build(git_remote, sorg, git_local, sbranch)
     zip_path, itrips = repro_loader(git_remote, org, git_local,
                                     repo_name, branch, remote_base,
-                                    load_base, config_template, scigraph_commit)
+                                    load_base, config_template, scigraph_commit,
+                                    post_clone=post_clone)
 
     if itrips:
         import_graph = rdflib.Graph()
