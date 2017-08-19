@@ -53,7 +53,7 @@ def getBranch(repo, branch):
         return [b for b in repo.branches if b.name == branch][0]
     except IndexError:
         branches = [b.name for b in repo.branches]
-        raise IOError('No branch %s found, options are %s' % (branch, branches))
+        raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
 def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, load_base, config_template, scigraph_commit):
     local_base = os.path.join(git_local, repo_name)
@@ -63,8 +63,12 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
     else:
         repo = Repo(local_base)
     nob = repo.active_branch
-    nab = getBranch(repo, branch)
-    nab.checkout()
+    try:
+        nab = getBranch(repo, branch)
+        nab.checkout()
+    except ValueError:  # usually a remote branch
+        repo.git.checkout(branch)
+        nab = repo.active_branch
     repo.remote().pull()  # make sure we are up to date
 
     # TODO consider dumping metadata in a file in the folder too?
@@ -153,8 +157,12 @@ def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO all
             last_commit = f.read().strip()
 
     sob = repo.active_branch
-    sab = getBranch(repo, branch)
-    sab.checkout()
+    try:
+        sab = getBranch(repo, branch)
+        sab.checkout()
+    except ValueError:  # usually a remote branch
+        repo.git.checkout(branch)
+        sab = repo.active_branch
     repo.remote().pull()
     commit = repo.head.object.hexsha
 
