@@ -2,6 +2,8 @@
 """ Use SciGraph to load an ontology. NIF -> http://ontology.neuinfo.org/NIF
 
 Usage:
+    ontload services [options] <repo>
+    ontload extra [options] <repo>
     ontload [options] <repo> <remote_base>
 
 Options:
@@ -11,9 +13,10 @@ Options:
     -l --git-local=LBASE            local path to look for <repo> [default: ~/git]
     -b --branch=BRANCH              specify branch to load [default: master]
     -so --scigraph-org=SORG         which org to clone/build scigraph from [default: SciCrunch]
-    -sb --scigraph-branch=SBRANCH   which branch to build scigrpah from [default: upstream]
+    -sb --scigraph-branch=SBRANCH   which branch to build scigraph from [default: upstream]
+    -s --services-template=SCFG     create services.yaml from template [default: scigraph/services-template.yaml]
+    -h --host=HOST                  host where services will run
     -f --logfile=LOG                log output here [default: ontload.log]
-    -e --extra                      run a full graph load and other utils
 """
 import os
 import shutil
@@ -30,19 +33,7 @@ from IPython import embed
 
 setPS1(__file__)
 
-github_base = 'https://github.com/SciCrunch/NIF-Ontology'
-remote_base = 'http://ontology.neuinfo.org/NIF'
-local_base = os.path.expanduser('~/git/NIF-Ontology')
-branch = 'master'
 cwd = os.getcwd()
-
-if cwd == os.path.join(local_base, 'ttl'):
-    print("WOOOOWOW")
-    memoryCheck(2665488384)
-
-with open(os.path.join(local_base, 'scigraph/nifstd_curie_map.yaml'), 'rt') as f:
-    curies = yaml.load(f)
-curie_prefixes = set(curies.values())
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -131,11 +122,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
 
 def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO allow exact commit?
     COMMIT_LOG = 'last-built-commit.log'
-
-    # scigraph setup
-    #org = 'SciCrunch'
     repo_name = 'SciGraph'
-    #branch = 'upstream'
     remote = os.path.join(git_remote, org, repo_name)
     local = os.path.join(git_local, repo_name)
     commit_log_path = os.path.join(local, COMMIT_LOG)
@@ -229,9 +216,15 @@ def local_imports(remote_base, local_base, ontologies, dobig=False):
         inner(start)
     return sorted(triples)
 
-def loadall():
-    if cwd != local_base:
-        raise FileNotFoundError('Please run this in NIF-Ontology/ttl') 
+def loadall(git_local, repo_name):
+    local_base = os.path.join(git_local, repo_name)
+    lb_ttl = os.path.join(local_base, 'ttl')
+
+    if cwd == lb_ttl:
+        print("WOOOOWOW")
+        memoryCheck(2665488384)
+    else:
+        raise FileNotFoundError('Please run this in %s' % lb_ttl) 
 
     graph = rdflib.Graph()
 
@@ -257,7 +250,7 @@ def loadall():
 
     return graph
 
-def normalize_prefixes(graph):
+def normalize_prefixes(graph, curies):
     mg = makeGraph('nifall', makePrefixes('owl', 'skos', 'oboInOwl'), graph=graph)
     mg.del_namespace('')
 
@@ -271,7 +264,7 @@ def normalize_prefixes(graph):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph):
+def import_tree(graph, curie_prefixes):
     mg = makeGraph('', graph=graph)
     mg.add_known_namespace('owl')
     mg.add_known_namespace('NIFTTL')
@@ -282,7 +275,7 @@ def import_tree(graph):
     prefs = set(_.rsplit('#', 1)[0] + '#' if '#' in _
                        else (_.rsplit('_',1)[0] + '_' if '_' in _
                              else _.rsplit('/',1)[0] + '/') for _ in asdf)
-    nots = set(_ for _ in prefs if _ not in curie_prefixes)
+    nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
     sos = set(prefs) - set(nots)
 
     print(len(prefs))
@@ -322,12 +315,6 @@ def for_burak(ng_):
 def main():
     args = docopt(__doc__, version='nif_load 0')
     print(args)
-    if args['--extra']:
-        graph = loadall()
-        mg, ng_ = normalize_prefixes(graph)
-        for_burak(ng_)
-        embed()
-        return
 
     repo_name = args['<repo>']
     remote_base = args['<remote_base>']
@@ -342,28 +329,47 @@ def main():
     branch = args['--branch']
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
+    services_template = args['--services-template']
 
-    local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
-    if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
-        remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
-        def post_clone():
-            print('Retrieving go.owl since it is not in the repo.')
-            os.system('wget -O' + local_go + ' ' + remote_go)
+    with open(os.path.join(git_local, repo_name, 'scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+        curies = yaml.load(f)
+    curie_prefixes = set(curies.values())
+
+    if args['services']:
+        services_template_path = os.path.join(git_local, repo_name, services_template)
+        services_path = os.path.join(git_local, repo_name, 'scigraph/services.yaml')
+        with open(services_template_path, 'rt') as f:
+            config = yaml.load(f)
+        config['graphConfiguration']['curies'] = curies
+        with open(services_path, 'wt') as f:
+            yaml.dump(config, f, default_flow_style=False)
+
+    elif args['extra']:
+        graph = loadall(git_local, repo_name)
+        mg, ng_ = normalize_prefixes(graph, curies)
+        for_burak(ng_)
     else:
-        post_clone = lambda : None
+        local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
+        if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
+            remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
+            def post_clone():
+                print('Retrieving go.owl since it is not in the repo.')
+                os.system('wget -O' + local_go + ' ' + remote_go)
+        else:
+            post_clone = lambda : None
 
-    scigraph_commit, load_base = scigraph_build(git_remote, sorg, git_local, sbranch)
-    zip_path, itrips = repro_loader(git_remote, org, git_local,
-                                    repo_name, branch, remote_base,
-                                    load_base, config_template, scigraph_commit,
-                                    post_clone=post_clone)
+        scigraph_commit, load_base = scigraph_build(git_remote, sorg, git_local, sbranch)
+        zip_path, itrips = repro_loader(git_remote, org, git_local,
+                                        repo_name, branch, remote_base,
+                                        load_base, config_template, scigraph_commit,
+                                        post_clone=post_clone)
 
-    if itrips:
-        import_graph = rdflib.Graph()
-        [import_graph.add(t) for t in itrips]
-        tree, extra = import_tree(import_graph)
-        with open('/tmp/nifstd-import-closure.html', 'wt') as f:
-            f.write(extra.html)
+        if itrips:
+            import_graph = rdflib.Graph()
+            [import_graph.add(t) for t in itrips]
+            tree, extra = import_tree(import_graph, curie_prefixes)
+            with open('/tmp/nifstd-import-closure.html', 'wt') as f:
+                f.write(extra.html)
     embed()
 
 if __name__ == '__main__':
