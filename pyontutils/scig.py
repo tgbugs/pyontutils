@@ -8,7 +8,7 @@ Usage:
     scig s [--local --verbose --limit=LIMIT] <term>...
     scig g [--local --verbose --rt=RELTYPE] <id>...
     scig e [--local --verbose] <p> <s> <o>
-    scig c
+    scig c [--local --verbose]
     scig cy <query>
 
 Options:
