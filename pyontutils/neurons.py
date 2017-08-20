@@ -549,9 +549,11 @@ class NeuronBase(graphBase):
             self.Class = infixowl.Class(self.id_, graph=self.in_graph)  # IN
             phenotypeEdges = self.bagExisting()  # rebuild the bag from the -class- id
 
+        self.pes = tuple(sorted(sorted(phenotypeEdges), key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
+        self.validate()
+
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
-        self.pes = tuple(sorted(sorted(phenotypeEdges), key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
 
         self.phenotypes = set((pe.p for pe in self.pes))
         self.edges = set((pe.e for pe in self.pes))
@@ -711,6 +713,15 @@ class NeuronBase(graphBase):
     def __gt__(self, other):
         return not self.__lt__(other)
 
+    def __add__(self, other):
+        return self.__class__(*self.pes, *other.pes)
+
+    def __radd__(self, other):
+        if type(other) is int:  # sum() starts at 0
+            return self
+        else:
+            return self.__class__(*self.pes, *other.pes)
+
     def __enter__(self):
         """ Using a neuron in a context manager treats it as context! """
         self._old_context = self.getContext()
@@ -724,6 +735,32 @@ class NeuronBase(graphBase):
 
 class Neuron(NeuronBase):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
+    
+    def validate(self):
+        # Fact++ factpp can do some reasoning bits, but struggles with disjoint classes that are SubClasses of themselves :/
+        # until factpp is working more seemlessly (tricky given the size of certain phenotype proxy ontologies)
+        # we will use a set of huristics to validate whether certain basic invariants are met
+
+        # invariants
+        # disjoint species
+        # disjoint brain regions (force explicit use of LogicalPhenotype(OR, a, b))
+        # disjoint layers
+        # disjoint morphological phenotypes
+        # NO disjoint ephys types we settle on allowing multiple, since we can't reasonably expect users
+        #  to dissociate a neuron at time 1 and time 2 as being distinct (even if that is true)
+        #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
+
+        disjoints = [  # FIXME there has got to be a better place to do this :/
+        self._predicates.hasInstanceInSpecies,
+        self._predicates.hasSomaLocatedIn,
+        self._predicates.hasLayerLocationPhenotype,
+        self._predicates.hasMorphologicalPhenotype,
+        ]
+
+        for disjoint in disjoints:
+            phenos = [pe for pe in self.pes if pe.e == disjoint]
+            if len(phenos) > 1:
+                raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
 
     def bagExisting(self):  # TODO intersections
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy

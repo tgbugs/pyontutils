@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 
 import inspect
 from pyontutils.neurons import *  # always import via pyontutils or you will get errors
@@ -55,7 +55,9 @@ with phenotype_namespaces.BBP():
         with mySecondNeuron:  # contexts are mutually exclusive even when nested WARNING MAY CHANGE!
             myFourthNeuron = Neuron(LBC)
         with myThirdNeuron:  # use a neuron defined in a context as context to simulate nesting
-            myFifthNeuron = Neuron(SBC)  # trivia: this neuron can't actually exist as defined
+            try: myFifthNeuron = Neuron(SBC)  # trivia: this neuron can't actually exist as defined
+            except TypeError: print('Neuron(SBC) fails as expected in context of LBC')
+            myFifthNeuron = Neuron(SOM)  # trivia: this neuron can't actually exist as defined
     mySixthNeuron = Neuron(brain)
     print('first ', repr(myFirstNeuron))
     print('second', repr(mySecondNeuron))
@@ -64,7 +66,14 @@ with phenotype_namespaces.BBP():
     print('fifth ', repr(myFifthNeuron))
     print('sixth ', repr(mySixthNeuron))
 
-#print(graphBase.neurons())
+# addition
+try: myFirstNeuron + mySecondNeuron
+except TypeError: print('myFirstNeuron + mySecondNeuron fails as expected')
+with phenotype_namespaces.BBP():
+    sumn = Neuron(S1, SOM) + Neuron(Mouse, PV)
+    print('sumn a neuron', repr(sumn))
+    nn = sum((sumn, Neuron(NGC)))
+    print('sumn a neuron again', repr(nn))
 
 setLocalNames(phenotype_namespaces.BBP)
 setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
