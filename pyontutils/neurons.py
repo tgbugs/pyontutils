@@ -518,6 +518,7 @@ class NeuronBase(graphBase):
         # this is really high overhead to load this here
         self._predicates.hasInstanceInSpecies,
         self._predicates.hasTaxonRank,
+        # TODO hasDevelopmentalStage   !!!!! FIXME
         self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
         self._predicates.hasDendriteMorphologicalPhenotype,
@@ -762,6 +763,21 @@ class Neuron(NeuronBase):
             if len(phenos) > 1:
                 raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
 
+        # subClassOf restrictions (hacked impl using curie prefixes as a proxy)
+        # no panther
+        # no uberon
+        for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
+            for pe in self.pes:
+                if pe.e == predicate and invalid_superclass in pe.p:
+                    print(f'WARNING: subClassOf restriction violated for {invalid_superclass} due to {pe}')
+                    #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
+
+        # species matched identifiers TODO
+        # developmental stages (if we use the uberon associated ones)
+        # parcellation schemes
+        # NCBIGene ilx:definedForTaxon  # FIXME this needs to be a real OP!
+        # PR ??
+
     def bagExisting(self):  # TODO intersections
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         for c in self.Class.equivalentClass:
@@ -859,6 +875,12 @@ class Neuron(NeuronBase):
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
+
+
+class TypeNeuron(Neuron):  # TODO
+    """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.
+        TypeNeurons can be use to construct rules based taxonomies from
+        collections of bindary phenotypes. """ 
 
 
 class MeasuredNeuron(NeuronBase):  # XXX DEPRECATED retained for loading from some existing ontology files
