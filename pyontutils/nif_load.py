@@ -156,7 +156,9 @@ def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO all
 
     if commit != last_commit:
         print('SciGraph not built at commit', commit, 'last built at', last_commit)
-        build_command = 'cd ' + local + '; mvn clean -DskipTests -DskipITs install'
+        build_command = ('cd ' + local +
+                         '; mvn clean -DskipTests -DskipITs install' +
+                         '; cd SciGraph-services; mvn -DskipTests -DskipITs package')
         out = os.system(build_command)
         print(out)
         if out:
@@ -166,7 +168,10 @@ def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO all
     else:
         print('SciGraph already built at commit', commit)
 
-    return commit, load_base
+    zip_filename =  '*.zip'  # TODO
+    services_zip = os.path.join(local, 'SciGraph-services', 'target', zip_filename)
+
+    return commit, load_base, services_zip
 
 def local_imports(remote_base, local_base, ontologies, dobig=False):
     """ Read the import closure and use the local versions of the files. """
@@ -358,7 +363,7 @@ def main():
         else:
             post_clone = lambda : None
 
-        scigraph_commit, load_base = scigraph_build(git_remote, sorg, git_local, sbranch)
+        scigraph_commit, load_base, services_zip = scigraph_build(git_remote, sorg, git_local, sbranch)
         zip_path, itrips = repro_loader(git_remote, org, git_local,
                                         repo_name, branch, remote_base,
                                         load_base, config_template, scigraph_commit,
