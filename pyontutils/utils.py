@@ -265,7 +265,18 @@ class makeGraph:
             if type(o) == rdflib.BNode():
                 self.del_class(o)
 
-    def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False):
+    def add_ap(self, id_, label=None, addPrefix=True):
+        """ Add id_ as an owl:AnnotationProperty"""
+        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.AnnotationProperty)
+        if label:
+            self.add_node(id_, rdflib.RDFS.label, label)
+            if addPrefix:
+                prefix = ''.join([s.capitalize() for s in label.split()])
+                namespace = self.expand(id_)
+                self.add_namespace(prefix, namespace)
+
+    def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False, addPrefix=True):
+        """ Add id_ as an owl:ObjectProperty"""
         self.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if inverse:
             self.add_node(id_, rdflib.OWL.inverseOf, inverse)
@@ -273,6 +284,10 @@ class makeGraph:
             self.add_node(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
         if label:
             self.add_node(id_, rdflib.RDFS.label, label)
+            if addPrefix:
+                prefix = ''.join([s.capitalize() for s in label.split()])
+                namespace = self.expand(id_)
+                self.add_namespace(prefix, namespace)
         if transitive:
             self.add_node(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
 
