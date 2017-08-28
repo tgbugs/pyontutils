@@ -34,7 +34,7 @@ for putative_dir in top_level:
                     def_ = def_.split(test, 1)[-1].strip().strip('=').strip()
                     break
 
-            g.add_node(ident, SKOS.definition, def_)
+            g.add_trip(ident, SKOS.definition, def_)
 
 g.write()
 

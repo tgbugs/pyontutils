@@ -229,25 +229,25 @@ class makeGraph:
             return thing
 
     def add_ont(self, ontid, label, shortName=None, comment=None, version=None):
-        self.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-        self.add_node(ontid, rdflib.RDFS.label, label)
+        self.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+        self.add_trip(ontid, rdflib.RDFS.label, label)
         if comment:
-            self.add_node(ontid, rdflib.RDFS.comment, comment)
+            self.add_trip(ontid, rdflib.RDFS.comment, comment)
         if version:
-            self.add_node(ontid, rdflib.OWL.versionInfo, version)
+            self.add_trip(ontid, rdflib.OWL.versionInfo, version)
         if shortName:
-            self.add_node(ontid, rdflib.namespace.SKOS.altLabel, shortName)
+            self.add_trip(ontid, rdflib.namespace.SKOS.altLabel, shortName)
 
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None, autogen=False):
-        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
         if autogen:
             label = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
         if label:
-            self.add_node(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdflib.RDFS.label, label)
         if subClassOf:
-            self.add_node(id_, rdflib.RDFS.subClassOf, subClassOf)
+            self.add_trip(id_, rdflib.RDFS.subClassOf, subClassOf)
 
-        [self.add_node(id_, self.SYNONYM, s) for s in synonyms]
+        [self.add_trip(id_, self.SYNONYM, s) for s in synonyms]
 
     def del_class(self, id_):
         id_ = self.check_thing(id_)
@@ -258,9 +258,9 @@ class makeGraph:
 
     def add_ap(self, id_, label=None, addPrefix=True):
         """ Add id_ as an owl:AnnotationProperty"""
-        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.AnnotationProperty)
+        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.AnnotationProperty)
         if label:
-            self.add_node(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdflib.RDFS.label, label)
             if addPrefix:
                 prefix = ''.join([s.capitalize() for s in label.split()])
                 namespace = self.expand(id_)
@@ -268,21 +268,21 @@ class makeGraph:
 
     def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False, addPrefix=True):
         """ Add id_ as an owl:ObjectProperty"""
-        self.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if inverse:
-            self.add_node(id_, rdflib.OWL.inverseOf, inverse)
+            self.add_trip(id_, rdflib.OWL.inverseOf, inverse)
         if subPropertyOf:
-            self.add_node(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
+            self.add_trip(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
         if label:
-            self.add_node(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdflib.RDFS.label, label)
             if addPrefix:
                 prefix = ''.join([s.capitalize() for s in label.split()])
                 namespace = self.expand(id_)
                 self.add_namespace(prefix, namespace)
         if transitive:
-            self.add_node(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
+            self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
 
-    def add_node(self, target, edge, value):
+    def add_trip(self, target, edge, value):
         if not value:  # no empty values!
             return
         target = self.check_thing(target)
@@ -336,11 +336,11 @@ class makeGraph:
             for s, p, o in self.g.triples(trip):
                 rep = [s, p, o]
                 rep[i] = replace
-                self.add_node(*rep)
+                self.add_trip(*rep)
                 self.g.remove((s, p, o))
 
     def replace_subject_object(self, p, s, o, rs, ro):  # useful for porting edges to equivalent classes
-        self.add_node(rs, p, ro)
+        self.add_trip(rs, p, ro)
         self.g.remove((s, p, o))
 
     def get_equiv_inter(self, curie):
@@ -457,7 +457,7 @@ def createOntology(filename=    'temp-graph',
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
     graph.add_ont(ontid, name, shortname, comment, version)
     for import_ in imports:
-        graph.add_node(ontid, rdflib.OWL.imports, import_)
+        graph.add_trip(ontid, rdflib.OWL.imports, import_)
     return graph
 
 def chunk_list(list_, size):

@@ -35,33 +35,33 @@ class ncbi(dictParse):
         super().__init__(thing, order=['uid'])
 
     def name(self, value):
-        self.g.add_node(self.identifier, rdflib.RDFS.label, value)
+        self.g.add_trip(self.identifier, rdflib.RDFS.label, value)
 
     def description(self, value):
         #if value:
-        self.g.add_node(self.identifier, 'skos:prefLabel', value)
+        self.g.add_trip(self.identifier, 'skos:prefLabel', value)
 
     def uid(self, value):
         self.identifier = 'NCBIGene:' + str(value)
-        self.g.add_node(self.identifier, rdflib.RDF.type, rdflib.OWL.Class)
-        self.g.add_node(self.identifier, rdflib.RDFS.subClassOf, self.superclass)
+        self.g.add_trip(self.identifier, rdflib.RDF.type, rdflib.OWL.Class)
+        self.g.add_trip(self.identifier, rdflib.RDFS.subClassOf, self.superclass)
 
     def organism(self, value):
         self._next_dict(value)
 
     def taxid(self, value):
         tax = 'NCBITaxon:' + str(value)
-        self.g.add_node(self.identifier, 'ilx:definedForTaxon', tax)  # FIXME species or taxon???
+        self.g.add_trip(self.identifier, 'ilx:definedForTaxon', tax)  # FIXME species or taxon???
 
     def otheraliases(self, value):
         if value:
             for synonym in value.split(','):
-                self.g.add_node(self.identifier, 'OBOANN:synonym', synonym.strip())
+                self.g.add_trip(self.identifier, 'OBOANN:synonym', synonym.strip())
 
     def otherdesignations(self, value):
         if value:
             for synonym in value.split('|'):
-                self.g.add_node(self.identifier, 'OBOANN:synonym', synonym)
+                self.g.add_trip(self.identifier, 'OBOANN:synonym', synonym)
 
 def ncbigene_make():
     IDS_FILE = 'resources/gene-subset-ids.txt'
@@ -194,8 +194,8 @@ def chebi_make():
                     for t in g.triples((replaced_by, None, None)):
                         new_graph.add_recursive(t, g)
                 chebi_dead.add_class(id_)
-                chebi_dead.add_node(id_, 'replacedBy:', replaced_by)
-                chebi_dead.add_node(id_, rdflib.OWL.deprecated, True)
+                chebi_dead.add_trip(id_, 'replacedBy:', replaced_by)
+                chebi_dead.add_trip(id_, rdflib.OWL.deprecated, True)
             else:
                 if id_ not in depwor:
                     raise BaseException('wtf error', id_)

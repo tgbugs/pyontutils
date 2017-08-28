@@ -85,7 +85,7 @@ def chebi_imp():
         ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl'))
         for f, r in deads.items():
             ng.replace_uriref(f, r)
-            ng.add_node(r, 'oboInOwl:hasAlternateId', rdflib.Literal(f, datatype=rdflib.XSD.string))
+            ng.add_trip(r, 'oboInOwl:hasAlternateId', rdflib.Literal(f, datatype=rdflib.XSD.string))
             g.remove((r, replacedBy, r))  # in case the replaced by was already in
     
     switch_dead(g)

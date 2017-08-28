@@ -196,7 +196,7 @@ def make_file(graph, records):
             #if field == 'alt_id' and id_[1:] == value:
                 print('caught a mainid appearing as altid', field, value)
                 continue
-            graph.add_node(*make_node(id_, field, value))
+            graph.add_trip(*make_node(id_, field, value))
 
     graph.write()
 

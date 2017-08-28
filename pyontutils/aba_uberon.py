@@ -164,8 +164,8 @@ ubridge = makeGraph('uberon-parcellation-mappings',prefixes=makePrefixes('ilx', 
 for u, arefs in u_a_map.items():
     if arefs:
         # TODO check for bad assumptions here
-        ubridge.add_node(u, 'ilx:delineatedBy', arefs[0])
-        ubridge.add_node(arefs[0], 'ilx:delineates', u)
+        ubridge.add_trip(u, 'ilx:delineatedBy', arefs[0])
+        ubridge.add_trip(arefs[0], 'ilx:delineates', u)
 
 ubridge.write()
 embed()

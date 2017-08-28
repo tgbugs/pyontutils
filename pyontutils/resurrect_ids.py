@@ -73,8 +73,8 @@ def extract(file):
     for replacedByClass, oldClassString in base_alts:
         if not alreadyHasEntry(oldClassString, og):
             ng.add_class(oldClassString)
-            ng.add_node(oldClassString, 'replacedBy:', replacedByClass)
-            ng.add_node(oldClassString, rdflib.OWL.deprecated, True)
+            ng.add_trip(oldClassString, 'replacedBy:', replacedByClass)
+            ng.add_trip(oldClassString, rdflib.OWL.deprecated, True)
 
     ng.write()
 

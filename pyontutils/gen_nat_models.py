@@ -37,8 +37,8 @@ class nat(rowParse):
         pass
     def _row_post(self):
         graph.add_class(self._id, self.super_id, label=self.label)
-        graph.add_node(self._id, 'skos:hiddenLabel', self.hidden)
-        graph.add_node(self._id, 'definition:', self.definition)
+        graph.add_trip(self._id, 'skos:hiddenLabel', self.hidden)
+        graph.add_trip(self._id, 'definition:', self.definition)
 
 asdf = nat(rows, header)
 graph.write()

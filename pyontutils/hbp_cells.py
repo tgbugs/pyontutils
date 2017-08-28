@@ -106,10 +106,10 @@ def clean_hbp_cell():
     NAME = 'NIF-Neuron-HBP-cell-import'
     mg = makeGraph(NAME, prefixes=PREFIXES)
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/generated/' + NAME + '.ttl'
-    mg.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    mg.add_node(ontid, rdflib.RDFS.label, 'NIF Neuron HBP cell import')
-    mg.add_node(ontid, rdflib.RDFS.comment, 'this file was automatically using pyontutils/hbp_cells.py')
-    mg.add_node(ontid, rdflib.OWL.versionInfo, date.isoformat(date.today()))
+    mg.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    mg.add_trip(ontid, rdflib.RDFS.label, 'NIF Neuron HBP cell import')
+    mg.add_trip(ontid, rdflib.RDFS.comment, 'this file was automatically using pyontutils/hbp_cells.py')
+    mg.add_trip(ontid, rdflib.OWL.versionInfo, date.isoformat(date.today()))
     newgraph = mg.g
 
     skip = {
@@ -162,8 +162,8 @@ def clean_hbp_cell():
                 try:
                     lab = v.findById(qnt[0] + ':' + qnt[2])['labels'][0]
                     print('REMOTE', qnt[0] + ':' + qnt[2], lab)
-                    #mg.add_node(triple[2], rdflib.RDFS.label, lab)
-                    #mg.add_node(triple[0], PREFIXES['OBOANN'] + 'synonym', lab)  # so we can see it
+                    #mg.add_trip(triple[2], rdflib.RDFS.label, lab)
+                    #mg.add_trip(triple[0], PREFIXES['OBOANN'] + 'synonym', lab)  # so we can see it
                 except TypeError:
                     if qnt[2].startswith('nlx'):
                         triple = (triple[0], triple[1], expand('NIFSTD:' + qnt[2]))
@@ -201,7 +201,7 @@ def clean_hbp_cell():
             else:
                 newgraph.add((triple[0], edge, triple[2]))
         elif triple[2] in replace:
-            mg.add_node(triple[0], edge, skip[obj_suffix])
+            mg.add_trip(triple[0], edge, skip[obj_suffix])
         elif triple[2] in phen:
             edge_, rst_on = to_phenotype[obj_suffix]
             edge_ = expand(edge_)
@@ -227,7 +227,7 @@ def clean_hbp_cell():
 
     # add missing subClasses
     for nosub in missing_supers:
-        mg.add_node(nosub, rdflib.RDFS.subClassOf, NEURON)
+        mg.add_trip(nosub, rdflib.RDFS.subClassOf, NEURON)
 
     # cleanup for subClassOf
     for subject in sorted(newgraph.subjects(rdflib.RDFS.subClassOf, expand(NEURON))):

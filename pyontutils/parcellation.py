@@ -106,7 +106,7 @@ def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER):
     graph.add_hierarchy(scheme.species, DEFSPECIES, scheme.curie)
     graph.add_hierarchy(scheme.devstage, DEVSTAGE, scheme.curie)
     if atlas_id:
-        graph.add_node(scheme.curie, rdflib.RDFS.isDefinedBy, atlas_id)
+        graph.add_trip(scheme.curie, rdflib.RDFS.isDefinedBy, atlas_id)
 
 def make_atlas(atlas, parent=ATLAS_SUPER):
     out = [
@@ -125,9 +125,9 @@ def make_atlas(atlas, parent=ATLAS_SUPER):
 
 def add_triples(graph, struct, struct_to_triples, parent=None):
     if not parent:
-        [graph.add_node(*triple) for triple in struct_to_triples(struct)]
+        [graph.add_trip(*triple) for triple in struct_to_triples(struct)]
     else:
-        [graph.add_node(*triple) for triple in struct_to_triples(struct, parent)]
+        [graph.add_trip(*triple) for triple in struct_to_triples(struct, parent)]
 
 def parcellation_schemes(ontids_atlases):
     ont = OntMeta(GENERATED,
@@ -142,7 +142,7 @@ def parcellation_schemes(ontids_atlases):
     graph.add_ont(ontid, *ont[2:])
 
     for import_id, atlas in sorted(ontids_atlases):
-        graph.add_node(ontid, rdflib.OWL.imports, import_id)
+        graph.add_trip(ontid, rdflib.OWL.imports, import_id)
         add_triples(graph, atlas, make_atlas)
 
     graph.add_class(ATLAS_SUPER, label=atname)
@@ -203,7 +203,7 @@ class genericPScheme:
     def dataproc(cls, graph, data):
         """ example datagetter function, make any local modifications here """
         for thing in data:
-            graph.add_node(*thing)
+            graph.add_trip(*thing)
         raise NotImplementedError('You need to implement this yourlself!')
 
     @classmethod
@@ -250,11 +250,11 @@ class HBA(genericPScheme):
             curie = graph.expand(cls.PREFIX + ':' + str(node['id']))
             graph.add_class(curie, cls.concept.curie)
             parent = node['parent_structure_id']
-            graph.add_node(curie, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + node['name'])
-            graph.add_node(curie, PARCLAB, node['name'])
-            graph.add_node(curie, ACRONYM, node['acronym'])
+            graph.add_trip(curie, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + node['name'])
+            graph.add_trip(curie, PARCLAB, node['name'])
+            graph.add_trip(curie, ACRONYM, node['acronym'])
             if node['safe_name'] != node['name']:
-                graph.add_node(curie, SYNONYM, node['safe_name'])
+                graph.add_trip(curie, SYNONYM, node['safe_name'])
             if parent:
                 pcurie = graph.expand(cls.PREFIX + ':' + str(parent))
                 graph.add_hierarchy(pcurie, PARTOF, curie)
@@ -346,14 +346,14 @@ class CoCoMac(genericPScheme):
                 pass
 
             def Acronym(self, value):
-                graph.add_node(self.identifier, ACRONYM, value)
+                graph.add_trip(self.identifier, ACRONYM, value)
 
             def FullName(self, value):
-                graph.add_node(self.identifier, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
-                graph.add_node(self.identifier, PARCLAB, value)
+                graph.add_trip(self.identifier, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
+                graph.add_trip(self.identifier, PARCLAB, value)
 
             def LegacyID(self, value):
-                graph.add_node(self.identifier, ACRONYM, value)
+                graph.add_trip(self.identifier, ACRONYM, value)
 
             def BrainInfoID(self, value):
                 pass
@@ -403,16 +403,16 @@ class HCP(genericPScheme):
 
             def Area_Name(self, value):
                 value = value.strip()
-                graph.add_node(self.id_, ACRONYM, value)
+                graph.add_trip(self.id_, ACRONYM, value)
 
             def Area_Description(self, value):
                 value = value.strip()
-                graph.add_node(self.id_, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
-                graph.add_node(self.id_, PARCLAB, value)
+                graph.add_trip(self.id_, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
+                graph.add_trip(self.id_, PARCLAB, value)
 
             def Newly_Described(self, value):
                 if value == 'Yes*' or value == 'Yes':
-                    graph.add_node(self.id_, 'OBOANN:definingCitation', 'Glasser and Van Essen 2016')
+                    graph.add_trip(self.id_, 'OBOANN:definingCitation', 'Glasser and Van Essen 2016')
 
             def Results_Sections(self, value):
                 pass
@@ -422,15 +422,15 @@ class HCP(genericPScheme):
                     name = name.strip()
                     if name:
                         if len(name) <= 3:
-                            graph.add_node(self.id_, ACRONYM, name)
+                            graph.add_trip(self.id_, ACRONYM, name)
                         else:
-                            graph.add_node(self.id_, SYNONYM, name)
+                            graph.add_trip(self.id_, SYNONYM, name)
                 
             def Key_Studies(self, value):
                 for study in value.split(','):
                     study = study.strip()
                     if study:
-                        graph.add_node(self.id_, 'OBOANN:definingCitation', study)
+                        graph.add_trip(self.id_, 'OBOANN:definingCitation', study)
 
         hcp2016(data)
 
@@ -475,8 +475,8 @@ class PAX1(genericPScheme):
             id_ = ':' + str(i + 1)
             display = '(%s) ' % cls.ont.shortname + label
             graph.add_class(id_, cls.concept.curie, label=display)
-            graph.add_node(id_, PARCLAB, label)
-            graph.add_node(id_, ACRONYM, abrv)  # FIXME these are listed as abbreviations in the text
+            graph.add_trip(id_, PARCLAB, label)
+            graph.add_trip(id_, ACRONYM, abrv)  # FIXME these are listed as abbreviations in the text
 
 
 class WHSSD(genericPScheme):
@@ -516,7 +516,7 @@ class WHSSD(genericPScheme):
             id_ = ':' + str(index)
             display = '(%s) ' % cls.ont.shortname + label
             graph.add_class(id_, cls.concept.curie, label=display)
-            graph.add_node(id_, PARCLAB, label)
+            graph.add_trip(id_, PARCLAB, label)
 
 class FMRI(genericPScheme):
     PREFIXES = makePrefixes('', 'skos', 'ILXREPLACE')
@@ -533,7 +533,7 @@ class FMRI(genericPScheme):
             label = node.text
             display = '(%s) ' % cls.ont.shortname + label
             graph.add_class(id_, cls.concept.curie, label=display)
-            graph.add_node(id_, PARCLAB, label)
+            graph.add_trip(id_, PARCLAB, label)
 
 
 def fmri_atlases():
@@ -796,15 +796,15 @@ def swanson():
     for node, anns in sp.nodes.items():
         nid = nbase % node
         new_graph.add_class(nid, parent, label=anns['label'])
-        new_graph.add_node(nid, 'OBOANN:definingCitation', anns['citation'])
+        new_graph.add_trip(nid, 'OBOANN:definingCitation', anns['citation'])
         json_['nodes'].append({'lbl':anns['label'],'id':'SWA:' + str(node)})
         #if anns['uberon']:
-            #new_graph.add_node(nid, rdflib.OWL.equivalentClass, anns['uberon'])  # issues arrise here...
+            #new_graph.add_trip(nid, rdflib.OWL.equivalentClass, anns['uberon'])  # issues arrise here...
 
     for appendix, data in sp.appendicies.items():
         aid = PREFIXES['SWAA'] + str(appendix)
         new_graph.add_class(aid, label=data['name'].capitalize())
-        new_graph.add_node(aid, 'ilx:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
+        new_graph.add_trip(aid, 'ilx:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
         children = data['children']
         ahp = HASPART + str(appendix)
         apo = PARTOF + str(appendix)

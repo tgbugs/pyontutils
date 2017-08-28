@@ -72,7 +72,7 @@ def convert(f):
             ps['cocomac'] = nsl['cocomac']
 
     ng = makeGraph(os.path.splitext(f)[0], prefixes=ps, writeloc=os.path.expanduser('~/git/NIF-Ontology/ttl/'))
-    [ng.add_node(*n) for n in graph.triples([None]*3)]
+    [ng.add_trip(*n) for n in graph.triples([None]*3)]
     #print(f, len(ng.g))
     ng.write()
     return f

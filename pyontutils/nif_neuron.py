@@ -63,7 +63,7 @@ PREFIXES = makePrefixes('ilx',
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
     for s, p, o in graph.g.triples((None, None, find)):
-        graph.add_node(s, p, replace)
+        graph.add_trip(s, p, replace)
         graph.g.remove((s, p, o))
 
 def make_defined(graph, ilx_start, label, phenotype_id, restriction_edge, parent=None):
@@ -110,7 +110,7 @@ def make_mutually_disjoint(graph, members):
         first, rest = members[0], members[1:]
         for r in rest:
             print(first, r)
-            graph.add_node(first, rdflib.OWL.disjointWith, r)
+            graph.add_trip(first, rdflib.OWL.disjointWith, r)
         return make_mutually_disjoint(graph, rest)
     else:
         return members
@@ -229,18 +229,18 @@ def make_phenotypes():
             continue
         id_ = PREFIXES['ilx'] + row[0]
         pedges.add(graph.expand('ilx:' + row[0]))
-        graph.add_node(id_, rdflib.RDFS.label, row[0])  # FIXME
-        graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        graph.add_trip(id_, rdflib.RDFS.label, row[0])  # FIXME
+        graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
-            graph.add_node(id_, rdflib.namespace.SKOS.definition, row[3])
+            graph.add_trip(id_, rdflib.namespace.SKOS.definition, row[3])
         if row[6]:
-            graph.add_node(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
+            graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
         if row[7]:
-            graph.add_node(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
+            graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
         if row[8]:
             for t in row[8].split(','):
                 t = t.strip()
-                graph.add_node(id_, rdflib.RDF.type, lookup[t])
+                graph.add_trip(id_, rdflib.RDF.type, lookup[t])
 
     with open(refile(__file__, 'resources/neuron_phenotype.csv'), 'rt') as f:
         rows = [r for r in csv.reader(f) if any(r) and not r[0].startswith('#')]
@@ -278,17 +278,17 @@ def make_phenotypes():
         def synonyms(self, value):
             if value:
                 for v in value.split(','):
-                    graph2.add_node(self.id_, 'OBOANN:synonym', v)
+                    graph2.add_trip(self.id_, 'OBOANN:synonym', v)
 
         def rules(self, value):
             if value == PP.SCD:
                 self.scd.add(self.id_)
             elif value.startswith(PP.DJW):
-                [graph2.add_node(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
+                [graph2.add_trip(self.id_, rdflib.OWL.disjointWith, _) for _ in value.split(' ')[1:]]
 
         def use_edge(self, value):
             if value:
-                graph2.add_node(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
+                graph2.add_trip(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
 
         def _row_post(self):
             # defined class
@@ -311,7 +311,7 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            graph2.add_node(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
+            graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
 
             self.ilx_start += 1
             id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
@@ -389,16 +389,16 @@ def make_phenotypes():
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
     graph.add_ont(ontid, 'NIF Phenotype core', comment= 'This is the core set of predicates used to model phenotypes and the parent class for phenotypes.')
     graph.add_class('ilx:Phenotype', label='Phenotype')
-    graph.add_node('ilx:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possilbe. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental contidions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxillary variable that we think accounts for the difference.')
-    #graph.add_node(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
-    #graph.add_node(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
+    graph.add_trip('ilx:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possilbe. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental contidions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxillary variable that we think accounts for the difference.')
+    #graph.add_trip(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
+    #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
     graph.write()  # moved below to incorporate uwotm8
     
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
-    graph2.add_node(ontid2, 'owl:imports', ontid)
+    graph2.add_trip(ontid2, 'owl:imports', ontid)
     graph2.write()
     
     syn_mappings = {}
@@ -566,60 +566,60 @@ def _rest_make_phenotypes():
             d = s2[s]
             syns.update(d['syns'])
             new_terms[d['xrefs'][0]] = {'replaced_by':id_}
-            xr.add_node(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
-            #dg.add_node(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
+            xr.add_trip(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
+            #dg.add_trip(d['xrefs'][0], 'oboInOwl:replacedBy', id_)
             new_terms[d['xrefs'][1]] = {'replaced_by':id_}
-            xr.add_node(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
-            #dg.add_node(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
+            xr.add_trip(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
+            #dg.add_trip(d['xrefs'][1], 'oboInOwl:replacedBy', id_)
 
             data['labels'] = [d['label'], d['o']]
-            #dg.add_node(id_, rdflib.RDFS.label, d['label'])
-            dg.add_node(id_, rdflib.RDFS.label, d['o'])
+            #dg.add_trip(id_, rdflib.RDFS.label, d['label'])
+            dg.add_trip(id_, rdflib.RDFS.label, d['o'])
             data['xrefs'] = d['xrefs']
             for x in d['xrefs']:  # FIXME... expecting order of evaluation errors here...
-                dg.add_node(id_, 'oboInOwl:hasDbXref', x)  # xr
-                xr.add_node(id_, 'oboInOwl:hasDbXref', x)  # x
+                dg.add_trip(id_, 'oboInOwl:hasDbXref', x)  # xr
+                xr.add_trip(id_, 'oboInOwl:hasDbXref', x)  # x
 
         elif spre.toPython() != 'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#' or ng.namespace_manager.qname(s).replace('default1','NIFQUAL') in desired_nif_terms:  # skip non-xref quals
             #print(ng.namespace_manager.qname(s).replace('default1','NIFQUAL'))
             new_terms[s] = {'replaced_by':id_}
-            xr.add_node(s, 'oboInOwl:replacedBy', id_)
+            xr.add_trip(s, 'oboInOwl:replacedBy', id_)
             data['labels'] = [o.toPython()]
-            dg.add_node(id_, rdflib.RDFS.label, o.toPython())
+            dg.add_trip(id_, rdflib.RDFS.label, o.toPython())
             data['xrefs'] = [s]
-            dg.add_node(id_, 'oboInOwl:hasDbXref', s)  # xr
-            xr.add_node(id_, 'oboInOwl:hasDbXref', s)  # xr
+            dg.add_trip(id_, 'oboInOwl:hasDbXref', s)  # xr
+            xr.add_trip(id_, 'oboInOwl:hasDbXref', s)  # xr
         else:
             ilx_start -= 1
             continue
 
         new_terms[id_] = data
-        dg.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
-        xr.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        dg.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        xr.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
         for syn in syns:
             if syn.toPython() not in data['labels']:
                 if len(syn) > 3:
-                    dg.add_node(id_, 'OBOANN:synonym', syn)
+                    dg.add_trip(id_, 'OBOANN:synonym', syn)
                 elif syn:
-                    dg.add_node(id_, 'OBOANN:abbrev', syn)
+                    dg.add_trip(id_, 'OBOANN:abbrev', syn)
 
         if 'EPHYS' in s or any(['EPHYS' in x for x in data['xrefs']]):
-            dg.add_node(id_, rdflib.RDFS.subClassOf, ephys_phenotype)
+            dg.add_trip(id_, rdflib.RDFS.subClassOf, ephys_phenotype)
         elif 'MORPHOLOGY' in s or any(['MORPHOLOGY' in x for x in data['xrefs']]):
-            dg.add_node(id_, rdflib.RDFS.subClassOf, morpho_phenotype)
+            dg.add_trip(id_, rdflib.RDFS.subClassOf, morpho_phenotype)
 
     #dg.write(convert=False)
     xr.write(convert=False)
 
     #skip this for now, we can use DG to do lookups later
     #for t in dg.g.triples((None, None, None)):
-        #g.add_node(*t)  # only way to clean prefixes :/
+        #g.add_trip(*t)  # only way to clean prefixes :/
     add_phenotypes(g)
     g.write(convert=False)
 
     g2 = makeGraph('pheno-comp', PREFIXES)
     for t in ng.triples((None, None, None)):
-        g2.add_node(*t)  # only way to clean prefixes :/
+        g2.add_trip(*t)  # only way to clean prefixes :/
 
     g2.write(convert=False)
     
@@ -658,13 +658,13 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     for m in missing:
         m = ng.expand(m)
         for s, p, o in cg.triples((m, None, None)):
-            ng.add_node(s, p, o)
+            ng.add_trip(s, p, o)
 
 
 
     #cg.remove((None, rdflib.OWL.imports, None))  # DONOTWANT NIF-Cell imports
     #for t in cg.triples((None, None, None)):
-        #ng.add_node(*t)  # only way to clean prefixes :/
+        #ng.add_trip(*t)  # only way to clean prefixes :/
     #cg = None
     #"""
 
@@ -678,18 +678,18 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
 
     ontid = base + ng.name + '.ttl'
-    ng.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
-    ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
-    ng.add_node(ontid, rdflib.OWL.imports, base + 'hbp-special.ttl')
-    #ng.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
-    #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
-    #ng.add_node(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
+    ng.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
+    ng.add_trip(ontid, rdflib.OWL.imports, base + 'hbp-special.ttl')
+    #ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
+    #ng.add_trip(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
+    #ng.add_trip(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
     ng.replace_uriref('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype')
 
     #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
-    defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
-    defined_graph.add_node(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
+    defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
 
     done = True#False
     done_ = set()
@@ -716,8 +716,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                     data = sgv.findById(o)
                     label = data['labels'][0]
-                    ng.add_node(o, rdflib.RDF.type, rdflib.OWL.Class)
-                    ng.add_node(o, rdflib.RDFS.label, label)
+                    ng.add_trip(o, rdflib.RDF.type, rdflib.OWL.Class)
+                    ng.add_trip(o, rdflib.RDFS.label, label)
 
                     success = True
                     true_o = label
@@ -737,8 +737,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                             ng.g.remove((s, p, o_lit))
 
                             label = d['labels'][0]
-                            ng.add_node(sgt, rdflib.RDF.type, rdflib.OWL.Class)
-                            ng.add_node(sgt, rdflib.RDFS.label, label)
+                            ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
+                            ng.add_trip(sgt, rdflib.RDFS.label, label)
 
                             success = True
                             true_o = label
@@ -753,8 +753,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                                 ng.g.remove((s, p, o_lit))
 
                                 label = d['labels'][0]
-                                ng.add_node(sgt, rdflib.RDF.type, rdflib.OWL.Class)
-                                ng.add_node(sgt, rdflib.RDFS.label, label)
+                                ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
+                                ng.add_trip(sgt, rdflib.RDFS.label, label)
 
                                 success = True
                                 true_o = label
@@ -769,7 +769,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                 else:
                     ilx_start += 1
                     id_ = ng.expand(ilx_base.format(ilx_start))
-                    defined_graph.add_node(id_, rdflib.RDF.type, rdflib.OWL.Class)
+                    defined_graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
                     restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
                     intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
                     this = infixowl.Class(id_, graph=defined_graph.g)
@@ -782,7 +782,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                         done = True
 
     defined_graph.add_class(defined_class_parent, NIFCELL_NEURON, label='defined class neuron')
-    defined_graph.add_node(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
+    defined_graph.add_trip(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
 
     defined_graph.write()
     ng.write()
@@ -868,9 +868,9 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + graph.name + '.ttl'
-    graph.add_node(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
-    graph.add_node(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
+    graph.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
+    graph.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    graph.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
 
     def lsn(word):
         syn_mappings[word] = graph.expand(sgv.findByTerm(word)[0]['curie'])  # cheating
@@ -892,8 +892,8 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     def do_graph(d):
         sgt = graph.expand(d['curie'])
         label = d['labels'][0]
-        graph.add_node(sgt, rdflib.RDF.type, rdflib.OWL.Class)
-        graph.add_node(sgt, rdflib.RDFS.label, label)
+        graph.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
+        graph.add_trip(sgt, rdflib.RDFS.label, label)
 
     done = set()
     for s, p, o in graph.g.triples((None, None, None)): #(rdflib.RDFS.subClassOf,rdflib.OWL.Thing)):
@@ -915,14 +915,14 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
 
     # FIXME this is a dupe with defined_class
-    #graph.add_node(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
-    #graph.add_node(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
-    #graph.add_node(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
-    #graph.add_node(defined_class_parent, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
-    #graph.add_node(morpho_defined, rdflib.RDFS.subClassOf, defined_class_parent)
-    #graph.add_node(morpho_defined, rdflib.RDFS.label, 'Morphologically classified neuron')  # FIXME -- need asserted in here...
-    #graph.add_node(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
-    #graph.add_node(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
+    #graph.add_trip(defined_class_parent, rdflib.RDF.type, rdflib.OWL.Class)
+    #graph.add_trip(defined_class_parent, rdflib.RDFS.label, 'defined class neuron')
+    #graph.add_trip(defined_class_parent, rdflib.namespace.SKOS.description, 'Parent class For all defined class neurons')
+    #graph.add_trip(defined_class_parent, rdflib.RDFS.subClassOf, NIFCELL_NEURON)
+    #graph.add_trip(morpho_defined, rdflib.RDFS.subClassOf, defined_class_parent)
+    #graph.add_trip(morpho_defined, rdflib.RDFS.label, 'Morphologically classified neuron')  # FIXME -- need asserted in here...
+    #graph.add_trip(ephys_defined, rdflib.RDFS.subClassOf, defined_class_parent)
+    #graph.add_trip(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
     graph.add_class(expression_defined, NIFCELL_NEURON, autogen=True)
     graph.add_class('ilx:NeuroTypeClass', NIFCELL_NEURON, label='Neuron TypeClass')
@@ -947,7 +947,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
         # FIXME not clear that we should be doing typeclasses this way.... :/
         # requires more thought, on the plus side you do get better reasoning...
         disjointunion = disjointUnionOf(graph=graph.g, members=list(disjoints))
-        graph.add_node(id_, rdflib.OWL.disjointUnionOf, disjointunion)
+        graph.add_trip(id_, rdflib.OWL.disjointUnionOf, disjointunion)
 
 
     graph.write()
@@ -977,7 +977,7 @@ def predicate_disambig(graph):
     ui = ILXREPLACE('phenotype predicate disambiguation')
     def uit(p, o):
         out = (ui, graph.expand(p), graph.expand(o))
-        graph.add_node(*out)
+        graph.add_trip(*out)
         return out
         
     uit('ilx:hasLayerLocation', 'UBERON:0005390')

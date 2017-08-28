@@ -322,7 +322,7 @@ def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be ex
         out.append( (id_, rdflib.RDFS.subClassOf, pref(superdict['ilx'])) )
     for eid in j['existing_ids']:
         out.append( (id_, 'ilx:someOtherId', eid['iri']) )  # predicate TODO
-    [g.add_node(*o) for o in out]
+    [g.add_trip(*o) for o in out]
     return g.g.serialize(format='nifttl')  # other formats can be choosen
 
 def main():

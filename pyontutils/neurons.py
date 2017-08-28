@@ -199,7 +199,7 @@ class graphBase:
         ontid = rdflib.URIRef('file://' + out_graph_path)
         new_graph.add_ont(ontid, 'Some Neurons')
         for remote_out_import in remote_out_imports:
-            new_graph.add_node(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
+            new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
         graphBase.ng = new_graph
 
         # set predicates
@@ -1230,8 +1230,8 @@ def main():
     WRITEPYTHON(sorted(dns))
     ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
-    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
-    ng.add_node(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
+    ng.add_trip(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
+    ng.add_trip(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
     ng.write()
     bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]

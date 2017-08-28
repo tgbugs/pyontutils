@@ -163,15 +163,15 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
         udepr = sgv.findById(uberon)['deprecated'] if uberon != 'NOREP' else False
         if udepr:
             # add xref to the now deprecated uberon term
-            graph.add_node(nifga, 'oboInOwl:hasDbXref', uberon)
+            graph.add_trip(nifga, 'oboInOwl:hasDbXref', uberon)
             #print('Replacement is deprecated, not replacing:', uberon)
-            graph.add_node(nifga, RDFS.comment, 'xref %s is deprecated, so not using replacedBy:' % uberon)
+            graph.add_trip(nifga, RDFS.comment, 'xref %s is deprecated, so not using replacedBy:' % uberon)
         else:
             # add replaced by -> uberon
-            graph.add_node(nifga, 'replacedBy:', uberon)
+            graph.add_trip(nifga, 'replacedBy:', uberon)
 
         # add deprecated true (ok to do twice...)
-        graph.add_node(nifga, OWL.deprecated, True)
+        graph.add_trip(nifga, OWL.deprecated, True)
 
         # review nifga relations, specifically has_proper_part, proper_part_of
         # put those relations on the uberon term in the 
@@ -226,7 +226,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
                         uedges[obj][pred].add(uberon)
                         bridge.add_hierarchy(obj, pred, uberon)
                 else:
-                    #bridge.add_node(uberon, pred, obj)
+                    #bridge.add_trip(uberon, pred, obj)
                     pass
             elif obj == nifga:
                 try:
@@ -241,7 +241,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
                         uedges[uberon][pred].add(sub)
                         bridge.add_hierarchy(uberon, pred, sub)
                 else:
-                    #bridge.add_node(sub, pred, uberon)
+                    #bridge.add_trip(sub, pred, uberon)
                     pass
 
         if False and uberon not in udone and include:  # skip porting annotations and labels for now
@@ -261,12 +261,12 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
                         print(label.lower())
                         print(o.lower())
                         print()
-                        bridge.add_node(uberon, p, o)
+                        bridge.add_trip(uberon, p, o)
 
                 if p == SKOS.prefLabel and not os_:
                     if uberon not in conflated or (uberon in conflated and nifga in preflabs):
                         l = list(graph.g.objects(graph.expand(nifga), RDFS.label))[0]
-                        bridge.add_node(uberon, SKOS.prefLabel, l)  # port label to prefLabel if no prefLabel
+                        bridge.add_trip(uberon, SKOS.prefLabel, l)  # port label to prefLabel if no prefLabel
 
     for nifga, uberon in replaced_by.items():
         if type(uberon) == tuple:
@@ -275,7 +275,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
                 print(ub)
                 inner(nifga, ub)
         elif uberon == 'NOREP':
-            graph.add_node(nifga, OWL.deprecated, True)  # TODO check for missing edges?
+            graph.add_trip(nifga, OWL.deprecated, True)  # TODO check for missing edges?
         elif uberon is None:
             continue  # BUT TODAY IS NOT THAT DAY!
         else:
