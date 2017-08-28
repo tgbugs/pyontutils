@@ -1,5 +1,7 @@
 #!/usr/bin/env python3.6
-""" Use SciGraph to load an ontology. NIF -> http://ontology.neuinfo.org/NIF
+""" ontUse SciGraph to load an ontology from a loacal git repository.
+ Remote imports are replaced with local imports.
+ NIF -> http://ontology.neuinfo.org/NIF
 
 Usage:
     ontload services [options] <repo>
@@ -7,14 +9,22 @@ Usage:
     ontload [options] <repo> <remote_base>
 
 Options:
-    -c --config-template=CFG        relative path to template [default: scigraph/graphload-template.yaml]
     -g --git-remote=GBASE           remote git hosting [default: https://github.com/]
-    -o --org=ORG                    user/org where the repo lives [default: SciCrunch]
-    -l --git-local=LBASE            local path to look for <repo> [default: ~/git]
-    -b --branch=BRANCH              specify branch to load [default: master]
-    -so --scigraph-org=SORG         which org to clone/build scigraph from [default: SciCrunch]
-    -sb --scigraph-branch=SBRANCH   which branch to build scigraph from [default: upstream]
-    -s --services-template=SCFG     create services.yaml from template [default: scigraph/services-template.yaml]
+    -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
+    -z --zip-location=ZIPLOC        local path in which to deposit zipped files [default: /tmp]
+
+    -c --graphload-template=CFG     rel path to graphload.yaml template [default: scigraph/graphload-template.yaml]
+    -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
+    -b --branch=BRANCH              ontology branch to load [default: master]
+    -m --commit=COMMIT              ontology commit to load [default: HEAD]
+
+    -s --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
+    -so --scigraph-org=SORG         user/org to clone/build scigraph from [default: SciCrunch]
+    -sb --scigraph-branch=SBRANCH   scigraph branch to build [default: upstream]
+    -sm --scigraph-commit=SCOMMIT   scigraph commit to build [default: HEAD]
+
+    -cu --curies=CURIEFILE          relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
+
     -h --host=HOST                  host where services will run
     -f --logfile=LOG                log output here [default: ontload.log]
 """
@@ -46,7 +56,7 @@ def getBranch(repo, branch):
         branches = [b.name for b in repo.branches]
         raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
-def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, load_base, config_template, scigraph_commit, post_clone=lambda: None):
+def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, commit, remote_base, load_base, graphload_template, scigraph_commit, post_clone=lambda: None):
     local_base = os.path.join(git_local, repo_name)
     git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
@@ -74,7 +84,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
                 '-' + ontology_commit)
 
     folder = folder_name(scigraph_commit)
-    graph_path = os.path.join('/tmp', folder)
+    graph_path = os.path.join(zip_location, folder)
     zip_path = graph_path + '.zip'
 
     zip_name = os.path.basename(zip_path)
@@ -82,7 +92,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
     zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
 
     # config graphload.yaml from template
-    with open(os.path.join(local_base, config_template), 'rt') as f:
+    with open(os.path.join(local_base, graphload_template), 'rt') as f:
         config = yaml.load(f)
 
     config['graphConfiguration']['location'] = graph_path
@@ -92,7 +102,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
                              for k, v in ont.items()}
                             for ont in config['ontologies']]
 
-    config_path = '/tmp/graphload-' + TODAY + '.yaml'
+    config_path = os.path.join(zip_location, 'graphload-' + TODAY + '.yaml')
     with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
     ontologies = [ont['url'] for ont in config['ontologies']]
@@ -120,7 +130,7 @@ def repro_loader(git_remote, org, git_local, repo_name, branch, remote_base, loa
 
     return zip_path, import_triples
 
-def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO allow exact commit?
+def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False):  # TODO allow exact commit?
     COMMIT_LOG = 'last-built-commit.log'
     repo_name = 'SciGraph'
     remote = os.path.join(git_remote, org, repo_name)
@@ -154,11 +164,12 @@ def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO all
     repo.remote().pull()
     commit = repo.head.object.hexsha
 
-    if commit != last_commit:
+    if commit != last_commit or clean:
         print('SciGraph not built at commit', commit, 'last built at', last_commit)
         build_command = ('cd ' + local +
-                         '; mvn clean -DskipTests -DskipITs install' +
-                         '; cd SciGraph-services; mvn -DskipTests -DskipITs package')
+                         '; mvn clean -DskipTests -DskipITs install'
+                         '; cd SciGraph-services'
+                         '; mvn -DskipTests -DskipITs package')
         out = os.system(build_command)
         print(out)
         if out:
@@ -168,8 +179,17 @@ def scigraph_build(git_remote, org, git_local, branch, clean=False):  # TODO all
     else:
         print('SciGraph already built at commit', commit)
 
-    zip_filename =  '*.zip'  # TODO
-    services_zip = os.path.join(local, 'SciGraph-services', 'target', zip_filename)
+    zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
+    services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
+    def zip_name():
+        return (repo_name +
+                '-' + branch +
+                '-services' +
+                '-' + TODAY +
+                '-' + commit[:7] +
+                '.zip')
+    services_zip = os.path.join(zip_location, zip_name())
+    shutil.copy(services_zip_temp, services_zip)
 
     return commit, load_base, services_zip
 
@@ -285,7 +305,7 @@ def import_tree(graph, curie_prefixes):
 
     print(len(prefs))
     t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j)
-    print(t)
+    #print(t)
     return t, te
 
 def for_burak(ng_):
@@ -325,18 +345,28 @@ def main():
     remote_base = args['<remote_base>']
     if remote_base == 'NIF':
         remote_base = 'http://ontology.neuinfo.org/NIF'
-    config_template = args['--config-template']
+
     git_remote = args['--git-remote']
-    org = args['--org']
     git_local = args['--git-local']
     if '~' in git_local:
         git_local = os.path.expanduser(git_local)
+    zip_location = args['--zip-location']
+
+    graphload_template = args['--graphload-template']
+    org = args['--org']
     branch = args['--branch']
+    commit = args['--commit']
+
+    services_template = args['--services-template']
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
-    services_template = args['--services-template']
+    scommit = args['--scigraph-commit']
 
-    with open(os.path.join(git_local, repo_name, 'scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+    curies = args['--curies']
+
+    host = args['--host']
+
+    with open(os.path.join(git_local, repo_name, curies), 'rt') as f:
         curies = yaml.load(f)
     curie_prefixes = set(curies.values())
 
@@ -353,6 +383,7 @@ def main():
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
+
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
@@ -361,19 +392,20 @@ def main():
                 print('Retrieving go.owl since it is not in the repo.')
                 os.system('wget -O' + local_go + ' ' + remote_go)
         else:
-            post_clone = lambda : None
+            post_clone = lambda: None
 
-        scigraph_commit, load_base, services_zip = scigraph_build(git_remote, sorg, git_local, sbranch)
-        zip_path, itrips = repro_loader(git_remote, org, git_local,
-                                        repo_name, branch, remote_base,
-                                        load_base, config_template, scigraph_commit,
+        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
+        graph_zip, itrips = repro_loader(zip_location, git_remote, org,
+                                        git_local, repo_name, branch, commit,
+                                        remote_base, load_base,
+                                        graphload_template, scigraph_commit,
                                         post_clone=post_clone)
-
+        print(graph_zip, services_zip, sep='\n')
         if itrips:
             import_graph = rdflib.Graph()
             [import_graph.add(t) for t in itrips]
             tree, extra = import_tree(import_graph, curie_prefixes)
-            with open('/tmp/nifstd-import-closure.html', 'wt') as f:
+            with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
                 f.write(extra.html)
     embed()
 
