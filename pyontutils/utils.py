@@ -201,21 +201,12 @@ class makeGraph:
                             ' The graph is not isomorphic to a single ontology!')
         return ontids[0]
 
-    def write(self, convert=False):
+    def write(self):
+        """ Serialize self.g and write to self.filename"""
         ser = self.g.serialize(format='nifttl')
         with open(self.filename, 'wb') as f:
             f.write(ser)
             #print('yes we wrote the first version...', self.name)
-        if hasattr(self.__class__, '_to_convert'):
-            self.__class__._to_convert.append(self.filename)
-        elif convert:  # this will confuse everyone, convert=False still runs if in side the with block...
-            self.owlapi_conversion((self.filename,))
-
-    def owlapi_conversion(self, files):
-        os.system('java -cp ' +
-            os.path.expanduser('~/git/ttl-convert/target/'
-                               'ttl-convert-1.0-SNAPSHOT-jar-with-dependencies.jar') +
-                  ' scicrunch.App ' + ' '.join(files))
 
     def expand(self, curie):
         prefix, suffix = curie.split(':',1)
@@ -447,14 +438,6 @@ class makeGraph:
                 done.append(obj)
 
         return json_
-
-    def __enter__(self):
-        m = Manager()
-        self.__class__._to_convert = m.list()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.owlapi_conversion(sorted(set(self.__class__._to_convert)))
 
 def createOntology(filename=    'temp-graph',
                    name=        'Temp Ontology',
