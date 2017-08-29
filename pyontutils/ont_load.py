@@ -19,13 +19,15 @@ Options:
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
 
     -e --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
-    -r --scigraph-org=SORG         user/org to clone/build scigraph from [default: SciCrunch]
-    -a --scigraph-branch=SBRANCH   scigraph branch to build [default: upstream]
-    -m --scigraph-commit=SCOMMIT   scigraph commit to build [default: HEAD]
+    -r --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
+    -a --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
+    -m --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
 
-    -u --curies=CURIEFILE          relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
+    -u --curies=CURIEFILE           relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
 
     -h --host=HOST                  host where services will run
+    -d --deploy-location=DLOC       override config folder where the graph will live [default: from-config]
+
     -f --logfile=LOG                log output here [default: ontload.log]
 """
 import os
@@ -43,8 +45,6 @@ from docopt import docopt
 from IPython import embed
 
 setPS1(__file__)
-
-cwd = os.getcwd()
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -268,6 +268,7 @@ def local_imports(remote_base, local_base, ontologies, dobig=False):
     return sorted(triples)
 
 def loadall(git_local, repo_name):
+    cwd = os.getcwd()
     local_base = os.path.join(git_local, repo_name)
     lb_ttl = os.path.join(local_base, 'ttl')
 
@@ -390,18 +391,25 @@ def main():
 
     curies = args['--curies']
 
-    host = args['--host']
+    host = args['--host']  # TODO
+    deploy_location = args['--deploy-location']
+
+    log = args['--logfile']  # TODO
 
     with open(os.path.join(git_local, repo_name, curies), 'rt') as f:
         curies = yaml.load(f)
     curie_prefixes = set(curies.values())
 
-    if args['services']:
+    if args['services']:  # TODO this could run when no specific is called as well?
         services_template_path = os.path.join(git_local, repo_name, services_template)
         services_path = os.path.join(git_local, repo_name, 'scigraph/services.yaml')
         with open(services_template_path, 'rt') as f:
             config = yaml.load(f)
         config['graphConfiguration']['curies'] = curies
+        if deploy_location != 'from-config':
+            config['graphConfiguration']['location'] = deploy_location
+        else:
+            deploy_location = config['graphConfiguration']['location']
         with open(services_path, 'wt') as f:
             yaml.dump(config, f, default_flow_style=False)
 
