@@ -76,11 +76,11 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     try:
         nab = getBranch(repo, branch)
         nab.checkout()
-    except ValueError:  # usually a remote branch
+    except ValueError:  # usually indicates a remote branch
         repo.git.checkout(branch)
         nab = repo.active_branch
     repo.remote().pull()  # make sure we are up to date
-    if commit != 'HEAD':  # TODO context manager?
+    if commit != 'HEAD':
         repo.git.checkout(commit)
 
     # TODO consider dumping metadata in a file in the folder too?
@@ -124,7 +124,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     ontologies = [ont['url'] for ont in config['ontologies']]
     load_command = load_base.format(config_path=config_path)
 
-    with checkout_when_done(nob):
+    with checkout_when_done(nob):  # FIXME start this immediately after we obtain nob?
         # main
         import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
         if not glob(wild_zip_path):
@@ -144,7 +144,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
 
     return zip_path, import_triples
 
-def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False):  # TODO allow exact commit?
+def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False):
     COMMIT_LOG = 'last-built-commit.log'
     repo_name = 'SciGraph'
     remote = os.path.join(git_remote, org, repo_name)
@@ -172,7 +172,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
     try:
         sab = getBranch(repo, branch)
         sab.checkout()
-    except ValueError:  # usually a remote branch
+    except ValueError:  # usually indicates a remote branch
         repo.git.checkout(branch)
         sab = repo.active_branch
     repo.remote().pull()
@@ -202,15 +202,20 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
                 scigraph_commit = 'FAILURE'
             with open(commit_log_path, 'wt') as f:
                 f.write(scigraph_commit)
-            # services zip
-            zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
-            services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
-            services_zip = os.path.join(zip_location, zip_name())
-            shutil.copy(services_zip_temp, services_zip)
         else:
-            print(zip_name(wild=True))
-            services_zip = glob(os.path.join(zip_location, zip_name(wild=True)))[0]
             print('SciGraph already built at commit', scigraph_commit)
+            wildcard = os.path.join(zip_location, zip_name(wild=True))
+            try:
+                services_zip = glob(wildcard)[0]  # this will error if the zip was moved
+                return scigraph_commit, load_base, services_zip
+            except IndexError:
+                pass  # we need to copy the zip out again
+
+        # services zip
+        zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
+        services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
+        services_zip = os.path.join(zip_location, zip_name())
+        shutil.copy(services_zip_temp, services_zip)
 
     return scigraph_commit, load_base, services_zip
 
