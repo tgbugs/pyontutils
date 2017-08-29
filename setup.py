@@ -11,7 +11,7 @@ files = [
     'pyontutils/ilx_utils.py',
     'pyontutils/neurons.py',
     'pyontutils/neuron_lang.py',
-    'pyontutils/nif_load.py',
+    'pyontutils/ont_load.py',
     'pyontutils/obo_io.py',
     'pyontutils/phenotype_namespaces.py',
     'pyontutils/scig.py',
@@ -60,6 +60,7 @@ try:
         entry_points={
             'console_scripts': [
                 'ilxcli=pyontutils.ilxcli:main',
+                'ontload=pyontutils.ont_load:main',
                 'scigraph-codegen=pyontutils.scigraph:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',
