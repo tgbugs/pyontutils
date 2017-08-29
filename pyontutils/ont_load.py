@@ -13,17 +13,17 @@ Options:
     -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
     -z --zip-location=ZIPLOC        local path in which to deposit zipped files [default: /tmp]
 
-    -c --graphload-template=CFG     rel path to graphload.yaml template [default: scigraph/graphload-template.yaml]
+    -t --graphload-template=CFG     rel path to graphload.yaml template [default: scigraph/graphload-template.yaml]
     -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
     -b --branch=BRANCH              ontology branch to load [default: master]
-    -m --commit=COMMIT              ontology commit to load [default: HEAD]
+    -c --commit=COMMIT              ontology commit to load [default: HEAD]
 
-    -s --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
-    -so --scigraph-org=SORG         user/org to clone/build scigraph from [default: SciCrunch]
-    -sb --scigraph-branch=SBRANCH   scigraph branch to build [default: upstream]
-    -sm --scigraph-commit=SCOMMIT   scigraph commit to build [default: HEAD]
+    -e --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
+    -r --scigraph-org=SORG         user/org to clone/build scigraph from [default: SciCrunch]
+    -a --scigraph-branch=SBRANCH   scigraph branch to build [default: upstream]
+    -m --scigraph-commit=SCOMMIT   scigraph commit to build [default: HEAD]
 
-    -cu --curies=CURIEFILE          relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
+    -u --curies=CURIEFILE          relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
 
     -h --host=HOST                  host where services will run
     -f --logfile=LOG                log output here [default: ontload.log]
@@ -61,6 +61,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
         repo = Repo.clone_from(git_base + '.git', local_base)
+        post_clone()
     else:
         repo = Repo(local_base)
     nob = repo.active_branch
@@ -71,7 +72,8 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         repo.git.checkout(branch)
         nab = repo.active_branch
     repo.remote().pull()  # make sure we are up to date
-    post_clone()
+    if commit != 'HEAD':  # TODO context manager?
+        repo.git.checkout(commit)
 
     # TODO consider dumping metadata in a file in the folder too?
     def folder_name(scigraph_commit):
@@ -79,7 +81,6 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         return (repo_name +
                 '-' + branch +
                 '-graph' +
-                '-' + TODAY +
                 '-' + scigraph_commit[:7] +
                 '-' + ontology_commit)
 
@@ -111,7 +112,6 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     # main
     import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
     if not os.path.exists(graph_path):
-
         failure = os.system(load_command)
         if failure:
             shutil.rmtree(graph_path)
@@ -119,13 +119,15 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
             os.rename(config_path,  # save the config for eaiser debugging
                       os.path.join(graph_path,
                                    os.path.basename(config_path)))
-            failure = os.system(zip_command)
+            failure = os.system(zip_command)  # graphload zip
     else:
         print('Graph already loaded at', graph_path)
 
     # return to original state
     repo.head.reset(index=True, working_tree=True)
     if nab != nob:
+        nob.checkout()
+    elif commit != 'HEAD':
         nob.checkout()
 
     return zip_path, import_triples
@@ -162,8 +164,11 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
         repo.git.checkout(branch)
         sab = repo.active_branch
     repo.remote().pull()
-    commit = repo.head.object.hexsha
+    if commit != 'HEAD':
+        repo.git.checkout(commit)
+    scigraph_commit = repo.head.object.hexsha
 
+    # main
     if commit != last_commit or clean:
         print('SciGraph not built at commit', commit, 'last built at', last_commit)
         build_command = ('cd ' + local +
@@ -173,25 +178,31 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
         out = os.system(build_command)
         print(out)
         if out:
-            commit = 'FAILURE'
+            scigraph_commit = 'FAILURE'
         with open(commit_log_path, 'wt') as f:
-            f.write(commit)
+            f.write(scigraph_commit)
     else:
-        print('SciGraph already built at commit', commit)
+        print('SciGraph already built at commit', scigraph_commit)
 
+    # services zip
     zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
     services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
     def zip_name():
         return (repo_name +
                 '-' + branch +
                 '-services' +
-                '-' + TODAY +
                 '-' + commit[:7] +
                 '.zip')
     services_zip = os.path.join(zip_location, zip_name())
     shutil.copy(services_zip_temp, services_zip)
 
-    return commit, load_base, services_zip
+    # cleanup
+    if sab != sob:
+        sob.checkout()
+    elif commit != 'HEAD':
+        sob.checkout()
+
+    return scigraph_commit, load_base, services_zip
 
 def local_imports(remote_base, local_base, ontologies, dobig=False):
     """ Read the import closure and use the local versions of the files. """
