@@ -33,6 +33,7 @@ import shutil
 import json
 import yaml
 from glob import glob
+from contextlib import contextmanager
 import rdflib
 from git.repo import Repo
 from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
@@ -48,6 +49,13 @@ cwd = os.getcwd()
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+
+@contextmanager
+def checkout_when_done(original_branch):
+    try:
+        yield
+    finally:
+        original_branch.checkout()
 
 def getBranch(repo, branch):
     try:
@@ -76,21 +84,28 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         repo.git.checkout(commit)
 
     # TODO consider dumping metadata in a file in the folder too?
-    def folder_name(scigraph_commit):
+    def folder_name(scigraph_commit, wild=False):
         ontology_commit = repo.head.object.hexsha[:7]
         return (repo_name +
                 '-' + branch +
                 '-graph' +
+                '-' + ('*' if wild else TODAY) +
                 '-' + scigraph_commit[:7] +
                 '-' + ontology_commit)
 
-    folder = folder_name(scigraph_commit)
-    graph_path = os.path.join(zip_location, folder)
-    zip_path = graph_path + '.zip'
-
-    zip_name = os.path.basename(zip_path)
-    zip_dir = os.path.dirname(zip_path)
-    zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
+    def make_folder_zip(wild=False):
+        folder = folder_name(scigraph_commit, wild)
+        graph_path = os.path.join(zip_location, folder)
+        zip_path = graph_path + '.zip'
+        if wild:
+            return graph_path, zip_path
+        zip_name = os.path.basename(zip_path)
+        zip_dir = os.path.dirname(zip_path)
+        zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
+        return graph_path, zip_path, zip_command
+    
+    graph_path, zip_path, zip_command = make_folder_zip()
+    wild_graph_path, wild_zip_path = make_folder_zip(wild=True)
 
     # config graphload.yaml from template
     with open(os.path.join(local_base, graphload_template), 'rt') as f:
@@ -109,26 +124,23 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     ontologies = [ont['url'] for ont in config['ontologies']]
     load_command = load_base.format(config_path=config_path)
 
-    # main
-    import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
-    if not os.path.exists(graph_path):
-        failure = os.system(load_command)
-        if failure:
-            shutil.rmtree(graph_path)
+    with checkout_when_done(nob):
+        # main
+        import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
+        if not glob(wild_zip_path):
+            failure = os.system(load_command)
+            if failure:
+                shutil.rmtree(graph_path)
+            else:
+                os.rename(config_path,  # save the config for eaiser debugging
+                          os.path.join(graph_path,
+                                       os.path.basename(config_path)))
+                failure = os.system(zip_command)  # graphload zip
         else:
-            os.rename(config_path,  # save the config for eaiser debugging
-                      os.path.join(graph_path,
-                                   os.path.basename(config_path)))
-            failure = os.system(zip_command)  # graphload zip
-    else:
-        print('Graph already loaded at', graph_path)
+            print('Graph already loaded at', graph_path)
 
-    # return to original state
+    # return to original state (reset --hard)
     repo.head.reset(index=True, working_tree=True)
-    if nab != nob:
-        nob.checkout()
-    elif commit != 'HEAD':
-        nob.checkout()
 
     return zip_path, import_triples
 
@@ -168,39 +180,37 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
         repo.git.checkout(commit)
     scigraph_commit = repo.head.object.hexsha
 
-    # main
-    if commit != last_commit or clean:
-        print('SciGraph not built at commit', commit, 'last built at', last_commit)
-        build_command = ('cd ' + local +
-                         '; mvn clean -DskipTests -DskipITs install'
-                         '; cd SciGraph-services'
-                         '; mvn -DskipTests -DskipITs package')
-        out = os.system(build_command)
-        print(out)
-        if out:
-            scigraph_commit = 'FAILURE'
-        with open(commit_log_path, 'wt') as f:
-            f.write(scigraph_commit)
-    else:
-        print('SciGraph already built at commit', scigraph_commit)
-
-    # services zip
-    zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
-    services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
-    def zip_name():
+    def zip_name(wild=False):
         return (repo_name +
                 '-' + branch +
                 '-services' +
-                '-' + commit[:7] +
+                '-' + ('*' if wild else TODAY) +
+                '-' + scigraph_commit[:7] +
                 '.zip')
-    services_zip = os.path.join(zip_location, zip_name())
-    shutil.copy(services_zip_temp, services_zip)
 
-    # cleanup
-    if sab != sob:
-        sob.checkout()
-    elif commit != 'HEAD':
-        sob.checkout()
+    with checkout_when_done(sob):
+        # main
+        if scigraph_commit != last_commit or clean:
+            print('SciGraph not built at commit', commit, 'last built at', last_commit)
+            build_command = ('cd ' + local +
+                             '; mvn clean -DskipTests -DskipITs install'
+                             '; cd SciGraph-services'
+                             '; mvn -DskipTests -DskipITs package')
+            out = os.system(build_command)
+            print(out)
+            if out:
+                scigraph_commit = 'FAILURE'
+            with open(commit_log_path, 'wt') as f:
+                f.write(scigraph_commit)
+            # services zip
+            zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
+            services_zip_temp = glob(os.path.join(local, 'SciGraph-services', 'target', zip_filename))[0]
+            services_zip = os.path.join(zip_location, zip_name())
+            shutil.copy(services_zip_temp, services_zip)
+        else:
+            print(zip_name(wild=True))
+            services_zip = glob(os.path.join(zip_location, zip_name(wild=True)))[0]
+            print('SciGraph already built at commit', scigraph_commit)
 
     return scigraph_commit, load_base, services_zip
 
