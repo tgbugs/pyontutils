@@ -401,6 +401,8 @@ def main():
         curies = yaml.load(f)
     curie_prefixes = set(curies.values())
 
+    itrips = None
+
     if args['services']:  # TODO this could run when no specific is called as well?
         services_template_path = os.path.join(git_local, repo_name, services_template)
         services_path = os.path.join(git_local, repo_name, 'scigraph/services.yaml')
@@ -415,7 +417,7 @@ def main():
             yaml.dump(config, f, default_flow_style=False)
     elif args['imports']:
         local_base = os.path.join(git_local, repo_name)
-        import_triples = local_imports(remote_base, local_base, args['<ontologies>'])
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
     elif args['extra']:
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
@@ -437,12 +439,14 @@ def main():
                                         graphload_template, scigraph_commit,
                                         post_clone=post_clone)
         print(graph_zip, services_zip, sep='\n')
-        if itrips:
-            import_graph = rdflib.Graph()
-            [import_graph.add(t) for t in itrips]
-            tree, extra = import_tree(import_graph, curie_prefixes)
-            with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
-                f.write(extra.html)
+
+    if itrips:
+        import_graph = rdflib.Graph()
+        [import_graph.add(t) for t in itrips]
+        tree, extra = import_tree(import_graph, curie_prefixes)
+        with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
+            f.write(extra.html)
+
     embed()
 
 if __name__ == '__main__':
