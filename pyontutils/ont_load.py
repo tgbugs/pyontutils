@@ -6,6 +6,7 @@
 Usage:
     ontload services [options] <repo>
     ontload extra [options] <repo>
+    ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload [options] <repo> <remote_base>
 
 Options:
@@ -297,8 +298,8 @@ def loadall(git_local, repo_name):
                 if noneMembers(o, *bigleaves) or dobig:
                     graph.parse(o, format=fmt)
 
-    for i in range(4):
-        repeat(True)
+    for i in range(2):
+        repeat(False)
 
     return graph
 
@@ -412,12 +413,13 @@ def main():
             deploy_location = config['graphConfiguration']['location']
         with open(services_path, 'wt') as f:
             yaml.dump(config, f, default_flow_style=False)
-
+    elif args['imports']:
+        local_base = os.path.join(git_local, repo_name)
+        import_triples = local_imports(remote_base, local_base, args['<ontologies>'])
     elif args['extra']:
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
-
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
