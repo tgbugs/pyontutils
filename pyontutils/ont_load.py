@@ -127,7 +127,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
 
     with checkout_when_done(nob):  # FIXME start this immediately after we obtain nob?
         # main
-        import_triples = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
+        itrips = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
         if not glob(wild_zip_path):
             failure = os.system(load_command)
             if failure:
@@ -143,7 +143,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     # return to original state (reset --hard)
     repo.head.reset(index=True, working_tree=True)
 
-    return zip_path, import_triples
+    return zip_path, itrips
 
 def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False):
     COMMIT_LOG = 'last-built-commit.log'
@@ -298,8 +298,8 @@ def loadall(git_local, repo_name):
                 if noneMembers(o, *bigleaves) or dobig:
                     graph.parse(o, format=fmt)
 
-    for i in range(2):
-        repeat(False)
+    for i in range(5):
+        repeat(True)
 
     return graph
 
@@ -420,6 +420,7 @@ def main():
         itrips = local_imports(remote_base, local_base, args['<ontologies>'])
     elif args['extra']:
         graph = loadall(git_local, repo_name)
+        itrips = set((s, rdflib.OWL.imports, o) for s, o in graph.subject_objects(rdflib.OWL.imports))
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     else:
