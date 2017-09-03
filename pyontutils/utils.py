@@ -126,6 +126,7 @@ def _loadPrefixes():
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'dc':'http://purl.org/dc/elements/1.1/',
         'dcterms':'http://purl.org/dc/terms/',
+        'dctypes':'http://purl.org/dc/dcmitype/',  # FIXME there is no agreement on qnames
         'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
         'ilx':'http://uri.interlex.org/base/', 
         'nsu':'http://www.FIXME.org/nsupper#',
