@@ -28,6 +28,7 @@ Options:
 
     -h --host=HOST                  host where services will run
     -d --deploy-location=DLOC       override config folder where the graph will live [default: from-config]
+    -y --read-only                  for imports only read the import chain
 
     -f --logfile=LOG                log output here [default: ontload.log]
 """
@@ -35,9 +36,12 @@ import os
 import shutil
 import json
 import yaml
+from io import BytesIO
 from glob import glob
 from contextlib import contextmanager
 import rdflib
+import requests
+from lxml import etree
 from git.repo import Repo
 from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
@@ -220,13 +224,13 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
 
     return scigraph_commit, load_base, services_zip
 
-def local_imports(remote_base, local_base, ontologies, dobig=False):
+def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=False):
     """ Read the import closure and use the local versions of the files. """
     done = []
     triples = set()
     p = rdflib.OWL.imports
     oi = b'owl:imports'
-    def inner(local_filepath):
+    def inner(local_filepath, remote=False):
         if noneMembers(local_filepath, *bigleaves) or dobig:
             ext = os.path.splitext(local_filepath)[-1]
             if ext == '.ttl':
@@ -234,20 +238,32 @@ def local_imports(remote_base, local_base, ontologies, dobig=False):
             else:
                 print(ext, local_filepath)
                 infmt = None
-            scratch = rdflib.Graph()
-            try:
-                with open(local_filepath, 'rb') as f:
-                    raw = f.read()
-            except FileNotFoundError as e:
-                if local_filepath.startswith('file://'):
-                    raise ValueError('local_imports has already been run') from e
-                else:
-                    print(e)
-                    raw = b''
+            if remote:
+                resp = requests.get(local_filepath)
+                raw = resp.text.encode()
+            else:
+                try:
+                    with open(local_filepath, 'rb') as f:
+                        raw = f.read()
+                except FileNotFoundError as e:
+                    if local_filepath.startswith('file://'):
+                        raise ValueError('local_imports has already been run') from e
+                    else:
+                        print(e)
+                        raw = b''
             if oi in raw:  # we only care if there are imports
-                start, ont_rest = raw.split(oi, 1)
-                ont, rest = ont_rest.split(b'###', 1)
-                data = start + oi + ont
+                scratch = rdflib.Graph()
+                if infmt == 'turtle':
+                    start, ont_rest = raw.split(oi, 1)
+                    ont, rest = ont_rest.split(b'###', 1)
+                    data = start + oi + ont
+                elif infmt == None:  # assume xml
+                    xml_tree = etree.parse(BytesIO(raw))
+                    xml_root = xml_tree.getroot()
+                    xml_ontology = xml_tree.xpath("/*[local-name()='RDF']/*[local-name()='Ontology']")
+                    xml_root.clear()
+                    xml_root.append(xml_ontology[0])
+                    data = etree.tostring(xml_root)
                 scratch.parse(data=data, format=infmt)
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
@@ -257,13 +273,19 @@ def local_imports(remote_base, local_base, ontologies, dobig=False):
                         scratch.remove((s, p, o))
                     if nlfp not in done:
                         done.append(nlfp)
-                        if local_base in nlfp and 'external' not in nlfp:  # skip externals
+                        if local_base in nlfp and 'external' not in nlfp:  # skip externals TODO
                             inner(nlfp)
-                ttl = scratch.serialize(format='nifttl')
-                ndata, comment = ttl.split(b'###', 1)
-                out = ndata + b'###' + rest
-                with open(local_filepath, 'wb') as f:
-                    f.write(out)
+                        elif readonly:  # read external imports
+                            if 'external' in nlfp:
+                                inner(nlfp)
+                            else:
+                                inner(nlfp, remote=True)
+                if not readonly:
+                    ttl = scratch.serialize(format='nifttl')
+                    ndata, comment = ttl.split(b'###', 1)
+                    out = ndata + b'###' + rest
+                    with open(local_filepath, 'wb') as f:
+                        f.write(out)
 
     for start in ontologies:
         print('START', start)
@@ -397,6 +419,7 @@ def main():
 
     host = args['--host']  # TODO
     deploy_location = args['--deploy-location']
+    readonly = args['--read-only']
 
     log = args['--logfile']  # TODO
 
@@ -405,6 +428,8 @@ def main():
     curie_prefixes = set(curies.values())
 
     itrips = None
+
+    local_base = os.path.join(git_local, repo_name)
 
     if args['services']:  # TODO this could run when no specific is called as well?
         services_template_path = os.path.join(git_local, repo_name, services_template)
@@ -419,11 +444,11 @@ def main():
         with open(services_path, 'wt') as f:
             yaml.dump(config, f, default_flow_style=False)
     elif args['imports']:
-        local_base = os.path.join(git_local, repo_name)
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly)
     elif args['extra']:
         graph = loadall(git_local, repo_name)
-        itrips = set((s, rdflib.OWL.imports, o) for s, o in graph.subject_objects(rdflib.OWL.imports))
+        itrips = set((s, rdflib.OWL.imports, rdflib.URIRef(o.replace('file://' + local_base, remote_base))) for s, o in graph.subject_objects(rdflib.OWL.imports))
+        # TODO mismatch between import name and file name needs a better fix
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     else:
