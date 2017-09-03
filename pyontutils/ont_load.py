@@ -241,6 +241,9 @@ def local_imports(remote_base, local_base, ontologies, dobig=False):
             except FileNotFoundError as e:
                 if local_filepath.startswith('file://'):
                     raise ValueError('local_imports has already been run') from e
+                else:
+                    print(e)
+                    raw = b''
             if oi in raw:  # we only care if there are imports
                 start, ont_rest = raw.split(oi, 1)
                 ont, rest = ont_rest.split(b'###', 1)
