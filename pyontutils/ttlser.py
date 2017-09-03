@@ -83,6 +83,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       SKOS.related,
                       DC.description,
                       RDFS.subClassOf,
+                      RDFS.subPropertyOf,
                       OWL.intersectionOf,
                       OWL.unionOf,
                       OWL.disjointWith,
@@ -373,5 +374,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.6\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.7\n").encode('ascii'))
 
