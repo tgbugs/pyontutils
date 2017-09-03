@@ -7,6 +7,7 @@ Usage:
     ontload services [options] <repo>
     ontload extra [options] <repo>
     ontload imports [options] <repo> <remote_base> <ontologies>...
+    ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload [options] <repo> <remote_base>
 
 Options:
@@ -28,7 +29,6 @@ Options:
 
     -h --host=HOST                  host where services will run
     -d --deploy-location=DLOC       override config folder where the graph will live [default: from-config]
-    -y --read-only                  for imports only read the import chain
 
     -f --logfile=LOG                log output here [default: ontload.log]
 """
@@ -228,6 +228,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
     """ Read the import closure and use the local versions of the files. """
     done = []
     triples = set()
+    imported_iri_vs_ontology_iri = {}
     p = rdflib.OWL.imports
     oi = b'owl:imports'
     def inner(local_filepath, remote=False):
@@ -239,7 +240,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                 print(ext, local_filepath)
                 infmt = None
             if remote:
-                resp = requests.get(local_filepath)
+                resp = requests.get(local_filepath)  # TODO nonblocking pull these out, fetch, run inner again until done
                 raw = resp.text.encode()
             else:
                 try:
@@ -268,6 +269,11 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
+                    if 'http://' in local_filepath or 'https://' in local_filepath:  # FIXME what to do about https used inconsistently :/
+                        imported_iri = rdflib.URIRef(local_filepath)
+                        if s != imported_iri:
+                            imported_iri_vs_ontology_iri[imported_iri] = s  # kept for the record
+                            triples.add((imported_iri, p, s))  # bridge imported != ontology iri
                     if local_base in nlfp:
                         scratch.add((s, p, rdflib.URIRef('file://' + nlfp)))
                         scratch.remove((s, p, o))
@@ -419,7 +425,6 @@ def main():
 
     host = args['--host']  # TODO
     deploy_location = args['--deploy-location']
-    readonly = args['--read-only']
 
     log = args['--logfile']  # TODO
 
@@ -444,8 +449,10 @@ def main():
         with open(services_path, 'wt') as f:
             yaml.dump(config, f, default_flow_style=False)
     elif args['imports']:
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly)
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
         # TODO mismatch between import name and file name needs a better fix
+    elif args['chain']:
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly=True)
     elif args['extra']:
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
