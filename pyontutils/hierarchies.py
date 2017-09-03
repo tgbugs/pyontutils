@@ -438,7 +438,9 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, p
     def sub_prefixes(h):
         if prefixes is not None:
             for n, p in prefixes.items():
+                #h = h.replace("href='" + n + ':', "href='" + p)
                 h = h.replace("href='" + n + ':', "href='" + p)
+                h = h.replace('>' + p, '>' + n + ':')
         return h
 
     html = sub_prefixes(html_hierarchy.__html__())
