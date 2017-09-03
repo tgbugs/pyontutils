@@ -269,8 +269,11 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
-                    if 'http://' in local_filepath or 'https://' in local_filepath:  # FIXME what to do about https used inconsistently :/
-                        imported_iri = rdflib.URIRef(local_filepath)
+                    if 'http://' in local_filepath or 'external' in local_filepath:  # FIXME what to do about https used inconsistently :/
+                        if 'external' in local_filepath:
+                            imported_iri = rdflib.URIRef(local_filepath.replace(local_base, remote_base))  # inefficient
+                        else:
+                            imported_iri = rdflib.URIRef(local_filepath)
                         if s != imported_iri:
                             imported_iri_vs_ontology_iri[imported_iri] = s  # kept for the record
                             triples.add((imported_iri, p, s))  # bridge imported != ontology iri
@@ -351,6 +354,11 @@ def normalize_prefixes(graph, curies):
 def import_tree(graph, curie_prefixes):
     mg = makeGraph('', graph=graph)
     mg.add_known_namespace('owl')
+    mg.add_known_namespace('obo')
+    mg.add_known_namespace('dc')
+    mg.add_known_namespace('dcterms')
+    mg.add_known_namespace('dctypes')
+    mg.add_known_namespace('skos')
     mg.add_known_namespace('NIFTTL')
     j = mg.make_scigraph_json('owl:imports', direct=True)
     #asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
@@ -363,7 +371,7 @@ def import_tree(graph, curie_prefixes):
     sos = set(prefs) - set(nots)
 
     print(len(prefs))
-    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j)
+    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
     #print(t)
     return t, te
 
