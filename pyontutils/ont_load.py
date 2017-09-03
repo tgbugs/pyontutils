@@ -324,7 +324,7 @@ def loadall(git_local, repo_name):
                     graph.parse(o, format=fmt)
 
     for i in range(5):
-        repeat(True)
+        repeat(False)
 
     return graph
 
@@ -445,10 +445,9 @@ def main():
             yaml.dump(config, f, default_flow_style=False)
     elif args['imports']:
         itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly)
+        # TODO mismatch between import name and file name needs a better fix
     elif args['extra']:
         graph = loadall(git_local, repo_name)
-        itrips = set((s, rdflib.OWL.imports, rdflib.URIRef(o.replace('file://' + local_base, remote_base))) for s, o in graph.subject_objects(rdflib.OWL.imports))
-        # TODO mismatch between import name and file name needs a better fix
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     else:
