@@ -13,3 +13,4 @@ ttlfmt $ONT/ttlcmp/*.ttl &&
 ttlfmt $ONT/ttlcmp/*/*.ttl &&
 ttlfmt $ONT/ttlcmp/*/*/*.ttl &&
 find -name '*.ttl' -exec bash -c 'diff -u $1 ../ttlcmp/$1.ttl >> /tmp/ttlcmp.patch' _ {} \;
+git checkout *.ttl */*.ttl */*/*.ttl
