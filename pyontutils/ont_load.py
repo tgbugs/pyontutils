@@ -248,7 +248,9 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                         raw = f.read()
                 except FileNotFoundError as e:
                     if local_filepath.startswith('file://'):
-                        raise ValueError('local_imports has already been run') from e
+                        print('local_imports has already been run, skipping', local_filepath)
+                        return
+                        #raise ValueError('local_imports has already been run') from e
                     else:
                         print(e)
                         raw = b''
@@ -277,7 +279,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                         if s != imported_iri:
                             imported_iri_vs_ontology_iri[imported_iri] = s  # kept for the record
                             triples.add((imported_iri, p, s))  # bridge imported != ontology iri
-                    if local_base in nlfp:
+                    if local_base in nlfp and 'file://' not in o:  # FIXME file:// should not be slipping through here...
                         scratch.add((s, p, rdflib.URIRef('file://' + nlfp)))
                         scratch.remove((s, p, o))
                     if nlfp not in done:
@@ -315,11 +317,16 @@ def loadall(git_local, repo_name):
 
     graph = rdflib.Graph()
 
+    #match = (rdflib.term.URIRef('http://purl.org/dc/elements/1.1/member'),  # iao.owl
+             #rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+             #rdflib.term.URIRef('http://www.w3.org/2002/07/owl#AnnotationProperty'))
     done = []
     for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl'):
         print(f)
         done.append(os.path.basename(f))
         graph.parse(f, format='turtle')
+        #if match in graph:
+            #raise BaseException('Evil file found %s' % f)
 
     def repeat(dobig=False):  # we don't really know when to stop, so just adjust
         for s, o in graph.subject_objects(rdflib.OWL.imports):
@@ -331,6 +338,8 @@ def loadall(git_local, repo_name):
                 fmt = 'turtle' if ext == '.ttl' else 'xml'
                 if noneMembers(o, *bigleaves) or dobig:
                     graph.parse(o, format=fmt)
+                    #if match in graph:
+                        #raise BaseException('Evil file found %s' % o)
 
     for i in range(5):
         repeat(False)
