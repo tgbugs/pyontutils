@@ -630,7 +630,7 @@ class scigPrint:
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
         'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
-        'RO_OLD':'http://www.obofoundry.org/ro/ro.owl#',
+        'ro':'http://www.obofoundry.org/ro/ro.owl#',
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
         'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
