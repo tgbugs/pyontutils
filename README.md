@@ -30,6 +30,7 @@ installation option you will need to `ln -sT` the scripts to your perferred bin 
 
 ## Requirements
 This repo requires Python3.5 or later. See setup.py for the additional requirements.
+ontload requires Java8 and >=maven3.3 in order to build SciGraph.
 
 ## NIF-Ontology
 Many of these scripts are written for working on the NIF standard ontology
