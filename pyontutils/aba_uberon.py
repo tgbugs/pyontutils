@@ -8,13 +8,13 @@ import requests
 from scigraph_client import Vocabulary, Graph
 from obo_io import OboFile, Header, Term, TVPair
 from IPython import embed
-from utils import makePrefixes, makeGraph
+from utils import makePrefixes, createOntology
 
 v = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
 g = Graph(cache=True, basePath='http://localhost:9000/scigraph')
 
 abagraph = rdflib.Graph()
-abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/generated/mbaslim.ttl'), format='turtle')
+abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/generated/parcellation/mbaslim.ttl'), format='turtle')
 abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/bridge/aba-bridge.ttl'), format='turtle')
 nses = {k:rdflib.Namespace(v) for k, v in abagraph.namespaces()}
 #nses['ABA'] = nses['MBA']  # enable quick check against the old xrefs
@@ -126,7 +126,7 @@ def obo_output():  # oh man obo_io is a terrible interface for writing obofiles 
         f.write(f.filename)
     #embed()
 
-obo_output()
+#obo_output()
 
 def make_record(uid, aid):  # edit this to change the format
     to_format = ('{uberon_id: <20}{uberon_label:}\n'
@@ -151,16 +151,16 @@ def make_record(uid, aid):  # edit this to change the format
     }
     return to_format.format(**kwargs)
 
-text = '\n\n'.join([make_record(uid, aid[0]) for uid, aid in sorted(u_a_map.items()) if aid])
+#text = '\n\n'.join([make_record(uid, aid[0]) for uid, aid in sorted(u_a_map.items()) if aid])
 
-with open('aba_uberon_syn_review.txt', 'wt') as f:
-    f.write(text)
+#with open('aba_uberon_syn_review.txt', 'wt') as f:
+    #f.write(text)
 
 print('total uberon terms checked:', len(uberon_labs))
 print('total aba terms:           ', len(abalabs))
 print('total uberon with aba xref:', len([a for a in u_a_map.values() if a]))
 
-ubridge = makeGraph('uberon-parcellation-mappings',prefixes=makePrefixes('ilx', 'UBERON', 'MBA'))
+ubridge = createOntology('uberon-parcellation-mappings', 'Uberon Parcellation Mappings', makePrefixes('ilx', 'UBERON', 'MBA'))
 for u, arefs in u_a_map.items():
     if arefs:
         # TODO check for bad assumptions here
