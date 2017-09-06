@@ -140,7 +140,7 @@ def parcellation_schemes(ontids_atlases):
                   'Brain parcellation schemes as represented by root concepts.',
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
     graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
     graph.add_ont(ontid, *ont[2:])
 
@@ -158,7 +158,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -172,9 +172,9 @@ class genericPScheme:
         ontid = cls.ont.path + cls.ont.filename + '.ttl'
         PREFIXES = {k:v for k, v in cls.PREFIXES.items()}
         PREFIXES.update(genericPScheme.PREFIXES)
-        if '' in cls.PREFIXES:
-            if PREFIXES[''] is None:
-                PREFIXES[''] = ontid + '/'
+        #if '' in cls.PREFIXES:  # NOT ALLOWED!
+            #if PREFIXES[''] is None:
+                #PREFIXES[''] = ontid + '/'
         graph = makeGraph(cls.ont.filename, PREFIXES, writeloc=WRITELOC)
         graph.add_ont(ontid, *cls.ont[2:])
         make_scheme(graph, cls.concept, cls.atlas.curie)
@@ -526,7 +526,7 @@ class WHSSD(genericPScheme):
             graph.add_trip(id_, PARCLAB, label)
 
 class FMRI(genericPScheme):
-    PREFIXES = makePrefixes('skos', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'skos', 'ILXREPLACE')
 
     @classmethod
     def datagetter(cls):
@@ -618,7 +618,7 @@ def swanson():
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
     PREFIXES.update({
         #'':ontid + '/',  # looking for better options
         'SWAN':interlex_namespace('swanson/nt/term'),

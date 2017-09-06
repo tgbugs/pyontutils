@@ -114,7 +114,7 @@ def _loadPrefixes():
 
     # holding place for values that are not in the curie map
     extras = {
-        '':None,  # safety
+        #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
