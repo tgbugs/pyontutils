@@ -31,6 +31,9 @@ installation option you will need to `ln -sT` the scripts to your perferred bin 
 ## Requirements
 This repo requires Python3.5 or later. See setup.py for the additional requirements.
 ontload requires Java8 and >=maven3.3 in order to build SciGraph.
+[parcellation.py](pyontutils/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
+to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
+some other way.
 
 ## NIF-Ontology
 Many of these scripts are written for working on the NIF standard ontology
