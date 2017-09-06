@@ -8,6 +8,7 @@ Usage:
     ontload extra [options] <repo>
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
+    ontload uri-switch [options] <repo>
     ontload [options] <repo> <remote_base>
 
 Options:
@@ -306,7 +307,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
         inner(start)
     return sorted(triples)
 
-def loadall(git_local, repo_name):
+def loadall(git_local, repo_name, local=False):
     cwd = os.getcwd()
     local_base = os.path.join(git_local, repo_name)
     lb_ttl = os.path.join(local_base, 'ttl')
@@ -343,8 +344,11 @@ def loadall(git_local, repo_name):
                     #if match in graph:
                         #raise BaseException('Evil file found %s' % o)
 
-    for i in range(5):
+    if local:
         repeat(False)
+    else:
+        for i in range(10):
+            repeat(True)
 
     return graph
 
@@ -362,7 +366,7 @@ def normalize_prefixes(graph, curies):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph, curie_prefixes):
+def import_tree(graph):
     mg = makeGraph('', graph=graph)
     mg.add_known_namespace('owl')
     mg.add_known_namespace('obo')
@@ -372,6 +376,11 @@ def import_tree(graph, curie_prefixes):
     mg.add_known_namespace('skos')
     mg.add_known_namespace('NIFTTL')
     j = mg.make_scigraph_json('owl:imports', direct=True)
+    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+    #print(t)
+    return t, te
+
+def uri_switch(graph, curie_prefixes):
     #asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
     #asdf = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
     asdf = set(_ for t in graph.subject_predicates() for _ in t if type(_) == rdflib.URIRef)
@@ -381,10 +390,39 @@ def import_tree(graph, curie_prefixes):
     nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
     sos = set(prefs) - set(nots)
 
+    fragment_prefixes = (
+        'birlex_',  # FIXME
+        'birnlex_',
+        'sao',
+        'sao-',  # FIXME
+        #'nif_organ_',  # single and seems like a mistake for nlx_organ_
+        'nifext_',
+        #'nifext_5007_',  # not a prefix
+        'nlx_', 
+        #'nlx_0906_MP_',  # not a prefix, sourced from mamalian phenotype ontology and prefixed TODO
+        #'nlx_200905_',  # not a prefix
+        'nlx_anat_',
+        'nlx_cell',
+        'nlx_chem_',
+        'nlx_dys_',
+        'nlx_func_',
+        'nlx_inv_',
+        'nlx_mol_',
+        'nlx_neuron_nt_',
+        'nlx_organ_',
+        'nlx_qual_',
+        'nlx_res_',
+        #'nlx_sub_',  # FIXME one off mistake for nlx_subcell?
+        'nlx_subcell_', 
+        'nlx_ubo_',
+        'nlx_uncl_',
+    )
+    #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in asdf if 'ontology.neuinfo.org' in _)
+    to_rep = set(_.rsplit('#', 1)[-1] for _ in asdf if 'ontology.neuinfo.org' in _)
+
     print(len(prefs))
-    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
-    #print(t)
-    return t, te
+    embed()
+
 
 def for_burak(ng_):
     syn_predicates = (ng_.expand('OBOANN:synonym'),
@@ -480,6 +518,10 @@ def main():
         curies, _ = getCuries()
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
+    elif args['uri-switch']:
+        graph = loadall(git_local, repo_name)
+        _, curie_prefixes = getCuries()
+        uri_switch(graph, curie_prefixes)
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
@@ -501,8 +543,7 @@ def main():
     if itrips:
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
-        _, curie_prefixes = getCuries()
-        tree, extra = import_tree(import_graph, curie_prefixes)
+        tree, extra = import_tree(import_graph)
         with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html)
 
