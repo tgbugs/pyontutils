@@ -74,7 +74,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
         repo = Repo.clone_from(git_base + '.git', local_base)
-        post_clone()
+        post_clone()  # FIXME if this does not complete we need to warn or something, it causes errors
     else:
         repo = Repo(local_base)
     nob = repo.active_branch
@@ -128,6 +128,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         yaml.dump(config, f, default_flow_style=False)
     ontologies = [ont['url'] for ont in config['ontologies']]
     load_command = load_base.format(config_path=config_path)
+    print(load_command)
 
     with checkout_when_done(nob):  # FIXME start this immediately after we obtain nob?
         # main
@@ -194,7 +195,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
                 '-' + scigraph_commit[:7] +
                 '.zip')
 
-    with checkout_when_done(sob):
+    with checkout_when_done(sob):  # FIXME this fails when we need to load the graph if we start on master :/
         # main
         if scigraph_commit != last_commit or clean:
             print('SciGraph not built at commit', commit, 'last built at', last_commit)
