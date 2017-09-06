@@ -60,7 +60,7 @@ def checkout_when_done(original_branch):
     try:
         yield
     finally:
-        original_branch.checkout()
+        original_branch.checkout()  # FIXME this fails in the case where we have modified files on the head of another branch instead of a detached head!
 
 def getBranch(repo, branch):
     try:
