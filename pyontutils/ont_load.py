@@ -135,7 +135,8 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         if not glob(wild_zip_path):
             failure = os.system(load_command)
             if failure:
-                shutil.rmtree(graph_path)
+                if os.path.exists(graph_path):
+                    shutil.rmtree(graph_path)
             else:
                 os.rename(config_path,  # save the config for eaiser debugging
                           os.path.join(graph_path,
@@ -438,16 +439,18 @@ def main():
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
 
-    curies = args['--curies']
+    curies_location = args['--curies']
 
     host = args['--host']  # TODO
     deploy_location = args['--deploy-location']
 
     log = args['--logfile']  # TODO
 
-    with open(os.path.join(git_local, repo_name, curies), 'rt') as f:
-        curies = yaml.load(f)
-    curie_prefixes = set(curies.values())
+    def getCuries():
+        with open(os.path.join(git_local, repo_name, curies_location), 'rt') as f:
+            curies = yaml.load(f)
+        curie_prefixes = set(curies.values())
+        return curies, curie_prefixes
 
     itrips = None
 
@@ -458,6 +461,7 @@ def main():
         services_path = os.path.join(git_local, repo_name, 'scigraph/services.yaml')
         with open(services_template_path, 'rt') as f:
             config = yaml.load(f)
+        curies, _ = getCuries()
         config['graphConfiguration']['curies'] = curies
         if deploy_location != 'from-config':
             config['graphConfiguration']['location'] = deploy_location
@@ -472,6 +476,7 @@ def main():
         itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly=True)
     elif args['extra']:
         graph = loadall(git_local, repo_name)
+        curies, _ = getCuries()
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     else:
@@ -495,6 +500,7 @@ def main():
     if itrips:
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
+        _, curie_prefixes = getCuries()
         tree, extra = import_tree(import_graph, curie_prefixes)
         with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html)
