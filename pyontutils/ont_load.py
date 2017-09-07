@@ -44,7 +44,7 @@ import rdflib
 import requests
 from lxml import etree
 from git.repo import Repo
-from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
+from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from docopt import docopt
@@ -414,19 +414,35 @@ def uri_switch(graph, curie_prefixes):
         'nlx_qual_':'NLXQUAL',
         'nlx_res_':'NLXRES',
         'nlx_sub_':'FIXME_NLXSUBCELL',  # FIXME one off mistake for nlx_subcell?
-        'nlx_subcell_':'NLXSUBCELL', 
+        'nlx_subcell_':'NLXSUB',   # NLXSUB??
         'nlx_ubo_':'NLXUBO',
         'nlx_uncl_':'NLXUNCL',
     }
     existing = {}
     NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/' 
-    repacement_graph = createOntology('NIF*-NIFSTD-mapping',
-                                      'NIF* to NIFSTD equivalents',
-                                      makePrefixes('NIFMOL',
-                                                   'NIFCELL',
-                                                   'NIFDYS',
-                                                  )
-                                     )
+    replacement_graph = createOntology('NIF-NIFSTD-mapping',
+                                       'NIF* to NIFSTD equivalents',
+                                       makePrefixes(
+                                           'owl',
+                                           'BIRNOBI',
+                                           'BIRNOBO',
+                                           'NIFCELL',
+                                           'NIFCHEM',
+                                           'NIFDYS',
+                                           'NIFFUN',
+                                           'NIFGA',
+                                           'NIFGG',
+                                           'NIFINV',
+                                           'NIFMOL',
+                                           'NIFORG',
+                                           'NIFQUAL',
+                                           'NIFRES',
+                                           'NIFRET',
+                                           'NIFSCID',
+                                           'NIFSUB',
+                                           'SAOCORE',
+                                                   )
+                                      )
 
     skip_namespaces = ('BIRNLex_annotation_properties.owl#',
                        'OBO_annotation_properties.owl#',
@@ -457,7 +473,7 @@ def uri_switch(graph, curie_prefixes):
                         existing[suffix] = prefix
                     pref = prefixFixes(pref)
                     new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
-                    replacement_graph.g.add(spo, rdflib.OWL.sameAs, new_spo)
+                    replacement_graph.g.add((spo, rdflib.OWL.sameAs, new_spo))
                     add_namespace(pref, g)
                     yield new_spo
                     done = True
