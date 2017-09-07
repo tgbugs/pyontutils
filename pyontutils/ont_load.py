@@ -310,13 +310,13 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
 def loadall(git_local, repo_name, local=False):
     cwd = os.getcwd()
     local_base = os.path.join(git_local, repo_name)
-    lb_ttl = os.path.join(local_base, 'ttl')
+    lb_ttl = os.path.realpath(os.path.join(local_base, 'ttl'))
 
     if cwd == lb_ttl:
         print("WOOOOWOW")
         memoryCheck(2665488384)
     else:
-        raise FileNotFoundError('Please run this in %s' % lb_ttl) 
+        raise FileNotFoundError('Please run this in %s. You are in %s.' % (lb_ttl, cwd))
 
     graph = rdflib.Graph()
 
@@ -344,9 +344,10 @@ def loadall(git_local, repo_name, local=False):
                     #if match in graph:
                         #raise BaseException('Evil file found %s' % o)
 
-    if local:
-        repeat(False)
-    else:
+    #if local:
+        #repeat(False)
+    #else:
+    if not local:
         for i in range(10):
             repeat(True)
 
@@ -390,35 +391,103 @@ def uri_switch(graph, curie_prefixes):
     nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
     sos = set(prefs) - set(nots)
 
-    fragment_prefixes = (
-        'birlex_',  # FIXME
-        'birnlex_',
-        'sao',
-        'sao-',  # FIXME
+    fragment_prefixes = {
+        'birlex_':'FIXME_BIRLEX',  # FIXME
+        'birnlex_':'BIRNLEX',
+        'sao':'SAO',
+        'sao-':'FIXME_SAO',  # FIXME
         #'nif_organ_',  # single and seems like a mistake for nlx_organ_
-        'nifext_',
+        'nifext_':'NIFEXT',
         #'nifext_5007_',  # not a prefix
-        'nlx_', 
+        'nlx_':'NLX', 
         #'nlx_0906_MP_',  # not a prefix, sourced from mamalian phenotype ontology and prefixed TODO
         #'nlx_200905_',  # not a prefix
-        'nlx_anat_',
-        'nlx_cell',
-        'nlx_chem_',
-        'nlx_dys_',
-        'nlx_func_',
-        'nlx_inv_',
-        'nlx_mol_',
-        'nlx_neuron_nt_',
-        'nlx_organ_',
-        'nlx_qual_',
-        'nlx_res_',
-        #'nlx_sub_',  # FIXME one off mistake for nlx_subcell?
-        'nlx_subcell_', 
-        'nlx_ubo_',
-        'nlx_uncl_',
-    )
+        'nlx_anat_':'NLXANAT',
+        'nlx_cell_':'NLXCELL',
+        'nlx_chem_':'NLXCHEM',
+        'nlx_dys_':'NLXDYS',
+        'nlx_func_':'NLXFUNC',
+        'nlx_inv_':'NLXINV',
+        'nlx_mol_':'NLXMOL',
+        'nlx_neuron_nt_':'NLXNEURNT',
+        'nlx_organ_':'NLXORGAN',
+        'nlx_qual_':'NLXQUAL',
+        'nlx_res_':'NLXRES',
+        'nlx_sub_':'FIXME_NLXSUBCELL',  # FIXME one off mistake for nlx_subcell?
+        'nlx_subcell_':'NLXSUBCELL', 
+        'nlx_ubo_':'NLXUBO',
+        'nlx_uncl_':'NLXUNCL',
+    }
+    existing = {}
+    NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/' 
+    repacement_graph = createOntology('NIF*-NIFSTD-mapping',
+                                      'NIF* to NIFSTD equivalents',
+                                      makePrefixes('NIFMOL',
+                                                   'NIFCELL',
+                                                   'NIFDYS',
+                                                  )
+                                     )
+
+    skip_namespaces = ('BIRNLex_annotation_properties.owl#',
+                       'OBO_annotation_properties.owl#',
+                      )
+    def prefixFixes(pref):
+        if pref == 'birlex_': return 'birnlex_'
+        elif pref == 'sao-': return 'sao'
+        elif pref == 'nlx_sub_': return 'nlx_subcell_'
+        else: return pref
+
+    def add_namespace(pref, g):
+        makeGraph('', graph=g).add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
+        replacement_graph.add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
+
+    def swapPrefs(trip, g):  # TODO one last collision check for old times sake
+        for spo in trip:
+            done = False
+            if not isinstance(spo, rdflib.URIRef):
+                yield spo
+                continue
+            for pref in sorted(fragment_prefixes, key=lambda x:-len(x)):  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
+                if noneMembers(spo, *skip_namespaces) and pref in spo:
+                    prefix, suffix = spo.split(pref)
+                    if pref + suffix in existing:
+                        if prefix != existing[pref + suffix]:
+                            print('WARNING multiple prefixes for', pref + suffix, prefix, existing[pref + suffix])
+                    else:
+                        existing[suffix] = prefix
+                    pref = prefixFixes(pref)
+                    new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
+                    replacement_graph.g.add(spo, rdflib.OWL.sameAs, new_spo)
+                    add_namespace(pref, g)
+                    yield new_spo
+                    done = True
+                    break
+            if not done:
+                yield spo
+
+    def switchURIs(g):
+        for t in g:
+            nt = tuple(swapPrefs(t, g))
+            if t != nt:
+                g.remove(t)
+                g.add(nt)
+
+
     #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in asdf if 'ontology.neuinfo.org' in _)
     to_rep = set(_.rsplit('#', 1)[-1] for _ in asdf if 'ontology.neuinfo.org' in _)
+    things_that_need_interlex_ids = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))
+
+    filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
+
+    for filename in filenames:
+        ng = rdflib.Graph()
+        ng.parse(filename, format='turtle')
+        switchURIs(ng)
+        wg = makeGraph('', graph=ng)
+        wg.filename = filename
+        wg.write()
+
+    replacement_graph.write()
 
     print(len(prefs))
     embed()
@@ -519,7 +588,7 @@ def main():
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     elif args['uri-switch']:
-        graph = loadall(git_local, repo_name)
+        graph = loadall(git_local, repo_name, local=True)
         _, curie_prefixes = getCuries()
         uri_switch(graph, curie_prefixes)
     else:
