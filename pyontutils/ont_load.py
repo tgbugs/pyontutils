@@ -424,6 +424,7 @@ def uri_switch(graph, curie_prefixes):
                                        'NIF* to NIFSTD equivalents',
                                        makePrefixes(
                                            'owl',
+                                           # old
                                            'BIRNOBI',
                                            'BIRNOBO',
                                            'NIFANN',
@@ -452,8 +453,15 @@ def uri_switch(graph, curie_prefixes):
                                            'NIFSUB',
                                            'NIFUNCL',
                                            'SAOCORE',
+                                           # new
+                                           'NLX',
                                                    )
                                       )
+    uri_replacements = {
+        'NIFRES:Class_2':'NLX:293',
+    }
+    uri_replacements = {replacement_graph.expand(k):replacement_graph.expand(v)
+                        for k, v in uri_replacements.items()}
 
     skip_namespaces = ('BIRNLex_annotation_properties.owl#',
                        'OBO_annotation_properties.owl#',
@@ -474,6 +482,11 @@ def uri_switch(graph, curie_prefixes):
             done = False
             if not isinstance(spo, rdflib.URIRef):
                 yield spo
+                continue
+            if spo in uri_replacements:
+                new_spo = uri_replacements[spo]
+                replacement_graph.g.add((spo, rdflib.OWL.sameAs, new_spo))
+                yield new_spo
                 continue
             for pref in sorted(fragment_prefixes, key=lambda x:-len(x)):  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
                 if noneMembers(spo, *skip_namespaces) and pref in spo:
@@ -500,10 +513,9 @@ def uri_switch(graph, curie_prefixes):
                 g.remove(t)
                 g.add(nt)
 
-
     #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in asdf if 'ontology.neuinfo.org' in _)
     to_rep = set(_.rsplit('#', 1)[-1] for _ in asdf if 'ontology.neuinfo.org' in _)
-    non_normal_identifiers = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))
+    non_normal_identifiers = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))  # only dupe is Class_2 and that is dealt with above
 
     filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
 
