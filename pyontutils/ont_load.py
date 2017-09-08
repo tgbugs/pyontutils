@@ -396,7 +396,7 @@ def uri_switch(graph, curie_prefixes):
         'birnlex_':'BIRNLEX',
         'sao':'SAO',
         'sao-':'FIXME_SAO',  # FIXME
-        #'nif_organ_',  # single and seems like a mistake for nlx_organ_
+        'nif_organ_':'FIXME_NIFORGAN',  # single and seems like a mistake for nlx_organ_
         'nifext_':'NIFEXT',
         #'nifext_5007_',  # not a prefix
         'nlx_':'NLX', 
@@ -410,7 +410,7 @@ def uri_switch(graph, curie_prefixes):
         'nlx_inv_':'NLXINV',
         'nlx_mol_':'NLXMOL',
         'nlx_neuron_nt_':'NLXNEURNT',
-        'nlx_organ_':'NLXORGAN',
+        'nlx_organ_':'NLXORG',
         'nlx_qual_':'NLXQUAL',
         'nlx_res_':'NLXRES',
         'nlx_sub_':'FIXME_NLXSUBCELL',  # FIXME one off mistake for nlx_subcell?
@@ -426,6 +426,7 @@ def uri_switch(graph, curie_prefixes):
                                            'owl',
                                            'BIRNOBI',
                                            'BIRNOBO',
+                                           'NIFANN',
                                            'NIFCELL',
                                            'NIFCHEM',
                                            'NIFDYS',
@@ -434,12 +435,22 @@ def uri_switch(graph, curie_prefixes):
                                            'NIFGG',
                                            'NIFINV',
                                            'NIFMOL',
+                                           'NIFMOLINF',
+                                           'NIFMOLROLE',
+                                           'NIFNCBISLIM',
+                                           'NIFNEURBR',
+                                           'NIFNEURBR2',
+                                           'NIFNEURCIR',
+                                           'NIFNEURMC',
+                                           'NIFNEURMOR',
+                                           'NIFNEURNT',
                                            'NIFORG',
                                            'NIFQUAL',
                                            'NIFRES',
                                            'NIFRET',
                                            'NIFSCID',
                                            'NIFSUB',
+                                           'NIFUNCL',
                                            'SAOCORE',
                                                    )
                                       )
@@ -451,6 +462,7 @@ def uri_switch(graph, curie_prefixes):
         if pref == 'birlex_': return 'birnlex_'
         elif pref == 'sao-': return 'sao'
         elif pref == 'nlx_sub_': return 'nlx_subcell_'
+        elif pref == 'nif_organ_': return 'nlx_organ_'
         else: return pref
 
     def add_namespace(pref, g):
@@ -491,11 +503,13 @@ def uri_switch(graph, curie_prefixes):
 
     #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in asdf if 'ontology.neuinfo.org' in _)
     to_rep = set(_.rsplit('#', 1)[-1] for _ in asdf if 'ontology.neuinfo.org' in _)
-    things_that_need_interlex_ids = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))
+    non_normal_identifiers = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))
 
     filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
 
     for filename in filenames:
+        if 'NIF-NIFSTD' in filename or filename == 'nif.ttl' or filename == 'resources.ttl':
+            continue
         ng = rdflib.Graph()
         ng.parse(filename, format='turtle')
         switchURIs(ng)
