@@ -117,6 +117,10 @@ def _loadPrefixes():
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
 
+        'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
+        'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
+        'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
+        'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
@@ -125,16 +129,13 @@ def _loadPrefixes():
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
-        'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'dc':'http://purl.org/dc/elements/1.1/',
         'dcterms':'http://purl.org/dc/terms/',
         'dctypes':'http://purl.org/dc/dcmitype/',  # FIXME there is no agreement on qnames
-        'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
         'ilx':'http://uri.interlex.org/base/', 
         'nsu':'http://www.FIXME.org/nsupper#',
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
         'owl':'http://www.w3.org/2002/07/owl#',
-        'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
         'skos':'http://www.w3.org/2004/02/skos/core#',
         'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
