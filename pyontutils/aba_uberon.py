@@ -160,7 +160,8 @@ print('total uberon terms checked:', len(uberon_labs))
 print('total aba terms:           ', len(abalabs))
 print('total uberon with aba xref:', len([a for a in u_a_map.values() if a]))
 
-ubridge = createOntology('uberon-parcellation-mappings', 'Uberon Parcellation Mappings', makePrefixes('ilx', 'UBERON', 'MBA'))
+ubridge = createOntology('uberon-parcellation-mappings', 'Uberon Parcellation Mappings',
+                         makePrefixes('owl', 'ilx', 'UBERON', 'MBA'))
 for u, arefs in u_a_map.items():
     if arefs:
         # TODO check for bad assumptions here

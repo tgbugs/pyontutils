@@ -116,6 +116,8 @@ def _loadPrefixes():
     extras = {
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
+
+        'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 

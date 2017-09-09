@@ -11,7 +11,7 @@ from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
 from pyontutils.process_fixed import ProcessPoolExecutor
 from IPython import embed
 
-PREFIXES.pop('OIO')  # prefer oboInOwl
+PREFIXES.pop('NIFTTL')
 
 exclude = 'generated/swanson_hierarchies.ttl',
 
@@ -19,39 +19,41 @@ def convert(f):
     if f in exclude:
         print('skipping', f)
         return f
-    ps = {'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#', }
-    PREFIXES.update(ps)
     pi = {v:k for k, v in PREFIXES.items()}
-    pi.pop(None)
 
     graph = rdflib.Graph()
     graph.parse(f, format='turtle')
     namespaces = [str(n) for p, n in graph.namespaces()]
-    prefs = []
+    prefs = ['']
 
-    if f == 'NIF-Dysfunction.ttl':
-        prefs.append('OBO')
-    elif f == 'NIF-Eagle-I-Bridge.ttl':
-        prefs.append('IAO')
-    elif f == 'resources.ttl':
-        prefs.append('IAO')
-    elif f == 'NIF-Investigation.ttl':
-        prefs.append('IAO')
+    #if f == 'NIF-Dysfunction.ttl':
+        #prefs.append('obo')
+    #elif f == 'NIF-Eagle-I-Bridge.ttl':
+        #prefs.append('IAO')
+    #elif f == 'resources.ttl':
+        #prefs.append('IAO')
+    #elif f == 'NIF-Investigation.ttl':
+        #prefs.append('IAO')
+    #elif f == 'BIRNLex-OBI-proxy.ttl':
+        #prefs.append('IAO')
 
-    asdf = {v:k for k, v in ps.items()}
+    asdf = {} #{v:k for k, v in ps.items()}
     asdf.update(pi)
 
     # determine which prefixes we need
-    for rn, rp in asdf.items():
-        for uri in list(graph.subjects()) + list(graph.predicates()) + list(graph.objects()):
+    for uri in list(graph.subjects()) + list(graph.predicates()) + list(graph.objects()):
+        if uri.endswith('.owl') or uri.endswith('.ttl'):
+            continue  # don't prefix imports
+        for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
+            lrn = len(rn)
             if type(uri) == rdflib.BNode:
                 continue
-            elif uri.startswith(rn):
-                if rp == 'OBO' or rp == 'IAO' or rp == 'NIFTTL':
-                    if rp == 'IAO' and 'IAO_0000412' in uri:  # for sequence_slim
-                        pass
-                    else:
-                        continue
+            elif uri.startswith(rn) and '#' not in uri[lrn:] and '/' not in uri[lrn:]:  # prevent prefixing when there is another sep
+                #if rp == 'obo' or rp == 'IAO' or rp == 'NIFTTL':  # FIXME need longest namespace code...
+                    #if rp == 'IAO' and 'IAO_0000412' in uri:  # for sequence_slim
+                        #pass
+                    #else:
+                        #continue
                 prefs.append(rp)
                 break
 
@@ -72,14 +74,15 @@ def convert(f):
             ps['cocomac'] = nsl['cocomac']
 
     ng = makeGraph(os.path.splitext(f)[0], prefixes=ps, writeloc=os.path.expanduser('~/git/NIF-Ontology/ttl/'))
-    [ng.add_trip(*n) for n in graph.triples([None]*3)]
+    [ng.g.add(t) for t in graph]
+    #[ng.add_trip(*n) for n in graph.triples([None]*3)]
     #print(f, len(ng.g))
     ng.write()
     return f
 
 def main():
     with ProcessPoolExecutor(8) as ppe:
-        futures = [ppe.submit(convert, f) for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')]
+        futures = [ppe.submit(convert, f) for f in glob('*/*.ttl') + glob('*.ttl')]
         #futures = [ppe.submit(convert, f) for f in glob('generated/parcellation/*.ttl')]
         #futures = [ppe.submit(convert, f) for f in glob('nif.ttl')]
     for f in futures:
