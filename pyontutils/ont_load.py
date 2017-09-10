@@ -382,17 +382,17 @@ def import_tree(graph):
     return t, te
 
 def uri_switch(graph, curie_prefixes):
-    #asdf = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
-    #asdf = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
-    asdf = set(_ for t in graph.subject_predicates() for _ in t if type(_) == rdflib.URIRef)
+    #all_uris = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
+    #all_uris = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
+    #all_uris = set(spo for t in graph.subject_predicates() for spo in t if isinstance(spo, rdflib.URIRef))
+    all_uris = set(spo for t in graph for spo in t if isinstance(spo, rdflib.URIRef))
     prefs = set(_.rsplit('#', 1)[0] + '#' if '#' in _
                        else (_.rsplit('_',1)[0] + '_' if '_' in _
-                             else _.rsplit('/',1)[0] + '/') for _ in asdf)
+                             else _.rsplit('/',1)[0] + '/') for _ in all_uris)
     nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
     sos = set(prefs) - set(nots)
 
     fragment_prefixes = {
-        'birlex_':'FIXME_BIRLEX',  # FIXME
         'birnlex_':'BIRNLEX',
         'sao':'SAO',
         'sao-':'FIXME_SAO',  # FIXME
@@ -419,7 +419,6 @@ def uri_switch(graph, curie_prefixes):
         'nlx_uncl_':'NLXUNCL',
     }
     existing = {}
-    NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/' 
     replacement_graph = createOntology('NIF-NIFSTD-mapping',
                                        'NIF* to NIFSTD equivalents',
                                        makePrefixes(
@@ -455,20 +454,58 @@ def uri_switch(graph, curie_prefixes):
                                            'SAOCORE',
                                            # new
                                            'NLX',
+                                           'NIFSTD',
                                                    )
                                       )
+    NIFSTDBASE = replacement_graph.namespaces['NIFSTD']
     uri_replacements = {
+        # Classes
+        'NIFCELL:Class_6':'NIFSTD:Class_6',
+        'NIFCHEM:CHEBI_18248':'NIFSTD:CHEBI_18248',
+        'NIFCHEM:CHEBI_26020':'NIFSTD:CHEBI_26020',
+        'NIFCHEM:CHEBI_27958':'NIFSTD:CHEBI_27958',
+        'NIFCHEM:CHEBI_35469':'NIFSTD:CHEBI_35469',
+        'NIFCHEM:CHEBI_35476':'NIFSTD:CHEBI_35476',
+        'NIFCHEM:CHEBI_3611':'NIFSTD:CHEBI_3611',
+        'NIFCHEM:CHEBI_49575':'NIFSTD:CHEBI_49575',
+        'NIFCHEM:DB00813':'NIFSTD:DB00813',
+        'NIFCHEM:DB01221':'NIFSTD:DB01221',
+        'NIFCHEM:DB01544':'NIFSTD:DB01544',
+        'NIFGA:Class_12':'NIFSTD:Class_12',
+        'NIFGA:Class_2':'NIFSTD:Class_2',
+        'NIFGA:Class_4':'NIFSTD:Class_4',
+        'NIFGA:FMAID_7191':'NIFSTD:FMA_7191',  # FIXME http://neurolex.org/wiki/FMA:7191
+        'NIFGA:UBERON_0000349':'NIFSTD:UBERON_0000349',
+        'NIFGA:UBERON_0001833':'NIFSTD:UBERON_0001833',
+        'NIFGA:UBERON_0001886':'NIFSTD:UBERON_0001886',
+        'NIFGA:UBERON_0002102':'NIFSTD:UBERON_0002102',
+        'NIFINV:OBI_0000470':'NIFSTD:OBI_0000470',
+        'NIFINV:OBI_0000690':'NIFSTD:OBI_0000690',
+        'NIFINV:OBI_0000716':'NIFSTD:OBI_0000716',
+        'NIFMOL:137140':'NIFSTD:137140',
+        'NIFMOL:137160':'NIFSTD:137160',
+        'NIFMOL:D002394':'NIFSTD:D002394',
+        'NIFMOL:D008995':'NIFSTD:D008995',
+        'NIFMOL:DB00668':'NIFSTD:DB00668',
+        'NIFMOL:GO_0043256':'NIFSTD:GO_0043256',
+        'NIFMOL:IMR_0000512':'NIFSTD:IMR_0000512',
         'NIFRES:Class_2':'NLX:293',
+        'NIFSUB:FMA_83604':'NIFSTD:FMA_83604',
+        'NIFSUB:FMA_83605':'NIFSTD:FMA_83605',
+        'NIFSUB:FMA_83606':'NIFSTD:FMA_83606',
+        'NIFUNCL:CHEBI_24848':'NIFSTD:CHEBI_24848',
+        'NIFUNCL:GO_0006954':'NIFSTD:GO_0006954',
+        # NIFSTD:predicates/ ?? preds/
+        # ObjectProperties not in OBOANN or BIRNANN
+        # AnnotationProperties not in OBOANN or BIRNANN
     }
     uri_replacements = {replacement_graph.expand(k):replacement_graph.expand(v)
                         for k, v in uri_replacements.items()}
-
     skip_namespaces = ('BIRNLex_annotation_properties.owl#',
                        'OBO_annotation_properties.owl#',
                       )
     def prefixFixes(pref):
-        if pref == 'birlex_': return 'birnlex_'
-        elif pref == 'sao-': return 'sao'
+        if pref == 'sao-': return 'sao'
         elif pref == 'nlx_sub_': return 'nlx_subcell_'
         elif pref == 'nif_organ_': return 'nlx_organ_'
         else: return pref
@@ -513,9 +550,15 @@ def uri_switch(graph, curie_prefixes):
                 g.remove(t)
                 g.add(nt)
 
-    #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in asdf if 'ontology.neuinfo.org' in _)
-    to_rep = set(_.rsplit('#', 1)[-1] for _ in asdf if 'ontology.neuinfo.org' in _)
-    non_normal_identifiers = sorted(u for u in asdf if 'ontology.neuinfo.org' in u and noneMembers(u, *fragment_prefixes) and not u.endswith('.ttl'))  # only dupe is Class_2 and that is dealt with above
+    all_uris = [u if u not in uri_replacements
+                else uri_replacements[u]
+                for u in all_uris]
+    #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in all_uris if 'ontology.neuinfo.org' in _)
+    #to_rep = set(_.rsplit('#', 1)[-1] for _ in all_uris if 'ontology.neuinfo.org' in _)
+    non_normal_identifiers = sorted(u for u in all_uris
+                                    if 'ontology.neuinfo.org' in u
+                                    and noneMembers(u, *fragment_prefixes)
+                                    and not u.endswith('.ttl'))  # only dupe is Class_2 and that is dealt with above
 
     filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
 
