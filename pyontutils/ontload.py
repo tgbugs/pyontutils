@@ -613,7 +613,7 @@ def switchURIs(g, ureps):
         for pref in iprefs:
             if pref not in prefs:
                 prefs.add(pref)
-                addpg.add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
+                addpg.add_known_namespace(fragment_prefixes[pref])
     return reps
 
 def do_file(filename, ureps):
