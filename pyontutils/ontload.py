@@ -46,7 +46,7 @@ import requests
 from lxml import etree
 from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
+from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, anyMembers, TODAY, setPS1  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from docopt import docopt
@@ -409,6 +409,7 @@ fragment_prefixes = {
     'nlx_ubo_':'NLXUBO',
     'nlx_uncl_':'NLXUNCL',
 }
+fragment_ordering = sorted(fragment_prefixes, key=lambda x:len(x), reverse=True)
 
 uri_replacements = {
     # Classes
@@ -500,17 +501,26 @@ def uri_switch():
                                       )
     ureps = {replacement_graph.expand(k):replacement_graph.expand(v)
                         for k, v in uri_replacements.items()}
-    filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
-    trips_lists = Parallel(n_jobs=8,
-                           pre_dispatch=56,
-                           batch_size=2)(delayed(do_file)(f, ureps) for f in filenames)
+    filenames =  glob('*.ttl') + glob('*/*.ttl') + glob('*/*/*.ttl')   # need all for the replacement
+    filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
+    filenames.remove('nif.ttl')
+    filenames.remove('resources.ttl')
+    filenames.remove('generated/chebislim.ttl')
+    filenames.remove('generated/ncbigeneslim.ttl')
+    filenames.remove('generated/NIF-NIFSTD-mapping.ttl')
+    print('Start writing')
+    trips_lists = Parallel(n_jobs=9,
+                           #pre_dispatch=56,
+                           #batch_size=1
+                          )(delayed(do_file)(f, ureps) for f in filenames)
+    print('Done writing')
     [replacement_graph.g.add(t) for trips in trips_lists for t in trips]
     replacement_graph.write()
     embed()
 
 def prefixFixes(pref):
-    if pref == 'sao-': return 'sao'
-    elif pref == 'nlx_sub_': return 'nlx_subcell_'
+    #if pref == 'sao-': return 'sao'  # fixed another way
+    if pref == 'nlx_sub_': return 'nlx_subcell_'
     elif pref == 'nif_organ_': return 'nlx_organ_'
     else: return pref
 
@@ -519,37 +529,76 @@ def add_namespace(pref, g):
 
 def swapPrefs(trip, g, ureps):
     for spo in trip:
-        done = False
         if not isinstance(spo, rdflib.URIRef):
-            yield spo, None
+            yield spo, None, None
             continue
-        if spo in ureps:
+        elif anyMembers(spo, *skip_namespaces):
+            yield spo, None, None
+            continue
+        elif spo in ureps:
             new_spo = ureps[spo]
             rep = (new_spo, rdflib.OWL.sameAs, spo)
-            yield new_spo, rep
+            yield new_spo, rep, None  # FIXME no prefix?
             continue
-        for pref in sorted(fragment_prefixes, key=lambda x:-len(x)):  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
-            if noneMembers(spo, *skip_namespaces) and pref in spo:
-                prefix, suffix = spo.split(pref)
-                pref = prefixFixes(pref)
-                new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
-                if new_spo != spo:
-                    rep = (new_spo, rdflib.OWL.sameAs, spo)
+
+        try:
+            uri_pref, fragment = spo.rsplit('#', 1)
+            if '_' in fragment:
+                frag_pref, p_suffix = fragment.split('_', 1)
+                if not p_suffix[0].isdigit():
+                    p, suffix = p_suffix.split('_', 1)
+                    frag_pref = frag_pref + '_' + p
                 else:
-                    rep = None
-                    print('Already converted', spo)
-                add_namespace(pref, g)
-                yield new_spo, rep
-                done = True
-                break
-        if not done:
-            yield spo, None
+                    suffix = p_suffix
+                frag_pref_ = frag_pref + '_'
+                if frag_pref_ in fragment_prefixes:
+                    pref = prefixFixes(frag_pref_)
+                else:
+                    yield spo, None, None
+                    continue
+            elif 'sao' in fragment:
+                suffix = fragment[3:].strip('-')
+                pref = 'sao'
+            else:
+                yield spo, None, None
+                continue
+            new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
+            if new_spo != spo:
+                rep = (new_spo, rdflib.OWL.sameAs, spo)
+            else:
+                rep = None
+                print('Already converted', spo)
+            yield new_spo, rep, pref
+        except ValueError:  # there was no # so do not split
+            yield spo, None, None
+            continue
+
+    """
+    for pref in fragment_ordering:  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
+        if noneMembers(spo, *skip_namespaces) and pref in spo:
+            prefix, suffix = spo.split(pref)
+            pref = prefixFixes(pref)
+            new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
+            if new_spo != spo:
+                rep = (new_spo, rdflib.OWL.sameAs, spo)
+            else:
+                rep = None
+                print('Already converted', spo)
+            add_namespace(pref, g)
+            yield new_spo, rep
+            done = True
+            break
+    if not done:
+        yield spo, None
     return None, None
+    #"""
 
 def switchURIs(g, ureps):
     reps = []
+    prefs = {None}
+    addpg = makeGraph('', graph=g)
     for t in g:
-        nt, ireps = tuple(zip(*swapPrefs(t, g, ureps)))
+        nt, ireps, iprefs = tuple(zip(*swapPrefs(t, g, ureps)))
         if t != nt:
             g.remove(t)
             g.add(nt)
@@ -558,19 +607,22 @@ def switchURIs(g, ureps):
             if rep is not None:
                 reps.append(rep)
 
+        for pref in iprefs:
+            if pref not in prefs:
+                prefs.add(pref)
+                addpg.add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
     return reps
             
 
 def do_file(filename, ureps):
-    if 'NIF-NIFSTD' in filename or filename == 'nif.ttl' or filename == 'resources.ttl':
-        return []
-    print(filename)
+    print('START', filename)
     ng = rdflib.Graph()
     ng.parse(filename, format='turtle')
     reps = switchURIs(ng, ureps)
     wg = makeGraph('', graph=ng)
     wg.filename = filename
     wg.write()
+    print('END', filename)
     return reps
 
 def graph_todo(graph, curie_prefixes):
