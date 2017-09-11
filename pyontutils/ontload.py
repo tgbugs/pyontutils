@@ -384,6 +384,7 @@ def import_tree(graph):
     return t, te
 
 fragment_prefixes = {
+    'NIFPRED':'NIFPRED',
     'NIFSTD':'NIFSTD',  # no known collisions, mostly for handling ureps
     'birnlex_':'BIRNLEX',
     'sao':'SAO',
@@ -464,22 +465,22 @@ uri_reps_nonstandard = {
     'NIFORG:third_trimester':'NIFSTD:third_trimester',
 
     # ObjectProperties not in OBOANN or BIRNANN
-    'NIFGA:has_lacking_of':'NIFSTD:has_lacking_of',
-    'NIFNEURNT:has_molecular_constituent':'NIFSTD:has_molecular_constituent',
-    'NIFNEURNT:has_neurotransmitter':'NIFSTD:has_neurotransmitter',
-    'NIFNEURNT:molecular_constituent_of':'NIFSTD:molecular_constituent_of',
-    'NIFNEURNT:neurotransmitter_of':'NIFSTD:neurotransmitter_of',
-    'NIFNEURNT:soma_located_in':'NIFSTD:soma_located_in',
-    'NIFNEURNT:soma_location_of':'NIFSTD:soma_location_of',
+    'NIFGA:has_lacking_of':'NIFPRED:has_lacking_of',
+    'NIFNEURNT:has_molecular_constituent':'NIFPRED:has_molecular_constituent',
+    'NIFNEURNT:has_neurotransmitter':'NIFPRED:has_neurotransmitter',
+    'NIFNEURNT:molecular_constituent_of':'NIFPRED:molecular_constituent_of',
+    'NIFNEURNT:neurotransmitter_of':'NIFPRED:neurotransmitter_of',
+    'NIFNEURNT:soma_located_in':'NIFPRED:soma_located_in',
+    'NIFNEURNT:soma_location_of':'NIFPRED:soma_location_of',
 
     # AnnotationProperties not in OBOANN or BIRNANN
-    'NIFCHEM:hasStreetName':'NIFSTD:hasStreetName',
-    'NIFMOL:hasGenbankAccessionNumber':'NIFSTD:hasGenbankAccessionNumber',
-    'NIFMOL:hasLocusMapPosition':'NIFSTD:hasLocusMapPosition',
-    'NIFMOL:hasSequence':'NIFSTD:hasSequence',
-    'NIFORG:hasCoveringOrganism':'NIFSTD:hasCoveringOrganism',
-    'NIFORG:hasMutationType':'NIFSTD:hasMutationType',
-    'NIFORG:hasTaxonRank':'NIFSTD:hasTaxonRank',
+    'NIFCHEM:hasStreetName':'NIFPRED:hasStreetName',
+    'NIFMOL:hasGenbankAccessionNumber':'NIFPRED:hasGenbankAccessionNumber',
+    'NIFMOL:hasLocusMapPosition':'NIFPRED:hasLocusMapPosition',
+    'NIFMOL:hasSequence':'NIFPRED:hasSequence',
+    'NIFORG:hasCoveringOrganism':'NIFPRED:hasCoveringOrganism',
+    'NIFORG:hasMutationType':'NIFPRED:hasMutationType',
+    'NIFORG:hasTaxonRank':'NIFPRED:hasTaxonRank',
 }
 
 NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'

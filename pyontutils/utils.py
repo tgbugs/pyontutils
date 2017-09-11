@@ -127,6 +127,7 @@ def _loadPrefixes():
         'ILX':'http://uri.interlex.org/base/ilx_', 
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
+        'NIFPRED':'http://uri.neuinfo.org/nif/nifstd/predicate/',  # XXX EXPERIMENTAL consider also 'Literal Identifier' or something like that
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
         'dc':'http://purl.org/dc/elements/1.1/',
