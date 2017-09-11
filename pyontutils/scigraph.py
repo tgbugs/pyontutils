@@ -11,7 +11,7 @@ from  IPython import embed
 class restService:
     """ Base class for SciGraph rest services. """
 
-    def __init__(self, cache=False):
+    def __init__(self, cache=False, key=None):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
         self._session.mount('http://', adapter)
@@ -23,8 +23,15 @@ class restService:
         else:
             self._get = self._normal_get
 
+        if key is not None:
+            self.api_key = key
+        else:
+            self.api_key = None
+
     def _normal_get(self, method, url, params=None, output=None):
         s = self._session
+        if self.api_key is not None:
+            params['key'] = self.api_key
         if method == 'POST':
             req = requests.Request(method=method, url=url, data=params)
         else:
@@ -72,10 +79,10 @@ class restService:
 class CLASSNAME(restService):
     """ DOCSTRING """
 
-    def __init__(self, basePath='BASEPATH', verbose=False, cache=False):
+    def __init__(self, basePath='BASEPATH', verbose=False, cache=False, key=None):
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache)
+        super().__init__(cache, key)
 
 
 class FAKECLASS:
