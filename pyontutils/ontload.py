@@ -9,6 +9,7 @@ Usage:
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload uri-switch [options] <repo>
+    ontload todo [options] <repo>
     ontload [options] <repo> <remote_base>
 
 Options:
@@ -44,6 +45,7 @@ import rdflib
 import requests
 from lxml import etree
 from git.repo import Repo
+from joblib import Parallel, delayed
 from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
@@ -381,44 +383,82 @@ def import_tree(graph):
     #print(t)
     return t, te
 
-def uri_switch(graph, curie_prefixes):
-    #all_uris = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
-    #all_uris = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
-    #all_uris = set(spo for t in graph.subject_predicates() for spo in t if isinstance(spo, rdflib.URIRef))
-    all_uris = set(spo for t in graph for spo in t if isinstance(spo, rdflib.URIRef))
-    prefs = set(_.rsplit('#', 1)[0] + '#' if '#' in _
-                       else (_.rsplit('_',1)[0] + '_' if '_' in _
-                             else _.rsplit('/',1)[0] + '/') for _ in all_uris)
-    nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
-    sos = set(prefs) - set(nots)
+fragment_prefixes = {
+    'birnlex_':'BIRNLEX',
+    'sao':'SAO',
+    'sao-':'FIXME_SAO',  # FIXME
+    'nif_organ_':'FIXME_NIFORGAN',  # single and seems like a mistake for nlx_organ_
+    'nifext_':'NIFEXT',
+    #'nifext_5007_',  # not a prefix
+    'nlx_':'NLX', 
+    #'nlx_0906_MP_',  # not a prefix, sourced from mamalian phenotype ontology and prefixed TODO
+    #'nlx_200905_',  # not a prefix
+    'nlx_anat_':'NLXANAT',
+    'nlx_cell_':'NLXCELL',
+    'nlx_chem_':'NLXCHEM',
+    'nlx_dys_':'NLXDYS',
+    'nlx_func_':'NLXFUNC',
+    'nlx_inv_':'NLXINV',
+    'nlx_mol_':'NLXMOL',
+    'nlx_neuron_nt_':'NLXNEURNT',
+    'nlx_organ_':'NLXORG',
+    'nlx_qual_':'NLXQUAL',
+    'nlx_res_':'NLXRES',
+    'nlx_sub_':'FIXME_NLXSUBCELL',  # FIXME one off mistake for nlx_subcell?
+    'nlx_subcell_':'NLXSUB',   # NLXSUB??
+    'nlx_ubo_':'NLXUBO',
+    'nlx_uncl_':'NLXUNCL',
+}
 
-    fragment_prefixes = {
-        'birnlex_':'BIRNLEX',
-        'sao':'SAO',
-        'sao-':'FIXME_SAO',  # FIXME
-        'nif_organ_':'FIXME_NIFORGAN',  # single and seems like a mistake for nlx_organ_
-        'nifext_':'NIFEXT',
-        #'nifext_5007_',  # not a prefix
-        'nlx_':'NLX', 
-        #'nlx_0906_MP_',  # not a prefix, sourced from mamalian phenotype ontology and prefixed TODO
-        #'nlx_200905_',  # not a prefix
-        'nlx_anat_':'NLXANAT',
-        'nlx_cell_':'NLXCELL',
-        'nlx_chem_':'NLXCHEM',
-        'nlx_dys_':'NLXDYS',
-        'nlx_func_':'NLXFUNC',
-        'nlx_inv_':'NLXINV',
-        'nlx_mol_':'NLXMOL',
-        'nlx_neuron_nt_':'NLXNEURNT',
-        'nlx_organ_':'NLXORG',
-        'nlx_qual_':'NLXQUAL',
-        'nlx_res_':'NLXRES',
-        'nlx_sub_':'FIXME_NLXSUBCELL',  # FIXME one off mistake for nlx_subcell?
-        'nlx_subcell_':'NLXSUB',   # NLXSUB??
-        'nlx_ubo_':'NLXUBO',
-        'nlx_uncl_':'NLXUNCL',
-    }
-    existing = {}
+uri_replacements = {
+    # Classes
+    'NIFCELL:Class_6':'NIFSTD:Class_6',
+    'NIFCHEM:CHEBI_18248':'NIFSTD:CHEBI_18248',
+    'NIFCHEM:CHEBI_26020':'NIFSTD:CHEBI_26020',
+    'NIFCHEM:CHEBI_27958':'NIFSTD:CHEBI_27958',
+    'NIFCHEM:CHEBI_35469':'NIFSTD:CHEBI_35469',
+    'NIFCHEM:CHEBI_35476':'NIFSTD:CHEBI_35476',
+    'NIFCHEM:CHEBI_3611':'NIFSTD:CHEBI_3611',
+    'NIFCHEM:CHEBI_49575':'NIFSTD:CHEBI_49575',
+    'NIFCHEM:DB00813':'NIFSTD:DB00813',
+    'NIFCHEM:DB01221':'NIFSTD:DB01221',
+    'NIFCHEM:DB01544':'NIFSTD:DB01544',
+    'NIFGA:Class_12':'NIFSTD:Class_12',
+    'NIFGA:Class_2':'NIFSTD:Class_2',  # FIXME this record is not in neurolex
+    'NIFGA:Class_4':'NIFSTD:Class_4',
+    'NIFGA:FMAID_7191':'NIFSTD:FMA_7191',  # FIXME http://neurolex.org/wiki/FMA:7191
+    'NIFGA:UBERON_0000349':'NIFSTD:UBERON_0000349',
+    'NIFGA:UBERON_0001833':'NIFSTD:UBERON_0001833',
+    'NIFGA:UBERON_0001886':'NIFSTD:UBERON_0001886',
+    'NIFGA:UBERON_0002102':'NIFSTD:UBERON_0002102',
+    'NIFINV:OBI_0000470':'NIFSTD:OBI_0000470',
+    'NIFINV:OBI_0000690':'NIFSTD:OBI_0000690',
+    'NIFINV:OBI_0000716':'NIFSTD:OBI_0000716',
+    'NIFMOL:137140':'NIFSTD:137140',
+    'NIFMOL:137160':'NIFSTD:137160',
+    'NIFMOL:D002394':'NIFSTD:D002394',
+    'NIFMOL:D008995':'NIFSTD:D008995',
+    'NIFMOL:DB00668':'NIFSTD:DB00668',
+    'NIFMOL:GO_0043256':'NIFSTD:GO_0043256',  # FIXME http://neurolex.org/wiki/GO:0043256
+    'NIFMOL:IMR_0000512':'NIFSTD:IMR_0000512',
+    'NIFRES:Class_2':'NLX:293',  # FIXME note that neurolex still thinks Class_2 goes here... not to NIFGA:Class_2
+    'NIFSUB:FMA_83604':'NIFSTD:FMA_83604',  # FIXME http://neurolex.org/wiki/FMA:83604
+    'NIFSUB:FMA_83605':'NIFSTD:FMA_83605',  # FIXME http://neurolex.org/wiki/FMA:83605
+    'NIFSUB:FMA_83606':'NIFSTD:FMA_83606',  # FIXME http://neurolex.org/wiki/FMA:83606
+    'NIFUNCL:CHEBI_24848':'NIFSTD:CHEBI_24848',  # FIXME not in interlex and not in neurolex_full.csv but in neurolex (joy)
+    'NIFUNCL:GO_0006954':'NIFSTD:GO_0006954',  # FIXME http://neurolex.org/wiki/GO:0006954
+    # NIFSTD:predicates/ ?? preds/
+    # ObjectProperties not in OBOANN or BIRNANN
+    # AnnotationProperties not in OBOANN or BIRNANN
+}
+
+NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
+
+skip_namespaces = ('BIRNLex_annotation_properties.owl#',
+                   'OBO_annotation_properties.owl#',
+                  )
+
+def uri_switch():
     replacement_graph = createOntology('NIF-NIFSTD-mapping',
                                        'NIF* to NIFSTD equivalents',
                                        makePrefixes(
@@ -453,105 +493,101 @@ def uri_switch(graph, curie_prefixes):
                                            'NIFUNCL',
                                            'SAOCORE',
                                            # new
-                                           'NLX',
                                            'NIFSTD',
-                                                   )
+                                           *(c for c in fragment_prefixes.values()
+                                             if 'FIXME' not in c)
+                                       )
                                       )
-    NIFSTDBASE = replacement_graph.namespaces['NIFSTD']
-    uri_replacements = {
-        # Classes
-        'NIFCELL:Class_6':'NIFSTD:Class_6',
-        'NIFCHEM:CHEBI_18248':'NIFSTD:CHEBI_18248',
-        'NIFCHEM:CHEBI_26020':'NIFSTD:CHEBI_26020',
-        'NIFCHEM:CHEBI_27958':'NIFSTD:CHEBI_27958',
-        'NIFCHEM:CHEBI_35469':'NIFSTD:CHEBI_35469',
-        'NIFCHEM:CHEBI_35476':'NIFSTD:CHEBI_35476',
-        'NIFCHEM:CHEBI_3611':'NIFSTD:CHEBI_3611',
-        'NIFCHEM:CHEBI_49575':'NIFSTD:CHEBI_49575',
-        'NIFCHEM:DB00813':'NIFSTD:DB00813',
-        'NIFCHEM:DB01221':'NIFSTD:DB01221',
-        'NIFCHEM:DB01544':'NIFSTD:DB01544',
-        'NIFGA:Class_12':'NIFSTD:Class_12',
-        'NIFGA:Class_2':'NIFSTD:Class_2',
-        'NIFGA:Class_4':'NIFSTD:Class_4',
-        'NIFGA:FMAID_7191':'NIFSTD:FMA_7191',  # FIXME http://neurolex.org/wiki/FMA:7191
-        'NIFGA:UBERON_0000349':'NIFSTD:UBERON_0000349',
-        'NIFGA:UBERON_0001833':'NIFSTD:UBERON_0001833',
-        'NIFGA:UBERON_0001886':'NIFSTD:UBERON_0001886',
-        'NIFGA:UBERON_0002102':'NIFSTD:UBERON_0002102',
-        'NIFINV:OBI_0000470':'NIFSTD:OBI_0000470',
-        'NIFINV:OBI_0000690':'NIFSTD:OBI_0000690',
-        'NIFINV:OBI_0000716':'NIFSTD:OBI_0000716',
-        'NIFMOL:137140':'NIFSTD:137140',
-        'NIFMOL:137160':'NIFSTD:137160',
-        'NIFMOL:D002394':'NIFSTD:D002394',
-        'NIFMOL:D008995':'NIFSTD:D008995',
-        'NIFMOL:DB00668':'NIFSTD:DB00668',
-        'NIFMOL:GO_0043256':'NIFSTD:GO_0043256',
-        'NIFMOL:IMR_0000512':'NIFSTD:IMR_0000512',
-        'NIFRES:Class_2':'NLX:293',
-        'NIFSUB:FMA_83604':'NIFSTD:FMA_83604',
-        'NIFSUB:FMA_83605':'NIFSTD:FMA_83605',
-        'NIFSUB:FMA_83606':'NIFSTD:FMA_83606',
-        'NIFUNCL:CHEBI_24848':'NIFSTD:CHEBI_24848',
-        'NIFUNCL:GO_0006954':'NIFSTD:GO_0006954',
-        # NIFSTD:predicates/ ?? preds/
-        # ObjectProperties not in OBOANN or BIRNANN
-        # AnnotationProperties not in OBOANN or BIRNANN
-    }
-    uri_replacements = {replacement_graph.expand(k):replacement_graph.expand(v)
+    ureps = {replacement_graph.expand(k):replacement_graph.expand(v)
                         for k, v in uri_replacements.items()}
-    skip_namespaces = ('BIRNLex_annotation_properties.owl#',
-                       'OBO_annotation_properties.owl#',
-                      )
-    def prefixFixes(pref):
-        if pref == 'sao-': return 'sao'
-        elif pref == 'nlx_sub_': return 'nlx_subcell_'
-        elif pref == 'nif_organ_': return 'nlx_organ_'
-        else: return pref
+    filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
+    trips_lists = Parallel(n_jobs=8,
+                           pre_dispatch=56,
+                           batch_size=2)(delayed(do_file)(f, ureps) for f in filenames)
+    [replacement_graph.g.add(t) for trips in trips_lists for t in trips]
+    replacement_graph.write()
+    embed()
 
-    def add_namespace(pref, g):
-        makeGraph('', graph=g).add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
-        replacement_graph.add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
+def prefixFixes(pref):
+    if pref == 'sao-': return 'sao'
+    elif pref == 'nlx_sub_': return 'nlx_subcell_'
+    elif pref == 'nif_organ_': return 'nlx_organ_'
+    else: return pref
 
-    def swapPrefs(trip, g):  # TODO one last collision check for old times sake
-        for spo in trip:
-            done = False
-            if not isinstance(spo, rdflib.URIRef):
-                yield spo
-                continue
-            if spo in uri_replacements:
-                new_spo = uri_replacements[spo]
-                replacement_graph.g.add((spo, rdflib.OWL.sameAs, new_spo))
-                yield new_spo
-                continue
-            for pref in sorted(fragment_prefixes, key=lambda x:-len(x)):  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
-                if noneMembers(spo, *skip_namespaces) and pref in spo:
-                    prefix, suffix = spo.split(pref)
-                    if pref + suffix in existing:
-                        if prefix != existing[pref + suffix]:
-                            print('WARNING multiple prefixes for', pref + suffix, prefix, existing[pref + suffix])
-                    else:
-                        existing[suffix] = prefix
-                    pref = prefixFixes(pref)
-                    new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
-                    replacement_graph.g.add((spo, rdflib.OWL.sameAs, new_spo))
-                    add_namespace(pref, g)
-                    yield new_spo
-                    done = True
-                    break
-            if not done:
-                yield spo
+def add_namespace(pref, g):
+    makeGraph('', graph=g).add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
 
-    def switchURIs(g):
-        for t in g:
-            nt = tuple(swapPrefs(t, g))
-            if t != nt:
-                g.remove(t)
-                g.add(nt)
+def swapPrefs(trip, g, ureps):
+    for spo in trip:
+        done = False
+        if not isinstance(spo, rdflib.URIRef):
+            yield spo, None
+            continue
+        if spo in ureps:
+            new_spo = ureps[spo]
+            rep = (new_spo, rdflib.OWL.sameAs, spo)
+            yield new_spo, rep
+            continue
+        for pref in sorted(fragment_prefixes, key=lambda x:-len(x)):  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
+            if noneMembers(spo, *skip_namespaces) and pref in spo:
+                prefix, suffix = spo.split(pref)
+                pref = prefixFixes(pref)
+                new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
+                if new_spo != spo:
+                    rep = (new_spo, rdflib.OWL.sameAs, spo)
+                else:
+                    rep = None
+                    print('Already converted', spo)
+                add_namespace(pref, g)
+                yield new_spo, rep
+                done = True
+                break
+        if not done:
+            yield spo, None
+    return None, None
 
-    all_uris = [u if u not in uri_replacements
-                else uri_replacements[u]
+def switchURIs(g, ureps):
+    reps = []
+    for t in g:
+        nt, ireps = tuple(zip(*swapPrefs(t, g, ureps)))
+        if t != nt:
+            g.remove(t)
+            g.add(nt)
+
+        for rep in ireps:
+            if rep is not None:
+                reps.append(rep)
+
+    return reps
+            
+
+def do_file(filename, ureps):
+    if 'NIF-NIFSTD' in filename or filename == 'nif.ttl' or filename == 'resources.ttl':
+        return []
+    print(filename)
+    ng = rdflib.Graph()
+    ng.parse(filename, format='turtle')
+    reps = switchURIs(ng, ureps)
+    wg = makeGraph('', graph=ng)
+    wg.filename = filename
+    wg.write()
+    return reps
+
+def graph_todo(graph, curie_prefixes):
+    eg = makeGraph('big-graph', graph=graph)
+    ureps = {eg.expand(k):eg.expand(v)
+             for k, v in uri_replacements.items()}
+    #all_uris = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
+    #all_uris = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
+    #all_uris = set(spo for t in graph.subject_predicates() for spo in t if isinstance(spo, rdflib.URIRef))
+    all_uris = set(spo for t in graph for spo in t if isinstance(spo, rdflib.URIRef))
+    prefs = set(_.rsplit('#', 1)[0] + '#' if '#' in _
+                       else (_.rsplit('_',1)[0] + '_' if '_' in _
+                             else _.rsplit('/',1)[0] + '/') for _ in all_uris)
+    nots = set(_ for _ in prefs if _ not in curie_prefixes)  # TODO
+    sos = set(prefs) - set(nots)
+    all_uris = [u if u not in ureps
+                else ureps[u]
                 for u in all_uris]
     #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in all_uris if 'ontology.neuinfo.org' in _)
     #to_rep = set(_.rsplit('#', 1)[-1] for _ in all_uris if 'ontology.neuinfo.org' in _)
@@ -559,21 +595,6 @@ def uri_switch(graph, curie_prefixes):
                                     if 'ontology.neuinfo.org' in u
                                     and noneMembers(u, *fragment_prefixes)
                                     and not u.endswith('.ttl'))  # only dupe is Class_2 and that is dealt with above
-
-    filenames = glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl')
-
-    for filename in filenames:
-        if 'NIF-NIFSTD' in filename or filename == 'nif.ttl' or filename == 'resources.ttl':
-            continue
-        ng = rdflib.Graph()
-        ng.parse(filename, format='turtle')
-        switchURIs(ng)
-        wg = makeGraph('', graph=ng)
-        wg.filename = filename
-        wg.write()
-
-    replacement_graph.write()
-
     print(len(prefs))
     embed()
 
@@ -708,9 +729,11 @@ def main():
         mg, ng_ = normalize_prefixes(graph, curies)
         for_burak(ng_)
     elif args['uri-switch']:
+        uri_switch()
+    elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
         _, curie_prefixes = getCuries()
-        uri_switch(graph, curie_prefixes)
+        graph_todo(graph, curie_prefixes)
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):

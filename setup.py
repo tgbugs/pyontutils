@@ -44,6 +44,7 @@ try:
             'docopt',
             'gitpython',
             'ipython',
+            'joblib',
             'lxml',
             'numpy',
             'psutil',
