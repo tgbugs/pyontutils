@@ -384,6 +384,7 @@ def import_tree(graph):
     return t, te
 
 fragment_prefixes = {
+    'NIFSTD':'NIFSTD',  # no known collisions, mostly for handling ureps
     'birnlex_':'BIRNLEX',
     'sao':'SAO',
     'sao-':'FIXME_SAO',  # FIXME
@@ -409,7 +410,6 @@ fragment_prefixes = {
     'nlx_ubo_':'NLXUBO',
     'nlx_uncl_':'NLXUNCL',
 }
-fragment_ordering = sorted(fragment_prefixes, key=lambda x:len(x), reverse=True)
 
 uri_replacements = {
     # Classes
@@ -448,9 +448,38 @@ uri_replacements = {
     'NIFSUB:FMA_83606':'NIFSTD:FMA_83606',  # FIXME http://neurolex.org/wiki/FMA:83606
     'NIFUNCL:CHEBI_24848':'NIFSTD:CHEBI_24848',  # FIXME not in interlex and not in neurolex_full.csv but in neurolex (joy)
     'NIFUNCL:GO_0006954':'NIFSTD:GO_0006954',  # FIXME http://neurolex.org/wiki/GO:0006954
-    # NIFSTD:predicates/ ?? preds/
+
+}
+uri_reps_nonstandard = {
+    # nonstandards XXX none of these collide with any other namespace 
+    # that we might like to use in the future under NIFSTD:namespace/
+    # therefore they are being placed directly into NIFSTD and we will
+    # work out the details and redirects later (some intlerlex classes
+    # may need to be created) maybe when we do the backend refactor.
+
+    # NamedIndividuals
+    'NIFORG:Infraclass':'NIFSTD:Infraclass',  # only used in annotaiton but all other similar cases show up as named individuals
+    'NIFORG:first_trimester':'NIFSTD:first_trimester',
+    'NIFORG:second_trimester':'NIFSTD:second_trimester',
+    'NIFORG:third_trimester':'NIFSTD:third_trimester',
+
     # ObjectProperties not in OBOANN or BIRNANN
+    'NIFGA:has_lacking_of':'NIFSTD:has_lacking_of',
+    'NIFNEURNT:has_molecular_constituent':'NIFSTD:has_molecular_constituent',
+    'NIFNEURNT:has_neurotransmitter':'NIFSTD:has_neurotransmitter',
+    'NIFNEURNT:molecular_constituent_of':'NIFSTD:molecular_constituent_of',
+    'NIFNEURNT:neurotransmitter_of':'NIFSTD:neurotransmitter_of',
+    'NIFNEURNT:soma_located_in':'NIFSTD:soma_located_in',
+    'NIFNEURNT:soma_location_of':'NIFSTD:soma_location_of',
+
     # AnnotationProperties not in OBOANN or BIRNANN
+    'NIFCHEM:hasStreetName':'NIFSTD:hasStreetName',
+    'NIFMOL:hasGenbankAccessionNumber':'NIFSTD:hasGenbankAccessionNumber',
+    'NIFMOL:hasLocusMapPosition':'NIFSTD:hasLocusMapPosition',
+    'NIFMOL:hasSequence':'NIFSTD:hasSequence',
+    'NIFORG:hasCoveringOrganism':'NIFSTD:hasCoveringOrganism',
+    'NIFORG:hasMutationType':'NIFSTD:hasMutationType',
+    'NIFORG:hasTaxonRank':'NIFSTD:hasTaxonRank',
 }
 
 NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
@@ -494,38 +523,26 @@ def uri_switch():
                                            'NIFUNCL',
                                            'SAOCORE',
                                            # new
-                                           'NIFSTD',
                                            *(c for c in fragment_prefixes.values()
                                              if 'FIXME' not in c)
                                        )
                                       )
     ureps = {replacement_graph.expand(k):replacement_graph.expand(v)
                         for k, v in uri_replacements.items()}
+    ureps.update({replacement_graph.expand(k):replacement_graph.expand(v)
+                  for k, v in uri_reps_nonstandard.items()})
     filenames =  glob('*.ttl') + glob('*/*.ttl') + glob('*/*/*.ttl')   # need all for the replacement
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
-    filenames.remove('nif.ttl')
-    filenames.remove('resources.ttl')
-    filenames.remove('generated/chebislim.ttl')
-    filenames.remove('generated/ncbigeneslim.ttl')
-    filenames.remove('generated/NIF-NIFSTD-mapping.ttl')
+    for n in ( 'nif.ttl', 'resources.ttl', 'generated/chebislim.ttl',
+              'generated/ncbigeneslim.ttl', 'generated/NIF-NIFSTD-mapping.ttl'):
+        if n in filenames:
+            filenames.remove(n)
     print('Start writing')
-    trips_lists = Parallel(n_jobs=9,
-                           #pre_dispatch=56,
-                           #batch_size=1
-                          )(delayed(do_file)(f, ureps) for f in filenames)
+    trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, ureps) for f in filenames)
     print('Done writing')
     [replacement_graph.g.add(t) for trips in trips_lists for t in trips]
     replacement_graph.write()
     embed()
-
-def prefixFixes(pref):
-    #if pref == 'sao-': return 'sao'  # fixed another way
-    if pref == 'nlx_sub_': return 'nlx_subcell_'
-    elif pref == 'nif_organ_': return 'nlx_organ_'
-    else: return pref
-
-def add_namespace(pref, g):
-    makeGraph('', graph=g).add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
 
 def swapPrefs(trip, g, ureps):
     for spo in trip:
@@ -538,7 +555,11 @@ def swapPrefs(trip, g, ureps):
         elif spo in ureps:
             new_spo = ureps[spo]
             rep = (new_spo, rdflib.OWL.sameAs, spo)
-            yield new_spo, rep, None  # FIXME no prefix?
+            if 'nlx_' in new_spo:
+                pref = 'nlx_'
+            else:
+                pref = 'NIFSTD'
+            yield new_spo, rep, pref
             continue
 
         try:
@@ -552,7 +573,9 @@ def swapPrefs(trip, g, ureps):
                     suffix = p_suffix
                 frag_pref_ = frag_pref + '_'
                 if frag_pref_ in fragment_prefixes:
-                    pref = prefixFixes(frag_pref_)
+                    if frag_pref_ == 'nlx_sub_': pref = 'nlx_subcell_'
+                    elif frag_pref_ == 'nif_organ_': pref = 'nlx_organ_'
+                    else: pref = frag_pref_  # come on branch predictor you can do it!
                 else:
                     yield spo, None, None
                     continue
@@ -573,26 +596,6 @@ def swapPrefs(trip, g, ureps):
             yield spo, None, None
             continue
 
-    """
-    for pref in fragment_ordering:  # make sure we find the longest (even though the swap will still work as expected we would get bad data on suffixes)
-        if noneMembers(spo, *skip_namespaces) and pref in spo:
-            prefix, suffix = spo.split(pref)
-            pref = prefixFixes(pref)
-            new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
-            if new_spo != spo:
-                rep = (new_spo, rdflib.OWL.sameAs, spo)
-            else:
-                rep = None
-                print('Already converted', spo)
-            add_namespace(pref, g)
-            yield new_spo, rep
-            done = True
-            break
-    if not done:
-        yield spo, None
-    return None, None
-    #"""
-
 def switchURIs(g, ureps):
     reps = []
     prefs = {None}
@@ -612,7 +615,6 @@ def switchURIs(g, ureps):
                 prefs.add(pref)
                 addpg.add_namespace(fragment_prefixes[pref], NIFSTDBASE + pref)
     return reps
-            
 
 def do_file(filename, ureps):
     print('START', filename)
@@ -629,6 +631,8 @@ def graph_todo(graph, curie_prefixes):
     eg = makeGraph('big-graph', graph=graph)
     ureps = {eg.expand(k):eg.expand(v)
              for k, v in uri_replacements.items()}
+    ureps.update({eg.expand(k):eg.expand(v)
+                  for k, v in uri_reps_nonstandard.items()})
     #all_uris = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
     #all_uris = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
     #all_uris = set(spo for t in graph.subject_predicates() for spo in t if isinstance(spo, rdflib.URIRef))
@@ -643,10 +647,32 @@ def graph_todo(graph, curie_prefixes):
                 for u in all_uris]
     #to_rep = set(_.rsplit('#', 1)[-1].split('_', 1)[0] for _ in all_uris if 'ontology.neuinfo.org' in _)
     #to_rep = set(_.rsplit('#', 1)[-1] for _ in all_uris if 'ontology.neuinfo.org' in _)
+
+    ignore = (
+        # deprecated and only in as annotations
+        'NIFGA:birnAnatomy_011',
+        'NIFGA:birnAnatomy_249',
+        'NIFORG:birnOrganismTaxon_19',
+        'NIFORG:birnOrganismTaxon_20',
+        'NIFORG:birnOrganismTaxon_21',
+        'NIFORG:birnOrganismTaxon_390',
+        'NIFORG:birnOrganismTaxon_391',
+        'NIFORG:birnOrganismTaxon_56',
+        'NIFORG:birnOrganismTaxon_68',
+        'NIFINV:birnlexInvestigation_174',
+        'NIFINV:birnlexInvestigation_199',
+        'NIFINV:birnlexInvestigation_202',
+        'NIFINV:birnlexInvestigation_204',
+    )
+    ignore = tuple(eg.expand(i) for i in ignore)
+
+
     non_normal_identifiers = sorted(u for u in all_uris
                                     if 'ontology.neuinfo.org' in u
                                     and noneMembers(u, *fragment_prefixes)
-                                    and not u.endswith('.ttl'))  # only dupe is Class_2 and that is dealt with above
+                                    and not u.endswith('.ttl')
+                                    and not u.endswith('.owl')
+                                    and u not in ignore)
     print(len(prefs))
     embed()
 
@@ -782,10 +808,12 @@ def main():
         for_burak(ng_)
     elif args['uri-switch']:
         uri_switch()
+        return
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
         _, curie_prefixes = getCuries()
         graph_todo(graph, curie_prefixes)
+        return
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
