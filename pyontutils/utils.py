@@ -225,7 +225,7 @@ class makeGraph:
     def check_thing(self, thing):
         if type(thing) == rdflib.Literal:
             return thing
-        elif type(thing) != rdflib.term.URIRef and type(thing) != rdflib.term.BNode:
+        elif not isinstance(thing, rdflib.term.URIRef) and not isinstance(thing, rdflib.term.BNode):
             try:
                 return self.expand(thing)
             except (KeyError, ValueError) as e:
@@ -290,18 +290,18 @@ class makeGraph:
         if transitive:
             self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
 
-    def add_trip(self, target, edge, value):
-        if not value:  # no empty values!
+    def add_trip(self, subject, predicate, object_):
+        if not object_:  # no empty object_s!
             return
-        target = self.check_thing(target)
-        edge = self.check_thing(edge)
+        subject = self.check_thing(subject)
+        predicate = self.check_thing(predicate)
         try:
-            if value.startswith(':') and ' ' in value:  # not a compact repr AND starts with a : because humans are insane
-                value = ' ' + value
-            value = self.check_thing(value)
+            if object_.startswith(':') and ' ' in object_:  # not a compact repr AND starts with a : because humans are insane
+                object_ = ' ' + object_
+            object_ = self.check_thing(object_)
         except (TypeError, AttributeError) as e:
-            value = rdflib.Literal(value)  # trust autoconv
-        self.g.add( (target, edge, value) )
+            object_ = rdflib.Literal(object_)  # trust autoconv
+        self.g.add( (subject, predicate, object_) )
 
     def del_trip(self, s, p, o):
         self.g.remove(tuple(self.check_thing(_) for _ in (s, p, o)))
@@ -460,6 +460,7 @@ def createOntology(filename=    'temp-graph',
                    imports=     tuple()):
     writeloc = local_base + path
     ontid = remote_base + path + filename + '.ttl'
+    prefixes.update(makePrefixes('owl'))
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
