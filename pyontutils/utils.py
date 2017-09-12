@@ -120,6 +120,8 @@ def _loadPrefixes():
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
+        'termsMerged':'http://purl.obolibrary.org/obo/IAO_0000227',
+        'obsReason':'http://purl.obolibrary.org/obo/IAO_0000231',
         'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
@@ -151,7 +153,7 @@ def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
 
 class makeGraph:
-    SYNONYM = 'OBOANN:synonym'  # dangerous with prefixes
+    SYNONYM = 'NIFRID:synonym'  # dangerous with prefixes
 
     def __init__(self, name, prefixes=None, graph=None, writeloc='/tmp/'):
         self.name = name
@@ -632,7 +634,11 @@ class scigPrint:
         'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
         'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
+        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',
+        'NLX':'http://uri.neuinfo.org/nif/nifstd/nlx_',
+        'SAO':'http://uri.neuinfo.org/nif/nifstd/sao',
+        'BIRNLEX':'http://uri.neuinfo.org/nif/nifstd/birnlex_',
+        'NIFRID':'http://uri.neuinfo.org/nif/nifstd/readable/',
         'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
         'UBERON':'http://purl.obolibrary.org/obo/UBERON_',

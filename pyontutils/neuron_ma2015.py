@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 
 from pyontutils.utils import rowParse, refile
 import pyontutils.neuron_example as ne
@@ -42,7 +42,7 @@ class table1(rowParse):
             output.append(label)
 
         for v in output:
-            self.graph.add_trip(self._morpho_parent_id, 'OBOANN:synonym', v)
+            self.graph.add_trip(self._morpho_parent_id, 'NIFRID:synonym', v)
 
     def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
         p_edge = ne.pred.hasExpressionPhenotype

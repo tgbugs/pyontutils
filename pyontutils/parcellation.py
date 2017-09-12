@@ -71,8 +71,8 @@ PSArtifact('SCR:something',
 # annotationProperties
 #PARCLAB = 'ilx:parcellationLabel'
 PARCLAB = 'skos:prefLabel'
-ACRONYM = 'OBOANN:acronym'
-SYNONYM = 'OBOANN:synonym'
+ACRONYM = 'NIFRID:acronym'
+SYNONYM = 'NIFRID:synonym'
 
 # objectProperties
 UNTAXON = 'ilx:ancestralInTaxon'
@@ -118,8 +118,8 @@ def make_atlas(atlas, parent=ATLAS_SUPER):
         (atlas.curie, rdflib.RDFS.subClassOf, parent),
         (atlas.curie, 'ilx:atlasVersion', atlas.version),  # FIXME
         (atlas.curie, 'ilx:atlasDate', atlas.date),  # FIXME
-        (atlas.curie, 'OBOANN:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
-        (atlas.curie, 'OBOANN:definingCitation', atlas.citation),
+        (atlas.curie, 'NIFRID:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
+        (atlas.curie, 'NIFRID:definingCitation', atlas.citation),
     ] + \
     [(atlas.curie, SYNONYM, syn) for syn in atlas.synonyms] + \
     [(atlas.curie, ACRONYM, ac) for ac in atlas.acronyms]
@@ -140,7 +140,7 @@ def parcellation_schemes(ontids_atlases):
                   'Brain parcellation schemes as represented by root concepts.',
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
     graph.add_ont(ontid, *ont[2:])
 
@@ -158,7 +158,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -417,7 +417,7 @@ class HCP(genericPScheme):
 
             def Newly_Described(self, value):
                 if value == 'Yes*' or value == 'Yes':
-                    graph.add_trip(self.id_, 'OBOANN:definingCitation', 'Glasser and Van Essen 2016')
+                    graph.add_trip(self.id_, 'NIFRID:definingCitation', 'Glasser and Van Essen 2016')
 
             def Results_Sections(self, value):
                 pass
@@ -435,7 +435,7 @@ class HCP(genericPScheme):
                 for study in value.split(','):
                     study = study.strip()
                     if study:
-                        graph.add_trip(self.id_, 'OBOANN:definingCitation', study)
+                        graph.add_trip(self.id_, 'NIFRID:definingCitation', study)
 
         hcp2016(data)
 
@@ -618,7 +618,7 @@ def swanson():
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'OBOANN', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     PREFIXES.update({
         #'':ontid + '/',  # looking for better options
         'SWAN':interlex_namespace('swanson/nt/term'),
@@ -634,8 +634,8 @@ def swanson():
     # FIXME citations should really go on the ... anatomy? scheme artifact
     definingCitation = 'Swanson, Larry W. Neuroanatomical Terminology: a lexicon of classical origins and historical foundations. Oxford University Press, USA, 2014.'
     definingCitationID = 'ISBN:9780195340624'
-    new_graph.add_trip(ontid, 'OBOANN:definingCitation', definingCitation)
-    new_graph.add_trip(ontid, 'OBOANN:definingCitationID', definingCitationID)
+    new_graph.add_trip(ontid, 'NIFRID:definingCitation', definingCitation)
+    new_graph.add_trip(ontid, 'NIFRID:definingCitationID', definingCitationID)
             
     with open(source, 'rt') as f:
         lines = [l.strip() for l in f.readlines()]
@@ -815,7 +815,7 @@ def swanson():
     for node, anns in sp.nodes.items():
         nid = nbase % node
         new_graph.add_class(nid, parent, label=anns['label'])
-        new_graph.add_trip(nid, 'OBOANN:definingCitation', anns['citation'])
+        new_graph.add_trip(nid, 'NIFRID:definingCitation', anns['citation'])
         json_['nodes'].append({'lbl':anns['label'],'id':'SWA:' + str(node)})
         #if anns['uberon']:
             #new_graph.add_trip(nid, rdflib.OWL.equivalentClass, anns['uberon'])  # issues arrise here...

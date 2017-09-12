@@ -53,7 +53,7 @@ PREFIXES = makePrefixes('ilx',
                         'nsu',
                         'NCBITaxon',
                         'oboInOwl',
-                        'OBOANN',
+                        'NIFRID',
                         'NIFQUAL',
                         'NIFCELL',
                         'NIFMOL',
@@ -278,7 +278,7 @@ def make_phenotypes():
         def synonyms(self, value):
             if value:
                 for v in value.split(','):
-                    graph2.add_trip(self.id_, 'OBOANN:synonym', v)
+                    graph2.add_trip(self.id_, 'NIFRID:synonym', v)
 
         def rules(self, value):
             if value == PP.SCD:
@@ -402,7 +402,7 @@ def make_phenotypes():
     graph2.write()
     
     syn_mappings = {}
-    for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('OBOANN:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
+    for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('NIFRID:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
         if syn in syn_mappings:
             print('ERROR duplicate synonym!', syn, sub)
@@ -599,9 +599,9 @@ def _rest_make_phenotypes():
         for syn in syns:
             if syn.toPython() not in data['labels']:
                 if len(syn) > 3:
-                    dg.add_trip(id_, 'OBOANN:synonym', syn)
+                    dg.add_trip(id_, 'NIFRID:synonym', syn)
                 elif syn:
-                    dg.add_trip(id_, 'OBOANN:abbrev', syn)
+                    dg.add_trip(id_, 'NIFRID:abbrev', syn)
 
         if 'EPHYS' in s or any(['EPHYS' in x for x in data['xrefs']]):
             dg.add_trip(id_, rdflib.RDFS.subClassOf, ephys_phenotype)
@@ -624,7 +624,7 @@ def _rest_make_phenotypes():
     g2.write(convert=False)
     
     syn_mappings = {}
-    for sub, syn in [_ for _ in g.g.subject_objects(g.expand('OBOANN:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
+    for sub, syn in [_ for _ in g.g.subject_objects(g.expand('NIFRID:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
         if syn in syn_mappings:
             print('ERROR duplicate synonym!', syn, sub)
@@ -787,7 +787,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     defined_graph.write()
     ng.write()
 
-    for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('OBOANN:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
+    for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('NIFRID:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
         if syn in syn_mappings:
             print('ERROR duplicate synonym!', syn, sub)

@@ -26,7 +26,7 @@ __all__ = [
     'LogicalPhenotype',
     'Neuron',
     #'NeuronArranger',
-    'NIFCELL_NEURON',
+    'NEURON_CLASS',
 ]
 
 # language constructes
@@ -34,7 +34,7 @@ AND = 'owl:intersectionOf'
 OR = 'owl:unionOf'
 
 # utility identifiers
-NIFCELL_NEURON = 'NIFCELL:sao1417703748'
+NEURON_CLASS = 'SAO:1417703748'
 PHENO_ROOT = 'ilx:hasPhenotype'  # needs to be qname representation
 DEF_ROOT = 'ilx:definedClassNeurons'
 def getPhenotypePredicates(graph):
@@ -189,8 +189,8 @@ class graphBase:
                                    'ILXREPLACE',
                                    'ilx',
                                    'ILX',
-                                   'NIFCELL',
-                                   'NIFMOL',
+                                   'SAO',
+                                   'BIRNLEX',
                                    graph=out_graph)
         graphBase.out_graph = out_graph
 
@@ -824,13 +824,13 @@ class Neuron(NeuronBase):
                         pes.append(lpe)
                         continue
                     if isinstance(pr, infixowl.Class):
-                        if id_ == self.expand(NIFCELL_NEURON):
+                        if id_ == self.expand(NEURON_CLASS):
                             #print('we got neuron root', id_)
                             continue
                         else:
                             pass  # it is a restriction
 
-                    p = pr.someValuesFrom  # if NIFCELL_NEURON is not a owl:Class > problems
+                    p = pr.someValuesFrom  # if NEURON_CLASS is not a owl:Class > problems
                     e = pr.onProperty
                     pes.append(type_(p, e))
                 return tuple(pes)
@@ -861,7 +861,7 @@ class Neuron(NeuronBase):
         """ Lift phenotypeEdges to Restrictions """
         if graph is None:
             graph = self.out_graph
-        members = [self.expand(NIFCELL_NEURON)]
+        members = [self.expand(NEURON_CLASS)]
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
@@ -1202,16 +1202,16 @@ def main():
                             'ILXREPLACE',
                             'ilx',
                             'ILX',
-                            'NIFCELL',
-                            'NIFMOL',)
+                            'SAO',
+                            'BIRNLEX',)
     graphBase.core_graph = EXISTING_GRAPH
     graphBase.out_graph = rdflib.Graph()
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(NIFCELL_NEURON)))
-    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NIFCELL_NEURON)]
-    def_neurons = g.get_equiv_inter(NIFCELL_NEURON)
+    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(NEURON_CLASS)))
+    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NEURON_CLASS)]
+    def_neurons = g.get_equiv_inter(NEURON_CLASS)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))
     MeasuredNeuron.out_graph = rdflib.Graph()

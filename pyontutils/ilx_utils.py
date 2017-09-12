@@ -210,7 +210,7 @@ def wholeProcess(filenames, existing, target_filename=None, json_location='ilx-r
 def createRecordsFromGraph(graph, existing, target_graph=None):
     mg = graph
     graph = mg.g
-    s = rdflib.URIRef(makePrefixes('OBOANN')['OBOANN'] + 'synonym')
+    s = rdflib.URIRef(makePrefixes('NIFRID')['NIFRID'] + 'synonym')
     if target_graph is None:
         target_ontology_iri = mg.ontid
     else:
@@ -308,7 +308,7 @@ def replaceFile(filename):
     readFile(filename)
     
 def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be exported as a relationship or an anotation
-    g = makeGraph('do not write me', prefixes=makePrefixes('ILX', 'ilx', 'owl', 'skos', 'OBOANN'))
+    g = makeGraph('do not write me', prefixes=makePrefixes('ILX', 'ilx', 'owl', 'skos', 'NIFRID'))
     def pref(inp): return makePrefixes('ilx')['ilx'] + inp
     id_ =  pref(j['ilx'])
     type_ = {'term':'owl:Class','relationship':'owl:ObjectProperty','annotation':'owl:AnnotationProperty'}[j['type']]
@@ -317,7 +317,7 @@ def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be ex
     out.append( (id_, rdflib.RDFS.label, j['label']) )
     out.append( (id_, 'skos:definition', j['definition']) )
     for syndict in j['synonyms']:
-        out.append( (id_, 'OBOANN:synonym', syndict['literal']) )
+        out.append( (id_, 'NIFRID:synonym', syndict['literal']) )
     for superdict in j['superclasses']:  # should we be returning the preferred id here not the ilx? or maybe that is a different json output?
         out.append( (id_, rdflib.RDFS.subClassOf, pref(superdict['ilx'])) )
     for eid in j['existing_ids']:

@@ -56,12 +56,12 @@ class ncbi(dictParse):
     def otheraliases(self, value):
         if value:
             for synonym in value.split(','):
-                self.g.add_trip(self.identifier, 'OBOANN:synonym', synonym.strip())
+                self.g.add_trip(self.identifier, 'NIFRID:synonym', synonym.strip())
 
     def otherdesignations(self, value):
         if value:
             for synonym in value.split('|'):
-                self.g.add_trip(self.identifier, 'OBOANN:synonym', synonym)
+                self.g.add_trip(self.identifier, 'NIFRID:synonym', synonym)
 
 def ncbigene_make():
     IDS_FILE = 'resources/gene-subset-ids.txt'
@@ -96,7 +96,7 @@ def ncbigene_make():
  
     ng = createOntology('ncbigeneslim',
                         'NIF NCBI Gene subset',
-                        makePrefixes('ILXREPLACE', 'ilx', 'OBOANN', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
+                        makePrefixes('', 'ILXREPLACE', 'ilx', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
                         'ncbigeneslim',
                         'This subset is automatically generated from the NCBI Gene database on a subset of terms listed in %s.' % IDS_FILE,
                         remote_base= 'http://ontology.neuinfo.org/NIF/')
@@ -108,14 +108,18 @@ def ncbigene_make():
     #embed()
 
 def chebi_make():
-    PREFIXES = makePrefixes('definition',
+    PREFIXES = makePrefixes('',
+                            'definition',
                             'hasRole',
+                            'replacedBy',
+                            'termsMerged',
+                            'obsReason',
                             'BFO',
                             'CHEBI',
                             'owl',
                             'skos',
                             'oboInOwl')
-    dPREFIXES = makePrefixes('CHEBI','replacedBy','owl','skos')
+    dPREFIXES = makePrefixes('', 'CHEBI','replacedBy','owl','skos')
     ug = makeGraph('utilgraph', prefixes=PREFIXES)
 
     IDS_FILE = 'resources/chebi-subset-ids.txt'
@@ -202,6 +206,11 @@ def chebi_make():
         else:
             for trip in trips:
                 new_graph.add_recursive(trip, g)
+                if trip[1] == ug.expand('replacedBy:'):
+                    if (trip[-1], rdflib.RDF.type, rdflib.OWL.Class) not in g:
+                        print('WARNING REPLACED BY NOT IN THE XML SUBSET', trip[-1])
+                    for t in g.triples((trip[-1], None, None)):
+                        new_graph.add_recursive(t, g)
 
     # https://github.com/ebi-chebi/ChEBI/issues/3294
     madness = new_graph.expand('oboInOwl:hasRelatedSynonym'), rdflib.Literal('0', datatype=rdflib.namespace.XSD.string)

@@ -94,9 +94,9 @@ def chebi_imp():
     switch_dead(molg)
 
     def fixHasAltId(g):
-        ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl', 'NIFCHEM', 'BIRNANN'))
+        ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl', 'NIFCHEM', 'NIFRID'))
         ng.replace_uriref('NIFCHEM:hasAlternativeId', 'oboInOwl:hasAlternativeId')
-        ng.replace_uriref('BIRNANN:ChEBIid', 'oboInOwl:id')
+        ng.replace_uriref('NIFRID:ChEBIid', 'oboInOwl:id')
 
     list(map(fixHasAltId, (g, cg, chemg)))
 
@@ -142,8 +142,7 @@ def chebi_imp():
                                      'NIFCHEM',
                                      'oboInOwl',
                                      'NIFMOL',
-                                     'OBOANN',
-                                     'BIRNANN'),
+                                     'NIFRID'),
                         'chebibridge',
                         ('This bridge file contains additional annotations'
                          ' on top of CHEBI identifiers that were originally'
@@ -200,7 +199,7 @@ def chebi_imp():
     intc = []
     outtc = []
     for s, o in cb.g.subject_objects(rdflib.RDFS.subClassOf):
-        if str(o) == 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#_birnlex_retired_class':
+        if str(o) == 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#_birnlex_retired_class' or str(o) == 'http://ontology.neuinfo.org/nif/nifstd/readable/birnlexRetiredClass':
             # we need to remove any of the cases where deprecation was misused
             cb.g.remove((s, rdflib.RDFS.subClassOf, o))
         elif hasImplicitSuperclass(s, o):

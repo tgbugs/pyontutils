@@ -18,8 +18,8 @@ abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/generated/parcellation/mbaslim
 abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/bridge/aba-bridge.ttl'), format='turtle')
 nses = {k:rdflib.Namespace(v) for k, v in abagraph.namespaces()}
 #nses['ABA'] = nses['MBA']  # enable quick check against the old xrefs
-syn_iri = nses['OBOANN']['synonym']
-acro_iri = nses['OBOANN']['acronym']
+syn_iri = nses['NIFRID']['synonym']
+acro_iri = nses['NIFRID']['acronym']
 abasyns = {}
 abalabs = {}
 abaacro = {}

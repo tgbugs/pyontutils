@@ -10,18 +10,11 @@ from utils import makeGraph, add_hierarchy
 from scigraph_client import Vocabulary
 v = Vocabulary()
 
-PREFIXES = {
-    'ilx':'http://uri.interlex.org/base/',
-    'owl':'http://www.w3.org/2002/07/owl#',
-    'skos':'http://www.w3.org/2004/02/skos/core#',
+PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFSTD', 'NIFRID', 'SAO', 'NIFEXT', 'NLXCELL')
+PREFIXES.update({
     'HBP_CELL':'http://www.hbp.FIXME.org/hbp_cell_ontology/',
-    'NIFCELL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Cell.owl#',
-    'NIFMOL':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Molecule.owl#',
-    'NIFNEURNT':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-NT-Bridge.owl#',
-    'NIFNEURON':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF_Neuron_MolecularConstituent_Bridge.owl#',
-    'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
-    'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/'
-}
+})
+
 
 def expand(curie):
     prefix, suffix = curie.split(':')
@@ -94,7 +87,7 @@ def ilx_conv(graph, prefix, ilx_start):
     return ilx_labels, replace
 
 
-NEURON = 'NIFCELL:sao1417703748'
+NEURON = 'SAO:1417703748'
 def clean_hbp_cell():
     #old graph
     g = rdflib.Graph()
@@ -113,11 +106,11 @@ def clean_hbp_cell():
     newgraph = mg.g
 
     skip = {
-        '0000000':'NIFCELL:sao1813327414',  # cell
+        '0000000':'SAO:1813327414',  # cell
         #'0000001':NEURON,  # neuron  (equiv)
-        #'0000002':'NIFCELL:sao313023570',  # glia  (equiv)
-        #'0000021':'NIFNEURNT:nlx_neuron_nt_090804',  # glut  (equiv, but phen)
-        #'0000022':'NIFNEURNT:nlx_neuron_nt_090803',  # gaba  (equiv, but phen)
+        #'0000002':'SAO:313023570',  # glia  (equiv)
+        #'0000021':'NLXNEURNT:090804',  # glut  (equiv, but phen)
+        #'0000022':'NLXNEURNT:090803',  # gaba  (equiv, but phen)
 
         '0000003':NEURON,
         '0000004':NEURON,
@@ -135,8 +128,8 @@ def clean_hbp_cell():
         '0000071':NEURON,
     }
     to_phenotype = {
-        '0000021':('ilx:hasExpressionPhenotype', 'NIFMOL:sao1744435799'),  # glut, all classes that might be here are equived out
-        '0000022':('ilx:hasExperssionPhenotype', 'NIFMOL:sao229636300'),  # gaba
+        '0000021':('ilx:hasExpressionPhenotype', 'SAO:1744435799'),  # glut, all classes that might be here are equived out
+        '0000022':('ilx:hasExperssionPhenotype', 'SAO:229636300'),  # gaba
     }
     lookup = {'NIFCELL', 'NIFNEURNT'}
     missing_supers = {
@@ -163,7 +156,7 @@ def clean_hbp_cell():
                     lab = v.findById(qnt[0] + ':' + qnt[2])['labels'][0]
                     print('REMOTE', qnt[0] + ':' + qnt[2], lab)
                     #mg.add_trip(triple[2], rdflib.RDFS.label, lab)
-                    #mg.add_trip(triple[0], PREFIXES['OBOANN'] + 'synonym', lab)  # so we can see it
+                    #mg.add_trip(triple[0], PREFIXES['NIFRID'] + 'synonym', lab)  # so we can see it
                 except TypeError:
                     if qnt[2].startswith('nlx'):
                         triple = (triple[0], triple[1], expand('NIFSTD:' + qnt[2]))
@@ -182,7 +175,7 @@ def clean_hbp_cell():
 
         # edge replace
         if triple[1].toPython() == 'http://www.FIXME.org/nsupper#synonym':
-            edge =  rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#abbrev')
+            edge =  mg.expand('NIFRID:abbrev')
         elif triple[1].toPython() == 'http://www.FIXME.org/nsupper#definition':
             edge = rdflib.namespace.SKOS.definition
         else:

@@ -6,6 +6,7 @@ from rdflib import RDF, RDFS, OWL, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from IPython import embed
 
+NIFRID = Namespace('http://uri.neuinfo.org/nif/nifstd/readable/')
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
 oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
@@ -75,7 +76,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.equivalentClass,
                       RDFS.label,
                       SKOS.prefLabel,
+                      NIFRID.synonym,
                       OBOANN.synonym,
+                      NIFRID.abbrev,
                       OBOANN.abbrev,
                       DC.title,
                       URIRef('http://purl.obolibrary.org/obo/IAO_0000115'),  # definition:
@@ -95,7 +98,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                       SKOS.editorialNote,
                       SKOS.changeNote,
                       OWL.versionInfo,
+                      NIFRID.createdDate,
                       OBOANN.createdDate,
+                      NIFRID.modifiedDate,
                       OBOANN.modifiedDate,
                      ]
 
