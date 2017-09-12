@@ -645,10 +645,10 @@ def do_file(filename, ureps):
 
 def graph_todo(graph, curie_prefixes):
     eg = makeGraph('big-graph', graph=graph)
-    eg.add_known_prefix('NIFRID')
+    eg.add_known_namespace('NIFRID')
     ureps = {eg.expand(k):eg.expand(v)
              for k, v in uri_replacements.items()}
-    ureps.update({eg.expand(k):eg.expand(v)
+    ureps.update({eg.check_thing(k):eg.expand(v)
                   for k, v in uri_reps_nonstandard.items()})
     #all_uris = sorted(set(_ for t in graph for _ in t if type(_) == rdflib.URIRef))  # this snags a bunch of other URIs
     #all_uris = sorted(set(_ for _ in graph.subjects() if type(_) != rdflib.BNode))
