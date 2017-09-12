@@ -18,7 +18,6 @@ import os
 import rdflib
 from docopt import docopt
 from pyontutils.utils import makePrefixes, makeGraph, createOntology, anyMembers
-from IPython import embed
 
 def kludge(filepath):
     if 'doid' in filepath:
@@ -116,7 +115,6 @@ def extract(file):
                 ng.add_trip(s, 'replacedBy:', replacedByClass)
     
     ng.write()
-    embed()
 
 def main():
     from joblib import Parallel, delayed

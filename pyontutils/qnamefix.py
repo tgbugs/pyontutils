@@ -17,7 +17,6 @@ from glob import glob
 import rdflib
 from docopt import docopt
 from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
-from IPython import embed
 
 PREFIXES.pop('NIFTTL')
 
