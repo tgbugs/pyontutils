@@ -449,7 +449,6 @@ uri_replacements = {
     'NIFSUB:FMA_83606':'NIFSTD:FMA_83606',  # FIXME http://neurolex.org/wiki/FMA:83606
     'NIFUNCL:CHEBI_24848':'NIFSTD:CHEBI_24848',  # FIXME not in interlex and not in neurolex_full.csv but in neurolex (joy)
     'NIFUNCL:GO_0006954':'NIFSTD:GO_0006954',  # FIXME http://neurolex.org/wiki/GO:0006954
-
 }
 uri_reps_nonstandard = {
     # nonstandards XXX none of these collide with any other namespace 
@@ -458,11 +457,19 @@ uri_reps_nonstandard = {
     # work out the details and redirects later (some intlerlex classes
     # may need to be created) maybe when we do the backend refactor.
 
+    # Classes (from backend)
+    'BIRNANN:_birnlex_limbo_class':'NIFRID:birnlexLimboClass',
+    'BIRNANN:_birnlex_retired_class':'NIFRID:birnlexRetiredClass',
+    rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/DC_Term'):'NIFRID:dctermsClass',
+    rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/SKOS_Entity'):'NIFRID:skosClass',
+    rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/_backend_class'):'NIFRID:BackendClass',
+    rdflib.URIRef('http://ontology.neuinfo.org/NIF/Backend/oboInOwlClass'):'NIFRID:oboInOwlClass',
+
     # NamedIndividuals
-    'NIFORG:Infraclass':'NIFSTD:Infraclass',  # only used in annotaiton but all other similar cases show up as named individuals
-    'NIFORG:first_trimester':'NIFSTD:first_trimester',
-    'NIFORG:second_trimester':'NIFSTD:second_trimester',
-    'NIFORG:third_trimester':'NIFSTD:third_trimester',
+    'NIFORG:Infraclass':'NIFRID:Infraclass',  # only used in annotaiton but all other similar cases show up as named individuals
+    'NIFORG:first_trimester':'NIFRID:first_trimester',
+    'NIFORG:second_trimester':'NIFRID:second_trimester',
+    'NIFORG:third_trimester':'NIFRID:third_trimester',
 
     # ObjectProperties not in OBOANN or BIRNANN
     'NIFGA:has_lacking_of':'NIFRID:has_lacking_of',
@@ -485,9 +492,10 @@ uri_reps_nonstandard = {
 
 NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
 
-skip_namespaces = ('BIRNLex_annotation_properties.owl#',
-                   'OBO_annotation_properties.owl#',
-                  )
+backend_namespaces = ('BIRNLex_annotation_properties.owl#',
+                      'OBO_annotation_properties.owl#',
+                     )
+
 
 def uri_switch():
     replacement_graph = createOntology('NIF-NIFSTD-mapping',
@@ -495,6 +503,7 @@ def uri_switch():
                                        makePrefixes(
                                            'owl',
                                            # old
+                                           'BIRNANN',
                                            'BIRNOBI',
                                            'BIRNOBO',
                                            'NIFANN',
@@ -522,6 +531,7 @@ def uri_switch():
                                            'NIFSCID',
                                            'NIFSUB',
                                            'NIFUNCL',
+                                           'OBOANN',
                                            'SAOCORE',
                                            # new
                                            *(c for c in fragment_prefixes.values()
@@ -530,7 +540,7 @@ def uri_switch():
                                       )
     ureps = {replacement_graph.expand(k):replacement_graph.expand(v)
                         for k, v in uri_replacements.items()}
-    ureps.update({replacement_graph.expand(k):replacement_graph.expand(v)
+    ureps.update({replacement_graph.check_thing(k):replacement_graph.expand(v)
                   for k, v in uri_reps_nonstandard.items()})
     filenames =  glob('*.ttl') + glob('*/*.ttl') + glob('*/*/*.ttl')   # need all for the replacement
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
@@ -543,14 +553,10 @@ def uri_switch():
     print('Done writing')
     [replacement_graph.g.add(t) for trips in trips_lists for t in trips]
     replacement_graph.write()
-    embed()
 
-def swapPrefs(trip, g, ureps):
+def swapPrefs(trip, ureps):
     for spo in trip:
         if not isinstance(spo, rdflib.URIRef):
-            yield spo, None, None
-            continue
-        elif anyMembers(spo, *skip_namespaces):
             yield spo, None, None
             continue
         elif spo in ureps:
@@ -562,6 +568,13 @@ def swapPrefs(trip, g, ureps):
                 pref = 'NIFRID'
             else:
                 pref = 'NIFSTD'
+            yield new_spo, rep, pref
+            continue
+        elif anyMembers(spo, *backend_namespaces):  # backend refactor
+            _, suffix = spo.rsplit('#', 1)
+            new_spo = rdflib.URIRef(os.path.join(NIFSTDBASE, 'readable', suffix))
+            rep = (new_spo, rdflib.OWL.sameAs, spo)
+            pref = 'NIFRID'
             yield new_spo, rep, pref
             continue
 
@@ -604,7 +617,7 @@ def switchURIs(g, ureps):
     prefs = {None}
     addpg = makeGraph('', graph=g)
     for t in g:
-        nt, ireps, iprefs = tuple(zip(*swapPrefs(t, g, ureps)))
+        nt, ireps, iprefs = tuple(zip(*swapPrefs(t, ureps)))
         if t != nt:
             g.remove(t)
             g.add(nt)
@@ -632,6 +645,7 @@ def do_file(filename, ureps):
 
 def graph_todo(graph, curie_prefixes):
     eg = makeGraph('big-graph', graph=graph)
+    eg.add_known_prefix('NIFRID')
     ureps = {eg.expand(k):eg.expand(v)
              for k, v in uri_replacements.items()}
     ureps.update({eg.expand(k):eg.expand(v)
