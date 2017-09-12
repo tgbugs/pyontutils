@@ -236,6 +236,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
     imported_iri_vs_ontology_iri = {}
     p = rdflib.OWL.imports
     oi = b'owl:imports'
+    oo = b'owl:Ontology'
     def inner(local_filepath, remote=False):
         if noneMembers(local_filepath, *bigleaves) or dobig:
             ext = os.path.splitext(local_filepath)[-1]
@@ -259,12 +260,10 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                     else:
                         print(e)
                         raw = b''
-            if oi in raw:  # we only care if there are imports
+            if oo in raw:  # we only care if there are imports or an ontology iri
                 scratch = rdflib.Graph()
                 if infmt == 'turtle':
-                    start, ont_rest = raw.split(oi, 1)
-                    ont, rest = ont_rest.split(b'###', 1)
-                    data = start + oi + ont
+                    data, rest = raw.split(b'###', 1)
                 elif infmt == None:  # assume xml
                     xml_tree = etree.parse(BytesIO(raw))
                     xml_root = xml_tree.getroot()
@@ -273,6 +272,8 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                     xml_root.append(xml_ontology[0])
                     data = etree.tostring(xml_root)
                 scratch.parse(data=data, format=infmt)
+                for s in scratch.subjects(rdflib.RDF.type, rdflib.OWL.Ontology):
+                    triples.add((s, rdflib.OWL.sameAs, rdflib.URIRef(local_filepath)))
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
