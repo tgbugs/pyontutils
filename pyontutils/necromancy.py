@@ -104,9 +104,9 @@ def extract(file):
             if s not in deads:
                 types = set(o for o in graph.objects(replacedByClass, rdflib.RDF.type))
                 if anyMembers(types, *properties):
-                    p, o = 'owl:subPropertyOf', 'owl:DeprecatedProperty'
+                    p, o = 'rdfs:subPropertyOf', 'owl:DeprecatedProperty'
                 elif rdflib.OWL.Class in types:
-                    p, o = 'owl:subClassOf', 'owl:DeprecatedClass'
+                    p, o = 'rdfs:subClassOf', 'owl:DeprecatedClass'
                 else:
                     continue  # don't bother with named individuals
                 [ng.add_trip(s, 'rdf:type', o) for o in types]
