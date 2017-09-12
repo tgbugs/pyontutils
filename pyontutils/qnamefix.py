@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""
-    This file should be run in NIF-Ontology/ttl
-    Run at NIF-Ontology 5dd555fcbacf515a475ff1fe47aed06d93cce61e
+"""Set qnames based on the curies defined for a given ontology.
+
+Usage:
+    qnamefix [options] <file>...
+
+Options:
+    -h --help       print this
+    -v --verbose    do something fun!
+    -s --slow       do not use a process pool
+    -n --nowrite    parse the file and reserialize it but do not write changes
+
 """
 
 import os
 from glob import glob
 import rdflib
+from docopt import docopt
 from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
-from pyontutils.process_fixed import ProcessPoolExecutor
 from IPython import embed
 
 PREFIXES.pop('NIFTTL')
@@ -78,14 +86,12 @@ def convert(f):
     return f
 
 def main():
-    with ProcessPoolExecutor(8) as ppe:
-        futures = [ppe.submit(convert, f) for f in glob('*/*.ttl') + glob('*.ttl')]
-        #futures = [ppe.submit(convert, f) for f in glob('generated/parcellation/*.ttl')]
-        #futures = [ppe.submit(convert, f) for f in glob('nif.ttl')]
-    for f in futures:
-        if f.exception():
-            print(f)
-    #embed()
+    from joblib import Parallel, delayed
+    args = docopt(__doc__, version = "resurect-ids 0")
+    if args['--slow'] or len(args['<file>']) == 1:
+        [convert(f) for f in args['<file>']]
+    else:
+        Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()

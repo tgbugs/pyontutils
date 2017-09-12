@@ -14,6 +14,7 @@ files = [
     'pyontutils/ontload.py',
     'pyontutils/obo_io.py',
     'pyontutils/phenotype_namespaces.py',
+    'pyontutils/qnamefix.py',
     'pyontutils/scig.py',
     'pyontutils/scigraph.py',
     'pyontutils/scigraph_client.py',
@@ -62,6 +63,7 @@ try:
             'console_scripts': [
                 'ilxcli=pyontutils.ilxcli:main',
                 'ontload=pyontutils.ontload:main',
+                'qnamefix=pyontutils.qnamefix:main',
                 'scigraph-codegen=pyontutils.scigraph:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',
