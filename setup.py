@@ -9,6 +9,7 @@ files = [
     'pyontutils/hierarchies.py',
     'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
+    'pyontutils/necromancy.py',
     'pyontutils/neurons.py',
     'pyontutils/neuron_lang.py',
     'pyontutils/ontload.py',
@@ -62,6 +63,7 @@ try:
         entry_points={
             'console_scripts': [
                 'ilxcli=pyontutils.ilxcli:main',
+                'necromancy=pyontutils.necromancy.py:main',
                 'ontload=pyontutils.ontload:main',
                 'qnamefix=pyontutils.qnamefix:main',
                 'scigraph-codegen=pyontutils.scigraph:main',
