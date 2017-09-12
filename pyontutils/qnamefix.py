@@ -26,17 +26,6 @@ def convert(f):
     namespaces = [str(n) for p, n in graph.namespaces()]
     prefs = ['']
 
-    #if f == 'NIF-Dysfunction.ttl':
-        #prefs.append('obo')
-    #elif f == 'NIF-Eagle-I-Bridge.ttl':
-        #prefs.append('IAO')
-    #elif f == 'resources.ttl':
-        #prefs.append('IAO')
-    #elif f == 'NIF-Investigation.ttl':
-        #prefs.append('IAO')
-    #elif f == 'BIRNLex-OBI-proxy.ttl':
-        #prefs.append('IAO')
-
     asdf = {} #{v:k for k, v in ps.items()}
     asdf.update(pi)
 
@@ -49,11 +38,6 @@ def convert(f):
             if type(uri) == rdflib.BNode:
                 continue
             elif uri.startswith(rn) and '#' not in uri[lrn:] and '/' not in uri[lrn:]:  # prevent prefixing when there is another sep
-                #if rp == 'obo' or rp == 'IAO' or rp == 'NIFTTL':  # FIXME need longest namespace code...
-                    #if rp == 'IAO' and 'IAO_0000412' in uri:  # for sequence_slim
-                        #pass
-                    #else:
-                        #continue
                 prefs.append(rp)
                 break
 
@@ -72,6 +56,19 @@ def convert(f):
             ps['MBA'] = nsl['MBA']
         elif 'cocomac' in f:
             ps['cocomac'] = nsl['cocomac']
+
+    # special cases for NIFORG, NIFINV, NIFRET where there identifiers in
+    # annotation properties that share the prefix, so we warn incase
+    # at some point in the future for some reason want them again...
+    if f == 'NIF-Organism.ttl':
+        print('WARNING: special case for NIFORG')
+        ps.pop('NIFORG')
+    elif f == 'NIF-Investigation.ttl':
+        print('WARNING: special case for NIFINV')
+        ps.pop('NIFINV')
+    elif f == 'unused/NIF-Retired.ttl':
+        print('WARNING: special case for NIFRET')
+        ps.pop('NIFGA')
 
     ng = makeGraph(os.path.splitext(f)[0], prefixes=ps, writeloc=os.path.expanduser('~/git/NIF-Ontology/ttl/'))
     [ng.g.add(t) for t in graph]
