@@ -158,7 +158,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -235,9 +235,8 @@ class HBA(genericPScheme):
                        tuple(),
                        tuple())
     PREFIX = 'HBA'
-    PREFIXES = {
-        PREFIX:'http://api.brain-map.org:80/api/v2/data/Structure/',  # FIXME hack to allow both HBA and MBA 
-    }
+    PREFIXES = makePrefixes('NIFRID')
+    PREFIXES[PREFIX] = 'http://api.brain-map.org:80/api/v2/data/Structure/'  # FIXME hack to allow both HBA and MBA 
     ROOT = 3999
     #VALIDATE = True
 
@@ -287,9 +286,8 @@ class MBA(HBA):
                        tuple(),
                        tuple())
     PREFIX = 'MBA'
-    PREFIXES = {
-        PREFIX:'http://api.brain-map.org/api/v2/data/Structure/',  # FIXME hack to allow both HBA and MBA 
-    }
+    PREFIXES = makePrefixes('NIFRID')
+    PREFIXES[PREFIX] = 'http://api.brain-map.org/api/v2/data/Structure/'  # FIXME hack to allow both HBA and MBA 
     ROOT = 997
 
     @classmethod
@@ -322,9 +320,9 @@ class CoCoMac(genericPScheme):
                         'scholarly things',
                         tuple(),
                         tuple())
-    PREFIXES = {
-        'cocomac':'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT%20*%20from%20BrainMaps_BrainSiteAcronyms%20where%20ID=',  # looking for better options
-    }
+
+    PREFIXES = makePrefixes('NIFRID')
+    PREFIXES['cocomac'] = 'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT%20*%20from%20BrainMaps_BrainSiteAcronyms%20where%20ID='  # looking for better options
 
     @classmethod
     def datagetter(cls):
@@ -386,10 +384,8 @@ class HCP(genericPScheme):
                        ('Human Connectome Project Multi-Modal Parcellation', 'HCP Multi-Modal Parcellation','Human Connectome Project Multi-Modal Parcellation version 1.0'),
                        ('HCP_MMP', ont.shortname))
     # see also https://balsa.wustl.edu/study/show/RVVG
-    PREFIXES = {
-        #'':None,
-        'HCPMMP':interlex_namespace('hcpmmp/labels'),
-    }
+    PREFIXES = makePrefixes('NIFRID')
+    PREFIXES['HCPMMP'] = interlex_namespace('hcpmmp/labels')
 
     @classmethod
     def datagetter(cls):
@@ -463,10 +459,8 @@ class PAXRAT6(genericPScheme):
                         ' methods 3, no. 2 (1980): 129-149.'),  # FIXME
                        ('Paxinos Rat 6th',),
                        tuple())
-    PREFIXES = {
-        #'':ont.path + ont.filename + '.ttl/',  # FIXME
-        'PAXRAT':interlex_namespace('paxinos/rat/labels'),
-    }
+    PREFIXES = makePrefixes('NIFRID')
+    PREFIXES['PAXRAT'] = interlex_namespace('paxinos/rat/labels')
 
     @classmethod
     def datagetter(cls):
