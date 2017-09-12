@@ -86,7 +86,7 @@ HASPART = 'ilx:hasPart'
 DELINEATEDBY = 'ilx:delineatedBy'
 
 # classes
-ADULT = 'NIFORG:birnlex_681'
+ADULT = 'BIRNLEX:681'
 atname = 'Parcellation scheme artifact'
 ATLAS_SUPER = ILXREPLACE(atname) # 'NIFRES:nlx_res_20090402'  # alternatives?
 psname = 'Brain parcellation scheme concept'
@@ -158,7 +158,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFORG', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
