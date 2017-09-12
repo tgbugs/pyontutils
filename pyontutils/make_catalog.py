@@ -32,10 +32,8 @@ for f in fs:
             if 'external' not in target:
                 mapping.append((target, 'external/' + basename))
 
-print(mapping)
-
 # make a protege catalog file to simplify life
-uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
+uriline = '    <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
 
 xmllines = ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
 '<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">',] + \
