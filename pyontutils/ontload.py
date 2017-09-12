@@ -592,6 +592,10 @@ def swapPrefs(trip, ureps):
                     if frag_pref_ == 'nlx_sub_': pref = 'nlx_subcell_'
                     elif frag_pref_ == 'nif_organ_': pref = 'nlx_organ_'
                     else: pref = frag_pref_  # come on branch predictor you can do it!
+                elif frag_pref_ == 'nlx_neuron_':  # special case
+                    rest = 'nt_'
+                    suffix = suffix[len(rest):]
+                    pref = frag_pref_ + rest
                 else:
                     yield spo, None, None
                     continue
