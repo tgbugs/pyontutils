@@ -384,7 +384,7 @@ def import_tree(graph):
     return t, te
 
 fragment_prefixes = {
-    'NIFPRED':'NIFPRED',
+    'NIFRID':'NIFRID',
     'NIFSTD':'NIFSTD',  # no known collisions, mostly for handling ureps
     'birnlex_':'BIRNLEX',
     'sao':'SAO',
@@ -465,22 +465,22 @@ uri_reps_nonstandard = {
     'NIFORG:third_trimester':'NIFSTD:third_trimester',
 
     # ObjectProperties not in OBOANN or BIRNANN
-    'NIFGA:has_lacking_of':'NIFPRED:has_lacking_of',
-    'NIFNEURNT:has_molecular_constituent':'NIFPRED:has_molecular_constituent',
-    'NIFNEURNT:has_neurotransmitter':'NIFPRED:has_neurotransmitter',
-    'NIFNEURNT:molecular_constituent_of':'NIFPRED:molecular_constituent_of',
-    'NIFNEURNT:neurotransmitter_of':'NIFPRED:neurotransmitter_of',
-    'NIFNEURNT:soma_located_in':'NIFPRED:soma_located_in',
-    'NIFNEURNT:soma_location_of':'NIFPRED:soma_location_of',
+    'NIFGA:has_lacking_of':'NIFRID:has_lacking_of',
+    'NIFNEURNT:has_molecular_constituent':'NIFRID:has_molecular_constituent',
+    'NIFNEURNT:has_neurotransmitter':'NIFRID:has_neurotransmitter',
+    'NIFNEURNT:molecular_constituent_of':'NIFRID:molecular_constituent_of',
+    'NIFNEURNT:neurotransmitter_of':'NIFRID:neurotransmitter_of',
+    'NIFNEURNT:soma_located_in':'NIFRID:soma_located_in',
+    'NIFNEURNT:soma_location_of':'NIFRID:soma_location_of',
 
     # AnnotationProperties not in OBOANN or BIRNANN
-    'NIFCHEM:hasStreetName':'NIFPRED:hasStreetName',
-    'NIFMOL:hasGenbankAccessionNumber':'NIFPRED:hasGenbankAccessionNumber',
-    'NIFMOL:hasLocusMapPosition':'NIFPRED:hasLocusMapPosition',
-    'NIFMOL:hasSequence':'NIFPRED:hasSequence',
-    'NIFORG:hasCoveringOrganism':'NIFPRED:hasCoveringOrganism',
-    'NIFORG:hasMutationType':'NIFPRED:hasMutationType',
-    'NIFORG:hasTaxonRank':'NIFPRED:hasTaxonRank',
+    'NIFCHEM:hasStreetName':'NIFRID:hasStreetName',
+    'NIFMOL:hasGenbankAccessionNumber':'NIFRID:hasGenbankAccessionNumber',
+    'NIFMOL:hasLocusMapPosition':'NIFRID:hasLocusMapPosition',
+    'NIFMOL:hasSequence':'NIFRID:hasSequence',
+    'NIFORG:hasCoveringOrganism':'NIFRID:hasCoveringOrganism',
+    'NIFORG:hasMutationType':'NIFRID:hasMutationType',
+    'NIFORG:hasTaxonRank':'NIFRID:hasTaxonRank',
 }
 
 NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
@@ -558,6 +558,8 @@ def swapPrefs(trip, g, ureps):
             rep = (new_spo, rdflib.OWL.sameAs, spo)
             if 'nlx_' in new_spo:
                 pref = 'nlx_'
+            elif '/readable/' in new_spo:
+                pref = 'NIFRID'
             else:
                 pref = 'NIFSTD'
             yield new_spo, rep, pref
