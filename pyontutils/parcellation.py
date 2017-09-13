@@ -11,7 +11,7 @@ import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, makePrefixes, makeGraph, rowParse, TermColors as tc #TERMCOLORFUNC
+from utils import TODAY, async_getter, makePrefixes, makeGraph, rowParse, rdf, rdfs, owl, TermColors as tc #TERMCOLORFUNC
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
@@ -109,13 +109,13 @@ def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER):
     graph.add_hierarchy(scheme.species, DEFSPECIES, scheme.curie)
     graph.add_hierarchy(scheme.devstage, DEVSTAGE, scheme.curie)
     if atlas_id:
-        graph.add_trip(scheme.curie, rdflib.RDFS.isDefinedBy, atlas_id)
+        graph.add_trip(scheme.curie, rdfs.isDefinedBy, atlas_id)
 
 def make_atlas(atlas, parent=ATLAS_SUPER):
     out = [
-        (atlas.curie, rdflib.RDF.type, rdflib.OWL.Class),
-        (atlas.curie, rdflib.RDFS.label, atlas.name),
-        (atlas.curie, rdflib.RDFS.subClassOf, parent),
+        (atlas.curie, rdf.type, owl.Class),
+        (atlas.curie, rdfs.label, atlas.name),
+        (atlas.curie, rdfs.subClassOf, parent),
         (atlas.curie, 'ilx:atlasVersion', atlas.version),  # FIXME
         (atlas.curie, 'ilx:atlasDate', atlas.date),  # FIXME
         (atlas.curie, 'NIFRID:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
@@ -145,7 +145,7 @@ def parcellation_schemes(ontids_atlases):
     graph.add_ont(ontid, *ont[2:])
 
     for import_id, atlas in sorted(ontids_atlases):
-        graph.add_trip(ontid, rdflib.OWL.imports, import_id)
+        graph.add_trip(ontid, owl.imports, import_id)
         add_triples(graph, atlas, make_atlas)
 
     graph.add_class(ATLAS_SUPER, label=atname)
@@ -252,7 +252,7 @@ class HBA(genericPScheme):
             curie = graph.expand(cls.PREFIX + ':' + str(node['id']))
             graph.add_class(curie, cls.concept.curie)
             parent = node['parent_structure_id']
-            graph.add_trip(curie, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + node['name'])
+            graph.add_trip(curie, rdfs.label, '(%s) ' % cls.ont.shortname + node['name'])
             graph.add_trip(curie, PARCLAB, node['name'])
             graph.add_trip(curie, ACRONYM, node['acronym'])
             if node['safe_name'] != node['name']:
@@ -350,7 +350,7 @@ class CoCoMac(genericPScheme):
                 graph.add_trip(self.identifier, ACRONYM, value)
 
             def FullName(self, value):
-                graph.add_trip(self.identifier, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
+                graph.add_trip(self.identifier, rdfs.label, '(%s) ' % cls.ont.shortname + value)
                 graph.add_trip(self.identifier, PARCLAB, value)
 
             def LegacyID(self, value):
@@ -408,7 +408,7 @@ class HCP(genericPScheme):
 
             def Area_Description(self, value):
                 value = value.strip()
-                graph.add_trip(self.id_, rdflib.RDFS.label, '(%s) ' % cls.ont.shortname + value)
+                graph.add_trip(self.id_, rdfs.label, '(%s) ' % cls.ont.shortname + value)
                 graph.add_trip(self.id_, PARCLAB, value)
 
             def Newly_Described(self, value):
@@ -812,7 +812,7 @@ def swanson():
         new_graph.add_trip(nid, 'NIFRID:definingCitation', anns['citation'])
         json_['nodes'].append({'lbl':anns['label'],'id':'SWA:' + str(node)})
         #if anns['uberon']:
-            #new_graph.add_trip(nid, rdflib.OWL.equivalentClass, anns['uberon'])  # issues arrise here...
+            #new_graph.add_trip(nid, owl.equivalentClass, anns['uberon'])  # issues arrise here...
 
     for appendix, data in sp.appendicies.items():
         aid = PREFIXES['SWAA'] + str(appendix)
