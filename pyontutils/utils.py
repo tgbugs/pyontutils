@@ -475,7 +475,7 @@ def createOntology(filename=    'temp-graph',
                    imports=     tuple()):
     writeloc = local_base + path
     ontid = remote_base + path + filename + '.ttl'
-    prefixes.update(makePrefixes('owl'))
+    prefixes.update(makePrefixes('', 'owl'))
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
