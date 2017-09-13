@@ -862,7 +862,7 @@ def main():
         [import_graph.add(t) for t in itrips]
         tree, extra = import_tree(import_graph)
         with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
-            f.write(extra.html)
+            f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
     embed()
 
