@@ -4,10 +4,10 @@ from rdflib import Graph, URIRef
 from rdflib.namespace import ClosedNamespace
 
 __all__ = [
-    'owl',
-    'skos',
     'dc',
     'dcterms',
+    'owl',
+    'skos',
 ]
 
 ###
@@ -22,28 +22,29 @@ def main():
         'dcterms':'http://purl.org/dc/terms/',
     }
     tw = 4
+    tab = ' ' * tw
+    ind = ' ' * (tw + len('terms=['))
     functions = ''
     for name, uri in sorted(uris.items()):
         sep = uri[-1]
         globals().update(locals())
         terms = sorted(set(s.rsplit(sep, 1)[-1]
-                       for s in Graph().parse(uri).subjects()
-                       if uri in s and sep in s))
-        tab = ' ' * tw
-        ind = ' ' * (tw + len('terms=['))
-        block = (''
-                '{name} = ClosedNamespaces(\n'
-                '{tab}uri=URIRef({uri})\n'
-                "{tab}terms=['{terms0}',\n"
-                '{ind}'
-                ',\n{ind}'.join("'{t}'".format(t=t)
-                                for t in terms[1:]) + ']\n'
-                ')\n')
-        functions += block.format(name=name,
-                           uri=uri,
-                           tab=tab,
-                           ind=ind,
-                           terms0=terms[0])
+                           for s in Graph().parse(uri.rstrip('#')).subjects()
+                           if uri in s and uri != s.toPython() and sep in s))
+        block = ('\n'
+                 '{name} = ClosedNamespace(\n'
+                 "{tab}uri=URIRef('{uri}'),\n"
+                 '{tab}' + "terms=['{t}',\n".format(t=terms[0]) + ''
+                 '{ind}' + ',\n{ind}'.join("'{t}'".format(t=t)  # watch out for order of operations issues
+                                           for t in terms[1:]) + ']\n'
+                 ')\n')
+        function = block.format(name=name,
+                                uri=uri,
+                                tab=tab,
+                                ind=ind)
+        functions += function
+
+    functions += '\n'
 
     with open(__file__, 'rt') as f:
         text = f.read()
