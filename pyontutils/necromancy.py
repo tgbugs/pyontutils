@@ -23,7 +23,7 @@ def kludge(filepath):
     if 'doid' in filepath:
         return 'DOID',
     elif 'uberon' in filepath:
-        return 'UBERON',
+        return 'UBERON', 'obo'
     elif 'go' in filepath:
         return 'GO',
     elif 'pr' in filepath:
