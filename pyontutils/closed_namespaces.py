@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 from rdflib import Graph, URIRef
+from rdflib.plugin import PluginException
 from rdflib.namespace import ClosedNamespace
 
 __all__ = [
     'dc',
     'dcterms',
+    'oboInOwl',
     'owl',
     'skos',
 ]
@@ -133,6 +135,39 @@ dcterms = ClosedNamespace(
            'valid']
 )
 
+oboInOwl = ClosedNamespace(
+    uri=URIRef('http://www.geneontology.org/formats/oboInOwl#'),
+    terms=['DbXref',
+           'Definition',
+           'ObsoleteClass',
+           'ObsoleteProperty',
+           'Subset',
+           'SubsetProperty',
+           'Synonym',
+           'SynonymType',
+           'SynonymTypeProperty',
+           'consider',
+           'hasAlternativeId',
+           'hasBroadSynonym',
+           'hasDate',
+           'hasDbXref',
+           'hasDefaultNamespace',
+           'hasDefinition',
+           'hasExactSynonym',
+           'hasNarrowSynonym',
+           'hasOBONamespace',
+           'hasRelatedSynonym',
+           'hasSubset',
+           'hasSynonym',
+           'hasSynonymType',
+           'hasURI',
+           'hasVersion',
+           'inSubset',
+           'isCyclic',
+           'replacedBy',
+           'savedBy']
+)
+
 owl = ClosedNamespace(
     uri=URIRef('http://www.w3.org/2002/07/owl#'),
     terms=['AllDifferent',
@@ -255,6 +290,7 @@ skos = ClosedNamespace(
 def main():
     # use to populate terms
     uris = {
+        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
         'owl':'http://www.w3.org/2002/07/owl#',
         'skos':'http://www.w3.org/2004/02/skos/core#',
         'dc':'http://purl.org/dc/elements/1.1/',
@@ -265,10 +301,14 @@ def main():
     ind = ' ' * (tw + len('terms=['))
     functions = ''
     for name, uri in sorted(uris.items()):
+        try:
+            g = Graph().parse(uri.rstrip('#'))
+        except PluginException:
+            g = Graph().parse(uri.rstrip('#') + '.owl')
         sep = uri[-1]
         globals().update(locals())
         terms = sorted(set(s.rsplit(sep, 1)[-1]
-                           for s in Graph().parse(uri.rstrip('#')).subjects()
+                           for s in g.subjects()
                            if uri in s and uri != s.toPython() and sep in s))
         block = ('\n'
                  '{name} = ClosedNamespace(\n'
