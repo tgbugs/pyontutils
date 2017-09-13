@@ -32,8 +32,7 @@ def comb(members):
             for i, (n1, g1) in enumerate(sorted(members.items()))
             for n2, g2 in sorted(members.items())[i+1:]}
 
-def extract(files):  # FIXME this should take graphs as an inputs...
-    graphs = Parallel(n_jobs=8)(delayed(g)(f) for f in files)
+def extract(files, graphs):
     fn_graphs = {sn(f):g for f, g in zip(files, graphs)}
     results = comb(fn_graphs)
     overlaps = {k:v for k, v in results.items() if v}
@@ -44,7 +43,8 @@ def main():
     from joblib import Parallel, delayed
     args = docopt(__doc__, version = "overlaps 0")
     files = args['<file>']
-    extract(files)
+    graphs = Parallel(n_jobs=8)(delayed(g)(f) for f in files)
+    extract(files, graphs)
 
 if __name__ == '__main__':
     main()
