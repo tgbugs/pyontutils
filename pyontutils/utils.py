@@ -13,10 +13,15 @@ from multiprocessing import Manager
 import psutil
 import rdflib
 from rdflib.extras import infixowl
+from pyontutils.closed_namespaces import *
+from pyontutils import closed_namespaces as cnses
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
 TODAY = date.isoformat(date.today())
+
+rdf = rdflib.RDF
+rdfs = rdflib.RDFS
 
 def currentVMSKb():
     p = psutil.Process(os.getpid())
@@ -152,6 +157,16 @@ PREFIXES = _loadPrefixes()
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
 
+def getNamespace(prefix, namespace):
+    if prefix in cnses.__all__:
+        return getattr(cnses, prefix)
+    elif prefix == 'rdf':
+        return rdf
+    elif prefix == 'rdfs':
+        return rdfs
+    else:
+        return rdflib.Namespace(namespace)
+
 class makeGraph:
     SYNONYM = 'NIFRID:synonym'  # dangerous with prefixes
 
@@ -160,9 +175,9 @@ class makeGraph:
         self.writeloc = writeloc
         self.namespaces = {}
         if prefixes:
-            self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in prefixes.items()})
+            self.namespaces.update({p:getNamespace(p, ns) for p, ns in prefixes.items()})
         if graph:  # graph takes precidence
-            self.namespaces.update({p:rdflib.Namespace(ns) for p, ns in graph.namespaces()})
+            self.namespaces.update({p:getNamespace(p, ns) for p, ns in graph.namespaces()})
         if graph is None and not prefixes:
             raise ValueError('No prefixes or graph specified.')
 
@@ -173,14 +188,14 @@ class makeGraph:
 
         for p, ns in self.namespaces.items():
             self.add_namespace(p, ns)
-        self.namespaces.update({p:rdflib.Namespace(ns)
+        self.namespaces.update({p:getNamespace(p, ns)
                                 for p, ns in self.g.namespaces()})  # catchall for namespaces in self.g
 
     def add_known_namespace(self, prefix):
         self.add_namespace(prefix, PREFIXES[prefix])
 
     def add_namespace(self, prefix, namespace):
-        self.namespaces[prefix] = rdflib.Namespace(namespace)
+        self.namespaces[prefix] = getNamespace(prefix, namespace)
         self.g.bind(prefix, namespace)
 
     def del_namespace(self, prefix):
@@ -203,7 +218,7 @@ class makeGraph:
 
     @property
     def ontid(self):
-        ontids = list(self.g.subjects(rdflib.RDF.type, rdflib.OWL.Ontology))
+        ontids = list(self.g.subjects(rdf.type, owl.Ontology))
         if len(ontids) > 1:
             raise TypeError('There is more than one ontid in this graph!'
                             ' The graph is not isomorphic to a single ontology!')
@@ -232,28 +247,28 @@ class makeGraph:
                 if thing.startswith('http') and ' ' not in thing:  # so apparently some values start with http :/
                     return rdflib.URIRef(thing)
                 else:
-                    raise TypeError('Unknown format:', thing)
+                    raise e
         else:
             return thing
 
     def add_ont(self, ontid, label, shortName=None, comment=None, version=None):
-        self.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-        self.add_trip(ontid, rdflib.RDFS.label, label)
+        self.add_trip(ontid, rdf.type, owl.Ontology)
+        self.add_trip(ontid, rdfs.label, label)
         if comment:
-            self.add_trip(ontid, rdflib.RDFS.comment, comment)
+            self.add_trip(ontid, rdfs.comment, comment)
         if version:
-            self.add_trip(ontid, rdflib.OWL.versionInfo, version)
+            self.add_trip(ontid, owl.versionInfo, version)
         if shortName:
-            self.add_trip(ontid, rdflib.namespace.SKOS.altLabel, shortName)
+            self.add_trip(ontid, skos.altLabel, shortName)
 
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None, autogen=False):
-        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
+        self.add_trip(id_, rdf.type, owl.Class)
         if autogen:
             label = ' '.join(re.findall(r'[A-Z][a-z]*', id_.split(':')[1]))
         if label:
-            self.add_trip(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdfs.label, label)
         if subClassOf:
-            self.add_trip(id_, rdflib.RDFS.subClassOf, subClassOf)
+            self.add_trip(id_, rdfs.subClassOf, subClassOf)
 
         [self.add_trip(id_, self.SYNONYM, s) for s in synonyms]
 
@@ -266,9 +281,9 @@ class makeGraph:
 
     def add_ap(self, id_, label=None, addPrefix=True):
         """ Add id_ as an owl:AnnotationProperty"""
-        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.AnnotationProperty)
+        self.add_trip(id_, rdf.type, owl.AnnotationProperty)
         if label:
-            self.add_trip(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdfs.label, label)
             if addPrefix:
                 prefix = ''.join([s.capitalize() for s in label.split()])
                 namespace = self.expand(id_)
@@ -276,19 +291,19 @@ class makeGraph:
 
     def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False, addPrefix=True):
         """ Add id_ as an owl:ObjectProperty"""
-        self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
+        self.add_trip(id_, rdf.type, owl.ObjectProperty)
         if inverse:
-            self.add_trip(id_, rdflib.OWL.inverseOf, inverse)
+            self.add_trip(id_, owl.inverseOf, inverse)
         if subPropertyOf:
-            self.add_trip(id_, rdflib.RDFS.subPropertyOf, subPropertyOf)
+            self.add_trip(id_, rdfs.subPropertyOf, subPropertyOf)
         if label:
-            self.add_trip(id_, rdflib.RDFS.label, label)
+            self.add_trip(id_, rdfs.label, label)
             if addPrefix:
                 prefix = ''.join([s.capitalize() for s in label.split()])
                 namespace = self.expand(id_)
                 self.add_namespace(prefix, namespace)
         if transitive:
-            self.add_trip(id_, rdflib.RDF.type, rdflib.OWL.TransitiveProperty)
+            self.add_trip(id_, rdf.type, owl.TransitiveProperty)
 
     def add_trip(self, subject, predicate, object_):
         if not object_:  # no empty object_s!
@@ -299,7 +314,7 @@ class makeGraph:
             if object_.startswith(':') and ' ' in object_:  # not a compact repr AND starts with a : because humans are insane
                 object_ = ' ' + object_
             object_ = self.check_thing(object_)
-        except (TypeError, AttributeError) as e:
+        except (AttributeError, KeyError, ValueError) as e:
             object_ = rdflib.Literal(object_)  # trust autoconv
         self.g.add( (subject, predicate, object_) )
 
@@ -371,7 +386,7 @@ class makeGraph:
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
         if label_edge is None:
-            label_edge = rdflib.RDFS.label
+            label_edge = rdfs.label
         else:
             label_edge = self.expand(label_edge)
         json_ = {'nodes':[], 'edges':[]}
@@ -397,37 +412,37 @@ class makeGraph:
                 json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
                 if sub not in done:
                     node = {'lbl':slab,'id':sub, 'meta':{}}
-                    #if sdep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                    #if sdep: node['meta'][owl.deprecated.toPython()] = True
                     json_['nodes'].append(node)
                     done.append(sub)
                 if obj not in done:
                     node = {'lbl':olab,'id':obj, 'meta':{}}
-                    #if odep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                    #if odep: node['meta'][owl.deprecated.toPython()] = True
                     json_['nodes'].append(node)
                     done.append(obj)
             return json_
 
-        #linkers = list(self.g.subjects(rdflib.OWL.onProperty, restriction))
+        #linkers = list(self.g.subjects(owl.onProperty, restriction))
         done = []
-        for linker in self.g.subjects(rdflib.OWL.onProperty, restriction):
+        for linker in self.g.subjects(owl.onProperty, restriction):
             try:
-                obj = list(self.g.objects(linker, rdflib.OWL.someValuesFrom))[0]
+                obj = list(self.g.objects(linker, owl.someValuesFrom))[0]
             except IndexError:
-                obj = list(self.g.objects(linker, rdflib.OWL.allValuesFrom))[0]
+                obj = list(self.g.objects(linker, owl.allValuesFrom))[0]
             if type(obj) != rdflib.term.URIRef:
                 continue  # probably encountere a unionOf or something and don't want
             try:
                 olab = list(self.g.objects(obj, label_edge))[0].toPython()
             except IndexError:  # no label
                 olab = obj.toPython()
-            odep = True if list(self.g.objects(obj, rdflib.OWL.deprecated)) else False
+            odep = True if list(self.g.objects(obj, owl.deprecated)) else False
             obj = self.qname(obj)
-            sub = list(self.g.subjects(rdflib.RDFS.subClassOf, linker))[0]
+            sub = list(self.g.subjects(rdfs.subClassOf, linker))[0]
             try:
                 slab = list(self.g.objects(sub, label_edge))[0].toPython()
             except IndexError:  # no label
                 slab = sub.toPython()
-            sdep = True if list(self.g.objects(sub, rdflib.OWL.deprecated)) else False
+            sdep = True if list(self.g.objects(sub, owl.deprecated)) else False
             try:
                 sub = self.qname(sub)
             except:  # rdflib has iffy error handling here so need to catch unsplitables
@@ -436,12 +451,12 @@ class makeGraph:
             json_['edges'].append({'sub':sub,'pred':edge,'obj':obj})
             if sub not in done:
                 node = {'lbl':slab,'id':sub, 'meta':{}}
-                if sdep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                if sdep: node['meta'][owl.deprecated.toPython()] = True
                 json_['nodes'].append(node)
                 done.append(sub)
             if obj not in done:
                 node = {'lbl':olab,'id':obj, 'meta':{}}
-                if odep: node['meta'][rdflib.OWL.deprecated.toPython()] = True
+                if odep: node['meta'][owl.deprecated.toPython()] = True
                 json_['nodes'].append(node)
                 done.append(obj)
 
@@ -466,7 +481,7 @@ def createOntology(filename=    'temp-graph',
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
     graph.add_ont(ontid, name, shortname, comment, version)
     for import_ in imports:
-        graph.add_trip(ontid, rdflib.OWL.imports, import_)
+        graph.add_trip(ontid, owl.imports, import_)
     return graph
 
 def chunk_list(list_, size):
