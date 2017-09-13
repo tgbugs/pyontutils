@@ -123,7 +123,7 @@ def extract(og, ng, curie):
 
 def main():
     from joblib import Parallel, delayed
-    args = docopt(__doc__, version = "resurect-ids 0")
+    args = docopt(__doc__, version = "necromancy 0.5")
     if args['--slow'] or len(args['<file>']) == 1:
         [load(f) for f in args['<file>']]
     else:
