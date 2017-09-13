@@ -48,11 +48,11 @@ def convert(file):
             f.write(out)
 
 def main():
+    from joblib import Parallel, delayed
     if args['--slow'] or len(args['<file>']) == 1:
         [convert(f) for f in args['<file>']]
     else:
-        with ProcessPoolExecutor(4) as ppe:
-            futures = [ppe.submit(convert, _) for _ in args['<file>']]
+        Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()
