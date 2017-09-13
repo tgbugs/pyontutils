@@ -34,6 +34,8 @@ def kludge(filepath):
         return 'PATO',
     elif 'so' in filepath:
         return 'SO',
+    elif 'taxslim':
+        return 'NCBITaxon',
     else:
         raise NameError('We don\' know what to do with identifers from %s' % filepath)
 
@@ -73,7 +75,12 @@ def load(file):
     curie, *prefs = kludge(filepath)
 
     name = os.path.splitext(os.path.basename(filepath))[0]
-    version = list(graph.subject_objects(owl.versionIRI))[0][1]
+    if 'slim' in name:
+        name = name.replace('slim', '')
+    try:
+        version = list(graph.subject_objects(owl.versionIRI))[0][1]
+    except IndexError:
+        version = list(graph.subjects(rdf.type, owl.Ontology))[0]
 
     ng = createOntology(f'{name}-dead',
                         f'NIF {curie} deprecated',
