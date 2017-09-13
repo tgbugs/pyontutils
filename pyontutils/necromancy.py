@@ -32,6 +32,8 @@ def kludge(filepath):
         return 'ERO',
     elif 'pato' in filepath:
         return 'PATO',
+    elif 'so' in filepath:
+        return 'SO',
     else:
         raise NameError('We don\' know what to do with identifers from %s' % filepath)
 
