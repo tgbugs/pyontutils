@@ -12,7 +12,8 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makePrefixes, makeGraph, createOntology, chunk_list, dictParse, memoryCheck
+from utils import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, oboInOwl
+from utils import chunk_list, dictParse, memoryCheck
 from ilx_utils import ILXREPLACE
 from IPython import embed
 from lxml import etree
@@ -35,7 +36,7 @@ class ncbi(dictParse):
         super().__init__(thing, order=['uid'])
 
     def name(self, value):
-        self.g.add_trip(self.identifier, rdflib.RDFS.label, value)
+        self.g.add_trip(self.identifier, rdfs.label, value)
 
     def description(self, value):
         #if value:
@@ -43,8 +44,8 @@ class ncbi(dictParse):
 
     def uid(self, value):
         self.identifier = 'NCBIGene:' + str(value)
-        self.g.add_trip(self.identifier, rdflib.RDF.type, rdflib.OWL.Class)
-        self.g.add_trip(self.identifier, rdflib.RDFS.subClassOf, self.superclass)
+        self.g.add_trip(self.identifier, rdf.type, owl.Class)
+        self.g.add_trip(self.identifier, rdfs.subClassOf, self.superclass)
 
     def organism(self, value):
         self._next_dict(value)
@@ -188,18 +189,17 @@ def chebi_make():
         trips = list(g.triples((eid, None, None)))
         if not trips:
             #looks for the id_ as a literal
-            alts = list(g.triples((None,
-                                             rdflib.term.URIRef('http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'),
-                                             rdflib.Literal(id_, datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#string')))))
+            alts = list(g.subjects(oboInOwl.hasAlternativeId,
+                                   rdflib.Literal(id_, datatype=rdflib.XSD.string)))
             if alts:
-                replaced_by, _, __ = alts[0]
+                replaced_by = alts[0]
                 if replaced_by.toPython() not in ids:  #  we need to add any replacment classes to the bridge
                     print('REPLACED BY NEW CLASS', id_)
-                    for t in g.triples((replaced_by, None, None)):
-                        new_graph.add_recursive(t, g)
+                    for p, o in g.predicate_objects(replaced_by):
+                        new_graph.add_recursive((replaced_by, p, o), g)
                 chebi_dead.add_class(id_)
                 chebi_dead.add_trip(id_, 'replacedBy:', replaced_by)
-                chebi_dead.add_trip(id_, rdflib.OWL.deprecated, True)
+                chebi_dead.add_trip(id_, owl.deprecated, True)
             else:
                 if id_ not in depwor:
                     raise BaseException('wtf error', id_)
@@ -207,15 +207,22 @@ def chebi_make():
             for trip in trips:
                 new_graph.add_recursive(trip, g)
                 if trip[1] == ug.expand('replacedBy:'):
-                    if (trip[-1], rdflib.RDF.type, rdflib.OWL.Class) not in g:
-                        print('WARNING REPLACED BY NOT IN THE XML SUBSET', trip[-1])
+                    chebi_dead.add_trip(trip[0], rdfs.subClassOf, owl.DeprecatedClass)
+                    if (trip[-1], rdf.type, owl.Class) not in g:
+                        print('WARNING REPLACED BUT NOT IN THE XML SUBSET', trip[-1])
                     for t in g.triples((trip[-1], None, None)):
                         new_graph.add_recursive(t, g)
 
     # https://github.com/ebi-chebi/ChEBI/issues/3294
-    madness = new_graph.expand('oboInOwl:hasRelatedSynonym'), rdflib.Literal('0', datatype=rdflib.namespace.XSD.string)
-    for a in new_graph.g.subjects(*madness):
-        new_graph.g.remove((a,) + madness)
+    def doNotWant(o):
+        if o[-1].isdigit:
+            return o.strip('-').replace('.','').isdigit()
+        else:
+            return False
+
+    for s, o in new_graph.g.subject_objects(oboInOwl.hasRelatedSynonym):
+        if doNotWant(o):
+            new_graph.g.remove((s, oboInOwl.hasRelatedSynonym, o))
 
     new_graph.write()
     chebi_dead.write()
