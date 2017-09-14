@@ -123,6 +123,18 @@ def _loadPrefixes():
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
 
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
+        'inheresIn':'http://purl.obolibrary.org/obo/RO_0000052',
+        'bearerOf':'http://purl.obolibrary.org/obo/RO_0000053',
+        'adjacentTo':'http://purl.obolibrary.org/obo/RO_0002220',
+        'derivesFrom':'http://purl.obolibrary.org/obo/RO_0001000',
+        'derivesInto':'http://purl.obolibrary.org/obo/RO_0001001',
+        'agentIn':'http://purl.obolibrary.org/obo/RO_0002217',
+        'hasAgent':'http://purl.obolibrary.org/obo/RO_0002218',
+        'containedIn':'http://purl.obolibrary.org/obo/RO_0001018',
+        'contains':'http://purl.obolibrary.org/obo/RO_0001019',
+        'locatedIn':'http://purl.obolibrary.org/obo/RO_0001025',
+        'locationOf':'http://purl.obolibrary.org/obo/RO_0001015',
+
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
         'termsMerged':'http://purl.obolibrary.org/obo/IAO_0000227',

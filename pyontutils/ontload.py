@@ -9,6 +9,7 @@ Usage:
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload uri-switch [options] <repo>
+    ontload backend-refactor [options] <repo>
     ontload todo [options] <repo>
     ontload [options] <repo> <remote_base>
 
@@ -47,6 +48,8 @@ from lxml import etree
 from git.repo import Repo
 from joblib import Parallel, delayed
 from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, anyMembers, TODAY, setPS1  # TODO make prefixes needs an all...
+from pyontutils.utils import rdf, rdfs, owl, skos, oboInOwl
+
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from docopt import docopt
@@ -234,7 +237,7 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
     done = []
     triples = set()
     imported_iri_vs_ontology_iri = {}
-    p = rdflib.OWL.imports
+    p = owl.imports
     oi = b'owl:imports'
     oo = b'owl:Ontology'
     def inner(local_filepath, remote=False):
@@ -272,8 +275,8 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
                     xml_root.append(xml_ontology[0])
                     data = etree.tostring(xml_root)
                 scratch.parse(data=data, format=infmt)
-                for s in scratch.subjects(rdflib.RDF.type, rdflib.OWL.Ontology):
-                    triples.add((s, rdflib.OWL.sameAs, rdflib.URIRef(local_filepath)))
+                for s in scratch.subjects(rdf.type, owl.Ontology):
+                    triples.add((s, owl.sameAs, rdflib.URIRef(local_filepath)))
                 for s, o in sorted(scratch.subject_objects(p)):
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
@@ -335,9 +338,9 @@ def loadall(git_local, repo_name, local=False):
             #raise BaseException('Evil file found %s' % f)
 
     def repeat(dobig=False):  # we don't really know when to stop, so just adjust
-        for s, o in graph.subject_objects(rdflib.OWL.imports):
+        for s, o in graph.subject_objects(owl.imports):
             if os.path.basename(o) not in done and o not in done:
-            #if (o, rdflib.RDF.type, rdflib.OWL.Ontology) not in graph:
+            #if (o, rdf.type, owl.Ontology) not in graph:
                 print(o)
                 done.append(o)
                 ext = os.path.splitext(o)[1]
@@ -550,7 +553,7 @@ def uri_switch():
         if n in filenames:
             filenames.remove(n)
     print('Start writing')
-    trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, ureps) for f in filenames)
+    trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, ureps, swapPrefs) for f in filenames)
     print('Done writing')
     [replacement_graph.g.add(t) for trips in trips_lists for t in trips]
     replacement_graph.write()
@@ -562,7 +565,7 @@ def swapPrefs(trip, ureps):
             continue
         elif spo in ureps:
             new_spo = ureps[spo]
-            rep = (new_spo, rdflib.OWL.sameAs, spo)
+            rep = (new_spo, owl.sameAs, spo)
             if 'nlx_' in new_spo:
                 pref = 'nlx_'
             elif '/readable/' in new_spo:
@@ -574,7 +577,7 @@ def swapPrefs(trip, ureps):
         elif anyMembers(spo, *backend_namespaces):  # backend refactor
             _, suffix = spo.rsplit('#', 1)
             new_spo = rdflib.URIRef(os.path.join(NIFSTDBASE, 'readable', suffix))
-            rep = (new_spo, rdflib.OWL.sameAs, spo)
+            rep = (new_spo, owl.sameAs, spo)
             pref = 'NIFRID'
             yield new_spo, rep, pref
             continue
@@ -608,7 +611,7 @@ def swapPrefs(trip, ureps):
                 continue
             new_spo = rdflib.URIRef(NIFSTDBASE + pref + suffix)
             if new_spo != spo:
-                rep = (new_spo, rdflib.OWL.sameAs, spo)
+                rep = (new_spo, owl.sameAs, spo)
             else:
                 rep = None
                 print('Already converted', spo)
@@ -617,12 +620,12 @@ def swapPrefs(trip, ureps):
             yield spo, None, None
             continue
 
-def switchURIs(g, ureps):
+def switchURIs(g, ureps, swap):
     reps = []
     prefs = {None}
     addpg = makeGraph('', graph=g)
     for t in g:
-        nt, ireps, iprefs = tuple(zip(*swapPrefs(t, ureps)))
+        nt, ireps, iprefs = tuple(zip(*swap(t, ureps)))
         if t != nt:
             g.remove(t)
             g.add(nt)
@@ -637,11 +640,11 @@ def switchURIs(g, ureps):
                 addpg.add_known_namespace(fragment_prefixes[pref])
     return reps
 
-def do_file(filename, ureps):
+def do_file(filename, ureps, swap):
     print('START', filename)
     ng = rdflib.Graph()
     ng.parse(filename, format='turtle')
-    reps = switchURIs(ng, ureps)
+    reps = switchURIs(ng, ureps, swap)
     wg = makeGraph('', graph=ng)
     wg.filename = filename
     wg.write()
@@ -698,41 +701,92 @@ def graph_todo(graph, curie_prefixes):
     print(len(prefs))
     embed()
 
+def swapBackend(trip, ureps):
+    for spo in trip:
+        if spo in ureps:
+            new_spo = ureps[spo]
+            rep = (new_spo, owl.sameAs, spo)
+            yield new_spo, rep, None
+        else:
+            yield spo, None, None
+
 def backend_refactor():
-    # from https://github.com/information-artifact-ontology/IAO/blob/master/docs/BFO%201.1%20to%202.0%20conversion/mapping.txt  # FIXME not doing this right now...
     uri_reps_lit = {
-        'http://www.ifomis.org/bfo/1.1#Entity':'http://purl.obolibrary.org/obo/BFO_0000001',
-        'http://www.ifomis.org/bfo/1.1/snap#Continuant':'http://purl.obolibrary.org/obo/BFO_0000002',
-        'http://www.ifomis.org/bfo/1.1/snap#Disposition':'http://purl.obolibrary.org/obo/BFO_0000016',
-        'http://www.ifomis.org/bfo/1.1/snap#Function':'http://purl.obolibrary.org/obo/BFO_0000034',
-        'http://www.ifomis.org/bfo/1.1/snap#GenericallyDependentContinuant':'http://purl.obolibrary.org/obo/BFO_0000031',
-        'http://www.ifomis.org/bfo/1.1/snap#IndependentContinuant':'http://purl.obolibrary.org/obo/BFO_0000004',
-        'http://www.ifomis.org/bfo/1.1/snap#MaterialEntity':'http://purl.obolibrary.org/obo/BFO_0000040',
-        'http://www.ifomis.org/bfo/1.1/snap#Quality':'http://purl.obolibrary.org/obo/BFO_0000019',
-        'http://www.ifomis.org/bfo/1.1/snap#RealizableEntity':'http://purl.obolibrary.org/obo/BFO_0000017',
-        'http://www.ifomis.org/bfo/1.1/snap#Role':'http://purl.obolibrary.org/obo/BFO_0000023',
-        'http://www.ifomis.org/bfo/1.1/snap#Site':'http://purl.obolibrary.org/obo/BFO_0000029',
-        'http://www.ifomis.org/bfo/1.1/snap#SpecificallyDependentContinuant':'http://purl.obolibrary.org/obo/BFO_0000020',
-        'http://www.ifomis.org/bfo/1.1/span#Occurrent':'http://purl.obolibrary.org/obo/BFO_0000003',
-        'http://www.ifomis.org/bfo/1.1/span#ProcessualEntity':'http://purl.obolibrary.org/obo/BFO_0000015',
-        'http://www.ifomis.org/bfo/1.1/span#Process':'http://purl.obolibrary.org/obo/BFO_0000015',
-        'http://www.ifomis.org/bfo/1.1/snap#ZeroDimensionalRegion':'http://purl.obolibrary.org/obo/BFO_0000018',
-        'http://www.ifomis.org/bfo/1.1/snap#OneDimensionalRegion':'http://purl.obolibrary.org/obo/BFO_0000026',
-        'http://www.ifomis.org/bfo/1.1/snap#TwoDimensionalRegion':'http://purl.obolibrary.org/obo/BFO_0000009',
-        'http://www.ifomis.org/bfo/1.1/snap#ThreeDimensionalRegion':'http://purl.obolibrary.org/obo/BFO_0000028',
-        'http://purl.org/obo/owl/OBO_REL#bearer_of':'http://purl.obolibrary.org/obo/RO_0000053',
-        'http://purl.org/obo/owl/OBO_REL#inheres_in':'http://purl.obolibrary.org/obo/RO_0000052',
-        'http://www.obofoundry.org/ro/ro.owl#has_part':'http://purl.obolibrary.org/obo/BFO_0000051',
-        'http://www.obofoundry.org/ro/ro.owl#part_of':'http://purl.obolibrary.org/obo/BFO_0000050',
-        'http://www.obofoundry.org/ro/ro.owl#has_participant':'http://purl.obolibrary.org/obo/RO_0000057',
-        'http://www.obofoundry.org/ro/ro.owl#participates_in':'http://purl.obolibrary.org/obo/RO_0000056',
-        'http://purl.obolibrary.org/obo/OBI_0000294':'http://purl.obolibrary.org/obo/RO_0000059',
-        'http://purl.obolibrary.org/obo/OBI_0000297':'http://purl.obolibrary.org/obo/RO_0000058',
-        'http://purl.obolibrary.org/obo/OBI_0000300':'http://purl.obolibrary.org/obo/BFO_0000054',
-        'http://purl.obolibrary.org/obo/OBI_0000308':'http://purl.obolibrary.org/obo/BFO_0000055',
+        # from https://github.com/information-artifact-ontology/IAO/blob/master/docs/BFO%201.1%20to%202.0%20conversion/mapping.txt
+        'http://www.ifomis.org/bfo/1.1#Entity':'BFO:0000001',
+        'BFO1SNAP:Continuant':'BFO:0000002',
+        'BFO1SNAP:Disposition':'BFO:0000016',
+        'BFO1SNAP:Function':'BFO:0000034',
+        'BFO1SNAP:GenericallyDependentContinuant':'BFO:0000031',
+        'BFO1SNAP:IndependentContinuant':'BFO:0000004',
+        'BFO1SNAP:MaterialEntity':'BFO:0000040',
+        'BFO1SNAP:Quality':'BFO:0000019',
+        'BFO1SNAP:RealizableEntity':'BFO:0000017',
+        'BFO1SNAP:Role':'BFO:0000023',
+        'BFO1SNAP:Site':'BFO:0000029',
+        'BFO1SNAP:SpecificallyDependentContinuant':'BFO:0000020',
+        'BFO1SPAN:Occurrent':'BFO:0000003',
+        'BFO1SPAN:ProcessualEntity':'BFO:0000015',
+        'BFO1SPAN:Process':'BFO:0000015',
+        'BFO1SNAP:ZeroDimensionalRegion':'BFO:0000018',
+        'BFO1SNAP:OneDimensionalRegion':'BFO:0000026',
+        'BFO1SNAP:TwoDimensionalRegion':'BFO:0000009',
+        'BFO1SNAP:ThreeDimensionalRegion':'BFO:0000028',
+        'http://purl.org/obo/owl/OBO_REL#bearer_of':'RO:0000053',
+        'http://purl.org/obo/owl/OBO_REL#inheres_in':'RO:0000052',
+        'ro:has_part':'BFO:0000051',
+        'ro:part_of':'BFO:0000050',
+        'ro:has_participant':'RO:0000057',
+        'ro:participates_in':'RO:0000056',
+        'http://purl.obolibrary.org/obo/OBI_0000294':'RO:0000059',
+        'http://purl.obolibrary.org/obo/OBI_0000297':'RO:0000058',
+        'http://purl.obolibrary.org/obo/OBI_0000300':'BFO:0000054',
+        'http://purl.obolibrary.org/obo/OBI_0000308':'BFO:0000055',
+
+        # other
+        #'ro:participates_in'  # above
+        #'ro:has_participant'  # above
+        #'ro:has_part',  # above
+        #'ro:part_of',  # above
+        #'ro:precedes'  # unused and only in inferred
+        #'ro:preceded_by'  # unused and only in inferred
+        #'ro:transformation_of'  # unused and only in inferred
+        #'ro:transformed_into'  # unused and only in inferred
+
+        'http://purl.obolibrary.org/obo/pato#inheres_in':'RO:0000052',
+        'BIRNLEX:17':'RO:0000053',  # is_bearer_of
+        'http://purl.obolibrary.org/obo/pato#towards':'RO:0002502',
+        'ro:adjacent_to':'RO:0002220',
+
+        'ro:derives_from':'RO:0001000',
+        'ro:derives_into':'RO:0001001',
+
+        'ro:agent_in':'RO:0002217',
+        'ro:has_agent':'RO:0002218',
+
+        'ro:contained_in':'RO:0001018',
+        'ro:contains':'RO:0001019',
+
+        'ro:located_in':'RO:0001025',
+        'ro:location_of':'RO:0001015',
+
+        'ro:has_proper_part':'NIFRID:has_proper_part',
+        'ro:proper_part_of':'NIFRID:proper_part_of',  # part of where things are not part of themsevles need to review
     }
-    uri_reps_lit = {rdflib.URIRef(k):rdflib.URIRef(v)
-                    for k, v in uri_reps_lit.items()}
+    filenames =  glob('*.ttl') + glob('*/*.ttl') + glob('*/*/*.ttl')   # need all for the replacement
+    filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
+    for n in ( 'nif.ttl', 'resources.ttl', 'generated/chebislim.ttl',
+              'generated/ncbigeneslim.ttl', 'generated/NIF-NIFSTD-mapping.ttl'):
+        if n in filenames:
+            filenames.remove(n)
+    ug = makeGraph('', prefixes=makePrefixes('ro', 'RO', 'BIRNLEX', 'NIFRID',
+                                             'BFO', 'BFO1SNAP', 'BFO1SPAN'))
+    ureps = {ug.check_thing(k):ug.check_thing(v)
+             for k, v in uri_reps_lit.items()}
+    print('Start writing')
+    trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, ureps, swapBackend) for f in filenames)
+    print('Done writing')
+    embed()
 
 def for_burak(ng_):
     syn_predicates = (ng_.expand('OBOANN:synonym'),
@@ -741,24 +795,24 @@ def for_burak(ng_):
                       ng_.expand('NIFRID:synonym'),
                       ng_.expand('NIFRID:acronym'),
                       ng_.expand('NIFRID:abbrev'),
-                      ng_.expand('oboInOwl:hasExactSynonym'),
-                      ng_.expand('oboInOwl:hasNarrowSynonym'),
-                      ng_.expand('oboInOwl:hasBroadSynonym'),
-                      ng_.expand('oboInOwl:hasRelatedSynonym'),
-                      ng_.expand('skos:prefLabel'),
+                      oboInOwl.hasExactSynonym,
+                      oboInOwl.hasNarrowSynonym,
+                      oboInOwl.hasBroadSynonym,
+                      oboInOwl.hasRelatedSynonym,
+                      skos.prefLabel,
                       rdflib.URIRef('http://purl.obolibrary.org/obo/go#systematic_synonym'),
                      )
-    lab_predicates = rdflib.RDFS.label,
+    lab_predicates = rdfs.label,
     def inner(ng):
         graph = ng.g
-        for s in graph.subjects(rdflib.RDF.type, rdflib.OWL.Class):
+        for s in graph.subjects(rdf.type, owl.Class):
             if not isinstance(s, rdflib.BNode):
                 curie = ng.qname(s)
                 labels = [o for p in lab_predicates for o in graph.objects(s, p)
                           if not isinstance(o, rdflib.BNode)]
                 synonyms = [o for p in syn_predicates for o in graph.objects(s, p)
                             if not isinstance(o, rdflib.BNode)]
-                parents = [ng.qname(o) for o in graph.objects(s, rdflib.RDFS.subClassOf)
+                parents = [ng.qname(o) for o in graph.objects(s, rdfs.subClassOf)
                            if not isinstance(o, rdflib.BNode)]
                 yield [curie, labels, synonyms, parents]
 
@@ -833,6 +887,9 @@ def main():
         for_burak(ng_)
     elif args['uri-switch']:
         uri_switch()
+        return
+    elif args['backend-refactor']:
+        backend_refactor()
         return
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
