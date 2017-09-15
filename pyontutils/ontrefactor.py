@@ -7,6 +7,10 @@ Usage:
     ontload todo [options] <repo>
 
 Options:
+    -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
+
+    -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
+
     -d --debug                      call IPython embed when done
 """
 import os
@@ -14,7 +18,7 @@ from glob import glob
 import rdflib
 from joblib import Parallel, delayed
 from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, owl
-from pyontutils.ontload import loadall
+from pyontutils.ontload import loadall, locate_config_file
 from IPython import embed
 
 # common
@@ -402,7 +406,13 @@ def main():
 
     repo_name = args['<repo>']
 
-    filenames =  glob('*.ttl') + glob('*/*.ttl') + glob('*/*/*.ttl')   # need all for the replacement
+    git_local = args['--git-local']
+
+    curies_location = args['--curies']
+    curies_location = locate_config_file(curies_location)
+    curies, curie_prefixes = getCuries(curies_location)
+
+    filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(g + '.ttl')]
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
     for n in ('nif.ttl', 'resources.ttl', 'generated/chebislim.ttl',
               'generated/ncbigeneslim.ttl', 'generated/NIF-NIFSTD-mapping.ttl'):
@@ -415,7 +425,6 @@ def main():
         backend_refactor(filenames, backend_refactor_values)
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
-        _, curie_prefixes = getCuries()
         graph_todo(graph, curie_prefixes, uri_switch_values)
         embed()
 
