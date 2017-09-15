@@ -1,5 +1,10 @@
+# Local files
+scigraph/services.yaml*
+scigraph/graphload.yaml*
+
 # Vim
 *.swp
+*.swo
 
 # libreoffice
 .~lock.*#
