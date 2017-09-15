@@ -20,13 +20,13 @@ Options:
     -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
     -b --branch=BRANCH              ontology branch to load [default: master]
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
-    -s --scp-loc=SCP                where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
+    -s --scp-loc=SCP                where to scp the zipped graph file [default: user@localhost:/tmp/]
 
     -T --services-template=SCFG     rel path to services.yaml template [default: ../scigraph/services-template.yaml]
     -O --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
     -B --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
+    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: user@localhost:/tmp/]
 
     -f --graph-folder=DLOC          override config folder where the graph will live [default: from-config]
     -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
@@ -57,7 +57,7 @@ from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
 
-ontload_defaults = {o.name:o.value for o in parse_defaults(__doc__)}
+COMMIT_HASH_HEAD_LEN = 7
 
 setPS1(__file__)
 
@@ -103,12 +103,12 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
 
     # TODO consider dumping metadata in a file in the folder too?
     def folder_name(scigraph_commit, wild=False):
-        ontology_commit = repo.head.object.hexsha[:7]
+        ontology_commit = repo.head.object.hexsha[:COMMIT_HASH_HEAD_LEN]
         return (repo_name +
                 '-' + branch +
                 '-graph' +
                 '-' + ('*' if wild else TODAY) +
-                '-' + scigraph_commit[:7] +
+                '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '-' + ontology_commit)
 
     def make_folder_zip(wild=False):
@@ -214,7 +214,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
                 '-' + branch +
                 '-services' +
                 '-' + ('*' if wild else TODAY) +
-                '-' + scigraph_commit[:7] +
+                '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '.zip')
 
     def reset_state(original_branch=sob):
@@ -346,7 +346,6 @@ def loadall(git_local, repo_name, local=False):
 
     done = []
     filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
-    print(filenames)
     graph = rdflib.Graph()
     for f in filenames:
         print(f)
@@ -433,7 +432,7 @@ def for_burak(ng_):
 
 def deploy_scp(local_path, remote_spec):
     basename = os.path.basename(local_path)
-    if remote_spec == '${USER}@localhost:/tmp/':
+    if remote_spec == 'user@localhost:/tmp/':
         print(f'Default so not scping {local_path}')
     else:
         ssh_target, remote_path = remote_spec.split(':', 1)  # XXX bad things?
@@ -472,6 +471,7 @@ def args_services(services_template, graph_folder, curies):
         config['graphConfiguration']['location'] = graph_folder
     else:
         graph_folder = config['graphConfiguration']['location']
+    print(graph_folder)
     with open(services_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
 
@@ -558,6 +558,8 @@ def main(args):
             os.sys.exit(1)
         deploy_scp(services_zip, sscp)
         deploy_scp(graph_zip, scp)
+        print(services_zip)
+        print(graph_zip)
     elif scigraph:
         try:
             scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local,
@@ -567,6 +569,7 @@ def main(args):
         except NotBuiltError:
             os.sys.exit(1)
         deploy_scp(services_zip, sscp)
+        print(services_zip)
     elif services:
         args_services(services_template, graph_folder, curies)
     elif imports:
