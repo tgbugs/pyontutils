@@ -22,14 +22,16 @@ Options:
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
     -s --scp-loc=SCP                where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
-    -e --services-template=SCFG     rel path to services.yaml template [default: ../scigraph/services-template.yaml]
-    -r --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
-    -a --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
-    -m --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
-    -p --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
+    -T --services-template=SCFG     rel path to services.yaml template [default: ../scigraph/services-template.yaml]
+    -O --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
+    -B --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
+    -C --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
+    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
     -f --graph-folder=DLOC          override config folder where the graph will live [default: from-config]
     -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
+
+    -K --check-built                check whether a local copy is present but do not build if it is not
 
     -h --host=HOST                  host where services will run
 
@@ -47,6 +49,7 @@ import rdflib
 import requests
 from lxml import etree
 from git.repo import Repo
+from docopt import parse_defaults
 from joblib import Parallel, delayed
 from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1, refile  # TODO make prefixes needs an all...
 from pyontutils.utils import rdf, rdfs, owl, skos, oboInOwl
@@ -54,18 +57,23 @@ from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
 
+ontload_defaults = {o.name:o.value for o in parse_defaults(__doc__)}
+
 setPS1(__file__)
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
+class NotBuiltError(FileNotFoundError):
+    pass
+
 @contextmanager
-def checkout_when_done(original_branch):
+def execute_regardless(function):
     try:
         yield
     finally:
-        original_branch.checkout()  # FIXME this fails in the case where we have modified files on the head of another branch instead of a detached head!
+        function()
 
 def getBranch(repo, branch):
     try:
@@ -74,7 +82,7 @@ def getBranch(repo, branch):
         branches = [b.name for b in repo.branches]
         raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
-def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, commit, remote_base, load_base, graphload_template, scigraph_commit, post_clone=lambda: None):
+def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, commit, remote_base, load_base, graphload_template, scigraph_commit, post_clone=lambda: None, check_built=False):
     local_base = os.path.join(git_local, repo_name)
     git_base = os.path.join(git_remote, org, repo_name)
     if not os.path.exists(local_base):
@@ -135,10 +143,20 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     load_command = load_base.format(config_path=config_path)
     print(load_command)
 
-    with checkout_when_done(nob):  # FIXME start this immediately after we obtain nob?
+
+    def reset_state(original_branch=nob):
+        original_branch.checkout()
+        # return to original state (reset --hard)
+        repo.head.reset(index=True, working_tree=True)  # FIXME we need to not run anything if there are files added to staging
+
+    with execute_regardless(reset_state):  # FIXME start this immediately after we obtain nob?
         # main
         itrips = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
-        if not glob(wild_zip_path):
+        maybe_zip_path = glob(wild_zip_path)
+        if not maybe_zip_path:
+            if check_built:
+                print('The graph has not been loaded.')
+                raise NotBuiltError('The graph has not been loaded.')
             failure = os.system(load_command)
             if failure:
                 if os.path.exists(graph_path):
@@ -149,14 +167,13 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
                                        os.path.basename(config_path)))
                 failure = os.system(zip_command)  # graphload zip
         else:
-            print('Graph already loaded at', graph_path)
+            zip_path = maybe_zip_path[0]  # this way we get the actual date
+            print('Graph already loaded at', zip_path)
 
-    # return to original state (reset --hard)
-    repo.head.reset(index=True, working_tree=True)
 
     return zip_path, itrips
 
-def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False):
+def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, clean=False, check_built=False):
     COMMIT_LOG = 'last-built-commit.log'
     repo_name = 'SciGraph'
     remote = os.path.join(git_remote, org, repo_name)
@@ -200,7 +217,10 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
                 '-' + scigraph_commit[:7] +
                 '.zip')
 
-    with checkout_when_done(sob):  # FIXME this fails when we need to load the graph if we start on master :/
+    def reset_state(original_branch=sob):
+        original_branch.checkout()
+
+    with execute_regardless(reset_state):  # FIXME this fails when we need to load the graph if we start on master :/
         # main
         if scigraph_commit != last_commit or clean:
             print('SciGraph not built at commit', commit, 'last built at', last_commit)
@@ -208,6 +228,9 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit, cle
                              '; mvn clean -DskipTests -DskipITs install'
                              '; cd SciGraph-services'
                              '; mvn -DskipTests -DskipITs package')
+            if check_built:
+                print('SciGraph has not been built.')
+                raise NotBuiltError('SciGraph has not been built.')
             out = os.system(build_command)
             print(out)
             if out:
@@ -313,24 +336,19 @@ def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=Fal
     return sorted(triples)
 
 def loadall(git_local, repo_name, local=False):
-    cwd = os.getcwd()
+    memoryCheck(2665488384)
     local_base = os.path.join(git_local, repo_name)
     lb_ttl = os.path.realpath(os.path.join(local_base, 'ttl'))
-
-    if cwd == lb_ttl:
-        print("WOOOOWOW")
-        memoryCheck(2665488384)
-    else:
-        raise FileNotFoundError('Please run this in %s. You are in %s.' % (lb_ttl, cwd))
-
-    graph = rdflib.Graph()
 
     #match = (rdflib.term.URIRef('http://purl.org/dc/elements/1.1/member'),  # iao.owl
              #rdflib.term.URIRef('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
              #rdflib.term.URIRef('http://www.w3.org/2002/07/owl#AnnotationProperty'))
 
     done = []
-    for f in glob('*/*/*.ttl') + glob('*/*.ttl') + glob('*.ttl'):
+    filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
+    print(filenames)
+    graph = rdflib.Graph()
+    for f in filenames:
         print(f)
         done.append(os.path.basename(f))
         graph.parse(f, format='turtle')
@@ -445,7 +463,7 @@ def locate_config_file(location_spec):
     #print('Loading config from', location_spec)
     return location_spec
 
-def services(services_template, graph_folder, curies):
+def args_services(services_template, graph_folder, curies):
     services_path = os.path.join(os.path.dirname(services_template), 'services.yaml')
     with open(services_template, 'rt') as f:
         config = yaml.load(f)
@@ -457,89 +475,109 @@ def services(services_template, graph_folder, curies):
     with open(services_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
 
-def main():
-    from docopt import docopt
-    args = docopt(__doc__, version='ontload .5')
-    print(args)
+def getCuries(curies_location):
+    with open(curies_location, 'rt') as f:
+        curies = yaml.load(f)
+    curie_prefixes = set(curies.values())
+    return curies, curie_prefixes
 
+def make_post_clone(git_local, repo_name, remote_base):
+    local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
+    if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
+        remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
+        def post_clone():
+            print('Retrieving go.owl since it is not in the repo.')
+            os.system('wget -O' + local_go + ' ' + remote_go)
+    else:
+        post_clone = lambda: None
+    return post_clone
+
+def main(args):
+    # modes
+    graph = args['graph']
+    scigraph = args['scigraph']
+    services = args['services']
+    imports = args['imports']
+    chain = args['chain']
+    extra = args['extra']
+
+    # required
     repo_name = args['<repo>']
     remote_base = args['<remote_base>']
-    if remote_base == 'NIF':
-        remote_base = 'http://ontology.neuinfo.org/NIF'
+    ontologies = args['<ontologies>']
 
+    # options
     git_remote = args['--git-remote']
     git_local = args['--git-local']
-    if '~' in git_local:
-        git_local = os.path.expanduser(git_local)
     zip_location = args['--zip-location']
-
     graphload_template = args['--graphload-template']
-    graphload_template = locate_config_file(graphload_template)
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
     scp = args['--scp-loc']
-
     services_template = args['--services-template']
-    services_template = locate_config_file(services_template)
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
     sscp = args['--scigraph-scp-loc']
-
-    curies_location = args['--curies']
-    curies_location = locate_config_file(curies_location)
-
-    host = args['--host']  # TODO
     graph_folder = args['--graph-folder']
-
-    log = args['--logfile']  # TODO
+    curies_location = args['--curies']
+    check_built = args['--check-built']
+    host = args['--host']  # TODO
     debug = args['--debug']
+    log = args['--logfile']  # TODO
 
-    def getCuries():
-        with open(curies_location, 'rt') as f:
-            curies = yaml.load(f)
-        curie_prefixes = set(curies.values())
-        return curies, curie_prefixes
+    # post parse mods
+    if remote_base == 'NIF':
+        remote_base = 'http://ontology.neuinfo.org/NIF'
+    if '~' in git_local:
+        git_local = os.path.expanduser(git_local)
+    graphload_template = locate_config_file(graphload_template)
+    services_template = locate_config_file(services_template)
+    curies_location = locate_config_file(curies_location)
+    curies, curie_prefixes = getCuries(curies_location)
 
     itrips = None
 
     if repo_name is not None:
         local_base = os.path.join(git_local, repo_name)
 
-    if args['graph']:
-        local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
-        if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
-            remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
-            def post_clone():
-                print('Retrieving go.owl since it is not in the repo.')
-                os.system('wget -O' + local_go + ' ' + remote_go)
-        else:
-            post_clone = lambda: None
-
-        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
-        graph_zip, itrips = repro_loader(zip_location, git_remote, org,
-                                        git_local, repo_name, branch, commit,
-                                        remote_base, load_base,
-                                        graphload_template, scigraph_commit,
-                                        post_clone=post_clone)
+    if graph:
+        post_clone = make_post_clone(git_local, repo_name, remote_base)
+        try:
+            scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg,
+                                                                      git_local, sbranch, scommit, check_built=check_built)
+            graph_zip, itrips = repro_loader(zip_location, git_remote, org,
+                                             git_local, repo_name, branch, commit,
+                                             remote_base, load_base,
+                                             graphload_template, scigraph_commit,
+                                             post_clone=post_clone, check_built=check_built)
+            if check_built:
+                os.sys.exit(0)
+        except NotBuiltError:
+            os.sys.exit(1)
         deploy_scp(services_zip, sscp)
         deploy_scp(graph_zip, scp)
-    elif args['scigraph']:
-        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
+    elif scigraph:
+        try:
+            scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local,
+                                                                      git_local, sbranch, scommit, check_built=check_built)
+            if check_built:
+                os.sys.exit(0)
+        except NotBuiltError:
+            os.sys.exit(1)
         deploy_scp(services_zip, sscp)
-    elif args['services']:
-        curies, _ = getCuries()
-        services(services_template, graph_folder, curies)
-    elif args['imports']:
+    elif services:
+        args_services(services_template, graph_folder, curies)
+    elif imports:
         # TODO mismatch between import name and file name needs a better fix
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
-    elif args['chain']:
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly=True)
-    elif args['extra']:
+        itrips = local_imports(remote_base, local_base, ontologies)
+    elif chain:
+        itrips = local_imports(remote_base, local_base, ontologies, readonly=True)
+    elif extra:
         graph = loadall(git_local, repo_name)
-        curies, _ = getCuries()
         mg, ng_ = normalize_prefixes(graph, curies)
+        ng_.add_known_prefixes('NIFRID')  # not officially in the curies yet...
         for_burak(ng_)
         debug = True
     else:
@@ -556,4 +594,7 @@ def main():
         embed()
 
 if __name__ == '__main__':
-    main()
+    from docopt import docopt
+    args = docopt(__doc__, version='ontload .5')
+    print(args)
+    main(args)
