@@ -203,7 +203,7 @@ class makeGraph:
         self.namespaces.update({p:getNamespace(p, ns)
                                 for p, ns in self.g.namespaces()})  # catchall for namespaces in self.g
 
-    def add_known_namespaces(self, *prefixs):
+    def add_known_namespaces(self, *prefixes):
         for prefix in prefixes:
             if prefix not in self.namespaces:
                 self.add_namespace(prefix, PREFIXES[prefix])
