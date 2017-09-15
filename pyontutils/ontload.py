@@ -4,14 +4,15 @@
  NIF -> http://ontology.neuinfo.org/NIF
 
 Usage:
+    ontload graph [options] <repo> <remote_base>
+    ontload scigraph [options]
     ontload services [options] <repo>
-    ontload extra [options] <repo>
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload uri-switch [options] <repo>
     ontload backend-refactor [options] <repo>
     ontload todo [options] <repo>
-    ontload [options] <repo> <remote_base>
+    ontload extra [options] <repo>
 
 Options:
     -g --git-remote=GBASE           remote git hosting [default: https://github.com/]
@@ -22,18 +23,21 @@ Options:
     -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
     -b --branch=BRANCH              ontology branch to load [default: master]
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
+    -d --scp-loc=SCP                where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
     -e --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
     -r --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
     -a --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
     -m --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
+    -p --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
     -u --curies=CURIEFILE           relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
 
     -h --host=HOST                  host where services will run
-    -d --deploy-location=DLOC       override config folder where the graph will live [default: from-config]
+    -f --graph-folder=DLOC          override config folder where the graph will live [default: from-config]
 
-    -f --logfile=LOG                log output here [default: ontload.log]
+    -v --debug                      call IPython embed when done
+    -i --logfile=LOG                log output here [default: ontload.log]
 """
 import os
 import shutil
@@ -820,6 +824,21 @@ def for_burak(ng_):
     with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
               json.dump(records, f, sort_keys=True, indent=2)
 
+def deploy_scp(local_path, remote_path):
+    if remote_path == '${USER}@localhost:/tmp/':
+        print(f'Default so not scping {local_path}')
+    else:
+        if 'localhost' in remote_path:
+            copy_command = 'cp'
+            _, remote_path = remote_path.split(':', 1)  # XXX bad things?
+            if '~' in remote_path:
+                remote_path = os.path.expanduser(remote_path)
+        else:
+            copy_command = 'scp'
+        command = f'{copy_command} {local_path} {remote_path}'
+        print(command)
+        os.system(command)
+
 def main():
     args = docopt(__doc__, version='nif_load 0')
     print(args)
@@ -839,16 +858,18 @@ def main():
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
+    scp = args['--scp-loc']
 
     services_template = args['--services-template']
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
+    sscp = args['--scigraph-scp-loc']
 
     curies_location = args['--curies']
 
     host = args['--host']  # TODO
-    deploy_location = args['--deploy-location']
+    deploy_location = args['--graph-folder']
 
     log = args['--logfile']  # TODO
 
@@ -860,7 +881,8 @@ def main():
 
     itrips = None
 
-    local_base = os.path.join(git_local, repo_name)
+    if repo_name is not None:
+        local_base = os.path.join(git_local, repo_name)
 
     if args['services']:  # TODO this could run when no specific is called as well?
         services_template_path = os.path.join(git_local, repo_name, services_template)
@@ -887,15 +909,15 @@ def main():
         for_burak(ng_)
     elif args['uri-switch']:
         uri_switch()
-        return
     elif args['backend-refactor']:
         backend_refactor()
-        return
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
         _, curie_prefixes = getCuries()
         graph_todo(graph, curie_prefixes)
-        return
+    elif args['scigraph']:
+        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
+        deploy_scp(services_zip, sscp)
     else:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
@@ -912,7 +934,8 @@ def main():
                                         remote_base, load_base,
                                         graphload_template, scigraph_commit,
                                         post_clone=post_clone)
-        print(graph_zip, services_zip, sep='\n')
+        deploy_scp(services_zip, sscp)
+        deploy_scp(graph_zip, sscp)
 
     if itrips:
         import_graph = rdflib.Graph()
@@ -921,7 +944,8 @@ def main():
         with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
-    embed()
+    if args['--debug']:
+        embed()
 
 if __name__ == '__main__':
     main()
