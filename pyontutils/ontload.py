@@ -6,7 +6,7 @@
 Usage:
     ontload graph [options] <repo> <remote_base>
     ontload scigraph [options]
-    ontload services [options] <repo>
+    ontload services [options]
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload uri-switch [options] <repo>
@@ -19,19 +19,19 @@ Options:
     -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
     -z --zip-location=ZIPLOC        local path in which to deposit zipped files [default: /tmp]
 
-    -t --graphload-template=CFG     rel path to graphload.yaml template [default: scigraph/graphload-template.yaml]
+    -t --graphload-template=CFG     rel path to graphload.yaml template [default: ../scigraph/graphload-template.yaml]
     -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
     -b --branch=BRANCH              ontology branch to load [default: master]
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
     -d --scp-loc=SCP                where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
-    -e --services-template=SCFG     rel path to services.yaml template [default: scigraph/services-template.yaml]
+    -e --services-template=SCFG     rel path to services.yaml template [default: ../scigraph/services-template.yaml]
     -r --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
     -a --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
     -m --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
     -p --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: ${USER}@localhost:/tmp/]
 
-    -u --curies=CURIEFILE           relative path to curie definition file [default: scigraph/nifstd_curie_map.yaml]
+    -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
 
     -h --host=HOST                  host where services will run
     -f --graph-folder=DLOC          override config folder where the graph will live [default: from-config]
@@ -51,7 +51,7 @@ import requests
 from lxml import etree
 from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, anyMembers, TODAY, setPS1  # TODO make prefixes needs an all...
+from pyontutils.utils import makeGraph, createOntology, makePrefixes, memoryCheck, noneMembers, anyMembers, TODAY, setPS1, refile  # TODO make prefixes needs an all...
 from pyontutils.utils import rdf, rdfs, owl, skos, oboInOwl
 
 from pyontutils.hierarchies import creatTree
@@ -60,6 +60,7 @@ from docopt import docopt
 from IPython import embed
 
 setPS1(__file__)
+
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -123,7 +124,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     wild_graph_path, wild_zip_path = make_folder_zip(wild=True)
 
     # config graphload.yaml from template
-    with open(os.path.join(local_base, graphload_template), 'rt') as f:
+    with open(graphload_template, 'rt') as f:
         config = yaml.load(f)
 
     config['graphConfiguration']['location'] = graph_path
@@ -824,20 +825,49 @@ def for_burak(ng_):
     with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
               json.dump(records, f, sort_keys=True, indent=2)
 
-def deploy_scp(local_path, remote_path):
-    if remote_path == '${USER}@localhost:/tmp/':
+def deploy_scp(local_path, remote_spec):
+    basename = os.path.basename(local_path)
+    if remote_spec == '${USER}@localhost:/tmp/':
         print(f'Default so not scping {local_path}')
     else:
-        if 'localhost' in remote_path:
-            copy_command = 'cp'
-            _, remote_path = remote_path.split(':', 1)  # XXX bad things?
+        ssh_target, remote_path = remote_spec.split(':', 1)  # XXX bad things?
+        remote_folder = os.path.dirname(remote_path)
+        remote_latest = os.path.join(remote_folder, 'LATEST')
+        if 'localhost' in remote_spec:
             if '~' in remote_path:
                 remote_path = os.path.expanduser(remote_path)
+                remote_latest = os.path.expanduser(remote_latest)
+            remote_spec = remote_path
+            copy_command = 'cp'
+            update_latest = f'echo {basename} > {remote_latest}'
         else:
             copy_command = 'scp'
-        command = f'{copy_command} {local_path} {remote_path}'
+            update_latest = f'ssh {ssh_target} "echo {basename} > {remote_latest}"'
+        command = f'{copy_command} {local_path} {remote_spec}'
         print(command)
+        print(update_latest)
         os.system(command)
+
+def locate_config_file(location_spec):
+    if location_spec.startswith('../scigraph/'):
+        location_spec = refile(os.path.realpath(__file__), location_spec)
+    elif location_spec.startswith('~'):
+        location_spec = os.path.expanduser(location_spec)
+    location_spec = os.path.realpath(location_spec)
+    #print('Loading config from', location_spec)
+    return location_spec
+
+def services(services_template, graph_folder, curies):
+    services_path = os.path.join(os.path.dirname(services_template), 'services.yaml')
+    with open(services_template, 'rt') as f:
+        config = yaml.load(f)
+    config['graphConfiguration']['curies'] = curies
+    if graph_folder != 'from-config':
+        config['graphConfiguration']['location'] = graph_folder
+    else:
+        graph_folder = config['graphConfiguration']['location']
+    with open(services_path, 'wt') as f:
+        yaml.dump(config, f, default_flow_style=False)
 
 def main():
     args = docopt(__doc__, version='nif_load 0')
@@ -855,26 +885,30 @@ def main():
     zip_location = args['--zip-location']
 
     graphload_template = args['--graphload-template']
+    graphload_template = locate_config_file(graphload_template)
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
     scp = args['--scp-loc']
 
     services_template = args['--services-template']
+    services_template = locate_config_file(services_template)
     sorg = args['--scigraph-org']
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
     sscp = args['--scigraph-scp-loc']
 
     curies_location = args['--curies']
+    curies_location = locate_config_file(curies_location)
 
     host = args['--host']  # TODO
-    deploy_location = args['--graph-folder']
+    graph_folder = args['--graph-folder']
 
     log = args['--logfile']  # TODO
+    debug = args['--debug']
 
     def getCuries():
-        with open(os.path.join(git_local, repo_name, curies_location), 'rt') as f:
+        with open(curies_location, 'rt') as f:
             curies = yaml.load(f)
         curie_prefixes = set(curies.values())
         return curies, curie_prefixes
@@ -884,41 +918,7 @@ def main():
     if repo_name is not None:
         local_base = os.path.join(git_local, repo_name)
 
-    if args['services']:  # TODO this could run when no specific is called as well?
-        services_template_path = os.path.join(git_local, repo_name, services_template)
-        services_path = os.path.join(git_local, repo_name, 'scigraph/services.yaml')
-        with open(services_template_path, 'rt') as f:
-            config = yaml.load(f)
-        curies, _ = getCuries()
-        config['graphConfiguration']['curies'] = curies
-        if deploy_location != 'from-config':
-            config['graphConfiguration']['location'] = deploy_location
-        else:
-            deploy_location = config['graphConfiguration']['location']
-        with open(services_path, 'wt') as f:
-            yaml.dump(config, f, default_flow_style=False)
-    elif args['imports']:
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
-        # TODO mismatch between import name and file name needs a better fix
-    elif args['chain']:
-        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly=True)
-    elif args['extra']:
-        graph = loadall(git_local, repo_name)
-        curies, _ = getCuries()
-        mg, ng_ = normalize_prefixes(graph, curies)
-        for_burak(ng_)
-    elif args['uri-switch']:
-        uri_switch()
-    elif args['backend-refactor']:
-        backend_refactor()
-    elif args['todo']:
-        graph = loadall(git_local, repo_name, local=True)
-        _, curie_prefixes = getCuries()
-        graph_todo(graph, curie_prefixes)
-    elif args['scigraph']:
-        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
-        deploy_scp(services_zip, sscp)
-    else:
+    if args['graph']:
         local_go = os.path.join(git_local, repo_name, 'ttl/external/go.owl')
         if repo_name == 'NIF-Ontology' and not os.path.exists(local_go):
             remote_go = os.path.join(remote_base, 'ttl/external/go.owl')
@@ -935,7 +935,35 @@ def main():
                                         graphload_template, scigraph_commit,
                                         post_clone=post_clone)
         deploy_scp(services_zip, sscp)
-        deploy_scp(graph_zip, sscp)
+        deploy_scp(graph_zip, scp)
+    elif args['scigraph']:
+        scigraph_commit, load_base, services_zip = scigraph_build(zip_location, git_remote, sorg, git_local, sbranch, scommit)
+        deploy_scp(services_zip, sscp)
+    elif args['services']:
+        curies, _ = getCuries()
+        services(services_template, graph_folder, curies)
+    elif args['imports']:
+        # TODO mismatch between import name and file name needs a better fix
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'])
+    elif args['chain']:
+        itrips = local_imports(remote_base, local_base, args['<ontologies>'], readonly=True)
+    elif args['extra']:
+        graph = loadall(git_local, repo_name)
+        curies, _ = getCuries()
+        mg, ng_ = normalize_prefixes(graph, curies)
+        for_burak(ng_)
+        debug = True
+    elif args['uri-switch']:
+        uri_switch()
+    elif args['backend-refactor']:
+        backend_refactor()
+    elif args['todo']:
+        graph = loadall(git_local, repo_name, local=True)
+        _, curie_prefixes = getCuries()
+        graph_todo(graph, curie_prefixes)
+        debug = True
+    else:
+        raise BaseException('How did we possibly get here docopt?')
 
     if itrips:
         import_graph = rdflib.Graph()
@@ -944,7 +972,7 @@ def main():
         with open(os.path.join(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
-    if args['--debug']:
+    if debug:
         embed()
 
 if __name__ == '__main__':
