@@ -47,7 +47,7 @@ def alreadyHasEntry(oldClassString, og):
         print('OLD CLASS ID IS A URL', oldClassString)
     else:
         try:
-            og.add_known_namespace(namespace)
+            og.add_known_namespaces(namespace)
             target = og.expand(oldClassString)
         except KeyError:
             print('MISSING NAMESPACE', namespace, oldClassString)

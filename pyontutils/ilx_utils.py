@@ -158,11 +158,9 @@ def writeGraph(graph, target_graph, temp_ids_ids):
     if target_graph is None:
         target_graph = graph
 
-    graph.add_known_namespace('ILX')
-    target_graph.add_known_namespace('ILX')
-    for prefix in graph.namespaces:
-        if prefix not in target_graph.namespaces and prefix != 'ILXREPLACE':
-            target_graph.add_known_namespace(prefix)
+    graph.add_known_namespaces('ILX')
+    target_graph.add_known_namespaces(*(prefix for prefix in graph.namespaces
+                                        if prefix != 'ILXREPLACE'))
     subjects = []
     for temp_id, id_ in temp_ids_ids:
         graph.replace_uriref(temp_id, id_)
