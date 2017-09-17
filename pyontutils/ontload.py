@@ -23,12 +23,12 @@ Options:
     -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
     -b --branch=BRANCH              ontology branch to load [default: master]
     -c --commit=COMMIT              ontology commit to load [default: HEAD]
-    -s --scp-loc=SCP                where to scp the zipped graph file [default: user@localhost:/tmp/]
+    -s --scp-loc=SCP                where to scp the zipped graph file [default: user@localhost:/tmp/graph/]
 
     -O --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
     -B --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: user@localhost:/tmp/]
+    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: user@localhost:/tmp/scigraph/]
 
     -u --curies=CURIEFILE           curie definition file [default: nifstd_curie_map.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
@@ -463,13 +463,14 @@ def deploy_scp(local_path, remote_spec):
         command = f'{copy_command} {local_path} {remote_spec}'
         print(command)
         print(update_latest)
-        os.system(command)
+        #os.system(command)
+        #os.system(update_latest)
 
 def locate_config_file(location_spec, git_local):
     dflt = defaults['--scigraph-config-folder']
     if location_spec.startswith(dflt):
         this_path = os.path.realpath(__file__)
-        print(this_path)
+        #print(this_path)
         test = jpth(os.path.dirname(this_path), '..', '.git')
         if not os.path.exists(test):
             base = jpth(git_local, 'pyontutils', 'pyontutils','some_file.wat')
@@ -563,20 +564,22 @@ def main(args):
                                              graphload_config, scigraph_commit,
                                              post_clone=post_clone,
                                              check_built=check_built)
-        if check_built:
-            return
-        deploy_scp(services_zip, sscp)
-        deploy_scp(graph_zip, scp)
+        if not check_built:
+            deploy_scp(services_zip, sscp)
+            deploy_scp(graph_zip, scp)
         print(services_zip)
         print(graph_zip)
+        if '--local' in args:
+            return
     elif scigraph:
         (scigraph_commit, load_base, services_zip,
          _) = scigraph_build(zip_location, git_remote, sorg, git_local,
                              sbranch, scommit, check_built=check_built)
-        if check_built:
-            return
-        deploy_scp(services_zip, sscp)
+        if not check_built:
+            deploy_scp(services_zip, sscp)
         print(services_zip)
+        if '--local' in args:
+            return
     elif imports:
         # TODO mismatch between import name and file name needs a better fix
         itrips = local_imports(remote_base, local_base, ontologies)
@@ -607,8 +610,6 @@ if __name__ == '__main__':
     print(args)
     try:
         main(args)
-        if args['--check-built']:
-            print('Built')
     except NotBuiltError:
         if args['--check-built']:
             print('Not built')

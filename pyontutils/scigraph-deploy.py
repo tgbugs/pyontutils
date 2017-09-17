@@ -18,7 +18,7 @@ Options:
     -T --services-config=SCFG           services.yaml location [default: services.yaml]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config [default: scigraph-services.system]
+    -y --systemd-config=FILE            name of systemd config [default: scigraph-services.service]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
     -j --java-config=FILE               name of java template [default: scigraph-services.conf]
@@ -30,7 +30,7 @@ Options:
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log-loc=FOLDER           services logs [default: '/var/log/scigraph-services/' ]
+    --services-log-loc=FOLDER           services logs [default: /var/log/scigraph-services/]
 """
 #    -J --java-config-loc=FILEPATH       location to deploy java config [default: /etc/]
 # yes we could have tried to do this in make...
@@ -44,12 +44,14 @@ import inspect
 from os.path import join as jpth
 from shlex import quote as squote
 from functools import wraps
+from collections import namedtuple
+import yaml
 from docopt import parse_defaults
 from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import main as ontload_main
-from pyontutils.ontload import locate_config_file, COMMIT_HASH_HEAD_LEN, NotBuiltError
+from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, locate_config_file, getCuries
 from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
@@ -59,8 +61,7 @@ defaults.update({'<repo>':None,
                  '<remote_base>':None,
                  '<build_host>':None,
                  '<services_host>':None})  # these don't need values
-combined_defaults = {k:v for k, v in defaults.items()}
-combined_defaults.update(ontload_defaults)
+combined_defaults = {**defaults, **ontload_defaults}
 
 USER = os.environ['USER']
 HOST = socket.gethostname()
@@ -81,6 +82,7 @@ class Builder:
     start_script = 'start.sh'
     stop_script = 'stop.sh'
     services_jar = 'scigraph-services.jar'
+    heap_dump = 'head.dump'
     garbage_collection_log = 'gc.log'
     services_log = 'sysout.log'
     etc = '/etc/'
@@ -93,13 +95,13 @@ class Builder:
         self._host = HOST
         self._user = USER
         self.args = args
-        self.ontload_args = {k:v
-                             for k, v in args.items()
-                             if k in ontload_defaults
-                             and v != ontload_defaults[k]}
+        self.ontload_args = {k:v for k, v in args.items()}  # send them all!
         self.ontload_args['scigraph'] = self.services
         if self.all or self.graph:
             self.ontload_args['graph'] = True
+        self.ontload_args.update({'imports':None,'chain':None,'extra':None,'<ontologies>':[]})
+        self._init_more()
+
         self.same_remotes = False
         if self.local and self.build_only:
             if self.check_built:
@@ -134,12 +136,36 @@ class Builder:
                 print('WARNING: all servers are equivalent to localhost '
                       'but you are running without --local. Did you mean to?')
 
+
+    def _init_more(self):
+        all = {'--build-user',
+               '--services-user',
+               '--first-time',
+               '--execute',
+               '--local',
+               '--git-local',
+               '--zip-location',
+               '--check-built',
+               '--debug',
+              }
+        #not_pyontutils = '--systemd-config', '--java-config', '--services-log-loc', 
+        self.repo_arg_skip_mapping = {
+            self.scigraph_repo:{'--scp-loc'},
+            self.repo:{'--scigraph-scp-loc'},
+            'pyontutils':{'--scp-loc',
+                          '--scigraph-scp-loc',
+                          '--graph-latest-url',
+                          '--services-latest-url',
+                         },
+        }
+
     def compile(self):
         if self.first_time:
             return self.oneshots()
         if self.local:
             print('FIXME this should not be running')
             self.local_dispatch()
+            return 'echo This was a triumph.'
         elif self.build_only:
             return self.build()
         else:
@@ -147,7 +173,7 @@ class Builder:
 
     def exec(self):
         code = self.compile()
-        os.system(out)
+        os.system(code)
         return code
 
     def run(self):  # if the executor happens to be what is running this
@@ -155,7 +181,6 @@ class Builder:
             return self.exec()
         else:
             return self.compile()
-
 
     def makeOutput(self, BSE, commands, oper=ACCEPT, defer_shell_expansion=False):
         for o in (AND, OR, ACCEPT):
@@ -223,24 +248,48 @@ class Builder:
         else:
             raise TypeError('wat')
 
-    def formatted_args(self, args):
-        mode = [k for k, v in args.items() if not k.startswith('-') and not k.startswith('<')][0]
+    def formatted_args(self, args, repo=None, **additional_args):
+        scp = '--scp-loc', '--scigraph-scp-loc'
+        nargs = {**args, **additional_args}
+        orig_mode = [k for k, v in nargs.items() if not k.startswith('-') and not k.startswith('<')][0]
+        repo_to_mode = {None:'all',
+                        'pyontutils':'config',
+                        self.repo:'graph',
+                        self.scigraph_repo:'services'}
+        mode = repo_to_mode[repo]
+        allr = '<repo>', '<remote_base>', '<build_host>', '<services_host>'
+        cfgr = '<build_host>', '<services_host>'
+        r = allr if mode == 'all' or mode == 'graph' else cfgr
+        reqs = [nargs[k] for k in r if k in nargs]
         strings = [mode]
-        for k, v in sorted(args.items()):
+        for k, v in sorted(nargs.items()):
+            if repo is not None and k in self.repo_arg_skip_mapping[repo]:
+                continue
             if k in combined_defaults and v != combined_defaults[k]:
                 if k.startswith('-'):
-                    if combined_defaults[k] is None:  # argcount == 0
+                    if k in scp:  # FIXME don't want to have to do this
+                        user_host, path = v.split(':')
+                        user, host = user_host.split('@')
+                        print(user, host, path, self.build_host, self.build_user)
+                        if host == self.build_host and user == self.build_user:
+                            string = f'{k} {user}@localhost:{path}'
+                        else:
+                            string = f'{k} {v}'
+                    elif combined_defaults[k] is None:  # argcount == 0
                         if v:
                             string = k
                         else:
                             continue
                     else:
                         string = f'{k} {v}'
-                elif k.startswith('<'):
-                    string = v
+                else:
+                    continue
                 strings.append(string)
 
-        return ' '.join(strings)
+        strings += reqs
+        out = ' '.join(strings)
+        #print(out)
+        return out
 
     def LATEST(self, repo):
         if repo == self.repo:
@@ -288,17 +337,21 @@ class Builder:
 
     # pass along commands to build
 
-    def build(self):
+    def build(self, repo=None, check=False):
         """ Just shuffle the current call off to the build server with --local attached """ 
-        remote_args = self.formatted_args(self.args)
+        kwargs = {}
         if not self.build_only:  # don't try to deploy twice
-            remote_args += ' --build-only'
-        local = '' if self.local else ' --local' 
+            kwargs[' --build-only'] = True
+        if not self.local:
+            kwargs['--local'] = True
+        if check:
+            kwargs['--check-built'] = True
+        remote_args = self.formatted_args(self.args, repo, **kwargs)
         cmds = tuple() if self.check_built or self._updated else self.cmds_pyontutils()
         if not self._updated:
             self._updated = True
         return self.runOnBuild(*cmds,
-                               f'scigraph-deploy {remote_args}{local}',
+                               f'scigraph-deploy {remote_args}',
                                oper=AND)
 
     # local commands that actually do the work on the build server
@@ -325,16 +378,17 @@ class Builder:
 
     def build_services_config(self):
         services_config_template = self.locate_config_template(self.services_config)
-        services_config_path = self.locate_config(self.services_config)
+        curies_location = self.locate_config(self.curies)
         curies, _ = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
             services_config = yaml.load(f)
         services_config['graphConfiguration']['curies'] = curies
-        if graph_folder != combined_defaults['--graph-folder']:
-            services_config['graphConfiguration']['location'] = graph_folder
+        if self.graph_folder != combined_defaults['--graph-folder']:
+            services_config['graphConfiguration']['location'] = self.graph_folder
         else:
-            graph_folder = services_config['graphConfiguration']['location']
-        print(graph_folder)
+            self.graph_folder = services_config['graphConfiguration']['location']
+        #print(self.graph_folder)
+        services_config_path = jpth(self.zip_location, self.services_config)  # save loc
         with open(services_config_path, 'wt') as f:
             yaml.dump(services_config, f, default_flow_style=False)
 
@@ -344,38 +398,40 @@ class Builder:
         def ld(filename):
             template = self.locate_config_template(filename)
             variables = dict()
-            configured = self.locate_config(filename)
-            return PathDict(template, variables, configured)
+            return PathDict(template, variables, filename)
 
         _templates = {}
 
         # variable support functions
         def setVars(template_var, config_filename, *var_vals, templates=_templates):
             pd = ld(config_filename)
-            templates[template_name] = pd
+            templates[template_var] = pd
             for var, val in var_vals:
                 pd.variables[var] = val
 
         def build(templates=_templates):
             # format and save them as their real selves!
-            for template_file, kwargs, config_file in templates:
+            for template_file, kwargs, config_file in templates.values():
                 with open(template_file, 'rt') as f:
                     template = f.read()
                 config = template.format(**kwargs)
+                #print(config_file)
                 config_path = jpth(self.zip_location, config_file)
+                print(config_path)
                 with open(config_path, 'wt') as f:
                     f.write(config)
-
+            #print(self.zip_location)  # sent back over ssh
 
         return setVars, build
 
     def build_config(self):
         if self.check_built:
             configs = (self.services_config,
-                       self.start_script, self.stop_script,
+                       self.start_script,
+                       self.stop_script,
                        self.systemd_config,
                        self.java_config)
-            if not all(os.path.exists(jpth(self.zip_location, f)) for f in configs):
+            if not all(os.path.exists(jpth(self.zip_location, c)) for c in configs):
                 print('The configs have not been built.')
                 raise NotBuiltError('The configs have not been built.')
             return
@@ -388,16 +444,17 @@ class Builder:
         # themselves, but then one of them would have to be 'wrong'... hrm
 
         # variables (names should match {variables} in the templates)
-        setVars('start_template', self.start_script
+        setVars('start_template', self.start_script,
+                ('services_user', self.services_user),
                 ('java_config_path', jpth(self.etc, self.java_config)),
                 ('services_jar_path', jpth(self.services_folder, self.services_jar)),
                 ('services_config_path', jpth(self.services_folder, self.services_config)),
-                ('services_log', jpth(self.services_log_loc, self.services_log))
+                ('services_log', jpth(self.services_log_loc, self.services_log)))
         setVars('stop_template', self.stop_script,
                 ('services_user', self.services_user))
         setVars('systemd_config_template', self.systemd_config,
-                ('path_to_start_script', jpth(self.services_folder, start)),
-                ('path_to_stop_script', jpth(self.services_folder, stop)))
+                ('path_to_start_script', jpth(self.services_folder, self.start_script)),
+                ('path_to_stop_script', jpth(self.services_folder, self.stop_script)))
 
         # terror of terrors... this is not going in by default
         # why was this even enabled?!
@@ -406,8 +463,9 @@ class Builder:
          '-Dcom.sun.management.jmxremote.authenticate=false',
          '-Dcom.sun.management.jmxremote.ssl=false'))
         setVars('java_template', self.java_config,
+                ('heap_dump_path', jpth(self.services_log_loc, self.heap_dump)),
                 ('services_host', self.services_host),
-                ('garbage_collection_log', (self.services_log_loc, self.garbage_collection_log)),
+                ('garbage_collection_log', jpth(self.services_log_loc, self.garbage_collection_log)),
                 ('debug_jmx', ''))  # debug_jmx)
 
         build()
@@ -484,8 +542,8 @@ class Builder:
         # simple rule that a type checker could do is prevent runing G env cmds on S... no auth there...
         exe = self.runOnExecutor
         lc_command = self.get_latest_commit(repo)
-        check_command = self.build() + ' --check-built'
-        dependencies = self.build()
+        check_command = self.build(repo, check=True)
+        dependencies = self.build(repo)
         bld_usr_host = f'{self.build_user}@{self.build_host}'
         ser_usr_host = f'{self.services_user}@{self.services_host}'
         fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
@@ -493,7 +551,7 @@ class Builder:
         scps = tuple(f'scp {bld_usr_host}:{src} {ser_usr_host}:{targ}'
                      for src, targ in src_targs)
         command = exe(check_command,
-                      exe(*fetch),
+                      exe(*fetch),  # we do fetch on fail in case the build was cleaned up...
                       exe(f'export {self.zip_loc_var}=$({dependencies} | tail -n1)',
                           *vardefs,
                           *scps,
@@ -504,8 +562,8 @@ class Builder:
     #@executor
     def deploy_config(self, commands_only=False):
         # assumed to run on build already
-        ser_usr_host = f'{self.services_user}@{self.services_host}'
-        ser_tar = f'{ser_usr_host}:$SERVICES_FOLDER/'
+        #ser_usr_host = f'{self.services_user}@{self.services_host}'
+        ser_tar = f'$SERVICES_FOLDER/'
         return self.deploy_base('pyontutils',
                                 (f'${self.zip_loc_var}/{self.services_config}', ser_tar),
                                 (f'${self.zip_loc_var}/{self.start_script}', ser_tar),
@@ -522,7 +580,7 @@ class Builder:
             oper=AND)
 
     def deploy_services(self):
-        return self.deploy_base(self.scigraph_repo, ('${self.zip_loc_var}', '~/'))
+        return self.deploy_base(self.scigraph_repo, (f'${self.zip_loc_var}', '~/'))
 
     #@services
     def remote_services(self, commands_only=False):
@@ -547,7 +605,7 @@ class Builder:
                                   oper=AND)
 
     def deploy_graph(self):
-        return self.deploy_base(self.repo, ('${self.zip_loc_var}', '~/'))
+        return self.deploy_base(self.repo, (f'${self.zip_loc_var}', '~/'))
 
     #@depends('services', 'has', 'NIF-Ontology-*-graph-*.zip')
     def remote_graph(self, commands_only=False):
@@ -598,9 +656,11 @@ def main(args):
 
     kwargs = {k.strip('--').strip('<').rstrip('>').replace('-','_'):v for k, v in args.items()}
     b = Builder(args, **kwargs)
-    if b.local and b.check_built:
-        return
     code = b.run()
+    if b.local:
+        return
+        #if b.check_built:
+            #return
     FILE = '/tmp/test.sh'
     with open(FILE, 'wt') as f:
         f.write('#!/usr/bin/env bash\n' + code)
@@ -616,8 +676,6 @@ if __name__ == '__main__':
     args = docopt(__doc__)
     try:
         main(args)
-        if args['--check-built']:
-            print('Built')
     except NotBuiltError:
         if args['--check-built']:
             print('Not built')
