@@ -26,10 +26,11 @@ Options:
                                         will look for *.template version of the file
 
     -I --first-time                     generate the one shots or run them
+    -X --execute                        run the compiled commands
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log=FILEPATH             services logs [default: '/var/log/scigraph-services/sysout.log' ]
+    --services-log-loc=FOLDER           services logs [default: '/var/log/scigraph-services/' ]
 """
 #    -J --java-config-loc=FILEPATH       location to deploy java config [default: /etc/]
 # yes we could have tried to do this in make...
@@ -80,11 +81,13 @@ class Builder:
     start_script = 'start.sh'
     stop_script = 'stop.sh'
     services_jar = 'scigraph-services.jar'
-    garbage_collection_log = '/var/log/scigraph-services/gc.log'
+    garbage_collection_log = 'gc.log'
+    services_log = 'sysout.log'
     etc = '/etc/'
     zip_loc_var = 'ZIP_LOC'
     def __init__(self, args, **kwargs):
         self.__dict__.update(kwargs)
+        self._updated = False
         if self.check_built:
             self.build_only = True
         self._host = HOST
@@ -142,15 +145,24 @@ class Builder:
         else:
             return self.deploy()
 
+    def exec(self):
+        code = self.compile()
+        os.system(out)
+        return code
+
     def run(self):  # if the executor happens to be what is running this
-        os.system(self.compile())
+        if self.execute:
+            return self.exec()
+        else:
+            return self.compile()
+
 
     def makeOutput(self, BSE, commands, oper=ACCEPT, defer_shell_expansion=False):
         for o in (AND, OR, ACCEPT):
             if o in commands:
                 raise TypeError(f'You have an "{o}" operator in with the commands!')
 
-        to_run = (oper + ('\n' if self.debug else '')).join(commands)
+        to_run = (oper + ('\n' if self.debug else '')).join(c for c in commands if c)
 
         host, user = self.context(BSE)
 
@@ -247,15 +259,16 @@ class Builder:
                                oper=AND)
 
     def oneshots_services(self, commands_only=False):
+        java_config_path = jpth(self.etc, self.java_config)
         return self.runOnServices(
             f'sudo mkdir {self.services_folder}',
-            'sudo chown bamboo:bamboo {self.services_folder}',
-            'sudo mkdir /var/log/scigraph-services/',
-            'sudo chown bamboo:bamboo /var/log/scigraph-services/',
-            'sudo touch /etc/scigraph-services.conf',
-            'sudo chown bamboo:bamboo /etc/scigraph-services.conf'
-            'sudo mkdir -p /var/scigraph-services/',
-            'sudo chown bamboo:bamboo /var/scigraph-services/',
+            f'sudo chown {self.services_user}:{self.services_user} {self.services_folder}',
+            f'sudo mkdir {self.services_log_loc}',
+            f'sudo chown {self.services_user}:{self.services_user} {self.services_log_loc}',
+            f'sudo touch {java_config_path}',
+            f'sudo chown {self.services_user}:{self.services_user} {java_config_path}',
+            f'sudo mkdir -p {self.services_folder}',
+            f'sudo chown {self.services_user}:{self.services_user} {self.services_folder}',
             oper=AND)
 
 
@@ -281,7 +294,9 @@ class Builder:
         if not self.build_only:  # don't try to deploy twice
             remote_args += ' --build-only'
         local = '' if self.local else ' --local' 
-        cmds = tuple() if self.check_built else self.cmds_pyontutils()
+        cmds = tuple() if self.check_built or self._updated else self.cmds_pyontutils()
+        if not self._updated:
+            self._updated = True
         return self.runOnBuild(*cmds,
                                f'scigraph-deploy {remote_args}{local}',
                                oper=AND)
@@ -377,7 +392,7 @@ class Builder:
                 ('java_config_path', jpth(self.etc, self.java_config)),
                 ('services_jar_path', jpth(self.services_folder, self.services_jar)),
                 ('services_config_path', jpth(self.services_folder, self.services_config)),
-                ('services_log', self.services_log))
+                ('services_log', jpth(self.services_log_loc, self.services_log))
         setVars('stop_template', self.stop_script,
                 ('services_user', self.services_user))
         setVars('systemd_config_template', self.systemd_config,
@@ -392,7 +407,7 @@ class Builder:
          '-Dcom.sun.management.jmxremote.ssl=false'))
         setVars('java_template', self.java_config,
                 ('services_host', self.services_host),
-                ('garbage_collection_log', self.garbage_collection_log),
+                ('garbage_collection_log', (self.services_log_loc, self.garbage_collection_log)),
                 ('debug_jmx', ''))  # debug_jmx)
 
         build()
@@ -473,12 +488,12 @@ class Builder:
         dependencies = self.build()
         bld_usr_host = f'{self.build_user}@{self.build_host}'
         ser_usr_host = f'{self.services_user}@{self.services_host}'
-
+        fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
+                 self.fetch(repo, '$LATEST_COMMIT')) if repo != 'pyontutils' else ('(exit 1)',)
         scps = tuple(f'scp {bld_usr_host}:{src} {ser_usr_host}:{targ}'
                      for src, targ in src_targs)
         command = exe(check_command,
-                      exe(f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
-                          self.fetch(repo, '$LATEST_COMMIT')),
+                      exe(*fetch),
                       exe(f'export {self.zip_loc_var}=$({dependencies} | tail -n1)',
                           *vardefs,
                           *scps,
@@ -585,10 +600,10 @@ def main(args):
     b = Builder(args, **kwargs)
     if b.local and b.check_built:
         return
-    code1 = b.compile()
+    code = b.run()
     FILE = '/tmp/test.sh'
     with open(FILE, 'wt') as f:
-        f.write(code1)
+        f.write('#!/usr/bin/env bash\n' + code)
     os.system(f"emacs -batch {FILE} --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer")
     print()
     with open(FILE, 'rt') as f:
