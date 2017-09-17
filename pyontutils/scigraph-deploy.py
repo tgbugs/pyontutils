@@ -25,6 +25,7 @@ Options:
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
+    -I --first-time                     generate the one shots or run them
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
@@ -114,9 +115,11 @@ class Builder:
                         def mutex_on_ssh(*args, func=obj, **kwargs):  # ah late binding hacks
                             if not self._building:
                                 self._building = True
-                                out = func(*args, **kwargs)[1:-1]
+                                out = func(*args, **kwargs)
+                                if out.startswith('('):
+                                    out = f'"{out[1:-1]}"'
                                 print('YAY FOR ONLY ONE SSH!')
-                                return f'ssh {self._user}@{self._host} "{out}"'
+                                return f'ssh {self._user}@{self._host} {out}'
                             else:
                                 return func(*args, **kwargs)
                         setattr(self, name, mutex_on_ssh)
@@ -128,7 +131,9 @@ class Builder:
                 print('WARNING: all servers are equivalent to localhost '
                       'but you are running without --local. Did you mean to?')
 
-    def construct(self):
+    def compile(self):
+        if self.first_time:
+            return self.oneshots()
         if self.local:
             print('FIXME this should not be running')
             self.local_dispatch()
@@ -138,14 +143,14 @@ class Builder:
             return self.deploy()
 
     def run(self):  # if the executor happens to be what is running this
-        os.system(self.construct())
+        os.system(self.compile())
 
     def makeOutput(self, BSE, commands, oper=ACCEPT, defer_shell_expansion=False):
         for o in (AND, OR, ACCEPT):
             if o in commands:
                 raise TypeError(f'You have an "{o}" operator in with the commands!')
 
-        to_run = (oper + ('\n' if True else '')).join(commands)
+        to_run = (oper + ('\n' if self.debug else '')).join(commands)
 
         host, user = self.context(BSE)
 
@@ -231,32 +236,15 @@ class Builder:
         elif repo == self.scigraph_repo:
             return self.services_latest_url
 
-    # dump all the first time scripts that need to be run
-
-    def first_time():
-        #return self.runOnExecutor(
-        pass
-
     # oneshots that need to be run on build and services
+
+    def oneshots(self):
+        return self.runOnExecutor(self.oneshots_build(), self.oneshots_services())
 
     def oneshots_build(self, commands_only=False):
         return self.runOnBuild(*self.cmds_rdflib(),
                                *self.cmds_pyontutils(),
                                oper=AND)
-
-    def cmds_rdflib(self):
-        rdflib_repo = 'https://github.com/tgbugs/rdflib.git'
-        return (f'cd {self.git_local}',
-                f'cd rdflib && git pull || git clone {rdflib_repo} && cd rdflib',
-                'python3.6 setup.py bdist_wheel',
-                'pip3.6 install --user --upgrade dist/rdflib*.whl')
-
-    def cmds_pyontutils(self):
-        pyontutils_repo = 'https://github.com/tgbugs/pyontutils.git'
-        return (f'cd {self.git_local}',
-                f'cd pyontutils && git pull || git clone {pyontutils_repo} && cd pyontutils',
-                'python3.6 setup.py bdist_wheel',
-                'pip3.6 install --user --upgrade dist/pyontutils*.whl')
 
     def oneshots_services(self, commands_only=False):
         return self.runOnServices(
@@ -269,6 +257,21 @@ class Builder:
             'sudo mkdir -p /var/scigraph-services/',
             'sudo chown bamboo:bamboo /var/scigraph-services/',
             oper=AND)
+
+
+    def cmds_rdflib(self):
+        rdflib_repo = 'https://github.com/tgbugs/rdflib.git'
+        return (f'cd {self.git_local}',
+                f'cd rdflib && git pull || (git clone {rdflib_repo} && cd rdflib)',
+                'python3.6 setup.py bdist_wheel',
+                'pip3.6 install --user --upgrade dist/rdflib*.whl')
+
+    def cmds_pyontutils(self):
+        pyontutils_repo = 'https://github.com/tgbugs/pyontutils.git'
+        return (f'cd {self.git_local}',
+                f'cd pyontutils && git pull || (git clone {pyontutils_repo} && cd pyontutils)',
+                'python3.6 setup.py bdist_wheel',
+                'pip3.6 install --user --upgrade dist/pyontutils*.whl')
 
     # pass along commands to build
 
@@ -582,7 +585,7 @@ def main(args):
     b = Builder(args, **kwargs)
     if b.local and b.check_built:
         return
-    code1 = b.construct()
+    code1 = b.compile()
     FILE = '/tmp/test.sh'
     with open(FILE, 'wt') as f:
         f.write(code1)
