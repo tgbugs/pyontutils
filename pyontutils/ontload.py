@@ -14,7 +14,7 @@ Usage:
 Options:
     -g --git-remote=GBASE           remote git hosting [default: https://github.com/]
     -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
-    -z --zip-location=ZIPLOC        local path in which to deposit zipped files [default: /tmp]
+    -z --zip-location=ZIPLOC        local path in which to deposit build files [default: /tmp]
     -f --scigraph-config-folder=TP  templates files live here [default: ../scigraph/]
 
     -t --graphload-config=CFG       graphload.yaml location [default: graphload.yaml]
@@ -34,8 +34,6 @@ Options:
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -K --check-built                check whether a local copy is present but do not build if it is not
-
-    -h --host=HOST                  host where services will run
 
     -d --debug                      call IPython embed when done
     -i --logfile=LOG                log output here [default: ontload.log]
@@ -61,7 +59,7 @@ from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
 
-defaults = {o.name:o.value for o in parse_defaults(__doc__)}
+defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
 COMMIT_HASH_HEAD_LEN = 7
 
@@ -467,9 +465,17 @@ def deploy_scp(local_path, remote_spec):
         print(update_latest)
         os.system(command)
 
-def locate_config_file(location_spec):
-    if location_spec.startswith(defaults['--scigraph-config-folder']):
-        location_spec = refile(os.path.realpath(__file__), location_spec)
+def locate_config_file(location_spec, git_local):
+    dflt = defaults['--scigraph-config-folder']
+    if location_spec.startswith(dflt):
+        this_path = os.path.realpath(__file__)
+        print(this_path)
+        test = jpth(os.path.dirname(this_path), '..', '.git')
+        if not os.path.exists(test):
+            base = jpth(git_local, 'pyontutils', 'pyontutils','some_file.wat')
+        else:
+            base = this_path
+        location_spec = refile(base, location_spec)
     elif location_spec.startswith('~'):
         location_spec = os.path.expanduser(location_spec)
     location_spec = os.path.realpath(location_spec)
@@ -522,7 +528,6 @@ def main(args):
     sscp = args['--scigraph-scp-loc']
     curies_location = args['--curies']
     check_built = args['--check-built']
-    host = args['--host']  # TODO
     debug = args['--debug']
     log = args['--logfile']  # TODO
 
@@ -535,8 +540,8 @@ def main(args):
         graphload_config = jpth(scigraph_config_folder, graphload_config)
     if '/' not in curies_location:
         curies_location = jpth(scigraph_config_folder, curies_location)
-    graphload_config = locate_config_file(graphload_config)
-    curies_location = locate_config_file(curies_location)
+    graphload_config = locate_config_file(graphload_config, git_local)
+    curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     itrips = None
@@ -546,36 +551,30 @@ def main(args):
 
     if graph:
         post_clone = make_post_clone(git_local, repo_name, remote_base)
-        try:
-            (scigraph_commit, load_base, services_zip,
-             scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
-                                                    git_local, sbranch, scommit,
-                                                    check_built=check_built,
-                                                    cleanup_later=True)
-            with execute_regardless(scigraph_reset_state):
-                graph_zip, itrips = repro_loader(zip_location, git_remote, org,
-                                                 git_local, repo_name, branch,
-                                                 commit, remote_base, load_base,
-                                                 graphload_config, scigraph_commit,
-                                                 post_clone=post_clone,
-                                                 check_built=check_built)
-            if check_built:
-                os.sys.exit(0)
-        except NotBuiltError:
-            os.sys.exit(1)
+        (scigraph_commit, load_base, services_zip,
+         scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
+                                                git_local, sbranch, scommit,
+                                                check_built=check_built,
+                                                cleanup_later=True)
+        with execute_regardless(scigraph_reset_state):
+            graph_zip, itrips = repro_loader(zip_location, git_remote, org,
+                                             git_local, repo_name, branch,
+                                             commit, remote_base, load_base,
+                                             graphload_config, scigraph_commit,
+                                             post_clone=post_clone,
+                                             check_built=check_built)
+        if check_built:
+            return
         deploy_scp(services_zip, sscp)
         deploy_scp(graph_zip, scp)
         print(services_zip)
         print(graph_zip)
     elif scigraph:
-        try:
-            (scigraph_commit, load_base, services_zip,
-             _) = scigraph_build(zip_location, git_remote, sorg, git_local,
-                                 sbranch, scommit, check_built=check_built)
-            if check_built:
-                os.sys.exit(0)
-        except NotBuiltError:
-            os.sys.exit(1)
+        (scigraph_commit, load_base, services_zip,
+         _) = scigraph_build(zip_location, git_remote, sorg, git_local,
+                             sbranch, scommit, check_built=check_built)
+        if check_built:
+            return
         deploy_scp(services_zip, sscp)
         print(services_zip)
     elif imports:
@@ -606,4 +605,11 @@ if __name__ == '__main__':
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
     print(args)
-    main(args)
+    try:
+        main(args)
+        if args['--check-built']:
+            print('Built')
+    except NotBuiltError:
+        if args['--check-built']:
+            print('Not built')
+        os.sys.exit(1)
