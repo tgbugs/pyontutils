@@ -1,0 +1,10 @@
+[Unit]
+Description=SciGraph webservices
+After=sshd.service
+
+[Service]
+Type=simple
+User=root
+ExecStart={path_to_start_script}
+ExecStop={path_to_stop_script}
+Restart=on-failure

@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# this is stupid if {services_user} is running anything else on java
+for i in $(ps -fu {services_user} | grep java | grep -v grep | awk "{{print \$2}}");
+        do kill -9 $i;
+done || :
