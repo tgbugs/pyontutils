@@ -111,20 +111,29 @@ class Builder:
             self.same_remotes = True
             # the executor is different from the remotes
             if self.build_host != self._host and not self.check_built:
-                self._host = self.build_host
-                self._user = self.build_user
+                #self._host = self.build_host
+                #self._user = self.build_user
                 self._building = False
                 for name, obj in inspect.getmembers(self):
-                    if inspect.ismethod(obj) and anyMembers(name, 'build', 'graph', 'services', 'remote', 'config'):
+                    continue  # TODO there is a bug here with executor/build boundaries
+                    # i think the issues is with the way we are calling anyMembers
+                    if inspect.ismethod(obj) and anyMembers(name,
+                                                            'config',
+                                                            'services',
+                                                            'graph',
+                                                            'remote'):
                         @wraps(obj)
                         def mutex_on_ssh(*args, func=obj, **kwargs):  # ah late binding hacks
                             if not self._building:
                                 self._building = True
                                 out = func(*args, **kwargs)
+                                self._building = False
                                 if out.startswith('('):
-                                    out = f'"{out[1:-1]}"'
+                                    #out = f'"{out[1:-1]}"'
+                                    out = out[1:-1]
                                 print('YAY FOR ONLY ONE SSH!')
-                                return f'ssh {self._user}@{self._host} {out}'
+                                return out
+                                #return f'ssh {self._user}@{self._host} {out}'
                             else:
                                 return func(*args, **kwargs)
                         setattr(self, name, mutex_on_ssh)
@@ -161,15 +170,19 @@ class Builder:
 
     def compile(self):
         if self.first_time:
-            return self.oneshots()
-        if self.local:
+            code = self.oneshots()
+
+        elif self.local:
             print('FIXME this should not be running')
             self.local_dispatch()
-            return 'echo This was a triumph.'
+            code = 'echo This was a triumph.'
         elif self.build_only:
-            return self.build()
+            code = self.build()
         else:
-            return self.deploy()
+            code = self.deploy()  # NOTE really 'remote'
+        assert '{' not in code, (f'You have an unformatted string somewhere.\n'
+                                 f'{code[code.index("{")-30:code.index("{")+30]}')
+        return code
 
     def exec(self):
         code = self.compile()
@@ -191,7 +204,8 @@ class Builder:
 
         host, user = self.context(BSE)
 
-        if defer_shell_expansion and not self.same_remotes and not self.local:
+        #if defer_shell_expansion and not self.same_remotes and not self.local:
+        if defer_shell_expansion and not self.local:  # FIXME same remotes issues
             to_run = squote(to_run)
         same_server = self._host == host and self._user == user
         if BSE == EXE or same_server or self.local:
@@ -417,10 +431,10 @@ class Builder:
                 config = template.format(**kwargs)
                 #print(config_file)
                 config_path = jpth(self.zip_location, config_file)
-                print(config_path)
+                #print(config_path)
                 with open(config_path, 'wt') as f:
                     f.write(config)
-            #print(self.zip_location)  # sent back over ssh
+            print(self.zip_location)  # sent back over ssh
 
         return setVars, build
 
@@ -434,6 +448,8 @@ class Builder:
             if not all(os.path.exists(jpth(self.zip_location, c)) for c in configs):
                 print('The configs have not been built.')
                 raise NotBuiltError('The configs have not been built.')
+            else:
+                print(self.zip_location)
             return
 
         self.build_services_config()
@@ -528,15 +544,16 @@ class Builder:
     def deploy(self):
         # deploy logic is a bit different from build
         #  it also inverts the dependency order...
+        # XXX this is really 'remote'
         tups = tuple()
-        if self.config or self.all:
-            tups += (self.deploy_config(),)
+        if self.config:  # or self.all:  # don't need to call when all since services pulls it in
+            tups += (self.remote_config(),)
         if self.services or self.all:
-            tups += (self.deploy_services(),)
+            tups += (self.remote_services(),)
         if self.graph or self.all:
-            tups += (self.deploy_graph(),)
+            tups += (self.remote_graph(),)
 
-        return '\n'.join(tups)
+        return ';\n\n'.join(tups)
 
     def deploy_base(self, repo, *src_targs, vardefs=tuple()):
         # simple rule that a type checker could do is prevent runing G env cmds on S... no auth there...
@@ -573,20 +590,24 @@ class Builder:
                                vardefs=(f'export SERVICES_FOLDER={self.services_folder}',))
 
     def remote_config(self):
-        return self.runOnServices(
-            f'sudo cp {self.systemd_config} /etc/systemd/system/',
-            f'sudo cp {self.java_config} {self.etc}',
-            'sudo systemctl daemon-reload',
-            oper=AND)
+        dependencies = self.deploy_config(),
+        return self.runOnExecutor(*dependencies,
+                                  self.runOnServices(
+                                      f'sudo cp {self.systemd_config} /etc/systemd/system/',
+                                      f'sudo cp {self.java_config} {self.etc}',
+                                      'sudo systemctl daemon-reload',
+                                      oper=AND),
+                                 oper=AND)
+
 
     def deploy_services(self):
         return self.deploy_base(self.scigraph_repo, (f'${self.zip_loc_var}', '~/'))
 
     #@services
     def remote_services(self, commands_only=False):
-        dependencies = self.deploy_config(), self.deploy_services()
+        dependencies = self.remote_config(), self.deploy_services()
         commands = (
-            'export SERVICES_FOLDER={self.services_folder}',
+            f'export SERVICES_FOLDER={self.services_folder}',
             'unzip SciGraph-*-services-*.zip',
             'export SERVICES_NAME=$(echo scigraph-services-*-SNAPSHOT/)',
             f'sudo chown -R {self.services_user}:{self.services_user} $SERVICES_NAME',
@@ -594,7 +615,7 @@ class Builder:
             'rm -rf $SERVICES_FOLDER/lib',
             'mv $SERVICES_NAME/* $SERVICES_FOLDER/',
             # NOTE scigraph-services.jar is set by start.sh  # FIXME propagate this via ontload
-            'mv $SERVICES_FOLDER/scigraph-services-*-SNAPSHOT.jar $SERVICES_FOLDER/{self.services_jar}',  # TODO
+            f'mv $SERVICES_FOLDER/scigraph-services-*-SNAPSHOT.jar $SERVICES_FOLDER/{self.services_jar}',  # TODO
             # deploy_config needs to have been run for this to work as expected
             'sudo systemctl restart scigraph-services',
             'rmdir $SERVICES_NAME')
@@ -617,9 +638,12 @@ class Builder:
                       "import yaml\\n"
                       "with open('$F', 'rt') as f:\\n"
                       "    sys.stdout.write(yaml.load(f)['graphConfiguration']['location'])")
-        get_graph_folder = f'$(F={services_config_file}; echo -e "{use_python}" | python)'
+
+        use_py_var = 'f_GET_GRAPH_FOLDER'
+        get_graph_folder = f'$(F={services_config_file}; echo -e ${use_py_var} | python)'
 
         commands = self.runOnServices(
+            f'export {use_py_var}="{use_python}"',
             f'export GRAPH_FOLDER={get_graph_folder}',
             'export GRAPH_PARENT_FOLDER=$(dirname $GRAPH_FOLDER)',
             'unzip NIF-Ontology-*-graph-*.zip',
