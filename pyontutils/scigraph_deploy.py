@@ -675,14 +675,12 @@ class Builder:
         # DONT TRUST THEIR LIES READ IT FROM THE DISK
         use_python = ("import sys\\n"
                       "import yaml\\n"
-                      "with open('$F', 'rt') as f:\\n"
-                      "    sys.stdout.write(yaml.load(f)['graphConfiguration']['location'])")
+                      "with open(\\\"$F\\\", \\\"rt\\\") as f:\\n"
+                      "    sys.stdout.write(yaml.load(f)[\\\"graphConfiguration\\\"][\\\"location\\\"])")
 
-        use_py_var = 'f_GET_GRAPH_FOLDER'
-        get_graph_folder = f'$(F={services_config_file}; echo -e ${use_py_var} | python)'
+        get_graph_folder = f'$(F={services_config_file}; echo -e "{use_python}" | python)'
 
         commands = self.runOnServices(
-            f'export {use_py_var}="{use_python}"',
             f'export GRAPH_FOLDER={get_graph_folder}',
             'export GRAPH_PARENT_FOLDER=$(dirname $GRAPH_FOLDER)',
             'unzip NIF-Ontology-*-graph-*.zip',
