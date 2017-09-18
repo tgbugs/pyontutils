@@ -356,7 +356,7 @@ class Builder:
     def cmds_python(self, os='centos7'):
         iftest = 'if {}; then echo os ok; else echo os bad; exit 1 ; fi'
         if os == 'centos7':
-            TEST = '[[ -e /etc/centos-release ]]'
+            TEST = '[ -f /etc/centos-release ]'
             return (iftest.format(TEST),
                     'sudo yum -y install yum-utils',
                     'sudo yum -y groupinstall development',
@@ -469,8 +469,8 @@ class Builder:
                 #print(config_path)
                 with open(config_path, 'wt') as f:
                     f.write(config)
-                if config_path.endswith('.sh'):
-                    os.chmod(config_path, 0o744)
+                #if config_path.endswith('.sh'):  # scpeeeee
+                    #os.chmod(config_path, 0o744)
             print(self.zip_location)  # sent back over ssh
 
         return setVars, build
@@ -567,7 +567,7 @@ class Builder:
         return self.runOnServices(
             f'export LC=$(cat -)',
             f'ZIP={repo}-*-$LC*.zip',
-            f'if [[ -f $ZIP ]]; then unzip $ZIP; exit 0; fi',
+            f'if [ -f $ZIP ]; then unzip $ZIP; exit 0; fi',
             f'export LATEST=$(curl {fetch_LATEST})',
             f'if [[ $LATEST =~ $LC ]]; then curl -O {fetch_folder}/$LATEST; else exit 1; fi',
             defer_shell_expansion=True,
@@ -610,18 +610,18 @@ class Builder:
                      f'echo Failed to copy {src})'
                      for src, targ in src_targs)
 
-        fetches = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',)
+        fetches = f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN}) && '
         if repo != 'pyontutils':
-            fetches += (f'echo $LATEST_COMMIT | ' + self.fetch(repo),)
+            fetches += f'echo $LATEST_COMMIT | ' + self.fetch(repo)
         else:
-            fetches += ('(exit 1)',)  # too hard to check if configs are up to date
+            fetches += '(exit 1)'  # too hard to check if configs are up to date
 
         builds = (f'export {self.zip_loc_var}=$({dependencies} | tail -n1)',
                   *vardefs,
                   *scps)
 
         return exe(check_command,  # needed to fetch latest
-                   exe(*fetches,
+                   exe(fetches,
                        exe(*builds,
                            oper=AND),
                        oper=OR))
@@ -642,21 +642,27 @@ class Builder:
     def deploy_config(self, commands_only=False):
         # assumed to run on build already
         #ser_usr_host = f'{self.services_user}@{self.services_host}'
-        ser_tar = f'$SERVICES_FOLDER/'
         return self.deploy_base('config',
-                                (f'${self.zip_loc_var}/{self.services_config}', ser_tar),
-                                (f'${self.zip_loc_var}/{self.start_script}', ser_tar),
-                                (f'${self.zip_loc_var}/{self.stop_script}', ser_tar),
+                                (f'${self.zip_loc_var}/{self.services_config}', ''),
+                                (f'${self.zip_loc_var}/{self.start_script}', ''),
+                                (f'${self.zip_loc_var}/{self.stop_script}', ''),
                                 (f'${self.zip_loc_var}/{self.systemd_config}', ''),
-                                (f'${self.zip_loc_var}/{self.java_config}', ''),
-                               vardefs=(f'export SERVICES_FOLDER={self.services_folder}',))
+                                (f'${self.zip_loc_var}/{self.java_config}', ''))
 
     def remote_config(self):
         dependencies = self.deploy_config(),
+        ser_tar = f'$SERVICES_FOLDER/'
         return self.runOnExecutor(*dependencies,
                                   self.runOnServices(
-                                      f'sudo cp {self.systemd_config} /etc/systemd/system/',
-                                      f'sudo cp {self.java_config} {self.etc}',
+                                      # ANNOYING
+                                      f'export SERVICES_FOLDER={self.services_folder}',
+                                      f'sudo mv {self.services_config} {ser_tar}',
+                                      f'sudo chmod 744 {self.start_script}',
+                                      f'sudo mv {self.start_script} {ser_tar}',
+                                      f'sudo chmod 744 {self.stop_script}',
+                                      f'sudo mv {self.stop_script} {ser_tar}',
+                                      f'sudo mv {self.systemd_config} /etc/systemd/system/',
+                                      f'sudo mv {self.java_config} {self.etc}',
                                       'sudo systemctl daemon-reload',
                                       oper=AND),
                                  oper=AND)
@@ -714,8 +720,8 @@ class Builder:
             'unlink $GRAPH_FOLDER',
             'ln -sT $GRAPH_PARENT_FOLDER/$GRAPH_NAME $GRAPH_FOLDER',
             'sudo systemctl start scigraph-services',
-            defer_shell_expansion=True,
-            oper=AND)
+            defer_shell_expansion=True)
+            #oper=AND)
         return self.runOnExecutor(*dependencies,
                                   commands,
                                   oper=AND)
