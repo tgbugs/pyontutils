@@ -602,7 +602,8 @@ class Builder:
         fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',) + \
                 (f'echo $LATEST_COMMIT | ' + self.fetch(repo),) if repo != 'pyontutils' else tuple()  # FIXME $LATEST COMMIT is not escaped
         # XXX NOTE: for 3 way transfers to work you must use ssh-agent
-        scps = tuple(f'scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ}'
+        scps = tuple(f'(scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ} || '
+                     f'echo Failed to copy {src})'
                      for src, targ in src_targs)
         command = exe(check_command,
                       exe(*fetch),  # we do fetch on fail in case the build was cleaned up...
