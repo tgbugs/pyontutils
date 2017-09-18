@@ -31,6 +31,8 @@ Options:
     -L --local                          run all commands locally (runs actual python!)
 
     --services-log-loc=FOLDER           services logs [default: /var/log/scigraph-services/]
+
+    -H --ssh-user                       if
 """
 #    -J --java-config-loc=FILEPATH       location to deploy java config [default: /etc/]
 # yes we could have tried to do this in make...
@@ -595,7 +597,7 @@ class Builder:
         ser_usr_host = f'{self.services_user}@{self.services_host}'
         fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
                  self.fetch(repo, '$LATEST_COMMIT')) if repo != 'pyontutils' else ('(exit 1)',)
-        scps = tuple(f'scp {bld_usr_host}:{src} {ser_usr_host}:{targ}'
+        scps = tuple(f'scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ}'  # -3 needed for 3way transfer
                      for src, targ in src_targs)
         command = exe(check_command,
                       exe(*fetch),  # we do fetch on fail in case the build was cleaned up...
