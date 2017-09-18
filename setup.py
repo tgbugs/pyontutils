@@ -6,6 +6,7 @@ from setuptools import setup, find_packages
 
 files = [
     'pyontutils/__init__.py',
+    'pyontutils/closed_namespaces.py',
     'pyontutils/hierarchies.py',
     'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
