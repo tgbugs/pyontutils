@@ -177,7 +177,6 @@ class Builder:
     def compile(self):
         if self.first_time:
             code = self.oneshots()
-
         elif self.local:
             print('FIXME this should not be running')
             self.local_dispatch()
@@ -337,6 +336,7 @@ class Builder:
         return self.runOnBuild(*self.cmds_python(),
                                *self.cmds_rdflib(),
                                *self.cmds_pyontutils(),
+                               defer_shell_expansion=True,
                                oper=AND)
 
     def oneshots_services(self, commands_only=False):
@@ -366,19 +366,21 @@ class Builder:
                     'sudo pip3.6 install wheel',
                    )
 
-    def cmds_rdflib(self):
-        rdflib_repo = 'https://github.com/tgbugs/rdflib.git'
+    def _repo_base(self, repo_name):
+        name, _ = os.path.splitext(os.path.basename(repo_name))
         return (f'mkdir -p {self.git_local}; cd {self.git_local}',
-                f'git clone {rdflib_repo}; cd rdflib && git pull',
-                'python3.6 setup.py bdist_wheel',
-                'pip3.6 install --user --upgrade dist/rdflib*.whl')
+                f'git clone {repo_name}; cd {name} && export RES=$(git pull)',
+                'if [[ $RES != "Already up-to-date." ]]; then '
+                'python3.6 setup.py bdist_wheel; '
+                f'pip3.6 install --user --upgrade dist/{name}*.whl; '
+                'fi')
+
+    def cmds_rdflib(self):
+        return self._repo_base('https://github.com/tgbugs/rdflib.git')
 
     def cmds_pyontutils(self):
-        pyontutils_repo = 'https://github.com/tgbugs/pyontutils.git'
-        return (f'mkdir -p {self.git_local}; cd {self.git_local}',
-                f'git clone {pyontutils_repo}; cd pyontutils && git pull',
-                'python3.6 setup.py bdist_wheel',
-                'pip3.6 install --user --upgrade dist/pyontutils*.whl')
+        return self._repo_base('https://github.com/tgbugs/pyontutils.git')
+
 
     # pass along commands to build
 
@@ -397,6 +399,7 @@ class Builder:
             self._updated = True
         return self.runOnBuild(*cmds,
                                f'scigraph-deploy {remote_args}',
+                               defer_shell_expansion=True,
                                oper=AND)
 
     # local commands that actually do the work on the build server
@@ -596,9 +599,10 @@ class Builder:
         dependencies = self.build(mode)
         bld_usr_host = f'{self.build_user}@{self.build_host}'
         ser_usr_host = f'{self.services_user}@{self.services_host}'
-        fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
-                 f'echo $LATEST_COMMIT | ' + self.fetch(repo)) if repo != 'pyontutils' else ('(exit 1)',)  # FIXME $LATEST COMMIT is not escaped
-        scps = tuple(f'scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ}'  # -3 needed for 3way transfer
+        fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',) + \
+                (f'echo $LATEST_COMMIT | ' + self.fetch(repo),) if repo != 'pyontutils' else tuple()  # FIXME $LATEST COMMIT is not escaped
+        # XXX NOTE: for 3 way transfers to work you must use ssh-agent
+        scps = tuple(f'scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ}'
                      for src, targ in src_targs)
         command = exe(check_command,
                       exe(*fetch),  # we do fetch on fail in case the build was cleaned up...
@@ -618,8 +622,8 @@ class Builder:
                                 (f'${self.zip_loc_var}/{self.services_config}', ser_tar),
                                 (f'${self.zip_loc_var}/{self.start_script}', ser_tar),
                                 (f'${self.zip_loc_var}/{self.stop_script}', ser_tar),
-                                (f'${self.zip_loc_var}/{self.systemd_config}', '~/'),
-                                (f'${self.zip_loc_var}/{self.java_config}', '~/'),
+                                (f'${self.zip_loc_var}/{self.systemd_config}', ''),
+                                (f'${self.zip_loc_var}/{self.java_config}', ''),
                                vardefs=(f'export SERVICES_FOLDER={self.services_folder}',))
 
     def remote_config(self):
@@ -634,7 +638,7 @@ class Builder:
 
 
     def deploy_services(self):
-        return self.deploy_base('services', (f'${self.zip_loc_var}', '~/'))
+        return self.deploy_base('services', (f'${self.zip_loc_var}', ''))
 
     #@services
     def remote_services(self, commands_only=False):
@@ -659,7 +663,7 @@ class Builder:
                                   oper=AND)
 
     def deploy_graph(self):
-        return self.deploy_base('graph', (f'${self.zip_loc_var}', '~/'))
+        return self.deploy_base('graph', (f'${self.zip_loc_var}', ''))
 
     #@depends('services', 'has', 'NIF-Ontology-*-graph-*.zip')
     def remote_graph(self, commands_only=False):
