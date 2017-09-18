@@ -469,6 +469,8 @@ class Builder:
                 #print(config_path)
                 with open(config_path, 'wt') as f:
                     f.write(config)
+                if config_path.endswith('.sh'):
+                    os.chmod(config_path, 744)
             print(self.zip_location)  # sent back over ssh
 
         return setVars, build
@@ -518,7 +520,6 @@ class Builder:
                 ('services_host', self.services_host),
                 ('garbage_collection_log', jpth(self.services_log_loc, self.garbage_collection_log)),
                 ('debug_jmx', ''))  # debug_jmx)
-
         build()
 
     def _config_path(self, config):
@@ -558,13 +559,15 @@ class Builder:
         
     # stuff that the executor server calls on services machine
 
-    def fetch(self, repo, commands_only=False):
+    def fetch(self, repo):
         if repo == 'pyontutils':
             return '(exit 1)'  # can't fetch
         fetch_LATEST = self.LATEST(repo)
         fetch_folder = os.path.dirname(fetch_LATEST)
         return self.runOnServices(
             f'export LC=$(cat -)',
+            f'ZIP={repo}-*-$LC*.zip',
+            f'if [[ -e $ZIP ]]; then unzip $ZIP; exit 0; fi',
             f'export LATEST=$(curl {fetch_LATEST})',
             f'if [[ $LATEST =~ $LC ]]; then curl -O {fetch_folder}/$LATEST; else exit 1; fi',
             defer_shell_expansion=True,
@@ -606,11 +609,30 @@ class Builder:
         scps = tuple(f'(scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ} || '
                      f'echo Failed to copy {src})'
                      for src, targ in src_targs)
+
+        fetches = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',)
+        if repo != 'pyontutils':
+            fetches += (f'echo $LATEST_COMMIT | ' + self.fetch(repo),)
+        else:
+            fetches += ('(exit 1)',)  # too hard to check if configs are up to date
+
+        builds = (f'export {self.zip_loc_var}=$({dependencies} | tail -n1)',
+                  *vardefs,
+                  *scps)
+
+        return exe(*fetches,
+                   exe(*builds,
+                       oper=AND),
+                   oper=OR)
+
+
+
+        # on services? ||
+        # fetch? ||
+        # build && scp
         command = exe(check_command,
                       exe(*fetch),  # we do fetch on fail in case the build was cleaned up...
                       exe(f'export {self.zip_loc_var}=$({dependencies} | tail -n1)',
-                          *vardefs,
-                          *scps,
                           oper=AND),
                       oper=OR)  # it's almost forth! >_<
         return command
@@ -647,7 +669,7 @@ class Builder:
         dependencies = self.remote_config(), self.deploy_services()
         commands = (
             f'export SERVICES_FOLDER={self.services_folder}',
-            'unzip SciGraph-*-services-*.zip',
+            'unzip -q SciGraph-*-services-*.zip',
             'export SERVICES_NAME=$(echo scigraph-services-*-SNAPSHOT/)',
             f'sudo chown -R {self.services_user}:{self.services_user} $SERVICES_NAME',
             'rm -rf $SERVICES_FOLDER/scigraph*',
@@ -683,7 +705,7 @@ class Builder:
         commands = self.runOnServices(
             f'export GRAPH_FOLDER={get_graph_folder}',
             'export GRAPH_PARENT_FOLDER=$(dirname $GRAPH_FOLDER)',
-            'unzip NIF-Ontology-*-graph-*.zip',
+            'unzip -q NIF-Ontology-*-graph-*.zip',
             'export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)',
             f'sudo chown -R {self.services_user}:{self.services_user} $GRAPH_NAME',
             'mv $GRAPH_NAME $GRAPH_PARENT_FOLDER/',
