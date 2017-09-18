@@ -106,6 +106,7 @@ class Builder:
                      if not k.startswith('-')
                      and not k.startswith('<')
                      and v][0]
+        self.build_services_config()  # needed to update self.graph_folder  XXX hack fixme
         self._init_more()
 
         self.same_remotes = False
@@ -348,8 +349,8 @@ class Builder:
             f'sudo chown {self.services_user}:{self.services_user} {self.services_log_loc}',
             f'sudo touch {java_config_path}',
             f'sudo chown {self.services_user}:{self.services_user} {java_config_path}',
-            f'sudo mkdir -p {self.services_folder}',
-            f'sudo chown {self.services_user}:{self.services_user} {self.services_folder}',
+            f'sudo mkdir -p {self.graph_folder}',
+            f'sudo chown {self.services_user}:{self.services_user} {self.graph_folder}',
             oper=AND)
 
     def cmds_python(self, os='centos7'):
