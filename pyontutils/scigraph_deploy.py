@@ -554,14 +554,15 @@ class Builder:
         
     # stuff that the executor server calls on services machine
 
-    def fetch(self, repo, lc_var, commands_only=False):
+    def fetch(self, repo, commands_only=False):
         if repo == 'pyontutils':
             return '(exit 1)'  # can't fetch
         fetch_LATEST = self.LATEST(repo)
         fetch_folder = os.path.dirname(fetch_LATEST)
         return self.runOnServices(
+            f'export LC=$(cat -)',
             f'export LATEST=$(curl {fetch_LATEST})',
-            f'if [[ $LATEST =~ {lc_var} ]]; then wget {fetch_folder}/$LATEST else exit 1 fi',
+            f'if [[ $LATEST =~ $LC ]]; then curl -O {fetch_folder}/$LATEST; else exit 1; fi',
             defer_shell_expansion=True,
             oper=AND)
 
@@ -596,7 +597,7 @@ class Builder:
         bld_usr_host = f'{self.build_user}@{self.build_host}'
         ser_usr_host = f'{self.services_user}@{self.services_host}'
         fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
-                 self.fetch(repo, '$LATEST_COMMIT')) if repo != 'pyontutils' else ('(exit 1)',)
+                 f'echo $LATEST_COMMIT | ' + self.fetch(repo)) if repo != 'pyontutils' else ('(exit 1)',)  # FIXME $LATEST COMMIT is not escaped
         scps = tuple(f'scp -3 {bld_usr_host}:{src} {ser_usr_host}:{targ}'  # -3 needed for 3way transfer
                      for src, targ in src_targs)
         command = exe(check_command,
@@ -726,6 +727,8 @@ def run(args):
         with open(FILE, 'rt') as f:
             print(f.read())
         #embed()
+    else:
+        print(code)
 
 def main():
     from docopt import docopt
