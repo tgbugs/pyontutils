@@ -20,18 +20,18 @@ files = [
     'pyontutils/qnamefix.py',
     'pyontutils/scig.py',
     'pyontutils/scigraph.py',
-    'pyontutils/scigraph-deploy.py',
+    'pyontutils/scigraph_deploy.py',
     'pyontutils/scigraph_client.py',
     'pyontutils/ttlfmt.py',
     'pyontutils/ttlser.py',
     'pyontutils/utils.py',
 ]
 
-os.mkdir('export')
-for f in files:
-    shutil.copyfile(f, f.replace('pyontutils','export'))
 
 try:
+    os.mkdir('export')
+    for f in files:
+        shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
         version='0.0.1',

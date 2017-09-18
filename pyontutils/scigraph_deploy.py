@@ -317,9 +317,7 @@ class Builder:
                 strings.append(string)
 
         strings += reqs
-        embed()
         out = ' '.join(strings)
-        #print(out)
         return out
 
     def LATEST(self, repo):
