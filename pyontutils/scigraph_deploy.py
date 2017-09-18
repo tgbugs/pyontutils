@@ -701,7 +701,8 @@ class Builder:
     
 
 def run(args):
-    print(args)
+    if args['--debug']:
+        print(args)
     # ignoring bamboo sequecing for the moment...
     # check the build server to see if we have built the latest (or the specified commit)
     # if yes just scp those to services

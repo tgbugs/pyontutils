@@ -607,7 +607,8 @@ def run(args):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
-    print(args)
+    if args['--debug']:
+        print(args)
     try:
         run(args)
     except NotBuiltError:
