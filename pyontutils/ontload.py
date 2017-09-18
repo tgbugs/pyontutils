@@ -500,7 +500,7 @@ def make_post_clone(git_local, repo_name, remote_base):
         post_clone = lambda: None
     return post_clone
 
-def main(args):
+def run(args):
     # modes
     graph = args['graph']
     scigraph = args['scigraph']
@@ -604,13 +604,16 @@ def main(args):
     if debug:
         embed()
 
-if __name__ == '__main__':
+def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
     print(args)
     try:
-        main(args)
+        run(args)
     except NotBuiltError:
         if args['--check-built']:
             print('Not built')
         os.sys.exit(1)
+
+if __name__ == '__main__':
+    main()

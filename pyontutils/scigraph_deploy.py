@@ -50,7 +50,7 @@ from docopt import parse_defaults
 from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
-from pyontutils.ontload import main as ontload_main
+from pyontutils.ontload import run as ontload_main
 from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, locate_config_file, getCuries
 from IPython import embed
 
@@ -691,7 +691,7 @@ class Builder:
                                   oper=AND)
     
 
-def main(args):
+def run(args):
     print(args)
     # ignoring bamboo sequecing for the moment...
     # check the build server to see if we have built the latest (or the specified commit)
@@ -725,13 +725,16 @@ def main(args):
             print(f.read())
         #embed()
 
-if __name__ == '__main__':
+def main():
     from docopt import docopt
     __doc__ = ''.join((__doc__, ontload_docs.split('Options:')[-1]))
     args = docopt(__doc__)
     try:
-        main(args)
+        run(args)
     except NotBuiltError:
         if args['--check-built']:
             print('Not built')
         os.sys.exit(1)
+
+if __name__ == '__main__':
+    main()
