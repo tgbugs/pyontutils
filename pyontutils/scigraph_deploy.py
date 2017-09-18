@@ -371,7 +371,7 @@ class Builder:
         name, _ = os.path.splitext(os.path.basename(repo_name))
         return (f'mkdir -p {self.git_local}; cd {self.git_local}',
                 f'git clone {repo_name}; cd {name} && export RES=$(git pull)',
-                'if [[ $RES != "Already up-to-date." ]]; then '
+                f'if [[ $RES != "Already up-to-date." ]] || [ ! -f dist/{name}*.whl  ]; then '
                 'python3.6 setup.py bdist_wheel; '
                 f'pip3.6 install --user --upgrade dist/{name}*.whl; '
                 'fi')
@@ -567,7 +567,7 @@ class Builder:
         return self.runOnServices(
             f'export LC=$(cat -)',
             f'ZIP={repo}-*-$LC*.zip',
-            f'if [[ -e $ZIP ]]; then unzip $ZIP; exit 0; fi',
+            f'if [[ -f $ZIP ]]; then unzip $ZIP; exit 0; fi',
             f'export LATEST=$(curl {fetch_LATEST})',
             f'if [[ $LATEST =~ $LC ]]; then curl -O {fetch_folder}/$LATEST; else exit 1; fi',
             defer_shell_expansion=True,
@@ -620,10 +620,11 @@ class Builder:
                   *vardefs,
                   *scps)
 
-        return exe(*fetches,
-                   exe(*builds,
-                       oper=AND),
-                   oper=OR)
+        return exe(check_command,  # needed to fetch latest
+                   exe(*fetches,
+                       exe(*builds,
+                           oper=AND),
+                       oper=OR))
 
 
 
