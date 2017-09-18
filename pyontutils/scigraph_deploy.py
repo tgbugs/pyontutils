@@ -727,6 +727,7 @@ def run(args):
 
 def main():
     from docopt import docopt
+    global __doc__
     __doc__ = ''.join((__doc__, ontload_docs.split('Options:')[-1]))
     args = docopt(__doc__)
     try:
