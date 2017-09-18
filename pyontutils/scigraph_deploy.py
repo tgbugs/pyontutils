@@ -100,6 +100,10 @@ class Builder:
         if self.all or self.graph:
             self.ontload_args['graph'] = True
         self.ontload_args.update({'imports':None,'chain':None,'extra':None,'<ontologies>':[]})
+        self.mode = [k for k, v in self.args.items()
+                     if not k.startswith('-')
+                     and not k.startswith('<')
+                     and v][0]
         self._init_more()
 
         self.same_remotes = False
@@ -262,20 +266,32 @@ class Builder:
         else:
             raise TypeError('wat')
 
-    def formatted_args(self, args, repo=None, **additional_args):
+    def _getRepo(self, mode):
+        if mode == 'all':
+            repo = None
+        elif mode == 'graph':
+            repo = self.repo
+        elif mode == 'config':
+            repo = 'pyontutils'
+        elif mode == 'services':
+            repo = self.scigraph_repo
+        else:
+            raise TypeError(f'WAT {mode}')
+
+
+        return repo
+
+    def formatted_args(self, args, mode=None, **additional_args):
+        if mode is None:
+            mode = self.mode
         scp = '--scp-loc', '--scigraph-scp-loc'
         nargs = {**args, **additional_args}
-        orig_mode = [k for k, v in nargs.items() if not k.startswith('-') and not k.startswith('<')][0]
-        repo_to_mode = {None:'all',
-                        'pyontutils':'config',
-                        self.repo:'graph',
-                        self.scigraph_repo:'services'}
-        mode = repo_to_mode[repo]
-        allr = '<repo>', '<remote_base>', '<build_host>', '<services_host>'
         cfgr = '<build_host>', '<services_host>'
+        allr = '<repo>', '<remote_base>', '<build_host>', '<services_host>'
         r = allr if mode == 'all' or mode == 'graph' else cfgr
         reqs = [nargs[k] for k in r if k in nargs]
         strings = [mode]
+        repo = self._getRepo(mode)
         for k, v in sorted(nargs.items()):
             if repo is not None and k in self.repo_arg_skip_mapping[repo]:
                 continue
@@ -301,6 +317,7 @@ class Builder:
                 strings.append(string)
 
         strings += reqs
+        embed()
         out = ' '.join(strings)
         #print(out)
         return out
@@ -365,7 +382,7 @@ class Builder:
 
     # pass along commands to build
 
-    def build(self, repo=None, check=False):
+    def build(self, mode=None, check=False):
         """ Just shuffle the current call off to the build server with --local attached """ 
         kwargs = {}
         if not self.build_only:  # don't try to deploy twice
@@ -374,7 +391,7 @@ class Builder:
             kwargs['--local'] = True
         if check:
             kwargs['--check-built'] = True
-        remote_args = self.formatted_args(self.args, repo, **kwargs)
+        remote_args = self.formatted_args(self.args, mode, **kwargs)
         cmds = tuple() if self.check_built or self._updated else self.cmds_pyontutils()
         if not self._updated:
             self._updated = True
@@ -569,12 +586,13 @@ class Builder:
 
         return ';\n\n'.join(tups)
 
-    def deploy_base(self, repo, *src_targs, vardefs=tuple()):
+    def deploy_base(self, mode, *src_targs, vardefs=tuple()):
         # simple rule that a type checker could do is prevent runing G env cmds on S... no auth there...
         exe = self.runOnExecutor
+        repo = self._getRepo(mode)
         lc_command = self.get_latest_commit(repo)
-        check_command = self.build(repo, check=True)
-        dependencies = self.build(repo)
+        check_command = self.build(mode, check=True)
+        dependencies = self.build(mode)
         bld_usr_host = f'{self.build_user}@{self.build_host}'
         ser_usr_host = f'{self.services_user}@{self.services_host}'
         fetch = (f'export LATEST_COMMIT=$({lc_command} | cut -b-{COMMIT_HASH_HEAD_LEN})',
@@ -595,7 +613,7 @@ class Builder:
         # assumed to run on build already
         #ser_usr_host = f'{self.services_user}@{self.services_host}'
         ser_tar = f'$SERVICES_FOLDER/'
-        return self.deploy_base('pyontutils',
+        return self.deploy_base('config',
                                 (f'${self.zip_loc_var}/{self.services_config}', ser_tar),
                                 (f'${self.zip_loc_var}/{self.start_script}', ser_tar),
                                 (f'${self.zip_loc_var}/{self.stop_script}', ser_tar),
@@ -615,7 +633,7 @@ class Builder:
 
 
     def deploy_services(self):
-        return self.deploy_base(self.scigraph_repo, (f'${self.zip_loc_var}', '~/'))
+        return self.deploy_base('services', (f'${self.zip_loc_var}', '~/'))
 
     #@services
     def remote_services(self, commands_only=False):
@@ -640,7 +658,7 @@ class Builder:
                                   oper=AND)
 
     def deploy_graph(self):
-        return self.deploy_base(self.repo, (f'${self.zip_loc_var}', '~/'))
+        return self.deploy_base('graph', (f'${self.zip_loc_var}', '~/'))
 
     #@depends('services', 'has', 'NIF-Ontology-*-graph-*.zip')
     def remote_graph(self, commands_only=False):
