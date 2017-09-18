@@ -470,7 +470,7 @@ class Builder:
                 with open(config_path, 'wt') as f:
                     f.write(config)
                 if config_path.endswith('.sh'):
-                    os.chmod(config_path, 744)
+                    os.chmod(config_path, 0o744)
             print(self.zip_location)  # sent back over ssh
 
         return setVars, build
