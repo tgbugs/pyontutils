@@ -317,7 +317,8 @@ class Builder:
         return self.runOnExecutor(self.oneshots_build(), self.oneshots_services())
 
     def oneshots_build(self, commands_only=False):
-        return self.runOnBuild(*self.cmds_rdflib(),
+        return self.runOnBuild(*self.cmds_python(),
+                               *self.cmds_rdflib(),
                                *self.cmds_pyontutils(),
                                oper=AND)
 
@@ -334,18 +335,31 @@ class Builder:
             f'sudo chown {self.services_user}:{self.services_user} {self.services_folder}',
             oper=AND)
 
+    def cmds_python(self, os='centos7'):
+        iftest = 'if {}; then echo os ok; else echo os bad; exit 1 ; fi'
+        if os == 'centos7':
+            TEST = '[[ -e /etc/centos-release ]]'
+            return (iftest.format(TEST),
+                    'sudo yum -y install yum-utils',
+                    'sudo yum -y groupinstall development',
+                    'sudo yum -y install https://centos7.iuscommunity.org/ius-release.rpm',
+                    'sudo yum -y install python36u',
+                    'sudo yum -y install python36u-pip',
+                    'sudo yum -y install python36u-devel',  # psutil needs this
+                    'sudo pip3.6 install wheel',
+                   )
 
     def cmds_rdflib(self):
         rdflib_repo = 'https://github.com/tgbugs/rdflib.git'
-        return (f'cd {self.git_local}',
-                f'cd rdflib && git pull || (git clone {rdflib_repo} && cd rdflib)',
+        return (f'mkdir -p {self.git_local}; cd {self.git_local}',
+                f'git clone {rdflib_repo}; cd rdflib && git pull',
                 'python3.6 setup.py bdist_wheel',
                 'pip3.6 install --user --upgrade dist/rdflib*.whl')
 
     def cmds_pyontutils(self):
         pyontutils_repo = 'https://github.com/tgbugs/pyontutils.git'
-        return (f'cd {self.git_local}',
-                f'cd pyontutils && git pull || (git clone {pyontutils_repo} && cd pyontutils)',
+        return (f'mkdir -p {self.git_local}; cd {self.git_local}',
+                f'git clone {pyontutils_repo}; cd pyontutils && git pull',
                 'python3.6 setup.py bdist_wheel',
                 'pip3.6 install --user --upgrade dist/pyontutils*.whl')
 
@@ -685,14 +699,15 @@ def main(args):
         return
         #if b.check_built:
             #return
-    FILE = '/tmp/test.sh'
-    with open(FILE, 'wt') as f:
-        f.write('#!/usr/bin/env bash\n' + code)
-    os.system(f"emacs -batch {FILE} --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer")
-    print()
-    with open(FILE, 'rt') as f:
-        print(f.read())
-    #embed()
+    if b.debug:
+        FILE = '/tmp/test.sh'
+        with open(FILE, 'wt') as f:
+            f.write('#!/usr/bin/env bash\n' + code)
+        os.system(f"emacs -batch {FILE} --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer")
+        print()
+        with open(FILE, 'rt') as f:
+            print(f.read())
+        #embed()
 
 if __name__ == '__main__':
     from docopt import docopt
