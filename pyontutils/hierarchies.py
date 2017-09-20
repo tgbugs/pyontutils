@@ -1,11 +1,13 @@
 #!/usr/bin/env python3.6
 from copy import deepcopy
+import yaml
 import requests
 from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
 from pyontutils.scigraph_client import Graph
+from pyontutils.utils import refile
 from pyontutils.utils import TermColors as tc
 
 BLANK = '   '
@@ -26,6 +28,9 @@ Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
                                'objects', 'parents',
                                'names', 'pnames', 'hpnames',
                                'json', 'html', 'text'])
+
+with open(refile(__file__, '../scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+    CURIES = yaml.load(f)
 
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
@@ -418,7 +423,15 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, p
             dict_[nodes[k]] = rename(tree[k])
         return dict_
 
-    htmlNodes = {k:"<a target='_blank' href='{}'>{}</a>".format(k, v) for k, v in nodes.items()}
+    htmlNodes = {}
+    for k, v in nodes.items():
+        if ':' in k:
+            prefix, suffix = k.split(':')
+            prefix = prefix.strip('\x1b[91m')  # colors :/
+            url = CURIES[prefix] + suffix
+        else:
+            url = k
+        htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, v)
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames)
     def htmlTree(tree):
