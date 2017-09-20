@@ -45,6 +45,7 @@
 'PR': 'http://purl.obolibrary.org/obo/PR_' 
 'PW': 'http://purl.obolibrary.org/obo/PW_'
 'CL': 'http://purl.obolibrary.org/obo/CL_'
+'MP': 'http://purl.obolibrary.org/obo/MP_'
 'CLO': 'http://purl.obolibrary.org/obo/CLO_'
 'GO': 'http://purl.obolibrary.org/obo/GO_'
 'SIO': 'http://semanticscience.org/resource/SIO_'
