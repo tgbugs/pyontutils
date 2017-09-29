@@ -20,7 +20,7 @@ from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
 
 PREFIXES.pop('NIFTTL')
 
-exclude = 'generated/swanson_hierarchies.ttl',
+exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
 def convert(f):
     if f in exclude:
@@ -86,7 +86,7 @@ def convert(f):
 
 def main():
     from joblib import Parallel, delayed
-    args = docopt(__doc__, version = "resurect-ids 0")
+    args = docopt(__doc__, version = "qnamefix 0")
     if args['--slow'] or len(args['<file>']) == 1:
         [convert(f) for f in args['<file>']]
     else:
