@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.6
-""" Various ontology refactors
+""" Various ontology refactors. Run in the root ttl folder.
 
 Usage:
     ontload uri-switch [options]
@@ -18,7 +18,7 @@ from glob import glob
 import rdflib
 from joblib import Parallel, delayed
 from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, owl
-from pyontutils.ontload import loadall, locate_config_file
+from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
 # common
@@ -409,7 +409,7 @@ def main():
     git_local = args['--git-local']
 
     curies_location = args['--curies']
-    curies_location = locate_config_file(curies_location)
+    curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(g + '.ttl')]
