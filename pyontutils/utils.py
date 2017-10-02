@@ -110,7 +110,7 @@ def mysql_conn_helper(host, db, user, port=3306):
 def _loadPrefixes():
     import yaml
     try:
-        with open(os.path.expanduser('~/git/NIF-Ontology/scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+        with open(refile(__file__, '../scigraph/nifstd_curie_map.yaml'), 'rt') as f:
             curie_map = yaml.load(f)
     except FileNotFoundError:
         import requests
