@@ -7,7 +7,7 @@ from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
 from pyontutils.scigraph_client import Graph
-from pyontutils.utils import refile
+from pyontutils.utils import PREFIXES as CURIES
 from pyontutils.utils import TermColors as tc
 
 BLANK = '   '
@@ -28,9 +28,6 @@ Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
                                'objects', 'parents',
                                'names', 'pnames', 'hpnames',
                                'json', 'html', 'text'])
-
-with open(refile(__file__, '../scigraph/nifstd_curie_map.yaml'), 'rt') as f:
-    CURIES = yaml.load(f)
 
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
@@ -341,12 +338,12 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, p
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
         if graph._cache:
             j = deepcopy(j)  # avoid dangers of mutable cache
-        flag_dep(j)
+        #flag_dep(j)
     else:
         j = dict(json)
         j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
-        if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
-            flag_dep(j)
+        #if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
+            #flag_dep(j)
 
     print(len(j['nodes']))
 
@@ -425,7 +422,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, p
 
     htmlNodes = {}
     for k, v in nodes.items():
-        if ':' in k:
+        if ':' in k and not k.startswith('http') and not k.startswith('file'):
             prefix, suffix = k.split(':')
             prefix = prefix.strip('\x1b[91m')  # colors :/
             url = CURIES[prefix] + suffix
