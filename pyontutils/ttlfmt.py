@@ -15,6 +15,7 @@ Options:
 import os
 from docopt import docopt
 import rdflib
+from rdflib.plugins.parsers.notation3 import BadSyntax
 from concurrent.futures import ProcessPoolExecutor
 args = docopt(__doc__, version = "ttlfmt 0")
 
@@ -37,7 +38,7 @@ def convert(file):
     graph = rdflib.Graph()
     try:
         graph.parse(filepath, format=infmt)
-    except rdflib.plugins.parsers.notation3.BadSyntax as e:
+    except BadSyntax as e:
         print('PARSING FAILED', filepath)
         raise e
     out = graph.serialize(format=outfmt)
