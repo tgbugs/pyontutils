@@ -3,9 +3,11 @@
 
 Usage:
     qnamefix [options] <file>...
+    qnamefix [options] (-x <prefix>)... <file>...
 
 Options:
     -h --help       print this
+    -x --exclude=X  do not include the prefix when rewriting
     -v --verbose    do something fun!
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
@@ -18,15 +20,13 @@ import rdflib
 from docopt import docopt
 from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
 
-PREFIXES.pop('NIFTTL')
-
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
-def convert(f):
+def convert(f, prefixes):
     if f in exclude:
         print('skipping', f)
         return f
-    pi = {v:k for k, v in PREFIXES.items()}
+    pi = {v:k for k, v in prefixes.items()}
 
     graph = rdflib.Graph()
     graph.parse(f, format='turtle')
@@ -77,7 +77,8 @@ def convert(f):
         print('WARNING: special case for NIFRET')
         ps.pop('NIFGA')
 
-    ng = makeGraph(os.path.splitext(f)[0], prefixes=ps, writeloc=os.path.expanduser('~/git/NIF-Ontology/ttl/'))
+    ng = makeGraph('', prefixes=ps)
+    ng.filename = f
     [ng.g.add(t) for t in graph]
     #[ng.add_trip(*n) for n in graph.triples([None]*3)]
     #print(f, len(ng.g))
@@ -87,10 +88,13 @@ def convert(f):
 def main():
     from joblib import Parallel, delayed
     args = docopt(__doc__, version = "qnamefix 0")
+    PREFIXES.pop('NIFTTL')
+    for x in args['--exclude']:
+        PREFIXES.pop(x)
     if args['--slow'] or len(args['<file>']) == 1:
-        [convert(f) for f in args['<file>']]
+        [convert(f, PREFIXES) for f in args['<file>']]
     else:
-        Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
+        Parallel(n_jobs=9)(delayed(convert)(f, PREFIXES) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()
