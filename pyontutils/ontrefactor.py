@@ -3,7 +3,7 @@
 
 Usage:
     ontload uri-switch [options]
-    ontload backend-refactor [options]
+    ontload backend-refactor [options] <file>...
     ontload todo [options] <repo>
 
 Options:
@@ -296,6 +296,10 @@ def backend_refactor_values():
         'http://purl.obolibrary.org/obo/OBI_0000300':'BFO:0000054',
         'http://purl.obolibrary.org/obo/OBI_0000308':'BFO:0000055',
 
+        # more bfo
+        'BFO1SNAP:SpatialRegion':'BFO:0000006',
+        #'BFO1SNAP:DependentContinuant'  # was not replaced
+
         # other
         #'ro:participates_in'  # above
         #'ro:has_participant'  # above
@@ -308,7 +312,7 @@ def backend_refactor_values():
 
         'http://purl.obolibrary.org/obo/pato#inheres_in':'RO:0000052',
         'BIRNLEX:17':'RO:0000053',  # is_bearer_of
-        'http://purl.obolibrary.org/obo/pato#towards':'RO:0002502',
+        'http://purl.obolibrary.org/obo/pato#towards':'RO:0002503',
         'ro:adjacent_to':'RO:0002220',
 
         'ro:derives_from':'RO:0001000',
@@ -402,7 +406,6 @@ def graph_todo(graph, curie_prefixes, get_values):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='refactor 0')
-    print(args)
 
     repo_name = args['<repo>']
 
@@ -412,9 +415,9 @@ def main():
     curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
-    filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(g + '.ttl')]
+    filenames = args['<file>']
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
-    for n in ('nif.ttl', 'resources.ttl', 'generated/chebislim.ttl',
+    for n in ('nif.ttl', 'resources.ttl', 'generated/chebislim.ttl', 'unused/ro_bfo_bridge.ttl',
               'generated/ncbigeneslim.ttl', 'generated/NIF-NIFSTD-mapping.ttl'):
         if n in filenames:
             filenames.remove(n)
