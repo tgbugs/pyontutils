@@ -588,7 +588,7 @@ def run(args):
     elif extra:
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
-        ng_.add_known_prefixes('NIFRID')  # not officially in the curies yet...
+        ng_.add_known_namespaces('NIFRID')  # not officially in the curies yet...
         for_burak(ng_)
         debug = True
     else:
