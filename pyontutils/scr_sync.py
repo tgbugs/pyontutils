@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.5
+#!/usr/bin/env python3.6
 """
     Sync the scicrunch registry to a ttl
     file for loading into scigraph for autocomplete. 
