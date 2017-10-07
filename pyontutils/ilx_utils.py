@@ -101,6 +101,24 @@ def makeJsonFromExisting(existing, order=None):
     recs = [existing[id_]['rec'] for id_ in order]
     return recs
 
+def authedRequest(*args, **kwargs):
+    if len(args) >= 2:
+        if not args[1].startswith(ILX_SERVER):
+            raise ValueError(f'Server does not match {ILX_SERVER} sess cookie will fail.')
+    elif 'url' in kwargs:
+        if not kwargs['url'].startswith(ILX_SERVER):
+            raise ValueError(f'Server does not match {ILX_SERVER} sess cookie will fail.')
+    else:
+        pass  # let requests take care of the error
+
+    session = requests.Session()
+    req = requests.Request(*args, **kwargs)
+    req.headers.update(SESS_COOKIE)
+    req.headers['Connection'] = 'keep-alive'
+    prep = req.prepare()
+    resp = session.send(prep)
+    return resp
+
 def getIlxForRecords(existing):
     order = getSubOrder(existing)
     recs = makeJsonFromExisting(existing, order)
@@ -108,12 +126,7 @@ def getIlxForRecords(existing):
         json.dump(recs, f, sort_keys=True, indent=4)
     file = json.dumps(recs, sort_keys=True).encode()
     data = {'cid':b'NaN'}
-    session = requests.Session()
-    req = requests.Request(method='POST', url=ILX_SERVER + ILX_ENDPOINT, data=data, files={'file': ('ilx_utils_upload.json', file, 'application/json')})  # the 'file' keyword is required to get all of this to work
-    req.headers.update(SESS_COOKIE)
-    req.headers['Connection'] = 'keep-alive'
-    prep = req.prepare()
-    resp = session.send(prep)
+    resp = authedRequest(method='POST', url=ILX_SERVER + ILX_ENDPOINT, data=data, files={'file': ('ilx_utils_upload.json', file, 'application/json')})  # the 'file' keyword is required to get all of this to work
     try:
         tuples = decodeIlxResp(resp)
     except IndexError as e:

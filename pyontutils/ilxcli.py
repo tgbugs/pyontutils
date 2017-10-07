@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 """Given a ttl file get ILX ids for ILXREPLACE terms.
 
 Usage:
@@ -41,6 +41,8 @@ def main():
     SC_EM = args['--user']
     SC_PASS = args['--password']
     iu.SESS_COOKIE = iu.getSessionCookie(SC_EM, SC_PASS)
+    embed()
+    return
 
     files = args['<file>']
     target_file = args['--ontology']  # target ontology file where the 'real' classes will be inserted
