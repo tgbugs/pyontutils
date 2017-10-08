@@ -10,6 +10,7 @@ Options:
     -a --vanilla    use the regular rdflib turtle serializer
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
+    -d --debug      embed after parsing and before serialization
 
 """
 import os
@@ -23,6 +24,8 @@ if args['--vanilla']:
     outfmt = 'turtle'
 else:
     outfmt = 'nifttl'
+if args['--debug']:
+    from IPython import embed
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
@@ -41,6 +44,8 @@ def convert(file):
     except BadSyntax as e:
         print('PARSING FAILED', filepath)
         raise e
+    if args['--debug']:
+        embed()
     out = graph.serialize(format=outfmt)
     if args['--nowrite']:
         print('PARSING Success', filepath)
