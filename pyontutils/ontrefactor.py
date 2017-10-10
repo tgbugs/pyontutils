@@ -298,6 +298,11 @@ def backend_refactor_values():
 
         # more bfo
         'BFO1SNAP:SpatialRegion':'BFO:0000006',
+        'BFO1SNAP:FiatObjectPart':'BFO:0000024',
+        'BFO1SNAP:ObjectAggregate':'BFO:0000027',
+        'BFO1SNAP:Object':'BFO:0000030',
+        #'BFO1SNAP:ObjectBoundary'  # no direct replacement, only occurs in unused
+        #'BFO1SPAN:ProcessAggregate'  # was not replaced, could simply be a process itself??
         #'BFO1SNAP:DependentContinuant'  # was not replaced
 
         # other
