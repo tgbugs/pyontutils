@@ -138,16 +138,19 @@ def _loadPrefixes():
 
 
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
+        'hasCurStatus':'http://purl.obolibrary.org/obo/IAO_0000114',
         'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
+        'editorNote':'http://purl.obolibrary.org/obo/IAO_0000116',
         'termEditor':'http://purl.obolibrary.org/obo/IAO_0000117',
         'altTerm':'http://purl.obolibrary.org/obo/IAO_0000118',
+        'defSource':'http://purl.obolibrary.org/obo/IAO_0000119',
         'termsMerged':'http://purl.obolibrary.org/obo/IAO_0000227',
         'obsReason':'http://purl.obolibrary.org/obo/IAO_0000231',
         'curatorNote':'http://purl.obolibrary.org/obo/IAO_0000232',
         'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
 
-        'partOf':'BFO:0000050',
-        'hasPart':'BFO:0000051',
+        'partOf':'http://purl.obolibrary.org/obo/BFO_0000050',
+        'hasPart':'http://purl.obolibrary.org/obo/BFO_0000051',
 
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
