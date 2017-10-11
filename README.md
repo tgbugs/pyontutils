@@ -13,7 +13,7 @@ with the NIF-Ontology repo you can add this folder to your `PYTHONPATH` environm
 variable using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
 
 ## Utility Scripts
-pyontutils provies a set of 5 scripts that are useful for maintaining and managing ontologies
+pyontutils provides a set of 5 scripts that are useful for maintaining and managing ontologies
 using git, and making them available via SciGraph. Note that if you choose the development
 installation option you will need to `ln -sT` the scripts to your perferred bin folder.
 1. [ttlfmt](pyontutils/ttlfmt.py)
