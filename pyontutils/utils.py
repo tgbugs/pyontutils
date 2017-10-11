@@ -125,6 +125,7 @@ def _loadPrefixes():
         'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
         'inheresIn':'http://purl.obolibrary.org/obo/RO_0000052',
         'bearerOf':'http://purl.obolibrary.org/obo/RO_0000053',
+        'participatesIn':'http://purl.obolibrary.org/obo/RO_0000056',
         'hasParticipant':'http://purl.obolibrary.org/obo/RO_0000057',
         'adjacentTo':'http://purl.obolibrary.org/obo/RO_0002220',
         'derivesFrom':'http://purl.obolibrary.org/obo/RO_0001000',
