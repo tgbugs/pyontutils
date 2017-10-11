@@ -113,6 +113,7 @@ def chebi_make():
                             'definition',
                             'hasRole',
                             'replacedBy',
+                            'hasPart',
                             'termsMerged',
                             'obsReason',
                             'BFO',
