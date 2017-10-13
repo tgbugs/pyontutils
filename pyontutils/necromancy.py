@@ -4,7 +4,7 @@ Also build a list of classes that may be banished to the shadow realm
 of oboInOwl:hasAlternativeId in the near future.
 
 Usage:
-    necromancy [options] <file>...
+    necromancy [options] <file-or-url>...
 
 Options:
     -h --help       print this
@@ -131,10 +131,23 @@ def extract(og, ng, curie):
 def main():
     from joblib import Parallel, delayed
     args = docopt(__doc__, version = "necromancy 0.5")
-    if args['--slow'] or len(args['<file>']) == 1:
-        [load(f) for f in args['<file>']]
+    files = args['<file-or-url>']
+    url_dest = [(f, '/tmp/' + os.path.basename(f)) if f.startswith('http://') or f.startswith('https://') else (f, f) for f in files]
+    toget = [(u, t) for u, t in url_dest if u != t]
+    if toget:
+        import requests
+        for url, filename in toget:
+            resp = requests.get(url, stream=True)
+            with open(filename, 'wb') as f:
+                for chunk in resp.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+        files = list(zip(*url_dest))[1]
+
+    if args['--slow'] or len(files) == 1:
+        [load(f) for f in files]
     else:
-        Parallel(n_jobs=9)(delayed(load)(f) for f in args['<file>'])
+        Parallel(n_jobs=9)(delayed(load)(f) for f in files)
 
 if __name__ == '__main__':
     main()
