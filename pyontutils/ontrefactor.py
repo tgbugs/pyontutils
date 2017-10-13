@@ -315,6 +315,10 @@ def backend_refactor_values():
         #'ro:transformation_of'  # unused and only in inferred
         #'ro:transformed_into'  # unused and only in inferred
 
+        'http://purl.org/obo/owl/obo#inheres_in':'RO:0000052',
+        'http://purl.obolibrary.org/obo/obo#towards':'RO:0002503',
+        'http://purl.org/obo/owl/pato#towards':'RO:0002503',
+
         'http://purl.obolibrary.org/obo/pato#inheres_in':'RO:0000052',
         'BIRNLEX:17':'RO:0000053',  # is_bearer_of
         'http://purl.obolibrary.org/obo/pato#towards':'RO:0002503',
