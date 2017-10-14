@@ -69,6 +69,8 @@
 'COGPO': 'http://www.cogpo.org/ontologies/COGPO_'  # doesn't resolve
 'COGPO1': 'http://www.cogpo.org/ontologies/CogPOver1.owl#COGPO_'
 'COGPO10': 'http://www.cogpo.org/ontologies/CogPOver2010.owl#COGPO_'
+'TRANS': 'http://purl.obolibrary.org/obo/TRANS_'
+'SYMP': 'http://purl.obolibrary.org/obo/SYMP_'
 
 # NIF Import closure
 'BIRNANN': 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#'

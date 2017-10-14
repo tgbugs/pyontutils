@@ -20,8 +20,12 @@ from docopt import docopt
 from pyontutils.utils import makePrefixes, makeGraph, createOntology, anyMembers, rdf, rdfs, owl, oboInOwl
 
 def kludge(filepath):
-    if 'doid' in filepath:
+    if 'doid' in filepath:  # FIXME doid has some weird deprecation practices wrt HP...
         return 'DOID',
+    elif 'trans.owl' in filepath:
+        return 'TRANS',
+    elif 'symp.owl' in filepath:
+        return 'SYMP',
     elif 'uberon' in filepath:
         return 'UBERON', 'BFO', 'obo'
     elif 'go' in filepath:
