@@ -3,10 +3,11 @@
     various ontology refactors that should be run in the root ttl folder.
 
 Usage:
-    ontload version-iri [options] <file>...
-    ontload uri-switch [options]
-    ontload backend-refactor [options] <file>...
-    ontload todo [options] <repo>
+    ontutils iri-commit [options] <file>...
+    ontutils version-iri [options] <file>...
+    ontutils uri-switch [options]
+    ontutils backend-refactor [options] <file>...
+    ontutils todo [options] <repo>
 
 Options:
     -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
@@ -27,6 +28,8 @@ from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
 # common
+
+zoneoffset = strftime('%z', localtime())
 
 def do_file(filename, swap, *args):
     print('START', filename)
@@ -87,7 +90,6 @@ class ontologySection:
 def version_iris(*filenames, epoch=None):
     if epoch is None:
         epoch = int(time())
-        zoneoffset = strftime('%z', localtime())  # just for the record...
     Parallel(n_jobs=9)(delayed(version_iri)(f, epoch) for f in filenames)
 
 def version_iri(filename, epoch):
@@ -110,6 +112,22 @@ def add_version_iri(graph, epoch):
         t = ont, owl.versionIRI, make_version_iri_from_iri(ont, epoch)
         graph.add(t)
 
+def make_git_commit_command(*filenames):
+    min_epoch = None
+    # TODO also need to get the epochs for all unchanged files and make sure that the max of those is less than commit_epoch...
+    for f in filenames:
+        graph = ontologySection(f).graph
+        for ont in graph.subjects(rdf.type, owl.Ontology):
+            for versionIRI in graph.objects(ont, owl.versionIRI):
+                base, epoch, filename = versionIRI.rsplit('/', 2)
+                epoch = int(epoch)
+                if min_epoch is None:
+                    min_epoch = epoch
+                elif epoch < min_epoch:
+                    min_epoch = epoch
+    print(min_epoch)
+    commit_epoch = min_epoch - 1
+    print(f'git commit --date {commit_epoch}{zoneoffset}')
 
 #
 # refactors
@@ -496,6 +514,8 @@ def main():
 
     if args['version-iri']:
         version_iris(*filenames, epoch=args['--epoch'])
+    elif args['iri-commit']:
+        make_git_commit_command(*filenames)
     elif args['uri-switch']:
         uri_switch(rfilenames, uri_switch_values)
     elif args['backend-refactor']:
