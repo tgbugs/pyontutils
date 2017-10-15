@@ -1,7 +1,9 @@
 #!/usr/bin/env python3.6
-""" Various ontology refactors. Run in the root ttl folder.
+""" Common commands for ontology processes. As well as
+    various ontology refactors that should be run in the root ttl folder.
 
 Usage:
+    ontload version-iri [options] <file>...
     ontload uri-switch [options]
     ontload backend-refactor [options] <file>...
     ontload todo [options] <repo>
@@ -11,13 +13,16 @@ Options:
 
     -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
 
+    -e --epoch=EPOCH                specify the epoch you want to use for versionIRI
+
     -d --debug                      call IPython embed when done
 """
 import os
 from glob import glob
+from time import time, localtime, strftime
 import rdflib
 from joblib import Parallel, delayed
-from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, owl
+from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, rdf, owl
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
@@ -53,6 +58,61 @@ def switchURIs(g, swap, *args):
                 prefs.add(pref)
                 addpg.add_known_namespaces(fragment_prefixes[pref])
     return reps
+
+class ontologySection:
+    def __init__(self, filename):
+        self.filename = filename
+        with open(self.filename, 'rb') as f:
+            raw = f.read()
+            ontraw, self.rest = raw.split(b'###', 1)
+        self.graph = rdflib.Graph().parse(data=ontraw, format='turtle')
+
+    def write(self):
+        ontraw_comment = self.graph.serialize(format='nifttl')
+        ontraw, comment = ontraw_comment.split(b'###', 1)
+        with open(self.filename, 'wb') as f:
+            f.write(ontraw)
+            f.write(b'###')
+            f.write(self.rest)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.write()
+
+#
+# utils
+
+def version_iris(*filenames, epoch=None):
+    if epoch is None:
+        epoch = int(time())
+        zoneoffset = strftime('%z', localtime())  # just for the record...
+    Parallel(n_jobs=9)(delayed(version_iri)(f, epoch) for f in filenames)
+
+def version_iri(filename, epoch):
+    with ontologySection(filename) as ont:
+        add_version_iri(ont.graph, epoch)
+
+def make_version_iri_from_iri(iri, epoch):
+    base = os.path.dirname(iri)
+    basename = os.path.basename(iri)
+    name, ext = os.path.splitext(basename)
+    newiri = f'{base}{name}/version/{epoch}/{basename}'
+    print(newiri)
+    return rdflib.URIRef(newiri)
+
+def add_version_iri(graph, epoch):
+    """ Also remove the previous versionIRI if there was one."""
+    for ont in graph.subjects(rdf.type, owl.Ontology):
+        for versionIRI in graph.objects(ont, owl.versionIRI):
+            graph.remove((ont, owl.versionIRI, versionIRI))
+        t = ont, owl.versionIRI, make_version_iri_from_iri(ont, epoch)
+        graph.add(t)
+
+
+#
+# refactors
 
 #
 # uri switch
@@ -414,7 +474,7 @@ def graph_todo(graph, curie_prefixes, get_values):
 
 def main():
     from docopt import docopt
-    args = docopt(__doc__, version='refactor 0')
+    args = docopt(__doc__, version='ontutils 0.0.1')
 
     repo_name = args['<repo>']
 
@@ -426,15 +486,20 @@ def main():
 
     filenames = args['<file>']
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
-    for n in ('nif.ttl', 'resources.ttl', 'generated/chebislim.ttl', 'unused/ro_bfo_bridge.ttl',
-              'generated/ncbigeneslim.ttl', 'generated/NIF-NIFSTD-mapping.ttl'):
-        if n in filenames:
-            filenames.remove(n)
+    refactor_skip = ('nif.ttl',
+                     'resources.ttl',
+                     'generated/chebislim.ttl',
+                     'unused/ro_bfo_bridge.ttl',
+                     'generated/ncbigeneslim.ttl',
+                     'generated/NIF-NIFSTD-mapping.ttl')
+    rfilenames = [f for f in filenames if f not in refactor_skip]
 
-    if args['uri-switch']:
-        uri_switch(filenames, uri_switch_values)
+    if args['version-iri']:
+        version_iris(*filenames, epoch=args['--epoch'])
+    elif args['uri-switch']:
+        uri_switch(rfilenames, uri_switch_values)
     elif args['backend-refactor']:
-        backend_refactor(filenames, backend_refactor_values)
+        backend_refactor(rfilenames, backend_refactor_values)
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
         graph_todo(graph, curie_prefixes, uri_switch_values)
