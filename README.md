@@ -29,17 +29,19 @@ using git, and making them available via SciGraph. Note that if you choose the d
 installation option you will need to `ln -sT` the scripts to your perferred bin folder.
 1. [ttlfmt](pyontutils/ttlfmt.py)
 	Reserialize an ontology file using deterministic turtle ([spec](docs/ttlser.md)).
-2. [ontload](pyontutils/ontload.py)
+2. [ontutils](pyontutils/ontutils.py)
+    Various useful and frequently needed commands for ontology processes as well as less frequent refactorings.
+3. [ontload](pyontutils/ontload.py)
 	Load an ontology managed by git into SciGraph for easy deployment of services.
-3. [qnamefix](pyontutils/qnamefix.py)
+4. [qnamefix](pyontutils/qnamefix.py)
     Set qnames based on the curies defined for a given ontology.
-4. [necromancy](pyontutils/necromancy.py)
+5. [necromancy](pyontutils/necromancy.py)
     Find dead ids in an ontology and raise them to be owl:Classes again.
-5. [scigraph-codegen](pyontutils/scigraph.py)
+6. [scigraph-codegen](pyontutils/scigraph.py)
 	Generate a rest client against a SciGraph services endpoint.
-6. [scig](pyontutils/scig.py)
+7. [scig](pyontutils/scig.py)
 	Run queries against a SciGraph endpoint from the command line.
-7. [ilxcli](pyontutils/ilxcli.py)
+8. [ilxcli](pyontutils/ilxcli.py)
 	Given an ontlogy file with temporary identifiers, get persistent, resolvable identifers
 	for them from InterLex.
 
