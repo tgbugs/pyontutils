@@ -138,7 +138,6 @@ def _loadPrefixes():
         'locationOf':'http://purl.obolibrary.org/obo/RO_0001015',
         'toward':'http://purl.obolibrary.org/obo/RO_0002503',
 
-
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'hasCurStatus':'http://purl.obolibrary.org/obo/IAO_0000114',
         'definition':'http://purl.obolibrary.org/obo/IAO_0000115',
@@ -159,8 +158,6 @@ def _loadPrefixes():
         'FIXME':'http://FIXME.org/',
         'ILX':'http://uri.interlex.org/base/ilx_', 
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
-        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',  # note that this is '' in real curies
-        'NIFRID':'http://uri.neuinfo.org/nif/nifstd/readable/',  # XXX EXPERIMENTAL 'readable id'
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
         'dc':'http://purl.org/dc/elements/1.1/',
@@ -691,6 +688,7 @@ class scigPrint:
         'BRAINInfo':'http://braininfo.rprc.washington.edu/centraldirectory.aspx?ID=',
         'PMID':'http://www.ncbi.nlm.nih.gov/pubmed/',
     }
+    _shorten_.update(PREFIXES)
 
     shorten = {v:k for k, v in _shorten_.items()}
 
