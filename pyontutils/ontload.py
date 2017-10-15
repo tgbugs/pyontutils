@@ -551,7 +551,6 @@ def run(args):
         local_base = jpth(git_local, repo_name)
 
     if graph:
-        post_clone = make_post_clone(git_local, repo_name, remote_base)
         (scigraph_commit, load_base, services_zip,
          scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
                                                 git_local, sbranch, scommit,
@@ -562,7 +561,6 @@ def run(args):
                                              git_local, repo_name, branch,
                                              commit, remote_base, load_base,
                                              graphload_config, scigraph_commit,
-                                             post_clone=post_clone,
                                              check_built=check_built)
         if not check_built:
             deploy_scp(services_zip, sscp)
