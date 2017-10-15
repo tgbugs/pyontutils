@@ -69,6 +69,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.onProperty,
                       OWL.allValuesFrom,
                       OWL.someValuesFrom,
+                      OWL.versionIRI,
                       OWL.imports,
                       OWL.deprecated,
                       URIRef('http://purl.obolibrary.org/obo/IAO_0100001'),  # replacedBy:
