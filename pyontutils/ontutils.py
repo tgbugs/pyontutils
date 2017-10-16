@@ -5,7 +5,7 @@
 Usage:
     ontutils iri-commit [options] <repo>
     ontutils version-iri [options] <file>...
-    ontutils uri-switch [options]
+    ontutils uri-switch [options] <file>...
     ontutils backend-refactor [options] <file>...
     ontutils todo [options] <repo>
 
@@ -44,6 +44,7 @@ def do_file(filename, swap, *args):
     return reps
 
 def switchURIs(g, swap, *args):
+    _, fragment_prefixes = args
     reps = []
     prefs = {None}
     addpg = makeGraph('', graph=g)
@@ -165,8 +166,8 @@ def get_epoch(*filenames, min_=True):
 #
 # uri switch
 
+NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
 def uri_switch_values(utility_graph):
-    NIFSTDBASE = 'http://uri.neuinfo.org/nif/nifstd/'
 
     fragment_prefixes = {
         'NIFRID':'NIFRID',
