@@ -3,7 +3,7 @@
     various ontology refactors that should be run in the root ttl folder.
 
 Usage:
-    ontutils iri-commit [options] <file>...
+    ontutils iri-commit [options] <repo>
     ontutils version-iri [options] <file>...
     ontutils uri-switch [options]
     ontutils backend-refactor [options] <file>...
@@ -22,6 +22,7 @@ import os
 from glob import glob
 from time import time, localtime, strftime
 import rdflib
+from git.repo import Repo
 from joblib import Parallel, delayed
 from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, rdf, owl
 from pyontutils.ontload import loadall, locate_config_file, getCuries
@@ -88,6 +89,7 @@ class ontologySection:
 # utils
 
 def version_iris(*filenames, epoch=None):
+    # TODO make sure that when we add versionIRIs the files we are adding them to are either unmodified or in the index
     if epoch is None:
         epoch = int(time())
     Parallel(n_jobs=9)(delayed(version_iri)(f, epoch) for f in filenames)
@@ -100,7 +102,7 @@ def make_version_iri_from_iri(iri, epoch):
     base = os.path.dirname(iri)
     basename = os.path.basename(iri)
     name, ext = os.path.splitext(basename)
-    newiri = f'{base}{name}/version/{epoch}/{basename}'
+    newiri = f'{base}/{name}/version/{epoch}/{basename}'
     print(newiri)
     return rdflib.URIRef(newiri)
 
@@ -112,22 +114,50 @@ def add_version_iri(graph, epoch):
         t = ont, owl.versionIRI, make_version_iri_from_iri(ont, epoch)
         graph.add(t)
 
-def make_git_commit_command(*filenames):
-    min_epoch = None
+def validate_new_version_iris(diffs):  # TODO
+    for diff in diffs:
+        diff.diff.split('\n')
+
+def make_git_commit_command(git_local, repo_name):
     # TODO also need to get the epochs for all unchanged files and make sure that the max of those is less than commit_epoch...
+    repo_path = os.path.join(git_local, repo_name)
+    print(repo_path)
+    repo = Repo(repo_path)
+    diffs = repo.index.diff(None) + repo.index.diff(repo.head.commit)  # not staged + staged; cant use create_patch=True...
+    filenames = [d.a_path for d in diffs if d.change_type == 'M']
+    print(filenames)
+    #validate_new_version_iris(something)  # TODO
+    min_epoch = get_epoch(*filenames)
+    other_filenames = [f for f in repo.git.ls_files().split('\n') if f not in filenames and f.endswith('.ttl')]
+    max_old_epoch = get_epoch(*other_filenames, min_=False)
+    print(min_epoch, max_old_epoch)
+    assert min_epoch - max_old_epoch >= 2, "NOPE"
+    commit_epoch = min_epoch - 1
+    print(f'git commit --date {commit_epoch}{zoneoffset}')
+
+def get_epoch(*filenames, min_=True):
+    comp_epoch = None
     for f in filenames:
         graph = ontologySection(f).graph
         for ont in graph.subjects(rdf.type, owl.Ontology):
             for versionIRI in graph.objects(ont, owl.versionIRI):
                 base, epoch, filename = versionIRI.rsplit('/', 2)
                 epoch = int(epoch)
-                if min_epoch is None:
-                    min_epoch = epoch
-                elif epoch < min_epoch:
-                    min_epoch = epoch
-    print(min_epoch)
-    commit_epoch = min_epoch - 1
-    print(f'git commit --date {commit_epoch}{zoneoffset}')
+                print(epoch)
+                if comp_epoch is None:
+                    comp_epoch = epoch
+                elif min_ and epoch < comp_epoch:
+                    comp_epoch = epoch
+                elif not min_ and epoch > comp_epoch:
+                    comp_epoch = epoch
+    print('min' if min_ else 'max', comp_epoch)
+    if comp_epoch is None:
+        if min_:
+            return 0
+        else:
+            return 0  # XXX this may cause errors down the line
+        
+    return comp_epoch
 
 #
 # refactors
@@ -496,7 +526,9 @@ def main():
 
     repo_name = args['<repo>']
 
-    git_local = args['--git-local']
+    git_local = os.path.expanduser(args['--git-local'])
+
+    epoch = args['--epoch']
 
     curies_location = args['--curies']
     curies_location = locate_config_file(curies_location, git_local)
@@ -513,9 +545,9 @@ def main():
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
     if args['version-iri']:
-        version_iris(*filenames, epoch=args['--epoch'])
+        version_iris(*filenames, epoch=epoch)
     elif args['iri-commit']:
-        make_git_commit_command(*filenames)
+        make_git_commit_command(git_local, repo_name)
     elif args['uri-switch']:
         uri_switch(rfilenames, uri_switch_values)
     elif args['backend-refactor']:
