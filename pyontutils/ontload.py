@@ -76,9 +76,10 @@ class NotBuiltError(FileNotFoundError):
 def execute_regardless(function, only_exception=False):
     try:
         yield
-    except:
+    except BaseException as e:
         if only_exception:
             function()
+        raise e
     finally:
         if not only_exception:
             function()
