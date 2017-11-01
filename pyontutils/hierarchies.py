@@ -333,7 +333,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, prefixes=None):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, prefixes=CURIES):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
         if graph._cache:
@@ -425,7 +425,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, p
         if ':' in k and not k.startswith('http') and not k.startswith('file'):
             prefix, suffix = k.split(':')
             prefix = prefix.strip('\x1b[91m')  # colors :/
-            url = CURIES[prefix] + suffix
+            url = prefixes[prefix] + suffix
         else:
             url = k
         htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, v)
