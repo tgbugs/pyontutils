@@ -22,3 +22,7 @@ and then submit a [pull request](https://github.com/tgbugs/pyontutils/compare?ex
 
 With these files as a starting point we will then have a record of the process by which
 the new terms are considered and ultimately added to the NIF-Ontology.
+
+# Integration from an existing git repo
+In the folder please include a README.md that has a link to the repo and
+any other relevant links.
