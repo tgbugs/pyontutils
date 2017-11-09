@@ -333,9 +333,12 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, prefixes=CURIES):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=CURIES):
     if json is None:
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
+        if filter_prefix is not None:
+            j['edges'] = [e for e in j['edges'] if not [v for v in e.values() if filter_prefix in v]]
+
         if graph._cache:
             j = deepcopy(j)  # avoid dangers of mutable cache
         #flag_dep(j)
@@ -541,7 +544,6 @@ def main():
         fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, graph=sgg_local)
 
         childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
-        from heatmaps.scigraph_client import Graph
         g = Graph('http://localhost:9000/scigraph')
         parent_nodes = []
         for curie in childs:
