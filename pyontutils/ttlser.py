@@ -42,8 +42,9 @@ def qname_mp(self, uri):  # for monkey patching Graph
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
-    topClasses = [RDFS.Class,
-                  OWL.Ontology,
+    topClasses = [OWL.Ontology,
+                  RDF.Property,
+                  RDFS.Class,
                   OWL.ObjectProperty,
                   RDFS.Datatype,  # FIXME order in this list matters, so we need to skip BNode cases
                   OWL.AnnotationProperty,
@@ -54,7 +55,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                  ]
 
     SECTIONS = ('',
-                '',
+                '\n### rdf Properties\n',
+                '\n### rdfs Classes\n',
                 '\n### Object Properties\n',
                 '\n### Datatypes\n',
                 '\n### Annotation Properties\n',
