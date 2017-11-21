@@ -6,9 +6,12 @@ Any documents related to methodology should go here.
 2. Tagging fMRI data
 
 # Collected thoughts/working draft
-This lives in []().
+My initial work to provide a consistent view of methodology lives in [methods_isa.graphml](methods_isa.graphml).
 The initial version has a collection of thoughts which need to be refined.
 Some parts of it were developed working directly with curators.
+To obtain a ttl version of the file and generate hierarchies run `graphml_to_ttl methods_isa.graphml`. 
+(`graphml_to_ttl` is installed by pyontutils).
+
 ## Tractable high level categories
 1. techniques/methods (turns out pretty much every source I can find does not distinguish between these words)  
    Could map these to 4. with `employedInParadigm` or something...
@@ -58,6 +61,11 @@ corresponds closely to initial work from 2015.
 [hbp_storage_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_storage_ontology.ttl)  
 [hbp_role_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_role_ontology.ttl)
 This could be expanded into the human executor 'role/skillset/responsibility' ontology.  
+
+## tgbugs/methodsOntology
+[tgbugs/methodsOntology](https://github.com/tgbugs/methodsOntology) contains the original work that was done back in 2015.
+[ns_methods.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_methods.obo)
+[ns_entities.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_entities.obo)
 
 ## Other
 [OEN](https://github.com/G-Node/OEN)  
