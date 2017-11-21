@@ -63,9 +63,9 @@ corresponds closely to initial work from 2015.
 This could be expanded into the human executor 'role/skillset/responsibility' ontology.  
 
 ## tgbugs/methodsOntology
-[tgbugs/methodsOntology](https://github.com/tgbugs/methodsOntology) contains the original work that was done back in 2015.
-[ns_methods.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_methods.obo)
-[ns_entities.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_entities.obo)
+[tgbugs/methodsOntology](https://github.com/tgbugs/methodsOntology) contains the original work that was done back in 2015.  
+[ns_methods.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_methods.obo)  
+[ns_entities.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_entities.obo)  
 
 ## Other
 [OEN](https://github.com/G-Node/OEN)  
