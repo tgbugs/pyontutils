@@ -9,7 +9,6 @@ import asyncio
 import inspect
 from datetime import date
 from functools import wraps
-from multiprocessing import Manager
 import psutil
 import rdflib
 from rdflib.extras import infixowl
@@ -62,6 +61,13 @@ def setPS1(script__file__):
 
 def refile(script__file__, path):
     return os.path.join(os.path.dirname(script__file__), path)
+
+def readFromStdIn(stdin=None):
+    from select import select
+    if stdin is None:
+        from sys import stdin
+    if select([stdin], [], [], 0.0)[0]:
+        return stdin
 
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
