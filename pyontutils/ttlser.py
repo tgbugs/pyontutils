@@ -90,6 +90,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                       DC.description,
                       RDFS.subClassOf,
                       RDFS.subPropertyOf,
+                      RDFS.domain,
+                      RDFS.range,
                       OWL.intersectionOf,
                       OWL.unionOf,
                       OWL.disjointWith,
@@ -105,6 +107,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OBOANN.createdDate,
                       NIFRID.modifiedDate,
                       OBOANN.modifiedDate,
+                      RDFS.isDefinedBy,
                      ]
 
     def __init__(self, store):
@@ -382,5 +385,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.7\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.0.8\n").encode('ascii'))
 
