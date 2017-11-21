@@ -44,6 +44,8 @@ installation option you will need to `ln -sT` the scripts to your perferred bin 
 8. [ilxcli](pyontutils/ilxcli.py)
 	Given an ontlogy file with temporary identifiers, get persistent, resolvable identifers
 	for them from InterLex.
+9. [graphml_to_ttl](pyontutils/graphml_to_ttl.py)
+	Convert yEd graphml files to ttl.
 
 ## NIF-Ontology
 Many of these scripts are written for working on the NIF standard ontology

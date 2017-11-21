@@ -7,6 +7,7 @@ from setuptools import setup, find_packages
 files = [
     'pyontutils/__init__.py',
     'pyontutils/closed_namespaces.py',
+    'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
     'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
@@ -66,6 +67,7 @@ try:
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={
             'console_scripts': [
+                'graphml_to_ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
                 'necromancy=pyontutils.necromancy.py:main',
                 'ontload=pyontutils.ontload:main',
