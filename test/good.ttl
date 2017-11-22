@@ -22,6 +22,38 @@
 
 ### Object Properties
 
+BLX:18 a owl:ObjectProperty .
+
+BLX:19 a owl:ObjectProperty .
+
+BLX:20 a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            BLX:19
+            BLX:20 ),
+        (
+            BLX:18
+            BLX:19
+            BLX:20 ),
+        (
+            BLX:18
+            BLX:21 ),
+        (
+            BLX:20
+            BLX:21 ) .
+
+BLX:21 a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            BLX:19
+            BLX:21 ),
+        (
+            BLX:18
+            BLX:21 ),
+        (
+            BLX:18
+            BLX:19
+            [ owl:inverseOf BLX:19 ]
+            [ owl:inverseOf BLX:20 ] ) .
+
 skos:related a owl:ObjectProperty ;
     owl:inverseOf skos:related,
         [ owl:inverseOf skos:related ] .
@@ -65,17 +97,17 @@ BLX:1 a owl:Class ;
 BLX:2 a owl:Class ;
     rdfs:subClassOf BLX:1234567,
         [ a owl:Restriction ;
-            owl:onProperty other:a1 ;
-            owl:someValuesFrom other:1 ],
-        [ a owl:Restriction ;
-            owl:onProperty other:a1 ;
-            owl:someValuesFrom other:2 ],
-        [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:allValuesFrom other:3 ],
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:allValuesFrom other:4 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:1 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:2 ],
         [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom other:5 ],
@@ -216,55 +248,55 @@ ns1:12345 a owl:Class .
             A:prefix_3 ) ] .
 
 [ a owl:Axiom ;
-    BLX:hasDbXref "A"^^xsd:string,
-        "D"^^xsd:string ;
-    owl:annotatedProperty BLX:00 ;
-    owl:annotatedSource BLX:10 ;
-    owl:annotatedTarget "A"^^xsd:string ] .
-
-[ a owl:Axiom ;
-    BLX:hasDbXref "B"^^xsd:string,
-        "D"^^xsd:string ;
-    owl:annotatedProperty BLX:01 ;
-    owl:annotatedSource BLX:11 ;
-    owl:annotatedTarget "B"^^xsd:string ] .
-
-[ a owl:Axiom ;
-    BLX:hasDbXref "C"^^xsd:string,
-        "D"^^xsd:string ;
-    owl:annotatedProperty BLX:02 ;
-    owl:annotatedSource BLX:12 ;
-    owl:annotatedTarget "C"^^xsd:string ] .
-
-[ a owl:Axiom ;
-    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ;
-    owl:annotatedProperty oboInOwl:hasExactSynonym ;
-    owl:annotatedSource obo:DOID_11394 ;
-    owl:annotatedTarget "ARDS"^^xsd:string ] .
-
-[ a owl:Axiom ;
-    oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string ;
-    owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_3820 ;
-    owl:annotatedTarget "chlamydiaceae infection"^^xsd:string ] .
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "chlamydiaceae infection"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string ] .
 
 [ a owl:Axiom ;
-    oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string ;
-    owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_65 ;
-    owl:annotatedTarget "connective tissue disorder"^^xsd:string ] .
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "connective tissue disorder"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string ] .
 
 [ a owl:Axiom ;
-    oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string ;
-    owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_1595 ;
-    owl:annotatedTarget "clinical depression"^^xsd:string ] .
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "clinical depression"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string ] .
 
 [ a owl:Axiom ;
-    oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string ;
+    owl:annotatedSource obo:DOID_11394 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "ARDS"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ] .
+
+[ a owl:Axiom ;
     owl:annotatedSource obo:DOID_3669 ;
-    owl:annotatedTarget "Charcot's syndrome"^^xsd:string ] .
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "Charcot's syndrome"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:10 ;
+    owl:annotatedProperty BLX:00 ;
+    owl:annotatedTarget "A"^^xsd:string ;
+    BLX:hasDbXref "A"^^xsd:string,
+        "D"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:11 ;
+    owl:annotatedProperty BLX:01 ;
+    owl:annotatedTarget "B"^^xsd:string ;
+    BLX:hasDbXref "B"^^xsd:string,
+        "D"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:12 ;
+    owl:annotatedProperty BLX:02 ;
+    owl:annotatedTarget "C"^^xsd:string ;
+    BLX:hasDbXref "C"^^xsd:string,
+        "D"^^xsd:string ] .
 
 ### Annotations
 
