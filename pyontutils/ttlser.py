@@ -12,7 +12,7 @@ BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_
 oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 #IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
-DEBUG = True
+DEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
@@ -154,19 +154,17 @@ class CustomTurtleSerializer(TurtleSerializer):
                        #{OWL.annotatedProperty},  # slot 2 is for predicate ranking generally
                        #{OWL.annotatedTarget}]
         def recurse(rank, node, pred, depth=0, start=tuple()):
-            #print(rank, node, pred, depth, start)
+            #print(rank, node, pred, depth)#, start)
             if isinstance(node, BNode):
                 if node not in node_rank:
-                    node_rank[node] = [0] * (self.npreds + 2)
-                if pred is None:
-                    pindex = -2
-                else:
-                    orp = self.object_rank[pred]
-                    pindex = self.npreds - orp - 1
-                    #print(self.npreds, orp, pindex)
+                    node_rank[node] = [0] * (self.npreds + 1)
+                #if pred is None: # this never happens because pred is only None when node is not a bnode
+                orp = self.object_rank[pred]
+                pindex = self.npreds - orp - 1
                 node_rank[node][pindex] += rank
             pd = 0
-            for s, p in self.store.subject_predicates(node):  # there should be only one of these usually
+            for s, p in sorted(self.store.subject_predicates(node),  # sort on predicate required for stability
+                               key=lambda t:(self.object_rank[t[1]], t[0])):
                 if not start:
                     start = {node}
                 elif node not in start:
@@ -237,19 +235,22 @@ class CustomTurtleSerializer(TurtleSerializer):
                 else:
                     pass  # we have hit a top level
 
-        for o, r in self.object_rank.items():
+        for o, r in sorted(self.object_rank.items(), key=lambda t:t[1]):
             recurse(r, o, None)
 
-        nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
+        temp_nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
         for node, parent in need_rank.items():
             before = node_rank[node][-1]
-            node_rank[node][-1] = nr[need_rank[node]]
+            node_rank[node][-1] = temp_nr[need_rank[node]]
             after = node_rank[node][-1]
             #print(before, after)
 
-        old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
-        nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(nr.items(), key=lambda t:t[-1]))}
-        #or_ = 
+
+        nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
+        if DEBUG:
+            old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
+            _ = [print(f'{a:<40}' + f'{nr[a]} ' + ' '.join(f'{c:>3}' for c in b))
+                 for a, b in sorted(old_nr,key=lambda t:t[1])]
         #self.node_rank = {k:tuple(v) for k, v in node_rank.items()}
         self.node_rank = nr
         #self.object_rank = {k:((0,) * self.npreds) + (v,) for k, v in self.object_rank.items()}
@@ -267,7 +268,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 #embed()
                 #return (-1, -1, -1, -1)
                 #return (-1,) * (self.npreds + 1)
-                return -2
+                return -1
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
