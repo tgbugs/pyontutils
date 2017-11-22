@@ -233,3 +233,37 @@ ns1:12345 a owl:Class .
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_3669 ;
     owl:annotatedTarget "Charcot's syndrome"^^xsd:string ] .
+
+# list ordering
+
+BLX:18 a owl:ObjectProperty .
+
+BLX:19 a owl:ObjectProperty .
+
+BLX:21 a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            BLX:18
+            BLX:19
+            [ owl:inverseOf BLX:20 ]
+            [ owl:inverseOf BLX:19 ] ),
+        (
+            BLX:21
+            BLX:19 ),
+        (
+            BLX:21
+            BLX:18 ) .
+
+BLX:20 a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            BLX:21
+            BLX:20 ),
+        (
+            BLX:21  # sums to 39 total ranks will be equal
+            BLX:18 ),
+        (
+            BLX:20  # sums to 39 total ranks will be equal
+            BLX:19 ),
+        (
+            BLX:20
+            BLX:18
+            BLX:19 ) .
