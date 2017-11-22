@@ -74,6 +74,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.versionIRI,
                       OWL.imports,
                       OWL.deprecated,
+                      OWL.annotatedSource,
+                      OWL.annotatedProperty,
+                      OWL.annotatedTarget,
                       URIRef('http://purl.obolibrary.org/obo/IAO_0100001'),  # replacedBy:
                       oboInOwl.hasDbXref,
                       OWL.equivalentClass,
@@ -114,8 +117,10 @@ class CustomTurtleSerializer(TurtleSerializer):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
+        pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
+        self.npreds = len(pr)
+        self.predicateOrder = [p for p in self.predicateOrder if p in pr]  # drop unused
         max_pred = len(self.predicateOrder) + 1
-        pr = sorted(sorted(self.store.predicates(None, None)), key=natsort)
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
                             enumerate(
@@ -134,42 +139,83 @@ class CustomTurtleSerializer(TurtleSerializer):
                                          if isinstance(_, URIRef)]), key=self.store.qname),
                                     key=lambda _: natsort(self.store.qname(_))))}
 
+        max_or = max(self.object_rank.values()) + 1
         self.node_rank = {}
-        rests = set()
-        def recurse(node, rank):
+        #mempreds = {}
+        anons = set()
+        level_preds = [{RDF.type},
+                       {OWL.onProperty, OWL.annotatedSource},
+                       {OWL.annotatedProperty},  # slot 2 is for predicate ranking generally
+                       {OWL.annotatedTarget}]
+        def recurse(rank, node, pred):
+            if isinstance(node, BNode):
+                if node not in self.node_rank:
+                    self.node_rank[node] = [0] * (self.npreds + 1)
+                if pred is None:
+                    prank = -1
+                else:
+                    prank = self.object_rank[pred]
+                self.node_rank[node][prank] += rank
+            for s, p in self.store.subject_predicates(node):  # there should be only one of these usually
+                if isinstance(s, BNode):
+                    recurse(rank, s, p)
+
+        def _old_recurse():
+            #if node not in mempreds:
+                #ranked_preds = sorted(set(self.store.predicates(node, None)), key=self._globalSortKey)
+                #mempreds[node] = ranked_preds
+            #else:
+                #ranked_preds = mempreds[node]
+
             for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
                 if isinstance(s, BNode):
                     if s not in self.node_rank:
-                        self.node_rank[s] = [0, 0, 0, 0]
+                        self.node_rank[s] = [0] * (self.npreds + 1)
 
-                    isrest = False
-                    if s not in rests:
-                        if OWL.Restriction in set(self.store.objects(s, RDF.type)):
-                            rests.add(s)
-                            isrest = True
-                    else:
-                        isrest = True
+                    prank = self.object_rank[p]
+                    #if prank == pred_rank:
+                        #self.node_rank[s][pred_rank] += rank
+                    #else:
+                    self.node_rank[s][prank] += rank
+                    recurse(rank, s, p)
+                    continue
 
-                    if isrest:
-                        if p == RDF.type:
-                            self.node_rank[s][0] += rank
-                        elif p == OWL.onProperty:  # properties are the first field to sort on
-                            self.node_rank[s][1] += rank
-                        else:  # someValuesFrom, allValuesFrom, etc
-                            self.node_rank[s][2] += self.object_rank[p]
-                            self.node_rank[s][3] += rank
+                    isanon = False
+                    if s not in anons:
+                        has_type_triple = set(self.store.objects(s, RDF.type))
+                        if has_type_triple:
+                            anons.add(s)
+                            isanon = True
                     else:
-                        self.node_rank[s][3] += rank
+                        isanon = True
+
+                    # TODO instead of using level_preds, sort the predicates by their predicate rank and _then_ file
+                    if isanon:
+                        for level, preds in enumerate(level_preds):
+                            if p in preds:
+                                self.node_rank[s][level] += rank
+
+                            if level == 2:
+                                self.node_rank[s][level] += self.object_rank[p]
+                            elif level == 3:
+                                self.node_rank[s][level] += rank
+
+                    else:
+                        self.node_rank[s][-1] += rank
 
                     recurse(s, rank)  # in theory the recurse gets smaller since we go up...
                 else:
                     pass  # we have hit a top level
 
         for o, r in self.object_rank.items():
-            recurse(o, r)
+            recurse(r, o, None)
 
-        self.node_rank = {k:tuple(v) for k, v in self.node_rank.items()}
-        self.object_rank = {k:(0, 0, 0, v) for k, v in self.object_rank.items()}
+        nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(self.node_rank.items(), key=lambda t:t[-1]))}
+        #or_ = 
+        #self.node_rank = {k:tuple(v) for k, v in self.node_rank.items()}
+        self.node_rank = nr
+        #self.object_rank = {k:((0,) * self.npreds) + (v,) for k, v in self.object_rank.items()}
+        #embed()
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
@@ -180,7 +226,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
                 print('WARNING: some node that is an object isnt really an object?')
                 print(e)
-                return (-1, -1, -1, -1)
+                #return (-1, -1, -1, -1)
+                #return (-1,) * (self.npreds + 1)
+                return -1
         else:  # every Literal and URIRef object has a global rank now
             return self.object_rank[bnode]
 
@@ -272,6 +320,38 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         return properties
 
+    def p_squared(self, node, position, newline=False):  # FIXME REMOVE
+        if (not isinstance(node, BNode)
+                or node in self._serialized
+                or self._references[node] > 1
+                or position == SUBJECT):
+            return False
+
+        if not newline:
+            self.write(' ')
+
+        if self.isValidList(node):
+            # this is a list
+            self.write('(')
+            self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
+            self.depth += 1  # 2
+            self.doList(node)
+            self.depth -= 1  # 2
+            self.write(' )')
+        else:
+            self.subjectDone(node)
+            self.depth += 2
+            # self.write('[\n' + self.indent())
+            self.write('[')
+            self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
+            self.depth -= 1
+            # self.predicateList(node, newline=True)
+            self.predicateList(node, newline=False)
+            # self.write('\n' + self.indent() + ']')
+            self.write(' ]')
+            self.depth -= 1
+
+        return True
 
     def isValidList(self, l):  # modified to flatten lists specified using [ a rdf:List; ] syntax
         """
@@ -302,6 +382,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             l = self.store.value(l, RDF.rest)
 
         for item in sorted(to_sort, key=self._globalSortKey):
+            self.write('\n# ' + str(self._globalSortKey(item)) + '\n')  # FIXME REMOVE
             self.write('\n' + self.indent(1))
             self.path(item, OBJECT, newline=True)
 
@@ -323,6 +404,8 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         if self.isValidList(node):
             # this is a list
+
+            self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.write('(')
             self.depth += 1  # 2
             self.doList(node)
@@ -333,6 +416,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.depth += 2
             # self.write('[\n' + self.indent())
             self.write('[')
+            self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.depth -= 1
             # self.predicateList(node, newline=True)
             self.predicateList(node, newline=False)
@@ -343,6 +427,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         return True
 
     def _s_default(self, subject):  # XXX unmodified, ordering issues start here
+        self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.write('\n' + self.indent())
         self.path(subject, SUBJECT)
         self.predicateList(subject)
@@ -353,6 +438,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         self.write('\n' + self.indent() + '[')
+        self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.predicateList(subject)
         self.write(' ] .')
         return True
