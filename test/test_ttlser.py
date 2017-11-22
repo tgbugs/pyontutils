@@ -9,6 +9,24 @@ import unittest
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
+def randomize_BNode_order(graph):
+    replaced = {}
+    def swap(t):
+        if isinstance(t, rdflib.BNode):
+            if t in replaced:
+                return replaced[t]
+            else:
+                rnd = random.randint(0, 999999999)
+                new = rdflib.BNode(rnd)
+                replaced[t] = new
+                return new
+        return t
+    for trip in graph:
+        new_trip = tuple(swap(t) for t in trip)
+        if new_trip != trip:
+            graph.remove(trip)
+            graph.add(new_trip)
+
 class TestTtlser(unittest.TestCase):
     def setUp(self):
 
@@ -25,18 +43,21 @@ class TestTtlser(unittest.TestCase):
             f.write(self.actual)
         
     def make_ser(self):
-        header = ('import rdflib\n'
-                  'import sys\n'
+        header = ('import sys\n'
+                  'import random\n'
+                  'import rdflib\n'
                   "rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')\n"
                   'class Thing:\n'
                   '    badpath = \'%s\'\n') % self.badpath
-        src = inspect.getsource(self.serialize)
+        src0 = inspect.getsource(self.serialize)
+        src1 = inspect.getsource(randomize_BNode_order)
         after =  't = Thing()\nsys.stdout.buffer.write(t.serialize())\n'
-        return header + src + after
+        return header + src0 + '\n\n' + src1 + after
 
     def serialize(self):
         graph = rdflib.Graph()
         graph.parse(self.badpath, format='turtle')
+        randomize_BNode_order(graph)
         actual = graph.serialize(format='nifttl')
         actual = actual.rsplit(b'\n',2)[0]  # drop versioninfo
         return actual
@@ -70,4 +91,16 @@ class TestTtlser(unittest.TestCase):
 
         assert nofail
 
+    def _skip_test_list_ordering(self):  # version used before randomizing bnodes
+        _20 = self.actual.split(b'\nBLX:20')[1].split(b'.\n')[0]
+        _22 = self.actual.split(b'\nBLX:22')[1].split(b'.\n')[0]
+        nofail = True
+        if _20 != _22:
+            print('List determinism failure')
+            for n, t in zip((20, 22), (_20, _22)):
+                with open(f'test/list{n}.ttl', 'wb') as f:
+                    f.write(f'BLX:{n}'.encode() + t + b'.\n')
+            nofail = False
+
+        assert nofail
 
