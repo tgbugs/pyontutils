@@ -91,16 +91,3 @@ class TestTtlser(unittest.TestCase):
 
         assert nofail
 
-    def _skip_test_list_ordering(self):  # version used before randomizing bnodes
-        _20 = self.actual.split(b'\nBLX:20')[1].split(b'.\n')[0]
-        _22 = self.actual.split(b'\nBLX:22')[1].split(b'.\n')[0]
-        nofail = True
-        if _20 != _22:
-            print('List determinism failure')
-            for n, t in zip((20, 22), (_20, _22)):
-                with open(f'test/list{n}.ttl', 'wb') as f:
-                    f.write(f'BLX:{n}'.encode() + t + b'.\n')
-            nofail = False
-
-        assert nofail
-
