@@ -76,7 +76,7 @@ class TestTtlser(unittest.TestCase):
                 env.pop('PYTHONHASHSEED', None)
             cmd_line = [sys.executable, '-c', self.make_ser()]
             p = subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, #stderr=subprocess.STDOUT,
                                  env=env)
             out, err = p.communicate()
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
