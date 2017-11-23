@@ -267,3 +267,22 @@ BLX:20 a owl:ObjectProperty ;
             BLX:20
             BLX:18
             BLX:19 ) .
+
+# axiom list ordering parent rank and list rank fight to the death
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:20 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:21
+            BLX:18 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:21 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:21
+            BLX:18 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
+
