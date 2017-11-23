@@ -15,6 +15,9 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 DEBUG = False
 SDEBUG = False
 
+if DEBUG:
+    import sys
+
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
 
@@ -158,7 +161,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             if isinstance(node, BNode):
                 node = BNode(node)
                 if node not in node_rank:
-                    node_rank[node] = [rank_init] * (self.npreds + 1)
+                    # len is predicates + parent + list cols
+                    node_rank[node] = [rank_init] * (self.npreds + 1 + 2)
                 orp = self.object_rank[pred]
                 pindex = orp
                 crank = node_rank[node][pindex]
@@ -169,17 +173,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                 else:
                     node_rank[node][pindex] += rank
             pd = 0
-            # sort on predicate required for stability
-            sps = sorted(self.store.subject_predicates(node),
-                         key=lambda t:(self.object_rank[t[1]], t[0]))
-            #if sps:
-                #preds = list(zip(*sps))[1]
-                #if RDF.rest in preds or RDF.first in preds:
-                    ## skip list nodes
-                    #return None, 0
-            #else:
-                #return node, depth  # no more parents
-            for s, p in sps:
+            for s, p in sorted(self.store.subject_predicates(node),
+                               # sort on predicate required for stability
+                               key=lambda t:(self.object_rank[t[1]], t[0])):
                 if p == RDF.rest or p == RDF.first:
                     continue
                 if not start:
@@ -188,7 +184,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                     start.append(node)
                 if s not in start:
                     if s in terminals and isinstance(node, BNode):
-                        node_rank[node][-1] = self.object_rank[s]
+                        node_rank[node][-3] = self.object_rank[s]  # tie breaker 0
                         parents[node] = s
                         continue
                     parent, d = recurse(rank, s, p, depth + 1, start)  # XXX recursion is here
@@ -200,7 +196,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                             # rdflib.term.URIRef and URIRef hash to different values :/
                             out = URIRef(parent) # XXX rdflib bug
                         if out in self.object_rank:
-                            node_rank[node][-1] = self.object_rank[out]  # tie breaker
+                            node_rank[node][-3] = self.object_rank[out]  # tie breaker 1
                         else:
                             need_rank[node] = out
                         parents[node] = out
@@ -244,11 +240,26 @@ class CustomTurtleSerializer(TurtleSerializer):
                     if or_ > prank:
                         prank = or_
                 elif s in node_rank:
-                    return node_rank[s][-1]
+                    return node_rank[s][-3]
             if prank < 0:
                 for s in subs:
                     prank = getPrank(node)
             return prank
+
+        def getAnonParents(node, start=tuple()):
+            if not start:
+                start = {node}
+            else:
+                start.add(node)
+            parents = list(self.store.subjects(None, node))
+            if not parents:
+                raise StopIteration
+            else:
+                for s in parents:
+                    if isinstance(s, BNode):
+                        yield s
+                    if s not in start:
+                        yield from getAnonParents(s, start)
 
         for s in (*self.store.subjects(RDF.type, RDF.List), *list_starts):
             prank = getPrank(s)
@@ -272,15 +283,19 @@ class CustomTurtleSerializer(TurtleSerializer):
         #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
         # alternate worst case #int('9' * len(str(len(self.store))))
         max_worst_case = max(max(v) for v in node_rank.values()) + 1
-        total_list_rank = 0
+        total_list_rank = 1
         for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
-            node_rank[l] = [rank_init] * (self.npreds - 2) + [lists[l]['prank'], r,
-                                                              max_worst_case + total_list_rank]
+            prank = lists[l]['prank']
+            node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
+            for p in getAnonParents(l):
+                # propagate list rank information to parent BNodes
+                if p in node_rank:
+                    node_rank[p][-2] = r
             total_list_rank += 1
             d = lists[l]
             nodes = d['nodes']
             for node in nodes:
-                node_rank[node] = [rank_init] * (self.npreds - 2) + [0, r, max_worst_case + total_list_rank]
+                node_rank[node] = [rank_init] * self.npreds + [rank_init, r, total_list_rank]
                 total_list_rank += 1
             #print(node_rank[l])
         max_worst_case += len(list_rank)
@@ -290,17 +305,19 @@ class CustomTurtleSerializer(TurtleSerializer):
                              sorted(node_rank.items(),
                                     key=lambda t:t[-1]))}
         for node, parent in need_rank.items():
-            node_rank[node][-1] = temp_nr[parent]  # tie breaker 2
+            node_rank[node][-3] = temp_nr[parent]  # tie breaker 2
             parents[node] = parent
 
         nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
         if DEBUG:
-            [print(f'{self.store.qname(p):<30} {i}') for i, p in enumerate(self.predicateOrder + pr)]
             old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
-            [print(f'{a:<10}' + f'{parents[a] if a in parents else "None":<40} {nr[a]} ' +
+            sys.stderr.write('\n')
+            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
+             for i, p in enumerate(self.predicateOrder + pr)]
+            [sys.stderr.write(f'{a:<10}' + f'{parents[a] if a in parents else "None":<40} {nr[a]} ' +
                    ' '.join('-' * 4
                             if c == max_worst_case
-                            else f'{c:>4}' for c in b))
+                            else f'{c:>4}' for c in b) + '\n')
              for a, b in sorted(old_nr, key=lambda t:t[1])]
         #self.node_rank = {k:tuple(v) for k, v in node_rank.items()}
         self.node_rank = nr
