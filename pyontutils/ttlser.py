@@ -156,19 +156,32 @@ class CustomTurtleSerializer(TurtleSerializer):
         def recurse(rank, node, pred, depth=0, start=tuple()):
             #print(rank, node, pred, depth)#, start)
             if isinstance(node, BNode):
+                node = BNode(node)
                 if node not in node_rank:
                     node_rank[node] = [rank_init] * (self.npreds + 1)
                 orp = self.object_rank[pred]
                 pindex = orp
                 crank = node_rank[node][pindex]
                 if not rank and crank == rank_init:
-                    node_rank[node][pindex] -= 1  # edge case where rank is 0 and pred rank is 0
-                    # results in trips withmultiple types first
+                    # edge case where rank is 0 and pred rank is 0
+                    # results in trips with multiple types first
+                    node_rank[node][pindex] -= 1
                 else:
                     node_rank[node][pindex] += rank
             pd = 0
-            for s, p in sorted(self.store.subject_predicates(node),  # sort on predicate required for stability
-                               key=lambda t:(self.object_rank[t[1]], t[0])):
+            # sort on predicate required for stability
+            sps = sorted(self.store.subject_predicates(node),
+                         key=lambda t:(self.object_rank[t[1]], t[0]))
+            #if sps:
+                #preds = list(zip(*sps))[1]
+                #if RDF.rest in preds or RDF.first in preds:
+                    ## skip list nodes
+                    #return None, 0
+            #else:
+                #return node, depth  # no more parents
+            for s, p in sps:
+                if p == RDF.rest or p == RDF.first:
+                    continue
                 if not start:
                     start = [node]
                 elif node not in start:
@@ -184,10 +197,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                         if isinstance(parent, BNode):
                             out = BNode(parent)  # XXX rdflib bug
                         else:
-                            out = URIRef(parent)  # rdflib.term.URIRef and URIRef hash to different values :/ XXX rdflib bug
+                            # rdflib.term.URIRef and URIRef hash to different values :/
+                            out = URIRef(parent) # XXX rdflib bug
                         if out in self.object_rank:
-                            #print(hash(out))
-                            #print('\n'.join(sorted(f'{k} {hash(k)}' for k in self.object_rank)))
                             node_rank[node][-1] = self.object_rank[out]  # tie breaker
                         else:
                             need_rank[node] = out
@@ -197,81 +209,104 @@ class CustomTurtleSerializer(TurtleSerializer):
             try:
                 return out, pd
             except NameError:
-                #print(start)
                 return node, depth  # no more parents
 
-        def _old_recurse():
-            #if node not in mempreds:
-                #ranked_preds = sorted(set(self.store.predicates(node, None)), key=self._globalSortKey)
-                #mempreds[node] = ranked_preds
-            #else:
-                #ranked_preds = mempreds[node]
-
-            for s, p in self.store.subject_predicates(node):  # subject_predicate for predicate ranking, walk backward up the tree?
-                if isinstance(s, BNode):
-                    if s not in self.node_rank:
-                        self.node_rank[s] = [0] * (self.npreds + 1)
-
-                    prank = self.object_rank[p]
-                    #if prank == pred_rank:
-                        #self.node_rank[s][pred_rank] += rank
-                    #else:
-                    self.node_rank[s][prank] += rank
-                    recurse(rank, s, p)
-                    continue
-
-                    isanon = False
-                    if s not in anons:
-                        has_type_triple = set(self.store.objects(s, RDF.type))
-                        if has_type_triple:
-                            anons.add(s)
-                            isanon = True
-                    else:
-                        isanon = True
-
-                    # TODO instead of using level_preds, sort the predicates by their predicate rank and _then_ file
-                    if isanon:
-                        for level, preds in enumerate(level_preds):
-                            if p in preds:
-                                self.node_rank[s][level] += rank
-
-                            if level == 2:
-                                self.node_rank[s][level] += self.object_rank[p]
-                            elif level == 3:
-                                self.node_rank[s][level] += rank
-
-                    else:
-                        self.node_rank[s][-1] += rank
-
-                    recurse(s, rank)  # in theory the recurse gets smaller since we go up...
-                else:
-                    pass  # we have hit a top level
-
         for o, r in sorted(self.object_rank.items(), key=lambda t:t[1]):
-            recurse(r, o, None)
+            if o != RDF.List:
+                recurse(r, o, None)
 
+        temp_nr = {k:v + max_or for v, k in
+                   enumerate(k for k, v in
+                             sorted(node_rank.items(),
+                                    key=lambda t:t[-1]))}
+        def lkey(t):
+            if t in self.object_rank:
+                return self.object_rank[t]
+            else:
+                try:
+                    return temp_nr[t]
+                except KeyError:
+                    print('KeyError on', t)
+                    print(list(self.store.subject_predicates(t)) + list(self.store.predicate_objects(t)))
+                    print()
+                    return -100
+
+        lists = {}
+        list_starts = (s for s in self.store.subjects(RDF.first, None)
+                       if not tuple(self.store.subjects(RDF.rest, s)))
+        
+        def getPrank(node):
+            prank = -100
+            subs = self.store.subjects(None, node)
+            for s in subs:
+                if s in terminals:
+                    or_ = self.object_rank[s]
+                    if or_ > prank:
+                        prank = or_
+                elif s in node_rank:
+                    return node_rank[s][-1]
+            if prank < 0:
+                for s in subs:
+                    prank = getPrank(node)
+            return prank
+
+        for s in (*self.store.subjects(RDF.type, RDF.List), *list_starts):
+            prank = getPrank(s)
+            l = s
+            lists[s] = {'vals':[], 'nodes':[], 'prank':prank}
+            while l:
+                item = self.store.value(l, RDF.first)
+                if item is not None:
+                    #print(item)
+                    lists[s]['vals'].append(item)
+                    if l != s:
+                        lists[s]['nodes'].append(l)
+                l = self.store.value(l, RDF.rest)
+            lists[s]['vals'].sort(key=lkey)
+        #print(lists)
+        list_rank = {o:i for i, o in
+                      enumerate(
+                          list(
+                              zip(*sorted(lists.items(),
+                                          key=lambda t: t[1]['vals'])))[0])}
+        #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
+        # alternate worst case #int('9' * len(str(len(self.store))))
         max_worst_case = max(max(v) for v in node_rank.values()) + 1
-        #int('9' * len(str(len(self.store))))
+        total_list_rank = 0
+        for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
+            node_rank[l] = [rank_init] * (self.npreds - 2) + [lists[l]['prank'], r,
+                                                              max_worst_case + total_list_rank]
+            total_list_rank += 1
+            d = lists[l]
+            nodes = d['nodes']
+            for node in nodes:
+                node_rank[node] = [rank_init] * (self.npreds - 2) + [0, r, max_worst_case + total_list_rank]
+                total_list_rank += 1
+            #print(node_rank[l])
+        max_worst_case += len(list_rank)
         node_rank = {k:[_ if _ else max_worst_case for _ in v] for k, v in node_rank.items()}
-        temp_nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
+        temp_nr = {k:v + max_or for v, k in
+                   enumerate(k for k, v in
+                             sorted(node_rank.items(),
+                                    key=lambda t:t[-1]))}
         for node, parent in need_rank.items():
             node_rank[node][-1] = temp_nr[parent]  # tie breaker 2
             parents[node] = parent
-
 
         nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
         if DEBUG:
             [print(f'{self.store.qname(p):<30} {i}') for i, p in enumerate(self.predicateOrder + pr)]
             old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
-            [print(f'{a:<10}' + f'{parents[a]:<40} {nr[a]} ' +
+            [print(f'{a:<10}' + f'{parents[a] if a in parents else "None":<40} {nr[a]} ' +
                    ' '.join('-' * 4
                             if c == max_worst_case
                             else f'{c:>4}' for c in b))
-             for a, b in sorted(old_nr,key=lambda t:t[1])]
+             for a, b in sorted(old_nr, key=lambda t:t[1])]
         #self.node_rank = {k:tuple(v) for k, v in node_rank.items()}
         self.node_rank = nr
         #self.object_rank = {k:((0,) * self.npreds) + (v,) for k, v in self.object_rank.items()}
         self.recurse = recurse
+        #embed()
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
