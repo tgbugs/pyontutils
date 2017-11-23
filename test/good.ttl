@@ -28,15 +28,15 @@ BLX:19 a owl:ObjectProperty .
 
 BLX:20 a owl:ObjectProperty ;
     owl:propertyChainAxiom (
-            BLX:19
-            BLX:20 ),
-        (
             BLX:18
             BLX:19
             BLX:20 ),
         (
             BLX:18
             BLX:21 ),
+        (
+            BLX:19
+            BLX:20 ),
         (
             BLX:20
             BLX:21 ) .
@@ -44,15 +44,15 @@ BLX:20 a owl:ObjectProperty ;
 BLX:21 a owl:ObjectProperty ;
     owl:propertyChainAxiom (
             BLX:18
-            BLX:21 ),
-        (
-            BLX:19
-            BLX:21 ),
-        (
-            BLX:18
             BLX:19
             [ owl:inverseOf BLX:19 ]
-            [ owl:inverseOf BLX:20 ] ) .
+            [ owl:inverseOf BLX:20 ] ),
+        (
+            BLX:18
+            BLX:21 ),
+        (
+            BLX:19
+            BLX:21 ) .
 
 skos:related a owl:ObjectProperty ;
     owl:inverseOf skos:related,
@@ -230,15 +230,6 @@ ns1:12345 a owl:Class .
 
 [ a owl:AllDifferent ;
     owl:distinctMembers (
-            A:4
-            A:5
-            A:6
-            A:prefix_4
-            A:prefix_5
-            A:prefix_6 ) ] .
-
-[ a owl:AllDifferent ;
-    owl:distinctMembers (
             A:0
             A:1
             A:2
@@ -246,6 +237,15 @@ ns1:12345 a owl:Class .
             A:prefix_1
             A:prefix_2
             A:prefix_3 ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            A:4
+            A:5
+            A:6
+            A:prefix_4
+            A:prefix_5
+            A:prefix_6 ) ] .
 
 [ a owl:Axiom ;
     owl:annotatedSource BLX:10 ;
