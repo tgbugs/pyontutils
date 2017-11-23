@@ -13,6 +13,7 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 #IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
 DEBUG = False
+SDEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
@@ -97,6 +98,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       RDFS.subPropertyOf,
                       RDFS.domain,
                       RDFS.range,
+                      OWL.propertyChainAxiom,
                       OWL.intersectionOf,
                       OWL.unionOf,
                       OWL.disjointWith,
@@ -122,6 +124,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
         self.npreds = len(pr)
         self.predicateOrder = [p for p in self.predicateOrder if p in pr]  # drop unused
+        pr = [p for p in pr if p not in self.predicateOrder]  # removed predicateOrder members from pr
         max_pred = len(self.predicateOrder) + 1
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
@@ -145,31 +148,36 @@ class CustomTurtleSerializer(TurtleSerializer):
                                     key=lambda _: natsort(self.store.qname(_)))))[::-1]}
 
         max_or = max(self.object_rank.values()) + 1
+        rank_init = 0
+        terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
         node_rank = {}
         need_rank = {}
-        #mempreds = {}
-        #anons = set()
-        #level_preds = [{RDF.type},
-                       #{OWL.onProperty, OWL.annotatedSource},
-                       #{OWL.annotatedProperty},  # slot 2 is for predicate ranking generally
-                       #{OWL.annotatedTarget}]
+        parents = {}
         def recurse(rank, node, pred, depth=0, start=tuple()):
             #print(rank, node, pred, depth)#, start)
             if isinstance(node, BNode):
                 if node not in node_rank:
-                    node_rank[node] = [0] * (self.npreds + 1)
-                #if pred is None: # this never happens because pred is only None when node is not a bnode
+                    node_rank[node] = [rank_init] * (self.npreds + 1)
                 orp = self.object_rank[pred]
-                pindex = self.npreds - orp - 1
-                node_rank[node][pindex] += rank
+                pindex = orp
+                crank = node_rank[node][pindex]
+                if not rank and crank == rank_init:
+                    node_rank[node][pindex] -= 1  # edge case where rank is 0 and pred rank is 0
+                    # results in trips withmultiple types first
+                else:
+                    node_rank[node][pindex] += rank
             pd = 0
             for s, p in sorted(self.store.subject_predicates(node),  # sort on predicate required for stability
                                key=lambda t:(self.object_rank[t[1]], t[0])):
                 if not start:
-                    start = {node}
+                    start = [node]
                 elif node not in start:
-                    start.add(node)
+                    start.append(node)
                 if s not in start:
+                    if s in terminals and isinstance(node, BNode):
+                        node_rank[node][-1] = self.object_rank[s]
+                        parents[node] = s
+                        continue
                     parent, d = recurse(rank, s, p, depth + 1, start)  # XXX recursion is here
                     if isinstance(node, BNode) and d > pd:
                         pd = d
@@ -183,9 +191,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                             node_rank[node][-1] = self.object_rank[out]  # tie breaker
                         else:
                             need_rank[node] = out
+                        parents[node] = out
+            if node not in parents:
+                parents[node] = 'None'
             try:
                 return out, pd
             except NameError:
+                #print(start)
                 return node, depth  # no more parents
 
         def _old_recurse():
@@ -238,19 +250,24 @@ class CustomTurtleSerializer(TurtleSerializer):
         for o, r in sorted(self.object_rank.items(), key=lambda t:t[1]):
             recurse(r, o, None)
 
+        max_worst_case = max(max(v) for v in node_rank.values()) + 1
+        #int('9' * len(str(len(self.store))))
+        node_rank = {k:[_ if _ else max_worst_case for _ in v] for k, v in node_rank.items()}
         temp_nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
         for node, parent in need_rank.items():
-            before = node_rank[node][-1]
-            node_rank[node][-1] = temp_nr[need_rank[node]]
-            after = node_rank[node][-1]
-            #print(before, after)
+            node_rank[node][-1] = temp_nr[parent]  # tie breaker 2
+            parents[node] = parent
 
 
         nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
         if DEBUG:
+            [print(f'{self.store.qname(p):<30} {i}') for i, p in enumerate(self.predicateOrder + pr)]
             old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
-            _ = [print(f'{a:<40}' + f'{nr[a]} ' + ' '.join(f'{c:>3}' for c in b))
-                 for a, b in sorted(old_nr,key=lambda t:t[1])]
+            [print(f'{a:<10}' + f'{parents[a]:<40} {nr[a]} ' +
+                   ' '.join('-' * 4
+                            if c == max_worst_case
+                            else f'{c:>4}' for c in b))
+             for a, b in sorted(old_nr,key=lambda t:t[1])]
         #self.node_rank = {k:tuple(v) for k, v in node_rank.items()}
         self.node_rank = nr
         #self.object_rank = {k:((0,) * self.npreds) + (v,) for k, v in self.object_rank.items()}
@@ -373,7 +390,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if self.isValidList(node):
             # this is a list
             self.write('(')
-            if DEBUG:
+            if SDEBUG:
                 self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.depth += 1  # 2
             self.doList(node)
@@ -384,7 +401,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.depth += 2
             # self.write('[\n' + self.indent())
             self.write('[')
-            if DEBUG:
+            if SDEBUG:
                 self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.depth -= 1
             # self.predicateList(node, newline=True)
@@ -446,7 +463,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if self.isValidList(node):
             # this is a list
 
-            if DEBUG:
+            if SDEBUG:
                 self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.write('(')
             self.depth += 1  # 2
@@ -458,7 +475,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.depth += 2
             # self.write('[\n' + self.indent())
             self.write('[')
-            if DEBUG:
+            if SDEBUG:
                 self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.depth -= 1
             # self.predicateList(node, newline=True)
@@ -480,7 +497,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         self.write('\n' + self.indent() + '[')
-        if DEBUG:
+        if SDEBUG:
             self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.predicateList(subject)
         self.write(' ] .')
