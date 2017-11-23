@@ -298,6 +298,22 @@ ns1:12345 a owl:Class .
     owl:annotatedTarget "ARDS"^^xsd:string ;
     oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ] .
 
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:20 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:18
+            BLX:21 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:21 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:18
+            BLX:21 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
+
 ### Annotations
 
 BLX:9 rdfs:subClassOf [ a owl:Restriction ;
