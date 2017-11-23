@@ -264,7 +264,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 l = self.store.value(l, RDF.rest)
             lists[s]['vals'].sort(key=lkey)
         #print(lists)
-        list_rank = {o:i for i, o in
+        list_rank = {o:i + 1 for i, o in  # + 1 to avoid the zero rewriting issue
                       enumerate(
                           list(
                               zip(*sorted(lists.items(),
