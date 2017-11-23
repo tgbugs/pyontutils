@@ -162,6 +162,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 node = BNode(node)
                 if node not in node_rank:
                     # len is predicates + parent + list cols
+                    # TODO optimization: skip predicates never used with BNodes
                     node_rank[node] = [rank_init] * (self.npreds + 1 + 2)
                 orp = self.object_rank[pred]
                 pindex = orp
@@ -230,10 +231,14 @@ class CustomTurtleSerializer(TurtleSerializer):
         lists = {}
         list_starts = (s for s in self.store.subjects(RDF.first, None)
                        if not tuple(self.store.subjects(RDF.rest, s)))
-        
-        def getPrank(node):
+
+        def getPrank(node, start=tuple()):
+            if not start:
+                start = {node}
+            else:
+                start.add(node)
             prank = -100
-            subs = self.store.subjects(None, node)
+            subs = list(self.store.subjects(None, node))
             for s in subs:
                 if s in terminals:
                     or_ = self.object_rank[s]
@@ -243,7 +248,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                     return node_rank[s][-3]
             if prank < 0:
                 for s in subs:
-                    prank = getPrank(node)
+                    if s not in start:
+                        prank = getPrank(s, start)
             return prank
 
         def getAnonParents(node, start=tuple()):
@@ -282,10 +288,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                                           key=lambda t: t[1]['vals'])))[0])}
         #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
         # alternate worst case #int('9' * len(str(len(self.store))))
-        max_worst_case = max(max(v) for v in node_rank.values()) + 1
         total_list_rank = 1
         for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
             prank = lists[l]['prank']
+            #prank = rank_init
             node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
             for p in getAnonParents(l):
                 # propagate list rank information to parent BNodes
@@ -298,7 +304,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 node_rank[node] = [rank_init] * self.npreds + [rank_init, r, total_list_rank]
                 total_list_rank += 1
             #print(node_rank[l])
-        max_worst_case += len(list_rank)
+        max_worst_case = max(max(v) for v in node_rank.values()) + 1
         node_rank = {k:[_ if _ else max_worst_case for _ in v] for k, v in node_rank.items()}
         temp_nr = {k:v + max_or for v, k in
                    enumerate(k for k, v in
