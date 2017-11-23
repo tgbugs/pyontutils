@@ -281,30 +281,35 @@ class CustomTurtleSerializer(TurtleSerializer):
                 l = self.store.value(l, RDF.rest)
             lists[s]['vals'].sort(key=lkey)
         #print(lists)
-        list_rank = {o:i + 1 for i, o in  # + 1 to avoid the zero rewriting issue
-                      enumerate(
-                          list(
-                              zip(*sorted(lists.items(),
-                                          key=lambda t: t[1]['vals'])))[0])}
-        #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
-        # alternate worst case #int('9' * len(str(len(self.store))))
-        total_list_rank = 1
-        for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
-            prank = lists[l]['prank']
-            #prank = rank_init
-            node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
-            for p in getAnonParents(l):
-                # propagate list rank information to parent BNodes
-                if p in node_rank:
-                    node_rank[p][-2] = r
-            total_list_rank += 1
-            d = lists[l]
-            nodes = d['nodes']
-            for node in nodes:
-                node_rank[node] = [rank_init] * self.npreds + [rank_init, r, total_list_rank]
+        if lists:
+            list_rank = {o:i + 1 for i, o in  # + 1 to avoid the zero rewriting issue
+                          enumerate(
+                              list(
+                                  zip(*sorted(lists.items(),
+                                              key=lambda t: t[1]['vals'])))[0])}
+            #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
+            # alternate worst case #int('9' * len(str(len(self.store))))
+            total_list_rank = 1
+            for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
+                prank = lists[l]['prank']
+                #prank = rank_init
+                node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
+                for p in getAnonParents(l):
+                    # propagate list rank information to parent BNodes
+                    if p in node_rank:
+                        node_rank[p][-2] = r
                 total_list_rank += 1
-            #print(node_rank[l])
-        max_worst_case = max(max(v) for v in node_rank.values()) + 1
+                d = lists[l]
+                nodes = d['nodes']
+                for node in nodes:
+                    node_rank[node] = [rank_init] * self.npreds + [rank_init, r, total_list_rank]
+                    total_list_rank += 1
+                #print(node_rank[l])
+
+        if node_rank:
+            max_worst_case = max(max(v) for v in node_rank.values()) + 1
+        else:
+            max_worst_case = 1
         node_rank = {k:[_ if _ else max_worst_case for _ in v] for k, v in node_rank.items()}
         temp_nr = {k:v + max_or for v, k in
                    enumerate(k for k, v in
