@@ -32,14 +32,14 @@ class TestTtlser(unittest.TestCase):
 
         goodpath = 'test/good.ttl'
         self.badpath = 'test/nasty.ttl'
-        actualpath = 'test/actual.ttl'
+        self.actualpath = 'test/actual.ttl'
         self.actualpath2 = 'test/actual2.ttl'
 
         with open(goodpath, 'rb') as f:
             self.good = f.read()
 
         self.actual = self.serialize()
-        with open(actualpath, 'wb') as f:
+        with open(self.actualpath, 'wb') as f:
             f.write(self.actual)
         
     def make_ser(self):
@@ -84,9 +84,17 @@ class TestTtlser(unittest.TestCase):
             actual2 = out
             if self.actual != actual2:
                 print('Determinism failure!')
+                hit = False
+                for _1, _2 in zip(self.actual.decode(), actual2.decode()):
+                    if _1 != _2 and not hit:
+                        hit = True
+                    if hit:
+                        print(_1, _2)
                 nofail = False
                 with open(self.actualpath2, 'wb') as f:
                     f.write(actual2)
+                with open(self.actualpath, 'wb') as f:
+                    f.write(self.actual)
                 break
 
         assert nofail
