@@ -335,3 +335,13 @@ BLX:20 a owl:ObjectProperty ;
 [ a (other:bb other:cc) ] .
 
 [ a (other:BB other:cc) ] .
+
+# full list ordering example
+
+[ a ( "bb" "cc" other:bb other:cc
+        [ a ( other:bb other:cc) ]
+        (other:bb other:cc) ) ] .
+
+[ a ("BB" "cc" other:BB other:cc
+        [ a (other:BB other:cc) ]
+        (other:BB other:cc) ) ] .
