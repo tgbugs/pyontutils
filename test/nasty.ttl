@@ -25,6 +25,11 @@
 # test annotation properties
 requestedBy: a owl:AnnotationProperty .
 
+other:a a owl:AnnotationProperty ;
+    other:UsedAP "LOOK AT MEEEEE!" .
+other:A a owl:AnnotationProperty .
+other:UsedAP a owl:AnnotationProperty .  # if only used predicates are put first then this will incorrectly sort before BLX:a and BLX:A
+
 # test full uri shortening
 BLX:BB a owl:Class ;
     <http://uri.binterlex.org/base/blx_999> "DIO!" .
@@ -48,6 +53,14 @@ blx:b a owl:Class .
 blx:ab a owl:Class .
 blx:Ab a owl:Class .
 blx:AB a owl:Class .
+
+# tests consistent case ordering 2
+other:aa a owl:Class .
+other:AA a owl:Class .
+other:bb a owl:Class .
+other:BB a owl:Class .
+other:cc a owl:Class .
+other:CC a owl:Class .
 
 # test qnames where the fragment is only numbers
 BLX:1234567 a owl:Class .
@@ -286,3 +299,35 @@ BLX:20 a owl:ObjectProperty ;
             BLX:18 ) ;
     rdfs:label "lol you have got to be kidding me" ] .
 
+# local list ordering
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:b
+            other:B
+            other:aa
+            other:aA
+            other:Aa
+            other:AA ) ] .
+
+# global list ordering
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:aa
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:AA
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:bb
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:BB
+            other:cc ) ] .
