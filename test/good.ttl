@@ -60,6 +60,13 @@ skos:related a owl:ObjectProperty ;
 
 ### Annotation Properties
 
+other:A a owl:AnnotationProperty .
+
+other:a a owl:AnnotationProperty ;
+    other:UsedAP "LOOK AT MEEEEE!" .
+
+other:UsedAP a owl:AnnotationProperty .
+
 requestedBy: a owl:AnnotationProperty .
 
 ### Classes
@@ -226,6 +233,18 @@ ns1:1234 a owl:Class .
 
 ns1:12345 a owl:Class .
 
+other:AA a owl:Class .
+
+other:aa a owl:Class .
+
+other:BB a owl:Class .
+
+other:bb a owl:Class .
+
+other:CC a owl:Class .
+
+other:cc a owl:Class .
+
 ### Axioms
 
 [ a owl:AllDifferent ;
@@ -246,6 +265,43 @@ ns1:12345 a owl:Class .
             A:prefix_4
             A:prefix_5
             A:prefix_6 ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:AA
+            other:Aa
+            other:aA
+            other:aa
+            other:B
+            other:b ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:AA
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:aa
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:BB
+            other:cc ) ] .
+
+[ a owl:AllDifferent ;
+    owl:distinctMembers (
+            other:bb
+            other:cc ) ] .
+
+[ a (
+            other:BB
+            other:cc ) ] .
+
+[ a (
+            other:bb
+            other:cc ) ] .
 
 [ a owl:Axiom ;
     owl:annotatedSource BLX:10 ;
