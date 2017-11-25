@@ -351,3 +351,11 @@ BLX:20 a owl:ObjectProperty ;
 ("this" "is" "a" "bare" "list") a rdf:List .
 ("this" "is" "a" "bare" "list") other:UsedAP "huehuehuehue" .
 
+# trying to reveal issues with summing list ranks
+
+[ a owl:Class ;
+    rdfs:label ( ("1" "5") ("0" "6") ("1" "5") ) ; ] .
+
+[ a owl:Class ;
+    rdfs:label ( ("2" "4") ("1" "5") ) ; ] .
+
