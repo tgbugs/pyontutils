@@ -345,3 +345,9 @@ BLX:20 a owl:ObjectProperty ;
 [ a ("BB" "cc" other:BB other:cc
         [ a (other:BB other:cc) ]
         (other:BB other:cc) ) ] .
+
+# collections as subjects
+
+("this" "is" "a" "bare" "list") a rdf:List .
+("this" "is" "a" "bare" "list") other:UsedAP "huehuehuehue" .
+
