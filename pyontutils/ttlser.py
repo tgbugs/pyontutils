@@ -122,148 +122,216 @@ class CustomTurtleSerializer(TurtleSerializer):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
+        self.rank_init = 0
+        self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
+        self.predicate_rank = self._PredRank()
+        self.object_rank = self._LitUriRank()
+        self.max_or = max(self.object_rank.values()) + 1
+        self.need_rank = {}
+        self.node_rank_vec = {}
+        self._BNodeRank()
+        list_rank_vec = self._ListRank()
+        self.node_rank_vec.update(list_rank_vec)
+        self.resolve_ranks()
+        self.node_rank = self._node_rank
+        if DEBUG:
+            max_worst_case = self.nr_worst_case
+            old_nr = [(k,tuple(v)) for k, v in self.node_rank_vec.items()]
+            sys.stderr.write('\n')
+            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
+             for i, p in enumerate(self.predicateOrder + pr)]
+            [sys.stderr.write(f'{a:<10}' + (f'{parents[a] if a in parents else "None":<40} '
+                              f'{self.node_rank[a]} ') +
+                              ' '.join('-' * 4
+                                       if c == max_worst_case
+                                       else f'{c:>4}' for c in b) + '\n')
+             for a, b in sorted(old_nr, key=lambda t:t[1])]
+
+    def _PredRank(self):
         pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
         self.npreds = len(pr)
         self.predicateOrder = [p for p in self.predicateOrder if p in pr]  # drop unused
         pr = [p for p in pr if p not in self.predicateOrder]  # removed predicateOrder members from pr
         max_pred = len(self.predicateOrder) + 1
-        self.object_rank = {o:i  # global rank for all URIRef that appear as objects
-                            for i, o in
-                            enumerate(
-                                sorted(  # doublesort needed for stability wrt case for literals
-                                    sorted((_ for _ in self.store.objects(None, None)
-                                            if isinstance(_, Literal))),
-                                       key=litsort) +
-                                sorted(
-                                    sorted(set(_ for t in self.store for _ in t
-                                               if isinstance(_, URIRef)),
-                                           key=self.store.qname),
-                                    key=lambda _: natsort(self.store.qname(_))))}
-        self.predicate_rank = {o:i for i, o in
-                               enumerate(
-                                   sorted(set((_ for _ in self.store.predicates(None, None))),
-                                          key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
-                                      ))}
-        max_or = max(self.object_rank.values()) + 1
-        rank_init = 0
-        terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
-        node_rank = {}
-        need_rank = {}
-        parents = {}
-        def recurse(rank, node, pred, depth=0, start=tuple()):
-            #print(rank, node, pred, depth)#, start)
-            if isinstance(node, BNode):
-                node = BNode(node)
-                if node not in node_rank:
-                    # len is predicates + parent + list cols
-                    # TODO optimization: skip predicates never used with BNodes
-                    node_rank[node] = [rank_init] * (self.npreds + 1 + 2)
-                orp = self.predicate_rank[pred]
-                pindex = orp
-                crank = node_rank[node][pindex]
-                if not rank and crank == rank_init:
-                    # edge case where rank is 0 and pred rank is 0
-                    # results in trips with multiple types first
-                    node_rank[node][pindex] -= 1
-                else:
-                    node_rank[node][pindex] += rank
-            pd = 0
-            for s, p in sorted(self.store.subject_predicates(node),
-                               # sort on predicate required for stability
-                               key=lambda t:(self.predicate_rank[t[1]], t[0])):
-                if p == RDF.rest or p == RDF.first:
-                    continue
-                if not start:
-                    start = [node]
-                elif node not in start:
-                    start.append(node)
-                if s not in start:
-                    if s in terminals and isinstance(node, BNode):
-                        node_rank[node][-3] = self.object_rank[s]  # tie breaker 0
-                        parents[node] = s
-                        continue
-                    parent, d = recurse(rank, s, p, depth + 1, start)  # XXX recursion is here
-                    if isinstance(node, BNode) and d > pd:
-                        pd = d
-                        if isinstance(parent, BNode):
-                            out = BNode(parent)  # XXX rdflib bug
-                        else:
-                            # rdflib.term.URIRef and URIRef hash to different values :/
-                            out = URIRef(parent) # XXX rdflib bug
-                        if out in self.object_rank:
-                            node_rank[node][-3] = self.object_rank[out]  # tie breaker 1
-                        else:
-                            need_rank[node] = out
-                        parents[node] = out
-            if node not in parents:
-                parents[node] = 'None'
-            try:
-                return out, pd
-            except NameError:
-                return node, depth  # no more parents
 
+        def prkey(p):
+            # needed for owl:Restrictions and other a uri verbs
+            return (self.predicateOrder.index(p)
+                    if p in self.predicateOrder
+                    else max_pred + pr.index(p))
+
+        return {o:i for i, o in
+                enumerate(
+                    sorted(set((_ for _ in self.store.predicates())),
+                           key=prkey))}
+
+    def _LitUriRank(self):
+        return {o:i  # global rank for all Literals and URIRefs
+                for i, o in
+                enumerate(
+                    sorted(  # doublesort needed for stability wrt case for literals
+                           sorted((_ for _ in self.store.objects()
+                                   if isinstance(_, Literal))),
+                           key=litsort) +
+                    sorted(
+                        sorted(set(_ for t in self.store for _ in t
+                                   if isinstance(_, URIRef)),
+                               key=self.store.qname),
+                        key=lambda _: natsort(self.store.qname(_))))}
+
+    def _recurse(self, rank, node, pred, depth=0, start=tuple()):
+        #print(rank, node, pred, depth)#, start)
+        if isinstance(node, BNode):
+            node = BNode(node)
+            if node not in self.node_rank_vec:
+                # len is predicates + parent + list cols
+                # TODO optimization: skip predicates never used with BNodes
+                self.node_rank_vec[node] = [self.rank_init] * (self.npreds + 1 + 2)
+            orp = self.predicate_rank[pred]
+            pindex = orp
+            crank = self.node_rank_vec[node][pindex]
+            if not rank and crank == self.rank_init:
+                # edge case where rank is 0 and pred rank is 0
+                # results in trips with multiple types first
+                self.node_rank_vec[node][pindex] -= 1
+            else:
+                self.node_rank_vec[node][pindex] += rank
+        pd = 0
+        for s, p in sorted(self.store.subject_predicates(node),
+                           # sort on predicate required for stability
+                           key=lambda t:(self.predicate_rank[t[1]], t[0])):
+            if p == RDF.rest or p == RDF.first:
+                continue
+            if not start:
+                start = [node]
+            elif node not in start:
+                start.append(node)
+            if s not in start:
+                if s in self.terminals and isinstance(node, BNode):
+                    self.node_rank_vec[node][-3] = self.object_rank[s]  # tie breaker 0
+                    #parents[node] = s
+                    continue
+                parent, d = self._recurse(rank, s, p, depth + 1, start)  # XXX recursion is here
+                if isinstance(node, BNode) and d > pd:
+                    pd = d
+                    if isinstance(parent, BNode):
+                        out = BNode(parent)  # XXX rdflib bug
+                    else:
+                        # rdflib.term.URIRef and URIRef hash to different values :/
+                        out = URIRef(parent) # XXX rdflib bug
+                    if out in self.object_rank:
+                        self.node_rank_vec[node][-3] = self.object_rank[out]  # tie breaker 1
+                    else:
+                        self.need_rank[node] = out
+                    #parents[node] = out
+        #if node not in parents:
+            #parents[node] = 'None'
+        try:
+            return out, pd
+        except NameError:
+            return node, depth  # no more parents
+
+    def _BNodeRank(self):
         for o, r in sorted(self.object_rank.items(), key=lambda t:t[1]):
             if o != RDF.List:
-                recurse(r, o, None)
+                self._recurse(r, o, None)
 
-        def getPrank(node, start=tuple()):
-            if not start:
-                start = {node}
-            else:
-                start.add(node)
-            prank = -100
-            subs = list(self.store.subjects(None, node))
+    def resolve_ranks(self):
+        node_rank = self._node_rank
+        for node, parent in self.need_rank.items():
+            self.node_rank_vec[node][-3] = node_rank[parent]  # tie breaker 2
+            parents[node] = parent
+
+    def getPrank(self, node, start=tuple()):
+        if not start:
+            start = {node}
+        else:
+            start.add(node)
+        prank = -100
+        subs = list(self.store.subjects(None, node))
+        for s in subs:
+            if s in self.terminals:
+                or_ = self.object_rank[s]
+                if or_ > prank:
+                    prank = or_
+            elif s in self.node_rank_vec:
+                return self.node_rank_vec[s][-3]
+        if prank < 0:
             for s in subs:
-                if s in terminals:
-                    or_ = self.object_rank[s]
-                    if or_ > prank:
-                        prank = or_
-                elif s in node_rank:
-                    return node_rank[s][-3]
-            if prank < 0:
-                for s in subs:
-                    if s not in start:
-                        prank = getPrank(s, start)
-            return prank
+                if s not in start:
+                    prank = self.getPrank(s, start)
+        return prank
 
-        def getAnonParents(node, start=tuple()):
-            if not start:
-                start = {node}
-            else:
-                start.add(node)
-            parents = list(self.store.subjects(None, node))
-            if not parents:
-                raise StopIteration
-            else:
-                for s in parents:
-                    if isinstance(s, BNode):
-                        yield s
-                    if s not in start:
-                        yield from getAnonParents(s, start)
+    def getAnonParents(self, node, start=tuple()):
+        if not start:
+            start = {node}
+        else:
+            start.add(node)
+        parents = list(self.store.subjects(None, node))
+        if not parents:
+            raise StopIteration
+        else:
+            for s in parents:
+                if isinstance(s, BNode):
+                    yield s
+                if s not in start:
+                    yield from self.getAnonParents(s, start)
 
-        temp_nr = {k:v + max_or for v, k in
-                   enumerate(k for k, v in
-                             sorted(node_rank.items(),
-                                    key=lambda t:t[-1]))}
+    @property
+    def nr_worst_case(self):
+        if self.node_rank_vec:
+            return max(max(v) for v in self.node_rank_vec.values()) + 1
+        else:
+            return 1
+
+    @property
+    def normalized_node_rank_vec(self):
+        max_worst_case = self.nr_worst_case
+        return {k:tuple(_ if _ else max_worst_case
+                   for _ in v)
+                for k, v in self.node_rank_vec.items()}
+
+    @property
+    def _node_rank(self):
+        return {k:v + self.max_or for v, k in
+                enumerate(k for k, v in
+                          sorted(self.normalized_node_rank_vec.items(),
+                                 key=lambda t:t[-1]))}
+
+    def _ListRank(self):
+        # FIXME lists inside lists will be a problem...
+        # when printing lists the nodes will always come second
+        # but when computing list ranks if there is a tie need to split
+        # on the ranks for the nodes inside and then the ranks of the lists inside
+        # we need a sort column for children for each of these
+        # literal
+        # uri
+        # BNode propertyList -> bnode [
+        # collection -> bnode (
+        # [self.rank_init] * self.npreds + [prank] + [lit, uri, bnPL, collection]
+        node_rank = self._node_rank
 
         def lkey(t):
             if t in self.object_rank:
                 return self.object_rank[t]
             else:
                 try:
-                    return temp_nr[t]
+                    return node_rank[t]
                 except KeyError:
                     print('KeyError on', t)
                     print(list(self.store.subject_predicates(t)) + list(self.store.predicate_objects(t)))
                     print()
                     return -100
 
+        def lrkey(t):
+            return tuple(lkey(v) for v in t[1]['vals'])
+
         lists = {}
         list_starts = (s for s in self.store.subjects(RDF.first, None)
                        if not tuple(self.store.subjects(RDF.rest, s)))
 
         for s in (*self.store.subjects(RDF.type, RDF.List), *list_starts):
-            prank = getPrank(s)
+            prank = self.getPrank(s)
             l = s
             lists[s] = {'vals':[], 'nodes':[], 'prank':prank}
             while l:
@@ -276,84 +344,50 @@ class CustomTurtleSerializer(TurtleSerializer):
                 l = self.store.value(l, RDF.rest)
             lists[s]['vals'].sort(key=lkey)
 
+
         if DEBUG:
             sys.stderr.write('\n[\n')
             [[sys.stderr.write('\n[\n')] +
              [sys.stderr.write(f'{self.store.qname(_)}\n')
               for _ in v['vals']] +
              [sys.stderr.write(']')]
-             for v in
-             sorted(lists.values(),
-                    key=lambda v: [self.object_rank[_] if _ in self.object_rank else max_or for _ in v['vals']])]
+             for k, v in
+             sorted(lists.items(),
+                    key=lrkey)]
+             #sorted(lists.values(),
+                    #key=lambda v: [self.object_rank[_] if _ in self.object_rank else self.max_or for _ in v['vals']])]
             sys.stderr.write('\n]\n')
-            # FIXME lists inside lists will be a problem...
-            # when printing lists the nodes will always come second
-            # but when computing list ranks if there is a tie need to split
-            # on the ranks for the nodes inside and then the ranks of the lists inside
-            # we need a sort column for children for each of these
-            # literal
-            # uri
-            # bnode [
-            # bnode (
-            # [rank_init] * self.npreds + [lit, uri, bnSqu, bnPrn] + [prank]
 
+        list_rank_vec = {}
         if lists:
+            # we have natsort for the internal list order from object_rank
+            # the we natsort again here for the between-list ordering
             list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
                          enumerate(
                              list(
-                                 zip(*sorted(
-                                     lists.items(),
-                                     # we have natsort for the internal list order from object_rank
-                                     # the we natsort again here for the between-list ordering
-                                     key=lambda t: [natsort(self.store.qname(v)) for v in t[1]['vals']])))[0])}
+                                 zip(*sorted(lists.items(),
+                                     key=lrkey)))[0])}
+                                     #key=lambda t: [natsort(self.store.qname(v)) for v in t[1]['vals']])))[0])}
             #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
             # alternate worst case #int('9' * len(str(len(self.store))))
             for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
                 total_list_rank = 1
                 prank = lists[l]['prank']
-                #prank = rank_init
-                node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
-                for p in getAnonParents(l):
+                #prank = self.rank_init
+                list_rank_vec[l] = [self.rank_init] * self.npreds + [prank, r, total_list_rank]
+                for p in self.getAnonParents(l):
                     # propagate list rank information to parent BNodes
                     if p in node_rank:
-                        node_rank[p][-2] = r
+                        self.node_rank_vec[p][-2] = r
                 total_list_rank += 1
                 d = lists[l]
                 nodes = d['nodes']
                 for node in nodes:
-                    node_rank[node] = [rank_init] * self.npreds + [rank_init, r, total_list_rank]
+                    list_rank_vec[node] = [self.rank_init] * self.npreds + [self.rank_init, r, total_list_rank]
                     total_list_rank += 1
                 #print(node_rank[l])
 
-        if node_rank:
-            max_worst_case = max(max(v) for v in node_rank.values()) + 1
-        else:
-            max_worst_case = 1
-        node_rank = {k:[_ if _ else max_worst_case for _ in v] for k, v in node_rank.items()}
-        temp_nr = {k:v + max_or for v, k in
-                   enumerate(k for k, v in
-                             sorted(node_rank.items(),
-                                    key=lambda t:t[-1]))}
-        for node, parent in need_rank.items():
-            node_rank[node][-3] = temp_nr[parent]  # tie breaker 2
-            parents[node] = parent
-
-        nr = {k:v + max_or for v, k in enumerate(k for k, v in sorted(node_rank.items(), key=lambda t:t[-1]))}
-        if DEBUG:
-            old_nr = [(k,tuple(v)) for k, v in node_rank.items()]
-            sys.stderr.write('\n')
-            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
-             for i, p in enumerate(self.predicateOrder + pr)]
-            [sys.stderr.write(f'{a:<10}' + f'{parents[a] if a in parents else "None":<40} {nr[a]} ' +
-                   ' '.join('-' * 4
-                            if c == max_worst_case
-                            else f'{c:>4}' for c in b) + '\n')
-             for a, b in sorted(old_nr, key=lambda t:t[1])]
-        #self.node_rank = {k:tuple(v) for k, v in node_rank.items()}
-        self.node_rank = nr
-        #self.object_rank = {k:((0,) * self.npreds) + (v,) for k, v in self.object_rank.items()}
-        self.recurse = recurse
-        #embed()
+        return list_rank_vec
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
