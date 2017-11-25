@@ -17,12 +17,16 @@ DEBUG = True
 SDEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
-    return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
+    # python reduces int('00') -> 0
+    #return [int(t) if t.isdigit() else t.lower() for t in pat.split(s) if t != '']
+    return [v for t in pat.split(s) if t != ''
+            for v in ((int(_) for _ in t) if all(_ == '0' for _ in t) else
+                      ((int(t),) if t.isdigit() else (t.lower(),)))]
 
 def litsort(l):
     dt = l.datatype if l.datatype is not None else ''
     lang = l.language if l.language is not None else ''
-    return (natsort(l), dt, lang)
+    return natsort(l), dt, lang
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
@@ -149,6 +153,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                                            if c == max_worst_case
                                            else f'{c:>4}' for c in b) + '\n')
                  for a, b in sorted(old_nr, key=lambda t:t[1])]
+                sys.stderr.write('Object Ranks\n')
+                [sys.stderr.write(f'{repr(o)}\n') for o, i in
+                 sorted(self.object_rank.items(), key=lambda t:t[1])]
         debug()
 
     def _PredRank(self):
@@ -378,7 +385,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                     # TODO keep all the *_rank_vec orthogonal
                     # even though lists are technically nodes, they have different semantics
                     # can pull this bit of code out into resolve ranks
-                    if p in list_rank_vec and p not in list_rank:
+                    if p in self.node_rank_vec and p not in list_rank:
                         self.node_rank_vec[p][-2] = r  # FIXME += ???? instead of last one wins?
                 total_list_rank += 1
                 d = lists[l]
