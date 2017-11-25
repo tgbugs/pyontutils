@@ -13,7 +13,7 @@ BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_
 oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 #IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
-DEBUG = False
+DEBUG = True
 SDEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
@@ -130,40 +130,37 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.need_rank = {}
         self.node_rank_vec = {}
         self._BNodeRank()
+        self.max_nr = max(self._node_rank.values())
         list_rank_vec = self._ListRank()
-        self.node_rank_vec.update(list_rank_vec)
+        self.node_rank_vec.update(list_rank_vec)  # FIXME GRRRRR code dedupe
         self.resolve_ranks()
         self.node_rank = self._node_rank
-        if DEBUG:
-            max_worst_case = self.nr_worst_case
-            old_nr = [(k,tuple(v)) for k, v in self.node_rank_vec.items()]
-            sys.stderr.write('\n')
-            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
-             for i, p in enumerate(self.predicateOrder + pr)]
-            [sys.stderr.write(f'{a:<10}' + (f'{parents[a] if a in parents else "None":<40} '
-                              f'{self.node_rank[a]} ') +
-                              ' '.join('-' * 4
-                                       if c == max_worst_case
-                                       else f'{c:>4}' for c in b) + '\n')
-             for a, b in sorted(old_nr, key=lambda t:t[1])]
+        def debug():
+            parents = {}
+            if DEBUG:
+                max_worst_case = self.nr_worst_case
+                old_nr = [(k,tuple(v)) for k, v in self.normalized_node_rank_vec.items()]
+                sys.stderr.write('\n')
+                [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
+                 for i, p in enumerate(self.predicateOrder)]
+                [sys.stderr.write(f'{a:<10}' + (f'{parents[a] if a in parents else "None":<40} '
+                                  f'{self.node_rank[a]} ') +
+                                  ' '.join('-' * 4
+                                           if c == max_worst_case
+                                           else f'{c:>4}' for c in b) + '\n')
+                 for a, b in sorted(old_nr, key=lambda t:t[1])]
+        debug()
 
     def _PredRank(self):
         pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
-        self.npreds = len(pr)
-        self.predicateOrder = [p for p in self.predicateOrder if p in pr]  # drop unused
-        pr = [p for p in pr if p not in self.predicateOrder]  # removed predicateOrder members from pr
-        max_pred = len(self.predicateOrder) + 1
-
-        def prkey(p):
-            # needed for owl:Restrictions and other a uri verbs
-            return (self.predicateOrder.index(p)
-                    if p in self.predicateOrder
-                    else max_pred + pr.index(p))
-
+        a = [p for p in self.predicateOrder if p in pr]  # remove predicateOrder not in pr
+        b = [p for p in pr if p not in self.predicateOrder]  # dedupe pr before merging
+        self.predicateOrder = a + b  # predicateOrder first, then any remaining
+        self.npreds = len(self.predicateOrder)
         return {o:i for i, o in
                 enumerate(
                     sorted(set((_ for _ in self.store.predicates())),
-                           key=prkey))}
+                           key=self.predicateOrder.index))}
 
     def _LitUriRank(self):
         return {o:i  # global rank for all Literals and URIRefs
@@ -318,9 +315,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                 try:
                     return node_rank[t]
                 except KeyError:
-                    print('KeyError on', t)
-                    print(list(self.store.subject_predicates(t)) + list(self.store.predicate_objects(t)))
-                    print()
+                    sys.stderr.write(f'KeyError on {t}\n')
+                    sys.stderr.write(str(list(self.store.subject_predicates(t)) +
+                                         list(self.store.predicate_objects(t))) + '\n\n')
                     return -100
 
         def lrkey(t):
@@ -344,19 +341,20 @@ class CustomTurtleSerializer(TurtleSerializer):
                 l = self.store.value(l, RDF.rest)
             lists[s]['vals'].sort(key=lkey)
 
-
-        if DEBUG:
-            sys.stderr.write('\n[\n')
-            [[sys.stderr.write('\n[\n')] +
-             [sys.stderr.write(f'{self.store.qname(_)}\n')
-              for _ in v['vals']] +
-             [sys.stderr.write(']')]
-             for k, v in
-             sorted(lists.items(),
-                    key=lrkey)]
-             #sorted(lists.values(),
-                    #key=lambda v: [self.object_rank[_] if _ in self.object_rank else self.max_or for _ in v['vals']])]
-            sys.stderr.write('\n]\n')
+        def debug():
+            if DEBUG:
+                sys.stderr.write('\n[\n')
+                [[sys.stderr.write('\n[\n')] +
+                 [sys.stderr.write(f'{self.store.qname(_)}\n')
+                  for _ in v['vals']] +
+                 [sys.stderr.write(']')]
+                 for k, v in
+                 sorted(lists.items(),
+                        key=lrkey)]
+                 #sorted(lists.values(),
+                        #key=lambda v: [self.object_rank[_] if _ in self.object_rank else self.max_or for _ in v['vals']])]
+                sys.stderr.write('\n]\n')
+        debug()
 
         list_rank_vec = {}
         if lists:
@@ -367,9 +365,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                              list(
                                  zip(*sorted(lists.items(),
                                      key=lrkey)))[0])}
-                                     #key=lambda t: [natsort(self.store.qname(v)) for v in t[1]['vals']])))[0])}
-            #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
-            # alternate worst case #int('9' * len(str(len(self.store))))
+            #[print(i, v, lists[i]['vals']) for i, v in list_rank_vecs.items()]
             for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
                 total_list_rank = 1
                 prank = lists[l]['prank']
@@ -377,8 +373,13 @@ class CustomTurtleSerializer(TurtleSerializer):
                 list_rank_vec[l] = [self.rank_init] * self.npreds + [prank, r, total_list_rank]
                 for p in self.getAnonParents(l):
                     # propagate list rank information to parent BNodes
-                    if p in node_rank:
-                        self.node_rank_vec[p][-2] = r
+                    # FIXME this won't work in cases there is more than one list :/
+                    # we would need a whole additional set of vectors for
+                    # TODO keep all the *_rank_vec orthogonal
+                    # even though lists are technically nodes, they have different semantics
+                    # can pull this bit of code out into resolve ranks
+                    if p in list_rank_vec and p not in list_rank:
+                        self.node_rank_vec[p][-2] = r  # FIXME += ???? instead of last one wins?
                 total_list_rank += 1
                 d = lists[l]
                 nodes = d['nodes']
