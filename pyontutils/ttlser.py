@@ -131,25 +131,21 @@ class CustomTurtleSerializer(TurtleSerializer):
         max_pred = len(self.predicateOrder) + 1
         self.object_rank = {o:i  # global rank for all URIRef that appear as objects
                             for i, o in
-                            list(
                             enumerate(
-                                sorted(set((_ for _ in self.store.predicates(None, None))),
-                                       key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
-                                      ) +
                                 sorted(  # doublesort needed for stability wrt case for literals
                                     sorted((_ for _ in self.store.objects(None, None)
                                             if isinstance(_, Literal))),
                                        key=litsort) +
                                 sorted(
-                                    sorted(set(
-                                        [_ for _ in self.store.objects(None, None)
-                                         if isinstance(_, URIRef)] +
-                                        [_ for _ in self.store.subjects(None, None)
-                                         if isinstance(_, URIRef)]), key=self.store.qname),
-                                    # we add to dict in reverse so that the rank of any nodes
-                                    # that appear more than once is their lowest rank
-                                    key=lambda _: natsort(self.store.qname(_)))))[::-1]}
-
+                                    sorted(set(_ for t in self.store for _ in t
+                                               if isinstance(_, URIRef)),
+                                           key=self.store.qname),
+                                    key=lambda _: natsort(self.store.qname(_))))}
+        self.predicate_rank = {o:i for i, o in
+                               enumerate(
+                                   sorted(set((_ for _ in self.store.predicates(None, None))),
+                                          key=lambda _: self.predicateOrder.index(_) if _ in self.predicateOrder else max_pred + pr.index(_) # needed for owl:Restrictions
+                                      ))}
         max_or = max(self.object_rank.values()) + 1
         rank_init = 0
         terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
@@ -164,7 +160,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                     # len is predicates + parent + list cols
                     # TODO optimization: skip predicates never used with BNodes
                     node_rank[node] = [rank_init] * (self.npreds + 1 + 2)
-                orp = self.object_rank[pred]
+                orp = self.predicate_rank[pred]
                 pindex = orp
                 crank = node_rank[node][pindex]
                 if not rank and crank == rank_init:
@@ -176,7 +172,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             pd = 0
             for s, p in sorted(self.store.subject_predicates(node),
                                # sort on predicate required for stability
-                               key=lambda t:(self.object_rank[t[1]], t[0])):
+                               key=lambda t:(self.predicate_rank[t[1]], t[0])):
                 if p == RDF.rest or p == RDF.first:
                     continue
                 if not start:
@@ -282,11 +278,14 @@ class CustomTurtleSerializer(TurtleSerializer):
             lists[s]['vals'].sort(key=lkey)
         #print(lists)
         if lists:
-            list_rank = {o:i + 1 for i, o in  # + 1 to avoid the zero rewriting issue
-                          enumerate(
-                              list(
-                                  zip(*sorted(lists.items(),
-                                              key=lambda t: t[1]['vals'])))[0])}
+            list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
+                         enumerate(
+                             list(
+                                 zip(*sorted(
+                                     lists.items(),
+                                     # we have natsort for the internal list order from object_rank
+                                     # the we natsort again here for the between-list ordering
+                                     key=lambda t: [natsort(v) for v in t[1]['vals']])))[0])}
             #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
             # alternate worst case #int('9' * len(str(len(self.store))))
             total_list_rank = 1
@@ -413,19 +412,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             objects.sort(key=self._globalSortKey)
 
         # Make sorted list of properties
-        propList = []
-        seen = {}
-        for prop in self.predicateOrder:
-            if (prop in properties) and (prop not in seen):
-                propList.append(prop)
-                seen[prop] = True
-        props = sorted(properties.keys())
-        props.sort(key=natsort)
-        for prop in props:
-            if prop not in seen:
-                propList.append(prop)
-                seen[prop] = True
-        return propList
+        return sorted(properties, key=lambda p: self.predicate_rank[p])
 
     def _buildPredicateHash(self, subject):  # XXX unmodified
         """
