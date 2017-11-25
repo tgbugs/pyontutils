@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 import re
+import sys
 from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, BNode, URIRef, Literal
@@ -14,9 +15,6 @@ oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 
 DEBUG = False
 SDEBUG = False
-
-if DEBUG:
-    import sys
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return [int(t) if t.isdigit() else t.lower() for t in pat.split(s)]
@@ -208,26 +206,6 @@ class CustomTurtleSerializer(TurtleSerializer):
             if o != RDF.List:
                 recurse(r, o, None)
 
-        temp_nr = {k:v + max_or for v, k in
-                   enumerate(k for k, v in
-                             sorted(node_rank.items(),
-                                    key=lambda t:t[-1]))}
-        def lkey(t):
-            if t in self.object_rank:
-                return self.object_rank[t]
-            else:
-                try:
-                    return temp_nr[t]
-                except KeyError:
-                    print('KeyError on', t)
-                    print(list(self.store.subject_predicates(t)) + list(self.store.predicate_objects(t)))
-                    print()
-                    return -100
-
-        lists = {}
-        list_starts = (s for s in self.store.subjects(RDF.first, None)
-                       if not tuple(self.store.subjects(RDF.rest, s)))
-
         def getPrank(node, start=tuple()):
             if not start:
                 start = {node}
@@ -263,6 +241,27 @@ class CustomTurtleSerializer(TurtleSerializer):
                     if s not in start:
                         yield from getAnonParents(s, start)
 
+        temp_nr = {k:v + max_or for v, k in
+                   enumerate(k for k, v in
+                             sorted(node_rank.items(),
+                                    key=lambda t:t[-1]))}
+
+        def lkey(t):
+            if t in self.object_rank:
+                return self.object_rank[t]
+            else:
+                try:
+                    return temp_nr[t]
+                except KeyError:
+                    print('KeyError on', t)
+                    print(list(self.store.subject_predicates(t)) + list(self.store.predicate_objects(t)))
+                    print()
+                    return -100
+
+        lists = {}
+        list_starts = (s for s in self.store.subjects(RDF.first, None)
+                       if not tuple(self.store.subjects(RDF.rest, s)))
+
         for s in (*self.store.subjects(RDF.type, RDF.List), *list_starts):
             prank = getPrank(s)
             l = s
@@ -276,7 +275,28 @@ class CustomTurtleSerializer(TurtleSerializer):
                         lists[s]['nodes'].append(l)
                 l = self.store.value(l, RDF.rest)
             lists[s]['vals'].sort(key=lkey)
-        #print(lists)
+
+        if DEBUG:
+            sys.stderr.write('\n[\n')
+            [[sys.stderr.write('\n[\n')] +
+             [sys.stderr.write(f'{self.store.qname(_)}\n')
+              for _ in v['vals']] +
+             [sys.stderr.write(']')]
+             for v in
+             sorted(lists.values(),
+                    key=lambda v: [self.object_rank[_] if _ in self.object_rank else max_or for _ in v['vals']])]
+            sys.stderr.write('\n]\n')
+            # FIXME lists inside lists will be a problem...
+            # when printing lists the nodes will always come second
+            # but when computing list ranks if there is a tie need to split
+            # on the ranks for the nodes inside and then the ranks of the lists inside
+            # we need a sort column for children for each of these
+            # literal
+            # uri
+            # bnode [
+            # bnode (
+            # [rank_init] * self.npreds + [lit, uri, bnSqu, bnPrn] + [prank]
+
         if lists:
             list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
                          enumerate(
@@ -285,11 +305,11 @@ class CustomTurtleSerializer(TurtleSerializer):
                                      lists.items(),
                                      # we have natsort for the internal list order from object_rank
                                      # the we natsort again here for the between-list ordering
-                                     key=lambda t: [natsort(v) for v in t[1]['vals']])))[0])}
+                                     key=lambda t: [natsort(self.store.qname(v)) for v in t[1]['vals']])))[0])}
             #[print(i, v, lists[i]['vals']) for i, v in list_rank.items()]
             # alternate worst case #int('9' * len(str(len(self.store))))
-            total_list_rank = 1
             for l, r in sorted(list_rank.items(), key=lambda t: t[1]):
+                total_list_rank = 1
                 prank = lists[l]['prank']
                 #prank = rank_init
                 node_rank[l] = [rank_init] * self.npreds + [prank, r, total_list_rank]
@@ -342,8 +362,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             except KeyError as e : 
                 # This is what we have to contend with here :/
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
-                print('WARNING: some node that is an object isnt really an object?')
-                print(e)
+                sys.stderr.write('WARNING: some node that is an object isnt really an object?\n')
+                sys.stderr.write(str(e) + '\n')
                 #embed()
                 #return (-1, -1, -1, -1)
                 #return (-1,) * (self.npreds + 1)
