@@ -169,7 +169,19 @@ BLX:7 a owl:Class ;
         "label1"^^xsd:string .
 
 BLX:8 a owl:Class ;
-    rdfs:label "Label2",
+    rdfs:label false,
+        true,
+        0.01,
+        1,
+        1.0,
+        1.00,
+        1.1,
+        2,
+        1e+10,
+        "1",
+        "1.000",
+        "2",
+        "Label2",
         "label2",
         "one should come?",
         "Two should come?" .
@@ -245,6 +257,27 @@ other:CC a owl:Class .
 
 other:cc a owl:Class .
 
+[ a owl:Class ;
+    rdfs:label (
+            (
+                "0"
+                "6" )
+            (
+                "1"
+                "5" )
+            (
+                "1"
+                "5" ) ) ] .
+
+[ a owl:Class ;
+    rdfs:label (
+            (
+                "1"
+                "5" )
+            (
+                "2"
+                "4" ) ) ] .
+
 ### Axioms
 
 [ a owl:AllDifferent ;
@@ -295,14 +328,6 @@ other:cc a owl:Class .
             other:bb
             other:cc ) ] .
 
-[ a (
-            other:BB
-            other:cc ) ] .
-
-[ a (
-            other:bb
-            other:cc ) ] .
-
 [ a owl:Axiom ;
     owl:annotatedSource BLX:10 ;
     owl:annotatedProperty BLX:00 ;
@@ -323,6 +348,22 @@ other:cc a owl:Class .
     owl:annotatedTarget "C"^^xsd:string ;
     BLX:hasDbXref "C"^^xsd:string,
         "D"^^xsd:string ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:20 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:18
+            BLX:21 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
+
+[ a owl:Axiom ;
+    owl:annotatedSource BLX:21 ;
+    owl:annotatedProperty owl:propertyChainAxiom ;
+    owl:annotatedTarget (
+            BLX:18
+            BLX:21 ) ;
+    rdfs:label "lol you have got to be kidding me" ] .
 
 [ a owl:Axiom ;
     owl:annotatedSource obo:DOID_65 ;
@@ -354,21 +395,58 @@ other:cc a owl:Class .
     owl:annotatedTarget "ARDS"^^xsd:string ;
     oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ] .
 
-[ a owl:Axiom ;
-    owl:annotatedSource BLX:20 ;
-    owl:annotatedProperty owl:propertyChainAxiom ;
-    owl:annotatedTarget (
-            BLX:18
-            BLX:21 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
 
-[ a owl:Axiom ;
-    owl:annotatedSource BLX:21 ;
-    owl:annotatedProperty owl:propertyChainAxiom ;
-    owl:annotatedTarget (
-            BLX:18
-            BLX:21 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
+[ a (
+            "BB"
+            "cc"
+            other:BB
+            other:cc
+            [ a (
+                        other:BB
+                        other:cc ) ]
+            (
+                other:BB
+                other:cc ) ) ] .
+
+[ a (
+            "bb"
+            "cc"
+            other:bb
+            other:cc
+            [ a (
+                        other:BB
+                        other:cc ) ]
+            (
+                other:bb
+                other:cc ) ) ] .
+
+[ a (
+            "bb"
+            "cc"
+            other:bb
+            other:cc
+            [ a (
+                        other:bb
+                        other:cc ) ]
+            (
+                other:bb
+                other:cc ) ) ] .
+
+[ a (
+            other:BB
+            other:cc ) ] .
+
+[ a (
+            other:bb
+            other:cc ) ] .
+
+[ other:UsedAP "huehuehuehue" ;
+    rdf:first "this" ;
+    rdf:rest (
+            "a"
+            "bare"
+            "is"
+            "list" ) ] .
 
 ### Annotations
 
