@@ -53,6 +53,46 @@ def qname_mp(self, uri):  # for monkey patching Graph
     else:
         return ":".join((prefix, name))
 
+class ListRanker:
+    def __init__(self, node, serializer):
+        self.node = node
+        self.serializer = serializer
+        self.vals = []
+        self.nodes = []  # list nodes
+        l = self.node
+        while l:
+            item = self.serializer.store.value(l, RDF.first)
+            self.add(item, l)
+            l = self.serializer.store.value(l, RDF.rest)
+        self.vis_vals = [v for v in self.vals if not isinstance(v, BNode)]
+        self.bvals = [v for v in self.vals if isinstance(v, BNode)]
+
+    def add(self, item, node):
+        if item is not None:
+            self.vals.append(item)
+            if node != self.node:
+                self.nodes.append(node)
+
+    @property
+    def rank_vec(self):
+        return tuple(sorted(self.vis_vals, key=self._vis_val_key))
+
+    def _vis_val_key(self, val):
+        if val in self.serializer.object_rank:
+            return self.serializer.object_rank[val]
+
+    def _b_val_rank(self, val):
+        if val in self.serializer.node_rank:
+            return 1, self.serializer.node_rank[val]
+        elif val in self.serializer.list_rank:
+            return 2, self.serializer.list_rank[val]
+        else:
+            raise BaseException('Not upulated yet...')
+            return self.max_or
+
+    def __hash__(self):
+        return hash(self.node)
+
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
@@ -137,14 +177,23 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.predicate_rank = self._PredRank()
         self.object_rank = self._LitUriRank()
         self.max_or = max(self.object_rank.values()) + 1
-        self.need_rank = {}
+        self.node_rank = self.round2()
+        if DEBUG:
+            sys.stderr.write('\n')
+            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
+             for i, p in enumerate(self.predicateOrder)]
+        return
+        # first rank by the 'visible' nodes
+        # build a map of nodes that have blank node children
+        # second rank by the ranks of the BNodes that have been ranked by the visible nodes
+        self.need_prank = {}
         self.node_rank_vec = {}
+        self._ListRank()
         self._BNodeRank()
         self.max_nr = max(self._node_rank.values())
-        list_rank_vec = self._ListRank()
-        self.node_rank_vec.update(list_rank_vec)  # FIXME GRRRRR code dedupe
         self.resolve_ranks()
         self.node_rank = self._node_rank
+        self.list_rank = self._list_rank  # FIXME TODO
         def debug():
             parents = {}
             if DEBUG:
@@ -163,6 +212,67 @@ class CustomTurtleSerializer(TurtleSerializer):
                 [sys.stderr.write(f'{repr(o)}\n') for o, i in
                  sorted(self.object_rank.items(), key=lambda t:t[1])]
         debug()
+
+    def round2(self):
+        bnodes = {v:[[[] for _ in range(self.npreds)],
+                     [[] for _ in range(self.npreds)]]  # [[]] * n produces 10 of the same list!
+                  for t in self.store
+                  for v in t
+                  if isinstance(v, BNode)}
+        mwc = len(bnodes) + self.max_or + 1
+        def normalize():
+            for vl, il in bnodes.values():
+                for l in vl:
+                    l.sort()
+                for l in il:
+                    l.sort()
+            return {k:[[_ if _ else [mwc] for _ in v],
+                       [_ if _ else [mwc] for _ in i]]
+                    for k, (v, i) in bnodes.items()}
+        def rank():
+            return {n:i for i, n in
+                    enumerate(list(
+                        zip(*sorted(normalize().items(),
+                                    key=lambda t: t[1])))[0])}
+        def fixedpoint(ranks):
+            for n, rank_vecs in bnodes.items():
+                rank_vecs[1] = [[] for _ in range(self.npreds)]
+                for p, o in self.store.predicate_objects(n):  # TODO speedup by not looking up every time
+                    if o not in self.object_rank:
+                        rank_vecs[1][self.predicate_rank[p]].append(ranks[o])
+        def one_time():
+            for n, (visible_ranks, invisible_ranks) in bnodes.items():
+                for p, o in self.store.predicate_objects(n):
+                    if o in self.object_rank:
+                        pr = self.predicate_rank[p]
+                        or_ = self.object_rank[o]
+                        #print(pr, or_)
+                        visible_ranks[pr].append(or_)
+            vranks = rank()
+            fixedpoint(vranks)
+        one_time()
+        [sys.stderr.write(f'\n{repr(k)}\n' +
+                          ' '.join([f'{str(_):<5}' if _ != [mwc] else '---  ' for _ in a]) +
+                          '\n' + ' '.join([f'{str(_):<5}' if _ != [mwc] else '---  ' for _ in b]))
+         for k, (a, b) in sorted(normalize().items(),
+                                 key=lambda t:t[1])]
+        old_iranks = None
+        i = 0
+        while 1:
+            #print(i)
+            i += 1
+            iranks = rank()
+            if old_iranks == iranks:
+                break
+            else:
+                old_iranks = iranks
+                fixedpoint(iranks)
+
+
+        #print(bnodes)
+        #print(iranks)
+        return {n:i + self.max_or for n, i in iranks.items()}
+        #embed()
 
     def _PredRank(self):
         pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
@@ -196,7 +306,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             if node not in self.node_rank_vec:
                 # len is predicates + parent + list cols
                 # TODO optimization: skip predicates never used with BNodes
-                self.node_rank_vec[node] = [self.rank_init] * (self.npreds + 1 + 2)
+                self.node_rank_vec[node] = [self.rank_init] * (self.npreds + 1 + 1)
             orp = self.predicate_rank[pred]
             pindex = orp
             crank = self.node_rank_vec[node][pindex]
@@ -205,21 +315,28 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # results in trips with multiple types first
                 self.node_rank_vec[node][pindex] -= 1
             else:
+                # summing ranks of all children could be an issue
+                # if you can find graph structures whose leaf
+                # counts sum to exactly the same amount at every
+                # node in the graph all the way up to the terminal
                 self.node_rank_vec[node][pindex] += rank
         pd = 0
         for s, p in sorted(self.store.subject_predicates(node),
                            # sort on predicate required for stability
                            key=lambda t:(self.predicate_rank[t[1]], t[0])):
-            if p == RDF.rest or p == RDF.first:
+            if isinstance(node, BNode) and s in self._list_rank:
+                self.node_rank_vec[node][-2] = self._list_rank[s]  # tie breaker 0 on vis nodes
                 continue
-            if not start:
+            elif p == RDF.rest or p == RDF.first:
+                continue
+            elif not start:
                 start = [node]
             elif node not in start:
                 start.append(node)
+
             if s not in start:
                 if s in self.terminals and isinstance(node, BNode):
-                    self.node_rank_vec[node][-3] = self.object_rank[s]  # tie breaker 0
-                    #parents[node] = s
+                    self.node_rank_vec[node][-1] = self.object_rank[s]  # tie breaker 0 on vis nodes
                     continue
                 parent, d = self._recurse(rank, s, p, depth + 1, start)  # XXX recursion is here
                 if isinstance(node, BNode) and d > pd:
@@ -230,12 +347,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                         # rdflib.term.URIRef and URIRef hash to different values :/
                         out = URIRef(parent) # XXX rdflib bug
                     if out in self.object_rank:
-                        self.node_rank_vec[node][-3] = self.object_rank[out]  # tie breaker 1
+                        self.node_rank_vec[node][-1] = self.object_rank[out]  # tie breaker 1
                     else:
-                        self.need_rank[node] = out
-                    #parents[node] = out
-        #if node not in parents:
-            #parents[node] = 'None'
+                        self.need_prank[node] = out
         try:
             return out, pd
         except NameError:
@@ -248,7 +362,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def resolve_ranks(self):
         node_rank = self._node_rank
-        for node, parent in self.need_rank.items():
+        for node, parent in self.need_prank.items():
             self.node_rank_vec[node][-3] = node_rank[parent]  # tie breaker 2
             parents[node] = parent
 
@@ -319,19 +433,21 @@ class CustomTurtleSerializer(TurtleSerializer):
         # BNode propertyList -> bnode [
         # collection -> bnode (
         # [self.rank_init] * self.npreds + [prank] + [lit, uri, bnPL, collection]
-        node_rank = self._node_rank
+        #node_rank = self._node_rank
 
         def lkey(t):
             if t in self.object_rank:
                 return self.object_rank[t]
             else:
-                try:
-                    return node_rank[t]
-                except KeyError:
-                    sys.stderr.write(f'KeyError on {t}\n')
-                    sys.stderr.write(str(list(self.store.subject_predicates(t)) +
-                                         list(self.store.predicate_objects(t))) + '\n\n')
-                    return -100
+                return self.max_or
+                #try:
+                    #return node_rank[t]
+                #except KeyError:
+                    #sys.stderr.write(f'KeyError on {t}\n')
+                    #sys.stderr.write(str(list(self.store.subject_predicates(t)) +
+                                         #list(self.store.predicate_objects(t))) + '\n\n')
+                    #self.need_rank[sub] = t
+                    #return -100
 
         def lrkey(t):
             return tuple(lkey(v) for v in t[1]['vals'])
@@ -341,18 +457,21 @@ class CustomTurtleSerializer(TurtleSerializer):
                        if not tuple(self.store.subjects(RDF.rest, s)))
 
         for s in (*self.store.subjects(RDF.type, RDF.List), *list_starts):
-            prank = self.getPrank(s)
-            l = s
-            lists[s] = {'vals':[], 'nodes':[], 'prank':prank}
-            while l:
-                item = self.store.value(l, RDF.first)
-                if item is not None:
-                    #print(item)
-                    lists[s]['vals'].append(item)
-                    if l != s:
-                        lists[s]['nodes'].append(l)
-                l = self.store.value(l, RDF.rest)
-            lists[s]['vals'].sort(key=lkey)
+            #prank = self.getPrank(s)
+            #l = s
+            print(s)
+            lists[s] = ListRanker(s, self)
+
+        self.list_rankers = lists
+        self.list_rank_vec = {n:lr.rank_vec for n, lr in self.list_rankers.items()}
+        list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
+                     enumerate(
+                         list(
+                             zip(*sorted(self.list_rank_vec.items(),
+                                         key=lambda t:t[1])))[0])}
+        self._list_rank = list_rank
+        self.max_lr = max(list_rank.values())
+        return
 
         def debug():
             if DEBUG:
@@ -383,21 +502,20 @@ class CustomTurtleSerializer(TurtleSerializer):
                 total_list_rank = 1
                 prank = lists[l]['prank']
                 #prank = self.rank_init
-                list_rank_vec[l] = [self.rank_init] * self.npreds + [prank, r, total_list_rank]
-                for p in self.getAnonParents(l):
+                list_rank_vec[l] = [rank_init, r, total_list_rank]
+                #for p in self.getAnonParents(l):
                     # propagate list rank information to parent BNodes
                     # FIXME this won't work in cases there is more than one list :/
                     # we would need a whole additional set of vectors for
                     # TODO keep all the *_rank_vec orthogonal
                     # even though lists are technically nodes, they have different semantics
                     # can pull this bit of code out into resolve ranks
-                    if p in self.node_rank_vec and p not in list_rank:
-                        self.node_rank_vec[p][-2] = r  # FIXME += ???? instead of last one wins?
+                    #if p in self.node_rank_vec and p not in list_rank:
+                        #self.node_rank_vec[p][-2] = r  # FIXME += ???? instead of last one wins?
                 total_list_rank += 1
-                d = lists[l]
-                nodes = d['nodes']
+                nodes = lists[l]['nodes']
                 for node in nodes:
-                    list_rank_vec[node] = [self.rank_init] * self.npreds + [self.rank_init, r, total_list_rank]
+                    list_rank_vec[node] = [r, total_list_rank]
                     total_list_rank += 1
                 #print(node_rank[l])
 
@@ -405,13 +523,15 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def _globalSortKey(self, bnode):
         if isinstance(bnode, BNode):
-            try:
+            if bnode in self.node_rank:
                 return self.node_rank[bnode]
-            except KeyError as e : 
+            elif bnode in self.list_rank:
+                return self.list_rank[bnode]
+            else:
                 # This is what we have to contend with here :/
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
-                sys.stderr.write('WARNING: some node that is an object isnt really an object?\n')
-                sys.stderr.write(str(e) + '\n')
+                sys.stderr.write(f'WARNING: some node {bnode} that is an object isnt really an object?\n')
+                #sys.stderr.write(str(e) + '\n')
                 #embed()
                 #return (-1, -1, -1, -1)
                 #return (-1,) * (self.npreds + 1)
