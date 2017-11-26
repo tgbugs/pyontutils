@@ -3,7 +3,7 @@ import re
 import sys
 from datetime import datetime
 from rdflib.plugins.serializers.turtle import TurtleSerializer
-from rdflib import RDF, RDFS, OWL, BNode, URIRef, Literal
+from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from IPython import embed
 
@@ -17,16 +17,22 @@ DEBUG = True
 SDEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
-    # python reduces int('00') -> 0
-    #return [int(t) if t.isdigit() else t.lower() for t in pat.split(s) if t != '']
-    return [v for t in pat.split(s) if t != ''
-            for v in ((int(_) for _ in t) if all(_ == '0' for _ in t) else
-                      ((int(t),) if t.isdigit() else (t.lower(),)))]
+    return tuple(int(t) if t.isdigit() else t.lower() for t in pat.split(s))
 
 def litsort(l):
     dt = l.datatype if l.datatype is not None else ''
     lang = l.language if l.language is not None else ''
-    return natsort(l), dt, lang
+    if dt == XSD.boolean:
+        out = 0, tuple(), (0 if l == 'false' else 1)
+    elif dt == XSD.integer:
+        out = 1, tuple(), int(l), str(l)
+    elif dt == XSD.decimal:
+        out = 1, tuple(), float(l), str(l)
+    elif dt == XSD.double:
+        out = 1, tuple(), float(l), str(l)
+    else:
+        out = 2, natsort(l), 0, dt, lang
+    return out
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
