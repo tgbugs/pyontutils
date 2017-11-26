@@ -13,7 +13,7 @@ BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_
 oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
 #IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
-DEBUG = True
+DEBUG = False
 SDEBUG = False
 
 def natsort(s, pat=re.compile(r'([0-9]+)')):
@@ -238,18 +238,26 @@ class CustomTurtleSerializer(TurtleSerializer):
             return {k:[smwc(v), smwc(i), smwc(ll)]
                     for k, (v, i, ll) in bnodes.items()}
         def rank():
-            return {n:i for i, n in
-                    enumerate(list(
-                        zip(*sorted(normalize().items(),
-                                    key=lambda t: t[1])))[0])}
+            old_ls = None
+            out = {}
+            i = 0  # skip zero so we don't overwrite it
+            for nb, ls in sorted(normalize().items(), key=lambda t: t[1]):
+                if ls != old_ls:
+                    i += 1
+                old_ls = ls
+                out[nb] = i
+            return out
         def fixedpoint(ranks):
             for n, rank_vecs in bnodes.items():
                 rank_vecs[1] = [[] for _ in range(self.npreds)]
+                rank_vecs[2][1] = []
                 for p, o in self.store.predicate_objects(n):  # TODO speedup by not looking up every time
                     if o not in self.object_rank:
                         if p == RDF.first:
-                            if n in self._list_rank and o in self._firsts:
-                                rank_vecs[2][1].append(ranks[o])
+                            if o in self._list_rank:
+                                if n not in self._list_rank:
+                                    print('hit', n, o, ranks[n], ranks[o])
+                                rank_vecs[2][1].append(ranks[o])  # FIXME Y U NO PROPAGATE?
                             continue
                         elif p == RDF.rest:
                             continue
@@ -258,8 +266,10 @@ class CustomTurtleSerializer(TurtleSerializer):
             for n, (visible_ranks, invisible_ranks, (lvr, lir)) in bnodes.items():
                 for p, o in self.store.predicate_objects(n):
                     if p == RDF.first:
-                        if n in self._list_rank:
+                        if n in self._list_rank and self.list_rankers[n].vis_vals:
                             lvr.append(self._list_rank[n])  # FIXME list of just lists will have weird rank
+                            #else:
+                                #print(self.list_rankers[n].vals)
                         continue
                     elif p == RDF.rest:
                         continue
@@ -270,21 +280,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                     else:
                         visible_ranks[pr].append(mwc - 1)  # presence of a more highly ranked predicate counts
             vranks = rank()
+            #print(sorted(vranks.items(), key=lambda t:(t[1], t[0])))
             fixedpoint(vranks)
         one_time()
-        if DEBUG:
-            def sss(l):
-                return ' '.join([f'{str(_):<5}' if _ != [mwc] else '---  '
-                                 for _ in l])
-            [sys.stderr.write(f'\n{v:<4}{k}')
-             for k, v in sorted(self.object_rank.items(),
-                                key=lambda t:t[1])]
-            [sys.stderr.write(f'\n' + #{repr(k)}\n' +
-                              sss(a) + '\n' +
-                              sss(b) + '\n' +
-                              sss(c)) 
-             for k, (a, b, c) in sorted(normalize().items(),
-                                     key=lambda t:t[1])]
         i = 0
         old_norm = None
         while 1:
@@ -297,12 +295,24 @@ class CustomTurtleSerializer(TurtleSerializer):
                 old_norm = norm
                 irank = rank()
                 fixedpoint(irank)
-
-
-        #print(bnodes)
-        #print(iranks)
+                #irank = rank()
+                #fixedpoint(irank)
+        def debug():
+            [sys.stderr.write(f'\n{v:<4}{k}')
+             for k, v in sorted(self.object_rank.items(),
+                                key=lambda t:t[1])]
+            def sss(l):
+                return ' '.join([f'{str(_):>5}' if _ != [mwc] else '-----'
+                                 for _ in l])
+            r = {o:i for i, o in enumerate(list(zip(*sorted(rank().items(), key=lambda t:t[1])))[0])}
+            [sys.stderr.write('\n' +
+                              f'{r[k]:>4} ' + sss(a) + '\n' +
+                              ' ' * 5 + sss(b) + '\n' +
+                              ' ' * 5 + sss(c))
+             for k, (a, b, c) in sorted(normalize().items(),
+                                     key=lambda t:t[1])]
+        if DEBUG: debug()
         return {n:i + self.max_or for n, i in irank.items()}
-        #embed()
 
     def _PredRank(self):
         pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
@@ -495,11 +505,21 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.list_rankers = lists
         self.max_lr = len(self.list_rankers)
         self.list_rank_vec = {n:lr.rank_vec for n, lr in self.list_rankers.items()}
-        list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
-                     enumerate(
-                         list(
-                             zip(*sorted(self.list_rank_vec.items(),
-                                         key=lambda t:t[1])))[0])}
+
+
+        old_ls = None
+        list_rank = {}
+        i = 0  # skip zero so we don't overwrite it
+        for nb, ls in sorted(self.list_rank_vec.items(), key=lambda t: t[1]):
+            if ls != old_ls:
+                i += 1
+            old_ls = ls
+            list_rank[nb] = i
+        #list_rank = {o:i + 1 for i, o in  # i + 1 to avoid renormalization of rank zero
+                     #enumerate(
+                         #list(
+                             #zip(*sorted(self.list_rank_vec.items(),
+                                         #key=lambda t:t[1])))[0])}
         self._list_rank = list_rank
         #self.max_lr = max(list_rank.values())
         return
