@@ -29,7 +29,10 @@ def litsort(l):
     elif dt == XSD.decimal:
         out = 1, tuple(), float(l), str(l)
     elif dt == XSD.double:
-        out = 1, tuple(), float(l), str(l)
+        n = float(l)
+        m, e = f'{n:e}'.split('e')
+        s = f'{m.rstrip("0").rstrip(".")}e{e}'
+        out = 1, tuple(), n, s
     else:
         out = 2, natsort(l), 0, dt, lang
     return out
