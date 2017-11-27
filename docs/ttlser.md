@@ -48,6 +48,9 @@ Alphabetical ordering in this document means the following.
 8. Ordering of BooleanLiterals shall be false, true.
 9. Ordering of NumericLiterals shall be by pairs of `(numeric value, original string representation)`.
 10. Ordering of RDFLiterals shall be alphabetical by the triple `(value, datatype, language)` with the empty string `''` being substituted for either datatype or language if either is missing.
+11. Ordering of elements at any given nesting level (skipping invalid combinations such as a literal as a subject) shall be, literal, iri, blankNodePropertyList, collection.
+    For example in a collection the order would be `(true 1 1.0 1.00 1e+00 "1" A:1 <http://a.org/1> [ a owl:Thing ] (1 "1"))`.
+12. Ordering of `owl:Axiom`s shall be by the triple of objects for `(owl:annotatedSource owl:annotatedProperty owl:annotatedTarget)`.
 
 ## Implementation note
-This is currently implemented in [ttlser.py](../pyontutils/ttlser.py) by finding a total ordering on all URIs and Literals, and then using the ranks on those nodes to calculate ranks for any BNode that is their parent. This is done using a fixedpoint function on the ranks of BNodes. This provides a global total ordering for all triples than can then be used to produce deterministic output recursively.
+This is currently implemented in [ttlser.py](../pyontutils/ttlser.py) by finding a total ordering on all URIs and Literals, and then using the ranks on those nodes to calculate ranks for any BNode that is their parent. This is done using a fixedpoint function on the ranks of BNodes. This provides a global total ordering for all triples than can then be used to produce deterministic output recursively. Ordering rules involving predicate precidence are implemented by selecting the order in which predicates or groups of predicates appear in the list at the beginning of `CustomTurtleSerializer`.
