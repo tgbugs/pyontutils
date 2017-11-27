@@ -77,7 +77,7 @@ class ListRanker:
     def rank_vec(self):
         out = tuple(sorted(self._vis_val_key(v) for v in self.vis_vals))
         if not out:
-            return self.serializer.max_lr + 1,
+            return self.serializer.max_or + self.serializer.max_lr + 1,
         else:
             return out
 
@@ -185,7 +185,9 @@ class CustomTurtleSerializer(TurtleSerializer):
         self._firsts = {n:p for p, lr in self.list_rankers.items() for n in lr.nodes}
         self.node_rank = self.round2()
         if DEBUG:
-            [l.vals for l in sorted(self.list_rankers.values(), key=lambda l:l.rank_vec)]
+            lv = [(l.node, l.vals)
+                  for l in sorted(self.list_rankers.values(),
+                                  key=lambda l:l.rank_vec)]
             sys.stderr.write('\n')
             [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
              for i, p in enumerate(self.predicateOrder)]
@@ -255,8 +257,8 @@ class CustomTurtleSerializer(TurtleSerializer):
                     if o not in self.object_rank:
                         if p == RDF.first:
                             if o in self._list_rank:
-                                if n not in self._list_rank:
-                                    print('hit', n, o, ranks[n], ranks[o])
+                                if DEBUG and n not in self._list_rank:
+                                    sys.stderr.write(f'\nhit {n:<10} {o:<10} {ranks[n]:<4} {ranks[o]:<4}')
                                 rank_vecs[2][1].append(ranks[o])  # FIXME Y U NO PROPAGATE?
                             continue
                         elif p == RDF.rest:
@@ -279,14 +281,14 @@ class CustomTurtleSerializer(TurtleSerializer):
                         visible_ranks[pr].append(or_)
                     else:
                         visible_ranks[pr].append(mwc - 1)  # presence of a more highly ranked predicate counts
-            vranks = rank()
+            ranks = rank()
             #print(sorted(vranks.items(), key=lambda t:(t[1], t[0])))
-            fixedpoint(vranks)
+            fixedpoint(ranks)
         one_time()
         i = 0
         old_norm = None
         while 1:
-            sys.stderr.write(str(i))
+            sys.stderr.write(f'\n{i}')
             i += 1
             norm = normalize()
             if old_norm == norm:
