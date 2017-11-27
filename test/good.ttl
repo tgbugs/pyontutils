@@ -4,6 +4,8 @@
 @prefix b: <http://b.org/prefix_> .
 @prefix blx: <http://uri.binterlex.org/base/> .
 @prefix BLX: <http://uri.binterlex.org/base/blx_> .
+@prefix c: <http://c.org/prefix_> .
+@prefix C: <http://cc.org/prefix_> .
 @prefix doid: <http://purl.obolibrary.org/obo/doid#> .
 @prefix ns1: <http://myduplicateprefix.org/> .
 @prefix obo: <http://purl.obolibrary.org/obo/> .
@@ -252,6 +254,8 @@ other:aa a owl:Class .
 other:BB a owl:Class .
 
 other:bb a owl:Class .
+
+other:BBb a owl:Class .
 
 other:CC a owl:Class .
 

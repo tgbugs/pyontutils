@@ -16,6 +16,8 @@
 @prefix b: <http://b.org/prefix_> .
 @prefix A: <http://Z.org/prefix_> .
 @prefix B: <http://X.org/prefix_> .
+@prefix C: <http://cc.org/prefix_> .
+@prefix c: <http://c.org/prefix_> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
 @base <http://ihavenoqname.org/> .  # this will be stripped and we prefer proper prefixes
 
@@ -57,6 +59,7 @@ blx:AB a owl:Class .
 # tests consistent case ordering 2
 other:aa a owl:Class .
 other:AA a owl:Class .
+other:BBb a owl:Class .
 other:bb a owl:Class .
 other:BB a owl:Class .
 other:cc a owl:Class .
