@@ -414,8 +414,8 @@ other:cc a owl:Class .
             other:bb
             other:cc
             [ a (
-                        other:BB
-                        other:cc ) ]
+                        other:XX
+                        other:yy ) ]
             (
                 other:bb
                 other:cc ) ) ] .
@@ -426,8 +426,8 @@ other:cc a owl:Class .
             other:bb
             other:cc
             [ a (
-                        other:bb
-                        other:cc ) ]
+                        other:xx
+                        other:yy ) ]
             (
                 other:bb
                 other:cc ) ) ] .

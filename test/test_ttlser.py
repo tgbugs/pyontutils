@@ -11,12 +11,14 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 
 def randomize_BNode_order(graph):
     replaced = {}
+    urn = [f'{i:0<6}' for i in range(999999)]
+    random.shuffle(urn)
     def swap(t):
         if isinstance(t, rdflib.BNode):
             if t in replaced:
                 return replaced[t]
             else:
-                rnd = random.randint(0, 999999999)
+                rnd = urn.pop()  # avoid the rare duplicate
                 new = rdflib.BNode(rnd)
                 replaced[t] = new
                 return new
@@ -69,7 +71,7 @@ class TestTtlser(unittest.TestCase):
         nofail = True
         env = os.environ.copy()
         seed = None  # 'random'
-        for _ in range(10):
+        for _ in range(20):
             if seed is not None:
                 env['PYTHONHASHSEED'] = str(seed)
             else:
@@ -84,12 +86,13 @@ class TestTtlser(unittest.TestCase):
             actual2 = out
             if self.actual != actual2:
                 print('Determinism failure!')
-                hit = False
-                for _1, _2 in zip(self.actual.decode(), actual2.decode()):
-                    if _1 != _2 and not hit:
-                        hit = True
-                    if hit:
-                        print(_1, _2)
+                if False:
+                    hit = False
+                    for _1, _2 in zip(self.actual.decode(), actual2.decode()):
+                        if _1 != _2 and not hit:
+                            hit = True
+                        if hit:
+                            print(_1, _2)
                 nofail = False
                 with open(self.actualpath2, 'wb') as f:
                     f.write(actual2)
