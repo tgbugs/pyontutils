@@ -577,5 +577,5 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.endDocument()
         stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.0.8\n").encode('ascii'))
+        stream.write((u"### Serialized using the nifstd custom serializer v1.1.0\n").encode('ascii'))
 
