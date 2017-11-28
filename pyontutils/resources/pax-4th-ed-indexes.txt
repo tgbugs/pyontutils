@@ -58,6 +58,7 @@ ACo anterior cortical amygdaloid nucleus 22-31, 86-87, 90-93
 acp anterior commissure, posterior part 18-22, 82-89, 96-100
 Acs5 accessory trigeminal nucleus 58-59, 93-94
 Acs6 accessory abducens nucleus 59-60, 91
+Acs6/7 accessory abducens/facial nucleus 91
 Acs7 accessory facial nucleus 61-65, 91-93
 AD anterodorsal thalamic nucleus 23-28, 82, 108-111
 ADP anterodorsal preoptic nucleus 18-20, 80, 98-102
@@ -272,6 +273,7 @@ ECu external cuneate nucleus 66-75, 82-84, 98-100
 EF epifascicular nucleus 67-69
 ELm epilemniscal nucleus 42-43
 eml external medullary lamina 26, 28-35, 84-87, 102-108
+Ent entorhinal cortex 0  ; NOTE Ent is never used directly in figures
 EPl external plexiform layer of the olfactory bulb 1-4, 80
 EPlA external plexiform layer of the accessory olfactory bulb 3
 ERS epirubrospinal nucleus 50, 83, 97
@@ -940,6 +942,7 @@ anterior olfactory nucleus, dorsal part AOD
 anterior olfactory nucleus, external part AOE
 anterior olfactory nucleus, lateral part AOL
 anterior olfactory nucleus, medial part AOM
+anterior olfactory nucleus, posterior part AOP
 anterior olfactory nucleus, ventral part AOV
 anterior perifornical nucleus APF
 anterior pretectal nucleus APT
@@ -1074,6 +1077,7 @@ dorsal lateral geniculate nucleus DLG
 dorsal lateral olfactory tract dlo
 dorsal longitudinal fasciculus dlf
 dorsal motor nucleus of vagus 10
+dorsal nucleus D
 dorsal nucleus of the lateral lemniscus DLL
 dorsal paragigantocellular nucleus DPGi
 dorsal peduncular cortex DP
@@ -1095,7 +1099,7 @@ dorsal tenia tecta DTT
 dorsal terminal nucleus of the accessory optic tract DT
 dorsal transition zone DTr
 dorsal tuberomammillary nucleus DTM
-dorsolateral fasciculus d1
+dorsolateral fasciculus dl
 dorsolateral orbital cortex DLO
 dorsolateral periaqueductal gray DLPAG
 dorsolateral pontine nucleus DLPn
@@ -1156,6 +1160,7 @@ genu of the facial nerve g7
 gigantocellular reticular nucleus Gi
 gigantocellular reticular nucleus, alpha part GiA
 gigantocellular reticular nucleus, ventral part GiV
+glomerular layer of the accessory olfactory bulb GlA
 glomerular layer of the olfactory bulb Gl
 gracile fasciculus gr
 gracile nucleus Gr
