@@ -1570,6 +1570,7 @@ rostral ventral respiratory group RVRG
 rostroventrolateral reticular nucleus RVL
 rostrum of the corpus callosum rcc
 rubrospinal tract rs
+; Q
 ; R
 raphe interpositus nucleus RIP
 raphe magnus nucleus RMg
@@ -1756,6 +1757,7 @@ vomeronasal nerve layer VN
 ; W
 ; X
 xiphoid thalamic nucleus Xi
+; Y
 ; Z
 zona incerta ZI
 zona incerta, dorsal part ZID
