@@ -165,7 +165,7 @@ CB cell bridges of the ventral striatum 14-17, 82-83, 94-96
 Cb cerebellum 55-57, 97, 100
 CC central canal 74-79, 92-95
 cc corpus callosum 16-38, 79-89, 113-116
-Ce 88, 94
+Ce central amygdaloid nucleus 88, 94
 CeC central amygdaloid nucleus, capsular part 25-33, 87, 95-97
 CeCv central cervical nucleus 117a,b
 CeL central amygdaloid nucleus, lateral division 26-33, 87, 97-98
@@ -1010,6 +1010,7 @@ caudate putamen (striatum) CPu
 caudoventral respiratory group CVRG
 caudoventrolateral reticular nucleus CVL
 cell bridges of the ventral striatum CB
+central amygdaloid nucleus Ce
 central amygdaloid nucleus, capsular part CeC
 central amygdaloid nucleus, lateral division CeL
 central amygdaloid nucleus, medial division CeM
