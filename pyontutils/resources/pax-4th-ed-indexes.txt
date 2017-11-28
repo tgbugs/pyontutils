@@ -758,7 +758,7 @@ SolG nucleus of the solitary tract, gelatinous part 72-73, 81
 SolI nucleus of the solitary tract, interstitial part 72-76
 SolIM nucleus of the solitary tract, intermediate part 65-76, 82-83
 SolM nucleus of the solitary tract, medial part 66-76, 81-82
-SolRL nucleus of the solitary tract, rostrolateral part1-10 64-66
+SolRL nucleus of the solitary tract, rostrolateral part 64-66
 SolVL nucleus of the solitary tract, ventrolateral part 66-76, 82-83
 SOR supraoptic nucleus, retrochiasmatic part 28-32, 82-83, 90
 sox supraoptic decussation 25-38, 79-87, 90-100
@@ -1421,7 +1421,7 @@ nucleus of the solitary tract, gelatinous part SolG
 nucleus of the solitary tract, intermediate part SolIM
 nucleus of the solitary tract, interstitial part SolI
 nucleus of the solitary tract, medial part SolM
-nucleus of the solitary tract, rostrolateral part1-10 SolRL
+nucleus of the solitary tract, rostrolateral part SolRL
 nucleus of the solitary tract, ventrolateral part SolVL
 nucleus of the stria medullaris SM
 nucleus of the trapezoid body Tz
