@@ -853,6 +853,42 @@ def paxinos():
         return sections(four), sections(six)
     #test4, test6 = test()
 
+    with open(os.path.expanduser('~/ni/nifstd/paxinos/tree.txt'), 'rt') as f:
+        tree = f.read()
+
+    def parse_tree():
+        lines = [l for l in tree.split('\n') if l]
+        out = {}
+        recs = []
+        parent_stack = [None]
+        old_depth = 0
+        for l in lines:
+            depth, abbrev, _, name = l.split(' ', 3)
+            depth = len(depth)
+            if old_depth < depth:  # don't change
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+                old_depth = depth
+            elif old_depth == depth:
+                if len(parent_stack) - 1 > depth:
+                    parent_stack.pop()
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+            elif old_depth > depth:  # bump back
+                for _ in range(old_depth - depth + 1):
+                    parent_stack.pop()
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+                old_depth = depth
+
+            struct = None if name == '-------' else name
+            o = (depth, abbrev, struct, parent)
+            recs.append(o)
+            out[abbrev] = ([struct], (), parent)
+        return recs, out
+    trecs, tr = parse_tree()
+    assert len(tr) == len(trecs), 'Abbreviations in tr are not unique!'
+
     @profile_me
     def fast(t):
         a, b = t.split('List of Structures')
@@ -900,12 +936,13 @@ def paxinos():
                 ar.append((abbrev, struct, figs))
         return sr, ar
 
+    def missing(a, b):
+        am = a - b
+        bm = b - a
+        return am, bm
+
     def check(t):
         sr, ar = fast(t)
-        def missing(a, b):
-            am = a - b
-            bm = b - a
-            return am, bm
         sabs = set(_[0] for _ in sr)
         aabs = set(_[0] for _ in ar)
         ssts = set(_[1] for _ in sr)
@@ -954,9 +991,17 @@ def paxinos():
     sr6, ar6, sx = check(six)
     sfr = set(fr)
     ssx = set(sx)
-    frm = sfr - ssx
-    sxm = ssx - sfr
-    print(len(frm), len(sxm))
+    str_ = set(tr)
+    in_four_not_in_six = sfr - ssx
+    in_six_not_in_four = ssx - sfr
+    in_tree_not_in_six = str_ - ssx
+    in_six_not_in_tree = ssx - str_
+
+    print(len(in_four_not_in_six), len(in_six_not_in_four), len(in_tree_not_in_six), len(in_six_not_in_tree))
+    for a, ((s), _, p) in tr.items():
+        if a in sx:
+            if s[0] not in sx[a][0]:
+                print(f'Found new label from tr for {a}:\n{s}\n{sx[a][0]}')
     embed()
 
 def main():
@@ -990,6 +1035,6 @@ def main():
         f.write(xml)
 
 if __name__ == '__main__':
-    main()
-    #paxinos()
+    #main()
+    paxinos()
 
