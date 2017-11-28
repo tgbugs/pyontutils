@@ -125,7 +125,7 @@ caudal interstitial nucleus of the medial longitudinal fasciculus CI
 caudal linear nucleus of the raphe CLi
 caudal periolivary nucleus CPO
 caudate putamen (striatum) CPu
-caudomedial entothinal cortex CEnt
+caudomedial entorhinal cortex CEnt
 cell bridges of the ventral striatum CB
 central amygdaloid nucleus Ce
 central amygdaloid nucleus, capsular part CeC
@@ -777,7 +777,7 @@ trigeminal transition zone 5Tr
 trigeminothalamic tract tth
 trochlear nerve 4n
 trochlear nucleus 4N
-trochlear nuclues shell region 4Sh
+trochlear nucleus shell region 4Sh
 tuberal region of lateral hypothalamus TuLH
 ; U
 uncinate fasciculus decussation unx
@@ -860,7 +860,7 @@ List of Abbreviations
 4Cb 4th cerebellar lobule 108-126, 162-175, 197-198, 200-202, 204-207
 4N trochlear nucleus 92-95, 162, 164, 192-194
 4n trochlear nerve 94-112, 166-170, 173, 175, 182-183, 185, 187, 193-197
-4Sh trochlear nuclues shell region 92-95, 195
+4Sh trochlear nucleus shell region 92-95, 195
 4V 4th ventricle 104-146, 162-165, 167, 187-195
 5 layer 5 of cortex 52
 5a layer 5a of cortex 52, 94
@@ -1037,7 +1037,7 @@ CeC central amygdaloid nucleus, capsular part 46-61, 176-179, 185-188
 CeCv central cervical nucleus of the spinal cord 149-161
 CeL central amygdaloid nucleus, lateral division 49-60, 177-178, 188
 CeM central amygdaloid nucleus, medial division 45-57, 174-177, 185-188
-CEnt caudomedial entothinal cortex 89-112, 176-180, 186-205
+CEnt caudomedial entorhinal cortex 89-112, 176-180, 186-205
 CG central gray 106-108, 162, 189, 192
 cg cingulum 11-83, 166-170, 198-207
 Cg1 cingulate cortex, area 1 8-46, 162-167
