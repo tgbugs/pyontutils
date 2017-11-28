@@ -974,7 +974,8 @@ basolateral amygdaloid nucleus, posterior part BLP
 basolateral amygdaloid nucleus, ventral part BLV
 basomedial amygdaloid nucleus BM
 basomedial amygdaloid nucleus, anterior part BMA
-basomedial amygdaloid nucleus, posterior part BMPbed nucleus of stria terminalis, fusiform part Fu
+basomedial amygdaloid nucleus, posterior part BMP
+bed nucleus of stria terminalis, fusiform part Fu
 bed nucleus of stria terminalis, supracapsular part BSTS
 bed nucleus of the accessory olfactory tract BAOT
 bed nucleus of the anterior commissure BAC
@@ -1065,7 +1066,8 @@ dorsal acoustic stria das
 dorsal cochlear nucleus DC
 dorsal cortex of the inferior colliculus DCIC
 dorsal endopiriform nucleus DEn
-dorsal fornix dfdorsal hippocampal commissure dhc
+dorsal fornix df
+dorsal hippocampal commissure dhc
 dorsal hypothalamic area DA
 dorsal hypothalamic nucleus Do
 dorsal lateral geniculate nucleus DLG
@@ -1163,7 +1165,8 @@ gracile nucleus Gr
 granular cell layer of the olfactory bulb GrO
 granular insular cortex GI
 granular layer of the cochlear nuclei GrC
-granular layer of the dentate gyrus GrDGgranule cell layer of the accessory olfactory bulb GrA
+granular layer of the dentate gyrus GrDG
+granule cell layer of the accessory olfactory bulb GrA
 ; H
 habenular commissure hbc
 hilus of the dentate gyrus Hil
@@ -1243,7 +1246,8 @@ islands of Calleja ICj
 islands of Calleja, major island ICjM
 ; J
 juxtarestiform body jx
-juxtatrigeminal area Jx5K
+juxtatrigeminal area Jx5
+; K
 Kîlliker-Fuse nucleus KF
 ; L
 lacunosum moleculare layer of the hippocampus LMol
@@ -1518,7 +1522,8 @@ posterior thalamic nuclear group, triangular part PoT
 posterodorsal preoptic nucleus PDP
 posterodorsal tegmental nucleus PDTg
 posterolateral cortical amygdaloid nucleus (C2) PLCo
-posterolateral fissure plfposteromedial cortical amygdaloid nucleus (C3) PMCo
+posterolateral fissure plf
+posteromedial cortical amygdaloid nucleus (C3) PMCo
 posteromedian thalamic nucleus PoMn
 postsubiculum Post
 pre-Botzinger complex PrBo
@@ -1618,7 +1623,8 @@ spinal trigeminal nucleus, caudal part Sp5C
 spinal trigeminal nucleus, interpolar part Sp5I
 spinal trigeminal nucleus, oral part Sp5O
 spinal trigeminal tract sp5
-spinal vestibular nucleus SpVespinocerebellar tract sc
+spinal vestibular nucleus SpVe
+spinocerebellar tract sc
 splenium of the corpus callosum scc
 stigmoid hypothalamic nucleus Stg
 stratum radiatum of the hippocampus Rad
@@ -1715,7 +1721,8 @@ ventral lateral geniculate nucleus, parvicellular part VLGPC
 ventral nucleus of the lateral lemniscus VLL
 ventral orbital cortex VO
 ventral pallidum VP
-ventral peduncular pontine nucleus VPPnventral posterior thalamic nucleus, parvicellular part VPPC
+ventral peduncular pontine nucleus VPPn
+ventral posterior thalamic nucleus, parvicellular part VPPC
 ventral posterolateral thalamic nucleus VPL
 ventral posteromedial thalamic nucleus VPM
 ventral reuniens thalamic nucleus VRe
