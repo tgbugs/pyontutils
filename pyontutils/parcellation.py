@@ -435,7 +435,6 @@ class HCP(genericPScheme):
 
         hcp2016(data)
 
-
 class PAXRAT6(genericPScheme):
     source = 'resources/paxinos09names.txt'
     ont = OntMeta(PARC,
@@ -842,6 +841,123 @@ def swanson():
 
     #embed()
 
+def paxinos():
+    from desc.prof import profile_me
+    from pysercomb.parsers.pax import sections
+    with open('resources/pax-4th-ed-indexes.txt', 'rt') as f:
+        four = f.read()
+    with open('resources/pax-6th-ed-indexes.txt', 'rt') as f:
+        six = f.read()
+    @profile_me
+    def test():
+        return sections(four), sections(six)
+    #test4, test6 = test()
+
+    @profile_me
+    def fast(t):
+        a, b = t.split('List of Structures')
+        if not a:
+            los, loa = b.split('List of Abbreviations')
+        else:
+            los = b
+            _, loa = a.split('List of Abbreviations')
+
+        sr = []
+        for l in los.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+                struct, abbrev = l.rsplit(' ', 1)
+                sr.append((abbrev, struct))
+        ar = []
+        for l in loa.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+                abbrev, rest = l.split(' ', 1)
+                parts = rest.split(' ')
+                #print(parts)
+                for i, pr in enumerate(parts[::-1]):
+                    #print(i, pr)
+                    z = pr[0].isdigit()
+                    if not z or i > 0 and z and pr[-1] != ',':
+                        break
+                struct = ' '.join(parts[:-i])
+                figs = tuple(tuple(int(_) for _ in p.split('-'))
+                             if '-' in p
+                             else (tuple(f'{nl[:-1]}{l}'
+                                        for nl, *ls in p.split(',')
+                                        for l in (nl[-1], *ls))
+                                   if ',' in p or p[-1].isalpha()
+                                   else int(p))
+                             for p in (_.rstrip(',') for _ in parts[-i:]))
+                figs = tuple(f for f in figs if f)  # zero marks abbrevs in index that are not in figures
+                #print(struct)
+                ar.append((abbrev, struct, figs))
+        return sr, ar
+
+    def check(t):
+        sr, ar = fast(t)
+        def missing(a, b):
+            am = a - b
+            bm = b - a
+            return am, bm
+        sabs = set(_[0] for _ in sr)
+        aabs = set(_[0] for _ in ar)
+        ssts = set(_[1] for _ in sr)
+        asts = set(_[1] for _ in ar)
+        ar2 = set(_[:2] for _ in ar)
+        aam, sam = missing(aabs, sabs)
+        asm, ssm = missing(asts, ssts)
+        ar2m, sr2m = missing(ar2, set(sr))
+        print('OK to skip')
+        print(sorted(aam))
+        print('Need to be created')
+        print(sorted(sam))
+        print()
+        print(sorted(asm))
+        print()
+        print(sorted(ssm))
+        print()
+        #print(sorted(ar2m))
+        #print()
+        #print(sorted(sr2m))
+        #print()
+        out = {}
+        for a, s, f in ar:
+            if a not in out:
+                out[a] = ([s], f)
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from ar for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+        for a, s in sr:
+            if a not in out:
+                out[a] = ([s], tuple())
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from sr for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+                    #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
+        return sr, ar, out
+
+    sr4, ar4, fr = check(four)
+    # abbreviations 1-10 in 4th are not unique
+    one_to_ten_contexts = ('cortical layer',
+                           'spinal cord layer',
+                           'cerebellar folium',
+                           'cranial nerve nucleus')
+    sr6, ar6, sx = check(six)
+    sfr = set(fr)
+    ssx = set(sx)
+    frm = sfr - ssx
+    sxm = ssx - sfr
+    print(len(frm), len(sxm))
+    embed()
 
 def main():
     if not os.path.exists(WRITELOC):
@@ -875,4 +991,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    #paxinos()
 
