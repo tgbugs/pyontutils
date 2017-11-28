@@ -163,7 +163,8 @@ cuneate nucleus, rotundus part CuR
 cuneiform nucleus CnF
 cuneiform nucleus, dorsal part CnFD
 cuneiform nucleus, intermediate part CnFI
-cuneiform nucleus, ventral part CnFV decussation of the superior cerebellar peduncle xscp
+cuneiform nucleus, ventral part CnFV
+decussation of the superior cerebellar peduncle xscp
 ; D
 decussation of the trapezoid body tzx
 deep cerebral white matter dcw
@@ -336,7 +337,7 @@ intramedullary thalamic area IMA
 islands of Calleja ICj
 islands of Calleja, major island ICjM
 isthmic periaqueductal gray isPAG
-isthmic reticular formation is Rt
+isthmic reticular formation isRt  ; FIXME italics
 ; J
 juxtaolivary nucleus JxO
 juxtaparaventricular part of lateral hypothalamus JPLH
@@ -453,7 +454,7 @@ medial preoptic nucleus, lateral part MPOL
 medial pretectal nucleus MPT
 medial septal nucleus MS
 medial superior olive MSO
-medial terminal nucleus of the accessory optic trac MT
+medial terminal nucleus of the accessory optic tract MT
 medial tuberal nucleus MTu
 medial vestibular nucleus MVe
 medial vestibular nucleus, magnocellular part MVeMC
@@ -641,9 +642,9 @@ pyramidal decussation pyx
 pyramidal tract py
 ; Q
 ; R
-r1 reticular formation r1 Rt
-r2 reticular formation r2 Rt
-r3 reticular formation r3 Rt
+r1 reticular formation r1Rt  ; FIXME italics (not subscript)
+r2 reticular formation r2Rt  ; FIXME italics (not subscript)
+r3 reticular formation r3Rt  ; FIXME italics (not subscript)
 radiatum layer of the hippocampus Rad
 raphe interpositus nucleus RIP
 raphe magnus nucleus RMg
@@ -897,6 +898,7 @@ List of Abbreviations
 7VM facial nucleus, ventromedial subnucleus 121-130
 8Cb 8th cerebellar lobule 135-155, 162-166, 197-201
 8cn cochlear root of the vestibulocochlear nerve 112-117, 121-123, 126-127, 181-185
+8Gn vestibulocochlear ganglion 0
 8n vestibulocochlear nerve 171-172, 174-175, 177, 182, 185-190
 8vn vestibular root of the vestibulocochlear nerve 115-125, 173, 176, 182, 186, 188
 9a,bCb 9th cerebellar lobule, a and b 140-159, 165
@@ -909,6 +911,7 @@ List of Abbreviations
 10N dorsal motor nucleus of vagus 136-156, 163-165, 182-187
 10n vagus nerve 132-137, 139, 141-143, 147, 149-150, 172, 182-183
 11N accessory nerve nucleus 157-161
+11n root of accessory nerve 0
 12GH hypoglossal nucleus, geniohyoid part 147-156
 12N hypoglossal nucleus 138-157, 162-164, 185-186
 12n root of hypoglossal nerve 137, 141, 144, 149-155
@@ -922,16 +925,21 @@ A2 A2 noradrenaline cells 155-161
 A5 A5 noradrenaline cells 108-125, 127, 169, 171-172, 181-184
 A7 A7 noradrenaline cells 102-108, 168-172, 186-188
 AA anterior amygdaloid area 35-48, 171-176, 182-186
+AC anterior commissural nucleus 0
 ac anterior commissure 34-37, 162-167, 191-194
 aca anterior commissure, anterior part 8-33, 167-169, 171, 189-191, 196
+Acb accumbens nucleus 0
 AcbC accumbens nucleus, core 11-29, 166-171, 189-195
 AcbSh accumbens nucleus, shell 10-29, 164-170, 187-195
 acer anterior cerebral artery 16-31, 33-37, 40, 186
 aci anterior commissure, intrabulbar part 2-7, 167-170, 191-195
 ACo anterior cortical amygdaloid nucleus 37-55, 174-178, 181-183
 acp anterior commissure, posterior part 34-43, 169-180, 187-191
+Acs6/7 accessory abducens/facial nucleus 0
+Acs7 accessory facial nucleus 184-186  ; FIXME this renders as acs7 in the figures, but the location matches Acs7, plate numbers may be wrong, structure name taken from 4th
 AD anterodorsal thalamic nucleus 43-52, 166-168, 199-202
 af amygdaloid fissure 46-47, 50, 54, 67-80, 181-185
+AH anterior hypothalamic area 0
 AHA anterior hypothalamic area, anterior part 41-45, 164-166, 185-186
 AHC anterior hypothalamic area, central part 46-50, 164-166, 184-186
 AHi amygdalohippocampal area 184-186
@@ -947,6 +955,7 @@ AL nucleus of the ansa lenticularis 52, 173, 187
 Al alar nucleus 33-34, 164-165
 alv alveus of the hippocampus 47-96, 167-178, 180, 187-207
 AM anteromedial thalamic nucleus 42-53, 164-168, 170, 192-196
+Amb ambiguus nucleus 0
 AmbC ambiguus nucleus, compact part 133-140, 169-170, 181
 AmbL ambiguus nucleus, loose part 146-151, 169, 181
 AmbSC ambiguus nucleus, subcompact part 141-145, 169-170, 181
@@ -997,6 +1006,7 @@ BAC bed nucleus of the anterior commissure 37-40, 165, 193-194
 BAOT bed nucleus of the accessory olfactory tract 46-51, 171, 181-182
 Bar Barrington’s nucleus 108-112, 166, 189-191
 bas basilar artery 85-96, 98-135, 162
+BC basal nucleus, compact part 0
 BIC nucleus of the brachium of the inferior colliculus 88-98, 173-174, 195-200, 202
 bic brachium of the inferior colliculus 82-102, 173-175, 193-205
 BL basolateral amygdaloid nucleus 74-75, 183
@@ -1019,6 +1029,7 @@ CAT nucleus of the central acoustic tract 105-109, 168-169, 181
 CB cell bridges of the ventral striatum 24-34, 167, 169, 185-187
 Cb cerebellum 191
 cbw cerebellar white matter 108-156, 162-167, 169-172, 174-180, 200
+cbx cerebellar commissure 0
 CC central canal 147-162, 182-186
 cc corpus callosum 21-74, 162-180, 204-207
 Ce central amygdaloid nucleus 189
@@ -1057,6 +1068,7 @@ CPO caudal periolivary nucleus 121, 168
 CPu caudate putamen (striatum) 12-66, 166-171, 173-180, 187-207
 Crus1 crus 1 of the ansiform lobule 117-141, 169-180, 195-207
 Crus2 crus 2 of the ansiform lobule 132-150, 168-180, 195-203, 205
+csc commissure of the superior colliculus 76-86, 162-164, 200-201
 CST nucleus of the commissural stria terminalis 35, 165, 193-194
 cst commissural stria terminalis 39, 41-64, 175-177, 185-188, 192
 Ct conterminal nucleus 152-155
@@ -1068,6 +1080,7 @@ Cx cerebral cortex 112-113
 CxA cortex-amygdala transition zone 174, 176, 181-184
 CxA1 cortex-amygdala transition zone, layer 1 34-47, 177-178
 ; D
+D dorsal nucleus of the spinal cord 208d
 D3V dorsal 3rd ventricle 42-76, 162-164, 198-203
 DA dorsal hypothalamic area 52-60, 163-164, 187
 das dorsal acoustic stria 126-129, 168
@@ -1131,11 +1144,13 @@ EAC sublenticular extended amygdala, central part 39-46
 EAM sublenticular extended amygdala, medial part 43-46
 ec external capsule 14-66, 173, 175-180, 188-206
 ECIC external cortex of the inferior colliculus 91-98, 100, 104-110, 165-174, 196-206
+ECIC1 external cortex of the inferior colliculus, layer 1 199
 Ect ectorhinal cortex 58-111, 178-180, 193-207
 ECu external cuneate nucleus 135-151, 167-172, 188-191
 EF epifascicular nucleus 132-134
 ELm epilemniscal nucleus 82, 190
 eml external medullary lamina 47-53, 60-65, 171-173, 175, 177, 193-199
+Ent entorhinal cortex 0
 EP entopeduncular nucleus 49-56, 171-175, 188-191
 EPl external plexiform layer of the olfactory bulb 1-5, 164
 EPlA external plexiform layer of the accessory olfactory bulb 3-4
@@ -1209,6 +1224,7 @@ IM intercalated amygdaloid nucleus, main part 49-51, 177, 184
 IMA intramedullary thalamic area 65-78, 175, 199-203
 IMD intermediodorsal thalamic nucleus 53-64, 162, 195-199
 IMG amygdaloid intramedullary gray 54-56, 189-190
+IML intermediolateral cell column of the spinal cord 208c,d
 iml internal medullary lamina 44, 65, 167, 196, 198
 imvc intermedioventral thalamic commissure 60, 194
 In intercalated nucleus of the medulla 140-141
@@ -1251,6 +1267,8 @@ IRe infundibular recess 162
 IRt intermediate reticular nucleus 117-119, 133-161, 165-172, 181-186
 IRtA intermediate reticular nucleus, alpha part 120-132, 167-169, 181-183, 186
 IS inferior salivatory nucleus 128-135, 166, 168
+isPAG isthmic periaqueductal gray 0
+isRt isthmic reticular formation 92-101, 166, 191-194
 IVF interventricular foramen 39-42, 165, 167-168, 197, 199
 ; J
 JPLH juxtaparaventricular part of lateral hypothalamus 45-48, 165, 188
@@ -1263,6 +1281,7 @@ La lat amygdaloid nucleus 68, 187-188
 LAcbSh lateral accumbens shell 15-26, 171-173, 187-189
 LaDL lateral amygdaloid nucleus, dorsolateral part 50-67, 180, 189-191
 Lat lateral (dentate) cerebellar nucleus 122-130, 173-175, 192-197
+LatC lateral cervical nucleus of the spinal cord 208a
 LatPC lateral cerebellar nucleus, parvicellular part 124-128, 172-175, 192-193
 LaVL lateral amygdaloid nucleus, ventrolateral part 55-61, 180
 LaVM lateral amygdaloid nucleus, ventromedial part 55-67, 180, 186
@@ -1275,6 +1294,7 @@ LDTgV laterodorsal tegmental nucleus, ventral part 104-108, 165-168, 190-192
 LDVL laterodorsal thalamic nucleus, ventrolateral part 48-61, 170-175, 200-202
 LEnt lateral entorhinal cortex 184, 191, 194-198
 lfp longitudinal fasciculus of the pons 94-107, 163-165, 167, 169, 181-184
+LH lateral hypothalamic area 0
 LHb lateral habenular nucleus 52-56, 69, 164, 166
 LHbL lateral habenular nucleus, lateral part 57-68, 165, 200-201
 LHbM lateral habenular nucleus, medial part 57-68, 200-201
@@ -1295,6 +1315,7 @@ LPBCr lateral parabrachial nucleus, crescent part 107-110
 LPBD lateral parabrachial nucleus, dorsal part 107-110
 LPBE lateral parabrachial nucleus, external part 106-111, 171-172
 LPBI lateral parabrachial nucleus, internal part 107-113, 168, 194-195
+LPBM lateral parabrachial nucleus, medial part 0
 LPBS lateral parabrachial nucleus, superior part 105-106, 171, 194
 LPBV lateral parabrachial nucleus, ventral part 107-113, 168
 LPGi lateral paragigantocellular nucleus 119-120, 132-142, 165-167, 169
@@ -1310,9 +1331,11 @@ LR4V lateral recess of the 4th ventricle 113-139, 168-177, 188-192
 LRt lateral reticular nucleus 142-157, 167-172
 LRtPC lateral reticular nucleus, parvicellular part 148-157, 171-172
 LRtS5 lateral reticular nucleus, subtrigeminal part 143-150, 173
+LS lateral septal nucleus 0
 LSD lateral septal nucleus, dorsal part 16-41, 164-166, 199-205
 LSI lateral septal nucleus, intermediate part 14-37, 162-168, 193-204
 LSO lateral superior olive 112-122, 169-171, 181
+LSp lateral spinal nucleus 208a,b,c,d,e
 LSS lateral stripe of the striatum 14-38, 171, 173-178, 188-189
 LSV lateral septal nucleus, ventral part 16-36, 165-167, 193-198
 LT lateral terminal nucleus of the accessory optic tract 71-78, 176-177, 192
@@ -1342,6 +1365,7 @@ ME median eminence 48, 162
 Me medial amygdaloid nucleus 171
 Me5 mesencephalic trigeminal nucleus 86-107, 109-116, 166-167, 169, 190-199
 me5 mesencephalic trigeminal tract 86-115, 165-167, 169, 188-194, 196-199
+MeA medial amygdaloid nucleus, anterior part 0
 MeAD medial amygdaloid nucleus, ant dorsal 42-55, 171-175, 182-187
 MeAV medial amygdaloid nucleus, anteroventral part 47-54, 171-174, 181-182
 Med medial (fastigial) cerebellar nucleus 124-133, 164-167, 192-197
@@ -1351,6 +1375,7 @@ MedL medial cerebellar nucleus, lateral part 127-131, 166, 168, 196
 MEE medial eminence, external layer 49-61
 MEI medial eminence, internal layer 49-61
 MEnt medial entorhinal cortex 87-105, 175, 177-180, 182-199
+MEntV medial entorhinal cortex, ventral part 0
 MePD medial amygdaloid nucleus, posterodorsal part 53-63, 172-176, 184-188
 MePV medial amygdaloid nucleus, posteroventral part 55-63, 171-174, 181-184
 mfb medial forebrain bundle 12-31, 40-70, 167-169, 171, 183-188
@@ -1390,6 +1415,7 @@ MPOM medial preoptic nucleus, medial part 35-42
 MPT medial pretectal nucleus 70-77, 164-166, 200-201
 MPtA medial parietal association cortex 60-67, 167-169, 171-172
 MRe mammillary recess of the 3rd ventricle 66-70, 162-163
+mRt mesencephalic reticular formation 81-91, 167-172, 192-197
 MS medial septal nucleus 20-33, 162-164, 191-198
 MSO medial superior olive 109-120, 169-170, 181
 MT medial terminal nucleus of the accessory optic tract 74-79, 167-168, 184-188
@@ -1411,6 +1437,7 @@ Obex obex 153, 162
 oc olivocerebellar tract 129-134, 136, 182
 ocb olivocochlear bundle 115-121, 162-163, 168-171, 173, 176-177, 182-184, 186-187
 och optic chiasm 29-40, 162-164, 166, 183
+ON olfactory nerve layer 0
 Op optic nerve layer of the superior colliculus 77-98, 163-173, 200-205, 207
 OPC oval paracentral thalamic nucleus 60-66, 165-168, 193-196
 OPT olivary pretectal nucleus 70-78, 165-169, 200-202
@@ -1420,6 +1447,7 @@ OT nucleus of the optic tract 72-81, 167-169, 171-173, 202-203
 OV olfactory ventricle (olfactory part of lateral ventricle) 1-5, 194
 ; P
 p1PAG p1 periaqueductal gray 75  ; FIXME italics and missing p1
+P3V preoptic recess of the 3rd ventricle 0
 P5 peritrigeminal zone 107-116, 168-169, 185-189
 P7 perifacial zone 120-131, 133-134, 167-172, 181-182
 Pa paraventricular hypoth nucleus 187
@@ -1452,6 +1480,7 @@ PDPO posterodorsal preoptic nucleus 38-39
 PDR posterodorsal raphe nucleus 93-101
 PDTg posterodorsal tegmental nucleus 111-115, 162-164, 189-190
 Pe periventricular hypothalamic nucleus 35-62, 162, 182-189
+PeAP periventricular hypothalamic nucleus, anterior parvicellular part 0
 PeF perifornical nucleus 55-63, 166-168, 184-185
 PeFLH perifornical part of lateral hypothalamus 51-65, 165-168, 184-186
 PF parafascicular thalamic nucleus 64-70, 164-167, 193-199
@@ -1508,6 +1537,7 @@ Pr5DM principal sensory trigeminal nucleus, dorsomedial part 110-119, 172-173, 1
 Pr5VL principal sensory trigeminal nucleus, ventrolateral part 107-120, 172-174, 183-188
 PrBo pre-Botzinger complex 138-140, 170
 PrC precommissural nucleus 67-72, 164-165, 197-199
+PrCnF precuneiform area 91-100, 167-172, 195-198
 PrEW pre-Edinger-Westphal nucleus 76-83, 163, 192-195
 prf primary fissure 111-126, 128-131, 162-178, 195-207
 PRh perirhinal cortex 58-111, 179-180, 187-206
@@ -1533,6 +1563,7 @@ pyx pyramidal decussation 155-162
 ; Q
 ; R
 R red nucleus 163, 165, 167
+r1Rt r1 reticular formation 185-186
 r2Rt r2 reticular formation 188
 r3Rt r3 reticular formation 188
 Rad radiatum layer of the hippocampus 49-89, 166-180, 189-207
@@ -1565,6 +1596,7 @@ RRe retrouniens area 63-66, 162-164, 192
 RRF retrorubral field 86-93, 165-171, 188-191
 rs rubrospinal tract 86-161, 166-173, 181-183, 185-188
 RSD retrosplenial dysgranular cortex 47-111, 162-180, 206-207
+RSG retrosplenial granular cortex 0
 RSGa retrosplenial granular cortex, a region 79-104, 165-171, 207
 RSGb retrosplenial granular cortex, b region 66-96, 162-168
 RSGc retrosplenial granular cortex, c region 47-90, 162-167
@@ -1576,6 +1608,7 @@ RtTgP reticulotegmental nucleus of the pons, pericentral part 99-104, 163-165, 1
 RVL rostroventrolateral reticular nucleus 133-137, 169-172
 RVRG rostral ventral respiratory group 141-151, 170
 ; S
+S subiculum 0
 S1 primary somatosensory cortex 65-71, 197
 S1BF primary somatosensory cortex, barrel field 36-69, 176-180, 203-207
 S1DZ primary somatosensory cortex, dysgranular zone 13-61, 176, 178-179
@@ -1604,6 +1637,7 @@ SG suprageniculate thalamic nucleus 76-85, 173-174, 197-199
 SGe supragenual nucleus 116-119, 164, 188
 SHi septohippocampal nucleus 14-35, 162-163, 192-203
 SHy septohypothalamic nucleus 28-37, 163-166, 189-196
+SI substantia innominata 0
 SIB substantia innominata, basal part 24-40, 165-170, 185-188
 Sim simple lobule 111-113, 124-135, 167, 173, 175, 180, 195-207
 SimA simple lobule A 114-123, 169, 171-179
@@ -1651,7 +1685,9 @@ StA strial part of the preoptic area 33-35, 189-190
 Stg stigmoid hypothalamic nucleus 50-52, 187
 STh subthalamic nucleus 59-68, 170-173, 186-190
 StHy striohypothalamic nucleus 37-42, 164, 166, 188-191
+STI bed nucleus of the stria terminalis, intermediate division 0
 STIA bed nucleus of the stria terminalis, intraamygdaloid division 52-63, 175-177, 184-188
+STIL I think this is a typo for STLI 35  ; FIXME is in figure right next to STLI with similar location
 STL bed nucleus of the stria terminalis, lateral division 167, 169-170
 STLD bed nucleus of the stria terminalis, lateral division, dorsal part 31-35, 193-195
 STLI bed nucleus of the stria terminalis, lateral division, intermediate part 36-38, 166, 168, 192
@@ -1743,11 +1779,14 @@ VLPAG ventrolateral periaqueductal gray 88-106, 162, 165-166, 195-197
 VLPO ventrolateral preoptic nucleus 33-38, 165-167
 VM ventromedial thalamic nucleus 48-64, 165-170, 189-192
 VMH ventromedial hypothalamic nucleus 47-49, 60-61, 164-165, 182
+VMHA ventromedial hypothalamic nucleus, anterior part 0
 VMHC ventromedial hypothalamic nucleus, central part 50-59
 VMHDM ventromedial hypothalamic nucleus, dorsomedial part 50-59, 163, 183
 VMHSh ventromedial nucleus of the hypothalamus shell 47-61, 164-166
 VMHVL ventromedial hypothalamic nucleus, ventrolateral part 50-59, 181
 VMPO ventromedial preoptic nucleus 31-36, 163-164, 184
+VN vomeronasal nerve layer 0
+vn vomeronasal nerve 0
 VO ventral orbital cortex 5-11, 165-171, 173-175, 194-205
 VOLT vascular organ of the lamina terminalis 28-33, 162, 186-187
 VP ventral pallidum 11-42, 165-174, 182-190
