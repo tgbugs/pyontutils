@@ -97,7 +97,7 @@ basomedial amygdaloid nucleus, anterior part BMA
 basomedial amygdaloid nucleus, posterior part BMP
 bed nucleus of stria terminalis, fusiform part Fu
 bed nucleus of stria terminalis, supracapsular division STS
-bed nucleus of stria terminalis, supracapsular division, lateralpart STSM
+bed nucleus of stria terminalis, supracapsular division, lateral part STSM
 bed nucleus of stria terminalis, supracapsular division, medial part STSL
 bed nucleus of the accessory olfactory tract BAOT
 bed nucleus of the anterior commissure BAC
@@ -1671,7 +1671,7 @@ STr subiculum, transition area 91-96, 194-201
 str superior thalamic radiation 66-73, 171-177, 194, 196-200
 STS bed nucleus of stria terminalis, supracapsular division 169
 STSL bed nucleus of stria terminalis, supracapsular division, medial part 45-46
-STSM bed nucleus of stria terminalis, supracapsular division, lateralpart 45-46
+STSM bed nucleus of stria terminalis, supracapsular division, lateral part 45-46
 Su3 supraoculomotor periaqueductal gray 83-92, 162-164, 195
 Su3C supraoculomotor cap 84-92, 164, 195
 Su5 supratrigeminal nucleus 106-113, 168-171, 188-189
