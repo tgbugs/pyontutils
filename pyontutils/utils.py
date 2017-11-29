@@ -371,7 +371,7 @@ class makeGraph:
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
 
     def add_restriction(self, subject, predicate, object_):
-        """ Lift normal triples into restrictions. """
+        """ Lift normal triples into restrictions using someValuesFrom. """
         if type(object_) != rdflib.URIRef:
             object = self.check_thing(object_)
 
