@@ -989,19 +989,30 @@ def paxinos():
                            'cerebellar folium',
                            'cranial nerve nucleus')
     sr6, ar6, sx = check(six)
+    sx2 = {a:([s], ()) for s, a in PAXRAT6.datagetter()}
     sfr = set(fr)
     ssx = set(sx)
+    ssx2 = set(sx2)
     str_ = set(tr)
     in_four_not_in_six = sfr - ssx
     in_six_not_in_four = ssx - sfr
     in_tree_not_in_six = str_ - ssx
     in_six_not_in_tree = ssx - str_
+    in_six2_not_in_six = ssx2 - ssx
+    in_six_not_in_six2 = ssx - ssx2
 
-    print(len(in_four_not_in_six), len(in_six_not_in_four), len(in_tree_not_in_six), len(in_six_not_in_tree))
+    print(len(in_four_not_in_six), len(in_six_not_in_four),
+          len(in_tree_not_in_six), len(in_six_not_in_tree),
+          len(in_six2_not_in_six), len(in_six_not_in_six2),
+         )
     for a, ((s), _, p) in tr.items():
         if a in sx:
             if s[0] not in sx[a][0]:
                 print(f'Found new label from tr for {a}:\n{s}\n{sx[a][0]}')
+    for a, ((s), _) in sx2.items():
+        if a in sx:
+            if s[0] not in sx[a][0]:
+                print(f'Found new label from sx2 for {a}:\n{s}\n{sx[a][0]}')
     embed()
 
 def main():
@@ -1035,6 +1046,6 @@ def main():
         f.write(xml)
 
 if __name__ == '__main__':
-    #main()
-    paxinos()
+    main()
+    #paxinos()
 
