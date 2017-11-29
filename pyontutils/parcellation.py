@@ -1013,6 +1013,17 @@ def paxinos():
         if a in sx:
             if s[0] not in sx[a][0]:
                 print(f'Found new label from sx2 for {a}:\n{s}\n{sx[a][0]}')
+
+    tree_no_name = {_:tr[_] for _ in sorted(in_tree_not_in_six) if not tr[_][0][0]}
+    tree_with_name = {_:tr[_] for _ in sorted(in_tree_not_in_six) if tr[_][0][0]}
+    not_in_tree_with_figures = {_:sx[_] for _ in sorted(in_six_not_in_tree) if sx[_][-1]}
+    a = f'{"abv":<25} | {"structure name":<60} | parent abv\n' + '\n'.join(f'{k:<25} | {v[0][0]:<60} | {v[-1]}' for k, v in tree_with_name.items())
+    b = f'{"abv":<25} | {"structure name":<15} | parent abv\n' + '\n'.join(f'{k:<25} | {"":<15} | {v[-1]}' for k, v in tree_no_name.items())
+    c = f'abv    | {"structure name":<60} | figures (figure ranges are tuples)\n' + '\n'.join(f'{k:<6} | {v[0][0]:<60} | {v[-1]}' for k, v in not_in_tree_with_figures.items())
+    with open(os.path.expanduser('~/ni/nifstd/paxinos/tree-with-name.txt'), 'wt') as f: f.write(a)
+    with open(os.path.expanduser('~/ni/nifstd/paxinos/tree-no-name.txt'), 'wt') as f: f.write(b)
+    with open(os.path.expanduser('~/ni/nifstd/paxinos/not-in-tree-with-figures.txt'), 'wt') as f: f.write(c)
+    match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
     embed()
 
 def main():
