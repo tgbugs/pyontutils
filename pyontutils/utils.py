@@ -352,7 +352,7 @@ class makeGraph:
     def del_trip(self, s, p, o):
         self.g.remove(tuple(self.check_thing(_) for _ in (s, p, o)))
 
-    def add_hierarchy(self, parent, edge, child):
+    def add_hierarchy(self, parent, edge, child):  # XXX DEPRECATED
         """ Helper function to simplify the addition of part_of style
             objectProperties to graphs. FIXME make a method of makeGraph?
         """
@@ -369,6 +369,22 @@ class makeGraph:
 
         restriction = infixowl.Restriction(edge, graph=self.g, someValuesFrom=parent)
         child.subClassOf = [restriction] + [c for c in child.subClassOf]
+
+    def add_restriction(self, subject, predicate, object_):
+        """ Lift normal triples into restrictions. """
+        if type(object_) != rdflib.URIRef:
+            object = self.check_thing(object_)
+
+        if type(predicate) != rdflib.URIRef:
+            predicate = self.check_thing(predicate)
+
+        if type(subject) != infixowl.Class:
+            if type(subject) != rdflib.URIRef:
+                subject = self.check_thing(subject)
+            subject = infixowl.Class(subject, graph=self.g)
+
+        restriction = infixowl.Restriction(predicate, graph=self.g, someValuesFrom=object_)
+        subject.subClassOf = [restriction] + [c for c in subject.subClassOf]
 
     def add_recursive(self, triple, source_graph):
         self.g.add(triple)
