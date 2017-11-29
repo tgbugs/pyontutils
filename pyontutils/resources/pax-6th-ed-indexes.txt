@@ -327,7 +327,7 @@ interposed cerebellar nucleus, anterior part IntA
 interposed cerebellar nucleus, dorsomedial crest IntDM
 interposed cerebellar nucleus, posterior part IntP
 interstitial nucleus of Cajal InC
-interstitial nucleus of Cajal. shell region InCSh
+interstitial nucleus of Cajal, shell region InCSh
 interstitial nucleus of the decussation of the superior cerebellar peduncle ID
 interstitial nucleus of the medulla IB
 interstitial nucleus of the posterior limb of the anterior commissure, lateral part IPACL
@@ -1229,7 +1229,7 @@ iml internal medullary lamina 44, 65, 167, 196, 198
 imvc intermedioventral thalamic commissure 60, 194
 In intercalated nucleus of the medulla 140-141
 InC interstitial nucleus of Cajal 75-90, 164, 192-194
-InCSh interstitial nucleus of Cajal. shell region 75-84, 193-195  ; FIXME period?
+InCSh interstitial nucleus of Cajal, shell region 75-84, 193-195
 InfS infundibular stem 62-65, 162
 InG intermediate gray layer of the superior colliculus 77-99, 164-173, 198-205
 InM intermedius nucleus of the medulla 142-146
@@ -1687,10 +1687,9 @@ STh subthalamic nucleus 59-68, 170-173, 186-190
 StHy striohypothalamic nucleus 37-42, 164, 166, 188-191
 STI bed nucleus of the stria terminalis, intermediate division 0
 STIA bed nucleus of the stria terminalis, intraamygdaloid division 52-63, 175-177, 184-188
-STIL I think this is a typo for STLI 35  ; FIXME is in figure right next to STLI with similar location
 STL bed nucleus of the stria terminalis, lateral division 167, 169-170
 STLD bed nucleus of the stria terminalis, lateral division, dorsal part 31-35, 193-195
-STLI bed nucleus of the stria terminalis, lateral division, intermediate part 36-38, 166, 168, 192
+STLI bed nucleus of the stria terminalis, lateral division, intermediate part 35, 36-38, 166, 168, 192  ; the occurance on 35 is a typo to STIL corrected in the compact edition
 STLJ bed nucleus of the stria terminalis, lateral division, juxtacapsular part 34-36, 192, 194-195
 STLP bed nucleus of the stria terminalis, lateral division, posterior part 30-40, 192, 194-195
 STLV bed nucleus of the stria terminalis, lateral division, ventral part 30-37, 190
