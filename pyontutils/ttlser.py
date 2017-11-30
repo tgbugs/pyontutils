@@ -2,6 +2,7 @@
 import re
 import sys
 from datetime import datetime
+from decimal import Decimal
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
@@ -20,22 +21,35 @@ def natsort(s, pat=re.compile(r'([0-9]+)')):
     return tuple(int(t) if t.isdigit() else t.lower() for t in pat.split(s))
 
 def litsort(l):
-    dt = l.datatype if l.datatype is not None else ''
-    lang = l.language if l.language is not None else ''
-    if dt == XSD.boolean:
-        out = 0, tuple(), (0 if l == 'false' else 1)
-    elif dt == XSD.integer:
-        out = 1, tuple(), int(l), str(l)
-    elif dt == XSD.decimal:
-        out = 1, tuple(), float(l), str(l)
-    elif dt == XSD.double:
-        n = float(l)
+    v = l.value
+    if type(v) == bool:
+        out = 0, v
+    elif type(v) == int:
+        out = 1, v, str(l)
+    elif type(v) == Decimal:
+        out = 1, v, str(l)
+    elif type(v) == float:
+        n = v
         m, e = f'{n:e}'.split('e')
         s = f'{m.rstrip("0").rstrip(".")}e{e}'
-        out = 1, tuple(), n, s
+        out = 1, n, s
+    elif type(v) == datetime:
+        # we make no assumptions about the original timestamp so we
+        # put zone naieve datetimes first
+        out = 2, bool(v.tzinfo), v
     else:
-        out = 2, natsort(l), 0, dt, lang
+        dt = l.datatype if l.datatype is not None else ''
+        lang = l.language if l.language is not None else ''
+        out = 3, natsort(l), dt, lang
     return out
+
+def dtsort(l):
+    """ inner sort which supports datetime types
+        we don't worry about the total ordering because
+        the list will be sorted a second time using litsort """ 
+    return ((bool(l.value.tzinfo), l.value)
+            if type(l) == Literal and type(l.value) == datetime
+            else (2, l))
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
@@ -316,12 +330,17 @@ class CustomTurtleSerializer(TurtleSerializer):
                            key=self.predicateOrder.index))}
 
     def _LitUriRank(self):
+        self._datetimes = []
         return {o:i  # global rank for all Literals and URIRefs
                 for i, o in
                 enumerate(
                     sorted(  # doublesort needed for stability wrt case for literals
                            sorted((_ for _ in self.store.objects()
-                                   if isinstance(_, Literal))),
+                                   if isinstance(_, Literal) and
+                                   (not self._datetimes.append(_)
+                                    if type(_.value) == datetime
+                                    else True)),
+                                  key=dtsort),
                            key=litsort) +
                     sorted(
                         sorted(set(_ for t in self.store for _ in t
@@ -397,11 +416,19 @@ class CustomTurtleSerializer(TurtleSerializer):
         if len(propList) == 0:
             return
         self.verb(propList[0], newline=newline)
-        self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:Type
+        if self._datetimes:
+            typestarts = sorted(properties[propList[0]], key=dtsort)
+        else:
+            typestarts = sorted(properties[propList[0]])
+        self.objectList(sorted(typestarts[::-1], key=self._globalSortKey))  # rdf:Type
         for predicate in propList[1:]:
             self.write(' ;\n' + self.indent(1))
             self.verb(predicate, newline=True)
-            self.objectList(sorted(sorted(properties[predicate])[::-1], key=self._globalSortKey))
+            if self._datetimes:
+                starts = sorted(properties[predicate], key=dtsort)
+            else:
+                starts = sorted(properties[predicate])
+            self.objectList(sorted(starts[::-1], key=self._globalSortKey))
 
     def sortProperties(self, properties):  # modified to sort objects using their global rank
         """Take a hash from predicate uris to lists of values.
