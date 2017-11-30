@@ -117,7 +117,7 @@ def rate_limit_getter(func, arglist, rate):
     size = len(arglist) // rate
     print(f'Time estimate at {rate}Hz for apply {func} to {len(arglist)} args: {size}s')
     async_loader, async_do = async_maker(one_per_second)
-    for i, fargs in enumerate(chunk_list([(func, args) for args in arglist], size))
+    for i, fargs in enumerate(chunk_list([(func, args) for args in arglist], size)):
         async_loader(*fargs, smooth_offset=(1 * i) / rate)
     return [b for a in async_do() for b in a]
 
