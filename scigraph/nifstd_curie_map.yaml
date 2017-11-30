@@ -66,6 +66,7 @@
 'BFO1': 'http://www.ifomis.org/bfo/1.1#'
 'BFO1SNAP': 'http://www.ifomis.org/bfo/1.1/snap#'
 'BFO1SPAN': 'http://www.ifomis.org/bfo/1.1/span#'
+'CAO': 'http://www.cognitiveatlas.org/ontology/cogat.owl#CAO_'
 'COGAT': 'http://www.cognitiveatlas.org/ontology/cogat.owl#'
 'COGPO': 'http://www.cogpo.org/ontologies/COGPO_'  # doesn't resolve
 'COGPO1': 'http://www.cogpo.org/ontologies/CogPOver1.owl#COGPO_'
