@@ -8,6 +8,10 @@ from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from IPython import embed
 
+# XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
+#     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
+#     will likely be the one that is called when NamespaceManager.compute_qname calls self.store.prefix
+
 NIFRID = Namespace('http://uri.neuinfo.org/nif/nifstd/readable/')
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
@@ -42,14 +46,6 @@ def litsort(l):
         lang = l.language if l.language is not None else ''
         out = 3, natsort(l), dt, lang
     return out
-
-# XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
-#     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
-#     will likely be the one that is called when NamespaceManager.compute_qname calls self.store.prefix
-
-SUBJECT = 0
-VERB = 1
-OBJECT = 2
 
 def qname_mp(self, uri):  # for monkey patching Graph
     try:
@@ -100,6 +96,10 @@ class ListRanker:
 
     def _bval_key(self, val, ranks):
         return ranks[val]
+
+SUBJECT = 0
+VERB = 1
+OBJECT = 2
 
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
@@ -558,14 +558,19 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(' ] .')
         return True
 
+    def getQName(self, uri, gen_prefix=True): # modified to make it possible to block gen_prefix
+        return super(CustomTurtleSerializer, self).getQName(uri, gen_prefix and self._gen_prefix)
+
     def serialize(self, stream, base=None, encoding=None,  # modified to enable section headers
-                  spacious=None, **args):
+                  spacious=None, gen_prefix=True, **args):
         self.reset()
         self.stream = stream
         self.base = base
 
         if spacious is not None:
             self._spacious = spacious
+
+        self._gen_prefix = gen_prefix
 
         self.preprocess()
         sections_list = self.orderSubjects()
