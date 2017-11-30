@@ -24,9 +24,19 @@ from docopt import docopt
 from pyontutils.utils import makePrefixes, PREFIXES, makeGraph, readFromStdIn
 from pyontutils.ttlfmt import parse, prepareFile, prepareStream
 
-exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 PREFIXES.pop('NIFTTL')
 PREFIXES = {k:v for k, v in PREFIXES.items()}
+
+if __name__ == '__main__':
+    args = docopt(__doc__, version = "qnamefix 0")
+    if args['--exclude'] == ['ALL']:
+        for k in list(PREFIXES):
+            PREFIXES.pop(k)
+    else:
+        for x in args['--exclude']:
+            PREFIXES.pop(x)
+
+exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
 def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     namespaces = [str(n) for p, n in graph.namespaces()]
@@ -86,7 +96,8 @@ def serialize(graph, outpath):
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
     graph = cull_prefixes(graph, cleanup=pc)
 
-    out = graph.g.serialize(format='nifttl')
+    print(bool(PREFIXES))
+    out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
     else:
@@ -103,22 +114,10 @@ def converts(stream):
     serialize(*parse(**prepareStream(stream)))
 
 def main():
-    args = docopt(__doc__, version = "qnamefix 0")
-    if args['--exclude'] == ['ALL']:
-        for k in list(PREFIXES):
-            PREFIXES.pop(k)
-    else:
-        for x in args['--exclude']:
-            PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
             converts(stdin)
-            #fn = sys.stdout.fileno()
-            #tty = os.ttyname(fn)
-            #with open(tty) as sys.stdin:
-                #from IPython import embed
-                #embed()
         else:
             print(__doc__)
     else:
