@@ -42,7 +42,7 @@ def main():
     for filepath in FILEPATHS:
         filepaths.extend(glob(filepath))
 
-    template = 'curl -o {FTP_BASE_PATH}{filepath} {GITHUB_BASE_URL}{COMMIT}/{filepath}'
+    template = 'sudo curl -o {FTP_BASE_PATH}{filepath} {GITHUB_BASE_URL}{COMMIT}/{filepath}'
 
     if not filepaths:
         print('No files found! Exiting...')
@@ -63,7 +63,7 @@ def main():
         commands.append(string)
 
     TIMESTAMP = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')  # ISO8601 boys
-    string = 'echo \'{} {} {}\' >> {FTP_BASE_PATH}updates.log'.format(TIMESTAMP,
+    string = 'sudo echo \'{} {} {}\' >> {FTP_BASE_PATH}updates.log'.format(TIMESTAMP,
                     COMMIT, str(filepaths), FTP_BASE_PATH=FTP_BASE_PATH)
     commands.append(string)
 

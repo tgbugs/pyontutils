@@ -4,6 +4,7 @@
 
 Usage:
     ontutils iri-commit [options] <repo>
+    ontutils deadlinks [options] <file> ...
     ontutils version-iri [options] <file>...
     ontutils uri-switch [options] <file>...
     ontutils backend-refactor [options] <file>...
@@ -16,15 +17,19 @@ Options:
 
     -e --epoch=EPOCH                specify the epoch you want to use for versionIRI
 
+    -r --rate=Hz                  rate in Hz at which to limit requests [default: 20]
+
     -d --debug                      call IPython embed when done
 """
 import os
 from glob import glob
 from time import time, localtime, strftime
 import rdflib
+import requests
 from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.utils import makePrefixes, makeGraph, createOntology, noneMembers, anyMembers, rdf, owl
+from pyontutils.utils import makePrefixes, makeGraph, createOntology
+from pyontutils.utils import noneMembers, anyMembers, rdf, owl, rate_limit_getter
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
@@ -88,6 +93,22 @@ class ontologySection:
 
 #
 # utils
+
+def deadlinks(filenames, rate):
+    urls, = Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames)
+    print(len(urls))
+    s = time()
+    all_ = rate_limit_getter(requests.head, urls, rate)
+    not_ok = [_.url for _ in all_ if not _.ok]
+    o = time()
+    d = o - s
+    print('actual', d)
+    print(not_ok)
+
+def furls(filename):
+    return [(url,)
+            for t in rdflib.Graph().parse(filename, format='turtle')
+            for url in t if isinstance(url, rdflib.URIRef) and not url.startswith('file://')]
 
 def version_iris(*filenames, epoch=None):
     # TODO make sure that when we add versionIRIs the files we are adding them to are either unmodified or in the index
@@ -547,6 +568,8 @@ def main():
 
     if args['version-iri']:
         version_iris(*filenames, epoch=epoch)
+    elif args['deadlinks']:
+        deadlinks(filenames, int(args['--rate']))
     elif args['iri-commit']:
         make_git_commit_command(git_local, repo_name)
     elif args['uri-switch']:
