@@ -7,6 +7,7 @@ import os
 import re
 import asyncio
 import inspect
+from time import time, sleep
 from datetime import date
 from functools import wraps
 import psutil
@@ -85,6 +86,67 @@ def async_getter(function, listOfArgs):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(future_loop(future))
     return future.result()
+
+def async_maker(function):
+    listOfArgs = []
+    listOfKwargs = []
+    def async_loader(*args, **kwargs):
+        listOfArgs.append(args)
+        listOfKwargs.append(kwargs)
+    def wrapper(args, kwargs):
+        return function(*args, **kwargs)
+    def async_do():
+        async def future_loop(future_):
+            loop = asyncio.get_event_loop()
+            futures = []
+            for args, kwargs in zip(listOfArgs, listOfKwargs):
+                future = loop.run_in_executor(None, wrapper, args, kwargs)
+                futures.append(future)
+            print('Futures compiled')
+            responses = []
+            for f in futures:
+                responses.append(await f)
+            future_.set_result(responses)
+        future = asyncio.Future()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(future_loop(future))
+        return future.result()
+    return async_loader, async_do
+
+def rate_limit_getter(func, arglist, rate):
+    size = len(arglist) // rate
+    print(f'Time estimate at {rate}Hz for apply {func} to {len(arglist)} args: {size}s')
+    async_loader, async_do = async_maker(one_per_second)
+    for i, fargs in enumerate(chunk_list([(func, args) for args in arglist], size))
+        async_loader(*fargs, smooth_offset=(1 * i) / rate)
+    return [b for a in async_do() for b in a]
+
+def one_per_second(*farglist, smooth_offset=0, debug=False):
+    additional = 0
+    additional_sleep = 0
+    if smooth_offset:
+        sleep(smooth_offset)
+    out = []
+    for func, args in farglist:
+        if additional:
+            additional -= 1
+            additional_sleep = sleep_time
+        start = time()
+        out.append(func(*args))
+        stop = time()
+        delta = stop - start
+        if delta > 1:
+            diff = delta - 1
+            sleep_time = diff % 1
+            additional += int(diff // 1)
+            continue
+        else:
+            sleep_time = 1 - delta
+        if debug:
+            print(f'{start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f} {additional_sleep:<10f} {additional}')
+        sleep(sleep_time + additional_sleep)
+        additional_sleep = 0
+    return out
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
