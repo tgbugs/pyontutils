@@ -2,12 +2,14 @@
 """Set qnames based on the curies defined for a given ontology.
 
 Usage:
+    qnamefix [options]
+    qnamefix [options] (-x <prefix>)...
     qnamefix [options] <file>...
     qnamefix [options] (-x <prefix>)... <file>...
 
 Options:
     -h --help       print this
-    -x --exclude=X  do not include the prefix when rewriting
+    -x --exclude=X  do not include the prefix when rewriting, ALL will strip
     -v --verbose    do something fun!
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
@@ -15,54 +17,16 @@ Options:
 """
 
 import os
+import sys
 from glob import glob
 import rdflib
 from docopt import docopt
-from pyontutils.utils import makePrefixes, PREFIXES, makeGraph
+from pyontutils.utils import makePrefixes, PREFIXES, makeGraph, readFromStdIn
+from pyontutils.ttlfmt import parse, prepareFile, prepareStream
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 PREFIXES.pop('NIFTTL')
-
-
-def convert(f, prefixes):
-    if f in exclude:
-        print('skipping', f)
-        return f
-
-    graph = rdflib.Graph()
-    graph.parse(f, format='turtle')
-
-    def prefix_cleanup(ps, graph):
-        if 'parcellation/' in f:
-            nsl = {p:n for p, n in graph.namespaces()}
-            if '' in nsl:
-                ps[''] = nsl['']
-            elif 'hbaslim' in f:
-                ps['HBA'] = nsl['HBA']
-            elif 'mbaslim' in f:
-                ps['MBA'] = nsl['MBA']
-            elif 'cocomac' in f:
-                ps['cocomac'] = nsl['cocomac']
-
-        # special cases for NIFORG, NIFINV, NIFRET where there identifiers in
-        # annotation properties that share the prefix, so we warn incase
-        # at some point in the future for some reason want them again...
-        if f == 'NIF-Organism.ttl':
-            print('WARNING: special case for NIFORG')
-            ps.pop('NIFORG')
-        elif f == 'NIF-Investigation.ttl':
-            print('WARNING: special case for NIFINV')
-            ps.pop('NIFINV')
-        elif f == 'unused/NIF-Retired.ttl':
-            print('WARNING: special case for NIFRET')
-            ps.pop('NIFGA')
-
-    ng = cull_prefixes(graph, cleanup=prefix_cleanup)
-    ng.filename = f
-    #[ng.add_trip(*n) for n in graph.triples([None]*3)]
-    #print(f, len(ng.g))
-    ng.write()
-    return f
+PREFIXES = {k:v for k, v in PREFIXES.items()}
 
 def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     namespaces = [str(n) for p, n in graph.namespaces()]
@@ -93,15 +57,76 @@ def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     [ng.g.add(t) for t in graph]
     return ng
 
-def main():
-    from joblib import Parallel, delayed
-    args = docopt(__doc__, version = "qnamefix 0")
-    for x in args['--exclude']:
-        PREFIXES.pop(x)
-    if args['--slow'] or len(args['<file>']) == 1:
-        [convert(f, PREFIXES) for f in args['<file>']]
+def serialize(graph, outpath):
+    def prefix_cleanup(ps, graph):
+        if 'parcellation/' in outpath:
+            nsl = {p:n for p, n in graph.namespaces()}
+            if '' in nsl:
+                ps[''] = nsl['']
+            elif 'hbaslim' in outpath:
+                ps['HBA'] = nsl['HBA']
+            elif 'mbaslim' in outpath:
+                ps['MBA'] = nsl['MBA']
+            elif 'cocomac' in outpath:
+                ps['cocomac'] = nsl['cocomac']
+
+        # special cases for NIFORG, NIFINV, NIFRET where there identifiers in
+        # annotation properties that share the prefix, so we warn incase
+        # at some point in the future for some reason want them again...
+        if outpath == 'NIF-Organism.ttl':
+            print('WARNING: special case for NIFORG')
+            ps.pop('NIFORG')
+        elif outpath == 'NIF-Investigation.ttl':
+            print('WARNING: special case for NIFINV')
+            ps.pop('NIFINV')
+        elif outpath == 'unused/NIF-Retired.ttl':
+            print('WARNING: special case for NIFRET')
+            ps.pop('NIFGA')
+
+    pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
+    graph = cull_prefixes(graph, cleanup=pc)
+
+    out = graph.g.serialize(format='nifttl')
+    if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
+        outpath.buffer.write(out)
     else:
-        Parallel(n_jobs=9)(delayed(convert)(f, PREFIXES) for f in args['<file>'])
+        with open(outpath, 'wb') as f:
+            f.write(out)
+
+def convert(file):
+    if file in exclude:
+        print('skipping', file)
+        return file
+    serialize(*parse(**prepareFile(file)))
+
+def converts(stream):
+    serialize(*parse(**prepareStream(stream)))
+
+def main():
+    args = docopt(__doc__, version = "qnamefix 0")
+    if args['--exclude'] == ['ALL']:
+        for k in list(PREFIXES):
+            PREFIXES.pop(k)
+    else:
+        for x in args['--exclude']:
+            PREFIXES.pop(x)
+    if not args['<file>']:
+        stdin = readFromStdIn(sys.stdin)
+        if stdin is not None:
+            converts(stdin)
+            #fn = sys.stdout.fileno()
+            #tty = os.ttyname(fn)
+            #with open(tty) as sys.stdin:
+                #from IPython import embed
+                #embed()
+        else:
+            print(__doc__)
+    else:
+        from joblib import Parallel, delayed
+        if args['--slow'] or len(args['<file>']) == 1:
+            [convert(f, PREFIXES) for f in args['<file>']]
+        else:
+            Parallel(n_jobs=9)(delayed(convert)(f, PREFIXES) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()
