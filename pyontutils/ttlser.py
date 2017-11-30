@@ -43,14 +43,6 @@ def litsort(l):
         out = 3, natsort(l), dt, lang
     return out
 
-def dtsort(l):
-    """ inner sort which supports datetime types
-        we don't worry about the total ordering because
-        the list will be sorted a second time using litsort """ 
-    return ((bool(l.value.tzinfo), l.value)
-            if type(l) == Literal and type(l.value) == datetime
-            else (2, l))
-
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
 #     will likely be the one that is called when NamespaceManager.compute_qname calls self.store.prefix
@@ -330,17 +322,12 @@ class CustomTurtleSerializer(TurtleSerializer):
                            key=self.predicateOrder.index))}
 
     def _LitUriRank(self):
-        self._datetimes = []
         return {o:i  # global rank for all Literals and URIRefs
                 for i, o in
                 enumerate(
                     sorted(  # doublesort needed for stability wrt case for literals
                            sorted((_ for _ in self.store.objects()
-                                   if isinstance(_, Literal) and
-                                   (not self._datetimes.append(_)
-                                    if type(_.value) == datetime
-                                    else True)),
-                                  key=dtsort),
+                                   if isinstance(_, Literal))),
                            key=litsort) +
                     sorted(
                         sorted(set(_ for t in self.store for _ in t
@@ -416,19 +403,11 @@ class CustomTurtleSerializer(TurtleSerializer):
         if len(propList) == 0:
             return
         self.verb(propList[0], newline=newline)
-        if self._datetimes:
-            typestarts = sorted(properties[propList[0]], key=dtsort)
-        else:
-            typestarts = sorted(properties[propList[0]])
-        self.objectList(sorted(typestarts[::-1], key=self._globalSortKey))  # rdf:Type
+        self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:Type
         for predicate in propList[1:]:
             self.write(' ;\n' + self.indent(1))
             self.verb(predicate, newline=True)
-            if self._datetimes:
-                starts = sorted(properties[predicate], key=dtsort)
-            else:
-                starts = sorted(properties[predicate])
-            self.objectList(sorted(starts[::-1], key=self._globalSortKey))
+            self.objectList(sorted(sorted(properties[predicate])[::-1], key=self._globalSortKey))
 
     def sortProperties(self, properties):  # modified to sort objects using their global rank
         """Take a hash from predicate uris to lists of values.
