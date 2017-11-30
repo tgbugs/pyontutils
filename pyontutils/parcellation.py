@@ -106,8 +106,8 @@ def add_ops(graph):
 
 def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER):
     graph.add_class(scheme.curie, parent, label=scheme.name)
-    graph.add_hierarchy(scheme.species, DEFSPECIES, scheme.curie)
-    graph.add_hierarchy(scheme.devstage, DEVSTAGE, scheme.curie)
+    graph.add_restriction(scheme.curie, DEFSPECIES, scheme.species)
+    graph.add_restriction(scheme.curie, DEVSTAGE, scheme.devstage)
     if atlas_id:
         graph.add_trip(scheme.curie, rdfs.isDefinedBy, atlas_id)
 
@@ -259,7 +259,7 @@ class HBA(genericPScheme):
                 graph.add_trip(curie, SYNONYM, node['safe_name'])
             if parent:
                 pcurie = graph.expand(cls.PREFIX + ':' + str(parent))
-                graph.add_hierarchy(pcurie, PARTOF, curie)
+                graph.add_restriction(curie, PARTOF, pcurie)
 
     @classmethod
     def validate(cls, graph):
@@ -434,6 +434,8 @@ class HCP(genericPScheme):
                         graph.add_trip(self.id_, 'NIFRID:definingCitation', study)
 
         hcp2016(data)
+
+class PAX_Labels(genericPScheme):
 
 class PAXRAT6(genericPScheme):
     source = 'resources/paxinos09names.txt'
@@ -826,8 +828,8 @@ def swanson():
             pid = nbase % parent
             for child in childs:
                 cid = nbase % child
-                new_graph.add_hierarchy(cid, ahp, pid)  # note hierarhcy inverts direction
-                new_graph.add_hierarchy(pid, apo, cid)
+                new_graph.add_restriction(pid, ahp, cid)  # note hierarhcy inverts direction
+                new_graph.add_restriction(cid, apo, pid)
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     new_graph.write()
