@@ -181,6 +181,8 @@ BLX:8 a owl:Class ;
         1.1,
         2,
         1e+10,
+        "2014-04-14T00:00:00"^^xsd:dateTime,
+        "2014-04-14T00:00:00-08:00"^^xsd:dateTime,
         "1",
         "1.000",
         "2",
@@ -188,6 +190,13 @@ BLX:8 a owl:Class ;
         "label2",
         "one should come?",
         "Two should come?" .
+
+BLX:8.5 a owl:Class ;
+    rdfs:label "2014-04-14T00:00:00"^^xsd:dateTime,
+        "2014-04-14T00:00:01"^^xsd:dateTime,
+        "2014-04-14T00:00:00-06:00"^^xsd:dateTime,
+        "2014-04-14T00:00:00-08:00"^^xsd:dateTime,
+        "2014-04-14T00:00:01-08:00"^^xsd:dateTime .
 
 BLX:123 a owl:Class .
 
