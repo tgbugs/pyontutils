@@ -21,14 +21,16 @@ import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from concurrent.futures import ProcessPoolExecutor
 from pyontutils.utils import readFromStdIn
-args = docopt(__doc__, version="ttlfmt 0")
 
-if args['--vanilla']:
-    outfmt = 'turtle'
-else:
-    outfmt = 'nifttl'
-if args['--debug']:
-    from IPython import embed
+if __name__ == '__main__':
+    args = docopt(__doc__, version="ttlfmt 0")
+
+    if args['--vanilla']:
+        outfmt = 'turtle'
+    else:
+        outfmt = 'nifttl'
+    if args['--debug']:
+        from IPython import embed
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 
