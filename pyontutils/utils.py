@@ -5,11 +5,13 @@
 
 import os
 import re
+import math
 import asyncio
 import inspect
 from time import time, sleep
 from datetime import date
 from functools import wraps
+from concurrent.futures import ThreadPoolExecutor
 import psutil
 import rdflib
 from rdflib.extras import infixowl
@@ -87,58 +89,72 @@ def async_getter(function, listOfArgs):
     loop.run_until_complete(future_loop(future))
     return future.result()
 
-def async_maker(function):
-    listOfArgs = []
-    listOfKwargs = []
-    def async_loader(*args, **kwargs):
-        listOfArgs.append(args)
-        listOfKwargs.append(kwargs)
-    def wrapper(args, kwargs):
-        return function(*args, **kwargs)
-    def async_do():
+def deferred(function):
+    def wrapper(*args, **kwargs):
+        @wraps(function)
+        def inner(args=args, kwargs=kwargs):
+            return function(*args, **kwargs)
+        return inner
+    return wrapper
+
+def Async(rate=None):  # ah conclib
+    if rate:
+        def scurve(x, a=32, b=1, d=2, c=8, i=20, e=1.5):
+            return a / (b + e ** (i - x)) + c
+        workers = scurve(rate)
+        executor = ThreadPoolExecutor(max_workers=math.ceil(workers))
+    else:
+        executor = None
+    print(executor)
+    def inner(generator):
+        if rate is not None:
+            funclist = list(generator)
+            size = len(funclist) // rate  # maybe this is where our stragglers are coming from
+            print(f'Time estimate at {rate}Hz for apply {funclist[0]} to {len(funclist)} args: {size}s')
+            chunks = chunk_list(funclist, size)
+            generator = (lambda:list(limited_gen(chunk, smooth_offset=i/rate))
+                         for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
+
         async def future_loop(future_):
             loop = asyncio.get_event_loop()
             futures = []
-            for args, kwargs in zip(listOfArgs, listOfKwargs):
-                future = loop.run_in_executor(None, wrapper, args, kwargs)
+            for wrapped_function_or_limgen in generator:
+                future = loop.run_in_executor(executor, wrapped_function_or_limgen, )
                 futures.append(future)
             print('Futures compiled')
             responses = []
             for f in futures:
-                responses.append(await f)
+                if rate:
+                    responses.extend(await f)
+                else:
+                    responses.append(await f)
             future_.set_result(responses)
+
         future = asyncio.Future()
         loop = asyncio.get_event_loop()
         loop.run_until_complete(future_loop(future))
         return future.result()
-    return async_loader, async_do
+    return inner
 
-def rate_limit_getter(func, arglist, rate):
-    size = len(arglist) // rate
-    print(f'Time estimate at {rate}Hz for apply {func} to {len(arglist)} args: {size}s')
-    async_loader, async_do = async_maker(one_per_second)
-    for i, fargs in enumerate(chunk_list([(func, args) for args in arglist], size)):
-        async_loader(*fargs, smooth_offset=(1 * i) / rate)
-    return [b for a in async_do() for b in a]
-
-def one_per_second(*farglist, smooth_offset=0, debug=False):
+def limited_gen(chunk, smooth_offset=0, debug=True):
     additional = 0
     additional_sleep = 0
     if smooth_offset:
+        print('started running with offset', smooth_offset)
         sleep(smooth_offset)
-    out = []
-    for func, args in farglist:
+    for element in chunk:
         if additional:
             additional -= 1
             additional_sleep = sleep_time
         start = time()
-        out.append(func(*args))
+        yield element()
         stop = time()
         delta = stop - start
         if delta > 1:
-            diff = delta - 1
-            sleep_time = diff % 1
-            additional += int(diff // 1)
+            sleep_time = delta % 1
+            additional += int(delta // 1)
+            if debug:
+                print(f'{start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f} {additional_sleep:<10f} {additional} {delta - 1}')
             continue
         else:
             sleep_time = 1 - delta
@@ -146,7 +162,6 @@ def one_per_second(*farglist, smooth_offset=0, debug=False):
             print(f'{start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f} {additional_sleep:<10f} {additional}')
         sleep(sleep_time + additional_sleep)
         additional_sleep = 0
-    return out
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
