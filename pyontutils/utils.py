@@ -99,27 +99,28 @@ def deferred(function):
 
 def Async(rate=None):  # ah conclib
     if rate:
-        def scurve(x, a=32, b=1, d=2, c=8, i=20, e=1.5):
-            return a / (b + e ** (i - x)) + c
-        workers = scurve(rate)
-        executor = ThreadPoolExecutor(max_workers=math.ceil(workers))
+        #def scurve(x, a=32, b=1, d=2, c=8, i=20, e=1.5):
+            #return a / (b + e ** (i - x)) + c
+        #workers = scurve(rate)
+        workers = rate if rate <= 40 else 40
+        executor = ThreadPoolExecutor(max_workers=workers)
     else:
-        executor = None
-    print(executor)
+        executor = ThreadPoolExecutor()
+        workers = executor._max_workers
+    print(rate, workers)
     def inner(generator):
-        if rate is not None:
+        if rate:
             funclist = list(generator)
-            size = len(funclist) // rate  # maybe this is where our stragglers are coming from
+            size = (len(funclist) // rate) if rate >= 1 else 1  # FIXME low rates should not have to worry about haning...
             print(f'Time estimate at {rate}Hz for apply {funclist[0]} to {len(funclist)} args: {size}s')
             chunks = chunk_list(funclist, size)
-            generator = (lambda:list(limited_gen(chunk, smooth_offset=i/rate))
+            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % workers)/workers))  # this was the slowdown culpret
                          for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
-
         async def future_loop(future_):
             loop = asyncio.get_event_loop()
             futures = []
             for wrapped_function_or_limgen in generator:
-                future = loop.run_in_executor(executor, wrapped_function_or_limgen, )
+                future = loop.run_in_executor(executor, wrapped_function_or_limgen)
                 futures.append(future)
             print('Futures compiled')
             responses = []
@@ -612,11 +613,18 @@ def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
         NOTE: len(chunks[-1]) <= size. """
     ll = len(list_)
-    chunks = []
-    for start, stop in zip(range(0, ll, size), range(size, ll, size)):
-        chunks.append(list_[start:stop])
-    chunks.append(list_[stop:])  # snag unaligned chunks from last stop
-    return chunks
+    if ll <= size:
+        return [list_]
+    elif size == 0:
+        return list_ # or None ??
+    elif size == 1:
+        return [[l] for l in list_]
+    else:
+        chunks = []
+        for start, stop in zip(range(0, ll, size), range(size, ll, size)):
+            chunks.append(list_[start:stop])
+        chunks.append(list_[stop:])  # snag unaligned chunks from last stop
+        return chunks
 
 class dictParse:
     """ Base class for building dict parsers (that can also handle lists).
