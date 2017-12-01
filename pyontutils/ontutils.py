@@ -17,7 +17,7 @@ Options:
 
     -e --epoch=EPOCH                specify the epoch you want to use for versionIRI
 
-    -r --rate=Hz                  rate in Hz at which to limit requests [default: 20]
+    -r --rate=Hz                    rate in Hz at which to limit requests zero is no limit [default: 20]
 
     -d --debug                      call IPython embed when done
 """
@@ -29,7 +29,8 @@ import requests
 from git.repo import Repo
 from joblib import Parallel, delayed
 from pyontutils.utils import makePrefixes, makeGraph, createOntology
-from pyontutils.utils import noneMembers, anyMembers, rdf, owl, rate_limit_getter
+from pyontutils.utils import noneMembers, anyMembers, rdf, owl
+from pyontutils.utils import Async, deferred
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
@@ -96,9 +97,8 @@ class ontologySection:
 
 def deadlinks(filenames, rate):
     urls, = Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames)
-    print(len(urls))
     s = time()
-    all_ = rate_limit_getter(requests.head, urls, rate)
+    all_ = Async(rate=rate)(deferred(requests.head)(url) for url in urls)
     not_ok = [_.url for _ in all_ if not _.ok]
     o = time()
     d = o - s
@@ -106,7 +106,7 @@ def deadlinks(filenames, rate):
     print(not_ok)
 
 def furls(filename):
-    return [(url,)
+    return [url
             for t in rdflib.Graph().parse(filename, format='turtle')
             for url in t if isinstance(url, rdflib.URIRef) and not url.startswith('file://')]
 
