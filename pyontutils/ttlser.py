@@ -59,21 +59,27 @@ def qname_mp(self, uri):  # for monkey patching Graph
         return ':'.join((prefix, name))
 
 def makeSymbolPrefixes(n):
-    symbols = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_'
+    symbols = '_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'[::-1]
     ls = len(symbols)
-    for i in range(n):
-        places = []
-        while 1:  # probably a really really bad way to convert between base 10 and base 62
-            left = (i // ls) if i else 0
-            if left:
-                places.append(left)
-            if left < ls:
-                places.append(i % ls)
-                break
-            else:
-                i = i % left
-        out = 'q' + ''.join(symbols[pl] for pl in places)
-        print(out)
+    for j in range(n):
+        p = []
+        def woo(places, i):
+            while 1:  # probably a really really bad way to convert between base 10 and base 62
+                left = (i // ls) if i else 0
+                #print(left)
+                if left >= ls:
+                    woo(places, left)
+                    break
+                if left:
+                    places.append(left)
+                if left < ls:
+                    places.append(i % ls)
+                    break
+                else:
+                    i = i % left
+
+        woo(p, j)
+        out = 'q' + ''.join(symbols[pl] for pl in p)
         yield out
 
 class ListRanker:
@@ -637,12 +643,12 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
                                         for _ in t
                                         if isinstance(_, Literal)))
                          if isinstance(e, URIRef))
-        preds = set(v for v, c in counts.items() if c > 1 and len(v) > 10)
+        preds = set(v for v, c in counts.items() if c > 2 and len(v) > 10)
         if not self._compact:
             real_namespace = store.store._IOMemory__namespace
             real_prefix = store.store._IOMemory__prefix
             for p, n in tuple(real_namespace.items()):
-                if n in preds and (p[0] == 'q' or p[0] == 'p'):
+                if n in preds:
                     real_namespace.pop(p)
                     real_prefix.pop(n)
         store.namespace_manager.reset()
