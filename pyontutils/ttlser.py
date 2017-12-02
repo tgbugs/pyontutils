@@ -50,13 +50,31 @@ def litsort(l):
 def qname_mp(self, uri):  # for monkey patching Graph
     try:
         prefix, namespace, name = self.compute_qname(uri, False)
-    except Exception:  # no prefix no problems
+    except (ValueError, KeyError) as e:#Exception:  # no prefix no problems
         return uri
 
-    if prefix == "":
+    if prefix == '':
         return name
     else:
-        return ":".join((prefix, name))
+        return ':'.join((prefix, name))
+
+def makeSymbolPrefixes(n):
+    symbols = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_'
+    ls = len(symbols)
+    for i in range(n):
+        places = []
+        while 1:  # probably a really really bad way to convert between base 10 and base 62
+            left = (i // ls) if i else 0
+            if left:
+                places.append(left)
+            if left < ls:
+                places.append(i % ls)
+                break
+            else:
+                i = i % left
+        out = 'q' + ''.join(symbols[pl] for pl in places)
+        print(out)
+        yield out
 
 class ListRanker:
     def __init__(self, node, serializer):
@@ -104,6 +122,11 @@ OBJECT = 2
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
+    short_name = 'nifttl'
+    _name = 'pyontutils deterministic'
+    __version = 'v1.1.0'
+    _newline = True
+
     topClasses = [OWL.Ontology,
                   RDF.Property,
                   RDFS.Class,
@@ -117,16 +140,16 @@ class CustomTurtleSerializer(TurtleSerializer):
                  ]
 
     SECTIONS = ('',
-                '\n### rdf Properties\n',
-                '\n### rdfs Classes\n',
-                '\n### Object Properties\n',
-                '\n### Datatypes\n',
-                '\n### Annotation Properties\n',
-                '\n### Data Properties\n',
-                '\n### Classes\n',
-                '\n### Individuals\n',
-                '\n### Axioms\n',
-                '\n### Annotations\n',
+                '### rdf Properties\n',
+                '### rdfs Classes\n',
+                '### Object Properties\n',
+                '### Datatypes\n',
+                '### Annotation Properties\n',
+                '### Data Properties\n',
+                '### Classes\n',
+                '### Individuals\n',
+                '### Axioms\n',
+                '### Annotations\n',
                )
 
     predicateOrder = [RDF.type,
@@ -176,9 +199,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                       RDFS.isDefinedBy,
                      ]
 
-    def __init__(self, store):
+    def __init__(self, store, reset=True):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
-        store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
+        if reset:
+            store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         super(CustomTurtleSerializer, self).__init__(store)
         self.rank_init = 0
         self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
@@ -404,9 +428,10 @@ class CustomTurtleSerializer(TurtleSerializer):
             return
         self.verb(propList[0], newline=newline)
         self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:Type
+        whitespace = ' ;\n' + self.indent(1) if self._newline else ';'
         for predicate in propList[1:]:
-            self.write(' ;\n' + self.indent(1))
-            self.verb(predicate, newline=True)
+            self.write(whitespace)
+            self.verb(predicate, newline=self._newline)
             self.objectList(sorted(sorted(properties[predicate])[::-1], key=self._globalSortKey))
 
     def sortProperties(self, properties):  # modified to sort objects using their global rank
@@ -495,9 +520,10 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.subjectDone(l)
             l = self.store.value(l, RDF.rest)
 
+        whitespace = '\n' + self.indent(1) if self._newline else ''
         for item in sorted(to_sort, key=self._globalSortKey):
-            self.write('\n' + self.indent(1))
-            self.path(item, OBJECT, newline=True)
+            self.write(whitespace)
+            self.path(item, OBJECT, newline=self._newline)
 
     def _p_default(self, node, position, newline=False):  # XXX unmodified
         if position != SUBJECT and not newline:
@@ -551,11 +577,12 @@ class CustomTurtleSerializer(TurtleSerializer):
     def s_squared(self, subject):  # modified to make anon topClasses behave like anon nested classes
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
-        self.write('\n' + self.indent() + '[')
+        whitespace = '\n' + self.indent() if self._newline else ''
+        self.write(whitespace + '[')
         if SDEBUG:
             self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.predicateList(subject)
-        self.write(' ] .')
+        self.write(' ] .' + whitespace)
         return True
 
     def getQName(self, uri, gen_prefix=True): # modified to make it possible to block gen_prefix
@@ -577,10 +604,11 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         self.startDocument()
 
+        whitespace = '\n' if self._newline else ''
         firstTime = True
         for header, subjects_list in zip(self.SECTIONS, sections_list):
-            if subjects_list:
-                self.write(header)
+            if subjects_list and header:
+                self.write(whitespace + header)
             for subject in subjects_list:
                 if self.isDone(subject):
                     continue
@@ -590,6 +618,69 @@ class CustomTurtleSerializer(TurtleSerializer):
                     self.write('\n')
 
         self.endDocument()
-        stream.write(u"\n".encode('ascii'))
-        stream.write((u"### Serialized using the nifstd custom serializer v1.1.0\n").encode('ascii'))
+        stream.write('\n'.encode('ascii'))
+        n, v = self._name, self.__version
+        stream.write(u'### Serialized using the {} serializer {}\n'.format(n, v).encode('ascii'))
+
+
+class CompactTurtleSerializer(CustomTurtleSerializer):
+
+    short_name = 'cmpttl'
+    _name = 'pyontutils compact deterministic'
+    _newline = False
+    _compact = True
+
+    def __init__(self, store):
+        from collections import Counter
+        counts = Counter(e for t in store
+                         for e in (*t, *(_.datatype
+                                        for _ in t
+                                        if isinstance(_, Literal)))
+                         if isinstance(e, URIRef))
+        preds = set(v for v, c in counts.items() if c > 1 and len(v) > 10)
+        if not self._compact:
+            real_namespace = store.store._IOMemory__namespace
+            real_prefix = store.store._IOMemory__prefix
+            for p, n in tuple(real_namespace.items()):
+                if n in preds and (p[0] == 'q' or p[0] == 'p'):
+                    real_namespace.pop(p)
+                    real_prefix.pop(n)
+        store.namespace_manager.reset()
+        if self._compact:
+            #existing = set(n for q, n in store.namespace_manager.namespaces())
+            #pne = sorted(sorted((_ for _ in preds if _ not in existing)), key=natsort)
+            pne = sorted(sorted((_ for _ in preds)), key=natsort)
+            for p, q in zip(pne, sorted(sorted(makeSymbolPrefixes(len(pne))), key=natsort)):
+                store.bind(q, p, override=False)
+        #print(store.namespace_manager._NamespaceManager__trie)
+        #print(list(store.namespaces()))
+        super(CompactTurtleSerializer, self).__init__(store, reset=False)
+
+    def s_default(self, subject):  # modified from TurtleSerializer to remove newlines
+        self.path(subject, SUBJECT)
+        self.predicateList(subject)
+        self.write(' .')
+        return True
+
+    def objectList(self, objects):  # modified from TurtleSerializer to remove newlines
+        count = len(objects)
+        if count == 0:
+            return
+        depthmod = (count == 1) and 0 or 1
+        self.depth += depthmod
+        self.path(objects[0], OBJECT)
+        for obj in objects[1:]:
+            self.write(',')
+            self.path(obj, OBJECT, newline=False)
+        self.depth -= depthmod
+
+    def serialize(self, *args, **kwargs):
+        super(CompactTurtleSerializer, self).serialize(*args, **kwargs)
+
+class UncompactTurtleSerializer(CompactTurtleSerializer):
+
+    short_name = 'uncmpttl'
+    _name = 'pyontutils uncompact deterministic'
+    _newline = False
+    _compact = False
 
