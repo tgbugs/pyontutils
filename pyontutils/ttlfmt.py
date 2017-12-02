@@ -9,6 +9,8 @@ Options:
     -h --help       print this
     -v --verbose    do something fun!
     -a --vanilla    use the regular rdflib turtle serializer
+    -c --compact    use the compact turtle serializer
+    -u --uncompact  use the uncompact turtle serializer
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
     -d --debug      embed after parsing and before serialization
@@ -27,12 +29,18 @@ if __name__ == '__main__':
 
     if args['--vanilla']:
         outfmt = 'turtle'
+    elif args['--compact']:
+        outfmt = 'cmpttl'
+    elif args['--uncompact']:
+        outfmt = 'uncmpttl'
     else:
         outfmt = 'nifttl'
     if args['--debug']:
         from IPython import embed
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
+rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
+rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 
 def prepareFile(file):
     filepath = os.path.expanduser(file)
