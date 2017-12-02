@@ -19,6 +19,8 @@ from pyontutils.closed_namespaces import *
 from pyontutils import closed_namespaces as cnses
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
+rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
+rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 
 TODAY = date.isoformat(date.today())
 
