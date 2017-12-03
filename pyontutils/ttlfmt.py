@@ -4,6 +4,7 @@
 Usage:
     ttlfmt [options]
     ttlfmt [options] <file>...
+    ttlfmt [options] <file>...
 
 Options:
     -h --help       print this
@@ -11,6 +12,7 @@ Options:
     -a --vanilla    use the regular rdflib turtle serializer
     -c --compact    use the compact turtle serializer
     -u --uncompact  use the uncompact turtle serializer
+    -j --jsonld     use the rdflib-jsonld serializer
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
     -o --output=F   serialize all input files to output file
@@ -20,6 +22,7 @@ Options:
 """
 import os
 import sys
+from io import StringIO, TextIOWrapper
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
@@ -49,6 +52,8 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
         filetype = ext.strip('.')
         if filetype == 'ttl':
             infmt_guess = 'ttl'
+        elif filetype == 'json':
+            infmt_guess = 'json-ld'
         else:
             infmt_guess = None
         if outpath is None:
@@ -58,26 +63,35 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
                 format_guess=infmt_guess,
                 outpath=outpath)
 
-formats = ('ttl', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
+formats = ('ttl', 'json-ld', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
            'trig', 'hturtle', 'rdfa', 'mdata', 'rdfa1.0', 'html')
 @profile_me
 def parse(source, format_guess, outpath, graph=rdflib.Graph()):
-    filepath = source
     errors = []
     for format in (format_guess, *(f for f in formats if f != format_guess)):
+        print(format)
+        if type(source) == TextIOWrapper:  # stdin can't reset
+            src = source.read()
+            source = StringIO(src)
         try:
             graph.parse(source=source, format=format)
+            a = next(iter(graph))
             return graph, outpath
-        except BadSyntax as e:
+        except (StopIteration, BadSyntax) as e:
             print('PARSING FAILED', source)
             errors.append(e)
+            if type(source) == StringIO:
+                source.seek(0)
     raise BadSyntax(str(errors)) from errors[0]
 
 @profile_me
 def serialize(graph, outpath):
     if args['--debug']:
-        from IPython import embed
-        embed()
+        if type(outpath) == type(sys.stdout):
+            pipe_debug(graph=graph, outpath=outpath)
+        else:
+            from IPython import embed
+            embed()
     out = graph.serialize(format=outfmt)
     if args['--nowrite']:
         print('PARSING Success', outpath)
@@ -87,14 +101,22 @@ def serialize(graph, outpath):
         with open(outpath, 'wb') as f:
             f.write(out)
 
-def convert(files, outpath=None, stream=False):
-    if outpath and len(files) > 1:
-        graph = rdflib.Graph()
-        [parse(**prepare(file, outpath), graph=graph) for file in files]
-        serialize(graph, outpath)
-    else:
-        file_or_stream = files
+def convert(file, outpath=None, stream=False):
+    if stream or type(file) == str:
+        file_or_stream = file
         serialize(*parse(**prepare(file_or_stream, outpath, stream)))
+    else:
+        file_list = file
+        graph = rdflib.Graph()
+        [parse(**prepare(file, outpath), graph=graph) for file in file_list]
+        serialize(graph, outpath)
+
+def pipe_debug(*args, source=None, graph=None, outpath=None, **kwargs):
+    fn = sys.stdout.fileno()
+    tty = os.ttyname(fn)
+    with open(tty) as sys.stdin:
+        from IPython import embed
+        embed()
 
 def main():
     global args  # vastly preferable to classing everything since this way we can see
@@ -108,6 +130,8 @@ def main():
         outfmt = 'cmpttl'
     elif args['--uncompact']:
         outfmt = 'uncmpttl'
+    elif args['--jsonld']:
+        outfmt = 'json-ld'
     else:
         outfmt = 'nifttl'
 
@@ -117,17 +141,14 @@ def main():
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
             convert(stdin, outpath, stream=True)
-            #fn = sys.stdout.fileno()
-            #tty = os.ttyname(fn)
-            #with open(tty) as sys.stdin:
-                #from IPython import embed
-                #embed()
         else:
             print(__doc__)
     else:
         from joblib import Parallel, delayed
         if outpath or args['--slow'] or len(files) == 1:
-            [convert(f, outpath=outpath) for f in files]
+            if len(files) == 1:
+                files,  = files
+            convert(files, outpath=outpath)
         else:
             Parallel(n_jobs=9)(delayed(convert)(f) for f in files)
 
