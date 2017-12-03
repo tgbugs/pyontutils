@@ -36,6 +36,16 @@ other:UsedAP a owl:AnnotationProperty .  # if only used predicates are put first
 BLX:BB a owl:Class ;
     <http://uri.binterlex.org/base/blx_999> "DIO!" .
 
+# test failure to shorten on underscore
+BLX:AAB a owl:Class ;
+    <http://FIXME.org/other_this_works> 0 ;
+    #<http://uri.binterlex.org/base/colons:too> 1 ;
+    <http://uri.binterlex.org/base/this_fails> 2 ;
+    <http://purl.obolibrary.org/obo/doid#this_too> 3 ;
+    #blx:colons:1234567 ;  # while we're here make sure this works going forward
+    #blx:colons:also  # not ready for prime time on the parsing side sadly
+    .
+
 # test consistent ordering with respect to case
 BLX:AA a owl:Class .
 blx:aa a owl:Class .

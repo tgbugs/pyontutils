@@ -226,6 +226,11 @@ blx:aA a owl:Class .
 
 blx:aa a owl:Class .
 
+BLX:AAB a owl:Class ;
+    blx:this_fails 2 ;
+    doid:this_too 3 ;
+    other:this_works 0 .
+
 BLX:AB a owl:Class .
 
 BLX:Ab a owl:Class .
