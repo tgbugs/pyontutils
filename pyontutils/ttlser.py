@@ -59,28 +59,29 @@ def qname_mp(self, uri):  # for monkey patching Graph
         return ':'.join((prefix, name))
 
 def makeSymbolPrefixes(n):
-    symbols = '_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'[::-1]
-    ls = len(symbols)
-    for j in range(n):
-        p = []
-        def woo(places, i):
-            while 1:  # probably a really really bad way to convert between base 10 and base 62
-                left = (i // ls) if i else 0
-                #print(left)
-                if left >= ls:
-                    woo(places, left)
-                    break
-                if left:
-                    places.append(left)
-                if left < ls:
-                    places.append(i % ls)
-                    break
-                else:
-                    i = i % left
-
-        woo(p, j)
-        out = 'q' + ''.join(symbols[pl] for pl in p)
+    from collections import deque
+    symbols = 'AABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'
+    most_significant = 26 * 2  # aka last base really
+    base = len(symbols)
+    gap = base - most_significant
+    index = -1
+    count = 0
+    while count < n:
+        index += 1
+        bd, br = divmod(index, base)
+        if br == 0:
+            continue
+        i = index
+        out = deque()
+        while i:
+            i, r = divmod(i, base)
+            out.appendleft(r)
+        if out and out[0] >= most_significant:  # forget math use programming
+            continue
+        out = ''.join(symbols[d] for d in out)
+        #print(' '.join(f'{_:>3}' for _ in (index, bd, br)), out)
         yield out
+        count += 1
 
 class ListRanker:
     def __init__(self, node, serializer):
@@ -256,7 +257,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             return [_ if _ else [max_worst_case] for _ in l]
         def normalize():
             for vl, il, (listlists) in bnodes.values():
-                for l in vl + il + listlists:
+                for l in vl + il + listlists:  # FIXME SLOW
                     l.sort()
             return {k:[smwc(v), smwc(i), smwc(ll)]
                     for k, (v, i, ll) in bnodes.items()}
@@ -655,7 +656,7 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
         if self._compact:
             #existing = set(n for q, n in store.namespace_manager.namespaces())
             #pne = sorted(sorted((_ for _ in preds if _ not in existing)), key=natsort)
-            pne = sorted(sorted((_ for _ in preds)), key=natsort)
+            pne = sorted(sorted(preds), key=natsort)
             for p, q in zip(pne, sorted(sorted(makeSymbolPrefixes(len(pne))), key=natsort)):
                 store.bind(q, p, override=False)
         #print(store.namespace_manager._NamespaceManager__trie)
@@ -680,8 +681,6 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
             self.path(obj, OBJECT, newline=False)
         self.depth -= depthmod
 
-    def serialize(self, *args, **kwargs):
-        super(CompactTurtleSerializer, self).serialize(*args, **kwargs)
 
 class UncompactTurtleSerializer(CompactTurtleSerializer):
 
