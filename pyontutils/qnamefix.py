@@ -22,19 +22,11 @@ from glob import glob
 import rdflib
 from docopt import docopt
 from pyontutils.utils import makePrefixes, PREFIXES, makeGraph, readFromStdIn
-from pyontutils.ttlfmt import parse, prepareFile, prepareStream
+import pyontutils.ttlfmt
+from pyontutils.ttlfmt import parse, prepare
 
 PREFIXES.pop('NIFTTL')
 PREFIXES = {k:v for k, v in PREFIXES.items()}
-
-if __name__ == '__main__':
-    args = docopt(__doc__, version = "qnamefix 0")
-    if args['--exclude'] == ['ALL']:
-        for k in list(PREFIXES):
-            PREFIXES.pop(k)
-    else:
-        for x in args['--exclude']:
-            PREFIXES.pop(x)
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
@@ -96,7 +88,7 @@ def serialize(graph, outpath):
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
     graph = cull_prefixes(graph, cleanup=pc)
 
-    print(bool(PREFIXES))
+    #print(bool(PREFIXES))
     out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
@@ -104,28 +96,35 @@ def serialize(graph, outpath):
         with open(outpath, 'wb') as f:
             f.write(out)
 
-def convert(file):
-    if file in exclude:
+def convert(file_or_stream, stream=False):
+    if file_or_stream in exclude:
         print('skipping', file)
         return file
-    serialize(*parse(**prepareFile(file)))
-
-def converts(stream):
-    serialize(*parse(**prepareStream(stream)))
+    serialize(*parse(**prepare(file_or_stream, stream=stream)))
 
 def main():
+    global PREFIXES
+    args = docopt(__doc__, version = "qnamefix 0")
+    args['--format'] = 'turtle'
+    pyontutils.ttlfmt.args = args
+    if args['--exclude'] == ['ALL']:
+        for k in list(PREFIXES):
+            PREFIXES.pop(k)
+    else:
+        for x in args['--exclude']:
+            PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
-            converts(stdin)
+            convert(stdin, stream=True)
         else:
             print(__doc__)
     else:
-        from joblib import Parallel, delayed
         if args['--slow'] or len(args['<file>']) == 1:
-            [convert(f, PREFIXES) for f in args['<file>']]
+            [convert(f) for f in args['<file>']]
         else:
-            Parallel(n_jobs=9)(delayed(convert)(f, PREFIXES) for f in args['<file>'])
+            from joblib import Parallel, delayed
+            Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()
