@@ -11,10 +11,11 @@ some other way.
 
 ## Installation
 In order to get good (deterministic) ttl serialization from these tools you need to use
-my modified version of rdflib (see https://github.com/RDFLib/rdflib/pull/649).
+my modified version of rdflib (see https://github.com/RDFLib/rdflib/pull/649 and
+https://github.com/RDFLib/rdflib/pull/793).
 Follow the steps below in your preferred python environment. You may need to run `pip install wheel`.
-1. Get a copy of the whl file for my release `wget https://github.com/tgbugs/rdflib/releases/download/v5.0.0-dev-tgbugs-b2/rdflib-5.0.0_dev_tgbugs_b2-py2.py3-none-any.whl`
-2. Install the whl `pip install --user --upgrade rdflib-5.0.0_dev_tgbugs_b2-py2.py3-none-any.whl`
+1. Get a copy of the whl file for my release `wget https://github.com/tgbugs/rdflib/releases/download/v5.0.0-dev-tgbugs-b3/rdflib-5.0.0_dev_tgbugs_b3-py2.py3-none-any.whl`
+2. Install the whl `pip install --user --upgrade rdflib-5.0.0_dev_tgbugs_b3-py2.py3-none-any.whl`
 3. If you have not done so already `git clone https://github.com/tgbugs/pyontutils`
 4. `cd pyontutils && python setup.py bdist_wheel && pip3 install --user --upgrade dist/pyontutils*.whl`
 
@@ -28,7 +29,7 @@ pyontutils provides a set of scripts that are useful for maintaining and managin
 using git, and making them available via SciGraph. Note that if you choose the development
 installation option you will need to `ln -sT` the scripts to your perferred bin folder.
 1. [ttlfmt](pyontutils/ttlfmt.py)
-	Reserialize an ontology file using deterministic turtle ([spec](docs/ttlser.md)).
+	Reserialize ontology files using deterministic turtle ([spec](docs/ttlser.md)).
 2. [ontutils](pyontutils/ontutils.py)
     Various useful and frequently needed commands for ontology processes as well as less frequent refactorings.
 3. [ontload](pyontutils/ontload.py)
