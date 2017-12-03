@@ -29,15 +29,6 @@ from pyontutils.utils import readFromStdIn
 profile_me = lambda f:f
 if __name__ == '__main__':
     args = docopt(__doc__, version="ttlfmt 0")
-
-    if args['--vanilla']:
-        outfmt = 'turtle'
-    elif args['--compact']:
-        outfmt = 'cmpttl'
-    elif args['--uncompact']:
-        outfmt = 'uncmpttl'
-    else:
-        outfmt = 'nifttl'
     if args['--debug']:
         from IPython import embed
     if args['--profile']:
@@ -106,6 +97,20 @@ def convert(files, outpath=None, stream=False):
         serialize(*parse(**prepare(file_or_stream, outpath, stream)))
 
 def main():
+    global args  # vastly preferable to classing everything since this way we can see
+    global outfmt  # in 2 lines what is actually shared instead of stuffed into self
+    if __name__ != '__main__':
+        args = docopt(__doc__, version="ttlfmt 0")
+
+    if args['--vanilla']:
+        outfmt = 'turtle'
+    elif args['--compact']:
+        outfmt = 'cmpttl'
+    elif args['--uncompact']:
+        outfmt = 'uncmpttl'
+    else:
+        outfmt = 'nifttl'
+
     outpath = args['--output']
     files = args['<file>']
     if not files:
