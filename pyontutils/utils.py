@@ -200,7 +200,7 @@ def _loadPrefixes():
             curie_map = yaml.load(f)
     except FileNotFoundError:
         import requests
-        curie_map = requests.get('https://github.com/SciCrunch/NIF-Ontology/raw/master/scigraph/nifstd_curie_map.yaml')
+        curie_map = requests.get('https://github.com/tgbugs/pyontutils/blob/master/scigraph/nifstd_curie_map.yaml?raw=true')
         curie_map = yaml.load(curie_map.text)
 
     # holding place for values that are not in the curie map
