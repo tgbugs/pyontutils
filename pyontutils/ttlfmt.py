@@ -13,6 +13,8 @@ Options:
     -u --uncompact  use the uncompact turtle serializer
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
+    -o --output=F   serialize all input files to output file
+    -p --profile    enable profiling on parsing and serialization
     -d --debug      embed after parsing and before serialization
 
 """
@@ -24,6 +26,7 @@ from rdflib.plugins.parsers.notation3 import BadSyntax
 from concurrent.futures import ProcessPoolExecutor
 from pyontutils.utils import readFromStdIn
 
+profile_me = lambda f:f
 if __name__ == '__main__':
     args = docopt(__doc__, version="ttlfmt 0")
 
@@ -37,36 +40,49 @@ if __name__ == '__main__':
         outfmt = 'nifttl'
     if args['--debug']:
         from IPython import embed
+    if args['--profile']:
+        from desc.prof import profile_me
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 
-def prepareFile(file):
-    filepath = os.path.expanduser(file)
-    _, ext = os.path.splitext(filepath)
-    filetype = ext.strip('.')
-    if filetype == 'ttl':
-        infmt = 'turtle'
+def prepare(filepath_or_stream, outpath=None, stream=False):
+    if stream:
+        infmt_guess = 'turtle'
+        if outpath is None:
+            outpath = sys.stdout
     else:
-        infmt = None
-    print(filepath)
-    return dict(source=filepath, format=infmt, outpath=filepath)
+        filepath_or_stream = os.path.expanduser(filepath_or_stream)
+        _, ext = os.path.splitext(filepath_or_stream)
+        filetype = ext.strip('.')
+        if filetype == 'ttl':
+            infmt_guess = 'ttl'
+        else:
+            infmt_guess = None
+        if outpath is None:
+            outpath = filepath_or_stream
+        print(filepath_or_stream)
+    return dict(source=filepath_or_stream,
+                format_guess=infmt_guess,
+                outpath=outpath)
 
-def prepareStream(stream):
-    infmt = 'turtle'  # FIXME detect or try/except?
-    return dict(source=stream, format=infmt, outpath=sys.stdout)
-
-def parse(source, format, outpath):
-    graph = rdflib.Graph()
+formats = ('ttl', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
+           'trig', 'hturtle', 'rdfa', 'mdata', 'rdfa1.0', 'html')
+@profile_me
+def parse(source, format_guess, outpath, graph=rdflib.Graph()):
     filepath = source
-    try:
-        graph.parse(source=source, format=format)
-    except BadSyntax as e:
-        print('PARSING FAILED', source)
-        raise e
-    return graph, outpath
+    errors = []
+    for format in (format_guess, *(f for f in formats if f != format_guess)):
+        try:
+            graph.parse(source=source, format=format)
+            return graph, outpath
+        except BadSyntax as e:
+            print('PARSING FAILED', source)
+            errors.append(e)
+    raise BadSyntax(str(errors)) from errors[0]
 
+@profile_me
 def serialize(graph, outpath):
     if args['--debug']:
         from IPython import embed
@@ -80,17 +96,22 @@ def serialize(graph, outpath):
         with open(outpath, 'wb') as f:
             f.write(out)
 
-def convert(file):
-    serialize(*parse(**prepareFile(file)))
-
-def converts(stream):
-    serialize(*parse(**prepareStream(stream)))
+def convert(files, outpath=None, stream=False):
+    if outpath and len(files) > 1:
+        graph = rdflib.Graph()
+        [parse(**prepare(file, outpath), graph=graph) for file in files]
+        serialize(graph, outpath)
+    else:
+        file_or_stream = files
+        serialize(*parse(**prepare(file_or_stream, outpath, stream)))
 
 def main():
-    if not args['<file>']:
+    outpath = args['--output']
+    files = args['<file>']
+    if not files:
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
-            converts(stdin)
+            convert(stdin, outpath, stream=True)
             #fn = sys.stdout.fileno()
             #tty = os.ttyname(fn)
             #with open(tty) as sys.stdin:
@@ -100,10 +121,10 @@ def main():
             print(__doc__)
     else:
         from joblib import Parallel, delayed
-        if args['--slow'] or len(args['<file>']) == 1:
-            [convert(f) for f in args['<file>']]
+        if outpath or args['--slow'] or len(files) == 1:
+            [convert(f, outpath=outpath) for f in files]
         else:
-            Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
+            Parallel(n_jobs=9)(delayed(convert)(f) for f in files)
 
 if __name__ == '__main__':
     main()
