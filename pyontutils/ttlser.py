@@ -60,7 +60,7 @@ def qname_mp(self, uri):  # for monkey patching Graph
 
 def makeSymbolPrefixes(n):
     from collections import deque
-    symbols = 'AABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-'
+    symbols = 'AABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-%'
     most_significant = 26 * 2  # aka last base really
     base = len(symbols)
     gap = base - most_significant
@@ -342,7 +342,9 @@ class CustomTurtleSerializer(TurtleSerializer):
         return out
 
     def _PredRank(self):
-        pr = sorted(sorted(set(self.store.predicates(None, None))), key=natsort)
+        pr = sorted(sorted(set(self.store.predicates(None, None)),
+                           key=self.store.qname),
+                    key=lambda p: natsort(self.store.qname(p)))
         a = [p for p in self.predicateOrder if p in pr]  # remove predicateOrder not in pr
         b = [p for p in pr if p not in self.predicateOrder]  # dedupe pr before merging
         self.predicateOrder = a + b  # predicateOrder first, then any remaining
@@ -589,7 +591,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if SDEBUG:
             self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.predicateList(subject)
-        self.write(' ] .' + whitespace)
+        self.write(' ] .')
         return True
 
     def getQName(self, uri, gen_prefix=True): # modified to make it possible to block gen_prefix
