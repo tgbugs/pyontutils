@@ -131,7 +131,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
-    __version = 'v1.1.0'
+    __version = 'v1.1.1'
     _newline = True
 
     topClasses = [OWL.Ontology,

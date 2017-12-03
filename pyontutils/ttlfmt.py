@@ -67,7 +67,8 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
 formats = ('ttl', 'json-ld', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
            'trig', 'hturtle', 'rdfa', 'mdata', 'rdfa1.0', 'html')
 @profile_me
-def parse(source, format_guess, outpath, graph=rdflib.Graph()):
+def parse(source, format_guess, outpath, graph=None):
+    graph = rdflib.Graph() if graph is None else graph
     errors = []
     if args['--format']:
         format_guess = args['--format']
