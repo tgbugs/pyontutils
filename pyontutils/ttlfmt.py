@@ -13,9 +13,10 @@ Options:
     -c --compact    use the compact turtle serializer
     -u --uncompact  use the uncompact turtle serializer
     -j --jsonld     use the rdflib-jsonld serializer
+    -f --format=FM  specify the input format (used for pipes)
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
-    -o --output=F   serialize all input files to output file
+    -o --output=FI  serialize all input files to output file
     -p --profile    enable profiling on parsing and serialization
     -d --debug      embed after parsing and before serialization
 
@@ -68,8 +69,9 @@ formats = ('ttl', 'json-ld', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
 @profile_me
 def parse(source, format_guess, outpath, graph=rdflib.Graph()):
     errors = []
+    if args['--format']:
+        format_guess = args['--format']
     for format in (format_guess, *(f for f in formats if f != format_guess)):
-        print(format)
         if type(source) == TextIOWrapper:  # stdin can't reset
             src = source.read()
             source = StringIO(src)
@@ -78,7 +80,7 @@ def parse(source, format_guess, outpath, graph=rdflib.Graph()):
             a = next(iter(graph))
             return graph, outpath
         except (StopIteration, BadSyntax) as e:
-            print('PARSING FAILED', source)
+            print('PARSING FAILED', format, source)
             errors.append(e)
             if type(source) == StringIO:
                 source.seek(0)
