@@ -1,16 +1,16 @@
 # Prerequisites
 Neuron Lang depends on a set of core ontology files that define the
 predicates and complex neuronal phenotypes that are the building blocks
-for neurons. At the moment these files live in the neurons branch of the
-NIF-Ontology repository. As such, Neuron Lang requires a local copy of
-the NIF-Ontology repository which has the neurons branch checked out.
-To accomplish this run
+for neurons. At the moment these files live in the
+[neurons branch](https://github.com/SciCrunch/NIF-Ontology/tree/neurons)
+ofthe NIF-Ontology repository. As such, Neuron Lang requires a local copy
+of the NIF-Ontology repository which has the neurons branch checked out.
+To accomplish this run the following.
 ```
-git clone https://github.com/SciCrunch/NIF-Ontolgoy.git`
+git clone https://github.com/SciCrunch/NIF-Ontology.git`
 cd NIF-Ontology
 git checkout neurons
 ```
-.
 Neuron Lang also makes use of SciGraph for searching the ontologies that
 provide identifiers for phenotypes. Neuron Lang currently defaults to
 a local scigraph instance. To set up SciGraph with the NIF-Ontology you
