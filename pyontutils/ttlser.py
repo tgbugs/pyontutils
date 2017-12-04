@@ -709,26 +709,56 @@ class SubClassOfTurtleSerializer(CustomTurtleSerializer):
         return self.topclass_rank[bnode]
 
     def _TCRank(self):
+
+        class wrapsort(URIRef):
+            """ steal their identitiy and force them to sort using ulterior methods """
+            def __call__(self, uriref):
+                return self.__class__(uriref)
+            def __eq__(self, other):
+                return str(self) == str(other)
+            def __lt__(self, other):  # recall that lower ranked goes first
+                return ((self in supers[other]
+                         if other in self.supers
+                         else False) or
+                        (any(other > mysuper #mysuper < other
+                             if mysuper != self  # FIXME longer cycles?
+                             else False
+                             for mysuper in self.supers[self])
+                         if self in supers else False) or  # oof could be slow
+                        nq(self) < nq(other))
+            def __gt__(self, other):
+                return ((other in self.supers[self]
+                         if self in self.supers
+                         else False) or
+                        (any(othersuper < self
+                             if othersuper != other  # FIXME longer cycles?
+                             else False
+                             for othersuper in self.supers[other])
+                         if other in supers else False) or  # oof could be slow
+                        nq(self) > nq(other))
+            __hash__ = URIRef.__hash__
+
         uris = set(s for e in self.topClasses for s in self.store.subjects(RDF.type, e))
-        def supersOf(predicate, swap=False):
+        def supersOf(predicate, object_is_child):
             supers = {}
             for s, o in self.store.subject_objects(predicate):
-                if swap:
+                if object_is_child:
                     o, s = s, o
                 if isinstance(s, URIRef):
                     if not isinstance(o, URIRef):
                         continue
+                    s, o = wrapsort(s), wrapsort(o)
                     if s not in supers:
                         supers[s] = set()
                     supers[s].add(o)
             return supers
 
-        supers = {k:v for p in
-                  (RDFS.subClassOf,
-                   RDFS.subPropertyOf,
-                   OWL.imports)
-                  for k, v in supersOf(p).items()}
-        print(supers)
+        supers = {k:v for p, oic in
+                  ((RDFS.subClassOf, False),
+                   (RDFS.subPropertyOf, False),
+                   (OWL.imports, False))
+                  for k, v in supersOf(p, oic).items()}
+        wrapsort.supers = supers
         qname = self.store.qname
 
         def nq(n):
@@ -737,22 +767,8 @@ class SubClassOfTurtleSerializer(CustomTurtleSerializer):
             return natsort(qname(n))
 
 
-        class wrapsort:
-            """ steal their identitiy and force them to sort using ulterior methods """
-            def __new__(cls, uri):
-                self = uri
-                return self
-            def __eq__(self, other):
-                return self == other
-            def __lt__(self, other):  # recall that lower ranked goes first
-                return (self in supers[other] or
-                        any(s < other for s in supers[self]) or  # oof could be slow
-                        nq(self) > nq(other))
-            def __gt__(self, other):
-                return (other in supers[self] or
-                        any(o < self for o in supers[other]) or  # oof could be slow
-                        nq(self) < nq(other))
-
+        #for k, v in supers.items():
+            #print(repr(k), v)
 
         return {o:i  # global rank for all Literals and URIRefs
                 for i, o in
