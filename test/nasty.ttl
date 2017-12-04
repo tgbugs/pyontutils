@@ -18,6 +18,7 @@
 @prefix B: <http://X.org/prefix_> .
 @prefix C: <http://cc.org/prefix_> .
 @prefix c: <http://c.org/prefix_> .
+@prefix sco: <http://sco.lol/> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
 @base <http://ihavenoqname.org/> .  # this will be stripped and we prefer proper prefixes
 
@@ -386,4 +387,29 @@ BLX:20 a owl:ObjectProperty ;
 
 [ a owl:Class ;
     rdfs:label ( ("2" "4") ("1" "5") ) ; ] .
+
+# sub class of ordering additional tests
+
+sco:1 a owl:Ontology ;
+    owl:imports sco:0 .
+
+sco:0 a owl:Ontology .
+
+sco:2 a owl:AnnotationProperty ;
+    rdfs:subPropertyOf sco:3 .
+
+sco:3 a owl:ObjectProperty .
+
+sco:4 a owl:ObjectProperty ;
+    rdfs:subPropertyOf sco:5 .
+
+sco:5 a owl:AnnotationProperty .
+
+sco:6 a owl:Class ;
+    rdfs:subClassOf sco:6 .
+
+sco:7 a owl:Class ;
+    rdfs:subClassOf sco:8 .
+
+sco:8 a owl:Class .
 
