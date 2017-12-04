@@ -10,6 +10,7 @@ Options:
     -h --help       print this
     -v --verbose    do something fun!
     -a --vanilla    use the regular rdflib turtle serializer
+    -y --subclass   use the subClassOf turtle serializer
     -c --compact    use the compact turtle serializer
     -u --uncompact  use the uncompact turtle serializer
     -j --jsonld     use the rdflib-jsonld serializer
@@ -41,6 +42,7 @@ if __name__ == '__main__':
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
+rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
 
 def prepare(filepath_or_stream, outpath=None, stream=False):
     if stream:
@@ -127,7 +129,9 @@ def main():
     if __name__ != '__main__':
         args = docopt(__doc__, version="ttlfmt 0")
 
-    if args['--vanilla']:
+    if args['--subclass']:
+        outfmt = 'scottl'
+    elif args['--vanilla']:
         outfmt = 'turtle'
     elif args['--compact']:
         outfmt = 'cmpttl'
