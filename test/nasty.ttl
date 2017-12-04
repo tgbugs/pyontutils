@@ -398,12 +398,12 @@ sco:0 a owl:Ontology .
 sco:2 a owl:AnnotationProperty ;
     rdfs:subPropertyOf sco:3 .
 
-sco:3 a owl:ObjectProperty .
+sco:3 a owl:AnnotationProperty .
 
 sco:4 a owl:ObjectProperty ;
     rdfs:subPropertyOf sco:5 .
 
-sco:5 a owl:AnnotationProperty .
+sco:5 a owl:ObjectProperty .
 
 sco:6 a owl:Class ;
     rdfs:subClassOf sco:6 .

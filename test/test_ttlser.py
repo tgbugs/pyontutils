@@ -14,10 +14,15 @@ rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 def randomize_prefix_order(graph):
     namespace = graph.namespace_manager.store._IOMemory__namespace
     prefix = graph.namespace_manager.store._IOMemory__prefix
-    def save(d): return {k:v for l in (list(d.items()),)
-                         for k, v in l
-                         if not shuffle(l)}
+    def save(d):
+        keys = list(d)
+        shuffle(keys)
+        out = {}
+        for k in keys:
+            out[k] = d[k]
+        return out
     sn, sp = save(namespace), save(prefix)
+    assert namespace == sn and prefix == sp
     def zap(d): [d.pop(k) for k in list(d.keys())]
     zap(namespace)
     zap(prefix)
@@ -27,6 +32,7 @@ def randomize_prefix_order(graph):
             d[k] = v
     readd(sn, namespace)
     readd(sp, prefix)
+    graph.namespace_manager.reset()  # repopulate the trie
 
 def randomize_BNode_order(graph):
     replaced = {}
@@ -69,7 +75,7 @@ class TestTtlser(unittest.TestCase):
             f.write(self.actual)
 
         self.scoactual = self.serialize(outfmt='scottl')
-        with open(self.actualpath, 'wb') as f:
+        with open(self.scoactualpath, 'wb') as f:
             f.write(self.scoactual)
         
     def make_ser(self, outfmt='nifttl'):
@@ -77,13 +83,14 @@ class TestTtlser(unittest.TestCase):
                   'from random import shuffle\n'
                   'import rdflib\n'
                   "rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')\n"
+                  "rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')\n"
                   'class Thing:\n'
                   '    badpath = \'%s\'\n') % self.badpath
         src0 = inspect.getsource(self.serialize)
         src1 = inspect.getsource(randomize_BNode_order)
         src2 = inspect.getsource(randomize_prefix_order)
         after =  f't = Thing()\nsys.stdout.buffer.write(t.serialize(\'{outfmt}\'))\n'
-        return header + src0 + '\n\n' + src1 + '\n\n' + after
+        return header + src0 + '\n\n' + src1 + '\n' + src2 + '\n' + after
 
     def serialize(self, outfmt='nifttl'):
         graph = rdflib.Graph()
@@ -124,7 +131,7 @@ class TestTtlser(unittest.TestCase):
                 print('Determinism failure!')
                 if False:
                     hit = False
-                    for _1, _2 in zip(self.actual.decode(), actual2.decode()):
+                    for _1, _2 in zip(actual.decode(), actual2.decode()):
                         if _1 != _2 and not hit:
                             hit = True
                         if hit:

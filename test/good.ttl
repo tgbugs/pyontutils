@@ -15,12 +15,18 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> .
+@prefix sco: <http://sco.lol/> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xml: <http://www.w3.org/XML/1998/namespace> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 <http://testurl.org/filename.ttl> a owl:Ontology ;
     rdfs:label "U WOT M8" .
+
+sco:0 a owl:Ontology .
+
+sco:1 a owl:Ontology ;
+    owl:imports sco:0 .
 
 ### Object Properties
 
@@ -56,6 +62,11 @@ BLX:21 a owl:ObjectProperty ;
             BLX:19
             BLX:21 ) .
 
+sco:4 a owl:ObjectProperty ;
+    rdfs:subPropertyOf sco:5 .
+
+sco:5 a owl:ObjectProperty .
+
 skos:related a owl:ObjectProperty ;
     owl:inverseOf skos:related,
         [ owl:inverseOf skos:related ] .
@@ -70,6 +81,11 @@ other:a a owl:AnnotationProperty ;
 other:UsedAP a owl:AnnotationProperty .
 
 requestedBy: a owl:AnnotationProperty .
+
+sco:2 a owl:AnnotationProperty ;
+    rdfs:subPropertyOf sco:3 .
+
+sco:3 a owl:AnnotationProperty .
 
 ### Classes
 
@@ -275,6 +291,14 @@ other:BBb a owl:Class .
 other:CC a owl:Class .
 
 other:cc a owl:Class .
+
+sco:6 a owl:Class ;
+    rdfs:subClassOf sco:6 .
+
+sco:7 a owl:Class ;
+    rdfs:subClassOf sco:8 .
+
+sco:8 a owl:Class .
 
 [ a owl:Class ;
     rdfs:label (
