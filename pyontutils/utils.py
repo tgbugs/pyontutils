@@ -250,6 +250,9 @@ def _loadPrefixes():
         'dcterms':'http://purl.org/dc/terms/',
         'dctypes':'http://purl.org/dc/dcmitype/',  # FIXME there is no agreement on qnames
         'ilx':'http://uri.interlex.org/base/', 
+        'ilxr':'http://uri.interlex.org/base/readable/',
+        'ilxrt':'http://uri.interlex.org/tgbugs/uris/readable/',
+        # FIXME a thought: was # intentionally used to increase user privacy? or is this just happenstance?
         'nsu':'http://www.FIXME.org/nsupper#',
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
         'owl':'http://www.w3.org/2002/07/owl#',
@@ -257,6 +260,7 @@ def _loadPrefixes():
         'skos':'http://www.w3.org/2004/02/skos/core#',
         'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
+        'prov':'http://www.w3.org/ns/prov#',
     }
     curie_map.update(extras)
     return curie_map
