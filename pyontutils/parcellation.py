@@ -11,7 +11,10 @@ import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, makePrefixes, makeGraph, rowParse, rdf, rdfs, owl, TermColors as tc #TERMCOLORFUNC
+from utils import TODAY, async_getter, makePrefixes, makeGraph, createOntology, rowParse
+from utils import rdf, rdfs, owl, dc, dcterms, skos, prov
+from utils import TermColors as tc #TERMCOLORFUNC
+from utils import PREFIXES as uPREFIXES
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
@@ -435,7 +438,6 @@ class HCP(genericPScheme):
 
         hcp2016(data)
 
-class PAX_Labels(genericPScheme):
 
 class PAXRAT6(genericPScheme):
     source = 'resources/paxinos09names.txt'
@@ -843,6 +845,39 @@ def swanson():
 
     #embed()
 
+def main():
+    if not os.path.exists(WRITELOC):
+        os.mkdir(WRITELOC)
+
+    with ProcessPoolExecutor(4) as ppe:
+        funs = [fmri_atlases,
+                CoCoMac, #cocomac_make,
+                MBA, #mouse_brain_atlas,
+                HBA, #human_brain_atlas,
+                HCP, #hcp2016_make,
+                PAXRAT6,
+                WHSSD,
+                swanson]
+        futures = [ppe.submit(f) for f in funs]
+        print('futures compiled')
+        fs = [f.result() for f in futures]
+        fs = fs[0] + fs[1:]
+        parcellation_schemes(fs[:-1])
+
+    # make a protege catalog file to simplify life
+    uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
+    xmllines = ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
+    '<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">',] + \
+    [uriline.format(ontid=f, filename=f.rsplit('/',1)[-1]) for f,_ in fs] + \
+    ['  <group id="Folder Repository, directory=, recursive=true, Auto-Update=true, version=2" prefer="public" xml:base=""/>',
+    '</catalog>',]
+    xml = '\n'.join(xmllines)
+    with open('/tmp/catalog-v001.xml','wt') as f:
+        f.write(xml)
+
+#
+# paxinos
+
 def paxinos():
     from desc.prof import profile_me
     from pysercomb.parsers.pax import sections
@@ -1028,37 +1063,231 @@ def paxinos():
     match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
     embed()
 
+
+class PAX_Labels(genericPScheme):
+    sources = {'resources/paxinos09names.txt':6,
+               'resources/pax-6th-ed-indexes.txt':6,
+               os.path.expanduser('~/ni/nifstd/paxinos/tree.txt'):6,
+               'resources/pax-4th-ed-indexes.txt':4}
+    graph = createOntology(filename='paxinos-rat-labels',
+                           name='Paxinos Rat Parcellation Labels',
+                           #prefixes=
+                           comment='',
+                           shortname='paxrat6',
+                           path='ttl/generated/parcellation/')
+
+#
+# New impl
+
+# namespaces
+NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
+ilxrt = rdflib.Namespace(uPREFIXES['ilxrt'])
+
+# classes
+class Class:
+    rdfType = owl.Class
+    propertyMapping = dict(
+        rdfs_lable=rdfs.label,
+        label=skos.prefLabel,
+        synonyms=NIFRID.synonym,
+        abbrevs=NIFRID.abbrev,
+        version=None,
+        shortname=None,  # use NIFRID:acronym originally probably need something better
+        species=None,
+        devstage=None,
+        source=dc.source,  # replaces NIFRID.externalSourceURI?
+        # things that go on classes namely artifacts
+        # documentation of where the exact information came from
+        # documentation from the source about how the provenance was generated
+        #NIFRID.definingCitation
+    )
+    _kwargs = None
+    def __init__(*args, **kwargs):
+        self.args = args
+        if self._kwargs:
+            for kw, arg in self._kwargs.items():
+                if kw in kwargs:
+                    arg = kwargs[kw]
+                setattr(self, kw, arg)
+        else:
+            for kw, arg in kwargs:
+                setattr(self, kw, arg)
+
+    @property
+    def triples(self):
+        yield self.iri, rdf.Type, owl.Class
+        for key, value in self.__dict__.items():
+            if key in self.propertyMapping:
+                predicate = self.propertyMapping[key]
+                if value is not None:
+                    if type(value) != str and hasattr(value, '__iter__'):  # FIXME do generators have __iter__?
+                        for v in value:
+                            yield self.iri, predicate, v
+                    else:
+                        yield self.iri, predicate, value
+
+
+class Artifact(Class):
+    iri = ilxrt.parcellationArtifact
+    _kwargs = dict(iri=None,
+                   label=None,
+                   synonyms=tuple(),
+                   abbrevs=tuple(),
+                   shortname=None,
+                   date=None,
+                   version=None,
+                   species=None,
+                   devstage=None,
+                   source=None,
+                  )
+    propertyMapping = dict(
+        version=dcterms,
+        date=dc.date,
+        source=dc.sorce,  # use for links to
+        # ilxr.atlasDate
+        # ilxr.atlasVersion
+    )
+    def ___init___(self, **kwargs):
+
+        self.iri = iri
+        self.label = label
+        self.synonyms = synonyms
+        self.abbrevs = abbrevs
+        self.version = version
+        self.shortname = shortname
+        self.species = species
+        self.devstage = devstage
+
+
+class Terminology(Artifact):
+    """ A source for parcellation information that applies to one
+        or more spatial sources, but does not itself contain the
+        spatial definitions. For example Allen MBA. """
+    iri = ilxrt.parcellationTerminology
+
+
+class Atlas(Artifact):
+    """ Atlases are may define a terminology themselves, or """
+    iri = ilxrt.parcellationAtlas
+
+
+class LabelRoot(Class):
+    """ Parcellation labels are strings characthers sometimes associated
+        with a unique identifier, such as an index number or an iri. """
+    """ Base class for labels from a common source that should live in one file """
+    # use this to define the common superclass for a set of labels
+    iri = ilxrt.parcellationLabel
+    _kwargs = dict(iri=None,
+                   label=None,
+                   shortname=None,  # used to construct the rdfs:label
+                   definingArtifacts=tuple(),  # leave blank if defined for the parent class
+                  )
+
+
+class Label(Class):
+    # allen calls these Structures (which is too narrow because of ventricles etc)
+    _kwargs = dict(labelRoot=None,
+                   label=None,  # this will become the skos:prefLabel
+                   altLabel=None,
+                   synonyms=tuple(),
+                   abbrevs=tuple(),
+                   definingArtifacts=tuple(),  # leave blank if defined for the parent class, needed for paxinos
+                  )
+    def __init__(self,
+                 usedInArtifacts=tuple(),  # leave blank if 1:1 map between labelRoot and use artifacts NOTE even MBA requires validate on this
+                 **kwargs
+                ):
+        super().__init__(**kwargs)
+        self.usedInArtifacts = list(usedInArtifact)
+
+    def usedInArtifact(self, artifact):
+        self.usedInArtifacts.append(artifact)
+
+    @property
+    def rdfs_label(self):
+        return self.label + '(' + self.labelRoot.shortname + ')'
+
+
+class RegionRoot(Class):
+    """ Parcellation regions are 'anatomical entities' that are equivalent some
+    part of a real biological system and are equivalent to an intersection
+    between a parcellation label and a specific version of an atlas that
+    defines that label and a difinitive (0, 1, or probabilistics) way to
+    determine whether a particular sample corresponds to that region. """
+    iri = ilxrt.parcellationRegion
+    _kwargs = dict(iri=None,
+                   atlas=None,  # : Atlas
+                   labelRoot=None)  # : LabelRoot
+
+
+class Region(Class):
+    iri = ilxrt.parcellationRegion
+    def __init__(self,
+                 regionRoot,
+                 label):
+        self.atlas = regionRoot.atlas
+        self.label = label.label
+
+#
+# ontologies
+
+class Ont:
+    rdfType = owl.Ontology
+    iri = None
+    comment = None  # about how the file was generated, nothing about what it contains
+    version = TODAY
+    propertyMapping = dict(
+        sources=prov.wasDerivedFrom,  # the direct source file(s)
+    )
+    def __init__(*args, **kwargs):
+        self.graph = rdflib.Graph()
+
+
+class parcBase(Ont):
+    """ Import everything and bridging """
+    labelRoot = LabelRoot
+    regionRoot = RegionRoot
+    atlasRoot = AtlasRoot
+
+
+class Artifacts(Ont):
+    """ An ontology file containing all the parcellation scheme artifacts. """
+    path = 'ttl/generated/'
+    filename = 'parcellation-artifacts'
+    name = 'Parcellation Artifacts'
+    prefixes = {}
+    comment = ('Parcellation artifacts are the defining information sources for '
+               'parcellation labels and/or atlases in which those labels are used.')
+    def __init__(self, artifacts):
+        self.artifacts = artifacts
+
+
+class LabelsBase(Ont):  # this replaces genericPScheme
+    """ An ontology file containing parcellation labels from a common source. """
+    iri = None
+    source_artifacts = tuple()
+    root = None  # : LabelRoot 
+    filename = None
+    name = None
+    prefixes = {}
+    comment = None
+
+
+class RegionsBase(Ont):
+    """ An ontology file containing parcellation regions from the
+        intersection of an atlas artifact and a set of labels. """
+    # TODO find a way to allow these to serialize into one file
+    iri = None
+    atlas = None
+    labelRoot = None
+    def __init__(self):
+        self.regionRoot = RegionRoot(atlas=self.atlas,
+                                     labelRoot=self.labelRoot)
+
+
 def main():
-    if not os.path.exists(WRITELOC):
-        os.mkdir(WRITELOC)
-
-    with ProcessPoolExecutor(4) as ppe:
-        funs = [fmri_atlases,
-                CoCoMac, #cocomac_make,
-                MBA, #mouse_brain_atlas,
-                HBA, #human_brain_atlas,
-                HCP, #hcp2016_make,
-                PAXRAT6,
-                WHSSD,
-                swanson]
-        futures = [ppe.submit(f) for f in funs]
-        print('futures compiled')
-        fs = [f.result() for f in futures]
-        fs = fs[0] + fs[1:]
-        parcellation_schemes(fs[:-1])
-
-    # make a protege catalog file to simplify life
-    uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
-    xmllines = ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
-    '<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">',] + \
-    [uriline.format(ontid=f, filename=f.rsplit('/',1)[-1]) for f,_ in fs] + \
-    ['  <group id="Folder Repository, directory=, recursive=true, Auto-Update=true, version=2" prefer="public" xml:base=""/>',
-    '</catalog>',]
-    xml = '\n'.join(xmllines)
-    with open('/tmp/catalog-v001.xml','wt') as f:
-        f.write(xml)
+    pass
 
 if __name__ == '__main__':
     main()
-    #paxinos()
 

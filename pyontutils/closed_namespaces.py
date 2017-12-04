@@ -9,6 +9,7 @@ __all__ = [
     'dcterms',
     'oboInOwl',
     'owl',
+    'prov',
     'skos',
 ]
 
