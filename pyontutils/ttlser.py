@@ -389,6 +389,8 @@ class CustomTurtleSerializer(TurtleSerializer):
         else:  # every Literal and URIRef object has a global rank
             return self.object_rank[bnode]
 
+    _topClassSortKey = _globalSortKey
+
     def startDocument(self):  # modified to natural sort prefixes
         self._started = True
         ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (natsort(kv[0]), kv[1]))
@@ -403,7 +405,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         for i, classURI in enumerate(self.topClasses):  # SECTIONS
             members = sorted(self.store.subjects(RDF.type, classURI))
-            members.sort(key=self._globalSortKey)
+            members.sort(key=self._topClassSortKey)
 
             subjects = []
             for member in members:
@@ -691,3 +693,74 @@ class UncompactTurtleSerializer(CompactTurtleSerializer):
     _newline = False
     _compact = False
 
+
+class SubClassOfTurtleSerializer(CustomTurtleSerializer):
+
+    short_name = 'scottl'
+    _name = 'pyontutils subClassOf deterministic'
+
+    def __init__(self, store):
+        super(SubClassOfTurtleSerializer, self).__init__(store)
+        self.topclass_rank = self._TCRank()
+
+    def _topClassSortKey(self, bnode):
+        if isinstance(bnode, BNode):
+            return self._globalSortKey(bnode)
+        return self.topclass_rank[bnode]
+
+    def _TCRank(self):
+        uris = set(s for e in self.topClasses for s in self.store.subjects(RDF.type, e))
+        def supersOf(predicate, swap=False):
+            supers = {}
+            for s, o in self.store.subject_objects(predicate):
+                if swap:
+                    o, s = s, o
+                if isinstance(s, URIRef):
+                    if not isinstance(o, URIRef):
+                        continue
+                    if s not in supers:
+                        supers[s] = set()
+                    supers[s].add(o)
+            return supers
+
+        supers = {k:v for p in
+                  (RDFS.subClassOf,
+                   RDFS.subPropertyOf,
+                   OWL.imports)
+                  for k, v in supersOf(p).items()}
+        print(supers)
+        qname = self.store.qname
+
+        def nq(n):
+            if isinstance(n, BNode):
+                return '',
+            return natsort(qname(n))
+
+
+        class wrapsort:
+            """ steal their identitiy and force them to sort using ulterior methods """
+            def __new__(cls, uri):
+                self = uri
+                return self
+            def __eq__(self, other):
+                return self == other
+            def __lt__(self, other):  # recall that lower ranked goes first
+                return (self in supers[other] or
+                        any(s < other for s in supers[self]) or  # oof could be slow
+                        nq(self) > nq(other))
+            def __gt__(self, other):
+                return (other in supers[self] or
+                        any(o < self for o in supers[other]) or  # oof could be slow
+                        nq(self) < nq(other))
+
+
+        return {o:i  # global rank for all Literals and URIRefs
+                for i, o in
+                enumerate(
+                    sorted(  # doublesort needed for stability wrt case for literals
+                           sorted((_ for _ in self.store.objects()
+                                   if isinstance(_, Literal))),
+                           key=litsort) +
+                    sorted(
+                        sorted(uris, key=self.store.qname),
+                        key=wrapsort))}
