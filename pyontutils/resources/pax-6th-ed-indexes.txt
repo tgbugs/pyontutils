@@ -936,7 +936,7 @@ aci anterior commissure, intrabulbar part 2-7, 167-170, 191-195
 ACo anterior cortical amygdaloid nucleus 37-55, 174-178, 181-183
 acp anterior commissure, posterior part 34-43, 169-180, 187-191
 Acs6/7 accessory abducens/facial nucleus 0
-Acs7 accessory facial nucleus 184-186  ; FIXME this renders as acs7 in the figures, but the location matches Acs7, plate numbers may be wrong, structure name taken from 4th
+Acs7 accessory facial nucleus 184-186  ; FIXME ERRATA this renders as acs7 in the figures, but the location matches Acs7, plate numbers may be wrong, structure name taken from 4th
 AD anterodorsal thalamic nucleus 43-52, 166-168, 199-202
 af amygdaloid fissure 46-47, 50, 54, 67-80, 181-185
 AH anterior hypothalamic area 0
@@ -1689,7 +1689,7 @@ STI bed nucleus of the stria terminalis, intermediate division 0
 STIA bed nucleus of the stria terminalis, intraamygdaloid division 52-63, 175-177, 184-188
 STL bed nucleus of the stria terminalis, lateral division 167, 169-170
 STLD bed nucleus of the stria terminalis, lateral division, dorsal part 31-35, 193-195
-STLI bed nucleus of the stria terminalis, lateral division, intermediate part 35, 36-38, 166, 168, 192  ; the occurance on 35 is a typo to STIL corrected in the compact edition
+STLI bed nucleus of the stria terminalis, lateral division, intermediate part 35, 36-38, 166, 168, 192  ; ERRATA the occurance on 35 is a typo to STIL corrected in the compact edition
 STLJ bed nucleus of the stria terminalis, lateral division, juxtacapsular part 34-36, 192, 194-195
 STLP bed nucleus of the stria terminalis, lateral division, posterior part 30-40, 192, 194-195
 STLV bed nucleus of the stria terminalis, lateral division, ventral part 30-37, 190
@@ -1765,7 +1765,7 @@ veme vestibulomesencephalic tract 116-122, 168
 VEn ventral endopiriform nucleus 40-58, 177-180, 182-185
 vert vertebral artery 137, 139-145, 147-161
 vesp vestibulospinal tract 123-126, 168
-VG ventral geniculate nucleus 63, 65-66, 76-77, 176-179, 193-199
+VG ventral geniculate nucleus 60-63, 65-66, 76-77, 176-179, 193-199  ; FIXME 60-62 appear with label VLG or is it that the version we have is missing the entry for VLG???
 VG1 ventral geniculate nucleus, layer 1 64, 67-75
 vhc ventral hippocampal commissure 38-48, 162-167, 199-204
 VIEnt ventral intermediate entorhinal cortex 85-100, 182-189, 194, 196-199
