@@ -1765,11 +1765,12 @@ veme vestibulomesencephalic tract 116-122, 168
 VEn ventral endopiriform nucleus 40-58, 177-180, 182-185
 vert vertebral artery 137, 139-145, 147-161
 vesp vestibulospinal tract 123-126, 168
-VG ventral geniculate nucleus 60-63, 65-66, 76-77, 176-179, 193-199  ; FIXME 60-62 appear with label VLG or is it that the version we have is missing the entry for VLG???
+VG ventral geniculate nucleus 63, 65-66, 76-77, 176-179, 193-199
 VG1 ventral geniculate nucleus, layer 1 64, 67-75
 vhc ventral hippocampal commissure 38-48, 162-167, 199-204
 VIEnt ventral intermediate entorhinal cortex 85-100, 182-189, 194, 196-199
 VL ventrolateral thalamic nucleus 48-59, 166-172, 192-199
+VLG ventral lateral geniculate nucleus 60-62  ; FIXME Must check a physical version. The usage differs very significantly from the 4th to the point where it almost seems like it is a typo and in the compact edition it has been even further renamed to PrG perigenculate nucleus, none of the introductions make so much as a peep about these changes and neither do the references. The bounding curve is obviously intended to be a continuation of the one that is labeled VG in more posterior sections.
 VLH ventrolateral hypothalamic nucleus 39-46, 167-169, 184
 vlh ventrolateral hypothalamic tract 47-56
 VLi ventral linear nucleus of the thalamus 69-74, 169-172, 192
