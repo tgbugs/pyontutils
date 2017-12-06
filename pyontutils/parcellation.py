@@ -880,7 +880,8 @@ def main():
 
 def paxinos():
     from desc.prof import profile_me
-    from pysercomb.parsers.pax import sections
+    from collections import Counter
+    #from pysercomb.parsers.pax import sections
     with open('resources/pax-4th-ed-indexes.txt', 'rt') as f:
         four = f.read()
     with open('resources/pax-6th-ed-indexes.txt', 'rt') as f:
@@ -899,9 +900,11 @@ def paxinos():
         recs = []
         parent_stack = [None]
         old_depth = 0
+        layers = {}
         for l in lines:
             depth, abbrev, _, name = l.split(' ', 3)
             depth = len(depth)
+
             if old_depth < depth:  # don't change
                 parent = parent_stack[-1]
                 parent_stack.append(abbrev)
@@ -920,10 +923,42 @@ def paxinos():
 
             struct = None if name == '-------' else name
             o = (depth, abbrev, struct, parent)
-            recs.append(o)
-            out[abbrev] = ([struct], (), parent)
-        return recs, out
-    trecs, tr = parse_tree()
+            if '-' in abbrev:
+                # remove the precomposed, we will deal with them systematically
+                maybe_parent, rest = abbrev.split('-', 1)
+                if rest.isdigit() or rest == '1a' or rest == '1b':  # Pir1a Pir1b
+                    if parent == 'Unknown':  # XXX special cases
+                        if maybe_parent == 'Pi':  # i think this was probably caused by an ocr error from Pir3 -> Pi3
+                            continue
+                    assert maybe_parent == parent, f'you fall into a trap {maybe_parent} {parent}'
+                    if parent not in layers:
+                        layers[parent] = []
+                    layers[parent].append((layer, o))
+            elif struct is not None and ', layer 1' in struct:
+                # remove the precomposed, we will deal with them systematically
+                parent_, layer = abbrev[:-1], abbrev[-1]
+                if parent_ == 'CxA' and parent == 'Amy':  # XXX special cases
+                    parent = 'CxA'
+                elif parent == 'Unknown':
+                    if parent_ == 'LOT':
+                        parent = 'LOT'
+                    elif parent_ == 'Tu':
+                        parent = 'Tu'
+                assert parent_ == parent, f'wrong turn friend {parent_} {parent}'
+                if parent not in layers:
+                    layers[parent] = []
+                layers[parent].append((layer, o))
+            else:
+                recs.append(o)
+                out[abbrev] = ([struct], (), parent)
+
+        errata = {'nodes with layers':layers}
+        return recs, out, errata
+
+    trecs, tr, errata = parse_tree()
+    print(Counter(_[1] for _ in trecs).most_common())
+    ('CxA1', 2), ('Tu1', 2), ('LOT1', 2), ('ECIC3', 2)  #
+    #embed()
     assert len(tr) == len(trecs), 'Abbreviations in tr are not unique!'
 
     @profile_me
@@ -978,7 +1013,7 @@ def paxinos():
         bm = b - a
         return am, bm
 
-    def check(t):
+    def index_process(t):
         sr, ar = fast(t)
         sabs = set(_[0] for _ in sr)
         aabs = set(_[0] for _ in ar)
@@ -1002,14 +1037,22 @@ def paxinos():
         #print(sorted(sr2m))
         #print()
         out = {}
+        achild = {}
         for a, s, f in ar:
+            if ', layer 1' in s or s.endswith(' layer 1'):  # DTT1 ends in ' layer 1' without a comma
+                achild[a[:-1]] = a
+                continue  # remove the precomposed, we will deal with them systematically
             if a not in out:
                 out[a] = ([s], f)
             else:
                 if s not in out[a][0]:
                     print(f'Found new label from ar for {a}:\n{s}\n{out[a][0]}')
                     out[a][0].append(s)
+        schild = {}
         for a, s in sr:
+            if ', layer 1' in s or s.endswith(' layer 1'):
+                schild[a[:-1]] = a
+                continue # remove the precomposed, we will deal with them systematically
             if a not in out:
                 out[a] = ([s], tuple())
             else:
@@ -1017,15 +1060,22 @@ def paxinos():
                     print(f'Found new label from sr for {a}:\n{s}\n{out[a][0]}')
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
-        return sr, ar, out
+        assert all(s in achild for s in schild), f'somehow the kids dont match {achild} {schild}\n' + str(sorted(set(a) - set(s) | set(s) - set(a)
+                                                                                               for a, s in ((tuple(sorted(achild.items())),
+                                                                                                             tuple(sorted(schild.items()))),)))
+        errata = {'nodes with layers':achild}
+        return sr, ar, out, errata
 
-    sr4, ar4, fr = check(four)
-    # abbreviations 1-10 in 4th are not unique
-    one_to_ten_contexts = ('cortical layer',
-                           'spinal cord layer',
-                           'cerebellar folium',
-                           'cranial nerve nucleus')
-    sr6, ar6, sx = check(six)
+    sr4, ar4, fr, err4 = index_process(four)
+    def fourth():
+        # abbreviations 1-10 in 4th ed are not unique
+        one_to_ten = list(map(str, range(1,11)))
+        one_to_ten_contexts = {'cortical layer':', layer {n}',
+                               'spinal cord layer':'{n}',
+                               'cerebellar folium':'{n}',
+                               'cranial nerve nucleus':'{n}'}
+
+    sr6, ar6, sx, err6 = index_process(six)
     sx2 = {a:([s], ()) for s, a in PAXRAT6.datagetter()}
     sfr = set(fr)
     ssx = set(sx)
@@ -1042,14 +1092,38 @@ def paxinos():
           len(in_tree_not_in_six), len(in_six_not_in_tree),
           len(in_six2_not_in_six), len(in_six_not_in_six2),
          )
-    for a, ((s), _, p) in tr.items():
-        if a in sx:
-            if s[0] not in sx[a][0]:
-                print(f'Found new label from tr for {a}:\n{s}\n{sx[a][0]}')
-    for a, ((s), _) in sx2.items():
-        if a in sx:
-            if s[0] not in sx[a][0]:
-                print(f'Found new label from sx2 for {a}:\n{s}\n{sx[a][0]}')
+    tr_struct_abrv = {}
+    for abrv, ((struct, *extra), _, parent) in tr.items():
+        tr_struct_abrv[struct] = abrv
+        if abrv in sx:
+            #print(abrv, struct, parent)
+            if struct and struct not in sx[abrv][0]:
+                print(f'Found new label from tr for {abrv}:\n{struct}\n{sx[abrv][0]}\n')
+    # can't run these for tr yet
+    #reduced = set(tr_struct_abrv.values())
+    #print(sorted(_ for _ in tr if _ not in reduced))
+    #assert len(tr_struct_abrv) == len(tr), 'mapping between abrvs and structs is not 1:1 for tr'
+
+    sx2_struct_abrv = {}
+    for abrv, ((struct, *extra), _) in sx2.items():
+        sx2_struct_abrv[struct] = abrv
+        if abrv in sx:
+            if struct and struct not in sx[abrv][0]:
+                print(f'Found new label from sx2 for {abrv}:\n{struct}\n{sx[abrv][0]}\n')
+    reduced = set(sx2_struct_abrv.values())
+    print(sorted(_ for _ in reduced if _ not in sx2))
+    assert len(sx2_struct_abrv) == len(sx2), 'there is a duplicate struct'
+
+    sx_struct_abrv = {}
+    for abrv, ((struct, *extra), _) in sx.items():
+        sx_struct_abrv[struct] = abrv
+    reduced = set(sx_struct_abrv.values())
+    print(sorted(_ for _ in reduced if _ not in sx))
+    assert len(sx_struct_abrv) == len(sx), 'there is a duplicate struct'
+
+    # TODO test whether any of the tree members that were are going to exclude have children that we are going to include
+
+    names_match_not_abbervs = {}
 
     tree_no_name = {_:tr[_] for _ in sorted(in_tree_not_in_six) if not tr[_][0][0]}
     tree_with_name = {_:tr[_] for _ in sorted(in_tree_not_in_six) if tr[_][0][0]}
@@ -1061,21 +1135,46 @@ def paxinos():
     with open(os.path.expanduser('~/ni/nifstd/paxinos/tree-no-name.txt'), 'wt') as f: f.write(b)
     with open(os.path.expanduser('~/ni/nifstd/paxinos/not-in-tree-with-figures.txt'), 'wt') as f: f.write(c)
     match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
-    embed()
 
-
-class PAX_Labels(genericPScheme):
+    combined_record = sx  # TODO
     sources = {'resources/paxinos09names.txt':6,
                'resources/pax-6th-ed-indexes.txt':6,
                os.path.expanduser('~/ni/nifstd/paxinos/tree.txt'):6,
                'resources/pax-4th-ed-indexes.txt':4}
+    PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
     graph = createOntology(filename='paxinos-rat-labels',
-                           name='Paxinos Rat Parcellation Labels',
-                           #prefixes=
-                           comment='',
-                           shortname='paxrat6',
+                           name='Paxinos & Watson Rat Parcellation Labels',
+                           prefixes={**makePrefixes('NIFRID'), 'PAXRAT':str(PAXRAT)},   # FIXME this should inherit from Ont...
+                           comment='TESTING TESTING 123',
+                           shortname='paxrat',
                            path='ttl/generated/parcellation/')
 
+    from ttlser import natsort
+    labelRoot = LabelRoot(iri=PAXRAT['0'], 
+                          label='Paxinos rat parcellation label root',
+                          shortname = 'paxrat'
+                         )
+    labelRoot.addTo(graph)
+    for i, (abrv, ((structure, *extras), figures)) in enumerate(
+        sorted(combined_record.items(),
+               key=lambda d:natsort(d[1][0][0]))):  # sort by structure
+        processed_figures = figures  # TODO
+        iri = PAXRAT[str(i + 1)]
+        l = Label(labelRoot=labelRoot,
+                  ifail='i fail!',
+                  label=structure,
+                  altLabel=None,
+                  synonyms=extras,
+                  abbrevs=(abrv,),  # FIXME make sure to check that it is not a string
+                  definingArtifacts='paxinos 6',
+                  iri=iri,  # FIXME error reporint if you try to put in abrv is vbad
+                  extra_triples = processed_figures,  # TODO
+                 )
+        l.addTo(graph)
+
+    graph.write()
+
+    embed()
 #
 # New impl
 
@@ -1085,14 +1184,15 @@ ilxrt = rdflib.Namespace(uPREFIXES['ilxrt'])
 
 # classes
 class Class:
-    rdfType = owl.Class
-    propertyMapping = dict(
-        rdfs_lable=rdfs.label,
+    rdf_type = owl.Class
+    propertyMapping = dict(  # NOTE ONLY theese properties are serialized
+        rdfs_label=rdfs.label,
         label=skos.prefLabel,
         synonyms=NIFRID.synonym,
         abbrevs=NIFRID.abbrev,
+        rdfs_subClassOf=rdfs.subClassOf,
         version=None,
-        shortname=None,  # use NIFRID:acronym originally probably need something better
+        shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
         species=None,
         devstage=None,
         source=dc.source,  # replaces NIFRID.externalSourceURI?
@@ -1101,31 +1201,78 @@ class Class:
         # documentation from the source about how the provenance was generated
         #NIFRID.definingCitation
     )
-    _kwargs = None
-    def __init__(*args, **kwargs):
+    _kwargs = tuple()  # but really a dict
+    def __init__(self, *args, **kwargs):
+
+        if self.parentClass:
+            self.rdfs_subClassOf = self._rdfs_subClassOf
+
         self.args = args
+        self._extra_triples = None  # TODO ?
         if self._kwargs:
             for kw, arg in self._kwargs.items():
                 if kw in kwargs:
-                    arg = kwargs[kw]
-                setattr(self, kw, arg)
+                    arg = kwargs.pop(kw)
+                    if (kw == 'label' and
+                        'rdfs_label' not in kwargs and
+                        not hasattr(self, 'rdfs_label')):
+                        kw = 'rdfs_label'  # if nothing else defines rdfs_label for this class fail over
+
+                    try:
+                        print(self.rdfs_label)
+                    except AttributeError as e :
+                        print(e)
+                    print(self.__class__, kw, arg)
+                    setattr(self, kw, arg)
+            if kwargs:
+                print(f'WARNING: {sorted(kwargs)} are not kwargs for {self.__class__.__name__}')
         else:
             for kw, arg in kwargs:
                 setattr(self, kw, arg)
 
+    def addTo(self, graph):
+        [graph.add_trip(*t) for t in self]
+        return graph  # enable chaining
+
+    def __iter__(self):
+        yield from self.triples
+
     @property
     def triples(self):
-        yield self.iri, rdf.Type, owl.Class
-        for key, value in self.__dict__.items():
-            if key in self.propertyMapping:
-                predicate = self.propertyMapping[key]
-                if value is not None:
-                    if type(value) != str and hasattr(value, '__iter__'):  # FIXME do generators have __iter__?
-                        for v in value:
-                            yield self.iri, predicate, v
-                    else:
-                        yield self.iri, predicate, value
+        return self._triples(self)
 
+    def _triples(self, self_or_cls):
+        iri = self_or_cls.iri
+        yield iri, rdf.type, self.rdf_type
+        for key, predicate in self_or_cls.propertyMapping.items():
+            if hasattr(self_or_cls, key):
+                value = getattr(self_or_cls, key)
+                #print(key, predicate, value)
+                if value is not None:
+                    #(f'{key} are not kwargs for {self.__class__.__name__}')
+                    if not isinstance(value, str) and hasattr(self._kwargs[key], '__iter__'):  # FIXME do generators have __iter__?
+                        for v in value:
+                            yield iri, predicate, v
+                    else:
+                        yield iri, predicate, value
+
+    @property
+    def parentClass(self):
+        if hasattr(self.__class__, 'iri'):
+            return self.__class__.iri
+
+    @property
+    def parentClass_triples(self):
+        if self.parentClass:
+            yield from self._triples(self.__class__)
+
+    @property
+    def _rdfs_subClassOf(self):
+        return self.parentClass
+
+    def __repr__(self):
+        return repr(self.__dict__)
+    
 
 class Artifact(Class):
     iri = ilxrt.parcellationArtifact
@@ -1143,7 +1290,7 @@ class Artifact(Class):
     propertyMapping = dict(
         version=dcterms,
         date=dc.date,
-        source=dc.sorce,  # use for links to
+        source=dc.source,  # use for links to
         # ilxr.atlasDate
         # ilxr.atlasVersion
     )
@@ -1192,20 +1339,31 @@ class Label(Class):
                    synonyms=tuple(),
                    abbrevs=tuple(),
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class, needed for paxinos
+                   iri=None,  # use when a class already exists and we need to know its identifier
                   )
     def __init__(self,
                  usedInArtifacts=tuple(),  # leave blank if 1:1 map between labelRoot and use artifacts NOTE even MBA requires validate on this
                  **kwargs
                 ):
         super().__init__(**kwargs)
-        self.usedInArtifacts = list(usedInArtifact)
+        self.usedInArtifacts = list(usedInArtifacts)
 
     def usedInArtifact(self, artifact):
         self.usedInArtifacts.append(artifact)
 
     @property
     def rdfs_label(self):
-        return self.label + '(' + self.labelRoot.shortname + ')'
+        if hasattr(self, 'label'):
+            if hasattr(self, 'labelRoot'):
+                return self.label + ' (' + self.labelRoot.shortname + ')'
+            return self.label + ' (WARNING YOUR LABELS HAVE NO ROOT!)'
+        else:
+            return 'class not initialized but here __init__ you can have this helpful string :)'
+
+    @property
+    def rdfs_subClassOf(self):
+        return self.labelRoot.iri
+        
 
 
 class RegionRoot(Class):
@@ -1213,7 +1371,20 @@ class RegionRoot(Class):
     part of a real biological system and are equivalent to an intersection
     between a parcellation label and a specific version of an atlas that
     defines that label and a difinitive (0, 1, or probabilistics) way to
-    determine whether a particular sample corresponds to that region. """
+    determine whether a particular sample corresponds to that region.
+
+    Centroid regions (anatomical entities)
+
+    species specific labels
+    species generic labels (no underlying species specific mapping)
+
+    Symbols             ->
+    semantic labels     -> semantic anatomical region                   -> point (aka unbounded connected spatial volume defined by some 'centroid' or canonical member)
+    parcellation labels -> probabalistic anatomical parcellation region -> probablistically bounded connected spatial volume
+                        -> anatomical parcellation region               -> bounded connected spatial volume (as long as the 3d volume is topoligically equivalent to a sphere, unconnected planes of section are fine)
+    
+
+    """
     iri = ilxrt.parcellationRegion
     _kwargs = dict(iri=None,
                    atlas=None,  # : Atlas
@@ -1232,7 +1403,7 @@ class Region(Class):
 # ontologies
 
 class Ont:
-    rdfType = owl.Ontology
+    rdf_type = owl.Ontology
     iri = None
     comment = None  # about how the file was generated, nothing about what it contains
     version = TODAY
@@ -1241,13 +1412,6 @@ class Ont:
     )
     def __init__(*args, **kwargs):
         self.graph = rdflib.Graph()
-
-
-class parcBase(Ont):
-    """ Import everything and bridging """
-    labelRoot = LabelRoot
-    regionRoot = RegionRoot
-    atlasRoot = AtlasRoot
 
 
 class Artifacts(Ont):
@@ -1285,7 +1449,16 @@ class RegionsBase(Ont):
                                      labelRoot=self.labelRoot)
 
 
+class parcBase(Ont):
+    """ Import everything, core, and bridging """
+    parents = LabelRoot, RegionRoot, Atlas
+
+
+#
+# labels
+
 def main():
+    paxinos()
     pass
 
 if __name__ == '__main__':
