@@ -81,7 +81,14 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
         if version >= versions[(rid, value_name)]:
             res_cols_latest[(rid, value_name)] = (rid, value_name, value)
 
-    res_cols = list(res_cols_latest.values())
+    latest = {}
+    for (rid, value_name), version in sorted(versions.items(), key=lambda a: (a[0][0], a[1], a[0][1]))[::-1]:
+        if rid not in latest:
+            latest[rid] = version
+        if version < latest[rid]:
+            res_cols_latest.pop((rid, value_name))  # some entries are not present in the latest and so we need to pop them
+
+    res_cols_l = list(res_cols_latest.values())
 
     output = {}
         #rc_query = conn.execute('SELECT rid, name, value FROM resource_columns as rc WHERE rc.name IN %s' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
@@ -119,18 +126,21 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
                     value = remap_supers[value]
             output[scrid].append((field_mapping[value_name], value))  # TODO we may want functions here
 
-    for rid, value_name, value in (_ for _ in res_cols if _[1] == 'Resource Name'):
+    for rid, value_name, value in (_ for _ in res_cols_l if _[1] == 'Resource Name'):
         internal(rid, value_name, value)
-    for rid, value_name, value in (_ for _ in res_cols if _[1] == 'Synonyms'):
+    for rid, value_name, value in (_ for _ in res_cols_l if _[1] == 'Synonyms'):
         internal(rid, value_name, value)
-    for rid, value_name, value in (_ for _ in res_cols if _[1] != 'Resource Name' and _[1] != 'Synonyms'):
+    for rid, value_name, value in (_ for _ in res_cols_l if _[1] != 'Resource Name' and _[1] != 'Synonyms'):
         internal(rid, value_name, value)
 
     return output
 
 def make_node(id_, field, value, column_to_predicate=_column_to_predicate):
     if field == 'id':
-        value = 'owl:Class'
+        if value.startswith('SCR_'):
+            value = 'owl:NamedIndividual'
+        else:
+            value = 'owl:Class'
     #if type(value) == bool:
         #if value:
             #value = rdflib.Literal(True)
