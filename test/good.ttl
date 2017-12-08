@@ -292,6 +292,15 @@ other:CC a owl:Class .
 
 other:cc a owl:Class .
 
+other:XMLLiteral_test a owl:Class ;
+    rdfs:label "<tag>A</tag>"^^rdf:XMLLiteral,
+        "<tag>a</tag>"^^rdf:XMLLiteral,
+        """<tag>some text</tag>
+<something-else>another tag</something-else>
+    """^^rdf:XMLLiteral,
+        """<tag>some text</tag> <something-else>another tag</something-else>
+    """^^rdf:XMLLiteral .
+
 sco:6 a owl:Class ;
     rdfs:subClassOf sco:6 .
 

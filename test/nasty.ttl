@@ -413,3 +413,14 @@ sco:7 a owl:Class ;
 
 sco:8 a owl:Class .
 
+# XMLLiteral ordering
+
+other:XMLLiteral_test a owl:Class ;
+    rdfs:label "<tag>a</tag>"^^rdf:XMLLiteral,
+    "<tag>A</tag>"^^rdf:XMLLiteral,
+    """<tag>some text</tag>
+<something-else>another tag</something-else>
+    """^^rdf:XMLLiteral,
+    """<tag>some text</tag> <something-else>another tag</something-else>
+    """^^rdf:XMLLiteral .
+
