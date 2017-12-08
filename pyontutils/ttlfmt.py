@@ -25,6 +25,7 @@ Options:
 import os
 import sys
 from io import StringIO, TextIOWrapper
+from json.decoder import JSONDecodeError
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
@@ -82,7 +83,7 @@ def parse(source, format_guess, outpath, graph=None):
             graph.parse(source=source, format=format)
             a = next(iter(graph))
             return graph, outpath
-        except (StopIteration, BadSyntax) as e:
+        except (StopIteration, BadSyntax, JSONDecodeError) as e:
             print('PARSING FAILED', format, source)
             errors.append(e)
             if type(source) == StringIO:
