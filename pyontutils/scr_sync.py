@@ -137,9 +137,10 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
 
 def make_node(id_, field, value, column_to_predicate=_column_to_predicate):
     if field == 'id':
-        if value.startswith('SCR_'):
+        if value.startswith('SCR:'):
             value = 'owl:NamedIndividual'
         else:
+            print(value)
             value = 'owl:Class'
     #if type(value) == bool:
         #if value:
