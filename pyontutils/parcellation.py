@@ -958,7 +958,6 @@ def paxinos():
     trecs, tr, errata = parse_tree()
     print(Counter(_[1] for _ in trecs).most_common())
     ('CxA1', 2), ('Tu1', 2), ('LOT1', 2), ('ECIC3', 2)  #
-    #embed()
     assert len(tr) == len(trecs), 'Abbreviations in tr are not unique!'
 
     @profile_me
@@ -1365,7 +1364,6 @@ class Label(Class):
         return self.labelRoot.iri
         
 
-
 class RegionRoot(Class):
     """ Parcellation regions are 'anatomical entities' that are equivalent some
     part of a real biological system and are equivalent to an intersection
@@ -1455,7 +1453,106 @@ class parcBase(Ont):
 
 
 #
-# labels
+# Input Files
+
+class Source:
+   """ Manages loading and converting source files into ontology representations """ 
+   source = None
+
+   def __init__(self):
+       self.raw = self.loadData()
+
+    def loadData(self):
+        with open(os.path.expanduser(self.source), 'rt') as f:
+            return f.read()
+
+    def processData(self):
+        raise NotImplementedError('Do this in child classes. Should probably output to a common internal format.')
+
+    @property
+    def data(self):
+        return self.validate(self.processData())
+
+    
+class Merge:    # TODO
+    pass
+
+
+class PaxinosIndex(Source):
+    source = None
+
+
+class PaxinosTree(Source):
+    source = '~/ni/dev/nifstd/paxinos/tree.txt'
+
+    def processData(self):
+        lines = [l for l in self.raw.split('\n') if l]
+        out = {}
+        recs = []
+        parent_stack = [None]
+        old_depth = 0
+        layers = {}
+        for l in lines:
+            depth, abbrev, _, name = l.split(' ', 3)
+            depth = len(depth)
+
+            if old_depth < depth:  # don't change
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+                old_depth = depth
+            elif old_depth == depth:
+                if len(parent_stack) - 1 > depth:
+                    parent_stack.pop()
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+            elif old_depth > depth:  # bump back
+                for _ in range(old_depth - depth + 1):
+                    parent_stack.pop()
+                parent = parent_stack[-1]
+                parent_stack.append(abbrev)
+                old_depth = depth
+
+            struct = None if name == '-------' else name
+            o = (depth, abbrev, struct, parent)
+            if '-' in abbrev:
+                # remove the precomposed, we will deal with them systematically
+                maybe_parent, rest = abbrev.split('-', 1)
+                if rest.isdigit() or rest == '1a' or rest == '1b':  # Pir1a Pir1b
+                    if parent == 'Unknown':  # XXX special cases
+                        if maybe_parent == 'Pi':  # i think this was probably caused by an ocr error from Pir3 -> Pi3
+                            continue
+                    assert maybe_parent == parent, f'you fall into a trap {maybe_parent} {parent}'
+                    if parent not in layers:
+                        layers[parent] = []
+                    layers[parent].append((layer, o))
+            elif struct is not None and ', layer 1' in struct:
+                # remove the precomposed, we will deal with them systematically
+                parent_, layer = abbrev[:-1], abbrev[-1]
+                if parent_ == 'CxA' and parent == 'Amy':  # XXX special cases
+                    parent = 'CxA'
+                elif parent == 'Unknown':
+                    if parent_ == 'LOT':
+                        parent = 'LOT'
+                    elif parent_ == 'Tu':
+                        parent = 'Tu'
+                assert parent_ == parent, f'wrong turn friend {parent_} {parent}'
+                if parent not in layers:
+                    layers[parent] = []
+                layers[parent].append((layer, o))
+            else:
+                recs.append(o)
+                out[abbrev] = ([struct], (), parent)
+
+        errata = {'nodes with layers':layers}
+        return recs, out, errata
+
+    def validateData(self, data):
+        trecs, tr, errata = data
+        print(Counter(_[1] for _ in trecs).most_common())
+        ('CxA1', 2), ('Tu1', 2), ('LOT1', 2), ('ECIC3', 2)  #
+        assert len(tr) == len(trecs), 'Abbreviations in tr are not unique!'
+        return trecs, tr, errata
+
 
 def main():
     paxinos()
