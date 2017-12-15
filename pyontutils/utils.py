@@ -242,7 +242,7 @@ def _loadPrefixes():
         'ILX':'http://uri.interlex.org/base/ilx_', 
         'ilx':'http://uri.interlex.org/base/', 
         'ilxr':'http://uri.interlex.org/base/readable/',
-        'ilxrt':'http://uri.interlex.org/tgbugs/uris/readable/',
+        'ilxtr':'http://uri.interlex.org/tgbugs/uris/readable/',
         # for obo files with 'fake' namespaces, http://uri.interlex.org/fakeobo/uris/ eqiv to purl.obolibrary.org/
         'fobo':'http://uri.interlex.org/fakeobo/uris/obo/',
 
