@@ -1009,16 +1009,21 @@ class Artifact(Class):
                    species=None,
                    devstage=None,
                    source=None,
+                   sourceUri=None,
                   )
     propertyMapping = dict(
         version=ilxtr.atlasVersion,  # FIXME
         date=dc.date,
+        sourceUri=ilxtr.sourceUri,  # FIXME
         copyrighted=dcterms.dateCopyrighted,
         source=dc.source,  # use for links to
         #hadDerivation=prov.hadDerivation,  # easier with _extra_triples since can be more than one
         # ilxr.atlasDate
         # ilxr.atlasVersion
     )
+
+    propertyMapping = {**Class.propertyMapping, **propertyMapping}  # FIXME make this implicit
+
     def ___init___(self, **kwargs):
 
         self.iri = iri
@@ -1225,7 +1230,7 @@ class Artifacts(Ont):
     filename = 'parcellation-artifacts'
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
-    #prefixes = {**makePrefixes('NIFRID', 'ilxtr'), **Ont.prefixes}
+    prefixes = {**makePrefixes('NCBITaxon'), **Ont.prefixes}
     comment = ('Parcellation artifacts are the defining information sources for '
                'parcellation labels and/or atlases in which those labels are used.')
 
@@ -1271,7 +1276,19 @@ class Artifacts(Ont):
                     **_PaxRatShared
                       )
 
-    _artifacts = PaxRat4, PaxRat6, PaxRat7
+    MBA = Terminology(iri=ilxtr.mba,
+                      label='Allen Mouse Brain Atlas Terminology',
+                      shortname='MBA',
+                      date='2011',  # TODO
+                      species=NCBITaxon['10090'],
+                      devstage='Adult',
+                      version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
+                      sourceUri='http://api.brain-map.org/api/v2/data/Structure/',
+                      source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
+    )
+    MBAxCCFv2 = None  # TODO
+    MBAxCCFv3 = None  # TODO
+    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA
 
     def _triples(self):
         for art in self._artifacts:
@@ -1307,7 +1324,7 @@ class RegionsBase(Ont):
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """ 
-    iri_prefix_wdf = f'https://github.com/tgbugs/pyontutils/blob/{commit}/pyontutils/'
+    iri_prefix_wdf = f'https://github.com/tgbugs/pyontutils/blob/{commit}/pyontutils/'  # TODO isVersionOf ↓
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
@@ -1734,10 +1751,10 @@ class parcBridge(Ont):
 
     path = 'ttl/generated/'
     filename = 'parcellation-bridge'
-    name = 'Parcellation Artifacts'
+    name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    comment = ('Parcellation scheme bridge.')
+    #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
+    comment = ('Imports the various parts of the brain parcellations ontology.')
     imports = parcCore, Artifacts, PaxLabels  # FIXME init?
 
     # stuff
