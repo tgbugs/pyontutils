@@ -688,7 +688,6 @@ rostral linear nucleus of the raphe RLi
 rostral ventral respiratory group RVRG
 rostrum of the corpus callosum rcc
 #S
-subiculum S
 sagulum nucleus Sag
 scaphoid thalamic nucleus Sc
 secondary auditory cortex, dorsal area AuD
