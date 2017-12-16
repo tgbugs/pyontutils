@@ -6,6 +6,7 @@ import glob
 import subprocess
 from datetime import date
 from collections import namedtuple, defaultdict, Counter
+from inspect import getsourcelines
 import requests
 import rdflib
 from rdflib.extras import infixowl
@@ -1169,7 +1170,8 @@ class Ont:
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      f'{commit}/pyontutils/{os.path.basename(__file__)}')
+                      f'{commit}/pyontutils/{os.path.basename(__file__)}'
+                     '#L{line}')
 
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
@@ -1177,6 +1179,8 @@ class Ont:
     )
 
     def __init__(self, *args, **kwargs):
+        line = getsourcelines(self.__class__)[-1]
+        self.wasGeneratedBy = self.wasGeneratedBy.format(line=line)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
