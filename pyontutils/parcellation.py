@@ -889,10 +889,20 @@ def check_value(v):
     else:
         return rdflib.Literal(v)
 
+def restriction(lift, s, p, o):
+    n0 = rdflib.BNode()
+    yield s, rdfs.subClassOf, n0
+    yield n0, rdf.type, owl.Restriction
+    yield n0, owl.onProperty, p
+    yield n0, lift, o
+
 # namespaces
 NCBITaxon = rdflib.Namespace(uPREFIXES['NCBITaxon'])
+UBERON = rdflib.Namespace(uPREFIXES['UBERON'])
 NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
+NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
+PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
 
 # classes
 class Class:
@@ -905,14 +915,19 @@ class Class:
         rdfs_subClassOf=rdfs.subClassOf,
         version=None,
         shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
-        species=ilxtr.definedForTaxon,  # FIXME
-        devstage=ilxtr.definedForDevelopmentalStage,  # FIXME
-        definingArtifacts=rdfs.isDefinedBy,  # FIXME used in...
+        species=ilxtr.wasDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
+        devstage=ilxtr.wasDefinedInDevelopmentalStage,  # FIXME
+        definingArtifacts=rdfs.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         source=dc.source,  # replaces NIFRID.externalSourceURI?
         # things that go on classes namely artifacts
         # documentation of where the exact information came from
         # documentation from the source about how the provenance was generated
         #NIFRID.definingCitation
+    )
+    lift = dict(
+        species=owl.allValuesFrom,  # FIXME really for all rats?
+        devstage=owl.allValuesFrom,
+        definingArtifacts=owl.allValuesFrom,
     )
     _kwargs = tuple()  # but really a dict
     def __init__(self, *args, **kwargs):
@@ -965,16 +980,26 @@ class Class:
         iri = self_or_cls.iri
         yield iri, rdf.type, self.rdf_type
         for key, predicate in self_or_cls.propertyMapping.items():
+            if key in self.lift:
+                lift = self.lift[key]
+            else:
+                lift = None
             if hasattr(self_or_cls, key):
                 value = getattr(self_or_cls, key)
                 #print(key, predicate, value)
                 if value is not None:
                     #(f'{key} are not kwargs for {self.__class__.__name__}')
+                    def makeTrip(value, iri=iri, predicate=predicate, lift=lift):
+                        t = iri, predicate, check_value(value)
+                        if lift is not None:
+                            yield from restriction(lift, *t)
+                        else:
+                            yield t
                     if not isinstance(value, str) and hasattr(self._kwargs[key], '__iter__'):  # FIXME do generators have __iter__?
                         for v in value:
-                            yield iri, predicate, check_value(v)
+                            yield from makeTrip(v)
                     else:
-                        yield iri, predicate, check_value(value)
+                        yield from makeTrip(value)
         for s, p, o in self._extra_triples:
             yield s, p, o
 
@@ -1152,7 +1177,7 @@ class Ont:
     )
 
     def __init__(self, *args, **kwargs):
-        imports = tuple(i().iri if issubclass(i, Ont) else i for i in self.imports)
+        imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
                                      prefixes=self.prefixes,
@@ -1215,6 +1240,7 @@ class parcCore(Ont):
     #shortname = 'parcore'  # huehuehue
     #prefixes = {**Ont.prefixes}
     comment = ('The parcellation scheme core that needs to be imported.')
+    imports = NIFTTL['nif_backend.ttl'],
     
     # stuff
 
@@ -1230,14 +1256,14 @@ class Artifacts(Ont):
     filename = 'parcellation-artifacts'
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
-    prefixes = {**makePrefixes('NCBITaxon'), **Ont.prefixes}
+    prefixes = {**makePrefixes('NCBITaxon', 'UBERON'), **Ont.prefixes}
     comment = ('Parcellation artifacts are the defining information sources for '
                'parcellation labels and/or atlases in which those labels are used.')
 
     # artifacts
 
     _PaxRatShared = dict(species=NCBITaxon['10116'],
-                         devstage='Adult',  # TODO
+                         devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
                          source=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
                                  '"AChE-stained horizontal sections of the rat brain '
                                  'in stereotaxic coordinates." Journal of neuroscience '
@@ -1280,11 +1306,11 @@ class Artifacts(Ont):
                       label='Allen Mouse Brain Atlas Terminology',
                       shortname='MBA',
                       date='2011',  # TODO
-                      species=NCBITaxon['10090'],
-                      devstage='Adult',
                       version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
                       sourceUri='http://api.brain-map.org/api/v2/data/Structure/',
                       source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
+                      species=NCBITaxon['10090'],
+                      devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
     )
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
@@ -1298,7 +1324,7 @@ class Artifacts(Ont):
 
 class LabelsBase(Ont):  # this replaces genericPScheme
     """ An ontology file containing parcellation labels from a common source. """
-    imports = parcCore,
+    imports = parcCore(),
     sources = tuple()
     root = None  # : LabelRoot 
     filename = None
@@ -1311,7 +1337,7 @@ class RegionsBase(Ont):
     """ An ontology file containing parcellation regions from the
         intersection of an atlas artifact and a set of labels. """
     # TODO find a way to allow these to serialize into one file
-    imports = parcCore,
+    imports = parcCore(),
     atlas = None
     labelRoot = None
     def __init__(self):
@@ -1612,7 +1638,6 @@ class PaxTree_6(Source):
 #
 # Ontology Instances
 
-PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))  # FIXME namespace = ??
 class PaxLabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
     filename = 'paxinos-rat-labels'
@@ -1622,7 +1647,7 @@ class PaxLabels(LabelsBase):
                'in atlases created using Paxinos and Watson\'s methodology.')
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRAT':str(PAXRAT)}
-    imports = parcCore,
+    imports = parcCore(),
     sources = PaxSrAr_4(), PaxSrAr_6(), PaxSr_6(), PaxTree_6()
     root = LabelRoot(iri=PAXRAT['0'],
                      label='Paxinos rat parcellation label root',
@@ -1755,7 +1780,7 @@ class parcBridge(Ont):
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
     comment = ('Imports the various parts of the brain parcellations ontology.')
-    imports = parcCore, Artifacts, PaxLabels  # FIXME init?
+    imports = parcCore(), Artifacts(), PaxLabels()  # FIXME init?
 
     # stuff
 
