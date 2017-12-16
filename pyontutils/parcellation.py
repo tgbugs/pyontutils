@@ -904,6 +904,7 @@ NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
 NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
+PAXRATTEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
 
 # classes
 class Class:
@@ -1650,10 +1651,10 @@ class PaxLabels(LabelsBase):
     comment = ('Compilation of all labels used to name rat brain regions '
                'in atlases created using Paxinos and Watson\'s methodology.')
 
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRAT':str(PAXRAT)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
     imports = parcCore(),
     sources = PaxSrAr_4(), PaxSrAr_6(), PaxSr_6(), PaxTree_6()
-    root = LabelRoot(iri=PAXRAT['0'],
+    root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
 
@@ -1671,7 +1672,7 @@ class PaxLabels(LabelsBase):
             sorted(combined_record.items(),
                    key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure
             processed_figures = figures  # TODO
-            iri = PAXRAT[str(i + 1)]
+            iri = PAXRATTEMP[str(i + 1)]
             yield from Label(labelRoot=self.root,
                              ifail='i fail!',
                              label=structure if structure else 'zzzzzz',
