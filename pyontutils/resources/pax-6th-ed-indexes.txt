@@ -919,7 +919,7 @@ List of Abbreviations
 a artery 38-39, 43, 47-63, 65-74, 76-79, 81, 83-85, 87, 91-105, 107, 109, 113-114, 118, 120-126, 128, 130-131, 148-149, 163, 169-170, 176
 A1 A1 noradrenaline cells 152-161, 169, 171, 193
 A1/C1 A1 noradrenaline cells/C1 adrenaline cells 151
-A11 A11dopamine cells 58-70, 163, 187, 191-192
+A11 A11 dopamine cells 58-70, 163, 187, 191-192
 A13 A13 dopamine cells 50-57, 165-166, 188
 A2 A2 noradrenaline cells 155-161
 A5 A5 noradrenaline cells 108-125, 127, 169, 171-172, 181-184
