@@ -673,7 +673,7 @@ REth retroethmoid nucleus 40-41, 84, 101-103
 rf rhinal fissure 4-50, 52, 80-89, 100-110
 Rh rhomboid thalamic nucleus 25-32, 79-80, 100-103
 RI rostral interstitial nucleus of medial longitudinal fasciculus 37-39, 80-81, 96-103
-ri rhinal incisura 6-8
+ri rhinal incisura 6-8  ; ERRATA this is a misspelling?
 RIP raphe interpositus nucleus 57-59, 91
 RL retrolemniscal nucleus 56, 85, 103
 RLH red nucleus, lateral horn 99
@@ -1590,7 +1590,7 @@ retrosplenial granular b cortex RSGb
 reuniens thalamic nucleus Re
 rhabdoid nucleus Rbd
 rhinal fissure rf
-rhinal incisura ri
+rhinal incisura ri  ; ERRATA this is a misspelling?
 rhomboid thalamic nucleus Rh
 root of abducens nerve 6n
 root of hypoglossal nerve 12n
