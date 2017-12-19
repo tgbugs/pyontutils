@@ -935,7 +935,7 @@ class Class:
         #NIFRID.definingCitation
     )
     lift = dict(
-        species=owl.allValuesFrom,  # FIXME really for all rats?
+        species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
         devstage=owl.allValuesFrom,
         definingArtifacts=owl.allValuesFrom,
     )
@@ -1363,7 +1363,7 @@ class RegionsBase(Ont):
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """ 
-    iri_prefix_wdf = f'https://github.com/tgbugs/pyontutils/blob/{commit}/pyontutils/'  # TODO isVersionOf ↓
+    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'  # TODO isVersionOf ↓ FIXME get latest commit per source
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
@@ -1375,7 +1375,11 @@ class Source(tuple):
             cls.data = cls.validate(*cls.processData())
             cls.prov()
             if os.path.exists(cls.source):  # TODO no expanded stuff
-                cls.iri = rdflib.URIRef(cls.iri_prefix_wdf + cls.source)
+                file_commit = subprocess.check_output(['git', 'log', '-n', '1',
+                                                       '--pretty=format:%H', '--',
+                                                       cls.source]).decode().rstrip()
+                
+                cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
             else:
                 print('Unknown source', cls.source)
         self = super().__new__(cls, cls.data)
@@ -1393,7 +1397,6 @@ class Source(tuple):
     @classmethod
     def validate(cls, data):
         return data
-
 
     @classmethod
     def prov(cls):
@@ -1667,26 +1670,75 @@ class PaxLabels(LabelsBase):
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
 
-    fixes = [
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
-        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+    _fixes = [
+        # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
+        ('1', (['layer 1 of cortex', 'layer 1'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('1a', (['layer 1a of cortex', 'layer 1a'],
+                {Artifacts.PaxRat6.iri:(8,)},
+                [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('1b', (['layer 1b of cortex', 'layer 1b'],
+                {Artifacts.PaxRat6.iri:(8,)},
+                [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('2', (['layer 2 of cortex', 'layer 2'], {}, [Artifacts.PaxRat4.iri])),
+        ('3', (['layer 3 of cortex', 'layer 3'], {}, [Artifacts.PaxRat4.iri])),
+        ('3/4', (['layer 3/4 of cortex', 'layer 3/4'],
+                 {Artifacts.PaxRat6.iri:(94,)},
+                 [Artifacts.PaxRat6.iri])),
+        ('4', (['layer 4 of cortex', 'layer 4'], {}, [Artifacts.PaxRat4.iri])),
+        ('5', (['layer 5 of cortex', 'layer 5'], {}, [Artifacts.PaxRat4.iri])),
+        ('5a', (['layer 5a of cortex', 'layer 5a'],
+                {Artifacts.PaxRat6.iri:(52, 94)},
+                [Artifacts.PaxRat6.iri, Artifacts.PaxRat7.iri])),
+        ('5b', (['layer 5b of cortex', 'layer 5b'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('6', (['layer 6 of cortex', 'layer 6'], {}, [Artifacts.PaxRat4.iri])),
+        ('6a', (['layer 6a of cortex', 'layer 6a'], {}, [Artifacts.PaxRat4.iri])),
+        ('6b', (['layer 6b of cortex', 'layer 6b'], {}, [Artifacts.PaxRat4.iri])),
+
+        ('1', (['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri])),
+        ('2', (['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri])),
+        ('3', (['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri])),
+        ('4', (['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri])),
+        ('5', (['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri])),
+        ('6', (['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri])),
+        ('6a', (['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri])),
+        ('6b', (['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri])),
+        ('7', (['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri])),
+        ('8', (['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri])),
+        ('9', (['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri])),
+        ('10', (['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri])),
+        # for 4e the numbers in the index are to the cranial nerve nuclei entries
     ]
+
+    @property
+    def fixes_abbrevs(self):
+        fixes_abbrevs = set()
+        for f in self._fixes:
+            fixes_abbrevs.add(f[0])
+        return fixes_abbrevs
+
+    @property
+    def fixes_prov(self):
+        _fixes_prov = {}
+        for f in self._fixes:
+            for l in f[1][0]:
+                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getsourcelines(self.__class__)[-1])]  # FIXME per file
+        return _fixes_prov
+
+    @property
+    def fixes(self):
+        yield from self._fixes
 
     def _triples(self):
         for t in self.root:
             yield t
 
         combined_record, struct_prov = self.records()
+        struct_prov.update(self.fixes_prov)  # FIXME
         for i, (abrv, ((structure, *extras), figures, artifacts)) in enumerate(
-            sorted(list(combined_record.items()) + self.fixes,  # FIXME natsort needs another field
+            sorted(list(combined_record.items()) + list(self.fixes),  # FIXME natsort needs another field
                    key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure
-            processed_figures = figures  # TODO
+            print(artifacts)
+            processed_figures = figures  # TODO FIXME we need to link back to atlas version properly
             iri = PAXRATTEMP[str(i + 1)]
             struct = structure if structure else 'zzzzzz'
             if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
@@ -1714,11 +1766,14 @@ class PaxLabels(LabelsBase):
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
-                if a in paxfixes and source != PaxFixes:
-                    continue  # skip the entries that we create manually
+                if a in self.fixes_abbrevs:
+                    continue  # skip the entries that we create manually TODO
 
                 if a in combined_record:
                     structures, figures, artifacts = combined_record[a]
+                    if f:
+                        assert se.artifact.iri not in figures, f'>1 figures {a} {figures} {bool(f)}'
+                        figures[se.artifact.iri] = f
                     for s in ss:
                         if s is not None and s not in structures:
                             structures.append(s)
@@ -1731,7 +1786,7 @@ class PaxLabels(LabelsBase):
                 else:
                     ss = [s for s in ss if s is not None]
                     if ss:  # skip terms without structures
-                        combined_record[a] = ss, f, [se.artifact.iri]
+                        combined_record[a] = ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
                             if s not in struct_prov:
                                 struct_prov[s] = [se.artifact.iri]
