@@ -26,7 +26,7 @@ WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
 PARC = GENERATED + 'parcellation/'
 
-commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode()  # FIXME this breaks scripts that import from this file
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()  # FIXME this breaks scripts that import from this file
 NOTICE = ' Please see https://github.com/tgbugs/pyontutils/tree/{commit}/parcellation.py for details.'.format(commit=commit)
 
 sgv = Vocabulary(cache=True)
@@ -897,6 +897,14 @@ def restriction(lift, s, p, o):
     yield n0, owl.onProperty, p
     yield n0, lift, o
 
+def annotation(ap, ao, s, p, o):
+    n0 = rdflib.BNode()
+    yield n0, rdf.type, owl.Axiom
+    yield n0, owl.annotatedSource, s
+    yield n0, owl.annotatedProperty, p
+    yield n0, owl.annotatedTarget, check_value(o)
+    yield n0, ap, check_value(ao)
+
 # namespaces
 NCBITaxon = rdflib.Namespace(uPREFIXES['NCBITaxon'])
 UBERON = rdflib.Namespace(uPREFIXES['UBERON'])
@@ -1653,29 +1661,33 @@ class PaxLabels(LabelsBase):
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
     imports = parcCore(),
-    sources = PaxSrAr_4(), PaxSrAr_6(), PaxSr_6(), PaxTree_6()
+    # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
+    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(),  # PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
-
-    def __new__(cls, debug=False):
-        cls.debug=debug
-        cls.curate()
-        return super().__new__(cls)
 
     def _triples(self):
         for t in self.root:
             yield t
 
-        combined_record = self.records()
+        combined_record, struct_prov = self.records()
         for i, (abrv, ((structure, *extras), figures, artifacts)) in enumerate(
             sorted(combined_record.items(),
                    key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure
             processed_figures = figures  # TODO
             iri = PAXRATTEMP[str(i + 1)]
+            struct = structure if structure else 'zzzzzz'
+            if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
+                if struct in struct_prov:
+                    yield from (t for artifact in struct_prov[struct]
+                                for t in annotation(rdfs.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
+                for extra in extras:
+                    yield from (t for artifact in struct_prov[extra]
+                                for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
             yield from Label(labelRoot=self.root,
                              ifail='i fail!',
-                             label=structure if structure else 'zzzzzz',
+                             label=struct,
                              altLabel=None,
                              synonyms=extras,
                              abbrevs=(abrv,),  # FIXME make sure to check that it is not a string
@@ -1686,24 +1698,35 @@ class PaxLabels(LabelsBase):
         
     def records(self):
         combined_record = {}
+        struct_prov = {}
         for se in self.sources:
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
+                # TODO deal with overlapping layer names here
                 if a in combined_record:
                     structures, figures, artifacts = combined_record[a]
                     for s in ss:
                         if s is not None and s not in structures:
                             structures.append(s)
+                        if s not in struct_prov:
+                            struct_prov[s] = [se.artifact.iri]
+                        elif se.artifact.iri not in struct_prov[s]:
+                            struct_prov[s].append(se.artifact.iri)
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
                 else:
                     ss = [s for s in ss if s is not None]
                     if ss:  # skip terms without structures
                         combined_record[a] = ss, f, [se.artifact.iri]
-        return combined_record
+                        for s in ss:
+                            if s not in struct_prov:
+                                struct_prov[s] = [se.artifact.iri]
+                            elif se.artifact.iri not in struct_prov[s]:
+                                struct_prov[s].append(se.artifact.iri)
+                                # TODO will need this for some abbrevs too...
+        return combined_record, struct_prov
 
-    @classmethod
-    def curate(cls):
+    def curate(self):
         fr, err4 = PaxSrAr_4()
         sx, err6 = PaxSrAr_6()
         sx2, _ = PaxSr_6()
@@ -1768,8 +1791,11 @@ class PaxLabels(LabelsBase):
         with open(os.path.expanduser('~/ni/dev/nifstd/paxinos/not-in-tree-with-figures.txt'), 'wt') as f: f.write(c)
         match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
 
-        if cls.debug:
-            embed()
+        abrv_match_not_name = {k:v[0] for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1}
+        #embed()
+
+        #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
+
 
 #
 # Bridge (has to go last)
