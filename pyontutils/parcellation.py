@@ -1667,13 +1667,24 @@ class PaxLabels(LabelsBase):
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
 
+    fixes = [
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+        ('abrev', (['struct 1', 'struct 1'], ('FIGURES','NOOOOOO'), ['artifacts'] )),
+    ]
+
     def _triples(self):
         for t in self.root:
             yield t
 
         combined_record, struct_prov = self.records()
         for i, (abrv, ((structure, *extras), figures, artifacts)) in enumerate(
-            sorted(combined_record.items(),
+            sorted(list(combined_record.items()) + self.fixes,  # FIXME natsort needs another field
                    key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure
             processed_figures = figures  # TODO
             iri = PAXRATTEMP[str(i + 1)]
@@ -1703,6 +1714,9 @@ class PaxLabels(LabelsBase):
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
+                if a in paxfixes and source != PaxFixes:
+                    continue  # skip the entries that we create manually
+
                 if a in combined_record:
                     structures, figures, artifacts = combined_record[a]
                     for s in ss:
@@ -1792,7 +1806,8 @@ class PaxLabels(LabelsBase):
         match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
 
         abrv_match_not_name = {k:v[0] for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1}
-        #embed()
+        _ = [print(k, *v[0]) for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1]
+        embed()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
