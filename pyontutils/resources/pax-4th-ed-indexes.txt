@@ -66,7 +66,7 @@ af amygdaloid fissure 35-44, 90-94
 AH anterior hypothalamic area 94
 AHA anterior hypothalamic area, anterior part 23-25, 80-81, 95
 AHC anterior hypothalamic area, central part 25-28, 81, 93, 95
-AHi anterior hypothalamic area 87, 92-95
+AHi amygdalohippocampal area 87, 92-95  ; ERRATA copy paste error with anterior hypothalamic area
 AHiAL amygdalohippocampal area, anterolateral part 34-37, 88, 91
 AHiPM amygdalohippocampal area, posteromedial part 36-44, 84-86, 91
 AHP anterior hypothalamic area, posterior part 26-29, 80-81, 95
@@ -933,7 +933,7 @@ anterior commissure, intrabulbar part aci
 anterior commissure, posterior part acp
 anterior cortical amygdaloid nucleus ACo
 anterior hypothalamic area AH
-anterior hypothalamic area AHi
+amygdalohippocampal area AHi  ; ERRATA copy paste error with anterior hypothalamic area
 anterior hypothalamic area, anterior part AHA
 anterior hypothalamic area, central part AHC
 anterior hypothalamic area, posterior part AHP
