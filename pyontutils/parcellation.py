@@ -1696,8 +1696,10 @@ class PaxLabels(LabelsBase):
 
         ('1', (['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri])),
         ('2', (['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri])),
+        ('2&3', (['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri])),
         ('3', (['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri])),
         ('4', (['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri])),
+        ('4&5', (['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri])),
         ('5', (['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri])),
         ('6', (['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri])),
         ('6a', (['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri])),
@@ -1707,6 +1709,14 @@ class PaxLabels(LabelsBase):
         ('9', (['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri])),
         ('10', (['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri])),
         # for 4e the numbers in the index are to the cranial nerve nuclei entries
+
+        ('3', (['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri])),
+        ('4', (['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri])),
+        ('6', (['abducens nucleus'], {}, [Artifacts.PaxRat4.iri])),
+        ('6a', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
+        ('6b', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
+        ('7', (['facial nucleus'], {}, [Artifacts.PaxRat4.iri])),
+        ('10', (['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri])),
     ]
 
     @property
@@ -1726,18 +1736,21 @@ class PaxLabels(LabelsBase):
 
     @property
     def fixes(self):
-        yield from self._fixes
+        _, _, collisions = self.records()
+        for a, (ss, f, arts) in self._fixes:
+            if (a, ss[0]) in collisions:
+                f.update(collisions[a, ss[0]])
+            yield a, (ss, f, arts)
 
     def _triples(self):
         for t in self.root:
             yield t
 
-        combined_record, struct_prov = self.records()
+        combined_record, struct_prov, _ = self.records()
         struct_prov.update(self.fixes_prov)  # FIXME
         for i, (abrv, ((structure, *extras), figures, artifacts)) in enumerate(
-            sorted(list(combined_record.items()) + list(self.fixes),  # FIXME natsort needs another field
-                   key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure
-            print(artifacts)
+            sorted(list(combined_record.items()) + list(self.fixes),
+                   key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
             processed_figures = figures  # TODO FIXME we need to link back to atlas version properly
             iri = PAXRATTEMP[str(i + 1)]
             struct = structure if structure else 'zzzzzz'
@@ -1762,11 +1775,14 @@ class PaxLabels(LabelsBase):
     def records(self):
         combined_record = {}
         struct_prov = {}
+        collisions = {}
         for se in self.sources:
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
                 if a in self.fixes_abbrevs:
+                    print('TODO', a, ss, f)
+                    collisions[a, ss[0]] = {se.artifact.iri:f}
                     continue  # skip the entries that we create manually TODO
 
                 if a in combined_record:
@@ -1793,7 +1809,7 @@ class PaxLabels(LabelsBase):
                             elif se.artifact.iri not in struct_prov[s]:
                                 struct_prov[s].append(se.artifact.iri)
                                 # TODO will need this for some abbrevs too...
-        return combined_record, struct_prov
+        return combined_record, struct_prov, collisions
 
     def curate(self):
         fr, err4 = PaxSrAr_4()
