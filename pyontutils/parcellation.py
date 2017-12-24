@@ -1715,13 +1715,14 @@ class PaxLabels(LabelsBase):
         ('3', (['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('4', (['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('6', (['abducens nucleus'], {}, [Artifacts.PaxRat4.iri])),
-        ('6a', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
-        ('6b', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
+        #('6a', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
+        #('6b', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
         ('7', (['facial nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('10', (['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri])),
     ]
 
     _dupes = {
+        # FIXME need comments about the index entries
         '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
         '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
         '2/3Cb':(['2&3'], ['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri]),
@@ -1732,6 +1733,7 @@ class PaxLabels(LabelsBase):
         '6Cb':(['6'], ['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri]),
         '6aCb':(['6a'], ['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri]),
         '6bCb':(['6b'], ['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri]),
+        '6cCb':(['6c'], ['cerebellar lobule 6c'], {}, [Artifacts.PaxRat4.iri]),
         '7Cb':(['7'], ['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri]),
         '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
         '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
@@ -1743,6 +1745,8 @@ class PaxLabels(LabelsBase):
         fixes_abbrevs = set()
         for f in self._fixes:
             fixes_abbrevs.add(f[0])
+        for (abrv, *_), *_ in self._dupes.values():
+            fixes_abbrevs.add(abrv)
         return fixes_abbrevs
 
     @property
