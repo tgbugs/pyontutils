@@ -1654,6 +1654,23 @@ class PaxTree_6(Source):
 #
 # Ontology Instances
 
+class PaxRecord:
+    # TODO collisions
+    def __init__(self, source, abbreviation, structure, artifacts,
+                 figures=tuple(),
+                 synonyms=tuple(),
+                 altAbbrevs=tuple()):
+        self.source = source
+        self.abbreviation = abbreviation
+        self.structure = structure
+        self.artifacts = artifacts
+
+    def __iter__(self):
+        pass
+
+    def __hash__(self):
+        return hash(self.abbreviation)
+
 class PaxLabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
     filename = 'paxinos-rat-labels'
@@ -1665,7 +1682,7 @@ class PaxLabels(LabelsBase):
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
     imports = parcCore(),
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
-    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(),  # PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
@@ -1694,22 +1711,7 @@ class PaxLabels(LabelsBase):
         ('6a', (['layer 6a of cortex', 'layer 6a'], {}, [Artifacts.PaxRat4.iri])),
         ('6b', (['layer 6b of cortex', 'layer 6b'], {}, [Artifacts.PaxRat4.iri])),
 
-        ('1', (['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri])),
-        ('2', (['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri])),
-        ('2&3', (['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri])),
-        ('3', (['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri])),
-        ('4', (['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri])),
-        ('4&5', (['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri])),
-        ('5', (['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri])),
-        ('6', (['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri])),
-        ('6a', (['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri])),
-        ('6b', (['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri])),
-        ('7', (['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri])),
-        ('8', (['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri])),
-        ('9', (['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri])),
-        ('10', (['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri])),
         # for 4e the numbers in the index are to the cranial nerve nuclei entries
-
         ('3', (['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('4', (['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('6', (['abducens nucleus'], {}, [Artifacts.PaxRat4.iri])),
@@ -1718,6 +1720,23 @@ class PaxLabels(LabelsBase):
         ('7', (['facial nucleus'], {}, [Artifacts.PaxRat4.iri])),
         ('10', (['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri])),
     ]
+
+    _dupes = {
+        '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
+        '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
+        '2/3Cb':(['2&3'], ['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri]),
+        '3Cb':(['3'], ['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri]),
+        '4Cb':(['4'], ['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri]),
+        '4/5Cb':(['4&5'], ['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri]),
+        '5Cb':(['5'], ['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri]),
+        '6Cb':(['6'], ['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri]),
+        '6aCb':(['6a'], ['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri]),
+        '6bCb':(['6b'], ['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri]),
+        '7Cb':(['7'], ['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri]),
+        '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
+        '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
+        '10Cb':(['10'], ['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri]),
+    }
 
     @property
     def fixes_abbrevs(self):
@@ -1736,37 +1755,44 @@ class PaxLabels(LabelsBase):
 
     @property
     def fixes(self):
-        _, _, collisions = self.records()
+        _, _, collisions, _ = self.records()
         for a, (ss, f, arts) in self._fixes:
             if (a, ss[0]) in collisions:
                 f.update(collisions[a, ss[0]])
-            yield a, (ss, f, arts)
+            yield a, ([], ss, f, arts)
+
+    def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
+        if alt_abbrevs:
+            for abbrev in [abrv] + alt_abbrevs:
+                yield from (t for artifact in abbrev_prov[abbrev, struct]
+                            for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
+        if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
+            if struct in struct_prov:
+                yield from (t for artifact in struct_prov[struct]
+                            for t in annotation(rdfs.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
+            for extra in extras:
+                yield from (t for artifact in struct_prov[extra]
+                            for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
 
     def _triples(self):
         for t in self.root:
             yield t
 
-        combined_record, struct_prov, _ = self.records()
+        combined_record, struct_prov, _, abbrev_prov = self.records()
         struct_prov.update(self.fixes_prov)  # FIXME
-        for i, (abrv, ((structure, *extras), figures, artifacts)) in enumerate(
+        for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
             sorted(list(combined_record.items()) + list(self.fixes),
-                   key=lambda d:natsort(d[1][0][0] if d[1][0][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
-            processed_figures = figures  # TODO FIXME we need to link back to atlas version properly
+                   key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
+            processed_figures = figures  # TODO these are handled in regions
             iri = PAXRATTEMP[str(i + 1)]
             struct = structure if structure else 'zzzzzz'
-            if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
-                if struct in struct_prov:
-                    yield from (t for artifact in struct_prov[struct]
-                                for t in annotation(rdfs.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
-                for extra in extras:
-                    yield from (t for artifact in struct_prov[extra]
-                                for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
+            yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
                              ifail='i fail!',
                              label=struct,
                              altLabel=None,
                              synonyms=extras,
-                             abbrevs=(abrv,),  # FIXME make sure to check that it is not a string
+                             abbrevs=(abrv, *alts),  # FIXME make sure to check that it is not a string
                              definingArtifacts=artifacts,
                              iri=iri,  # FIXME error reporint if you try to put in abrv is vbad
                              extra_triples = str(processed_figures),  # TODO
@@ -1776,6 +1802,7 @@ class PaxLabels(LabelsBase):
         combined_record = {}
         struct_prov = {}
         collisions = {}
+        abbrev_prov = {}
         for se in self.sources:
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -1786,7 +1813,7 @@ class PaxLabels(LabelsBase):
                     continue  # skip the entries that we create manually TODO
 
                 if a in combined_record:
-                    structures, figures, artifacts = combined_record[a]
+                    _, structures, figures, artifacts = combined_record[a]
                     if f:
                         assert se.artifact.iri not in figures, f'>1 figures {a} {figures} {bool(f)}'
                         figures[se.artifact.iri] = f
@@ -1801,15 +1828,29 @@ class PaxLabels(LabelsBase):
                         artifacts.append(se.artifact.iri)
                 else:
                     ss = [s for s in ss if s is not None]
+                    alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
                     if ss:  # skip terms without structures
-                        combined_record[a] = ss, {se.artifact.iri:f}, [se.artifact.iri]
+                        combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
                             if s not in struct_prov:
                                 struct_prov[s] = [se.artifact.iri]
                             elif se.artifact.iri not in struct_prov[s]:
                                 struct_prov[s].append(se.artifact.iri)
-                                # TODO will need this for some abbrevs too...
-        return combined_record, struct_prov, collisions
+                    if alt_abbrevs:  # TODO will need this for some abbrevs too...
+                        arts = self._dupes[a][-1]
+                        for s in self._dupes[a][1]:
+                            for art in arts:
+                                if s not in struct_prov:
+                                    struct_prov[s] = [art]
+                                elif art not in struct_prov[s]:
+                                    struct_prov[s].append(art)
+                        abbrev_prov[a, ss[0]] = [se.artifact.iri]  # FIXME overwritten?
+                        for alt in alt_abbrevs:
+                            if alt not in abbrev_prov:
+                                abbrev_prov[alt, ss[0]] = arts
+                            # TODO elif...
+
+        return combined_record, struct_prov, collisions, abbrev_prov
 
     def curate(self):
         fr, err4 = PaxSrAr_4()
