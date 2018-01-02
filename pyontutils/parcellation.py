@@ -1914,6 +1914,9 @@ class PaxLabels(LabelsBase):
                             if s not in ss:
                                 ss.append(s)
                             for art in arts:
+                                artifacts = combined_record[a][-1]
+                                if art not in artifacts:
+                                    artifacts.append(art)
                                 if s not in struct_prov:
                                     struct_prov[s] = [art]
                                 elif art not in struct_prov[s]:
