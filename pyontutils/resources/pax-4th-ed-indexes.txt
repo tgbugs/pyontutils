@@ -771,7 +771,7 @@ SPF subparafascicular thalamic nucleus 35-36, 80-81, 100
 SPFPC subparafascicular thalamic nucleus, parvicellular part 37-41, 82-84, 101-102
 Sph sphenoid nucleus 58-59, 79-80, 100
 SPO superior paraolivary nucleus 54-60, 82
-SPTg subpedencular tegmental nucleus 50-53, 81-82, 99-100
+SPTg subpedencular tegmental nucleus 50-53, 81-82, 99-100  ; ERRATA this is a spelling mistake which seems to have propagated to braininfo
 SpVe spinal vestibular nucleus 64-69, 82-84, 97-100
 st stria terminalis 18-35, 82-89, 95-110
 StA strial part of the preoptic area 18-20, 98-99
