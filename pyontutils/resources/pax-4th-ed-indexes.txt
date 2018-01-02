@@ -1051,7 +1051,7 @@ commissure of the superior colliculus csc
 copula of the pyramis Cop
 corpus callosum cc
 cortex-amygdala transition zone CxA
-cortical or spinal cord layers, cerebellar folia or cranial nerve nuclei 1-10  ; FIXME this one is a mess
+;cortical or spinal cord layers, cerebellar folia or cranial nerve nuclei 1-10  ; dealt with in generation code
 crus 1 of the ansiform lobule Crus1
 crus 2 of the ansiform lobule Crus2
 cuneate fasciculus cu
