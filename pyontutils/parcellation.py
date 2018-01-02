@@ -927,7 +927,7 @@ class Class:
         shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
         species=ilxtr.wasDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
         devstage=ilxtr.wasDefinedInDevelopmentalStage,  # FIXME
-        definingArtifacts=rdfs.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
+        definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         source=dc.source,  # replaces NIFRID.externalSourceURI?
         # things that go on classes namely artifacts
         # documentation of where the exact information came from
@@ -936,7 +936,7 @@ class Class:
     )
     lift = dict(
         species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
-        devstage=owl.allValuesFrom,
+        devstage=owl.allValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
         definingArtifacts=owl.allValuesFrom,
     )
     _kwargs = tuple()  # but really a dict
@@ -1242,24 +1242,6 @@ class Ont:
         self._graph.write()
 
 
-class parcCore(Ont):
-    """ Core OWL2 entities needed for parcellations """
-
-    # setup
-
-    path = 'ttl/generated/'
-    filename = 'parcellation-core'
-    name = 'Parcellation Artifacts'
-    #shortname = 'parcore'  # huehuehue
-    #prefixes = {**Ont.prefixes}
-    comment = ('The parcellation scheme core that needs to be imported.')
-    imports = NIFTTL['nif_backend.ttl'],
-    
-    # stuff
-
-    parents = LabelRoot, RegionRoot, Atlas
-
-
 class Artifacts(Ont):
     """ An ontology file containing all the parcellation scheme artifacts. """
 
@@ -1333,6 +1315,24 @@ class Artifacts(Ont):
         for art in self._artifacts:
             for t in art:
                 yield t
+
+
+class parcCore(Ont):
+    """ Core OWL2 entities needed for parcellations """
+
+    # setup
+
+    path = 'ttl/generated/'
+    filename = 'parcellation-core'
+    name = 'Parcellation Artifacts'
+    #shortname = 'parcore'  # huehuehue
+    #prefixes = {**Ont.prefixes}
+    comment = ('The parcellation scheme core that needs to be imported.')
+    imports = NIFTTL['nif_backend.ttl'], Artifacts()
+
+    # stuff
+
+    parents = LabelRoot, RegionRoot, Atlas
 
 
 class LabelsBase(Ont):  # this replaces genericPScheme
@@ -1671,6 +1671,34 @@ class PaxRecord:
     def __hash__(self):
         return hash(self.abbreviation)
 
+
+class PaxRegion(RegionsBase):
+    path = 'ttl/generated/parcellation/'
+    filename = 'paxinos-rat-regions'
+    name = 'Paxinos & Watson Rat Parcellation Regions'
+    shortname = 'paxratr'
+    comment = ('Intersection between labels and atlases for all regions '
+               'delineated using Paxinos and Watson\'s methodology.')
+
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'ILXREPLACE')}
+    #imports = parcCore(),
+    # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
+    #sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    root = RegionRoot(iri=PAXRATTEMP['FIXME'],  # FIXME these should probably be EquivalentTo Parcellation Region HasLabel some label HasAtlas some atlas...
+                     label='Paxinos rat parcellation region root',
+                     shortname=shortname,
+                    )
+    # atlas version
+    # label identifier
+    # figures
+
+    things = {}
+
+    @classmethod
+    def addthing(cls, thing, value):
+        cls.things[thing] = value
+
+
 class PaxLabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
     filename = 'paxinos-rat-labels'
@@ -1682,7 +1710,7 @@ class PaxLabels(LabelsBase):
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
     imports = parcCore(),
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
-    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname)
@@ -1710,18 +1738,16 @@ class PaxLabels(LabelsBase):
         ('6', (['layer 6 of cortex', 'layer 6'], {}, [Artifacts.PaxRat4.iri])),
         ('6a', (['layer 6a of cortex', 'layer 6a'], {}, [Artifacts.PaxRat4.iri])),
         ('6b', (['layer 6b of cortex', 'layer 6b'], {}, [Artifacts.PaxRat4.iri])),
-
-        # for 4e the numbers in the index are to the cranial nerve nuclei entries
-        ('3', (['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri])),
-        ('4', (['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri])),
-        ('6', (['abducens nucleus'], {}, [Artifacts.PaxRat4.iri])),
-        #('6a', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
-        #('6b', (['cerebellar lobule'], {}, [Artifacts.PaxRat4.iri])),
-        ('7', (['facial nucleus'], {}, [Artifacts.PaxRat4.iri])),
-        ('10', (['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri])),
     ]
 
     _dupes = {
+        # for 4e the numbers in the index are to the cranial nerve nuclei entries
+        '3N': (['3'], ['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '4N': (['4'], ['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '6N': (['6'], ['abducens nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '7N': (['7'], ['facial nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '10N': (['10'], ['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri]),
+
         # FIXME need comments about the index entries
         '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
         '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
@@ -1738,6 +1764,34 @@ class PaxLabels(LabelsBase):
         '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
         '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
         '10Cb':(['10'], ['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri]),
+    }
+
+    _merge = {  # abbrevs that have identical structure names
+        '5N':'Mo5',
+        '12N':'12',
+        'ANS':'Acc',
+        'ASt':'AStr',
+        'AngT':'Ang',
+        'MnM':'MMn',
+        'MoDG':'Mol',
+        'PDPO':'PDP',
+        'PTg':'PPTg',
+        'STIA':'BSTIA',
+        'STL':'BSTL',
+        'STLD':'BSTLD',
+        'STLI':'BSTLI',
+        'STLJ':'BSTLJ',
+        'STLP':'BSTLP',
+        'STLV':'BSTLV',
+        'STM':'BSTM',
+        'STMA':'BSTMA',
+        'STMP':'BSTMP',
+        'STMPI':'BSTMPI',
+        'STMPL':'BSTMPL',
+        'STMPM':'BSTMPM',
+        'STMV':'BSTMV',
+        'hif':'hf',
+        'och':'ox',
     }
 
     @property
@@ -1769,14 +1823,14 @@ class PaxLabels(LabelsBase):
         if alt_abbrevs:
             for abbrev in [abrv] + alt_abbrevs:
                 yield from (t for artifact in abbrev_prov[abbrev, struct]
-                            for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
+                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
         if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
             if struct in struct_prov:
                 yield from (t for artifact in struct_prov[struct]
-                            for t in annotation(rdfs.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
+                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
             for extra in extras:
                 yield from (t for artifact in struct_prov[extra]
-                            for t in annotation(NIFRID.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
+                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
 
     def _triples(self):
         for t in self.root:
@@ -1787,7 +1841,6 @@ class PaxLabels(LabelsBase):
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
             sorted(list(combined_record.items()) + list(self.fixes),
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
-            processed_figures = figures  # TODO these are handled in regions
             iri = PAXRATTEMP[str(i + 1)]
             struct = structure if structure else 'zzzzzz'
             yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
@@ -1799,14 +1852,19 @@ class PaxLabels(LabelsBase):
                              abbrevs=(abrv, *alts),  # FIXME make sure to check that it is not a string
                              definingArtifacts=artifacts,
                              iri=iri,  # FIXME error reporint if you try to put in abrv is vbad
-                             extra_triples = str(processed_figures),  # TODO
+                             #extra_triples = str(processed_figures),  # TODO
                      )
+            processed_figures = figures  # TODO these are handled in regions pass to PaxRegions
+            if figures:
+                for artifact in artifacts:
+                    PaxRegion.addthing(iri, figures)  # artifact is baked into figures
         
     def records(self):
         combined_record = {}
         struct_prov = {}
         collisions = {}
         abbrev_prov = {}
+        merge = {**self._merge, **{v:k for k, v in self._merge.items()}}
         for se in self.sources:
             source, errata = se
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -1830,9 +1888,19 @@ class PaxLabels(LabelsBase):
                             struct_prov[s].append(se.artifact.iri)
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
+                elif a in merge and merge[a] in combined_record:
+                    alt_abbrevs, _, figures, artifacts = combined_record[merge[a]]
+                    # by the definition of merge we can skip structures since they are identical
+                    alt_abbrevs.append(a)
+                    abbrev_prov[a, ss[0]] = [se.artifact.iri]
+                    figures[se.artifact.iri] = f
+                    if se.artifact.iri not in artifacts:
+                        artifacts.append(se.artifact.iri)
                 else:
                     ss = [s for s in ss if s is not None]
                     alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
+                    if a in merge:
+                        abbrev_prov[a, ss[0]] = [se.artifact.iri]
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
@@ -1843,6 +1911,8 @@ class PaxLabels(LabelsBase):
                     if alt_abbrevs:  # TODO will need this for some abbrevs too...
                         arts = self._dupes[a][-1]
                         for s in self._dupes[a][1]:
+                            if s not in ss:
+                                ss.append(s)
                             for art in arts:
                                 if s not in struct_prov:
                                     struct_prov[s] = [art]
@@ -1919,7 +1989,16 @@ class PaxLabels(LabelsBase):
         with open(os.path.expanduser('~/ni/dev/nifstd/paxinos/tree-with-name.txt'), 'wt') as f: f.write(a)
         with open(os.path.expanduser('~/ni/dev/nifstd/paxinos/tree-no-name.txt'), 'wt') as f: f.write(b)
         with open(os.path.expanduser('~/ni/dev/nifstd/paxinos/not-in-tree-with-figures.txt'), 'wt') as f: f.write(c)
-        match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
+        #match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
+
+        _match_name_not_abrev = {}
+        for a, (alts, (s, *extra), f, *_) in PaxLabels().records()[0].items():
+            if s not in _match_name_not_abrev:
+                _match_name_not_abrev[s] = [a]
+            elif a not in _match_name_not_abrev[s]:
+                _match_name_not_abrev[s].append(a)
+
+        match_name_not_abrev = {k:v for k, v in _match_name_not_abrev.items() if len(v) > 1}
 
         abrv_match_not_name = {k:v[0] for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1}
         _ = [print(k, *v[0]) for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1]
@@ -1936,13 +2015,13 @@ class parcBridge(Ont):
 
     # setup
 
-    path = 'ttl/generated/'
+    path = 'ttl/bridge/'
     filename = 'parcellation-bridge'
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
     comment = ('Imports the various parts of the brain parcellations ontology.')
-    imports = parcCore(), Artifacts(), PaxLabels()  # FIXME init?
+    imports = parcCore(), PaxLabels()  # FIXME init?
 
     # stuff
 
