@@ -925,8 +925,8 @@ class Class:
         rdfs_subClassOf=rdfs.subClassOf,
         version=None,
         shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
-        species=ilxtr.wasDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
-        devstage=ilxtr.wasDefinedInDevelopmentalStage,  # FIXME
+        species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
+        devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         source=dc.source,  # replaces NIFRID.externalSourceURI?
         # things that go on classes namely artifacts
@@ -1717,27 +1717,27 @@ class PaxLabels(LabelsBase):
 
     _fixes = [
         # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
-        ('1', (['layer 1 of cortex', 'layer 1'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('1a', (['layer 1a of cortex', 'layer 1a'],
+        ('1', (['layer 1', 'layer 1 of cortex'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('1a', (['layer 1a', 'layer 1a of cortex'],
                 {Artifacts.PaxRat6.iri:(8,)},
                 [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('1b', (['layer 1b of cortex', 'layer 1b'],
+        ('1b', (['layer 1b', 'layer 1b of cortex'],
                 {Artifacts.PaxRat6.iri:(8,)},
                 [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('2', (['layer 2 of cortex', 'layer 2'], {}, [Artifacts.PaxRat4.iri])),
-        ('3', (['layer 3 of cortex', 'layer 3'], {}, [Artifacts.PaxRat4.iri])),
-        ('3/4', (['layer 3/4 of cortex', 'layer 3/4'],
+        ('2', (['layer 2', 'layer 2 of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('3', (['layer 3', 'layer 3 of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('3/4', (['layer 3/4', 'layer 3/4 of cortex'],
                  {Artifacts.PaxRat6.iri:(94,)},
                  [Artifacts.PaxRat6.iri])),
-        ('4', (['layer 4 of cortex', 'layer 4'], {}, [Artifacts.PaxRat4.iri])),
-        ('5', (['layer 5 of cortex', 'layer 5'], {}, [Artifacts.PaxRat4.iri])),
-        ('5a', (['layer 5a of cortex', 'layer 5a'],
+        ('4', (['layer 4', 'layer 4 of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('5', (['layer 5', 'layer 5 of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('5a', (['layer 5a', 'layer 5a of cortex'],
                 {Artifacts.PaxRat6.iri:(52, 94)},
                 [Artifacts.PaxRat6.iri, Artifacts.PaxRat7.iri])),
-        ('5b', (['layer 5b of cortex', 'layer 5b'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('6', (['layer 6 of cortex', 'layer 6'], {}, [Artifacts.PaxRat4.iri])),
-        ('6a', (['layer 6a of cortex', 'layer 6a'], {}, [Artifacts.PaxRat4.iri])),
-        ('6b', (['layer 6b of cortex', 'layer 6b'], {}, [Artifacts.PaxRat4.iri])),
+        ('5b', (['layer 5b', 'layer 5b of cortex'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
+        ('6', (['layer 6', 'layer 6 of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('6a', (['layer 6a', 'layer 6a of cortex'], {}, [Artifacts.PaxRat4.iri])),
+        ('6b', (['layer 6b', 'layer 6b of cortex'], {}, [Artifacts.PaxRat4.iri])),
     ]
 
     _dupes = {
@@ -1816,7 +1816,7 @@ class PaxLabels(LabelsBase):
         _, _, collisions, _ = self.records()
         for a, (ss, f, arts) in self._fixes:
             if (a, ss[0]) in collisions:
-                f.update(collisions[a, ss[0]])
+                f.update(collisions[a, ss[1]])  # have to use 1 since we want "layer n" as the pref
             yield a, ([], ss, f, arts)
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
