@@ -2,19 +2,20 @@
 """Look look up ontology terms on the command line.
 
 Usage:
-    scig v [--local --verbose] <id>...
-    scig i [--local --verbose] <id>...
-    scig t [--local --verbose --limit=LIMIT] <term>...
-    scig s [--local --verbose --limit=LIMIT] <term>...
-    scig g [--local --verbose --rt=RELTYPE] <id>...
-    scig e [--local --verbose] <p> <s> <o>
-    scig c [--local --verbose]
+    scig v [--local --verbose --key=KEY] <id>...
+    scig i [--local --verbose --key=KEY] <id>...
+    scig t [--local --verbose --limit=LIMIT --key=KEY] <term>...
+    scig s [--local --verbose --limit=LIMIT --key=KEY] <term>...
+    scig g [--local --verbose --rt=RELTYPE --key=KEY] <id>...
+    scig e [--local --verbose --key=KEY] <p> <s> <o>
+    scig c [--local --verbose --key=KEY]
     scig cy <query>
 
 Options:
     -l --local          hit the local scigraph server
     -v --verbose        print the full uri
     -t --limit=LIMIT    limit number of results [default: 10]
+    -k --key=KEY        api key
 
 """
 from docopt import docopt
@@ -24,8 +25,9 @@ from pyontutils.utils import scigPrint
 
 def main():
     args = docopt(__doc__, version='scig 0')
-    #print(args)
+    print(args)
     server = None
+    api_key = args['--key']
     verbose = False
     if args['--local']:
         server = 'http://localhost:9000/scigraph'
@@ -34,7 +36,7 @@ def main():
 
 
     if args['i'] or args['v']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose, key=api_key)
         for id_ in args['<id>']:
             out = v.findById(id_)
             if out:
@@ -42,7 +44,7 @@ def main():
                 for key, value in sorted(out.items()):
                     print('\t%s:' % key, value)
     elif args['s'] or args['t']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = Vocabulary(server, verbose, key=api_key) if server else Vocabulary(verbose=verbose, key=api_key)
         for term in args['<term>']:
             print(term)
             limit = args['--limit']
@@ -58,14 +60,14 @@ def main():
                         print('\t\t%s:' % key, value)
                 print()
     elif args['g']:
-        g = Graph(server, verbose) if server else Graph(verbose=verbose)
+        g = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
         for id_ in args['<id>']:
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
                 print(id_,)
                 scigPrint.pprint_neighbors(out)
     elif args['e']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
+        v = Vocabulary(server, verbose, key=api_key) if server else Vocabulary(verbose=verbose, key=api_key)
         p, s, o = args['<p>'], args['<s>'], args['<o>']
         if ':' in p:
             p = v.findById(p)['labels'][0]
@@ -75,14 +77,14 @@ def main():
             o = v.findById(o)['labels'][0]
         print('(%s %s %s)' % tuple([_.replace(' ', '-') for _ in (p, s, o)]))
     elif args['c']:
-        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
         curies = c.getCuries()
         align = max([len(c) for c in curies]) + 2
         fmt = '{: <%s}' % align
         for curie, iri in sorted(curies.items()):
             print(fmt.format(repr(curie)), repr(iri))
     elif args['cy']:
-        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
         out = c.execute(args['<query>'], 10)
         if out:
             out = '\n'.join([_.strip() for _ in out.split('|')[3:-1]])
