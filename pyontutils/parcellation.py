@@ -929,6 +929,7 @@ class Class:
         devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         source=dc.source,  # replaces NIFRID.externalSourceURI?
+        comment=rdfs.comment,
         # things that go on classes namely artifacts
         # documentation of where the exact information came from
         # documentation from the source about how the provenance was generated
@@ -1045,6 +1046,7 @@ class Artifact(Class):
                    devstage=None,
                    source=None,
                    sourceUri=None,
+                   comment=None,
                   )
     propertyMapping = dict(
         version=ilxtr.atlasVersion,  # FIXME
@@ -1297,19 +1299,41 @@ class Artifacts(Ont):
                     **_PaxRatShared
                       )
 
-    MBA = Terminology(iri=ilxtr.mba,
-                      label='Allen Mouse Brain Atlas Terminology',
+    MBA = Terminology(iri=ilxtr.mbav2,
+                      label='Allen Mouse Brain Atlas Terminology',  # TODO version?
+                      prefLabel='Allen Mouse Brain Atlas Ontology',
                       shortname='MBA',
                       date='2011',  # TODO
                       version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
-                      sourceUri='http://api.brain-map.org/api/v2/data/Structure/',
+                      sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/997.json?descendants=true',
                       source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                       species=NCBITaxon['10090'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+                      comment=('Note that the ontology version for the MBA is distinct from '
+                               'the common coordinate framework version. Unfortunately there '
+                               'is not a link to documentation for the ontology independent '
+                               'of the CCF, which makes it impossible to determine changes '
+                               'to the ontology independent of changes to the CCF. However ',
+                               'there have been few changes over time with only one major ',
+                               'change between version 1 and 2.')
     )
+
+    HBA = Terminology(iri=ilxtr.hbav2,
+                      label='Allen Human Brain Atlas Terminology',
+                      prefLabel='Allen Human Brain Atlas Ontology',
+                      shortname='MBA',
+                      date='2013',  # TODO
+                      version='2',
+                      sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/3999.json?descendants=true',
+                      source='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
+                      species=NCBITaxon['9606'],
+                      devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+    )
+
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
-    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA
+
+    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA
 
     def _triples(self):
         for art in self._artifacts:
@@ -1649,7 +1673,31 @@ class PaxTree_6(Source):
         assert len(tr) == len(trecs), 'Abbreviations in tr are not unique!'
         return tr, errata
 
-    
+
+class JSONSource(Source):
+    @classmethod
+    def loadData(cls):
+        resp = requests.get(cls.source)
+        return resp.json()
+
+    @classmethod
+    def processData(cls):
+        return cls.loadData()
+
+    @classmethod
+    def validate(cls, j):
+        return j
+
+
+class MBASrc(JSONSource):
+    artifact = Artifacts.MBA
+    source = artifact.sourceUri
+
+
+class HBASrc(JSONSource):
+    artifact = Artifacts.HBA
+    source = artifact.sourceUri 
+
 
 #
 # Ontology Instances
@@ -1698,6 +1746,15 @@ class PaxRegion(RegionsBase):
     def addthing(cls, thing, value):
         cls.things[thing] = value
 
+
+class MBA(LabelsBase):
+    path = 'ttl/generated/parcellation/'
+    filename = 'mbaslim'
+    name = 'Allen Mouse Brain Atlas Ontology'
+    sources = MBASrc(),
+    root = LabelRoot(iri=ilxtr.,
+                     label='Allen Mouse Brain Atlas parcellation label root',
+                     shortname=shortname)
 
 class PaxLabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
