@@ -913,6 +913,8 @@ NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
 PAXRATTEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
+MBA = rdflib.Namespace(uPREFIXES['MBA'])
+HBA = rdflib.Namespace(uPREFIXES['HBA'])
 
 # classes
 class Class:
@@ -961,7 +963,8 @@ class Class:
                         #print(self.rdfs_label)
                     #except AttributeError as e :
                         #print(e)
-                    #print(self.__class__, kw, arg)
+                    #if self.__class__ == Terminology:
+                        #print(self.__class__, kw, arg)
                     setattr(self, kw, arg)
             if kwargs:
                 #print(f'WARNING: {sorted(kwargs)} are not kwargs for {self.__class__.__name__}')  # XXX
@@ -1035,6 +1038,7 @@ class Class:
 class Artifact(Class):
     iri = ilxtr.parcellationArtifact
     _kwargs = dict(iri=None,
+                   rdfs_label=None,
                    label=None,
                    synonyms=tuple(),
                    abbrevs=tuple(),
@@ -1049,7 +1053,7 @@ class Artifact(Class):
                    comment=None,
                   )
     propertyMapping = dict(
-        version=ilxtr.atlasVersion,  # FIXME
+        version=ilxtr.artifactVersion,  # FIXME
         date=dc.date,
         sourceUri=ilxtr.sourceUri,  # FIXME
         copyrighted=dcterms.dateCopyrighted,
@@ -1060,17 +1064,6 @@ class Artifact(Class):
     )
 
     propertyMapping = {**Class.propertyMapping, **propertyMapping}  # FIXME make this implicit
-
-    def ___init___(self, **kwargs):
-
-        self.iri = iri
-        self.label = label
-        self.synonyms = synonyms
-        self.abbrevs = abbrevs
-        self.version = version
-        self.shortname = shortname
-        self.species = species
-        self.devstage = devstage
 
 
 class Terminology(Artifact):
@@ -1223,8 +1216,10 @@ class Ont:
 
     @property
     def triples(self):
+        if hasattr(self, 'root'):
+            yield from self.root
         if hasattr(self, '_triples'):
-            return self._triples()
+            yield from self._triples()
         else:
             raise StopIteration
 
@@ -1253,7 +1248,7 @@ class Artifacts(Ont):
     filename = 'parcellation-artifacts'
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
-    prefixes = {**makePrefixes('NCBITaxon', 'UBERON'), **Ont.prefixes}
+    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes}
     comment = ('Parcellation artifacts are the defining information sources for '
                'parcellation labels and/or atlases in which those labels are used.')
 
@@ -1300,31 +1295,31 @@ class Artifacts(Ont):
                       )
 
     MBA = Terminology(iri=ilxtr.mbav2,
-                      label='Allen Mouse Brain Atlas Terminology',  # TODO version?
-                      prefLabel='Allen Mouse Brain Atlas Ontology',
+                      rdfs_label='Allen Mouse Brain Atlas Terminology',  # TODO version?
+                      label='Allen Mouse Brain Atlas Ontology',
                       shortname='MBA',
                       date='2011',  # TODO
                       version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
-                      sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/997.json?descendants=true',
+                      #sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/997.json?descendants=true',
                       source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                       species=NCBITaxon['10090'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
-                      comment=('Note that the ontology version for the MBA is distinct from '
+                      comment=('Note that the ontology version for MBA is distinct from '
                                'the common coordinate framework version. Unfortunately there '
                                'is not a link to documentation for the ontology independent '
                                'of the CCF, which makes it impossible to determine changes '
-                               'to the ontology independent of changes to the CCF. However ',
-                               'there have been few changes over time with only one major ',
+                               'to the ontology independent of changes to the CCF. However '
+                               'there have been few changes over time with only one major '
                                'change between version 1 and 2.')
     )
 
     HBA = Terminology(iri=ilxtr.hbav2,
-                      label='Allen Human Brain Atlas Terminology',
-                      prefLabel='Allen Human Brain Atlas Ontology',
+                      rdfs_label='Allen Human Brain Atlas Terminology',
+                      label='Allen Human Brain Atlas Ontology',
                       shortname='MBA',
                       date='2013',  # TODO
                       version='2',
-                      sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/3999.json?descendants=true',
+                      #sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/3999.json?descendants=true',
                       source='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
                       species=NCBITaxon['9606'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
@@ -1336,6 +1331,10 @@ class Artifacts(Ont):
     _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA
 
     def _triples(self):
+        yield Artifact.iri, rdf.type, owl.Class
+        for art_type in Artifact.__subclasses__():
+            yield art_type.iri, rdf.type, owl.Class
+            yield art_type.iri, rdfs.subClassOf, Artifact.iri
         for art in self._artifacts:
             for t in art:
                 yield t
@@ -1356,7 +1355,12 @@ class parcCore(Ont):
 
     # stuff
 
-    parents = LabelRoot, RegionRoot, Atlas
+    parents = LabelRoot, RegionRoot
+
+    def _triples(self):
+        for parent in self.parents:
+            yield parent.iri, rdf.type, owl.Class
+
 
 
 class LabelsBase(Ont):  # this replaces genericPScheme
@@ -1404,6 +1408,8 @@ class Source(tuple):
                                                        cls.source]).decode().rstrip()
                 
                 cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
+            elif cls.source.startswith('http'):
+                cls.iri = rdflib.URIRef(cls.source)
             else:
                 print('Unknown source', cls.source)
         self = super().__new__(cls, cls.data)
@@ -1427,6 +1433,8 @@ class Source(tuple):
         if os.path.exists(cls.source):
             object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
             cls.artifact.addPair(prov.hadDerivation, object)  # FIXME ObjectProperty?
+        elif cls.source.startswith('http'):
+            print('Source is url and assumed to have no intermediate', cls.source)
         else:
             print('Unknown source', cls.source)
 
@@ -1674,29 +1682,35 @@ class PaxTree_6(Source):
         return tr, errata
 
 
-class JSONSource(Source):
+class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new__ sets data for all subclasses
+    artifact = None
+    root = None
+    sourceUriPattern = 'http://api.brain-map.org/api/v2/tree_search/Structure/{}.json?descendants=true'
+
     @classmethod
     def loadData(cls):
+        cls.source = cls.sourceUriPattern.format(cls.root)
+        cls.artifact.sourceUri = cls.source
         resp = requests.get(cls.source)
         return resp.json()
 
     @classmethod
     def processData(cls):
-        return cls.loadData()
+        return cls.raw['msg'],
 
     @classmethod
     def validate(cls, j):
         return j
 
 
-class MBASrc(JSONSource):
+class MBASrc(ABASrc):
     artifact = Artifacts.MBA
-    source = artifact.sourceUri
+    root = 997
 
 
-class HBASrc(JSONSource):
+class HBASrc(ABASrc):
     artifact = Artifacts.HBA
-    source = artifact.sourceUri 
+    root = 3999
 
 
 #
@@ -1729,7 +1743,6 @@ class PaxRegion(RegionsBase):
                'delineated using Paxinos and Watson\'s methodology.')
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'ILXREPLACE')}
-    #imports = parcCore(),
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     #sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = RegionRoot(iri=PAXRATTEMP['FIXME'],  # FIXME these should probably be EquivalentTo Parcellation Region HasLabel some label HasAtlas some atlas...
@@ -1747,14 +1760,55 @@ class PaxRegion(RegionsBase):
         cls.things[thing] = value
 
 
-class MBA(LabelsBase):
+class MBALabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
     filename = 'mbaslim'
     name = 'Allen Mouse Brain Atlas Ontology'
+    shortname='mba'
+    comment='TODO'
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
     sources = MBASrc(),
-    root = LabelRoot(iri=ilxtr.,
+    root = LabelRoot(iri=ilxtr.mbaroot,  # FIXME MBA:997?
                      label='Allen Mouse Brain Atlas parcellation label root',
-                     shortname=shortname)
+                     shortname=shortname,
+                     definingArtifacts=(s.artifact.iri for s in sources),
+                    )
+    namespace = MBA
+
+    def _triples(self):
+        for source in self.sources:
+            for record in source:
+                iri = self.namespace[str(record['id'])]
+                sn = record['safe_name']
+                if sn and sn != record['name']: syns = sn,
+                else: syns = tuple()
+                yield from Label(labelRoot=self.root,
+                                 label=record['name'],
+                                 synonyms=syns,
+                                 abbrevs=(record['acronym'],),
+                                 iri=iri,
+                )
+                superpart = record['parent_structure_id']
+                if superpart:
+                    superpart_iri = self.namespace[str(superpart)]
+                    yield from restriction(owl.someValuesFrom,
+                                           iri, ilxtr.labelPartOf, superpart_iri)
+
+
+class HBALabels(MBALabels):
+    filename = 'hbaslim'
+    name = 'Allen Human Brain Atlas Ontology'
+    shortname='hba'
+    comment='TODO'
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
+    sources = HBASrc(),
+    root = LabelRoot(iri=ilxtr.hbaroot,  # FIXME MBA:997?
+                     label='Allen Human Brain Atlas parcellation label root',
+                     shortname=shortname,
+                     definingArtifacts=(s.artifact.iri for s in sources),
+                    )
+    namespace = HBA
+
 
 class PaxLabels(LabelsBase):
     path = 'ttl/generated/parcellation/'
@@ -1765,7 +1819,6 @@ class PaxLabels(LabelsBase):
                'in atlases created using Paxinos and Watson\'s methodology.')
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
-    imports = parcCore(),
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
@@ -2094,6 +2147,8 @@ def doit(ont):
 
 def main():
     #paxinos()
+    doit(MBALabels)
+    doit(HBALabels)
     doit(PaxLabels)
     doit(Artifacts)
     doit(parcBridge)
