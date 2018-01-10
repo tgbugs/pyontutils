@@ -931,6 +931,7 @@ class Class:
         species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
         devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
+        definingArtifactsS=ilxtr.isDefinedBy,
         source=dc.source,  # replaces NIFRID.externalSourceURI?
         comment=rdfs.comment,
         # things that go on classes namely artifacts
@@ -938,10 +939,15 @@ class Class:
         # documentation from the source about how the provenance was generated
         #NIFRID.definingCitation
     )
+    classPropertyMapping = dict(
+        class_label=rdfs.label,
+        class_definition=skos.definition,
+    )
     lift = dict(
         species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
         devstage=owl.allValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
         definingArtifacts=owl.allValuesFrom,
+        definingArtifactsS=owl.someValuesFrom,  # HRM
     )
     _kwargs = tuple()  # but really a dict
     def __init__(self, *args, **kwargs):
@@ -1020,8 +1026,6 @@ class Class:
 
     @property
     def parentClass(self):
-        #if hasattr(super(self.__class__, self), 'iri'):  # use the python hierarchy
-            #return super(self.__class__, self).iri
         if hasattr(self.__class__, 'iri'):
             return self.__class__.iri
 
@@ -1029,6 +1033,16 @@ class Class:
     def parentClass_triples(self):
         if self.parentClass:
             yield from self._triples(self.__class__)
+
+    @classmethod
+    def class_triples(cls):
+        yield cls.iri, rdf.type, owl.Class
+        mro = cls.mro()
+        if len(mro) > 1 and hasattr(mro[1], 'iri'):
+            yield cls.iri, rdfs.subClassOf, mro[1].iri
+        for arg, predicate in cls.classPropertyMapping.items():
+            if hasattr(cls, arg):
+                yield cls.iri, predicate, check_value(getattr(cls, arg))
 
     @property
     def _rdfs_subClassOf(self):
@@ -1040,6 +1054,9 @@ class Class:
 
 class Artifact(Class):
     iri = ilxtr.parcellationArtifact
+    class_label = 'Parcellation Artifact'
+    class_definition = ('Some digital or physical object that contains '
+                        'information about a parcellation scheme.')
     _kwargs = dict(iri=None,
                    rdfs_label=None,
                    label=None,
@@ -1075,11 +1092,17 @@ class Terminology(Artifact):
         or more spatial sources, but does not itself contain the
         spatial definitions. For example Allen MBA. """
     iri = ilxtr.parcellationTerminology
+    class_label = 'Parcellation Terminology'
+    class_definition = ('An artifact that only contains semantic information, '
+                        'not geometric information about a parcellation.')
 
 
 class Atlas(Artifact):
     """ Atlases are may define a terminology themselves, or """
     iri = ilxtr.parcellationAtlas
+    class_label = 'Parcellation Atlas'
+    class_definition = ('An artifact that contains geometric information and '
+                        'may contain semantic information about a parcellation.')
     # TODO links to identifying atlas pictures
 
 
@@ -1093,6 +1116,7 @@ class LabelRoot(Class):
                    label=None,
                    shortname=None,  # used to construct the rdfs:label
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
+                   definingArtifactsS=tuple(),
                   )
 
 
@@ -1343,12 +1367,13 @@ class Artifacts(Ont):
         yield Artifact.iri, rdf.type, owl.Class
         def subclasses(start):
             for sc in start.__subclasses__():
-                yield sc, start
+                yield sc
                 yield from subclasses(sc)
-        for art_type, parent in subclasses(Artifact):  # FIXME recurse to further children?
+        for art_type in subclasses(Artifact):  # FIXME recurse to further children?
+            yield from art_type.class_triples() 
             #yield from art_type()
-            yield art_type.iri, rdf.type, owl.Class
-            yield art_type.iri, rdfs.subClassOf, parent.iri
+            #yield art_type.iri, rdf.type, owl.Class
+            #yield art_type.iri, rdfs.subClassOf, parent.iri
         for art in self._artifacts:
             for t in art:
                 yield t
@@ -1838,7 +1863,8 @@ class PaxLabels(LabelsBase):
     root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname,
-                     definingArtifacts=(Artifacts.PaxRatAt.iri,),
+                     #definingArtifactsS=None,#Artifacts.PaxRatAt.iri,
+                     definingArtifactsS=(Artifacts.PaxRatAt.iri,),
                     )
 
     _fixes = [
@@ -1946,7 +1972,8 @@ class PaxLabels(LabelsBase):
             yield a, ([], ss, f, arts)
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
-        annotation_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
+        #annotation_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
+        annotation_predicate = ilxtr.literalUsedBy
         if alt_abbrevs:
             for abbrev in [abrv] + alt_abbrevs:
                 yield from (t for artifact in abbrev_prov[abbrev, struct]
@@ -1960,9 +1987,6 @@ class PaxLabels(LabelsBase):
                         for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['synonyms'], extra))
 
     def _triples(self):
-        for t in self.root:
-            yield t
-
         combined_record, struct_prov, _, abbrev_prov = self.records()
         struct_prov.update(self.fixes_prov)  # FIXME
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
@@ -1977,7 +2001,6 @@ class PaxLabels(LabelsBase):
                              altLabel=None,
                              synonyms=extras,
                              abbrevs=(abrv, *alts),  # FIXME make sure to check that it is not a string
-                             #definingArtifacts=artifacts,  # better to handle this with 'one of' since it is more accurate
                              iri=iri,  # FIXME error reporint if you try to put in abrv is vbad
                              #extra_triples = str(processed_figures),  # TODO
                      )
