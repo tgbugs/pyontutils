@@ -1055,8 +1055,9 @@ class Class:
 class Artifact(Class):
     iri = ilxtr.parcellationArtifact
     class_label = 'Parcellation Artifact'
-    class_definition = ('Some digital or physical object that contains '
-                        'information about a parcellation scheme.')
+    class_definition = ('Parcellation artifacts are the defining information sources for '
+                        'parcellation labels and/or atlases in which those labels are used. '
+                        'They may include semantic and/or geometric information.')
     _kwargs = dict(iri=None,
                    rdfs_label=None,
                    label=None,
@@ -1094,7 +1095,7 @@ class Terminology(Artifact):
     iri = ilxtr.parcellationTerminology
     class_label = 'Parcellation Terminology'
     class_definition = ('An artifact that only contains semantic information, '
-                        'not geometric information about a parcellation.')
+                        'not geometric information, about a parcellation.')
 
 
 class Atlas(Artifact):
@@ -1112,13 +1113,14 @@ class LabelRoot(Class):
     """ Base class for labels from a common source that should live in one file """
     # use this to define the common superclass for a set of labels
     iri = ilxtr.parcellationLabel
+    class_label = 'Parcellation Label'
     _kwargs = dict(iri=None,
                    label=None,
                    shortname=None,  # used to construct the rdfs:label
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
                    definingArtifactsS=tuple(),
                   )
-
+LabelRoot.class_definition = ' '.join(_.strip() for _ in LabelRoot.__doc__.split('\n'))
 
 class Label(Class):
     # allen calls these Structures (which is too narrow because of ventricles etc)
@@ -1277,8 +1279,8 @@ class Artifacts(Ont):
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
     prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes}
-    comment = ('Parcellation artifacts are the defining information sources for '
-               'parcellation labels and/or atlases in which those labels are used.')
+    comment = ('Ontology file for artifacts that define labels or '
+               'geometry for parcellation schemes.')
 
     # artifacts
 
@@ -1364,16 +1366,13 @@ class Artifacts(Ont):
     _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA
 
     def _triples(self):
-        yield Artifact.iri, rdf.type, owl.Class
         def subclasses(start):
             for sc in start.__subclasses__():
                 yield sc
                 yield from subclasses(sc)
-        for art_type in subclasses(Artifact):  # FIXME recurse to further children?
+        yield from Artifact.class_triples()
+        for art_type in subclasses(Artifact):
             yield from art_type.class_triples() 
-            #yield from art_type()
-            #yield art_type.iri, rdf.type, owl.Class
-            #yield art_type.iri, rdfs.subClassOf, parent.iri
         for art in self._artifacts:
             for t in art:
                 yield t
@@ -1388,8 +1387,7 @@ class parcCore(Ont):
     filename = 'parcellation-core'
     name = 'Parcellation Artifacts'
     #shortname = 'parcore'  # huehuehue
-    #prefixes = {**Ont.prefixes}
-    comment = ('The parcellation scheme core that needs to be imported.')
+    prefixes = {**makePrefixes('skos'), **Ont.prefixes}
     imports = NIFTTL['nif_backend.ttl'], Artifacts()
 
     # stuff
@@ -1398,8 +1396,8 @@ class parcCore(Ont):
 
     def _triples(self):
         for parent in self.parents:
-            yield parent.iri, rdf.type, owl.Class
-
+            yield from parent.class_triples()
+parcCore.comment = ' '.join(_.strip() for _ in parcCore.__doc__.split('\n'))
 
 
 class LabelsBase(Ont):  # this replaces genericPScheme
