@@ -925,6 +925,7 @@ class Class:
         synonyms=NIFRID.synonym,
         abbrevs=NIFRID.abbrev,
         rdfs_subClassOf=rdfs.subClassOf,
+        definition=skos.definition,
         version=None,
         shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
         species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
@@ -1019,6 +1020,8 @@ class Class:
 
     @property
     def parentClass(self):
+        #if hasattr(super(self.__class__, self), 'iri'):  # use the python hierarchy
+            #return super(self.__class__, self).iri
         if hasattr(self.__class__, 'iri'):
             return self.__class__.iri
 
@@ -1042,6 +1045,7 @@ class Artifact(Class):
                    label=None,
                    synonyms=tuple(),
                    abbrevs=tuple(),
+                   definition=None,
                    shortname=None,
                    date=None,
                    copyrighted=None,
@@ -1262,36 +1266,41 @@ class Artifacts(Ont):
                                  'methods 3, no. 2 (1980): 129-149.'),
                        )
 
-    PaxRat4 = Atlas(iri=ilxtr.paxr4,
-                    label='The Rat Brain in Stereotaxic Coordinates 4th Edition',
-                    synonyms=('Paxinos Rat 6th',),
-                    abbrevs=tuple(),
-                    shortname='PAXRAT4',  # TODO upper for atlas lower for label?
-                    copyrighted='1998',
-                    version='4th Edition',
-                    **_PaxRatShared
+    class PaxRatAt(Atlas):
+        iri = ilxtr.paxinosRatAtlas
+        class_label = 'Paxinos Rat Atlas'
+        class_definition = 'Any atlas artifact with Paxinos as an author for the adult rat.'
+
+    PaxRat4 = PaxRatAt(iri=ilxtr.paxr4,
+                       label='The Rat Brain in Stereotaxic Coordinates 4th Edition',
+                       synonyms=('Paxinos Rat 6th',),
+                       abbrevs=tuple(),
+                       shortname='PAXRAT4',  # TODO upper for atlas lower for label?
+                       copyrighted='1998',
+                       version='4th Edition',
+                       **_PaxRatShared
                       )
 
-    PaxRat6 = Atlas(iri=ilxtr.paxr6,
-                    label='The Rat Brain in Stereotaxic Coordinates 6th Edition',
-                    synonyms=('Paxinos Rat 6th',),
-                    abbrevs=tuple(),
-                    shortname='PAXRAT6',  # TODO upper for atlas lower for label?
-                    copyrighted='2007',
-                    version='6th Edition',
-                    **_PaxRatShared
+    PaxRat6 = PaxRatAt(iri=ilxtr.paxr6,
+                       label='The Rat Brain in Stereotaxic Coordinates 6th Edition',
+                       synonyms=('Paxinos Rat 6th',),
+                       abbrevs=tuple(),
+                       shortname='PAXRAT6',  # TODO upper for atlas lower for label?
+                       copyrighted='2007',
+                       version='6th Edition',
+                       **_PaxRatShared
                       )
 
-    PaxRat7 = Atlas(iri=ilxtr.paxr7,
-                    label='The Rat Brain in Stereotaxic Coordinates 7th Edition',
-                    synonyms=('Paxinos Rat 7th',
-                              'Paxinso and Watson\'s The Rat Brain in Stereotaxic Coordinates 7th Edition',  # branding >_<
-                             ),
-                    abbrevs=tuple(),
-                    shortname='PAXRAT7',  # TODO upper for atlas lower for label?
-                    copyrighted='2014',
-                    version='7th Edition',
-                    **_PaxRatShared
+    PaxRat7 = PaxRatAt(iri=ilxtr.paxr7,
+                       label='The Rat Brain in Stereotaxic Coordinates 7th Edition',
+                       synonyms=('Paxinos Rat 7th',
+                                 'Paxinso and Watson\'s The Rat Brain in Stereotaxic Coordinates 7th Edition',  # branding >_<
+                                ),
+                       abbrevs=tuple(),
+                       shortname='PAXRAT7',  # TODO upper for atlas lower for label?
+                       copyrighted='2014',
+                       version='7th Edition',
+                       **_PaxRatShared
                       )
 
     MBA = Terminology(iri=ilxtr.mbav2,
@@ -1332,9 +1341,14 @@ class Artifacts(Ont):
 
     def _triples(self):
         yield Artifact.iri, rdf.type, owl.Class
-        for art_type in Artifact.__subclasses__():
+        def subclasses(start):
+            for sc in start.__subclasses__():
+                yield sc, start
+                yield from subclasses(sc)
+        for art_type, parent in subclasses(Artifact):  # FIXME recurse to further children?
+            #yield from art_type()
             yield art_type.iri, rdf.type, owl.Class
-            yield art_type.iri, rdfs.subClassOf, Artifact.iri
+            yield art_type.iri, rdfs.subClassOf, parent.iri
         for art in self._artifacts:
             for t in art:
                 yield t
@@ -1768,7 +1782,7 @@ class MBALabels(LabelsBase):
     comment='TODO'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
     sources = MBASrc(),
-    root = LabelRoot(iri=ilxtr.mbaroot,  # FIXME MBA:997?
+    root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
                      definingArtifacts=(s.artifact.iri for s in sources),
@@ -1802,7 +1816,7 @@ class HBALabels(MBALabels):
     comment='TODO'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
     sources = HBASrc(),
-    root = LabelRoot(iri=ilxtr.hbaroot,  # FIXME MBA:997?
+    root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
                      definingArtifacts=(s.artifact.iri for s in sources),
@@ -1823,7 +1837,9 @@ class PaxLabels(LabelsBase):
     sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
                      label='Paxinos rat parcellation label root',
-                     shortname=shortname)
+                     shortname=shortname,
+                     definingArtifacts=(Artifacts.PaxRatAt.iri,),
+                    )
 
     _fixes = [
         # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
@@ -1930,17 +1946,18 @@ class PaxLabels(LabelsBase):
             yield a, ([], ss, f, arts)
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
+        annotation_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
         if alt_abbrevs:
             for abbrev in [abrv] + alt_abbrevs:
                 yield from (t for artifact in abbrev_prov[abbrev, struct]
-                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
-        if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes
-            if struct in struct_prov:
-                yield from (t for artifact in struct_prov[struct]
-                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['label'], struct))
-            for extra in extras:
-                yield from (t for artifact in struct_prov[extra]
-                            for t in annotation(ilxtr.isDefinedBy, artifact, iri, Label.propertyMapping['synonyms'], extra))
+                            for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
+        #if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes  # changing how this is modelled so that only the root bears the defining artifacts so that it is clearer what the criteria for being a certain type of label is, the granular information about intersection can be instantiated by the regions (which can be constructed from the quads or from the original source files)
+        if struct in struct_prov:
+            yield from (t for artifact in struct_prov[struct]
+                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['label'], struct))
+        for extra in extras:
+            yield from (t for artifact in struct_prov[extra]
+                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['synonyms'], extra))
 
     def _triples(self):
         for t in self.root:
@@ -1960,7 +1977,7 @@ class PaxLabels(LabelsBase):
                              altLabel=None,
                              synonyms=extras,
                              abbrevs=(abrv, *alts),  # FIXME make sure to check that it is not a string
-                             definingArtifacts=artifacts,
+                             #definingArtifacts=artifacts,  # better to handle this with 'one of' since it is more accurate
                              iri=iri,  # FIXME error reporint if you try to put in abrv is vbad
                              #extra_triples = str(processed_figures),  # TODO
                      )
@@ -2133,8 +2150,8 @@ class parcBridge(Ont):
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    comment = ('Imports the various parts of the brain parcellations ontology.')
-    imports = parcCore(), PaxLabels()  # FIXME init?
+    comment = ('Main bridge for importing the various files that make up the parcellation ontology.')
+    imports = PaxLabels(), MBALabels(), HBALabels()
 
     # stuff
 
@@ -2147,8 +2164,8 @@ def doit(ont):
 
 def main():
     #paxinos()
-    doit(MBALabels)
-    doit(HBALabels)
+    #doit(MBALabels)
+    #doit(HBALabels)
     doit(PaxLabels)
     doit(Artifacts)
     doit(parcBridge)
