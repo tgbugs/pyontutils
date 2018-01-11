@@ -1910,7 +1910,7 @@ class WHSSDLabels(LabelsBase):
     filename = 'waxholm-rat-labels'
     name = 'Waxholm Sprague Dawley Atlas Labels'
     shortname = 'whssd'
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'WHSSD':str(WHSSD)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
     sources = WHSSD2Src(),
     root = LabelRoot(iri=ilxtr.whssdroot,
                      label='Waxholm Space Sprague Dawley parcellation label root',
