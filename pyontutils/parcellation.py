@@ -1036,6 +1036,8 @@ class Class:
 
     @classmethod
     def class_triples(cls):
+        if not hasattr(cls, 'class_definition') and cls.__doc__:
+            cls.class_definition = ' '.join(_.strip() for _ in cls.__doc__.split('\n'))
         yield cls.iri, rdf.type, owl.Class
         mro = cls.mro()
         if len(mro) > 1 and hasattr(mro[1], 'iri'):
@@ -1053,11 +1055,12 @@ class Class:
     
 
 class Artifact(Class):
+    """ Parcellation artifacts are the defining information sources for
+        parcellation labels and/or atlases in which those labels are used.
+        They may include semantic and/or geometric information. """
+
     iri = ilxtr.parcellationArtifact
     class_label = 'Parcellation Artifact'
-    class_definition = ('Parcellation artifacts are the defining information sources for '
-                        'parcellation labels and/or atlases in which those labels are used. '
-                        'They may include semantic and/or geometric information.')
     _kwargs = dict(iri=None,
                    rdfs_label=None,
                    label=None,
@@ -1073,6 +1076,7 @@ class Artifact(Class):
                    source=None,
                    sourceUri=None,
                    comment=None,
+                   hadDerivation=tuple(),
                   )
     propertyMapping = dict(
         version=ilxtr.artifactVersion,  # FIXME
@@ -1080,7 +1084,7 @@ class Artifact(Class):
         sourceUri=ilxtr.sourceUri,  # FIXME
         copyrighted=dcterms.dateCopyrighted,
         source=dc.source,  # use for links to
-        #hadDerivation=prov.hadDerivation,  # easier with _extra_triples since can be more than one
+        hadDerivation=prov.hadDerivation,
         # ilxr.atlasDate
         # ilxr.atlasVersion
     )
@@ -1092,18 +1096,19 @@ class Terminology(Artifact):
     """ A source for parcellation information that applies to one
         or more spatial sources, but does not itself contain the
         spatial definitions. For example Allen MBA. """
+
     iri = ilxtr.parcellationTerminology
     class_label = 'Parcellation Terminology'
-    class_definition = ('An artifact that only contains semantic information, '
-                        'not geometric information, about a parcellation.')
+    #class_definition = ('An artifact that only contains semantic information, '
+                        #'not geometric information, about a parcellation.')
 
 
 class Atlas(Artifact):
-    """ Atlases are may define a terminology themselves, or """
+    """ An artifact that contains geometric information and
+        may contain semantic information about a parcellation. """
+
     iri = ilxtr.parcellationAtlas
     class_label = 'Parcellation Atlas'
-    class_definition = ('An artifact that contains geometric information and '
-                        'may contain semantic information about a parcellation.')
     # TODO links to identifying atlas pictures
 
 
@@ -1120,7 +1125,7 @@ class LabelRoot(Class):
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
                    definingArtifactsS=tuple(),
                   )
-LabelRoot.class_definition = ' '.join(_.strip() for _ in LabelRoot.__doc__.split('\n'))
+
 
 class Label(Class):
     # allen calls these Structures (which is too narrow because of ventricles etc)
@@ -1157,12 +1162,14 @@ class Label(Class):
         
 
 class RegionRoot(Class):
-    """ Parcellation regions are 'anatomical entities' that are equivalent some
-    part of a real biological system and are equivalent to an intersection
-    between a parcellation label and a specific version of an atlas that
-    defines that label and a difinitive (0, 1, or probabilistics) way to
-    determine whether a particular sample corresponds to that region.
-
+    """ Parcellation regions are 'anatomical entities' that correspond to some
+        part of a real biological system and are equivalent to an intersection
+        between a parcellation label and a specific version of an atlas that
+        defines or uses that label and that provides a definitive
+        (0, 1, or probabilistic) way to determine whether a particular sample
+        corresponds to any given region.
+        """
+    """
     Centroid regions (anatomical entities)
 
     species specific labels
@@ -1172,10 +1179,9 @@ class RegionRoot(Class):
     semantic labels     -> semantic anatomical region                   -> point (aka unbounded connected spatial volume defined by some 'centroid' or canonical member)
     parcellation labels -> probabalistic anatomical parcellation region -> probablistically bounded connected spatial volume
                         -> anatomical parcellation region               -> bounded connected spatial volume (as long as the 3d volume is topoligically equivalent to a sphere, unconnected planes of section are fine)
-    
-
     """
     iri = ilxtr.parcellationRegion
+    class_label = 'Parcellation Region'
     _kwargs = dict(iri=None,
                    atlas=None,  # : Atlas
                    labelRoot=None)  # : LabelRoot
@@ -1213,6 +1219,9 @@ class Ont:
     )
 
     def __init__(self, *args, **kwargs):
+        if 'comment' not in kwargs and self.comment is None and self.__doc__:
+            self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
+
         line = getsourcelines(self.__class__)[-1]
         self.wasGeneratedBy = self.wasGeneratedBy.format(line=line)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
@@ -1225,11 +1234,15 @@ class Ont:
                                      version=self.version,
                                      imports=imports)
         self.graph = self._graph.g
+        self._extra_triples = set()
         if hasattr(self, 'sources'):  # FIXME move this to the RegionBase/LabelBase
             self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
                                                     for i in self.sources)
                                         if _ is not None)
             print(self.wasDerivedFrom)
+
+    def addTrip(self, subject, predicate, object):
+        self._extra_triples.add((subject, predicate, object))
 
     def _mapProps(self):
         for key, predicate in self.propertyMapping.items():
@@ -1241,8 +1254,6 @@ class Ont:
                             yield self.iri, predicate, check_value(v)
                     else:
                         yield self.iri, predicate, check_value(value)
-        #for s, p, o in self._extra_triples:  # TODO see if we really need this
-            #yield s, p, o
 
     @property
     def triples(self):
@@ -1252,6 +1263,8 @@ class Ont:
             yield from self._triples()
         else:
             raise StopIteration
+        for t in self._extra_triples:  # last so _triples can populate
+            yield t
 
     def __iter__(self):
         yield from self._mapProps()
@@ -1270,7 +1283,8 @@ class Ont:
 
 
 class Artifacts(Ont):
-    """ An ontology file containing all the parcellation scheme artifacts. """
+    """ Ontology file for artifacts that define labels or
+        geometry for parcellation schemes. """
 
     # setup
 
@@ -1279,10 +1293,13 @@ class Artifacts(Ont):
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
     prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes}
-    comment = ('Ontology file for artifacts that define labels or '
-               'geometry for parcellation schemes.')
 
     # artifacts
+
+    class PaxRatAt(Atlas):
+        """ Any atlas artifact with Paxinos as an author for the adult rat. """
+        iri = ilxtr.paxinosRatAtlas
+        class_label = 'Paxinos Rat Atlas'
 
     _PaxRatShared = dict(species=NCBITaxon['10116'],
                          devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
@@ -1291,11 +1308,6 @@ class Artifacts(Ont):
                                  'in stereotaxic coordinates." Journal of neuroscience '
                                  'methods 3, no. 2 (1980): 129-149.'),
                        )
-
-    class PaxRatAt(Atlas):
-        iri = ilxtr.paxinosRatAtlas
-        class_label = 'Paxinos Rat Atlas'
-        class_definition = 'Any atlas artifact with Paxinos as an author for the adult rat.'
 
     PaxRat4 = PaxRatAt(iri=ilxtr.paxr4,
                        label='The Rat Brain in Stereotaxic Coordinates 4th Edition',
@@ -1335,7 +1347,6 @@ class Artifacts(Ont):
                       shortname='MBA',
                       date='2011',  # TODO
                       version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
-                      #sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/997.json?descendants=true',
                       source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                       species=NCBITaxon['10090'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
@@ -1354,7 +1365,6 @@ class Artifacts(Ont):
                       shortname='MBA',
                       date='2013',  # TODO
                       version='2',
-                      #sourceUri='http://api.brain-map.org/api/v2/tree_search/Structure/3999.json?descendants=true',
                       source='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
                       species=NCBITaxon['9606'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
@@ -1397,7 +1407,6 @@ class parcCore(Ont):
     def _triples(self):
         for parent in self.parents:
             yield from parent.class_triples()
-parcCore.comment = ' '.join(_.strip() for _ in parcCore.__doc__.split('\n'))
 
 
 class LabelsBase(Ont):  # this replaces genericPScheme
@@ -1428,7 +1437,7 @@ class RegionsBase(Ont):
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """ 
-    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'  # TODO isVersionOf ↓ FIXME get latest commit per source
+    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'  # TODO dcterms:isVersionOf ↓
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
@@ -1438,6 +1447,7 @@ class Source(tuple):
         if not hasattr(cls, 'data'):
             cls.raw = cls.loadData()
             cls.data = cls.validate(*cls.processData())
+            cls._triples_for_ontology = []
             cls.prov()
             if os.path.exists(cls.source):  # TODO no expanded stuff
                 file_commit = subprocess.check_output(['git', 'log', '-n', '1',
@@ -1469,7 +1479,11 @@ class Source(tuple):
     def prov(cls):
         if os.path.exists(cls.source):
             object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
-            cls.artifact.addPair(prov.hadDerivation, object)  # FIXME ObjectProperty?
+            cls.iri_head = object
+            if hasattr(cls.artifact, 'hadDerivation'):
+                cls.artifact.hadDerivation.append(object)
+            else:
+                cls.artifact.hadDerivation = [object]
         elif cls.source.startswith('http'):
             print('Source is url and assumed to have no intermediate', cls.source)
         else:
@@ -1802,7 +1816,6 @@ class MBALabels(LabelsBase):
     filename = 'mbaslim'
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
-    comment='TODO'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
     sources = MBASrc(),
     root = LabelRoot(iri=ilxtr.mbaroot,
@@ -1836,7 +1849,6 @@ class HBALabels(MBALabels):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname='hba'
-    comment='TODO'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
     sources = HBASrc(),
     root = LabelRoot(iri=ilxtr.hbaroot,
@@ -1848,14 +1860,15 @@ class HBALabels(MBALabels):
 
 
 class PaxLabels(LabelsBase):
+    """ Compilation of all labels used to name rat brain regions
+        in atlases created using Paxinos and Watson\'s methodology."""
+
     path = 'ttl/generated/parcellation/'
     filename = 'paxinos-rat-labels'
     name = 'Paxinos & Watson Rat Parcellation Labels'
     shortname = 'paxrat'
-    comment = ('Compilation of all labels used to name rat brain regions '
-               'in atlases created using Paxinos and Watson\'s methodology.')
 
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'PAXRATTEMP':str(PAXRATTEMP)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRATTEMP':str(PAXRATTEMP)}
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRATTEMP['0'],
@@ -2015,6 +2028,8 @@ class PaxLabels(LabelsBase):
         merge = {**self._merge, **{v:k for k, v in self._merge.items()}}
         for se in self.sources:
             source, errata = se
+            if hasattr(se, 'iri_head'):
+                self.addTrip(se.iri, dcterms.isVersionOf, se.iri_head)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
                 if a in self.fixes_abbrevs:
@@ -2162,7 +2177,8 @@ class PaxLabels(LabelsBase):
 # Bridge (has to go last)
 
 class parcBridge(Ont):
-    """ Import everything, and bridging """
+    """ Main bridge for importing the various files that
+        make up the parcellation ontology. """
 
     # setup
 
@@ -2171,7 +2187,6 @@ class parcBridge(Ont):
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    comment = ('Main bridge for importing the various files that make up the parcellation ontology.')
     imports = PaxLabels(), MBALabels(), HBALabels()
 
     # stuff
