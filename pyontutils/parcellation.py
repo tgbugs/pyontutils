@@ -932,8 +932,10 @@ class Class:
         devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         definingArtifactsS=ilxtr.isDefinedBy,
+        citation=dcterms.bibliographicCitation,
         source=dc.source,  # replaces NIFRID.externalSourceURI?
         comment=rdfs.comment,
+        docUri=ilxtr.isDocumentedBy,
         # things that go on classes namely artifacts
         # documentation of where the exact information came from
         # documentation from the source about how the provenance was generated
@@ -1074,7 +1076,8 @@ class Artifact(Class):
                    species=None,
                    devstage=None,
                    source=None,
-                   sourceUri=None,
+                   citation=None,
+                   docUri=None,
                    comment=None,
                    hadDerivation=tuple(),
                   )
@@ -1303,10 +1306,10 @@ class Artifacts(Ont):
 
     _PaxRatShared = dict(species=NCBITaxon['10116'],
                          devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
-                         source=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
-                                 '"AChE-stained horizontal sections of the rat brain '
-                                 'in stereotaxic coordinates." Journal of neuroscience '
-                                 'methods 3, no. 2 (1980): 129-149.'),
+                         citation=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
+                                   '"AChE-stained horizontal sections of the rat brain '
+                                   'in stereotaxic coordinates." Journal of neuroscience '
+                                   'methods 3, no. 2 (1980): 129-149.'),
                        )
 
     PaxRat4 = PaxRatAt(iri=ilxtr.paxr4,
@@ -1347,7 +1350,7 @@ class Artifacts(Ont):
                       shortname='MBA',
                       date='2011',  # TODO
                       version='2',  # XXX NOT TO BE CONFUSED WITH CCFv2
-                      source='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
+                      docUri='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                       species=NCBITaxon['10090'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
                       comment=('Note that the ontology version for MBA is distinct from '
@@ -1365,7 +1368,7 @@ class Artifacts(Ont):
                       shortname='MBA',
                       date='2013',  # TODO
                       version='2',
-                      source='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
+                      docUri='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
                       species=NCBITaxon['9606'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
     )
@@ -1437,7 +1440,7 @@ class RegionsBase(Ont):
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """ 
-    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'  # TODO dcterms:isVersionOf ↓
+    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
@@ -1489,12 +1492,16 @@ class Source(tuple):
         else:
             print('Unknown source', cls.source)
 
+    @property
+    def isVersionOf(self):
+        if hasattr(self, 'iri_head'):
+            yield self.iri, dcterms.isVersionOf, self.iri_head
+
+
 ##
 #  Instances
 ##
 
-# Atlases
-#
 # Source instances
 
 class PaxSr_6(Source):
@@ -1736,12 +1743,12 @@ class PaxTree_6(Source):
 class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new__ sets data for all subclasses
     artifact = None
     root = None
-    sourceUriPattern = 'http://api.brain-map.org/api/v2/tree_search/Structure/{}.json?descendants=true'
+    sourcePattern = 'http://api.brain-map.org/api/v2/tree_search/Structure/{}.json?descendants=true'
 
     @classmethod
     def loadData(cls):
-        cls.source = cls.sourceUriPattern.format(cls.root)
-        cls.artifact.sourceUri = cls.source
+        cls.source = cls.sourcePattern.format(cls.root)
+        cls.artifact.source = cls.source
         resp = requests.get(cls.source)
         return resp.json()
 
@@ -2028,8 +2035,8 @@ class PaxLabels(LabelsBase):
         merge = {**self._merge, **{v:k for k, v in self._merge.items()}}
         for se in self.sources:
             source, errata = se
-            if hasattr(se, 'iri_head'):
-                self.addTrip(se.iri, dcterms.isVersionOf, se.iri_head)
+            for t in se.isVersionOf:
+                self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
                 if a in self.fixes_abbrevs:
