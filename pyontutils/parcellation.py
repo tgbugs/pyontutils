@@ -912,7 +912,7 @@ NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
 NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
-PAXRATTEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
+TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
 MBA = rdflib.Namespace(uPREFIXES['MBA'])
 HBA = rdflib.Namespace(uPREFIXES['HBA'])
 
@@ -1276,6 +1276,10 @@ class Ont:
     def __call__(self):  # FIXME __iter__ and __call__ ala Class?
         for t in self:
             self.graph.add(t)
+
+    def validate(self):
+        # implement per class
+        pass
 
     @property
     def iri(self):
@@ -1803,7 +1807,7 @@ class PaxRegion(RegionsBase):
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'ILXREPLACE')}
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     #sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
-    root = RegionRoot(iri=PAXRATTEMP['FIXME'],  # FIXME these should probably be EquivalentTo Parcellation Region HasLabel some label HasAtlas some atlas...
+    root = RegionRoot(iri=TEMP['FIXME'],  # FIXME these should probably be EquivalentTo Parcellation Region HasLabel some label HasAtlas some atlas...
                      label='Paxinos rat parcellation region root',
                      shortname=shortname,
                     )
@@ -1875,10 +1879,10 @@ class PaxLabels(LabelsBase):
     name = 'Paxinos & Watson Rat Parcellation Labels'
     shortname = 'paxrat'
 
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRATTEMP':str(PAXRATTEMP)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRAT':str(PAXRAT)}
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
-    root = LabelRoot(iri=PAXRATTEMP['0'],
+    root = LabelRoot(iri=PAXRAT['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname,
                      #definingArtifactsS=None,#Artifacts.PaxRatAt.iri,
@@ -2010,7 +2014,7 @@ class PaxLabels(LabelsBase):
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
             sorted(list(combined_record.items()) + list(self.fixes),
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
-            iri = PAXRATTEMP[str(i + 1)]
+            iri = PAXRAT[str(i + 1)]  # TODO load from existing
             struct = structure if structure else 'zzzzzz'
             yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
@@ -2026,6 +2030,17 @@ class PaxLabels(LabelsBase):
             if figures:
                 for artifact in artifacts:
                     PaxRegion.addthing(iri, figures)  # artifact is baked into figures
+
+    def validate(self):
+        # check for duplicate labels
+        labels = list(self.graph.objects(None, rdfs.label))
+        assert len(labels) == len(set(labels)), 'There are classes with duplicate labels'
+
+        # check for unexpected duplicate abbreviations
+        abrevs = list(self.graph.objects(None, NIFRID.abbrev))
+        # remove expected numeric/layer/lobule duplicates
+        filt = [a for a in abrevs if not a.isdigit() and a.value not in ('6a', '6b')]
+        assert len(filt) == len(set(filt)), f'DUPES! {Counter(filt).most_common()[:5]}'
         
     def records(self):
         combined_record = {}
@@ -2202,6 +2217,7 @@ class parcBridge(Ont):
 def doit(ont):
     o = ont()
     o()
+    o.validate()
     o.write()
     return o
 
