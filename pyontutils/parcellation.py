@@ -915,6 +915,7 @@ PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
 TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
 MBA = rdflib.Namespace(uPREFIXES['MBA'])
 HBA = rdflib.Namespace(uPREFIXES['HBA'])
+WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels'))
 
 # classes
 class Class:
@@ -1377,10 +1378,22 @@ class Artifacts(Ont):
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
     )
 
+    WHSSD2 = Terminology(iri=ilxtr.whssdv2,
+                         rdfs_label='Waxholm Space Sprague Dawley Terminology v2',
+                         shortname='WHSSD2',
+                         date='2015-02-02',
+                         version='2',
+                         citation='https://www.ncbi.nlm.nih.gov/pubmed/24726336',
+                         comment=('There is an earlier version of the .label file '
+                                  'but indexes are unique and are not reused, only renamed'),
+                         species=NCBITaxon['10116'],
+                         devstage=UBERON['0000113'],
+                        )
+
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
 
-    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA
+    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA, WHSSD2
 
     def _triples(self):
         def subclasses(start):
@@ -1455,7 +1468,6 @@ class Source(tuple):
             cls.raw = cls.loadData()
             cls.data = cls.validate(*cls.processData())
             cls._triples_for_ontology = []
-            cls.prov()
             if os.path.exists(cls.source):  # TODO no expanded stuff
                 file_commit = subprocess.check_output(['git', 'log', '-n', '1',
                                                        '--pretty=format:%H', '--',
@@ -1466,6 +1478,7 @@ class Source(tuple):
                 cls.iri = rdflib.URIRef(cls.source)
             else:
                 print('Unknown source', cls.source)
+            cls.prov()
         self = super().__new__(cls, cls.data)
         return self
 
@@ -1484,13 +1497,16 @@ class Source(tuple):
 
     @classmethod
     def prov(cls):
-        if os.path.exists(cls.source):
-            object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+        object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+        if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):
             cls.iri_head = object
             if hasattr(cls.artifact, 'hadDerivation'):
                 cls.artifact.hadDerivation.append(object)
             else:
                 cls.artifact.hadDerivation = [object]
+        elif hasattr(cls, 'source_original') and cls.source_original:
+            cls.iri_head = object
+            cls.artifact.source = cls.iri
         elif cls.source.startswith('http'):
             print('Source is url and assumed to have no intermediate', cls.source)
         else:
@@ -1775,6 +1791,26 @@ class HBASrc(ABASrc):
     root = 3999
 
 
+class WHSSD2Src(Source):
+    source = 'resources/WHS_SD_rat_atlas_v2.label'
+    source_original = True
+    artifact = Artifacts.WHSSD2
+
+    @classmethod
+    def loadData(cls):
+        with open(cls.source, 'rt') as f:
+            lines = [l.strip() for l in f.readlines() if not l.startswith('#')]
+        return [(l[:3].strip(), l.split('"',1)[1].strip('"')) for l in lines]
+
+    @classmethod
+    def processData(cls):
+        return cls.raw,
+
+    @classmethod
+    def validate(cls, d):
+        return d
+
+
 #
 # Ontology Instances
 
@@ -1868,6 +1904,30 @@ class HBALabels(MBALabels):
                      definingArtifacts=(s.artifact.iri for s in sources),
                     )
     namespace = HBA
+
+
+class WHSSDLabels(LabelsBase):
+    filename = 'waxholm-rat-labels'
+    name = 'Waxholm Sprague Dawley Atlas Labels'
+    shortname = 'whssd'
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'WHSSD':str(WHSSD)}
+    sources = WHSSD2Src(),
+    root = LabelRoot(iri=ilxtr.whssdroot,
+                     label='Waxholm Space Sprague Dawley parcellation label root',
+                     shortname=shortname,
+                     definingArtifacts=(s.artifact.iri for s in sources),
+                    )
+    namespace = WHSSD
+
+    def _triples(self):
+        for source in self.sources:
+            for index, label in source:
+                iri = WHSSD[str(index)]
+                yield from Label(labelRoot=self.root,
+                                 label=label,
+                                 iri=iri,
+                )
+            yield from source.isVersionOf
 
 
 class PaxLabels(LabelsBase):
@@ -2209,7 +2269,7 @@ class parcBridge(Ont):
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    imports = PaxLabels(), MBALabels(), HBALabels()
+    imports = PaxLabels(), MBALabels(), HBALabels(), WHSSDLabels(),
 
     # stuff
 
@@ -2223,8 +2283,9 @@ def doit(ont):
 
 def main():
     #paxinos()
-    #doit(MBALabels)
-    #doit(HBALabels)
+    doit(MBALabels)
+    doit(HBALabels)
+    doit(WHSSDLabels)
     doit(PaxLabels)
     doit(Artifacts)
     doit(parcBridge)
