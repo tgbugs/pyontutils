@@ -73,3 +73,54 @@ This could be expanded into the human executor 'role/skillset/responsibility' on
 [efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  
 [](
 )
+
+## Thoughts
+### Technique vs Method
+The common usage of technique and method are completely overlapping and it will be unproductive
+to try to force a distinction between the two. If we want a meaningful higher level above technique/method
+we should probably follow the scientific discipline approach or something similar. This higher level
+would allow for inclusion of analysis methods that tend to be used with certain types of data produced
+by common measurement techniques in a field.
+### An alternative: tools + targets
+An electrophysiological method is equivalent to some process that uses some ephys amplifier and measures
+some electrical property of some part of a living organism.
+An ephys technique is any (sub)process that is _required_ as part of a ephys method in order to
+produce the measurement or the thing measured. The boundary where it makes sense to draw a line is
+at the direct named inputs. For example pipette pulling is not an electrophysiological technique
+because 6 MOhm pipettes are a named input for whole cell patch clamp. Incubation of slices could
+be an ephys technique because only brain slices and cut buffer are named inputs -- the temperature
+for incluation and the process required would thus be part of electrophysiology. A dissenting view
+would say that those are slice preparation techniques and that the ephys techniques with regard to
+slices start with transferring incubated slices to the recording chamber. All of these processes are
+intertwined when it comes to naming. Another way out would be to define the boundary per protocol artifact,
+but then there will be no consistent view. Tools + techniques to use them? How about techniques that require
+the orchestrated use of multiple tools at the same time? The list of things that someone hired as an
+electrophysiologists would be expected to be capable of doing? This pushes us into modelling these as
+experimenter roles and capabilities. Perhaps modelling fields as collections of tools that are
+routinely used by their practicioners? Better yet, the minimal set of tools needed to match, plus
+a larger set of tools that are often expected/accompany the minimal core set. In fact, if we look at
+the history of electrophysiology, many PhDs were granted for creating new and better amplifiers.
+"A process that uses a (usually low noise) amplifier in order to record electrical signals from some
+biological source or physiological process." Or really just "Any process that records electrical signals
+from some biological source." For comparison, microscopy "Any process that records data (information, numbers)
+and whose black box (process phenomena?) requires a microscope as a necissary component to produce said data.
+(Has a microscope as part of the critical path.)" Symbolizes aspect A of target T using U.
+
+A process that symbolizes aspect A of black-box B using U. U should be the tool in the critical path. This
+gives us three of the major axes by which techniques are named. The fourth asis by which techniques are
+named is by some subprocess or phenomena that they employ (e.g. electroporation), or simply by some
+accidental naming of the whole process (e.g. golgi method) which is usually a completely opaque name.
+Nevertheless it should still be possible to model those techniques using the the aspect, black-box, or
+tool critical path naming criteria. A fifth, and more useful axis is whether the process symbolizes or
+just produces/modifies/combines/creates or sustains/maintains (these are included already, just noting again).
+subClassOf should probably have its first level divide the processes by whether their _primary_ (defining?)
+output is symbol or being, and then within being based on whether it creates or maintains. In theory these
+could all be modelled as process -> technique and use `ilxtr:processProducesClass` to allow mixing
+(needed for handling destructive measurement methods if we don't want to have multiparent classes).
+Technically all non-destructive measurement techniques are also maintaining techniques.
+A process that creates a new black-box B' using inputs I.
+A process that maintains an existing black-box B using inputs I.
+A process that symbolizes an aspect A of a black-box B using inputs I.
+(that (we assume makes minimal changes to and thus) maintains B)
+(that creates a new black-box B')
+
