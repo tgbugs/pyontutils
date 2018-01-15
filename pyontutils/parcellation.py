@@ -1324,6 +1324,8 @@ class Source(tuple):
 
     def __new__(cls):
         if not hasattr(cls, 'data'):
+            if hasattr(cls, 'runonce'):
+                cls.runonce()
             cls.raw = cls.loadData()
             cls.data = cls.validate(*cls.processData())
             cls._triples_for_ontology = []
@@ -1375,6 +1377,21 @@ class Source(tuple):
     def isVersionOf(self):
         if hasattr(self, 'iri_head'):
             yield self.iri, dcterms.isVersionOf, self.iri_head
+
+
+class LocalSource(Source):
+    data = tuple()
+
+    def __new__(cls):
+        line = getsourcelines(cls)[-1]
+        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line))
+        cls.iri_head = rdflib.URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
+        if cls.artifact is None:  # for prov...
+            class art(Artifact):
+                iri = cls.iri
+            cls.artifact = art
+        self = super().__new__(cls)
+        return self
 
 
 ##
@@ -1619,25 +1636,84 @@ class PaxTree_6(Source):
         return tr, errata
 
 
+class PaxFix4(LocalSource):
+    artifact = Artifacts.PaxRat4
+    data = ({
+        '1':(['layer 1 of cortex'], tuple()),
+        '1a':(['layer 1a of cortex'], tuple()),
+        '1b':(['layer 1b of cortex'], tuple()),
+        '2':(['layer 2 of cortex'], tuple()),
+        '3':(['layer 3 of cortex'], tuple()),
+        '3/4':(['layer 3/4 of cortex'], tuple()),
+        '4':(['layer 4 of cortex'], tuple()),
+        '5':(['layer 5 of cortex'], tuple()),
+        '5a':(['layer 5a of cortex'], tuple()),
+        '5b':(['layer 5b of cortex'], tuple()),
+        '6':(['layer 6 of cortex'], tuple()),
+        '6a':(['layer 6a of cortex'], tuple()),
+        '6b':(['layer 6b of cortex'], tuple()),
+    }, {})
+
+
+class PaxFix6(LocalSource):
+    artifact = Artifacts.PaxRat6
+    data = ({
+        '1':(['layer 1 of cortex'], tuple()),
+        '1a':(['layer 1a of cortex'], (8,)),
+        '1b':(['layer 1b of cortex'], (8,)),
+        '2':(['layer 2 of cortex'], tuple()),
+        '3':(['layer 3 of cortex'], tuple()),
+        '3/4':(['layer 3/4 of cortex'], (94,)),
+        '4':(['layer 4 of cortex'], tuple()),
+        '5':(['layer 5 of cortex'], tuple()),
+        '5a':(['layer 5a of cortex'], (52, 94)),
+        '5b':(['layer 5b of cortex'], tuple()),
+        '6':(['layer 6 of cortex'], tuple()),
+        '6a':(['layer 6a of cortex'], tuple()),
+        '6b':(['layer 6b of cortex'], tuple()),
+    }, {})
+
+
+class PaxFix(LocalSource):
+    data = ({
+        '1':(['layer 1'], tuple()),
+        '1a':(['layer 1a'], (8,)),
+        '1b':(['layer 1b'], (8,)),
+        '2':(['layer 2'], tuple()),
+        '3':(['layer 3'], tuple()),
+        '3/4':(['layer 3/4'], (94,)),
+        '4':(['layer 4'], tuple()),
+        '5':(['layer 5'], tuple()),
+        '5a':(['layer 5a'], (52, 94)),
+        '5b':(['layer 5b'], tuple()),
+        '6':(['layer 6'], tuple()),
+        '6a':(['layer 6a'], tuple()),
+        '6b':(['layer 6b'], tuple()),
+    }, {})
+
+
 class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new__ sets data for all subclasses
     artifact = None
     root = None
     sourcePattern = 'http://api.brain-map.org/api/v2/tree_search/Structure/{}.json?descendants=true'
 
     @classmethod
-    def loadData(cls):
+    def runonce(cls):
         cls.source = cls.sourcePattern.format(cls.root)
         cls.artifact.source = cls.source
+
+    @classmethod
+    def loadData(cls):
         resp = requests.get(cls.source)
-        return resp.json()
+        return resp.json()['msg']
 
     @classmethod
     def processData(cls):
         return cls.raw['msg'],
 
     @classmethod
-    def validate(cls, j):
-        return j
+    def validate(cls):
+        return cls.loadData()
 
 
 class MBASrc(ABASrc):
@@ -1689,8 +1765,6 @@ class HCPMMPSrc(Source):
         return d
 
 
-
-
 class FSLSrc(Source):
     pass
 
@@ -1710,7 +1784,7 @@ class HBALabels(LabelsBase):
     name = 'Allen Human Brain Atlas Ontology'
     shortname='hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
-    sources = HBASrc(),
+    sources = HBASrc, #(),
     root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1780,7 +1854,7 @@ class MBALabels(HBALabels):
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
-    sources = MBASrc(),
+    sources = MBASrc,#(),
     root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1800,7 +1874,7 @@ class PaxLabels(LabelsBase):
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRAT':str(PAXRAT)}
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
-    sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4()#, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    sources = PaxFix(), PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxFix6(), PaxFix4() #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRAT['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname,
@@ -1808,7 +1882,8 @@ class PaxLabels(LabelsBase):
                      definingArtifactsS=(Artifacts.PaxRatAt.iri,),
                     )
 
-    _fixes = [
+    _fixes = []
+    __fixes = [
         # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
         ('1', (['layer 1', 'layer 1 of cortex'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
         ('1a', (['layer 1a', 'layer 1a of cortex'],
@@ -1905,6 +1980,14 @@ class PaxLabels(LabelsBase):
         return _fixes_prov
 
     @property
+    def dupes_structs(self):
+        ds = {'cerebellar lobules', 'cerebellar lobule'}
+        for d in self._dupes.values():
+            for struct in d[1]:
+                ds.add(struct)
+        return ds
+
+    @property
     def fixes(self):
         _, _, collisions, _ = self.records()
         for a, (ss, f, arts) in self._fixes:
@@ -1914,40 +1997,42 @@ class PaxLabels(LabelsBase):
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
         # TODO asssert that any triple for as ap at is actually in the graph...
-        #annotation_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
         annotation_predicate = ilxtr.literalUsedBy
-        #if alt_abbrevs:
+        definition_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
         for abbrev in [abrv] + alt_abbrevs:  # FIXME multiple annotations per triple...
             t = iri, Label.propertyMapping['abbrevs'], abbrev
-            if (abbrev, struct) not in abbrev_prov:
-                print(':::::::: WARNING', abbrev, struct, 'not in abbrev_prov!')
-                continue
             if t not in self._prov_dict:
                 self._prov_dict[t] = []
-            for artifact in abbrev_prov[abbrev, struct]:
-                self._prov_dict[t].append((annotation_predicate, artifact))
-            continue
-            yield from (t for artifact in abbrev_prov[abbrev, struct]
-                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
-        #if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes  # changing how this is modelled so that only the root bears the defining artifacts so that it is clearer what the criteria for being a certain type of label is, the granular information about intersection can be instantiated by the regions (which can be constructed from the quads or from the original source files)
+            for s in [struct] + extras:
+                if (abbrev, s) in abbrev_prov:
+                    for artifact in abbrev_prov[abbrev, s]:
+                        if 'github' in artifact:
+                            continue
+                        else:
+                            predicate = annotation_predicate
+                        self._prov_dict[t].append((predicate, artifact))
+
         if struct in struct_prov:
             t = iri, Label.propertyMapping['label'], struct
             if t not in self._prov_dict:
                 self._prov_dict[t] = []
             for artifact in struct_prov[struct]:
-                self._prov_dict[t].append((annotation_predicate, artifact))
+                if 'github' in artifact:
+                    predicate = definition_predicate
+                else:
+                    predicate = annotation_predicate
+                self._prov_dict[t].append((predicate, artifact))
 
-            #yield from (t for artifact in struct_prov[struct]
-                        #for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['label'], struct))
         for extra in extras:
             t = iri, Label.propertyMapping['synonyms'], extra
             if t not in self._prov_dict:
                 self._prov_dict[t] = []
             for artifact in struct_prov[extra]:
-                self._prov_dict[t].append((annotation_predicate, artifact))
-            continue
-            yield from (t for artifact in struct_prov[extra]
-                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['synonyms'], extra))
+                if 'github' in artifact:
+                    predicate = definition_predicate
+                else:
+                    predicate = annotation_predicate
+                self._prov_dict[t].append((predicate, artifact))
 
     def _triples(self):
         self._prov_dict = {}
@@ -1962,7 +2047,8 @@ class PaxLabels(LabelsBase):
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
             iri = PAXRAT[str(i + 1)]  # TODO load from existing
             struct = structure if structure else 'zzzzzz'
-            yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
+            #yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
+            self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
                              ifail='i fail!',
                              label=struct,
@@ -1976,6 +2062,7 @@ class PaxLabels(LabelsBase):
             if figures:
                 for artifact in artifacts:
                     PaxRegion.addthing(iri, figures)  # artifact is baked into figures
+
         for t, pairs in self._prov_dict.items():
             if pairs:
                 yield from annotations(pairs, *t)
@@ -1984,7 +2071,7 @@ class PaxLabels(LabelsBase):
     def validate(self):
         # check for duplicate labels
         labels = list(self.graph.objects(None, rdfs.label))
-        assert len(labels) == len(set(labels)), 'There are classes with duplicate labels'
+        assert len(labels) == len(set(labels)), f'There are classes with duplicate labels! {Counter(labels).most_common()[:5]}'
 
         # check for unexpected duplicate abbreviations
         abrevs = list(self.graph.objects(None, NIFRID.abbrev))
@@ -1998,25 +2085,30 @@ class PaxLabels(LabelsBase):
         collisions = {}
         abbrev_prov = {}
         merge = {**self._merge, **{v:k for k, v in self._merge.items()}}
+        fa = self.fixes_abbrevs
+        ds = self.dupes_structs
         for se in self.sources:
             source, errata = se
             for t in se.isVersionOf:
                 self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
                 # TODO deal with overlapping layer names here
-                if a in self.fixes_abbrevs:
-                    print('TODO', a, ss, f)
-                    collisions[a, ss[0]] = {se.artifact.iri:f}
-                    continue  # skip the entries that we create manually TODO
+                if a in fa:  # XXX this is now just for dupes...
+                    if ss[0] in ds:
+                        print('TODO', a, ss, f)
+                        collisions[a, ss[0]] = {se.artifact.iri:f}
+                        continue  # skip the entries that we create manually TODO
 
+                if (a, ss[0]) not in abbrev_prov:
+                    abbrev_prov[a, ss[0]] = []
+                if se.artifact.iri not in abbrev_prov[a, ss[0]]:
+                    abbrev_prov[a, ss[0]].append(se.artifact.iri)  # include all the prov we can
                 if a in combined_record:
                     _, structures, figures, artifacts = combined_record[a]
                     if f:
-                        assert se.artifact.iri not in figures, f'>1 figures {a} {figures} {bool(f)}'
+                        assert (se.artifact.iri not in figures or
+                                figures[se.artifact.iri] == f), f'>1 figures {a} {figures} {bool(f)}'
                         figures[se.artifact.iri] = f
-                    if (a, ss[0]) not in abbrev_prov:
-                        abbrev_prov[a, ss[0]] = []
-                    abbrev_prov[a, ss[0]].append(se.artifact.iri)  # include all the prov we can
                     for s in ss:
                         if s is not None and s not in structures:
                             structures.append(s)
@@ -2029,8 +2121,12 @@ class PaxLabels(LabelsBase):
                 elif a in merge and merge[a] in combined_record:
                     alt_abbrevs, _, figures, artifacts = combined_record[merge[a]]
                     # by the definition of merge we can skip structures since they are identical
+                    for aa in alt_abbrevs:
+                        if (aa, ss[0]) not in abbrev_prov:
+                            abbrev_prov[aa, ss[0]] = []
+                        if se.artifact.iri not in abbrev_prov[aa, ss[0]]:
+                            abbrev_prov[aa, ss[0]].append(se.artifact.iri)
                     alt_abbrevs.append(a)
-                    abbrev_prov[a, ss[0]] = [se.artifact.iri]
                     figures[se.artifact.iri] = f
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
@@ -2038,7 +2134,14 @@ class PaxLabels(LabelsBase):
                     ss = [s for s in ss if s is not None]
                     alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
                     #if a in merge:
-                    abbrev_prov[a, ss[0]] = [se.artifact.iri]
+                    for aa in alt_abbrevs:
+                        if (aa, ss[0]) not in abbrev_prov:
+                            abbrev_prov[aa, ss[0]] = []
+                        if se.artifact.iri not in abbrev_prov[aa, ss[0]]:
+                            abbrev_prov[aa, ss[0]].append(se.artifact.iri)
+                    #if (a, ss[0]) not in abbrev_prov:
+                        #abbrev_prov[a, ss[0]] = []
+                    #abbrev_prov[a, ss[0]].append(se.artifact.iri)
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
@@ -2246,12 +2349,10 @@ def doit(ont):
 
 def main():
     #paxinos()
-    #doit(HCPMMPLabels)
-    #embed()
-    #return
+    doit(HCPMMPLabels)
     #doit(MBALabels)
     #doit(HBALabels)
-    #doit(WHSSDLabels)
+    doit(WHSSDLabels)
     doit(PaxLabels)
     doit(Artifacts)
     doit(parcBridge)
