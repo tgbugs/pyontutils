@@ -131,7 +131,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
-    __version = 'v1.1.1'
+    __version = 'v1.1.2'
     _newline = True
 
     topClasses = [OWL.Ontology,
@@ -174,6 +174,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                       OWL.equivalentClass,
                       RDFS.label,
                       SKOS.prefLabel,
+                      SKOS.altLabel,
                       NIFRID.synonym,
                       OBOANN.synonym,
                       NIFRID.abbrev,
