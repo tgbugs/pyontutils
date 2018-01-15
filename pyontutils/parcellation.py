@@ -737,6 +737,15 @@ def annotation(ap, ao, s, p, o):
     yield n0, owl.annotatedTarget, check_value(o)
     yield n0, ap, check_value(ao)
 
+def annotations(pairs, s, p, o):
+    n0 = rdflib.BNode()
+    yield n0, rdf.type, owl.Axiom
+    yield n0, owl.annotatedSource, s
+    yield n0, owl.annotatedProperty, p
+    yield n0, owl.annotatedTarget, check_value(o)
+    for predicate, object in pairs:
+        yield n0, predicate, check_value(object)
+
 # namespaces
 NCBITaxon = rdflib.Namespace(uPREFIXES['NCBITaxon'])
 UBERON = rdflib.Namespace(uPREFIXES['UBERON'])
@@ -1904,23 +1913,50 @@ class PaxLabels(LabelsBase):
             yield a, ([], ss, f, arts)
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
+        # TODO asssert that any triple for as ap at is actually in the graph...
         #annotation_predicate = ilxtr.isDefinedBy  # TODO more like 'symbolization used in'
         annotation_predicate = ilxtr.literalUsedBy
-        if alt_abbrevs:
-            for abbrev in [abrv] + alt_abbrevs:
-                yield from (t for artifact in abbrev_prov[abbrev, struct]
-                            for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
+        #if alt_abbrevs:
+        for abbrev in [abrv] + alt_abbrevs:  # FIXME multiple annotations per triple...
+            t = iri, Label.propertyMapping['abbrevs'], abbrev
+            if (abbrev, struct) not in abbrev_prov:
+                print(':::::::: WARNING', abbrev, struct, 'not in abbrev_prov!')
+                continue
+            if t not in self._prov_dict:
+                self._prov_dict[t] = []
+            for artifact in abbrev_prov[abbrev, struct]:
+                self._prov_dict[t].append((annotation_predicate, artifact))
+            continue
+            yield from (t for artifact in abbrev_prov[abbrev, struct]
+                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['abbrevs'], abbrev))
         #if extras:  # if there are no extras then the isDefinedBy on the class is sufficient because there are no changes  # changing how this is modelled so that only the root bears the defining artifacts so that it is clearer what the criteria for being a certain type of label is, the granular information about intersection can be instantiated by the regions (which can be constructed from the quads or from the original source files)
         if struct in struct_prov:
-            yield from (t for artifact in struct_prov[struct]
-                        for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['label'], struct))
+            t = iri, Label.propertyMapping['label'], struct
+            if t not in self._prov_dict:
+                self._prov_dict[t] = []
+            for artifact in struct_prov[struct]:
+                self._prov_dict[t].append((annotation_predicate, artifact))
+
+            #yield from (t for artifact in struct_prov[struct]
+                        #for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['label'], struct))
         for extra in extras:
+            t = iri, Label.propertyMapping['synonyms'], extra
+            if t not in self._prov_dict:
+                self._prov_dict[t] = []
+            for artifact in struct_prov[extra]:
+                self._prov_dict[t].append((annotation_predicate, artifact))
+            continue
             yield from (t for artifact in struct_prov[extra]
                         for t in annotation(annotation_predicate, artifact, iri, Label.propertyMapping['synonyms'], extra))
 
     def _triples(self):
+        self._prov_dict = {}
         combined_record, struct_prov, _, abbrev_prov = self.records()
-        struct_prov.update(self.fixes_prov)  # FIXME
+        for k, v in self.fixes_prov.items():
+            if k in struct_prov:
+                struct_prov[k].extend(v)
+            else:
+                struct_prov[k] = v
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
             sorted(list(combined_record.items()) + list(self.fixes),
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
@@ -1940,6 +1976,10 @@ class PaxLabels(LabelsBase):
             if figures:
                 for artifact in artifacts:
                     PaxRegion.addthing(iri, figures)  # artifact is baked into figures
+        for t, pairs in self._prov_dict.items():
+            if pairs:
+                yield from annotations(pairs, *t)
+
 
     def validate(self):
         # check for duplicate labels
@@ -1974,6 +2014,9 @@ class PaxLabels(LabelsBase):
                     if f:
                         assert se.artifact.iri not in figures, f'>1 figures {a} {figures} {bool(f)}'
                         figures[se.artifact.iri] = f
+                    if (a, ss[0]) not in abbrev_prov:
+                        abbrev_prov[a, ss[0]] = []
+                    abbrev_prov[a, ss[0]].append(se.artifact.iri)  # include all the prov we can
                     for s in ss:
                         if s is not None and s not in structures:
                             structures.append(s)
@@ -1994,8 +2037,8 @@ class PaxLabels(LabelsBase):
                 else:
                     ss = [s for s in ss if s is not None]
                     alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
-                    if a in merge:
-                        abbrev_prov[a, ss[0]] = [se.artifact.iri]
+                    #if a in merge:
+                    abbrev_prov[a, ss[0]] = [se.artifact.iri]
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
@@ -2203,12 +2246,12 @@ def doit(ont):
 
 def main():
     #paxinos()
-    doit(HCPMMPLabels)
+    #doit(HCPMMPLabels)
     #embed()
     #return
-    doit(MBALabels)
-    doit(HBALabels)
-    doit(WHSSDLabels)
+    #doit(MBALabels)
+    #doit(HBALabels)
+    #doit(WHSSDLabels)
     doit(PaxLabels)
     doit(Artifacts)
     doit(parcBridge)
