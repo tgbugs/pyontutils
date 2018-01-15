@@ -1384,10 +1384,10 @@ class LocalSource(Source):
 
     def __new__(cls):
         line = getsourcelines(cls)[-1]
-        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line))
+        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line))  # FIXME latest git blame on class?
         cls.iri_head = rdflib.URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
         if cls.artifact is None:  # for prov...
-            class art(Artifact):
+            class art:
                 iri = cls.iri
             cls.artifact = art
         self = super().__new__(cls)
@@ -1639,6 +1639,7 @@ class PaxTree_6(Source):
 class PaxFix4(LocalSource):
     artifact = Artifacts.PaxRat4
     data = ({
+        # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
         '1':(['layer 1 of cortex'], tuple()),
         '1a':(['layer 1a of cortex'], tuple()),
         '1b':(['layer 1b of cortex'], tuple()),
@@ -1705,15 +1706,15 @@ class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new_
     @classmethod
     def loadData(cls):
         resp = requests.get(cls.source)
-        return resp.json()['msg']
+        return resp.json()
 
     @classmethod
     def processData(cls):
         return cls.raw['msg'],
 
     @classmethod
-    def validate(cls):
-        return cls.loadData()
+    def validate(cls, d):
+        return d
 
 
 class MBASrc(ABASrc):
@@ -1784,7 +1785,7 @@ class HBALabels(LabelsBase):
     name = 'Allen Human Brain Atlas Ontology'
     shortname='hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
-    sources = HBASrc, #(),
+    sources = HBASrc(),
     root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1854,7 +1855,7 @@ class MBALabels(HBALabels):
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
-    sources = MBASrc,#(),
+    sources = MBASrc(),
     root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1883,30 +1884,6 @@ class PaxLabels(LabelsBase):
                     )
 
     _fixes = []
-    __fixes = [
-        # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
-        ('1', (['layer 1', 'layer 1 of cortex'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('1a', (['layer 1a', 'layer 1a of cortex'],
-                {Artifacts.PaxRat6.iri:(8,)},
-                [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('1b', (['layer 1b', 'layer 1b of cortex'],
-                {Artifacts.PaxRat6.iri:(8,)},
-                [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('2', (['layer 2', 'layer 2 of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('3', (['layer 3', 'layer 3 of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('3/4', (['layer 3/4', 'layer 3/4 of cortex'],
-                 {Artifacts.PaxRat6.iri:(94,)},
-                 [Artifacts.PaxRat6.iri])),
-        ('4', (['layer 4', 'layer 4 of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('5', (['layer 5', 'layer 5 of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('5a', (['layer 5a', 'layer 5a of cortex'],
-                {Artifacts.PaxRat6.iri:(52, 94)},
-                [Artifacts.PaxRat6.iri, Artifacts.PaxRat7.iri])),
-        ('5b', (['layer 5b', 'layer 5b of cortex'], {}, [Artifacts.PaxRat4.iri, Artifacts.PaxRat6.iri])),
-        ('6', (['layer 6', 'layer 6 of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('6a', (['layer 6a', 'layer 6a of cortex'], {}, [Artifacts.PaxRat4.iri])),
-        ('6b', (['layer 6b', 'layer 6b of cortex'], {}, [Artifacts.PaxRat4.iri])),
-    ]
 
     _dupes = {
         # for 4e the numbers in the index are to the cranial nerve nuclei entries
@@ -2047,7 +2024,6 @@ class PaxLabels(LabelsBase):
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
             iri = PAXRAT[str(i + 1)]  # TODO load from existing
             struct = structure if structure else 'zzzzzz'
-            #yield from self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
                              ifail='i fail!',
@@ -2133,15 +2109,11 @@ class PaxLabels(LabelsBase):
                 else:
                     ss = [s for s in ss if s is not None]
                     alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
-                    #if a in merge:
                     for aa in alt_abbrevs:
                         if (aa, ss[0]) not in abbrev_prov:
                             abbrev_prov[aa, ss[0]] = []
                         if se.artifact.iri not in abbrev_prov[aa, ss[0]]:
                             abbrev_prov[aa, ss[0]].append(se.artifact.iri)
-                    #if (a, ss[0]) not in abbrev_prov:
-                        #abbrev_prov[a, ss[0]] = []
-                    #abbrev_prov[a, ss[0]].append(se.artifact.iri)
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
@@ -2350,8 +2322,8 @@ def doit(ont):
 def main():
     #paxinos()
     doit(HCPMMPLabels)
-    #doit(MBALabels)
-    #doit(HBALabels)
+    doit(MBALabels)
+    doit(HBALabels)
     doit(WHSSDLabels)
     doit(PaxLabels)
     doit(Artifacts)
