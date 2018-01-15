@@ -714,6 +714,12 @@ def main():
 # New impl
 
 # common funcs
+
+def subclasses(start):
+    for sc in start.__subclasses__():
+        yield sc
+        yield from subclasses(sc)
+
 def check_value(v):
     if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
         return v
@@ -1255,10 +1261,6 @@ class Artifacts(Ont):
     _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA, WHSSD2, HCPMMP
 
     def _triples(self):
-        def subclasses(start):
-            for sc in start.__subclasses__():
-                yield sc
-                yield from subclasses(sc)
         yield from Artifact.class_triples()
         for art_type in subclasses(Artifact):
             yield from art_type.class_triples() 
@@ -1776,8 +1778,8 @@ class FSLSrc(Source):
 #
 # labels
 
-class FSLLabels(LabelsBase):
-    pass
+#class FSLLabels(LabelsBase):  # TODO
+    #pass
 
 
 class HBALabels(LabelsBase):
@@ -2307,7 +2309,7 @@ class parcBridge(Ont):
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    imports = PaxLabels(), MBALabels(), HBALabels(), WHSSDLabels(),
+    imports = [subclass() for subclass in subclasses(LabelsBase)]
 
     # stuff
 
