@@ -18,6 +18,7 @@
 'NLXINV': 'http://uri.neuinfo.org/nif/nifstd/nlx_inv_'
 'NLXMOL': 'http://uri.neuinfo.org/nif/nifstd/nlx_mol_'
 'NLXNEURNT': 'http://uri.neuinfo.org/nif/nifstd/nlx_neuron_nt_'
+'NLXOEN': 'http://uri.neuinfo.org/nif/nifstd/oen_'
 'NLXORG': 'http://uri.neuinfo.org/nif/nifstd/nlx_organ_'
 'NLXQUAL': 'http://uri.neuinfo.org/nif/nifstd/nlx_qual_'
 'NLXRES': 'http://uri.neuinfo.org/nif/nifstd/nlx_res_'
@@ -29,6 +30,17 @@
 # interlex
 'ILX': 'http://uri.interlex.org/base/ilx_'
 'ILXREPLACE': 'http://ILXREPLACE.org/'
+
+# interlex user/org namespaces
+'DICOM':'http://uri.interlex.org/dicom/uris/terms/'
+'PAR':'http://uri.interlex.org/fakeobo/uris/obo/PAR_'
+
+# alternate ids
+'GBIF': 'http://www.gbif.org/species/',
+'ITISTSN': 'http://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value=',
+'MESH': 'https://meshb.nlm.nih.gov/record/ui?ui='
+'RadLex': 'http://www.radlex.org/RID/'  # matches uberon
+'SBO': 'http://www.ebi.ac.uk/sbo/main/SBO:'  # SBO is a fakeobo
 
 # scicrunch registry
 'SCR': 'http://scicrunch.org/resolver/SCR_'
@@ -47,6 +59,7 @@
 'PR': 'http://purl.obolibrary.org/obo/PR_' 
 'PW': 'http://purl.obolibrary.org/obo/PW_'
 'CL': 'http://purl.obolibrary.org/obo/CL_'
+'MA': 'http://purl.obolibrary.org/obo/MA_'
 'MP': 'http://purl.obolibrary.org/obo/MP_'
 'CLO': 'http://purl.obolibrary.org/obo/CLO_'
 'GO': 'http://purl.obolibrary.org/obo/GO_'
