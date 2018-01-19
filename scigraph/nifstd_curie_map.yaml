@@ -32,12 +32,12 @@
 'ILXREPLACE': 'http://ILXREPLACE.org/'
 
 # interlex user/org namespaces
-'DICOM':'http://uri.interlex.org/dicom/uris/terms/'
-'PAR':'http://uri.interlex.org/fakeobo/uris/obo/PAR_'
+'DICOM': 'http://uri.interlex.org/dicom/uris/terms/'
+'PAR': 'http://uri.interlex.org/fakeobo/uris/obo/PAR_'
 
 # alternate ids
-'GBIF': 'http://www.gbif.org/species/',
-'ITISTSN': 'http://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value=',
+'GBIF': 'http://www.gbif.org/species/'
+'ITISTSN': 'http://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value='
 'MESH': 'https://meshb.nlm.nih.gov/record/ui?ui='
 'RadLex': 'http://www.radlex.org/RID/'  # matches uberon
 'SBO': 'http://www.ebi.ac.uk/sbo/main/SBO:'  # SBO is a fakeobo
