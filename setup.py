@@ -61,6 +61,8 @@ try:
             'requests',
             'robobrowser',
             'sqlalchemy',
+            'mysql-connector',
+            'protobuf',
         ],
         #extras_require
         #package_data
