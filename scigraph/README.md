@@ -51,10 +51,11 @@ unset SERVICES_NAME
 3. local graph generate services config and move to this folder and scp everything in the folder
 this README is in over to your target server and ssh to target 
 ```
-TARGET=target
-ontload services NIF-Ontology
-cp /tmp/NIF-Ontology/scigraph/services.yaml .
-scp s* ${TARGET}:~/
+#export TARGET=target  # YOU MUST EXPORT THIS YOURSELF
+export BUILD_DIR=/tmp/build
+mkdir ${BUILD_DIR}
+ontload scigraph-deploy config --local $(hostname) ${TARGET} -z ${BUILD_DIR}
+scp ${BUILD_DIR}/s* ${TARGET}:~/
 rm services.yaml  # prevent staleness by accident
 ```
 
@@ -75,7 +76,7 @@ sudo cp scigraph-services.conf /etc/
 export GRAPH_FOLDER=$(grep location services.yaml | cut -d':' -f2 | tr -d '[:space:]')
 export GRAPH_PARENT_FOLDER=$(dirname ${GRAPH_FOLDER})/
 # get a graph build TODO
-wget https://github.com/SciCrunch/NIF-Ontology/releases/download/v2.14/NIF-Ontology-master-graph-2017-09-13-4633a79-f52329a.zip
+curl -LOk $(curl --silent https://api.github.com/repos/SciCrunch/NIF-Ontology/releases/latest | awk '/browser_download_url/ { print $2 }' | sed 's/"//g')
 sudo unzip NIF-Ontology-*-graph-*.zip
 export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)
 sudo chown -R bamboo:bamboo $GRAPH_NAME
