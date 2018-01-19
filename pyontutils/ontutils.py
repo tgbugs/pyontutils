@@ -9,6 +9,7 @@ Usage:
     ontutils uri-switch [options] <file>...
     ontutils backend-refactor [options] <file>...
     ontutils todo [options] <repo>
+    ontutils expand <curie>...
 
 Options:
     -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
@@ -580,6 +581,10 @@ def main():
         graph = loadall(git_local, repo_name, local=True)
         graph_todo(graph, curie_prefixes, uri_switch_values)
         embed()
+    elif args['expand']:
+        for curie in args['<curie>']:
+            prefix, suffix = curie.split(':')
+            print(curies[prefix] + suffix)
 
 if __name__ == '__main__':
     main()
