@@ -582,6 +582,7 @@ def main():
         graph_todo(graph, curie_prefixes, uri_switch_values)
         embed()
     elif args['expand']:
+        curies['NLXWIKI'] = 'http://legacy.neurolex.org/wiki/'
         for curie in args['<curie>']:
             prefix, suffix = curie.split(':')
             print(curies[prefix] + suffix)
