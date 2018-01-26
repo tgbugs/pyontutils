@@ -69,12 +69,20 @@ This could be expanded into the human executor 'role/skillset/responsibility' on
 
 ## Other
 [OEN](https://github.com/G-Node/OEN)  
+[CNO](https://github.com/INCF/Computational-Neurosciences-Ontology--C.N.O.-)  
+[nat](https://github.com/BlueBrain/nat/blob/master/nat/modelingDictionary.csv)  
+[odml](https://github.com/G-Node/odml-terminologies) see also the [main page](http://www.g-node.org/projects/odml/terminologies)  
 [ero.owl](https://www.eagle-i.net/ero/latest/ero.owl) see also the [wiki](https://open.med.harvard.edu/wiki/display/eaglei/Ontology)  
 [efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  
-[](
-)
+
+## Related github issues
+https://github.com/SciCrunch/NIF-Ontology/issues/100  
 
 ## Thoughts
+### Tiers for tagging
+1. High level experimental approach (sometimes may directly imply a set of techniques as well)
+2. More specific techniques that are still high level (e.g. whole cell patch clamp, calcium imaging)
+3. Free text term addition if data providers want/need more granularity
 ### Technique vs Method
 The common usage of technique and method are completely overlapping and it will be unproductive
 to try to force a distinction between the two. If we want a meaningful higher level above technique/method
