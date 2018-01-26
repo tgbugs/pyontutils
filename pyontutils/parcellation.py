@@ -1170,7 +1170,7 @@ class Artifacts(Ont):
 
     PaxRat4 = PaxRatAt(iri=ilxtr.paxr4,
                        label='The Rat Brain in Stereotaxic Coordinates 4th Edition',
-                       synonyms=('Paxinos Rat 6th',),
+                       synonyms=('Paxinos Rat 4th',),
                        abbrevs=tuple(),
                        shortname='PAXRAT4',  # TODO upper for atlas lower for label?
                        copyrighted='1998',
