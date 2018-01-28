@@ -197,28 +197,27 @@ dorsal raphe nucleus, lateral part DRL
 dorsal raphe nucleus, ventral part DRV
 dorsal raphe, interfascicular part DRI
 dorsal spinocerebellar tract dsc
-dorsal spinocerebellar tract and olivocerebellar tract
-dsc/oc dorsal subiculum
-DS dorsal tegmental decussation
-dtgx dorsal tegmental nucleus
-DTg dorsal tegmental nucleus, central part
-DTgC dorsal tegmental nucleus, pericentral part
-DTgP dorsal tenia tecta
-DTT dorsal terminal nucleus
-DT dorsal transition zone
-DTr dorsal tuberomammillary nucleus
-DTM dorsolateral entorhinal cortex
-DLEnt dorsolateral orbital cortex
-DLO dorsolateral periaqueductal gray
-DLPAG dorsomedial hypothalamic nucleus
-DM dorsomedial hypothalamic nucleus, compact part
-DMC dorsomedial hypothalamic nucleus, dorsal part
-DMD dorsomedial hypothalamic nucleus, ventral part
-DMV dorsomedial periaqueductal gray
-DMPAG dorsomedial spinal trigeminal nucleus
-DMSp5 dorsomedial tegmental area
-DMTg dysgranular insular cortex
-DI
+dorsal spinocerebellar tract and olivocerebellar tract dsc/oc
+dorsal subiculum DS
+dorsal tegmental decussation dtgx
+dorsal tegmental nucleus DTg
+dorsal tegmental nucleus, central part DTgC
+dorsal tegmental nucleus, pericentral part DTgP
+dorsal tenia tecta DTT
+dorsal terminal nucleus DT
+dorsal transition zone DTr
+dorsal tuberomammillary nucleus DTM
+dorsolateral entorhinal cortex DLEnt
+dorsolateral orbital cortex DLO
+dorsolateral periaqueductal gray DLPAG
+dorsomedial hypothalamic nucleus DM
+dorsomedial hypothalamic nucleus, compact part DMC
+dorsomedial hypothalamic nucleus, dorsal part DMD
+dorsomedial hypothalamic nucleus, ventral part DMV
+dorsomedial periaqueductal gray DMPAG
+dorsomedial spinal trigeminal nucleus DMSp5
+dorsomedial tegmental area DMTg
+dysgranular insular cortex DI
 ; E
 ectorhinal cortex Ect
 Edinger-Westphal nucleus EW
@@ -236,7 +235,7 @@ external cortex of the inferior colliculus ECIC
 external cuneate nucleus ECu
 external medullary lamina eml
 external plexiform layer of the accessory olfactory b EPlA
-external plexiform layer of the olfactory bulb Epl
+external plexiform layer of the olfactory bulb EPl  ; ERRATA Epl
 ; F
 F cell group of the vestibular complex FVe
 facial motor nucleus, stylohyoid part 7SH

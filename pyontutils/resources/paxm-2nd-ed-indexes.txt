@@ -95,7 +95,7 @@ bed nucleus of the anterior commissure BAC
 bed nucleus of the stria terminalis, intermediate division BSTI
 bed nucleus of the stria terminalis, intraamygdaloid division BSTIA
 bed nucleus of the stria terminalis, lateral division BSTL
-bed nucleus of the stria t erminalis, lateral division, dorsal part BSTLD
+bed nucleus of the stria terminalis, lateral division, dorsal part BSTLD
 bed nucleus of the stria terminalis, lateral division, juxtacapsular part BSTLJ
 bed nucleus of the stria terminalis, lateral division, posterior part BSTLP
 bed nucleus of the stria terminalis, lateral division, ventral part BSTLV
@@ -135,9 +135,9 @@ central medial thalamic nucleus CM
 central tegmental tract ctg
 centrolateral thalamic nucleus CL
 cerebellar commissure cbc
-cerebellar lobule 6a
-cerebellar lobule 6b
-cerebellar lobules 4&5
+;cerebellar lobule 6a  ; ERRATA unused
+;cerebellar lobule 6b  ; ERRATA unused
+;cerebellar lobules 4&5  ; ERRATA unused
 cerebellum Cb
 cerebral cortex Cx
 cerebral peduncle, basal part cp
@@ -167,8 +167,7 @@ dentate gyrus DG
 dorsal 3rd ventricle D3V
 dorsal acoustic stria das
 dorsal cochlear nucleus DC
-dorsal endopiriform
-nucleus DEn
+dorsal endopiriform nucleus DEn
 dorsal fornix df
 dorsal hippocampal commissure dhc
 dorsal hypothalamic area DA
@@ -290,8 +289,7 @@ intercrural fissure icf
 intergeniculate leaf IGL
 intermediate acoustic stria ias
 intermediate geniculate nucleus IntG
-intermediate interstitial
-nucleus of the medial longitudinal fasciculus II
+intermediate interstitial nucleus of the medial longitudinal fasciculus II
 intermediate lobe of pituitary IPit
 intermediate nucleus of the lateral lemniscus ILL
 intermediodorsal thalamic nucleus IMD
@@ -316,7 +314,7 @@ interposed cerebellar nucleus, posterior parvicellular part IntPPC
 interstitial nucleus of Cajal InC
 interstitial nucleus of Cajal, greater part InCG
 interstitial nucleus of the posterior limb of the anterior commissure, central part IPACC
-interstitial nucleus of the posterior limb of t he anterior commissure, lateral part IPACL
+interstitial nucleus of the posterior limb of the anterior commissure, lateral part IPACL
 interstitial nucleus of the posterior limb of the anterior commissure, medial part IPACM
 interstitial nucleus of the vestibulocochlear nerve I8
 interventricular foramen IVF
@@ -389,7 +387,8 @@ magnocellular nucleus of the posterior commissure MCPC
 magnocellular preoptic nucleus MCPO
 mammillary peduncle mp
 mammillary recess of the 3rd ventricle MRe
-mammillotegmental tract mtg mammillothalamic tract mt
+mammillotegmental tract mtg
+mammillothalamic tract mt
 marginal zone of the medial geniculate MZMG
 medial (fastigial) cerebellar nucleus Med
 medial accessory oculomotor nucleus MA3
@@ -483,8 +482,7 @@ nucleus Y Y
 nucleus Z Z
 ; O
 obex Obex
-olfactory
-nerve layer ON
+olfactory nerve layer ON
 olfactory tubercle Tu
 olfactory tubercle densocellular layer TuDC
 olfactory tubercle plexiform layer TuPl
@@ -495,8 +493,7 @@ olivocerebellar tract oc
 olivocochlear bundle ocb
 optic chiasm ox
 optic nerve 2n
-optic nerve la
-yer of the superior colliculus Op
+optic nerve layer of the superior colliculus Op
 oriens layer of the hippocampus Or
 outer blade of the dentate gyrus OBl
 oval paracentral thalamic nucleus OPC
@@ -620,8 +617,7 @@ retroethmoid nucleus REth
 retrolemniscal nucleus RL
 retroparafascicular nucleus RPF
 retrorubral field RRF
-retrorubral fields/A8
-dopamine cells RRF/A8
+retrorubral fields/A8 dopamine cells RRF/A8
 retrorubral nucleus RR
 retrosplenial agranular cortex RSA
 retrosplenial granular a cortex RSGa
@@ -756,8 +752,7 @@ ventral spinocerebellar tract vsc
 ventral tegmental area VTA
 ventral tegmental decussation vtgx
 ventral tenia tecta VTT
-ventral tuberomammillary
-nucleus VTM
+ventral tuberomammillary nucleus VTM
 ventrolateral hypothalamic nucleus VLH
 ventrolateral preoptic nucleus VLPO
 ventrolateral thalamic nucleus VL
@@ -804,7 +799,7 @@ List of Abbreviations
 4N trochlear nucleus 68, 102-103
 4n trochlear nerve or its root 70-75, 108-110, 112
 4V 4th ventricle 74-91, 101, 103-108
-6 abducens nucleus 86
+;6 abducens nucleus 86  ; ERRATA does not exist, likely copy paste error
 6Cb 6th Cerebellar lobule 85, 87-94, 101-114
 6N abducens nucleus 77-79, 103-105
 7Cb 7th Cerebellar lobule 91-98, 101-113
@@ -820,13 +815,12 @@ List of Abbreviations
 8n vestibulocochlear nerve 74-82, 115-121
 8vn vestibular root of the vestibulocochlear nerve 72-73, 78-80
 9Cb 9th Cerebellar lobule 87-110
-10 dorsal motor nucleus of vagus 87
-10Cb 10th
-Cerebellar lobule 81-86, 88-89, 101-113
+;10 dorsal motor nucleus of vagus 87  ; ERRATA not used
+10Cb 10th Cerebellar lobule 81-86, 88-89, 101-113
 10N dorsal motor nucleus of vagus 84-99, 101-104
 11N accessory nerve nucleus 100
 11n root of accessory nerve 92
-12 hypoglossal nucleus 91
+12 hypoglossal nucleus 91  ; ERRATA this is real
 12N hypoglossal nucleus 89-90, 92-99, 101-103
 12n root of hypoglossal nerve 91, 96-98
 ; A
@@ -913,15 +907,14 @@ B4 B4 serotonin cells 88-89
 B9 B9 serotonin cells 64-66, 68
 BAC bed nucleus of the anterior commissure 31-32, 105
 BAOT bed nucleus of the accessory olfactory tract 38-39, 116-117
-Bar Barrin gton’s
-nucleus 75-78, 107
+Bar Barrington’s nucleus 75-78, 107
 bas basilar artery 61
 BIC nucleus of the brachium of the inferior colliculus 62-69, 115-118
 bic brachium of the inferior colliculus 59-69, 118-119
 BL basolateral amygdaloid nucleus 121
 BLA basolateral amygdaloid nucleus, anterior part 36-48, 124-128
 BLP basolateral amygdaloid nucleus, posterior part 47-57, 122-130
-BLV basolateral amygdaloid nucleus, v entral part 40-49, 127-130
+BLV basolateral amygdaloid nucleus, ventral part 40-49, 127-130
 BMA basomedial amygdaloid nucleus, anterior part 36-45, 119-126
 BMP basomedial amygdaloid nucleus, posterior part 43-53, 120-128
 Bo Botzinger complex 86
@@ -1082,7 +1075,7 @@ gr gracile fasciculus 97, 101-102
 GrA granule cell layer of the accessory olfactory bulb 2-3, 108-110
 GrC granular layer of the cochlear nuclei 78-83
 GrDG granular layer of the dentate gyrus 39-64, 104, 106-113, 115-124
-GrO granular cell layer of the olfact ory b ulb 1-9, 102-113
+GrO granular cell layer of the olfactory bulb 1-9, 102-113
 Gus gustatory thalamic nucleus 47-50, 102-110
 ; H
 hbc habenular commissure 46-50
@@ -1134,7 +1127,7 @@ IOPr inferior olive, principal nucleus 87-93, 103-104
 IOVL inferior olive, ventrolateral protrusion 91-92
 IP interpeduncular nucleus 65-66
 IPA interpeduncular nucleus, apical subnucleus 64, 101-102
-IPAC interstitial nucleus of the posterior limb o f the anterior commissure 37-43, 110-121
+IPAC interstitial nucleus of the posterior limb of the anterior commissure 37-43, 110-121
 IPACL interstitial nucleus of the posterior limb of the anterior commissure, lateral part 27-36
 IPACM interstitial nucleus of the posterior limb of the anterior commissure, medial part 27-36
 IPC interpeduncular nucleus, caudal subnucleus 59-64, 101-102
@@ -1156,8 +1149,7 @@ LA lateroanterior hypothalamic nucleus 34-38, 103-106
 La lateral amygdaloid nucleus 37-40, 50, 128-131
 LAcbSh lateral accumbens shell 20-21, 23-25, 113-118
 LaDL lateral amygdaloid nucleus, dorsolateral part 41-51
-Lat lateral (dentate)
-cerebellar nucleus 78-84, 117-123
+Lat lateral (dentate) cerebellar nucleus 78-84, 117-123
 LatPC lateral cerebellar nucleus, parvicellular part 81-83, 113-121
 LaVL lateral amygdaloid nucleus, ventrolateral part 43-49
 LaVM lateral amygdaloid nucleus, ventromedial part 46-51, 127
@@ -1192,7 +1184,7 @@ LPBS lateral parabrachial nucleus, superior part 73
 LPBV lateral parabrachial nucleus, ventral part 73-75, 77-78
 LPGi lateral paragigantocellular nucleus 78-90, 104-113
 LPLC lateral posterior thalamic nucleus, laterocaudal part 54-55, 116-117
-LPLR l ateral posterior thalamic nucleus, laterorostral part 46-53, 113-117
+LPLR lateral posterior thalamic nucleus, laterorostral part 46-53, 113-117
 LPMC lateral posterior thalamic nucleus, mediocaudal part 51-56, 115
 LPMR lateral posterior thalamic nucleus, mediorostral part 43-53, 107-114
 LPO lateral preoptic area 26-33, 105-109
@@ -1233,15 +1225,13 @@ me5 mesencephalic trigeminal tract 73-77, 109-111
 MeA medial amygdaloid nucleus, anterior part 40-41, 115
 MeAD medial amygdaloid nucleus, anterior dorsal 37-39, 116-118
 MeAV medial amygdaloid nucleus, anteroventral part 39, 116, 118
-Med medial (fastigial)
-cerebellar nucleus 80-88, 104-107, 110-111
+Med medial (fastigial) cerebellar nucleus 80-88, 104-107, 110-111
 MedDL medial cerebellar nucleus, dorsolateral protuberance 84-88, 108-113
 MEnt medial entorhinal cortex 0, 64-66, 68-74, 122-132
 MePD medial amygdaloid nucleus, posterodorsal part 42-50, 116-120
 MePV medial amygdaloid nucleus, posteroventral part 42-49, 115-118
 mfb medial forebrain bundle 15-44, 109-111, 114-116
-mfba medial forebrain bundle, ‘a’
-component 108
+mfba medial forebrain bundle, ‘a’ component 108
 MG medial geniculate nucleus 63-64, 121
 MGD medial geniculate nucleus, dorsal part 54-59, 117-120
 MGM medial geniculate nucleus, medial part 54-59, 116
@@ -1261,17 +1251,16 @@ MnA median accessory nucleus of the medulla 100
 MnPO median preoptic nucleus 26-30, 101-102
 MnR median raphe nucleus 64-73, 101
 MO medial orbital cortex 0, 4-14, 101-105
-Mo5
-motor trigeminal nucleus 71-75, 109-113
+Mo5 motor trigeminal nucleus 71-75, 109-113
 Mol molecular layer of the dentate gyrus 39-65, 104-123, 125-129
 mp mammillary peduncle 55-58
 MPA medial preoptic area 25-36, 102-107
-MPB m edial parabrachial nucleus 72-78, 107-112
+MPB medial parabrachial nucleus 72-78, 107-112
 MPBE medial parabrachial nucleus external part 75-76, 113
 MPOC medial preoptic nucleus, central part 30-32
 MPOL medial preoptic nucleus, lateral part 32-35
 MPOM medial preoptic nucleus, medial part 30-35, 102-104
-MPT m edial pretectal nucleus 53-54, 103-104
+MPT medial pretectal nucleus 53-54, 103-104
 MPtA medial parietal association cortex 0, 43-48, 108-110
 MRe mammillary recess of the 3rd ventricle 53-54
 MS medial septal nucleus 21-29, 101-103
@@ -1356,7 +1345,7 @@ PnR pontine raphe nucleus 74-75
 PnV pontine reticular nucleus, ventral part 73-75, 101-103
 Po posterior thalamic nuclear group 42-53, 109-118
 PoDG polymorph layer of the dentate gyrus 40-64, 104-106, 108, 110-112, 114-118, 120-126
-PoMn p osteromedian thalamic nucleus 47-48
+PoMn posteromedian thalamic nucleus 47-48
 Post postsubiculum 111-121
 PoT posterior thalamic nuclear group, triangular part 54-59, 113-114
 PP peripeduncular nucleus 53-61, 115-120
@@ -1368,8 +1357,7 @@ PR prerubral field 50-54, 106
 Pr prepositus nucleus 80-89, 101-102
 Pr5 principal sensory trigeminal nucleus 71-72, 119
 Pr5DM principal sensory trigeminal nucleus, dorsomedial part 73-78, 115-118
-Pr5VL principal sensory trigeminal nucleus,
-ventrolateral part 73-78, 114-118
+Pr5VL principal sensory trigeminal nucleus, ventrolateral part 73-78, 114-118
 prb Probst’s bundle 80
 PrC precommissural nucleus 49-51, 102-105
 prf primary fissure 75-87, 101-123
@@ -1415,9 +1403,7 @@ RPF retroparafascicular nucleus 52-55, 105-106
 RPO rostral periolivary region 68-72, 106-114
 RR retrorubral nucleus 66-67, 115-117
 RRF retrorubral field 62-65, 109-111
-RRF/A8
-retrorubral fields/A8
-dopamine cells 105-108, 112
+RRF/A8 retrorubral fields/A8 dopamine cells 105-108, 112
 rs rubrospinal tract 62-100, 112-114, 116
 RSA retrosplenial agranular cortex 0, 39-72, 101-107, 109-126
 RSG retrosplenial granular cortex 0, 39-66, 108-117
@@ -1469,8 +1455,7 @@ SLu stratum lucidum, hippocampus 40-59, 106-113, 116-124
 SM nucleus of the stria medullaris 35, 110
 sm stria medullaris of the thalamus 33-43, 104-108
 SMT submammillothalamic nucleus 49-52
-SMV superior medullary velum 76
--80, 101-102, 106
+SMV superior medullary velum 76-80, 101-102, 106
 SNC substantia nigra, compact part 52-63, 106-116
 SNL substantia nigra, lateral part 54-62, 116-118
 SNR substantia nigra, reticular part 51-64, 108-118
