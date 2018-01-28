@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 
 import os
+import re
 import csv
 import glob
 import subprocess
@@ -758,6 +759,7 @@ UBERON = rdflib.Namespace(uPREFIXES['UBERON'])
 NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
 NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
+PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
 TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
 MBA = rdflib.Namespace(uPREFIXES['MBA'])
@@ -1155,6 +1157,43 @@ class Artifacts(Ont):
 
     # artifacts
 
+    class PaxMouseAt(Atlas):
+        """ Any atlas artifact with Paxinos as an author for the adult rat. """
+        iri = ilxtr.paxinosMouseAtlas
+        class_label = 'Paxinos Mouse Atlas'
+
+    _PaxMouseShared = dict(species=NCBITaxon['10090'],
+                           devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
+                           citation=('INTERNAL SCREAMING'),
+                          )
+
+    PaxMouse2 = PaxMouseAt(iri=ilxtr.paxm2,
+                           label='The Mouse Brain in Stereotaxic Coordinates 2nd Edition',
+                           synonyms=('Paxinos Mouse 2nd',),
+                           abbrevs=tuple(),
+                           shortname='PAXMOUSE2',  # TODO upper for atlas lower for label?
+                           copyrighted='2001',
+                           version='2nd Edition',  # FIXME ??? delux edition??? what is this
+                           **_PaxMouseShared)
+
+    PaxMouse3 = PaxMouseAt(iri=ilxtr.paxm3,
+                           label='The Mouse Brain in Stereotaxic Coordinates 3rd Edition',
+                           synonyms=('Paxinos Mouse 3rd',),
+                           abbrevs=tuple(),
+                           shortname='PAXMOUSE3',  # TODO upper for atlas lower for label?
+                           copyrighted='2008',
+                           version='3rd Edition',
+                           **_PaxMouseShared)
+
+    PaxMouse4 = PaxMouseAt(iri=ilxtr.paxm4,
+                           label='The Mouse Brain in Stereotaxic Coordinates 4th Edition',
+                           synonyms=('Paxinos Mouse 4th',),
+                           abbrevs=tuple(),
+                           shortname='PAXMOUSE4',  # TODO upper for atlas lower for label?
+                           copyrighted='2012',
+                           version='4th Edition',
+                           **_PaxMouseShared)
+
     class PaxRatAt(Atlas):
         """ Any atlas artifact with Paxinos as an author for the adult rat. """
         iri = ilxtr.paxinosRatAtlas
@@ -1258,7 +1297,7 @@ class Artifacts(Ont):
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
 
-    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA, WHSSD2, HCPMMP
+    _artifacts = PaxRat4, PaxRat6, PaxRat7, MBA, HBA, WHSSD2, HCPMMP, PaxMouse2, PaxMouse3, PaxMouse4
 
     def _triples(self):
         yield from Artifact.class_triples()
@@ -1453,6 +1492,8 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
+                asdf = l.rsplit(' ', 1)
+                print(asdf)
                 struct, abbrev = l.rsplit(' ', 1)
                 sr.append((abbrev, struct))
         ar = []
@@ -1462,6 +1503,8 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
+                asdf = l.rsplit(' ', 1)
+                print(asdf)
                 abbrev, rest = l.split(' ', 1)
                 parts = rest.split(' ')
                 #print(parts)
@@ -1545,6 +1588,9 @@ class PaxSrAr(Source):
         assert all(s in achild for s in schild), f'somehow the kids dont match {achild} {schild}\n' + str(sorted(set(a) - set(s) | set(s) - set(a)
                                                                                                for a, s in ((tuple(sorted(achild.items())),
                                                                                                              tuple(sorted(schild.items()))),)))
+        for k, (structs, figs) in out.items():
+            for struct in structs:
+                assert not re.match('\d+-\d+', struct) and not re.match('\d+$', struct), f'bad struct {struct} in {k}'
 
         errata = {'nodes with layers':achild}
         return out, errata
@@ -1558,6 +1604,16 @@ class PaxSrAr_4(PaxSrAr):
 class PaxSrAr_6(PaxSrAr):
     source = 'resources/pax-6th-ed-indexes.txt'
     artifact = Artifacts.PaxRat6
+
+
+class PaxMSrAr_2(PaxSrAr):
+    source = 'resources/paxm-2nd-ed-indexes.txt'
+    artifact = Artifacts.PaxMouse2
+
+
+class PaxMSrAr_3(PaxSrAr):
+    source = 'resources/paxm-3rd-ed-indexes.txt'
+    artifact = Artifacts.PaxMouse3
 
 
 class PaxTree_6(Source):
@@ -1695,6 +1751,10 @@ class PaxFix(LocalSource):
     }, {})
 
 
+class PaxMFix(LocalSource):
+    data = ({}, {})
+
+
 class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new__ sets data for all subclasses
     artifact = None
     root = None
@@ -1782,12 +1842,13 @@ class FSLSrc(Source):
     #pass
 
 
-class HBALabels(LabelsBase):
+#class HBALabels(LabelsBase):
+class HBALabels(object):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname='hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
-    sources = HBASrc(),
+    sources = HBASrc,#(),
     root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1857,7 +1918,7 @@ class MBALabels(HBALabels):
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
-    sources = MBASrc(),
+    sources = MBASrc,#(),
     root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1867,79 +1928,12 @@ class MBALabels(HBALabels):
 
 
 class PaxLabels(LabelsBase):
-    """ Compilation of all labels used to name rat brain regions
-        in atlases created using Paxinos and Watson\'s methodology."""
-
+    """ Base class for processing paxinos indexes. """
+    __pythonOnly = True
     path = 'ttl/generated/parcellation/'
-    filename = 'paxinos-rat-labels'
-    name = 'Paxinos & Watson Rat Parcellation Labels'
-    shortname = 'paxrat'
-
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRAT':str(PAXRAT)}
-    # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
-    sources = PaxFix(), PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxFix6(), PaxFix4() #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
-    root = LabelRoot(iri=PAXRAT['0'],
-                     label='Paxinos rat parcellation label root',
-                     shortname=shortname,
-                     #definingArtifactsS=None,#Artifacts.PaxRatAt.iri,
-                     definingArtifactsS=(Artifacts.PaxRatAt.iri,),
-                    )
-
     _fixes = []
-
-    _dupes = {
-        # for 4e the numbers in the index are to the cranial nerve nuclei entries
-        '3N': (['3'], ['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '4N': (['4'], ['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '6N': (['6'], ['abducens nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '7N': (['7'], ['facial nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '10N': (['10'], ['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri]),
-
-        # FIXME need comments about the index entries
-        '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
-        '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
-        '2/3Cb':(['2&3'], ['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri]),
-        '3Cb':(['3'], ['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri]),
-        '4Cb':(['4'], ['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri]),
-        '4/5Cb':(['4&5'], ['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri]),
-        '5Cb':(['5'], ['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri]),
-        '6Cb':(['6'], ['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri]),
-        '6aCb':(['6a'], ['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri]),
-        '6bCb':(['6b'], ['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri]),
-        '6cCb':(['6c'], ['cerebellar lobule 6c'], {}, [Artifacts.PaxRat4.iri]),
-        '7Cb':(['7'], ['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri]),
-        '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
-        '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
-        '10Cb':(['10'], ['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri]),
-    }
-
-    _merge = {  # abbrevs that have identical structure names
-        '5N':'Mo5',
-        '12N':'12',
-        'ANS':'Acc',
-        'ASt':'AStr',
-        'AngT':'Ang',
-        'MnM':'MMn',
-        'MoDG':'Mol',
-        'PDPO':'PDP',
-        'PTg':'PPTg',
-        'STIA':'BSTIA',
-        'STL':'BSTL',
-        'STLD':'BSTLD',
-        'STLI':'BSTLI',
-        'STLJ':'BSTLJ',
-        'STLP':'BSTLP',
-        'STLV':'BSTLV',
-        'STM':'BSTM',
-        'STMA':'BSTMA',
-        'STMP':'BSTMP',
-        'STMPI':'BSTMPI',
-        'STMPL':'BSTMPL',
-        'STMPM':'BSTMPM',
-        'STMV':'BSTMV',
-        'hif':'hf',
-        'och':'ox',
-    }
+    _dupes = {}
+    _merge = {}
 
     @property
     def fixes_abbrevs(self):
@@ -2024,7 +2018,7 @@ class PaxLabels(LabelsBase):
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
             sorted(list(combined_record.items()) + list(self.fixes),
                    key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
-            iri = PAXRAT[str(i + 1)]  # TODO load from existing
+            iri = self.namespace[str(i + 1)]  # TODO load from existing
             struct = structure if structure else 'zzzzzz'
             self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
@@ -2044,7 +2038,6 @@ class PaxLabels(LabelsBase):
         for t, pairs in self._prov_dict.items():
             if pairs:
                 yield from annotations(pairs, *t)
-
 
     def validate(self):
         # check for duplicate labels
@@ -2144,6 +2137,127 @@ class PaxLabels(LabelsBase):
 
         return combined_record, struct_prov, collisions, abbrev_prov
 
+
+class PaxMouseLabels(PaxLabels):
+    """ Compilation of all labels used to name mouse brain regions
+        in atlases created using Paxinos and Franklin\'s methodology."""
+
+    filename = 'paxinos-mus-labels'
+    name = 'Paxinos & Franklin Mouse Parcellation Labels'
+    shortname = 'paxmus'
+    namespace = PAXMUS
+
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXMUS':str(PAXMUS)}
+    sources = PaxMFix(), PaxMSrAr_2(), PaxMSrAr_3()
+    root = LabelRoot(iri=PAXMUS['0'],
+                     label='Paxinos mouse parcellation label root',
+                     shortname=shortname,
+                     definingArtifactsS=(Artifacts.PaxMouseAt.iri,),
+                    )
+
+    _merge = {
+        '5N':'Mo5',
+        '12N':'12',
+        'AngT':'Ang',
+        'ANS':'Acc',
+        'ASt':'AStr',
+        'hif':'hf',
+        'MnM':'MMn',
+        'MoDG':'Mol',
+        'och':'ox',
+        'PHA':'PH',
+        'ST':'BST',
+        'STIA':'BSTIA',
+        'STLD':'BSTLD',
+        'STLI':'BSTLI',
+        'STLJ':'BSTLJ',
+        'STLP':'BSTLP',
+        'STLV':'BSTLV',
+        'STMA':'BSTMA',
+        'STMP':'BSTMP',
+        'STMPI':'BSTMPI',
+        'STMPL':'BSTMPL',
+        'STMPM':'BSTMPM',
+        'STMV':'BSTMV',
+        'STS':'BSTS',
+    }
+
+
+class PaxRatLabels(PaxLabels):
+    """ Compilation of all labels used to name rat brain regions
+        in atlases created using Paxinos and Watson\'s methodology."""
+
+    filename = 'paxinos-rat-labels'
+    name = 'Paxinos & Watson Rat Parcellation Labels'
+    shortname = 'paxrat'
+    namespace = PAXRAT
+
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRAT':str(PAXRAT)}
+    # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
+    sources = PaxFix(), PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxFix6(), PaxFix4() #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    root = LabelRoot(iri=PAXRAT['0'],
+                     label='Paxinos rat parcellation label root',
+                     shortname=shortname,
+                     #definingArtifactsS=None,#Artifacts.PaxRatAt.iri,
+                     definingArtifactsS=(Artifacts.PaxRatAt.iri,),
+                    )
+
+    _fixes = []
+
+    _dupes = {
+        # for 4e the numbers in the index are to the cranial nerve nuclei entries
+        '3N': (['3'], ['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '4N': (['4'], ['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '6N': (['6'], ['abducens nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '7N': (['7'], ['facial nucleus'], {}, [Artifacts.PaxRat4.iri]),
+        '10N': (['10'], ['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri]),
+
+        # FIXME need comments about the index entries
+        '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
+        '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
+        '2/3Cb':(['2&3'], ['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri]),
+        '3Cb':(['3'], ['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri]),
+        '4Cb':(['4'], ['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri]),
+        '4/5Cb':(['4&5'], ['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri]),
+        '5Cb':(['5'], ['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri]),
+        '6Cb':(['6'], ['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri]),
+        '6aCb':(['6a'], ['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri]),
+        '6bCb':(['6b'], ['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri]),
+        '6cCb':(['6c'], ['cerebellar lobule 6c'], {}, [Artifacts.PaxRat4.iri]),
+        '7Cb':(['7'], ['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri]),
+        '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
+        '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
+        '10Cb':(['10'], ['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri]),
+    }
+
+    _merge = {  # abbrevs that have identical structure names
+        '5N':'Mo5',
+        '12N':'12',
+        'ANS':'Acc',
+        'ASt':'AStr',
+        'AngT':'Ang',
+        'MnM':'MMn',
+        'MoDG':'Mol',
+        'PDPO':'PDP',
+        'PTg':'PPTg',
+        'STIA':'BSTIA',
+        'STL':'BSTL',
+        'STLD':'BSTLD',
+        'STLI':'BSTLI',
+        'STLJ':'BSTLJ',
+        'STLP':'BSTLP',
+        'STLV':'BSTLV',
+        'STM':'BSTM',
+        'STMA':'BSTMA',
+        'STMP':'BSTMP',
+        'STMPI':'BSTMPI',
+        'STMPL':'BSTMPL',
+        'STMPM':'BSTMPM',
+        'STMV':'BSTMV',
+        'hif':'hf',
+        'och':'ox',
+    }
+
     def curate(self):
         fr, err4 = PaxSrAr_4()
         sx, err6 = PaxSrAr_6()
@@ -2210,7 +2324,7 @@ class PaxLabels(LabelsBase):
         #match_name_not_abrev = set(v[0][0] for v in tree_with_name.values()) & set(v[0][0] for v in sx.values())
 
         _match_name_not_abrev = {}
-        for a, (alts, (s, *extra), f, *_) in PaxLabels().records()[0].items():
+        for a, (alts, (s, *extra), f, *_) in PaxRatLabels().records()[0].items():
             if s not in _match_name_not_abrev:
                 _match_name_not_abrev[s] = [a]
             elif a not in _match_name_not_abrev[s]:
@@ -2218,8 +2332,8 @@ class PaxLabels(LabelsBase):
 
         match_name_not_abrev = {k:v for k, v in _match_name_not_abrev.items() if len(v) > 1}
 
-        abrv_match_not_name = {k:v[0] for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1}
-        _ = [print(k, *v[0]) for k, v in PaxLabels().records()[0].items() if len(v[0]) > 1]
+        abrv_match_not_name = {k:v[0] for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1}
+        _ = [print(k, *v[0]) for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1]
         embed()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
@@ -2309,7 +2423,12 @@ class parcBridge(Ont):
     name = 'Parcellation Bridge'
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    imports = [subclass() for subclass in subclasses(LabelsBase)]
+    #imports = [subclass() for subclass in subclasses(LabelsBase)]
+    imports = []
+    for subclass in subclasses(LabelsBase):
+        if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
+            s = subclass()
+            imports.append(s)
 
     # stuff
 
@@ -2324,10 +2443,11 @@ def doit(ont):
 def main():
     #paxinos()
     doit(HCPMMPLabels)
-    doit(MBALabels)
-    doit(HBALabels)
+    #doit(MBALabels)
+    #doit(HBALabels)
     doit(WHSSDLabels)
-    doit(PaxLabels)
+    doit(PaxRatLabels)
+    doit(PaxMouseLabels)
     doit(Artifacts)
     doit(parcBridge)
     doit(parcCore)
