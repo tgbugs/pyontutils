@@ -472,7 +472,7 @@ nucleus of the solitary tract, dorsomedial part SolDM
 nucleus of the solitary tract, intermediate part SolIM
 nucleus of the solitary tract, interstitial part SolI
 nucleus of the solitary tract, medial part SolM
-nucleus of the solitary tract, rostrolateral part1-10 SolRL  ; FIXME
+nucleus of the solitary tract, rostrolateral part SolRL
 nucleus of the solitary tract, ventrolateral part SolVL
 nucleus of the solotary tract, rostral central part RCe
 nucleus of the stria medullaris SM
