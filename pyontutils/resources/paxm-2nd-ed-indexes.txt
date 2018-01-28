@@ -326,7 +326,7 @@ islands of Calleja, major island ICjM
 juxtarestiform body jx
 juxtatrigeminal area Jx5
 ; K
-Kölliker-Fuse nucleus KF  ; FIXME
+Kîlliker-Fuse nucleus KF  ; ERRATA Kölliker-Fuse
 ; L
 lacunosum moleculare layer of the hippocampus LMol
 lambdoid septal zone Ld
@@ -1150,7 +1150,7 @@ IS inferior salivatory nucleus 79-82
 IVF interventricular foramen 107
 ; J
 ; K
-KF Ko lliker-Fuse nucleus 71-75, 115-116
+KF Kîlliker-Fuse nucleus 71-75, 115-116  ; ERRATA Kolliker-Fuse
 ; L
 LA lateroanterior hypothalamic nucleus 34-38, 103-106
 La lateral amygdaloid nucleus 37-40, 50, 128-131

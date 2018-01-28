@@ -351,7 +351,7 @@ isthmic reticular formation isRt
 ; J
 juxtaparaventricular part of lateral hypothalamus JPLH
 ; K
-Klliker-Fuse nucleus KF
+Kîlliker-Fuse nucleus KF  ; ERRATA Klliker-Fuse
 ; L
 lacunosum moleculare layer of the hippocampus LMol
 lambdoid septal zone Ld
