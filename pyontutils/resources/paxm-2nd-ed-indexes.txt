@@ -826,7 +826,7 @@ List of Abbreviations
 ; A
 A1 A1 noradrenaline cells 93-96, 100
 A1/C1 noradrenaline/adrenaline cells 97
-A11 A11dopamine cells 47
+A11 A11 dopamine cells 47
 A12 A12 dopamine cells 47-48
 A13 A13 dopamine cells 40-43, 106-108
 A14 A14 dopamine cells 32-34
@@ -890,8 +890,7 @@ ArcD arcuate hypothalamic nucleus, dorsal part 45-48
 ArcL arcuate hypothalamic nucleus, lateral part 45-48
 ArcLP arcuate hypothalamic nucleus, lateroposterior part 49-52
 ArcMP arcuate hypothalamic nucleus, medial posterior part 49-54, 101
-asc7 ascending fibers of
-the facial nerve 105-106
+asc7 ascending fibers of the facial nerve 105-106
 AStr amygdalostriatal transition area 39-49, 124-130
 ATg anterior tegmental nucleus 65-66, 68-69, 102-103
 Au1 primary auditory cortex 0, 49-61, 131-132
@@ -899,7 +898,7 @@ AuD secondary auditory cortex, dorsal area 0, 48-61, 129-132
 AuV secondary auditory cortex, ventral area 0, 45-59, 131-132
 AV anteroventral thalamic nucleus 34-35, 39-41
 AVDM antero ventral thalamic nucleus, dorsomedial part 36-38, 107-110
-AVPe an teroventral periventricular nucleus 26-31, 102
+AVPe anteroventral periventricular nucleus 26-31, 102
 AVVL anteroventral thalamic nucleus, ventrolateral part 36-38, 108-112
 ; B
 B basal nucleus (Meynert) 34-40, 42, 113-121
