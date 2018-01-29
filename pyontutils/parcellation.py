@@ -1140,6 +1140,7 @@ class Ont:
         return self._graph.ontid
 
     def write(self):
+        # TODO warn in ttl file when run when __file__ has not been committed
         self._graph.write()
 
 
@@ -1492,8 +1493,8 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
-                asdf = l.rsplit(' ', 1)
-                print(asdf)
+                #asdf = l.rsplit(' ', 1)
+                #print(asdf)
                 struct, abbrev = l.rsplit(' ', 1)
                 sr.append((abbrev, struct))
         ar = []
@@ -1503,8 +1504,8 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
-                asdf = l.rsplit(' ', 1)
-                print(asdf)
+                #asdf = l.rsplit(' ', 1)
+                #print(asdf)
                 abbrev, rest = l.split(' ', 1)
                 parts = rest.split(' ')
                 #print(parts)
@@ -2049,6 +2050,11 @@ class PaxLabels(LabelsBase):
         # remove expected numeric/layer/lobule duplicates
         filt = [a for a in abrevs if not a.isdigit() and a.value not in ('6a', '6b')]
         assert len(filt) == len(set(filt)), f'DUPES! {Counter(filt).most_common()[:5]}'
+        # check for abbreviations without corresponding structure ie 'zzzzzz' 
+        syns = list(self.graph.objects(None, NIFRID.synonym))
+        for thing in labels + syns:
+            trips = [(s, o) for s in self.graph.subjects(None, thing) for p, o in self.graph.predicate_objects(s)]
+            assert 'zzzzzz' not in thing, f'{trips} has bad label/syn suggesting a problem with the source file'
         
     def records(self):
         combined_record = {}
@@ -2090,8 +2096,11 @@ class PaxLabels(LabelsBase):
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
                 elif a in merge and merge[a] in combined_record:
-                    alt_abbrevs, _, figures, artifacts = combined_record[merge[a]]
-                    # by the definition of merge we can skip structures since they are identical
+                    alt_abbrevs, structures, figures, artifacts = combined_record[merge[a]]
+                    for struct in structures:  # allow merge of terms with non exact matching but warn
+                        if struct not in ss:
+                            if ss: print(f'WARNING adding structure {struct} in merge of {a}')
+                            ss.append(struct)
                     for aa in alt_abbrevs:
                         if (aa, ss[0]) not in abbrev_prov:
                             abbrev_prov[aa, ss[0]] = []
@@ -2142,6 +2151,8 @@ class PaxMouseLabels(PaxLabels):
     """ Compilation of all labels used to name mouse brain regions
         in atlases created using Paxinos and Franklin\'s methodology."""
 
+    # TODO FIXME align indexes where possible to paxrat???
+
     filename = 'paxinos-mus-labels'
     name = 'Paxinos & Franklin Mouse Parcellation Labels'
     shortname = 'paxmus'
@@ -2156,6 +2167,7 @@ class PaxMouseLabels(PaxLabels):
                     )
 
     _merge = {
+        '4/5Cb':'4&5Cb',
         '5N':'Mo5',
         '12N':'12',
         'AngT':'Ang',
@@ -2165,7 +2177,7 @@ class PaxMouseLabels(PaxLabels):
         'MnM':'MMn',
         'MoDG':'Mol',
         'och':'ox',
-        'PHA':'PH',
+        'PHA':'PH',  # FIXME PH is reused in 3rd
         'ST':'BST',
         'STIA':'BSTIA',
         'STLD':'BSTLD',
