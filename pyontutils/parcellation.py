@@ -2008,6 +2008,25 @@ class PaxLabels(LabelsBase):
                     predicate = annotation_predicate
                 self._prov_dict[t].append((predicate, artifact))
 
+    def _makeIriLookup(self):
+        # FIXME need to validate that we didn't write the graph first...
+        g = rdflib.Graph().parse(self._graph.filename, format='turtle')
+        ids = [s for s in g.subjects(rdf.type, owl.Class) if self.namespace in s]
+        index0 = Label.propertyMapping['abbrevs'],
+        index1 = Label.propertyMapping['label'], Label.propertyMapping['synonyms']
+        out = {}
+        for i in ids:
+            for p0 in index0:
+                for o0 in g.objects(i, p0):
+                    for p1 in index1:
+                        for o1 in g.objects(i, p1):
+                            key = o0, o1
+                            value = i
+                            if key in out:
+                                raise KeyError(f'Key {key} already in output!')
+                            out[key] = value
+        return out
+
     def _triples(self):
         self._prov_dict = {}
         combined_record, struct_prov, _, abbrev_prov = self.records()
