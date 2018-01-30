@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+import os
 from copy import deepcopy
 from html import escape as html_escape
 import yaml
@@ -351,7 +352,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=''):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head='', local=False):
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
     if json is None:
         if relationshipType == 'rdfs:subClassOf':
@@ -449,9 +450,16 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         if ':' in k and not k.startswith('http') and not k.startswith('file'):
             prefix, suffix = k.split(':')
             prefix = prefix.strip('\x1b[91m')  # colors :/
-            url = prefixes[prefix] + suffix
+            if graph is not None and local:
+                url = os.path.join(graph._basePath, 'vocabulary', 'id', k)
+            else:
+                url = prefixes[prefix] + suffix
         else:
-            url = k
+            if graph is not None and local:
+                url = os.path.join(graph._basePath, 'vocabulary',
+                                   k.replace('/','%2F').replace('#','%23'))
+            else:
+                url = k
         htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(f'{v}'))
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
