@@ -8,20 +8,20 @@ Usage:
     scigraph-deploy services [options] <build_host> <services_host>
 
 Options:
-    -U --build-user=USER                build_user [default: bamboo]
-    -E --services-user=USER             services_user [default: bamboo]
+    -U --build-user=USER                build_user                          [default: bamboo]
+    -E --services-user=USER             services_user                       [default: bamboo]
 
-    -G --graph-latest-url=LAG           url to look up most recent build [default: file:///tmp/graph/LATEST]
-    -A --services-latest-url=LAS        url to look up most recent build [default: file:///tmp/scigraph/LATEST]
-    -F --graph-folder=DLOC              override the graph location [default: from-services-config]
-    -V --services-folder=PATH           jars sent here [default: /opt/scigraph-services/]
-    -T --services-config=SCFG           services.yaml location [default: services.yaml]
+    -G --graph-latest-url=LAG           url to look up most recent build    [default: file:///tmp/graph/LATEST]
+    -A --services-latest-url=LAS        url to look up most recent build    [default: file:///tmp/scigraph/LATEST]
+    -F --graph-folder=DLOC              override the graph location         [default: from-services-config]
+    -V --services-folder=PATH           jars sent here                      [default: /opt/scigraph-services/]
+    -T --services-config=SCFG           services.yaml location              [default: services.yaml]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config [default: scigraph-services.service]
+    -y --systemd-config=FILE            name of systemd config              [default: scigraph-services.service]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -j --java-config=FILE               name of java template [default: scigraph-services.conf]
+    -j --java-config=FILE               name of java template               [default: scigraph-services.conf]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
@@ -30,7 +30,7 @@ Options:
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log-loc=FOLDER           services logs [default: /var/log/scigraph-services/]
+    --services-log-loc=FOLDER           services logs                       [default: /var/log/scigraph-services/]
 
     -H --ssh-user                       if
 """

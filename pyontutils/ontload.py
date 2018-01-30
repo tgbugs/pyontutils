@@ -12,31 +12,31 @@ Usage:
     ontload --view-defaults
 
 Options:
-    -g --git-remote=GBASE           remote git hosting [default: https://github.com/]
-    -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
-    -z --zip-location=ZIPLOC        local path in which to deposit build files [default: /tmp]
-    -f --scigraph-config-folder=TP  templates files live here [default: ../scigraph/]
+    -g --git-remote=GBASE           remote git hosting                          [default: https://github.com/]
+    -l --git-local=LBASE            local path to look for ontology <repo>      [default: /tmp]
+    -z --zip-location=ZIPLOC        local path in which to deposit build files  [default: /tmp]
+    -f --scigraph-config-folder=TP  templates files live here                   [default: ../scigraph/]
 
-    -t --graphload-config=CFG       graphload.yaml location [default: graphload.yaml]
+    -t --graphload-config=CFG       graphload.yaml location                     [default: graphload.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
-    -o --org=ORG                    user/org to clone/load ontology from [default: SciCrunch]
-    -b --branch=BRANCH              ontology branch to load [default: master]
-    -c --commit=COMMIT              ontology commit to load [default: HEAD]
-    -s --scp-loc=SCP                where to scp the zipped graph file [default: user@localhost:/tmp/graph/]
+    -o --org=ORG                    user/org to clone/load ontology from        [default: SciCrunch]
+    -b --branch=BRANCH              ontology branch to load                     [default: master]
+    -c --commit=COMMIT              ontology commit to load                     [default: HEAD]
+    -s --scp-loc=SCP                where to scp the zipped graph file          [default: user@localhost:/tmp/graph/]
 
-    -O --scigraph-org=SORG          user/org to clone/build scigraph from [default: SciCrunch]
-    -B --scigraph-branch=SBRANCH    scigraph branch to build [default: upstream]
-    -C --scigraph-commit=SCOMMIT    scigraph commit to build [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file [default: user@localhost:/tmp/scigraph/]
+    -O --scigraph-org=SORG          user/org to clone/build scigraph from       [default: SciCrunch]
+    -B --scigraph-branch=SBRANCH    scigraph branch to build                    [default: upstream]
+    -C --scigraph-commit=SCOMMIT    scigraph commit to build                    [default: HEAD]
+    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file          [default: user@localhost:/tmp/scigraph/]
 
-    -u --curies=CURIEFILE           curie definition file [default: nifstd_curie_map.yaml]
+    -u --curies=CURIEFILE           curie definition file                       [default: nifstd_curie_map.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -K --check-built                check whether a local copy is present but do not build if it is not
 
     -d --debug                      call IPython embed when done
-    -i --logfile=LOG                log output here [default: ontload.log]
+    -i --logfile=LOG                log output here                             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
 """
 import os
