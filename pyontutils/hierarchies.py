@@ -34,7 +34,7 @@ Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
     #if type(item[1]) == type(base_dd):
-    return len(item[1]) + sum(tcsort(v) for v in item[1].items())
+    return len(item[1]) + sum(tcsort(v) for v in sorted(item[1].items(), key=lambda a: str(a)))
     #else:
         #jreturn 1
 
@@ -121,7 +121,11 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
         lleaves[parent_name] = None
         return lleaves
 
-    children_ord = reversed(sorted([(k, v) for k, v in children.items()], key=tcsort))  # make sure we hit deepest first
+    children_ord = reversed(sorted(sorted(((k, v)
+                                           for k, v in children.items()),
+                                          key=lambda a: f'{a[0]}'.split('>')[1] if '>' in f'{a[0]}' else f'a[0]'),
+                                          #key=lambda a: a[0].split('>') if '>' in a[0] else a[0]),
+                                   key=tcsort))  # make sure we hit deepest first
     
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
         #print(child_name)
@@ -235,7 +239,12 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             
         # FIXME ideally want to sort by length of the transitive closure :/
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=tcsort))]
-        items_list = sorted([i for i in sorted([(k if k is not None else 'None', v if v is not None else 'None') for k, v in self.items()])], key=tcsort)  # XXX best
+        #items_list = sorted([i for i in sorted([(k if k is not None else 'None', v if v is not None else 'None') for k, v in self.items()])], key=tcsort)  # XXX best
+        #print(self.keys())
+        items_list = sorted(sorted(((f'{k}', v)
+                                    for k, v in self.items()),
+                                   key=lambda a: f'{a[0]}'.split('>')[0] if '>' in f'{a[0]}' else f'a[0]'),
+                            key=tcsort)  # XXX best
 
         #items_list = [a for a in reversed(sorted([i for i in self.items()], key=lambda a: len(a[1])))]
         #items_list = sorted([i for i in self.items()], key=lambda a: len(a[1]))
@@ -254,6 +263,24 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             self.__class__.prefix.pop()
 
         return output
+
+    def ___lt__(self, other):
+        if not self and not other:
+            return False
+        elif self and not other:
+            return True
+        else:
+            if (any('>' in k for k in self.keys()) and
+                any('>' in k for k in other.keys())):
+                test = (sorted(k.split('>')[1] for k in self.keys()) <
+                        sorted(k.split('>')[1] for k in other.keys()))
+            else:
+                test = (sorted(k for k in self.keys()) <
+                        sorted(k for k in other.keys()))
+
+            return test
+            #pd = self.parent_dict[self]
+            #return other in pd and pd < other  # FIXME
 
     def __str__(self, html=False):
         output = self.print_tree(html=html)
@@ -439,7 +466,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             url = prefixes[prefix] + suffix
         else:
             url = k
-        htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, html_escape(v))
+        htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, html_escape(f'{v}'))
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
     def htmlTree(tree):
