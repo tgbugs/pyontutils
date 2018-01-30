@@ -94,12 +94,15 @@ def getArgs(request):
             for w, v in want.items()}
 
 def server():
+    f = os.path.realpath(__file__)
+    __file__name = os.path.basename(f)
+    __file__path = os.path.dirname(f)
     try:
-        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()
+        commit = subprocess.check_output(['git', '-C', f'{__file__path}', 'rev-parse', 'HEAD']).decode().rstrip()
     except subprocess.CalledProcessError:
         commit = 'master' # 'NO-REPO-AT-MOST-TODO-GET-LATEST-HASH'
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
-                      f'{commit}/pyontutils/{os.path.basename(__file__)}'
+                      f'{commit}/pyontutils/{__file__name}'
                       '#L{line}')
     line = getsourcelines(render)[-1]
     wgb = wasGeneratedBy.format(line=line)
