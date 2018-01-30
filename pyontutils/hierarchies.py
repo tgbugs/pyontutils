@@ -335,6 +335,8 @@ def newTree(name, **kwargs):
 
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=CURIES):
     if json is None:
+        if relationshipType == 'rdfs:subClassOf':
+            relationshipType = 'subClassOf'
         j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
         if filter_prefix is not None:
             j['edges'] = [e for e in j['edges'] if not [v for v in e.values() if filter_prefix in v]]
