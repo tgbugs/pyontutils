@@ -162,7 +162,7 @@ def server(api_key=None):
             ('Monomeric ion channels', a, 'NIFEXT:2500'),
             ('Diseases', a, 'DOID:4'),
             ('Vertebrata', a, 'NCBITaxon:7742', '?depth=40'),
-            ('Metazoa', a, 'NCBITaxon:33208', '?depth=20'),
+            ('Metazoa', a, 'NCBITaxon:33208', '?depth=40'),
             ('Rodentia', a, 'NCBITaxon:9989'),
             ('Neurotransmitters', hr, 'CHEBI:25512'),
             ('Neurotransmitters', a, 'NLXMOL:100306'),
