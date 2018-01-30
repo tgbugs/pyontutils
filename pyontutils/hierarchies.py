@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 from copy import deepcopy
+from html import escape as html_escape
 import yaml
 import requests
 from collections import namedtuple
@@ -17,6 +18,7 @@ MID_CON = '├'
 MID_STEM = MID_CON + LEAF
 BOT_CON = '└'
 BOT_STEM = BOT_CON + LEAF
+TOP_CON = '┌'
 
 CYCLE = 'CYCLE DETECTED DERPS'
 
@@ -337,6 +339,7 @@ def newTree(name, **kwargs):
     return Tree, newTreeNode
 
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=''):
+    # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
     if json is None:
         if relationshipType == 'rdfs:subClassOf':
             relationshipType = 'subClassOf'
@@ -436,7 +439,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             url = prefixes[prefix] + suffix
         else:
             url = k
-        htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, v)
+        htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, html_escape(v))
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
     def htmlTree(tree):
