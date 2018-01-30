@@ -7,7 +7,7 @@ from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
 from pyontutils.scigraph_client import Graph
-from pyontutils.utils import PREFIXES as CURIES
+from pyontutils.utils import PREFIXES as uPREFIXES
 from pyontutils.utils import TermColors as tc
 
 BLANK = '   '
@@ -155,6 +155,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
     #prefix = []
     #existing = {}  # FIXME CAREFUL WITH THIS
     #current_parent = None
+    html_head = ''
 
     def print_tree(self, level = 0, html=False):
         output = ''
@@ -303,11 +304,13 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         output = output.replace('\n', ' <br>\n')
         output = output.replace('</summary> <br>', '</summary>')
         output = output.replace('</details> <br>', '</details>')
+        html_head = '\n    '.join(self.html_head)
         output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
                   '"http://www.w3.org/TR/html4/loose.dtd">\n'
                   '<html>\n'
                   '  <head>\n'
                   '    <meta charset="UTF-8">\n'
+                  f'    {html_head}\n'
                   '    <style>\n'
                   '    body { font-family: Dejavu Sans Mono;\n'
                   '           font-size: 10pt; }\n'
@@ -333,7 +336,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=CURIES):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=''):
     if json is None:
         if relationshipType == 'rdfs:subClassOf':
             relationshipType = 'subClassOf'
@@ -341,7 +344,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         if filter_prefix is not None:
             j['edges'] = [e for e in j['edges'] if not [v for v in e.values() if filter_prefix in v]]
 
-        if graph._cache:
+        if hasattr(graph, '_cache'):
             j = deepcopy(j)  # avoid dangers of mutable cache
         #flag_dep(j)
     else:
@@ -435,7 +438,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             url = k
         htmlNodes[k] = "<a target='_blank' href='{}'>{}</a>".format(url, v)
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
-    _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames)
+    _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
     def htmlTree(tree):
         dict_ = hTreeNode()
         for k in tree:
