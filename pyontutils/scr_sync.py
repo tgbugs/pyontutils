@@ -4,6 +4,10 @@
     file for loading into scigraph for autocomplete. 
 """
 
+# XXX TODO sanity checks
+# alt id mapped to more than one SRC id
+# garbage in the alt id field
+
 import os
 from datetime import date
 
