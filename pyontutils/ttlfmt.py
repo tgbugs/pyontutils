@@ -76,6 +76,7 @@ def parse(source, format_guess, outpath, graph=None):
     if args['--format']:
         format_guess = args['--format']
     for format in (format_guess, *(f for f in formats if f != format_guess)):
+        # TODO we don't need to reset just saved parsed streams to the point where they fail?
         if type(source) == TextIOWrapper:  # stdin can't reset
             src = source.read()
             source = StringIO(src)
