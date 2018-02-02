@@ -22,11 +22,12 @@ import rdflib
 from docopt import docopt, parse_defaults
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort 
 from pyontutils.hierarchies import Query, creatTree, dematerialize
-from pyontutils.scigraph_client import Graph
+from pyontutils.scigraph_client import Graph, Vocabulary
 from pyontutils.utils import makeGraph
 from IPython import embed
 
-sgg = Graph(cache=False, verbose=False)
+sgg = Graph(cache=False, verbose=True)
+sgv = Vocabulary(cache=False, verbose=True)
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -72,6 +73,10 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
+        if root.startswith('http'):
+            rec = sgv.findById(root)
+            if 'curie' in rec:
+                root = rec['curie']
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
         return extras.html
@@ -105,11 +110,21 @@ def getArgs(request):
                 return False
             else:
                 raise TypeError(f'Expected a bool, got "{v}" instead.')
+        elif isinstance(want[k], int):
+            try:
+                return int(v)
+            except (TypeError, ValueError) as e:
+                raise TypeError(f'Expected an int, got "{v}" instead.') from e
         else:
             return v
 
+
     return {k:convert(k)
             for k, v in want.items()}
+
+def sanitize(pred, kwargs):
+    if pred == 'isDefinedBy' and kwargs['depth'] > 1:
+        return abort(400, 'isDefinedBy not allowed for queries with depth > 1.')
 
 def server(api_key=None):
     f = os.path.realpath(__file__)
@@ -166,6 +181,9 @@ def server(api_key=None):
             ('Rodentia', a, 'NCBITaxon:9989'),
             ('Neurotransmitters', hr, 'CHEBI:25512'),
             ('Neurotransmitters', a, 'NLXMOL:100306'),
+            ('IRIs ok for roots', a, 'http://uri.neuinfo.org/nif/nifstd/nlx_mol_100306'),
+            ('Provenance', 'isDefinedBy',
+             'http://ontology.neuinfo.org/NIF/ttl/generated/chebislim.ttl', '?depth=1'),
         )
         file_examples = (
             ('Resources', a, 'NLXRES:20090101', 'ttl/resources.ttl'),
@@ -196,6 +214,22 @@ def server(api_key=None):
     def route_query(pred, root):
         kwargs = getArgs(request)
         kwargs['wgb'] = wgb
+        maybe_abort = sanitize(pred, kwargs)
+        if maybe_abort is not None:
+            return maybe_abort
+        print(kwargs)
+        return render(pred, root, **kwargs)
+
+    @app.route(f'/{basename}/query/<pred>/http:/<path:iri>', methods=['GET'])
+    @app.route(f'/{basename}/query/<pred>/https:/<path:iri>', methods=['GET'])  # just in case
+    def route_iriquery(pred, iri):  # TODO maybe in the future
+        root = 'http://' + iri  # for now we have to normalize down can check request in future
+        print('ROOOOT', root)
+        kwargs = getArgs(request)
+        kwargs['wgb'] = wgb
+        maybe_abort = sanitize(pred, kwargs)
+        if maybe_abort is not None:
+            return maybe_abort
         print(kwargs)
         return render(pred, root, **kwargs)
 
@@ -204,6 +238,9 @@ def server(api_key=None):
         kwargs = getArgs(request)
         kwargs['local_filepath'] = file
         kwargs['wgb'] = wgb
+        maybe_abort = sanitize(pred, kwargs)
+        if maybe_abort is not None:
+            return maybe_abort
         print(kwargs)
         try:
             return render(pred, root, **kwargs)

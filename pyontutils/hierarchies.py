@@ -460,7 +460,9 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
                                    k.replace('/','%2F').replace('#','%23'))
             else:
                 url = k
-        htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(f'{v}'))
+        if v is None:  # if there is no label fail over to the url
+            v = f'<{url}>'
+        htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(v))
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
     def htmlTree(tree):

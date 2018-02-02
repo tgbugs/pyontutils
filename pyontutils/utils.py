@@ -524,7 +524,10 @@ class makeGraph:
         else:
             label_edge = self.expand(label_edge)
         json_ = {'nodes':[], 'edges':[]}
-        restriction = self.expand(edge)
+        if edge == 'isDefinedBy':
+            restriction = self.expand('rdfs:isDefinedBy')
+        else:
+            restriction = self.expand(edge)
         if direct:
             #trips = list(self.g.triples((None, restriction, None)))
             pred = restriction
