@@ -1,7 +1,7 @@
 # Resolver for ontology.neuinfo.org
 
-Python scripts to generate nginx include files and
-nginx configuration for ontology.neuinfo.org resolver.
+Python scripts to generate nginx include files and nginx configuration
+for the ontology.neuinfo.org and uri.neuinfo.org resolvers.
 
 This resolver is built to make it possible to resolve fragment identifiers
 where the fragment is not sent to the server by the browser.
@@ -14,7 +14,7 @@ All ttl files are redirected to github master.
 All owl files are redirected to github xml-final.
 
 # Setup
-1. Run make_config.py to generate `ontology-uri-map.conf`
-2. Copy `ontology-uri-map.conf` and `nif-ont-resolver.conf` into /etc/nginx/
-3. Add `include nif-ont-resolver.conf` to the main http section of /etc/nginx/nginx.conf
+1. Run make_config.py to generate `ontology-uri-map.conf` `uri-ilx-map.conf` and `uri-scr-map.conf`
+2. Copy the map conf files and `nif-ont-resolver.conf` into `/etc/nginx/`
+3. Add `include nif-ont-resolver.conf` to the main http section of `/etc/nginx/nginx.conf`
 4. Place `redirect.html` and `redirect.js` in `/var/www/ontology` (adjust location as needed)
