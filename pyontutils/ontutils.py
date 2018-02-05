@@ -155,7 +155,7 @@ def make_git_commit_command(git_local, repo_name):
     max_old_epoch = get_epoch(*other_filenames, min_=False)
     print(min_epoch, max_old_epoch)
     assert min_epoch - max_old_epoch >= 2, "NOPE"
-    commit_epoch = min_epoch - 1
+    commit_epoch = min_epoch
     print(f'git commit --date {commit_epoch}{zoneoffset}')
 
 def get_epoch(*filenames, min_=True):
