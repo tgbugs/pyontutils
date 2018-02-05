@@ -6,15 +6,21 @@ for the ontology.neuinfo.org and uri.neuinfo.org resolvers.
 This resolver is built to make it possible to resolve fragment identifiers
 where the fragment is not sent to the server by the browser.
 
-NOTE! There is no way that we can resolve these without javascript, anyone
-who is advanced enough to be trying to resolve these using a script should
-be using the uri.neuinfo.org resolver or can convert `#` to `/` on the fly.
+NOTE! There is no way that we can resolve fragment ids without javascript,
+anyone advanced enough to be resolving these using a script should use the
+uri.neuinfo.org resolver or can convert `#` to `/` in the script themselves.
 
 All ttl files are redirected to github master.
 All owl files are redirected to github xml-final.
 
+# nginx setup
+1. Install the nginx lua module for your system (and optionally also compile nginx with luajit).
+2. `git clone https://github.com/pintsized/lua-resty-http.git` to somewhere convenient.
+
 # Setup
-1. Run make_config.py to generate `ontology-uri-map.conf` `uri-ilx-map.conf` and `uri-scr-map.conf`
-2. Copy the map conf files and `nif-ont-resolver.conf` into `/etc/nginx/`
-3. Add `include nif-ont-resolver.conf` to the main http section of `/etc/nginx/nginx.conf`
-4. Place `redirect.html` and `redirect.js` in `/var/www/ontology` (adjust location as needed)
+1. Run make_config.py to generate `ontology-uri-map.conf` `uri-ilx-map.conf` and `uri-scr-map.conf`.
+2. Copy the map conf files and `nif-ont-resolver.conf` into `/etc/nginx/`.
+3. Add `include nif-ont-resolver.conf` to the main http section of `/etc/nginx/nginx.conf`.
+4. Place `redirect.html` and `redirect.js` in `/var/www/ontology` (adjust location as needed).
+5. Copy `version-lookup.lua` and `json.lua` into `/etc/nginx/`.
+6. Adjust the paths in all the config files to match the locations on your system.
