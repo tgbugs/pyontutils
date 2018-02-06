@@ -21,7 +21,7 @@ def _loadPrefixes():
         curie_map = yaml.load(curie_map.text)
 
     # holding place for values that are not in the curie map
-    extras = {
+    full = {
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
 
@@ -55,7 +55,9 @@ def _loadPrefixes():
 
         'partOf':'http://purl.obolibrary.org/obo/BFO_0000050',
         'hasPart':'http://purl.obolibrary.org/obo/BFO_0000051',
+    }
 
+    normal = {
         'ILX':'http://uri.interlex.org/base/ilx_',
         'ilx':'http://uri.interlex.org/base/',
         'ilxr':'http://uri.interlex.org/base/readable/',
@@ -82,6 +84,8 @@ def _loadPrefixes():
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
         'prov':'http://www.w3.org/ns/prov#',
     }
+    #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
+    extras = {**full, **normal}
     curie_map.update(extras)
     return curie_map
 
@@ -90,25 +94,30 @@ PREFIXES = _loadPrefixes()
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
 
+def makeNamespaces(*prefixes):
+    return tuple(rdflib.Namespace(PREFIXES[prefix]) for prefix in prefixes)
+
+def makeURIs(*prefixes):
+    return tuple(PREFIXES[prefix] for prefix in prefixes)
+
 def interlex_namespace(user):
     return 'http://uri.interlex.org/' + user + '/'
 
 # namespaces
 
-HBA = rdflib.Namespace(PREFIXES['HBA'])
+(HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
+ ilx) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
+                       'ilxtr', 'ilx')
 HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels'))
-MBA = rdflib.Namespace(PREFIXES['MBA'])
-NCBITaxon = rdflib.Namespace(PREFIXES['NCBITaxon'])
-NIFRID = rdflib.Namespace(PREFIXES['NIFRID'])
-NIFTTL = rdflib.Namespace(PREFIXES['NIFTTL'])
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
 TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
-UBERON = rdflib.Namespace(PREFIXES['UBERON'])
 WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels'))
-ilxtr = rdflib.Namespace(PREFIXES['ilxtr'])
+
 rdf = rdflib.RDF
 rdfs = rdflib.RDFS
+
+replacedBy = makeURIs('replacedBy')
 
 # common funcs
 
@@ -149,7 +158,7 @@ def yield_recursive(s, p, o, source_graph):
     new_s = o
     if isinstance(new_s, rdflib.BNode):
         for p, o in source_graph.predicate_objects(new_s):
-            yield from class_closure(new_s, p, o, source_graph)
+            yield from yield_recursive(new_s, p, o, source_graph)
 
 #
 # old impl
@@ -494,7 +503,7 @@ def createOntology(filename=    'temp-graph',
                    imports=     tuple()):
     writeloc = local_base + path
     ontid = remote_base + path + filename + '.ttl'
-    prefixes.update(makePrefixes('owl'))
+    prefixes.update(makePrefixes('', 'owl'))
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
@@ -683,7 +692,7 @@ class Source(tuple):
 
     @classmethod
     def processData(cls):
-        raise NotImplementedError('Do this in child classes. Should probably output to a common internal format.')
+        return cls.raw,
 
     @classmethod
     def validate(cls, data):
@@ -716,7 +725,7 @@ class Source(tuple):
 class Ont:
     #rdf_type = owl.Ontology
 
-    path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
+    path = 'ttl/generated/'  # sane default
     filename = None
     name = None
     shortname = None
@@ -759,6 +768,8 @@ class Ont:
             print(self.wasDerivedFrom)
 
     def addTrip(self, subject, predicate, object):
+        # TODO erro if object not an rdflib term to prevent
+        # non-local error issues at serilization time
         self._extra_triples.add((subject, predicate, object))
 
     def _mapProps(self):
@@ -790,6 +801,7 @@ class Ont:
     def __call__(self):  # FIXME __iter__ and __call__ ala Class?
         for t in self:
             self.graph.add(t)
+        return self
 
     def validate(self):
         # implement per class

@@ -1046,6 +1046,8 @@ class parcCore(Ont):
 
 class LabelsBase(Ont):  # this replaces genericPScheme
     """ An ontology file containing parcellation labels from a common source. """
+
+    path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
     imports = parcCore(),
     sources = tuple()
     root = None  # : LabelRoot 
