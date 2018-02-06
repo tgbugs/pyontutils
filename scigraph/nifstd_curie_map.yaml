@@ -74,6 +74,7 @@
 'NCBITaxon': 'http://purl.obolibrary.org/obo/NCBITaxon_'
 'UO': 'http://purl.obolibrary.org/obo/UO_'
 'CHEBI': 'http://purl.obolibrary.org/obo/CHEBI_'
+'chebi': 'http://purl.obolibrary.org/obo/chebi/'
 'FMA': 'http://purl.org/sig/ont/fma/fma'
 'HBA': 'http://api.brain-map.org:80/api/v2/data/Structure/'  # FIXME hack :/
 'MBA': 'http://api.brain-map.org/api/v2/data/Structure/'
