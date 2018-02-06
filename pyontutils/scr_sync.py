@@ -14,7 +14,8 @@ from datetime import date
 import rdflib
 from IPython import embed
 from sqlalchemy import create_engine, inspect
-from pyontutils.utils import mysql_conn_helper, makePrefixes, createOntology
+from pyontutils.core import makePrefixes, createOntology
+from pyontutils.utils import mysql_conn_helper
 
 _remap_supers = {
     'Resource':'NIFSTD:nlx_63400',  # FIXME do not want to use : but broken because of defaulting to add : to all scr ids (can fix just not quite yet)

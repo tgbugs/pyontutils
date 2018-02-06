@@ -9,7 +9,8 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
-from utils import TODAY, makePrefixes, makeGraph, rowParse, refile
+from utils import TODAY, rowParse, refile
+from core import makePrefixes, makeGraph,
 from ilx_utils import ILXREPLACE
 from parcellation import OntMeta
 from obo_io import OboFile

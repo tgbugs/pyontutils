@@ -4,7 +4,8 @@ import csv
 from io import StringIO
 import rdflib
 import requests
-from pyontutils.utils import rowParse, makePrefixes, makeGraph
+from pyontutils.utils import rowParse
+from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.ilx_utils import ILXREPLACE
 
 from IPython import embed

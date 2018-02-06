@@ -15,10 +15,10 @@ import requests
 from lxml import etree
 
 from ilx_utils import ILXREPLACE
-from utils import chunk_list, dictParse, memoryCheck
 from core import makePrefixes, makeGraph, createOntology
 from core import rdf, rdfs, owl, oboInOwl
 from core import Ont, Source, PREFIXES as uPREFIXES
+from utils import chunk_list, dictParse, memoryCheck
 
 from IPython import embed
 
