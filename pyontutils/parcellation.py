@@ -1409,7 +1409,8 @@ class Source(tuple):
                 cls.artifact.hadDerivation = [object]
         elif hasattr(cls, 'source_original') and cls.source_original:
             cls.iri_head = object
-            cls.artifact.source = cls.iri
+            if cls.artifact is not None:
+                cls.artifact.source = cls.iri
         elif cls.source.startswith('http'):
             print('Source is url and assumed to have no intermediate', cls.source)
         else:
@@ -1847,7 +1848,7 @@ class FSLSrc(Source):
 class HBALabels(object):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
-    shortname='hba'
+    shortname = 'hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
     sources = HBASrc,#(),
     root = LabelRoot(iri=ilxtr.hbaroot,

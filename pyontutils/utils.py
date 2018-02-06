@@ -475,9 +475,10 @@ class makeGraph:
 
     def add_recursive(self, triple, source_graph):
         self.g.add(triple)
-        if isinstance(triple[-1], rdflib.BNode):
-            for t_ in source_graph.triples((triple[-1], None, None)):
-                self.add_recursive(t_, source_graph)
+        s = triple[-1]
+        if isinstance(s, rdflib.BNode):
+            for p, o in source_graph.predicate_objects(s):
+                self.add_recursive((s, p, o), source_graph)
 
     def replace_uriref(self, find, replace):  # find and replace on the parsed graph
         # XXX warning this does not update cases where an iri is in an annotation property!
