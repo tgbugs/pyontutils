@@ -4,7 +4,6 @@ import os
 import re
 import csv
 import glob
-import subprocess
 from datetime import date
 from collections import namedtuple, defaultdict, Counter
 from inspect import getsourcelines
@@ -13,10 +12,12 @@ import rdflib
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, makePrefixes, makeGraph, createOntology, rowParse
-from utils import rdf, rdfs, owl, dc, dcterms, skos, prov
+from utils import TODAY, async_getter, rowParse, getCommit, subclasses
 from utils import TermColors as tc #TERMCOLORFUNC
-from utils import PREFIXES as uPREFIXES
+from core import rdf, rdfs, owl, dc, dcterms, skos, prov
+from core import ilxtr, NCBITaxon, UBERON, NIFTTL, HBA, MBA, HCPMMP, NIFRID, PAXMUS, PAXRAT, TEMP, WHSSD
+from core import Class, Source, Ont, annotations, restriction
+from core import makePrefixes, makeGraph, interlex_namespace
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
@@ -26,9 +27,8 @@ from process_fixed import ProcessPoolExecutor
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
 PARC = GENERATED + 'parcellation/'
+NOTICE = '**FIXME**'
 
-commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()  # FIXME this breaks scripts that import from this file
-NOTICE = ' Please see https://github.com/tgbugs/pyontutils/tree/{commit}/parcellation.py for details.'.format(commit=commit)
 
 sgv = Vocabulary(cache=True)
 
@@ -98,9 +98,6 @@ ATLAS_SUPER = ILXREPLACE(atname) # 'NIFRES:nlx_res_20090402'  # alternatives?
 psname = 'Brain parcellation scheme concept'
 PARC_SUPER = ILXREPLACE(psname)
 
-def interlex_namespace(user):
-    return 'http://uri.interlex.org/' + user + '/'
-
 def check_hierarchy(graph, root, edge, label_edge=None):
     a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.make_scigraph_json(edge, label_edge))
     print(a)
@@ -146,7 +143,7 @@ def parcellation_schemes(ontids_atlases):
                   'Brain parcellation schemes as represented by root concepts.',
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
+    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
     graph.add_ont(ontid, *ont[2:])
 
@@ -164,7 +161,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -358,7 +355,7 @@ class HCP(genericPScheme):
 
 
 class FMRI(genericPScheme):
-    PREFIXES = makePrefixes('', 'skos', 'ILXREPLACE')
+    PREFIXES = makePrefixes('skos', 'ILXREPLACE')
 
     @classmethod
     def datagetter(cls):
@@ -713,201 +710,7 @@ def main():
 
 #
 # New impl
-
-# common funcs
-
-def subclasses(start):
-    for sc in start.__subclasses__():
-        yield sc
-        yield from subclasses(sc)
-
-def check_value(v):
-    if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
-        return v
-    elif isinstance(v, str) and v.startswith('http'):
-        return rdflib.URIRef(v)
-    else:
-        return rdflib.Literal(v)
-
-def restriction(lift, s, p, o):
-    n0 = rdflib.BNode()
-    yield s, rdfs.subClassOf, n0
-    yield n0, rdf.type, owl.Restriction
-    yield n0, owl.onProperty, p
-    yield n0, lift, o
-
-def annotation(ap, ao, s, p, o):
-    n0 = rdflib.BNode()
-    yield n0, rdf.type, owl.Axiom
-    yield n0, owl.annotatedSource, s
-    yield n0, owl.annotatedProperty, p
-    yield n0, owl.annotatedTarget, check_value(o)
-    yield n0, ap, check_value(ao)
-
-def annotations(pairs, s, p, o):
-    n0 = rdflib.BNode()
-    yield n0, rdf.type, owl.Axiom
-    yield n0, owl.annotatedSource, s
-    yield n0, owl.annotatedProperty, p
-    yield n0, owl.annotatedTarget, check_value(o)
-    for predicate, object in pairs:
-        yield n0, predicate, check_value(object)
-
-# namespaces
-NCBITaxon = rdflib.Namespace(uPREFIXES['NCBITaxon'])
-UBERON = rdflib.Namespace(uPREFIXES['UBERON'])
-NIFRID = rdflib.Namespace(uPREFIXES['NIFRID'])
-NIFTTL = rdflib.Namespace(uPREFIXES['NIFTTL'])
-ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
-PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
-PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
-TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
-MBA = rdflib.Namespace(uPREFIXES['MBA'])
-HBA = rdflib.Namespace(uPREFIXES['HBA'])
-WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels'))
-HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels'))
-
 # classes
-class Class:
-    rdf_type = owl.Class
-    propertyMapping = dict(  # NOTE ONLY theese properties are serialized
-        rdfs_label=rdfs.label,
-        label=skos.prefLabel,
-        altLabel=skos.altLabel,
-        synonyms=NIFRID.synonym,
-        abbrevs=NIFRID.abbrev,
-        rdfs_subClassOf=rdfs.subClassOf,
-        definition=skos.definition,
-        version=None,
-        shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
-        species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
-        devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
-        definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
-        definingArtifactsS=ilxtr.isDefinedBy,
-        definingCitations=NIFRID.definingCitation,
-        citation=dcterms.bibliographicCitation,
-        source=dc.source,  # replaces NIFRID.externalSourceURI?
-        comment=rdfs.comment,
-        docUri=ilxtr.isDocumentedBy,
-        # things that go on classes namely artifacts
-        # documentation of where the exact information came from
-        # documentation from the source about how the provenance was generated
-        #NIFRID.definingCitation
-    )
-    classPropertyMapping = dict(
-        class_label=rdfs.label,
-        class_definition=skos.definition,
-    )
-    lift = dict(
-        species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
-        devstage=owl.allValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
-        definingArtifacts=owl.allValuesFrom,
-        definingArtifactsS=owl.someValuesFrom,  # HRM
-    )
-    _kwargs = tuple()  # but really a dict
-    def __init__(self, *args, **kwargs):
-
-        if self.parentClass:
-            self.rdfs_subClassOf = self._rdfs_subClassOf
-
-        self.args = args
-        self._extra_triples = []  # TODO ?
-        if self._kwargs:
-            for kw, arg in self._kwargs.items():
-                if kw in kwargs:
-                    arg = kwargs.pop(kw)
-                    if (kw == 'label' and
-                        'rdfs_label' not in kwargs and
-                        not hasattr(self, 'rdfs_label')):
-                        kw = 'rdfs_label'  # if nothing else defines rdfs_label for this class fail over
-
-                    #try:
-                        #print(self.rdfs_label)
-                    #except AttributeError as e :
-                        #print(e)
-                    #if self.__class__ == Terminology:
-                        #print(self.__class__, kw, arg)
-                    setattr(self, kw, arg)
-            if kwargs:
-                #print(f'WARNING: {sorted(kwargs)} are not kwargs for {self.__class__.__name__}')  # XXX
-                pass
-        else:
-            for kw, arg in kwargs:
-                setattr(self, kw, arg)
-
-    def addTo(self, graph):
-        [graph.add_trip(*t) for t in self]
-        return graph  # enable chaining
-
-    def addSubGraph(self, triples):
-        self._extra_triples.extend(triples)
-
-    def addPair(self, predicate, object):
-        self._extra_triples.append((self.iri, predicate, object))
-
-    def __iter__(self):
-        yield from self.triples
-
-    @property
-    def triples(self):
-        return self._triples(self)
-
-    def _triples(self, self_or_cls):
-        iri = self_or_cls.iri
-        yield iri, rdf.type, self.rdf_type
-        for key, predicate in self_or_cls.propertyMapping.items():
-            if key in self.lift:
-                lift = self.lift[key]
-            else:
-                lift = None
-            if hasattr(self_or_cls, key):
-                value = getattr(self_or_cls, key)
-                #print(key, predicate, value)
-                if value is not None:
-                    #(f'{key} are not kwargs for {self.__class__.__name__}')
-                    def makeTrip(value, iri=iri, predicate=predicate, lift=lift):
-                        t = iri, predicate, check_value(value)
-                        if lift is not None:
-                            yield from restriction(lift, *t)
-                        else:
-                            yield t
-                    if not isinstance(value, str) and hasattr(self._kwargs[key], '__iter__'):  # FIXME do generators have __iter__?
-                        for v in value:
-                            yield from makeTrip(v)
-                    else:
-                        yield from makeTrip(value)
-        for s, p, o in self._extra_triples:
-            yield s, p, o
-
-    @property
-    def parentClass(self):
-        if hasattr(self.__class__, 'iri'):
-            return self.__class__.iri
-
-    @property
-    def parentClass_triples(self):
-        if self.parentClass:
-            yield from self._triples(self.__class__)
-
-    @classmethod
-    def class_triples(cls):
-        if not hasattr(cls, 'class_definition') and cls.__doc__:
-            cls.class_definition = ' '.join(_.strip() for _ in cls.__doc__.split('\n'))
-        yield cls.iri, rdf.type, owl.Class
-        mro = cls.mro()
-        if len(mro) > 1 and hasattr(mro[1], 'iri'):
-            yield cls.iri, rdfs.subClassOf, mro[1].iri
-        for arg, predicate in cls.classPropertyMapping.items():
-            if hasattr(cls, arg):
-                yield cls.iri, predicate, check_value(getattr(cls, arg))
-
-    @property
-    def _rdfs_subClassOf(self):
-        return self.parentClass
-
-    def __repr__(self):
-        return repr(self.__dict__)
-    
 
 class Artifact(Class):
     """ Parcellation artifacts are the defining information sources for
@@ -1054,95 +857,6 @@ class Region(Class):
 
 #
 # ontologies
-
-class Ont:
-    #rdf_type = owl.Ontology
-
-    path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
-    filename = None
-    name = None
-    shortname = None
-    comment = None  # about how the file was generated, nothing about what it contains
-    version = TODAY
-    prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
-    imports = tuple()
-    wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      f'{commit}/pyontutils/{os.path.basename(__file__)}'
-                     '#L{line}')
-
-    propertyMapping = dict(
-        wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
-        wasGeneratedBy=prov.wasGeneratedBy,
-    )
-
-    def __init__(self, *args, **kwargs):
-        if 'comment' not in kwargs and self.comment is None and self.__doc__:
-            self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
-
-        line = getsourcelines(self.__class__)[-1]
-        self.wasGeneratedBy = self.wasGeneratedBy.format(line=line)
-        imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
-        self._graph = createOntology(filename=self.filename,
-                                     name=self.name,
-                                     prefixes=self.prefixes,
-                                     comment=self.comment,
-                                     shortname=self.shortname,
-                                     path=self.path,
-                                     version=self.version,
-                                     imports=imports)
-        self.graph = self._graph.g
-        self._extra_triples = set()
-        if hasattr(self, 'sources'):  # FIXME move this to the RegionBase/LabelBase
-            self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
-                                                    for i in self.sources)
-                                        if _ is not None)
-            print(self.wasDerivedFrom)
-
-    def addTrip(self, subject, predicate, object):
-        self._extra_triples.add((subject, predicate, object))
-
-    def _mapProps(self):
-        for key, predicate in self.propertyMapping.items():
-            if hasattr(self, key):
-                value = getattr(self, key)
-                if value is not None:
-                    if not isinstance(value, str) and hasattr(value, '__iter__'):
-                        for v in value:
-                            yield self.iri, predicate, check_value(v)
-                    else:
-                        yield self.iri, predicate, check_value(value)
-
-    @property
-    def triples(self):
-        if hasattr(self, 'root'):
-            yield from self.root
-        if hasattr(self, '_triples'):
-            yield from self._triples()
-        else:
-            raise StopIteration
-        for t in self._extra_triples:  # last so _triples can populate
-            yield t
-
-    def __iter__(self):
-        yield from self._mapProps()
-        yield from self.triples
-
-    def __call__(self):  # FIXME __iter__ and __call__ ala Class?
-        for t in self:
-            self.graph.add(t)
-
-    def validate(self):
-        # implement per class
-        pass
-
-    @property
-    def iri(self):
-        return self._graph.ontid
-
-    def write(self):
-        # TODO warn in ttl file when run when __file__ has not been committed
-        self._graph.write()
-
 
 class Artifacts(Ont):
     """ Ontology file for artifacts that define labels or
@@ -1356,78 +1070,12 @@ class RegionsBase(Ont):
 #
 # Sources (input files)
 
-class Source(tuple):
-    """ Manages loading and converting source files into ontology representations """ 
-    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'
-    iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
-    iri = None
-    source = None
-    artifact = None
-
-    def __new__(cls):
-        if not hasattr(cls, 'data'):
-            if hasattr(cls, 'runonce'):
-                cls.runonce()
-            cls.raw = cls.loadData()
-            cls.data = cls.validate(*cls.processData())
-            cls._triples_for_ontology = []
-            if os.path.exists(cls.source):  # TODO no expanded stuff
-                file_commit = subprocess.check_output(['git', 'log', '-n', '1',
-                                                       '--pretty=format:%H', '--',
-                                                       cls.source]).decode().rstrip()
-                
-                cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
-            elif cls.source.startswith('http'):
-                cls.iri = rdflib.URIRef(cls.source)
-            else:
-                print('Unknown source', cls.source)
-            cls.prov()
-        self = super().__new__(cls, cls.data)
-        return self
-
-    @classmethod
-    def loadData(cls):
-        with open(os.path.expanduser(cls.source), 'rt') as f:
-            return f.read()
-
-    @classmethod
-    def processData(cls):
-        raise NotImplementedError('Do this in child classes. Should probably output to a common internal format.')
-
-    @classmethod
-    def validate(cls, data):
-        return data
-
-    @classmethod
-    def prov(cls):
-        object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
-        if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):
-            cls.iri_head = object
-            if hasattr(cls.artifact, 'hadDerivation'):
-                cls.artifact.hadDerivation.append(object)
-            else:
-                cls.artifact.hadDerivation = [object]
-        elif hasattr(cls, 'source_original') and cls.source_original:
-            cls.iri_head = object
-            if cls.artifact is not None:
-                cls.artifact.source = cls.iri
-        elif cls.source.startswith('http'):
-            print('Source is url and assumed to have no intermediate', cls.source)
-        else:
-            print('Unknown source', cls.source)
-
-    @property
-    def isVersionOf(self):
-        if hasattr(self, 'iri_head'):
-            yield self.iri, dcterms.isVersionOf, self.iri_head
-
-
 class LocalSource(Source):
     data = tuple()
 
     def __new__(cls):
         line = getsourcelines(cls)[-1]
-        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line))  # FIXME latest git blame on class?
+        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line, commit=getCommit()))  # FIXME latest git blame on class?
         cls.iri_head = rdflib.URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
         if cls.artifact is None:  # for prov...
             class art:
@@ -1833,7 +1481,6 @@ class HCPMMPSrc(Source):
 class FSLSrc(Source):
     pass
 
-
 #
 # Ontology Instances
 
@@ -1843,14 +1490,12 @@ class FSLSrc(Source):
 #class FSLLabels(LabelsBase):  # TODO
     #pass
 
-
-#class HBALabels(LabelsBase):
-class HBALabels(object):
+class HBALabels(LabelsBase):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname = 'hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
-    sources = HBASrc,#(),
+    sources = HBASrc(),
     root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1920,7 +1565,7 @@ class MBALabels(HBALabels):
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
-    sources = MBASrc,#(),
+    sources = MBASrc(),
     root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -2440,7 +2085,6 @@ class PaxRegion(RegionsBase):
     def addthing(cls, thing, value):
         cls.things[thing] = value
 
-
 #
 # Bridge (has to go last)
 
@@ -2464,7 +2108,6 @@ class parcBridge(Ont):
 
     # stuff
 
-
 def doit(ont):
     o = ont()
     o()
@@ -2475,8 +2118,8 @@ def doit(ont):
 def main():
     #paxinos()
     doit(HCPMMPLabels)
-    #doit(MBALabels)
-    #doit(HBALabels)
+    doit(MBALabels)
+    doit(HBALabels)
     doit(WHSSDLabels)
     doit(PaxRatLabels)
     doit(PaxMouseLabels)

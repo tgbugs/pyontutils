@@ -12,11 +12,16 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 import requests
-from utils import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, oboInOwl
-from utils import chunk_list, dictParse, memoryCheck
-from ilx_utils import ILXREPLACE
-from IPython import embed
 from lxml import etree
+
+from ilx_utils import ILXREPLACE
+from utils import chunk_list, dictParse, memoryCheck
+from core import makePrefixes, makeGraph, createOntology
+from core import rdf, rdfs, owl, oboInOwl
+from core import Ont, Source, PREFIXES as uPREFIXES
+
+from IPython import embed
+
 
 memoryCheck(7300000000)
 
@@ -108,25 +113,7 @@ def ncbigene_make():
     ng.write()
     #embed()
 
-from pyontutils.parcellation import Ont, Source, uPREFIXES
-
-def yield_recursive(s, p, o, source_graph):
-    yield s, p, o
-    new_s = o
-    if isinstance(new_s, rdflib.BNode):
-        for p, o in source_graph.predicate_objects(new_s):
-            yield from class_closure(new_s, p, o, source_graph)
-
-class SimpleSource(Source):
-    @classmethod
-    def processData(cls):
-        return cls.raw,
-
-    @classmethod
-    def validate(cls, d):
-        return d
-
-class ChebiIdsSrc(SimpleSource):
+class ChebiIdsSrc(Source):
     source = 'resources/chebi-subset-ids.txt'
     source_original = True
     @classmethod
@@ -141,12 +128,12 @@ class ChebiIdsSrc(SimpleSource):
     def validate(cls, a):
         return a
 
-class ChebiOntSrc(SimpleSource):
+class ChebiOntSrc(Source):
     source = 'http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz'
     source_original = True
     @classmethod
     def loadData(cls):
-        gzed = requests.get('http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz')
+        gzed = requests.get(cls.source)
         cls._gzed = gzed
         raw = BytesIO(gzip.decompress(gzed.content))
         t = etree.parse(raw)
