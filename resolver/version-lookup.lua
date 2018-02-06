@@ -7,14 +7,14 @@ local furl = 'https://api.github.com/search/commits?q=repo:%s/%s+author-date:<=%
 local url = string.format(furl, user, repo, author_date_iso8601)
 -- print(url)
 local httpc = http.new()
-local res, err = httpc:request_uri(url, {
+local resp, err = httpc:request_uri(url, {
 		method = 'GET',
 		headers = {
 				['Accept'] = 'application/vnd.github.cloak-preview',
 		}
 })
-local api_resp = json.parse(res.body)
-if api_resp['items'] then
+local api_resp = json.parse(resp.body)
+if api_resp['items'] and api_resp['items'][1] ~= nil then
 	local commit_sha = api_resp['items'][1]['sha']
 	local fredirect = 'https://github.com/SciCrunch/NIF-Ontology/blob/%s%s/%s.ttl?raw=true'
 	local rurl = string.format(fredirect, commit_sha, ngx.var[1], ngx.var[2])
