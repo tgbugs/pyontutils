@@ -7,7 +7,7 @@ from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
 from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.utils import makeGraph, makePrefixes
+from pyontutils.core import makeGraph, makePrefixes
 from pyontutils.ilx_utils import ILXREPLACE
 
 __all__ = [

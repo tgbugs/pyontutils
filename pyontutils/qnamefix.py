@@ -21,7 +21,8 @@ import sys
 from glob import glob
 import rdflib
 from docopt import docopt
-from pyontutils.utils import makePrefixes, PREFIXES, makeGraph, readFromStdIn
+from pyontutils.core import makePrefixes, PREFIXES, makeGraph
+from pyontutils.utils import readFromStdIn
 import pyontutils.ttlfmt
 from pyontutils.ttlfmt import parse, prepare
 

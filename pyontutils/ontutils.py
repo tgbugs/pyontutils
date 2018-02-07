@@ -29,9 +29,8 @@ import rdflib
 import requests
 from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.utils import makePrefixes, makeGraph, createOntology
-from pyontutils.utils import noneMembers, anyMembers, rdf, owl
-from pyontutils.utils import Async, deferred
+from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, owl
+from pyontutils.utils import noneMembers, anyMembers, Async, deferred
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 

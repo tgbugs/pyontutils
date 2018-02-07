@@ -53,8 +53,9 @@ from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
-from pyontutils.utils import makeGraph, makePrefixes, memoryCheck, noneMembers, TODAY, setPS1, refile  # TODO make prefixes needs an all...
-from pyontutils.utils import rdf, rdfs, owl, skos, oboInOwl
+from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl
+from pyontutils.core import makeGraph, makePrefixes  # TODO make prefixes needs an all...
+from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed

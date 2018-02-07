@@ -14,7 +14,7 @@ from docopt import docopt
 from lxml import etree
 from rdflib import URIRef, RDFS
 from IPython import embed
-from pyontutils.utils import makeGraph, makePrefixes, createOntology
+from pyontutils.core import makeGraph, makePrefixes, createOntology
 from pyontutils.hierarchies import creatTree
 
 #from check_ids import safe_write  # that file very deprecated, pull safewrite out if you really need it

@@ -2,14 +2,13 @@
 import os
 from copy import deepcopy
 from html import escape as html_escape
-import yaml
 import requests
 from collections import namedtuple
 from collections import defaultdict as base_dd
 from IPython import embed
 import numpy as np
 from pyontutils.scigraph_client import Graph
-from pyontutils.utils import PREFIXES as uPREFIXES
+from pyontutils.core import PREFIXES as uPREFIXES
 from pyontutils.utils import TermColors as tc
 from pyontutils.ttlser import natsort
 

@@ -7,7 +7,7 @@ from hashlib import md5
 from functools import wraps
 import robobrowser
 import rdflib
-from pyontutils.utils import makePrefixes, makeGraph
+from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.scigraph_client import Vocabulary
 
 # ilx api implementation (will change)

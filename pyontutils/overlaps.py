@@ -13,7 +13,7 @@ Options:
 import os
 import rdflib
 from docopt import docopt
-from pyontutils.utils import makeGraph
+from pyontutils.core import makeGraph
 from IPython import embed
 
 def common(a, b):

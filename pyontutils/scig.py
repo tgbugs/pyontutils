@@ -20,7 +20,117 @@ Options:
 """
 from docopt import docopt
 from pyontutils.scigraph_client import *
-from pyontutils.utils import scigPrint
+from pyontutils.core import PREFIXES
+
+
+class scigPrint:
+
+    _shorten_ = {
+        'PR':'http://purl.obolibrary.org/obo/PR_',
+        'RO':'http://purl.obolibrary.org/obo/RO_',
+        'dc':'http://purl.org/dc/elements/1.1/',
+        'BFO':'http://purl.obolibrary.org/obo/BFO_',
+        'owl':'http://www.w3.org/2002/07/owl#',
+        'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
+        'skos':'http://www.w3.org/2004/02/skos/core#',
+        'NIFGA':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-GrossAnatomy.owl#',
+        'OBOANN':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  # FIXME needs to die a swift death
+        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
+        'NIFSTD':'http://uri.neuinfo.org/nif/nifstd/',
+        'NLX':'http://uri.neuinfo.org/nif/nifstd/nlx_',
+        'SAO':'http://uri.neuinfo.org/nif/nifstd/sao',
+        'BIRNLEX':'http://uri.neuinfo.org/nif/nifstd/birnlex_',
+        'NIFRID':'http://uri.neuinfo.org/nif/nifstd/readable/',
+        'NIFSUB':'http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Subcellular.owl#',
+        'ro':'http://www.obofoundry.org/ro/ro.owl#',
+        'UBERON':'http://purl.obolibrary.org/obo/UBERON_',
+        'BIRNANN':'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#',
+        'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
+        'BRAINInfo':'http://braininfo.rprc.washington.edu/centraldirectory.aspx?ID=',
+        'PMID':'http://www.ncbi.nlm.nih.gov/pubmed/',
+    }
+    _shorten_.update(PREFIXES)
+
+    shorten = {v:k for k, v in _shorten_.items()}
+
+    @staticmethod
+    def wrap(string, start, ind, wrap_=80):
+        if len(string) + start <= wrap_:
+            return string
+        else:
+            out = ''
+            ends = [_ for _ in range(wrap_ - start, len(string), wrap_ - ind - 4)] + [None]
+            starts = [0] + [e for e in ends]
+            blocks = [string[s:e] if e else string[s:] for s, e in zip(starts, ends)]
+            return ('\n' + ' ' * (ind + 4)).join(blocks)
+
+    @staticmethod
+    def sv(asdf, start, ind):
+        if type(asdf) is not bool and asdf.startswith('http'):
+            for iri, short in scigPrint.shorten.items():
+                if iri in asdf:
+                    return scigPrint.wrap(asdf.replace(iri, short + ':'), start, ind)
+            print('YOU HAVE FAILED!?', asdf)
+            return scigPrint.wrap(repr(asdf), start, ind)
+        else:
+            return scigPrint.wrap(repr(asdf), start, ind)
+
+    @staticmethod
+    def pprint_node(node):
+        nodes = node['nodes']
+        if not nodes:
+            return  # no node... probably put a None into SciGraph
+        else:
+            node = nodes[0]  # no edges here...
+        print('---------------------------------------------------')
+        print(node['id'], '  ', node['lbl'])
+        print()
+        scigPrint.pprint_meta(node['meta'])
+        print('---------------------------------------------------')
+
+    @staticmethod
+    def pprint_meta(meta):
+        for k, v in sorted(meta.items()):
+            if k in ('curie', 'iri'):
+                continue
+            for iri, short in scigPrint.shorten.items():
+                if iri in k:
+                    k = k.replace(iri, short + ':')
+                    break
+            if v is not None:
+                base = ' ' * 4 + '%s:' % k
+                if hasattr(v, '__iter__'):
+                    if len(v) > 1:
+                        print(base, '[')
+                        _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
+                        print(' ' * 4 + ']')
+                    elif len(v) == 1:
+                        asdf = v[0]
+                        print(base, scigPrint.sv(asdf, len(base) + 1, 4))
+                    else:
+                        pass
+                else:
+                    print(base, scigPrint.sv(v, len(base) + 1, 4))
+
+    @staticmethod
+    def pprint_edge(edge):
+        def fix(value):
+            for iri, short in scigPrint.shorten.items():
+                if iri in value:
+                    return value.replace(iri, short + ':')
+            return value
+
+        e = {k:fix(v) for k, v in edge.items()}
+        print('({pred} {sub} {obj}) ; {meta}'.format(**e))
+
+    @staticmethod
+    def pprint_neighbors(result):
+        print('\tnodes')
+        for node in sorted(result['nodes'], key = lambda n: n['id']):
+            scigPrint.pprint_node({'nodes':[node]})
+        print('\tedges')
+        for edge in sorted(result['edges'], key = lambda e: e['pred']):
+            scigPrint.pprint_edge(edge)
 
 
 def main():

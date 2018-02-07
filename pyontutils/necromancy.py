@@ -17,7 +17,8 @@ Options:
 import os
 import rdflib
 from docopt import docopt
-from pyontutils.utils import makePrefixes, makeGraph, createOntology, anyMembers, rdf, rdfs, owl, oboInOwl
+from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, oboInOwl
+from pyontutils.utils import anyMembers
 
 def kludge(filepath):
     if 'doid' in filepath:  # FIXME doid has some weird deprecation practices wrt HP...
