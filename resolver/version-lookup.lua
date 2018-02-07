@@ -2,7 +2,7 @@ local http = require 'resty.http'
 local json = require 'json'
 local user = 'SciCrunch'
 local repo = 'NIF-Ontology'
-local author_date_iso8601 = os.date('%Y-%m-%dT%H:%M:%S%z', ngx.var[3])
+local author_date_iso8601 = os.date('!%Y-%m-%dT%H:%M:%SZ', ngx.var[3])
 local furl = 'https://api.github.com/search/commits?q=repo:%s/%s+author-date:<=%s&sort=author-date&per_page=1'
 local url = string.format(furl, user, repo, author_date_iso8601)
 -- print(url)
