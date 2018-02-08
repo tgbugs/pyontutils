@@ -81,6 +81,10 @@ class restService:
         param_rest = param_rest if param_rest else ''
         return param_rest
 
+    @property
+    def _escape(self):
+        return '%252F' if 'scicrunch.org' in self._basePath else '%2F'
+
 
 class Analyzer(restService):
     """ Analysis services """
@@ -89,23 +93,6 @@ class Analyzer(restService):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
-
-    def enrichPost(self, output='application/json'):
-        """  from: /analyzer/enrichment
-
-            Arguments:
-
-            outputs:
-                application/json
-        """
-
-        kwargs = {}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params, output)
-        return output if output else []
 
     def enrich(self, sample, ontologyClass, path, callback=None, output='application/json'):
         """ Class Enrichment Service from: /analyzer/enrichment
@@ -129,6 +116,23 @@ class Analyzer(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
+    def enrichPost(self, output='application/json'):
+        """  from: /analyzer/enrichment
+
+            Arguments:
+
+            outputs:
+                application/json
+        """
+
+        kwargs = {}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params, output)
+        return output if output else []
+
 
 class Annotations(restService):
     """ Annotation services """
@@ -137,6 +141,30 @@ class Annotations(restService):
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
+
+    def annotate(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='text/plain; charset=utf-8'):
+        """ Annotate text from: /annotations
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+            outputs:
+                text/plain; charset=utf-8
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
 
     def annotatePost(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None, output='application/json'):
         """ Annotate text from: /annotations
@@ -167,54 +195,6 @@ class Annotations(restService):
         output = self._get('POST', url, requests_params, output)
         return output if output else None
 
-    def annotate(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='text/plain; charset=utf-8'):
-        """ Annotate text from: /annotations
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-            outputs:
-                text/plain; charset=utf-8
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-    def postEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='application/json'):
-        """ Get embedded annotations as well as a separate list from: /annotations/complete
-
-            Arguments:
-            content: The content to annotate
-            includeCat: A set of categories to include
-            excludeCat: A set of categories to exclude
-            minLength: The minimum number of characters in annotated entities
-            longestOnly: Should only the longest entity be returned for an overlapping group
-            includeAbbrev: Should abbreviations be included
-            includeAcronym: Should acronyms be included
-            includeNumbers: Should numbers be included
-            outputs:
-                application/json
-        """
-
-        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/complete').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params, output)
-        return output if output else []
-
     def getEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='application/json'):
         """ Get embedded annotations as well as a separate list from: /annotations/complete
 
@@ -239,8 +219,8 @@ class Annotations(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else []
 
-    def postEntities(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='application/json'):
-        """ Get entities from text from: /annotations/entities
+    def postEntitiesAndContent(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='application/json'):
+        """ Get embedded annotations as well as a separate list from: /annotations/complete
 
             Arguments:
             content: The content to annotate
@@ -258,7 +238,7 @@ class Annotations(restService):
         kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/annotations/entities').format(**kwargs)
+        url = self._basePath + ('/annotations/complete').format(**kwargs)
         requests_params = kwargs
         output = self._get('POST', url, requests_params, output)
         return output if output else []
@@ -287,6 +267,30 @@ class Annotations(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else []
 
+    def postEntities(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='application/json'):
+        """ Get entities from text from: /annotations/entities
+
+            Arguments:
+            content: The content to annotate
+            includeCat: A set of categories to include
+            excludeCat: A set of categories to exclude
+            minLength: The minimum number of characters in annotated entities
+            longestOnly: Should only the longest entity be returned for an overlapping group
+            includeAbbrev: Should abbreviations be included
+            includeAcronym: Should acronyms be included
+            includeNumbers: Should numbers be included
+            outputs:
+                application/json
+        """
+
+        kwargs = {'content':content, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/annotations/entities').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params, output)
+        return output if output else []
+
     def annotateUrl(self, url, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, ignoreTag=None, stylesheet=None, scripts=None, targetId=None, targetClass=None, output='text/html'):
         """ Annotate a URL from: /annotations/url
 
@@ -309,7 +313,7 @@ class Annotations(restService):
         """
 
         if url and url.startswith('http:'):
-            url = url.replace('/','%2F').replace('#','%23')
+            url = url.replace('/', self._escape).replace('#','%23')
         kwargs = {'url':url, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -427,7 +431,7 @@ class Graph(restService):
         """
 
         if type and type.startswith('http:'):
-            type = type.replace('/','%2F').replace('#','%23')
+            type = type.replace('/', self._escape).replace('#','%23')
         kwargs = {'type':type, 'entail':entail, 'limit':limit, 'skip':skip, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('type', **kwargs)
@@ -464,7 +468,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -501,7 +505,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -554,7 +558,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id, 'hint':hint, 'relationships':relationships, 'lbls':lbls, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -605,7 +609,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -711,48 +715,13 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
         url = self._basePath + ('/refine/preview/{id}').format(**kwargs)
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
-        return output if output else None
-
-    def suggestFromTerm_POST(self, query=None, queries=None, output='application/json'):
-        """ Reconcile terms from: /refine/reconcile
-
-            Arguments:
-            query: A call to a reconciliation service API
-            for a single query looks like either
-            of these:<ul><li>http://foo.com/bar/reconcile?query=...string...</li><li>http://foo.com/bar/reconcile?query={...json object literal...}</li></ul>If the query parameter
-            is a string, then it's an abbreviation
-            of <em>query={"query":...string...}</em>.<em>NOTE:</em> We encourage all API consumers
-            to consider the single query mode <b>DEPRECATED</b>.Refine
-            currently only uses the multiple query mode,
-            but other consumers of the API may
-            use the single query option since it
-            was included in the spec.
-            queries: A call to a standard reconciliation service API
-            for multiple queries looks like this:<ul><li>http://foo.com/bar/reconcile?queries={...json object literal...}</li></ul>The
-            json object literal has zero or more key/value
-            pairs with arbitrary keys where the value is
-            in the same format as a single query,
-            e.g.<ul><li>http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo" },
-            "q1" : { "query" : "bar" } }</li></ul>"q0"
-            and "q1" can be arbitrary strings.
-            outputs:
-                application/json
-                application/javascript
-        """
-
-        kwargs = {'query':query, 'queries':queries}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/refine/reconcile').format(**kwargs)
-        requests_params = kwargs
-        output = self._get('POST', url, requests_params, output)
         return output if output else None
 
     def suggestFromTerm(self, query=None, queries=None, callback=None, output='application/json'):
@@ -793,6 +762,41 @@ class Refine(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
+    def suggestFromTerm_POST(self, query=None, queries=None, output='application/json'):
+        """ Reconcile terms from: /refine/reconcile
+
+            Arguments:
+            query: A call to a reconciliation service API
+            for a single query looks like either
+            of these:<ul><li>http://foo.com/bar/reconcile?query=...string...</li><li>http://foo.com/bar/reconcile?query={...json object literal...}</li></ul>If the query parameter
+            is a string, then it's an abbreviation
+            of <em>query={"query":...string...}</em>.<em>NOTE:</em> We encourage all API consumers
+            to consider the single query mode <b>DEPRECATED</b>.Refine
+            currently only uses the multiple query mode,
+            but other consumers of the API may
+            use the single query option since it
+            was included in the spec.
+            queries: A call to a standard reconciliation service API
+            for multiple queries looks like this:<ul><li>http://foo.com/bar/reconcile?queries={...json object literal...}</li></ul>The
+            json object literal has zero or more key/value
+            pairs with arbitrary keys where the value is
+            in the same format as a single query,
+            e.g.<ul><li>http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo" },
+            "q1" : { "query" : "bar" } }</li></ul>"q0"
+            and "q1" can be arbitrary strings.
+            outputs:
+                application/json
+                application/javascript
+        """
+
+        kwargs = {'query':query, 'queries':queries}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/refine/reconcile').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('POST', url, requests_params, output)
+        return output if output else None
+
     def getView(self, id, output='application/json'):
         """  from: /refine/view/{id}
 
@@ -804,7 +808,7 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -873,7 +877,7 @@ class Vocabulary(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/','%2F').replace('#','%23')
+            id = id.replace('/', self._escape).replace('#','%23')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
