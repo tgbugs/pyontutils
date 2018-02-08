@@ -50,6 +50,7 @@ try:
         packages=['pyontutils'],
         install_requires=[
             'docopt',
+            'flask',
             'gitpython',
             'ipython',
             'joblib',
