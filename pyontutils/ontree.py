@@ -262,7 +262,7 @@ def main():
     if args['server']:
         k = args['--key']
         k = k if k != defaults['--key'] else None
-        server()
+        server(k)
     else:
         direction = both if args['--both'] else out if args['--incoming'] else inc
         # TODO default direction table to match to expected query behavior based on rdf direction
