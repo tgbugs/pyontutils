@@ -75,6 +75,10 @@ class restService:
         param_rest = param_rest if param_rest else ''
         return param_rest
 
+    @property
+    def _escape(self):
+        return '%252F' if 'scicrunch.org' in self._basePath else '%2F'
+
 
 class CLASSNAME(restService):
     """ DOCSTRING """
@@ -284,7 +288,7 @@ class State:
             if cond in param_rest:
                 params_conditional += (
                     "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
-                    "{t}{t}{t}{cond} = {cond}.replace('/','%2F').replace('#','%23')").format(cond=cond, t=self.tab)
+                    "{t}{t}{t}{cond} = {cond}.replace('/', self._escape).replace('#','%23')").format(cond=cond, t=self.tab)
 
         if 'produces' in api_dict:  # ICK but the alt is nastier
             outputs, default_output = self.make_produces(api_dict['produces'])
