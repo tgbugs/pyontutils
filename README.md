@@ -3,25 +3,32 @@ python utilities for working with ontologies
 
 ## Requirements
 This repo requires Python3.6 or later.
-See setup.py for additional requirements.
+See Pipfile for additional requirements.
 ontload requires Java8 and >=maven3.3 in order to build SciGraph.
 [parcellation.py](pyontutils/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
 to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
-some other way.
+some other way. In order to build all the packages required by this repo you will need
+gcc (and toolchain) installed and will need to have the development packages for
+`postgresql`, `libxml`, and `protobuf`  installed on your system.
 
 ## Installation
-In order to get good (deterministic) ttl serialization from these tools you need to use
-my modified version of rdflib (see https://github.com/RDFLib/rdflib/pull/649 and
-https://github.com/RDFLib/rdflib/pull/793).
-Follow the steps below in your preferred python environment. You may need to run `pip install wheel`.
-1. Get a copy of the whl file for my release `wget https://github.com/tgbugs/rdflib/releases/download/v5.0.0-dev-tgbugs-b3/rdflib-5.0.0_dev_tgbugs_b3-py2.py3-none-any.whl`
-2. Install the whl `pip install --user --upgrade rdflib-5.0.0_dev_tgbugs_b3-py2.py3-none-any.whl`
-3. If you have not done so already `git clone https://github.com/tgbugs/pyontutils`
-4. `cd pyontutils && python setup.py bdist_wheel && pip3 install --user --upgrade dist/pyontutils*.whl`
+The easiest way to install pyontutils is to use pipenv. It makes it easy to manage
+specific version of packages needed by pyontutils. For example in order to get good
+(deterministic) ttl serialization from these tools you need to use my modified version
+of rdflib (see https://github.com/RDFLib/rdflib/pull/649 and https://github.com/RDFLib/rdflib/pull/793).
+[Pipenv](https://pipenv.readthedocs.io/en/latest/#install-pipenv-today) makes it easier
+to accomplish this.
 
-Alternately, if want a development setup or need to use these tools for working directly
-with the NIF-Ontology repo you can add this folder to your `PYTHONPATH` environment
-variable using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
+1. In your preferred folder `git clone https://github.com/tgbugs/pyontutils.git`
+2. `cd pyontutils`
+3. `pipenv install --no-lock`. Note that `mysql-connector` (aka `mysql-connector-python`) often cannot find the
+files it needs to build.  When installing pass them in as environment variables (you may need to adjust
+exact paths for your system). `MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --no-lock`
+4. `pipenv shell` to enter the virtual environment where everything should work.
+
+Alternately, if manage your packages via another system you can create a development setup
+by adding this folder to your `PYTHONPATH` environment variable using
+`export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
 If you use a development setup you will need to create symlinks described below.
 
 ## Utility Scripts
@@ -47,6 +54,8 @@ installation option you will need to `ln -sT` the scripts to your perferred bin 
 	for them from InterLex.
 9. [graphml_to_ttl](pyontutils/graphml_to_ttl.py)
 	Convert yEd graphml files to ttl.
+10. [ontree](pyontutils/ontree.py)
+	Run a webserver to query and view hierarchies from the ontology.
 
 ## NIF-Ontology
 Many of these scripts are written for working on the NIF standard ontology
