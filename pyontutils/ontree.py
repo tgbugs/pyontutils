@@ -248,6 +248,7 @@ def server(api_key=None):
 
     if api_key:
         sgg.api_key = api_key
+        sgv.api_key = api_key
     app.debug = False
     app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
     # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
