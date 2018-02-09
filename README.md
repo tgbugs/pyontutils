@@ -21,9 +21,9 @@ to accomplish this.
 
 1. In your preferred folder `git clone https://github.com/tgbugs/pyontutils.git`
 2. `cd pyontutils`
-3. `pipenv install --no-lock`. Note that `mysql-connector` (aka `mysql-connector-python`) often cannot find the
+3. `pipenv install --skip-lock`. Note that `mysql-connector` (aka `mysql-connector-python`) often cannot find the
 files it needs to build.  When installing pass them in as environment variables (you may need to adjust
-exact paths for your system). `MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --no-lock`
+exact paths for your system). `MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --skip-lock`
 4. `pipenv shell` to enter the virtual environment where everything should work.
 
 Alternately, if manage your packages via another system you can create a development setup
