@@ -192,11 +192,10 @@ def server(api_key=None):
             ('Restriction example', hpp, 'UBERON:0000955',
              'ttl/bridge/uberon-bridge.ttl', '?direction=OUTGOING&restriction=true'),
         )
-        url = os.path.dirname(request.base_url)
-        links = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url}/query/{pred}/{root}{args[0] if args else ""}">'
+        links = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_query", pred=pred, root=root)}{args[0] if args else ""}">'
                            f'../query/{pred}/{root}{args[0] if args else ""}</a></td></tr>')
                           for name, pred, root, *args in examples)
-        flinks = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url}/query/{pred}/{root}/{file}{args[0] if args else ""}">'
+        flinks = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_filequery", pred=pred, root=root, file=file)}{args[0] if args else ""}">'
                             f'../query/{pred}/{root}/{file}{args[0] if args else ""}</a></td></tr>')
                            for name, pred, root, file, *args in file_examples)
         return ('<html>'
@@ -220,8 +219,8 @@ def server(api_key=None):
         print(kwargs)
         return render(pred, root, **kwargs)
 
-    @app.route(f'/{basename}/query/<pred>/http:/<path:iri>', methods=['GET'])
-    @app.route(f'/{basename}/query/<pred>/https:/<path:iri>', methods=['GET'])  # just in case
+    @app.route(f'/{basename}/query/<pred>/http://<path:iri>', methods=['GET'])
+    @app.route(f'/{basename}/query/<pred>/https://<path:iri>', methods=['GET'])  # just in case
     def route_iriquery(pred, iri):  # TODO maybe in the future
         root = 'http://' + iri  # for now we have to normalize down can check request in future
         print('ROOOOT', root)
