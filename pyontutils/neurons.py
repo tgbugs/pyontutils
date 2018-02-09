@@ -35,8 +35,8 @@ OR = 'owl:unionOf'
 
 # utility identifiers
 NEURON_CLASS = 'SAO:1417703748'
-PHENO_ROOT = 'ilx:hasPhenotype'  # needs to be qname representation
-DEF_ROOT = 'ilx:definedClassNeurons'
+PHENO_ROOT = 'ilxtr:hasPhenotype'  # needs to be qname representation
+DEF_ROOT = 'ilxtr:definedClassNeurons'
 def getPhenotypePredicates(graph):
     # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
     qstring = ('SELECT DISTINCT ?prop WHERE '
@@ -187,7 +187,7 @@ class graphBase:
                                    'UBERON',
                                    'NCBITaxon',
                                    'ILXREPLACE',
-                                   'ilx',
+                                   'ilxtr',
                                    'ILX',
                                    'SAO',
                                    'BIRNLEX',
@@ -249,13 +249,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'PR:000013502':'PV',
         'PR:000017299':'VIP',
         'PR:000005110':'CCK',
-        'ilx:PetillaSustainedAccomodatingPhenotype':'AC',
-        'ilx:PetillaSustainedNonAccomodatingPhenotype':'NAC',
-        'ilx:PetillaSustainedStutteringPhenotype':'STUT',
-        'ilx:PetillaSustainedIrregularPhenotype':'IR',
-        'ilx:PetillaInitialBurstSpikingPhenotype':'b',
-        'ilx:PetillaInitialClassicalSpikingPhenotype':'c',
-        'ilx:PetillaInitialDelayedSpikingPhenotype':'d',
+        'ilxtr:PetillaSustainedAccomodatingPhenotype':'AC',
+        'ilxtr:PetillaSustainedNonAccomodatingPhenotype':'NAC',
+        'ilxtr:PetillaSustainedStutteringPhenotype':'STUT',
+        'ilxtr:PetillaSustainedIrregularPhenotype':'IR',
+        'ilxtr:PetillaInitialBurstSpikingPhenotype':'b',
+        'ilxtr:PetillaInitialClassicalSpikingPhenotype':'c',
+        'ilxtr:PetillaInitialDelayedSpikingPhenotype':'d',
         'UBERON:0005390':'L1',
         'UBERON:0005391':'L2',
         'UBERON:0005392':'L3',
@@ -302,7 +302,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return subject
 
     def getObjectProperty(self, phenotype):
-        predicates = list(self.in_graph.objects(phenotype, self.expand('ilx:useObjectProperty')))  # useObjectProperty works for phenotypes we control
+        predicates = list(self.in_graph.objects(phenotype, self.expand('ilxtr:useObjectProperty')))  # useObjectProperty works for phenotypes we control
 
         if predicates:
             return predicates[0]
@@ -527,7 +527,7 @@ class NeuronBase(graphBase):
         self._predicates.hasMorphologicalPhenotype,
         self._predicates.hasElectrophysiologicalPhenotype,
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
-        self.expand('ilx:hasSpikingPhenotype'),  # legacy support
+        self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
         self._predicates.hasExpressionPhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
         ]
@@ -663,7 +663,7 @@ class NeuronBase(graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = 'Interneuron' if Phenotype('ilx:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'Neuron'
+        nin_switch = 'Interneuron' if Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'Neuron'
         label.append(nin_switch)
 
         new_label = ' '.join(label)
@@ -775,7 +775,7 @@ class Neuron(NeuronBase):
         # species matched identifiers TODO
         # developmental stages (if we use the uberon associated ones)
         # parcellation schemes
-        # NCBIGene ilx:definedForTaxon  # FIXME this needs to be a real OP!
+        # NCBIGene ilxtr:definedForTaxon  # FIXME this needs to be a real OP!
         # PR ??
 
     def bagExisting(self):  # TODO intersections
@@ -1052,18 +1052,18 @@ class LocalNameManager(metaclass=injective):
         set remains injective. """
 
     ORDER = (
-    'ilx:hasInstanceInSpecies',
-    'ilx:hasTaxonRank',
-    'ilx:hasSomaLocatedIn',  # hasSomaLocation?
-    'ilx:hasLayerLocationPhenotype',  # TODO soma naming...
-    'ilx:hasDendriteMorphologicalPhenotype',
-    'ilx:hasDendriteLocatedIn',
-    'ilx:hasAxonLocatedIn',
-    'ilx:hasMorphologicalPhenotype',
-    'ilx:hasElectrophysiologicalPhenotype',
-    'ilx:hasSpikingPhenotype',  # legacy support
-    'ilx:hasExpressionPhenotype',
-    'ilx:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+    'ilxtr:hasInstanceInSpecies',
+    'ilxtr:hasTaxonRank',
+    'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
+    'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
+    'ilxtr:hasDendriteMorphologicalPhenotype',
+    'ilxtr:hasDendriteLocatedIn',
+    'ilxtr:hasAxonLocatedIn',
+    'ilxtr:hasMorphologicalPhenotype',
+    'ilxtr:hasElectrophysiologicalPhenotype',
+    'ilxtr:hasSpikingPhenotype',  # legacy support
+    'ilxtr:hasExpressionPhenotype',
+    'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
     )
 
     def __enter__(self):
@@ -1200,7 +1200,7 @@ def main():
                             'UBERON',
                             'NCBITaxon',
                             'ILXREPLACE',
-                            'ilx',
+                            'ilxtr',
                             'ILX',
                             'SAO',
                             'BIRNLEX',)

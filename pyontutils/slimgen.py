@@ -57,7 +57,7 @@ class ncbi(dictParse):
 
     def taxid(self, value):
         tax = 'NCBITaxon:' + str(value)
-        self.g.add_trip(self.identifier, 'ilx:definedForTaxon', tax)  # FIXME species or taxon???
+        self.g.add_trip(self.identifier, 'ilxtr:definedForTaxon', tax)  # FIXME species or taxon???
 
     def otheraliases(self, value):
         if value:
@@ -102,7 +102,7 @@ def ncbigene_make():
  
     ng = createOntology('ncbigeneslim',
                         'NIF NCBI Gene subset',
-                        makePrefixes('', 'ILXREPLACE', 'ilx', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
+                        makePrefixes('ILXREPLACE', 'ilxtr', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
                         'ncbigeneslim',
                         'This subset is automatically generated from the NCBI Gene database on a subset of terms listed in %s.' % IDS_FILE,
                         remote_base= 'http://ontology.neuinfo.org/NIF/')

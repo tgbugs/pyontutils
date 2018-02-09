@@ -51,7 +51,7 @@ PScheme = namedtuple('PScheme',
                       'name',
                       'species',
                       'devstage'])
-PScheme('ilx:something',
+PScheme('ilxtr:something',
         'some parcellation scheme concept',
         'NCBITaxon:1234',
         'adult')
@@ -75,21 +75,21 @@ PSArtifact('SCR:something',
            tuple())
 
 # annotationProperties
-#PARCLAB = 'ilx:parcellationLabel'
+#PARCLAB = 'ilxtr:parcellationLabel'
 PARCLAB = 'skos:prefLabel'
 ACRONYM = 'NIFRID:acronym'
 SYNONYM = 'NIFRID:synonym'
 
 # objectProperties
-UNTAXON = 'ilx:ancestralInTaxon'
-EXTAXON = 'ilx:hasInstanceInTaxon'  # FIXME instances?
-EXSPECIES = 'ilx:hasInstanceInSpecies'
-DEFTAXON = 'ilx:definedForTaxon'
-DEFSPECIES = 'ilx:definedForSpecies'
-DEVSTAGE = 'ilx:definedForDevelopmentalStage'
-PARTOF = 'ilx:partOf'
-HASPART = 'ilx:hasPart'
-DELINEATEDBY = 'ilx:delineatedBy'
+UNTAXON = 'ilxtr:ancestralInTaxon'
+EXTAXON = 'ilxtr:hasInstanceInTaxon'  # FIXME instances?
+EXSPECIES = 'ilxtr:hasInstanceInSpecies'
+DEFTAXON = 'ilxtr:definedForTaxon'
+DEFSPECIES = 'ilxtr:definedForSpecies'
+DEVSTAGE = 'ilxtr:definedForDevelopmentalStage'
+PARTOF = 'ilxtr:partOf'
+HASPART = 'ilxtr:hasPart'
+DELINEATEDBY = 'ilxtr:delineatedBy'
 
 # classes
 ADULT = 'BIRNLEX:681'
@@ -119,8 +119,8 @@ def make_atlas(atlas, parent=ATLAS_SUPER):
         (atlas.curie, rdf.type, owl.Class),
         (atlas.curie, rdfs.label, atlas.name),
         (atlas.curie, rdfs.subClassOf, parent),
-        (atlas.curie, 'ilx:atlasVersion', atlas.version),  # FIXME
-        (atlas.curie, 'ilx:atlasDate', atlas.date),  # FIXME
+        (atlas.curie, 'ilxtr:atlasVersion', atlas.version),  # FIXME
+        (atlas.curie, 'ilxtr:atlasDate', atlas.date),  # FIXME
         (atlas.curie, 'NIFRID:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
         (atlas.curie, 'NIFRID:definingCitation', atlas.citation),
     ] + \
@@ -143,7 +143,7 @@ def parcellation_schemes(ontids_atlases):
                   'Brain parcellation schemes as represented by root concepts.',
                   TODAY)
     ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
+    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
     graph.add_ont(ontid, *ont[2:])
 
@@ -161,7 +161,7 @@ class genericPScheme:
     ont = OntMeta
     concept = PScheme
     atlas = PSArtifact
-    PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
+    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
         error = 'Expected %s got %s' 
@@ -229,7 +229,7 @@ class CoCoMac(genericPScheme):
     concept = PScheme(ILXREPLACE(ont.name),
                        'CoCoMac terminology parcellation concept',
                        'NCBITaxon:9544',
-                       'ilx:various')
+                       'ilxtr:various')
     atlas = PSArtifact(ILXREPLACE(ont.name + 'atlas'),
                         'CoCoMac terminology',
                         None, #'no version info',
@@ -447,7 +447,7 @@ def swanson():
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('', 'ilx', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
+    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     PREFIXES.update({
         #'':ontid + '/',  # looking for better options
         'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
@@ -652,7 +652,7 @@ def swanson():
     for appendix, data in sp.appendicies.items():
         aid = PREFIXES['SWAA'] + str(appendix)
         new_graph.add_class(aid, label=data['name'].capitalize())
-        new_graph.add_trip(aid, 'ilx:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
+        new_graph.add_trip(aid, 'ilxtr:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
         children = data['children']
         ahp = HASPART + str(appendix)
         apo = PARTOF + str(appendix)
@@ -671,7 +671,7 @@ def swanson():
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
         mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
         for i, n in enumerate(mapping):
-            a, b = creatTree(*Query('SWA:' + str(n), 'ilx:partOf' + str(i + 1), 'INCOMING', 10), json=json_)
+            a, b = creatTree(*Query('SWA:' + str(n), 'ilxtr:swansonPartOf' + str(i + 1), 'INCOMING', 10), json=json_)
             print(a)
     return ontid, None
 

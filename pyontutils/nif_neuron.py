@@ -25,27 +25,27 @@ sgv = Vocabulary(cache=True)
 # for the second arrow we basically need to improve neuronManager
 
 # consts
-defined_class_parent = 'ilx:definedClassNeurons'
-morpho_defined = 'ilx:definedClassNeuronsMorpho'
-ephys_defined = 'ilx:definedClassNeuronsElectro'
-morpho_phenotype =  'ilx:MorphologicalPhenotype'
-morpho_edge = 'ilx:hasMorphologicalPhenotype'
-ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
-ephys_edge = 'ilx:hasElectrophysiologicalPhenotype'
-spiking_phenotype = 'ilx:SpikingPhenotype'
-i_spiking_phenotype = 'ilx:PetillaInitialSpikingPhenotype'
-s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
-spiking_edge = 'ilx:hasSpikingPhenotype'
-fast_phenotype = 'ilx:FastSpikingPhenotype'
-reg_phenotype = 'ilx:RegularSpikingNonPyramidalPhenotype'
-expression_edge = 'ilx:hasExpressionPhenotype'
-expression_defined = 'ilx:ExpressionClassifiedNeuron'
+defined_class_parent = 'ilxtr:definedClassNeurons'
+morpho_defined = 'ilxtr:definedClassNeuronsMorpho'
+ephys_defined = 'ilxtr:definedClassNeuronsElectro'
+morpho_phenotype =  'ilxtr:MorphologicalPhenotype'
+morpho_edge = 'ilxtr:hasMorphologicalPhenotype'
+ephys_phenotype = 'ilxtr:ElectrophysiologicalPhenotype'
+ephys_edge = 'ilxtr:hasElectrophysiologicalPhenotype'
+spiking_phenotype = 'ilxtr:SpikingPhenotype'
+i_spiking_phenotype = 'ilxtr:PetillaInitialSpikingPhenotype'
+s_spiking_phenotype = 'ilxtr:PetillaSustainedSpikingPhenotype'
+spiking_edge = 'ilxtr:hasSpikingPhenotype'
+fast_phenotype = 'ilxtr:FastSpikingPhenotype'
+reg_phenotype = 'ilxtr:RegularSpikingNonPyramidalPhenotype'
+expression_edge = 'ilxtr:hasExpressionPhenotype'
+expression_defined = 'ilxtr:ExpressionClassifiedNeuron'
 NIFCELL_NEURON = 'NIFCELL:sao1417703748'
 
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
 
-PREFIXES = makePrefixes('ilx',
+PREFIXES = makePrefixes('ilxtr',
                         'ILX',
                         'ILXREPLACE',
                         'skos',
@@ -84,7 +84,7 @@ def make_defined(graph, ilx_start, label, phenotype_id, restriction_edge, parent
 
     # TODO I think the defined class disjointness needs additional code... selecting from phenotype disjointness?
     #for dj in self.:
-        #defined.disjointWith = [infixowl.Restriction(self.expand('ilx:hasPhenotype'), graph=self.graph.g, someValuesFrom=dj)]
+        #defined.disjointWith = [infixowl.Restriction(self.expand('ilxtr:hasPhenotype'), graph=self.graph.g, someValuesFrom=dj)]
 
 def pprint(thing):
     for t in thing:
@@ -149,7 +149,7 @@ def add_types(graph, phenotypes):  # TODO missing expression phenotypes! also ba
 
 def get_defined_classes(graph):
     phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
-    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))
+    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilxtr:NeuronPhenotype'))
     collect = []
     def recurse(id_, start, level=0):
         if type(id_) == rdflib.term.URIRef and id_ != start:
@@ -228,16 +228,16 @@ def make_phenotypes():
                 break
             print(row)
             continue
-        id_ = PREFIXES['ilx'] + row[0]
-        pedges.add(graph.expand('ilx:' + row[0]))
+        id_ = PREFIXES['ilxtr'] + row[0]
+        pedges.add(graph.expand('ilxtr:' + row[0]))
         graph.add_trip(id_, rdflib.RDFS.label, row[0])  # FIXME
         graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
             graph.add_trip(id_, rdflib.namespace.SKOS.definition, row[3])
         if row[6]:
-            graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilx:' + row[6])
+            graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + row[6])
         if row[7]:
-            graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilx:' + row[7])
+            graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilxtr:' + row[7])
         if row[8]:
             for t in row[8].split(','):
                 t = t.strip()
@@ -289,20 +289,20 @@ def make_phenotypes():
 
         def use_edge(self, value):
             if value:
-                graph2.add_trip(self.id_, 'ilx:useObjectProperty', graph.expand('ilx:' + value))
+                graph2.add_trip(self.id_, 'ilxtr:useObjectProperty', graph.expand('ilxtr:' + value))
 
         def _row_post(self):
             # defined class
             lookup = {
-                graph.expand('ilx:AxonPhenotype'):rdflib.URIRef('http://axon.org'),
-                graph.expand('ilx:AxonMorphologicalPhenotype'):None,
-                graph.expand('ilx:DendritePhenotype'):rdflib.URIRef('http://dendrite.org'),
-                graph.expand('ilx:DendriteMorphologicalPhenotype'):None,
-                graph.expand('ilx:SomaPhenotype'):rdflib.URIRef('http://soma.org'),
-                graph.expand('ilx:SomaMorphologicalPhenotype'):None,
-                graph.expand('ilx:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),
-                graph.expand('ilx:CellPhenotype'):None,
-                graph.expand('ilx:Phenotype'):graph.expand('ilx:Phenotype'),
+                graph.expand('ilxtr:AxonPhenotype'):rdflib.URIRef('http://axon.org'),
+                graph.expand('ilxtr:AxonMorphologicalPhenotype'):None,
+                graph.expand('ilxtr:DendritePhenotype'):rdflib.URIRef('http://dendrite.org'),
+                graph.expand('ilxtr:DendriteMorphologicalPhenotype'):None,
+                graph.expand('ilxtr:SomaPhenotype'):rdflib.URIRef('http://soma.org'),
+                graph.expand('ilxtr:SomaMorphologicalPhenotype'):None,
+                graph.expand('ilxtr:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),
+                graph.expand('ilxtr:CellPhenotype'):None,
+                graph.expand('ilxtr:Phenotype'):graph.expand('ilxtr:Phenotype'),
             }
             if self.id_ in lookup:
                 return
@@ -324,7 +324,7 @@ def make_phenotypes():
 
             def getPhenotypeEdge(phenotype):
                 print(phenotype)
-                edge = 'ilx:hasPhenotype'  # TODO in neuronManager...
+                edge = 'ilxtr:hasPhenotype'  # TODO in neuronManager...
                 return edge
             edge = getPhenotypeEdge(self.id_)
             restriction = infixowl.Restriction(graph.expand(edge), graph=defined_graph.g, someValuesFrom=self.id_)
@@ -333,11 +333,11 @@ def make_phenotypes():
             if parent:
                 parent = parent[0]
                 while 1:
-                    if parent == defined_graph.expand('ilx:NeuronPhenotype'):
+                    if parent == defined_graph.expand('ilxtr:NeuronPhenotype'):
                         #defined.subClassOf = [graph.expand(defined_class_parent)]  # XXX this does not produce what we want
                         break
                     #else:
-                        #print(parent, graph.expand('ilx:NeuronPhenotype'))
+                        #print(parent, graph.expand('ilxtr:NeuronPhenotype'))
 
                     #print('xxxxxxxxxxxxxxxx', parent)
                     new_parent = [p for p in self.child_parent_map[parent] if p]
@@ -383,14 +383,14 @@ def make_phenotypes():
 
     #for name, iri in to_add.items():  # XXX do not need, is already covered elsewhere
         #print('make_phenotypes ilx_start', ilx_start, name)
-        #ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilx:hasExpressionPhenotype', parent=expression_defined)
+        #ilx_start = make_defined(defined_graph, ilx_start, name, iri, 'ilxtr:hasExpressionPhenotype', parent=expression_defined)
 
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
     ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
     graph.add_ont(ontid, 'NIF Phenotype core', comment= 'This is the core set of predicates used to model phenotypes and the parent class for phenotypes.')
-    graph.add_class('ilx:Phenotype', label='Phenotype')
-    graph.add_trip('ilx:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possilbe. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental contidions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxillary variable that we think accounts for the difference.')
+    graph.add_class('ilxtr:Phenotype', label='Phenotype')
+    graph.add_trip('ilxtr:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possilbe. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental contidions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxillary variable that we think accounts for the difference.')
     #graph.add_trip(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
     #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
@@ -411,7 +411,7 @@ def make_phenotypes():
 
 
     phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
-    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilx:NeuronPhenotype'))  # FIXME not very configurable...
+    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilxtr:NeuronPhenotype'))  # FIXME not very configurable...
 
     return syn_mappings, pedges, ilx_start, inc, defined_graph
 
@@ -686,7 +686,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
     #ng.add_trip(ontid, rdflib.OWL.imports, base + 'external/uberon.owl')
     #ng.add_trip(ontid, rdflib.OWL.imports, base + 'external/pr.owl')
-    ng.replace_uriref('ilx:hasMolecularPhenotype', 'ilx:hasExpressionPhenotype')
+    ng.replace_uriref('ilxtr:hasMolecularPhenotype', 'ilxtr:hasExpressionPhenotype')
 
     #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
     defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -798,23 +798,23 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
 def add_phenotypes(graph):
 
-    cell_phenotype = 'ilx:CellPhenotype'
-    neuron_phenotype = 'ilx:NeuronPhenotype'
-    #ephys_phenotype = 'ilx:ElectrophysiologicalPhenotype'
-    #spiking_phenotype = 'ilx:SpikingPhenotype'
-    #i_spiking_phenotype = 'ilx:PetillaInitialSpikingPhenotype'
-    burst_p = 'ilx:PetillaInitialBurstSpikingPhenotype'
-    classical_p = 'ilx:PetillaInitialClassicalSpikingPhenotype'
-    delayed_p = 'ilx:PetillaInitialDelayedSpikingPhenotype'
-    #s_spiking_phenotype = 'ilx:PetillaSustainedSpikingPhenotype'
-    #morpho_phenotype = 'ilx:MorphologicalPhenotype'
-    ac_p = 'ilx:PetillaSustainedAccomodatingPhenotype'
-    nac_p = 'ilx:PetillaSustainedNonAccomodatingPhenotype'
-    st_p = 'ilx:PetillaSustainedStutteringPhenotype'
-    ir_p = 'ilx:PetillaSustainedIrregularPhenotype'
+    cell_phenotype = 'ilxtr:CellPhenotype'
+    neuron_phenotype = 'ilxtr:NeuronPhenotype'
+    #ephys_phenotype = 'ilxtr:ElectrophysiologicalPhenotype'
+    #spiking_phenotype = 'ilxtr:SpikingPhenotype'
+    #i_spiking_phenotype = 'ilxtr:PetillaInitialSpikingPhenotype'
+    burst_p = 'ilxtr:PetillaInitialBurstSpikingPhenotype'
+    classical_p = 'ilxtr:PetillaInitialClassicalSpikingPhenotype'
+    delayed_p = 'ilxtr:PetillaInitialDelayedSpikingPhenotype'
+    #s_spiking_phenotype = 'ilxtr:PetillaSustainedSpikingPhenotype'
+    #morpho_phenotype = 'ilxtr:MorphologicalPhenotype'
+    ac_p = 'ilxtr:PetillaSustainedAccomodatingPhenotype'
+    nac_p = 'ilxtr:PetillaSustainedNonAccomodatingPhenotype'
+    st_p = 'ilxtr:PetillaSustainedStutteringPhenotype'
+    ir_p = 'ilxtr:PetillaSustainedIrregularPhenotype'
 
-    #fast = 'ilx:FastSpikingPhenotype'
-    #reg_int = 'ilx:RegularSpikingNonPyramidalPhenotype'
+    #fast = 'ilxtr:FastSpikingPhenotype'
+    #reg_int = 'ilxtr:RegularSpikingNonPyramidalPhenotype'
 
     graph.add_class(cell_phenotype, autogen=True)
     graph.add_class(neuron_phenotype, cell_phenotype, autogen=True)
@@ -926,22 +926,22 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     #graph.add_trip(ephys_defined, rdflib.RDFS.label, 'Electrophysiologically classified neuron')
 
     graph.add_class(expression_defined, NIFCELL_NEURON, autogen=True)
-    graph.add_class('ilx:NeuroTypeClass', NIFCELL_NEURON, label='Neuron TypeClass')
+    graph.add_class('ilxtr:NeuroTypeClass', NIFCELL_NEURON, label='Neuron TypeClass')
 
     graph.g.commit()
 
     phenotype_dju_dict = add_types(graph, phenotypes)
     for pheno, disjoints in phenotype_dju_dict.items():
         name = ' '.join(re.findall(r'[A-Z][a-z]*', pheno.split(':')[1])[:-1])  #-1: drops Phenotype
-        ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilx:hasPhenotype')
+        ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilxtr:hasPhenotype')
         id_ = graph.expand(ilx_base.format(ilx_start))
         typeclass = infixowl.Class(id_, graph=graph.g)
         typeclass.label = rdflib.Literal(name + ' neuron type')
 
-        restriction = infixowl.Restriction(graph.expand('ilx:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
-        #typeclass.subClassOf = [restriction, graph.expand('ilx:NeuroTypeClass')]
+        restriction = infixowl.Restriction(graph.expand('ilxtr:hasPhenotype'), graph=graph.g, someValuesFrom=pheno)
+        #typeclass.subClassOf = [restriction, graph.expand('ilxtr:NeuroTypeClass')]
 
-        ntc = graph.expand('ilx:NeuroTypeClass')
+        ntc = graph.expand('ilxtr:NeuroTypeClass')
         intersection = infixowl.BooleanClass(members=(ntc, restriction), graph=graph.g)
         typeclass.equivalentClass = [intersection]
 
@@ -981,12 +981,12 @@ def predicate_disambig(graph):
         graph.add_trip(*out)
         return out
         
-    uit('ilx:hasLayerLocation', 'UBERON:0005390')
-    uit('ilx:hasLayerLocation', 'UBERON:0005391')
-    uit('ilx:hasLayerLocation', 'UBERON:0005392')
-    uit('ilx:hasLayerLocation', 'UBERON:0005393')
-    uit('ilx:hasLayerLocation', 'UBERON:0005394')
-    uit('ilx:hasLayerLocation', 'UBERON:0005395')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005390')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005391')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005392')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005393')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005394')
+    uit('ilxtr:hasLayerLocation', 'UBERON:0005395')
 
 def main():
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
