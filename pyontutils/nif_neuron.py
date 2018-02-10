@@ -10,7 +10,7 @@ import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
 from utils import TODAY, rowParse, refile
-from core import makePrefixes, makeGraph,
+from core import makePrefixes, makeGraph
 from ilx_utils import ILXREPLACE
 from parcellation import OntMeta
 from obo_io import OboFile
@@ -54,6 +54,7 @@ PREFIXES = makePrefixes('ilxtr',
                         'nsu',
                         'NCBITaxon',
                         'oboInOwl',
+                        'NIFEXT',
                         'NIFRID',
                         'NIFQUAL',
                         'NIFCELL',
