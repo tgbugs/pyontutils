@@ -6,7 +6,7 @@ import requests
 from pathlib import Path
 from collections import namedtuple
 from rdflib.extras import infixowl
-from inspect import getsourcelines
+from inspect import getsourcelines, getsourcefile
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, getCommit
 from pyontutils.closed_namespaces import *
@@ -750,7 +750,7 @@ class Ont:
     imports = tuple()
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
                       '{commit}/pyontutils/'
-                      f'{Path(__file__).name}'
+                      '{file}'
                       '#L{line}')
 
     propertyMapping = dict(
@@ -764,11 +764,14 @@ class Ont:
 
         commit = getCommit()
         line = getsourcelines(self.__class__)[-1]
-        self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit, line=line)
+        file = getsourcefile(self.__class__)
+        self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
+                                                         line=line,
+                                                         file=Path(file).name)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
-                                     prefixes=self.prefixes,
+                                     prefixes={**self.prefixes, **makePrefixes('prov')},
                                      comment=self.comment,
                                      shortname=self.shortname,
                                      path=self.path,
