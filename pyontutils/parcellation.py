@@ -17,7 +17,7 @@ from utils import TermColors as tc #TERMCOLORFUNC
 from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import ilxtr, NCBITaxon, UBERON, NIFTTL, HBA, MBA, HCPMMP, NIFRID, PAXMUS, PAXRAT, TEMP, WHSSD
 from core import Class, Source, Ont, annotations, restriction
-from core import makePrefixes, makeGraph, interlex_namespace
+from core import makePrefixes, makeGraph, interlex_namespace, OntMeta
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
@@ -31,20 +31,6 @@ NOTICE = '**FIXME**'
 
 
 sgv = Vocabulary(cache=True)
-
-OntMeta = namedtuple('OntMeta',
-                     ['path',
-                      'filename',
-                      'name',
-                      'shortname',
-                      'comment',
-                      'version'])
-OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
-        'swallows',
-        'Python Ontology',
-        'PO',
-        'Tis a silly place.',
-        '-1')
 
 PScheme = namedtuple('PScheme',
                      ['curie',

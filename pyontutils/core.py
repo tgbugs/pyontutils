@@ -4,6 +4,7 @@ import subprocess
 import rdflib
 import requests
 from pathlib import Path
+from collections import namedtuple
 from rdflib.extras import infixowl
 from inspect import getsourcelines
 from pyontutils import closed_namespaces as cnses
@@ -162,6 +163,20 @@ def yield_recursive(s, p, o, source_graph):
 
 #
 # old impl
+
+OntMeta = namedtuple('OntMeta',
+                     ['path',
+                      'filename',
+                      'name',
+                      'shortname',
+                      'comment',
+                      'version'])
+OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+        'swallows',
+        'Python Ontology',
+        'PO',
+        'Tis a silly place.',
+        '-1')
 
 def getNamespace(prefix, namespace):
     if prefix in cnses.__all__:
