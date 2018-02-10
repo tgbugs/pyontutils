@@ -10,7 +10,7 @@ import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
 from utils import TODAY, rowParse, refile
-from core import makePrefixes, makeGraph
+from core import makePrefixes, makeGraph, createOntology
 from ilx_utils import ILXREPLACE
 from parcellation import OntMeta
 from obo_io import OboFile
@@ -197,8 +197,12 @@ def get_transitive_closure(graph, edge, root):
 
 def make_phenotypes():
     ilx_start = 50114
-    graph = makeGraph('NIF-Phenotype-Core', prefixes=PREFIXES)
-    graph2 = makeGraph('NIF-Phenotypes', prefixes=PREFIXES)
+    graph = createOntology(filename='NIF-Phenotype-Core',
+                           path='ttl/',
+                           prefixes=PREFIXES)
+    graph2 = createOntology(filename='NIF-Phenotypes',
+                            path='ttl/',
+                            prefixes=PREFIXES)
     
 
     eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
