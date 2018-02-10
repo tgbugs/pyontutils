@@ -131,7 +131,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
-    __version = 'v1.1.2'
+    __version = 'v1.1.3'
     _newline = True
 
     topClasses = [OWL.Ontology,
@@ -211,6 +211,14 @@ class CustomTurtleSerializer(TurtleSerializer):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         if reset:
             store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
+        for s, o in store.subject_objects(OWL.disjointWith):
+            if s < o:
+                pass  # alwyas put disjointness axioms earlier in the file
+            elif o < s:
+                store.remove((s, OWL.disjointWith, o))
+                store.add((o, OWL.disjointWith, s))
+            else:
+                raise TypeError('Why do you have a class that is disjoint with itself?')
         super(CustomTurtleSerializer, self).__init__(store)
         self.rank_init = 0
         self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
