@@ -132,6 +132,7 @@ class graphBase:
             local = [local_base + s for s in suffixes]
             remote = [remote_base + branch + '/' + s for s in suffixes]
             return local, remote
+
         def attachPrefixes(*prefixes, graph=None):
             return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
         
