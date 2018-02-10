@@ -12,53 +12,53 @@ ca1_cont = (Rat, CA1)
 # organism
 
 # pyramidal phenotypes (cortex)
-P = P = PC = Phenotype('ilx:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  # 
-PB = BP = BPC = Phenotype('ilx:BiopolarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision
-PH = HP = HPC = Phenotype('ilx:HorizontalPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PI = IP = IPC = Phenotype('ilx:InvertedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PN = NP = NPC = Phenotype('ilx:NarrowPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # XXX These are apparently tufted.... so are they NarrowTufted or not? help!
-PS = SP = SPC = Phenotype('ilx:StarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision with stratum pyramidale
-PTN = NTP = NTPC = TPC_C = Phenotype('ilx:NarrowTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # are this different?  Yes, the Narrow modifieds the tufted... not entirely sure how that is different from when Narrow modifies Pyramidal...
-PT = TP = TPC = Phenotype('ilx:TuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PTS = STP = STPC = Phenotype('ilx:SlenderTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PTT = TTP = TTPC = Phenotype('ilx:ThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PTTLB = TTPLB = TTPCLB = TTPC1 = Phenotype('ilx:LateBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PTTEB = TTPEB = TTPCEB = TTPC2 = Phenotype('ilx:EarlyBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PTLB = TPLB = TPCLB = TPC_A = Phenotype('ilx:LateBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype) # these are inconsistent with usages like NGC_DA NGC_SA recomend the NGCDA NGCSA versions since the acronym is better than a/b 1/2
-PTEB = TPEB = TPCEB = TPC_B = Phenotype('ilx:EarlyBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
-PU = UP = UPC = UTPC = Phenotype('ilx:UntuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+P = P = PC = Phenotype('ilxtr:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  # 
+PB = BP = BPC = Phenotype('ilxtr:BiopolarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision
+PH = HP = HPC = Phenotype('ilxtr:HorizontalPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PI = IP = IPC = Phenotype('ilxtr:InvertedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PN = NP = NPC = Phenotype('ilxtr:NarrowPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # XXX These are apparently tufted.... so are they NarrowTufted or not? help!
+PS = SP = SPC = Phenotype('ilxtr:StarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision with stratum pyramidale
+PTN = NTP = NTPC = TPC_C = Phenotype('ilxtr:NarrowTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # are this different?  Yes, the Narrow modifieds the tufted... not entirely sure how that is different from when Narrow modifies Pyramidal...
+PT = TP = TPC = Phenotype('ilxtr:TuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTS = STP = STPC = Phenotype('ilxtr:SlenderTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTT = TTP = TTPC = Phenotype('ilxtr:ThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTTLB = TTPLB = TTPCLB = TTPC1 = Phenotype('ilxtr:LateBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTTEB = TTPEB = TTPCEB = TTPC2 = Phenotype('ilxtr:EarlyBifurcatingThickTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PTLB = TPLB = TPCLB = TPC_A = Phenotype('ilxtr:LateBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype) # these are inconsistent with usages like NGC_DA NGC_SA recomend the NGCDA NGCSA versions since the acronym is better than a/b 1/2
+PTEB = TPEB = TPCEB = TPC_B = Phenotype('ilxtr:EarlyBifurcatingTuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
+PU = UP = UPC = UTPC = Phenotype('ilxtr:UntuftedPyramidalPhenotype', pred.hasMorphologicalPhenotype)
 
-BT = BTC = Phenotype('ilx:BituftedPhenotype', pred.hasMorphologicalPhenotype)
-B = BP = Phenotype('ilx:BipolarPhenotype', pred.hasMorphologicalPhenotype)  # NOTE disjoint from biopolar pyramidal... also collision
-BS = Phenotype('ilx:BistratifiedPhenotype', pred.hasMorphologicalPhenotype)
-Ch = ChC = Phenotype('ilx:ChandelierPhenotype', pred.hasMorphologicalPhenotype)  # AA ??
-DB = DBC = Phenotype('ilx:DoubleBouquetPhenotype', pred.hasMorphologicalPhenotype)
-DA = DAC = Phenotype('ilx:DescendingAxonPhenotype', pred.hasMorphologicalPhenotype)  # FIXME how to communicate that these are a bit different than actual 'axon' phenotypes? disjoint from P?
-HA = HAC = Phenotype('ilx:HorizontalAxonPhenotype', pred.hasMorphologicalPhenotype)
-LA = LAC = Phenotype('ilx:LargeAxonPhenotype', pred.hasMorphologicalPhenotype)
-SA = SAC = Phenotype('ilx:SmallAxonPhenotype', pred.hasMorphologicalPhenotype)
-M = MC = Phenotype('ilx:MartinottiPhenotype', pred.hasMorphologicalPhenotype)
-NG = NGC = Phenotype('ilx:NeurogliaformPhenotype', pred.hasMorphologicalPhenotype)
-NGDA = NGCDA = NGC_DA = Phenotype('ilx:NeurogliaformDenseAxonPhenotype', pred.hasMorphologicalPhenotype)
-NGSA = NGCSA = NGC_SA = Phenotype('ilx:NeurogliaformSparseAxonPhenotype', pred.hasMorphologicalPhenotype)
-B = BC = Phenotype('ilx:BasketPhenotype', pred.hasMorphologicalPhenotype)
-SB = SBC = Phenotype('ilx:SmallBasketPhenotype', pred.hasMorphologicalPhenotype)
-LB = LBC = Phenotype('ilx:LargeBasketPhenotype', pred.hasMorphologicalPhenotype)
-NB = NBC = Phenotype('ilx:NestBasketPhenotype', pred.hasMorphologicalPhenotype)
-SS = SSC = Phenotype('ilx:SpinyStellatePhenotype', pred.hasMorphologicalPhenotype)  # SS is used on the website, SSC is used on the spreadsheet
+BT = BTC = Phenotype('ilxtr:BituftedPhenotype', pred.hasMorphologicalPhenotype)
+B = BP = Phenotype('ilxtr:BipolarPhenotype', pred.hasMorphologicalPhenotype)  # NOTE disjoint from biopolar pyramidal... also collision
+BS = Phenotype('ilxtr:BistratifiedPhenotype', pred.hasMorphologicalPhenotype)
+Ch = ChC = Phenotype('ilxtr:ChandelierPhenotype', pred.hasMorphologicalPhenotype)  # AA ??
+DB = DBC = Phenotype('ilxtr:DoubleBouquetPhenotype', pred.hasMorphologicalPhenotype)
+DA = DAC = Phenotype('ilxtr:DescendingAxonPhenotype', pred.hasMorphologicalPhenotype)  # FIXME how to communicate that these are a bit different than actual 'axon' phenotypes? disjoint from P?
+HA = HAC = Phenotype('ilxtr:HorizontalAxonPhenotype', pred.hasMorphologicalPhenotype)
+LA = LAC = Phenotype('ilxtr:LargeAxonPhenotype', pred.hasMorphologicalPhenotype)
+SA = SAC = Phenotype('ilxtr:SmallAxonPhenotype', pred.hasMorphologicalPhenotype)
+M = MC = Phenotype('ilxtr:MartinottiPhenotype', pred.hasMorphologicalPhenotype)
+NG = NGC = Phenotype('ilxtr:NeurogliaformPhenotype', pred.hasMorphologicalPhenotype)
+NGDA = NGCDA = NGC_DA = Phenotype('ilxtr:NeurogliaformDenseAxonPhenotype', pred.hasMorphologicalPhenotype)
+NGSA = NGCSA = NGC_SA = Phenotype('ilxtr:NeurogliaformSparseAxonPhenotype', pred.hasMorphologicalPhenotype)
+B = BC = Phenotype('ilxtr:BasketPhenotype', pred.hasMorphologicalPhenotype)
+SB = SBC = Phenotype('ilxtr:SmallBasketPhenotype', pred.hasMorphologicalPhenotype)
+LB = LBC = Phenotype('ilxtr:LargeBasketPhenotype', pred.hasMorphologicalPhenotype)
+NB = NBC = Phenotype('ilxtr:NestBasketPhenotype', pred.hasMorphologicalPhenotype)
+SS = SSC = Phenotype('ilxtr:SpinyStellatePhenotype', pred.hasMorphologicalPhenotype)  # SS is used on the website, SSC is used on the spreadsheet
 
 # e-types
-AC = Phenotype('ilx:PetillaSustainedAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
-NAC = Phenotype('ilx:PetillaSustainedNonAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
-STUT = Phenotype('ilx:PetillaSustainedStutteringPhenotype', pred.hasElectrophysiologicalPhenotype)
-IR = Phenotype('ilx:PetillaSustainedIrregularPhenotype', pred.hasElectrophysiologicalPhenotype)
-b = Phenotype('ilx:PetillaInitialBurstSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
-c = Phenotype('ilx:PetillaInitialClassicalSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
-d = Phenotype('ilx:PetillaInitialDelayedSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
+AC = Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
+NAC = Phenotype('ilxtr:PetillaSustainedNonAccomodatingPhenotype', pred.hasElectrophysiologicalPhenotype)
+STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', pred.hasElectrophysiologicalPhenotype)
+IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', pred.hasElectrophysiologicalPhenotype)
+b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
+c = Phenotype('ilxtr:PetillaInitialClassicalSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
+d = Phenotype('ilxtr:PetillaInitialDelayedSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
 
 # other e-types
-FS = Phenotype('ilx:FastSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
-RSNP = Phenotype('ilx:RegularSpikingNonPyramidalPhenotype', pred.hasElectrophysiologicalPhenotype)
+FS = Phenotype('ilxtr:FastSpikingPhenotype', pred.hasElectrophysiologicalPhenotype)
+RSNP = Phenotype('ilxtr:RegularSpikingNonPyramidalPhenotype', pred.hasElectrophysiologicalPhenotype)
 
 # layers
 L1 = Phenotype('UBERON:0005390', pred.hasLayerLocationPhenotype)
@@ -101,31 +101,31 @@ GABA = Phenotype('CHEBI:16865', pred.hasExpressionPhenotype)
 D1 = Phenotype('PR:000001175', pred.hasExpressionPhenotype)
 
 # dendrite phenotypes
-Th = Phenotype('ilx:ThickPhenotype', pred.hasDendriteMorphologicalPhenotype)
-Tu = Phenotype('ilx:TuftedPhenotype', pred.hasDendriteMorphologicalPhenotype)
+Th = Phenotype('ilxtr:ThickPhenotype', pred.hasDendriteMorphologicalPhenotype)
+Tu = Phenotype('ilxtr:TuftedPhenotype', pred.hasDendriteMorphologicalPhenotype)
 U = NegPhenotype(Tu)
 U.labelPostRule = lambda l: 'Un' + l.lower()
-S = Phenotype('ilx:SlenderPhenotype', pred.hasDendriteMorphologicalPhenotype)
-EB = Phenotype('ilx:EarlyBifurcatingPhenotype', pred.hasDendriteMorphologicalPhenotype)
-LB = Phenotype('ilx:LateBifurcatingPhenotype', pred.hasDendriteMorphologicalPhenotype)
-Sp = Phenotype('ilx:SpinyPhenotype', pred.hasDendriteMorphologicalPhenotype)
+S = Phenotype('ilxtr:SlenderPhenotype', pred.hasDendriteMorphologicalPhenotype)
+EB = Phenotype('ilxtr:EarlyBifurcatingPhenotype', pred.hasDendriteMorphologicalPhenotype)
+LB = Phenotype('ilxtr:LateBifurcatingPhenotype', pred.hasDendriteMorphologicalPhenotype)
+Sp = Phenotype('ilxtr:SpinyPhenotype', pred.hasDendriteMorphologicalPhenotype)
 ASp = NegPhenotype(Sp)
 
 # other?
-PPA = Phenotype('ilx:PerforantPathwayAssociated', pred.hasPhenotype)  # TODO FIXME
+PPA = Phenotype('ilxtr:PerforantPathwayAssociated', pred.hasPhenotype)  # TODO FIXME
 
 #OLM = Phenotype('', pred.hasLayerLocationPhenotype)  # removed since it seems to be a logical of SO and SLM
-TRI = Phenotype('ilx:TrilaminarPhenotype', pred.hasMorphologicalPhenotype)
-#AA = Phenotype('ilx:AxoAxonicPhenotype', pred.hasMorphologicalPhenotype)  # axo axonic??!? This is ChC
-IVY = Phenotype('ilx:IvyPhenotype', pred.hasMorphologicalPhenotype)  # check syns on this?
-#IS1 = Phenotype('ilx:IS1IHaveNoIdeaPhenotype', pred.hasMorphologicalPhenotype)  # these are NOT morphological types, they are an example of a 'true type' in the sense that you need multiple meausres to confirm them
-SCA = Phenotype('GO:1990021', pred.hasProjectionPhenotype)#'ilx:hasAssociatedTractPhenotype')  # how to model these... also schaffer collaterals are a MESS in the ontology FIXME
+TRI = Phenotype('ilxtr:TrilaminarPhenotype', pred.hasMorphologicalPhenotype)
+#AA = Phenotype('ilxtr:AxoAxonicPhenotype', pred.hasMorphologicalPhenotype)  # axo axonic??!? This is ChC
+IVY = Phenotype('ilxtr:IvyPhenotype', pred.hasMorphologicalPhenotype)  # check syns on this?
+#IS1 = Phenotype('ilxtr:IS1IHaveNoIdeaPhenotype', pred.hasMorphologicalPhenotype)  # these are NOT morphological types, they are an example of a 'true type' in the sense that you need multiple meausres to confirm them
+SCA = Phenotype('GO:1990021', pred.hasProjectionPhenotype)#'ilxtr:hasAssociatedTractPhenotype')  # how to model these... also schaffer collaterals are a MESS in the ontology FIXME
 STRI = Phenotype('UBERON:0005383', pred.hasSomaLocatedIn)  # VS UBERON:0002435 (always comes up)
-MSN = Phenotype('ilx:MediumSpinyPhenotype', pred.hasMorphologicalPhenotype)
-#DIRPATH = Phenotype('ilx:DirectPathway', pred.hasCircuitRolePhenotype)  # this is fine for a generic neuron, but PR:000001175 is really what we are looking at here
-INT = Phenotype('ilx:InterneuronPhenotype', pred.hasCircuitRolePhenotype)  # unsatisfactory
+MSN = Phenotype('ilxtr:MediumSpinyPhenotype', pred.hasMorphologicalPhenotype)
+#DIRPATH = Phenotype('ilxtr:DirectPathway', pred.hasCircuitRolePhenotype)  # this is fine for a generic neuron, but PR:000001175 is really what we are looking at here
+INT = Phenotype('ilxtr:InterneuronPhenotype', pred.hasCircuitRolePhenotype)  # unsatisfactory
 CER = Phenotype('UBERON:0002037', pred.hasSomaLocatedIn)
-GRAN = Phenotype('ilx:GranulePhenotype', pred.hasMorphologicalPhenotype)  # vs granular?
+GRAN = Phenotype('ilxtr:GranulePhenotype', pred.hasMorphologicalPhenotype)  # vs granular?
 
 
 def NeuronC(*args, **kwargs):

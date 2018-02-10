@@ -50,7 +50,8 @@ def do_file(filename, swap, *args):
     return reps
 
 def switchURIs(g, swap, *args):
-    _, fragment_prefixes = args
+    if len(args) > 1:  # FIXME hack!
+        _, fragment_prefixes = args
     reps = []
     prefs = {None}
     addpg = makeGraph('', graph=g)
@@ -477,6 +478,7 @@ def backend_refactor_values():
     return ureps
 
 def swapBackend(trip, ureps):
+    print(ureps)
     for spo in trip:
         if spo in ureps:
             new_spo = ureps[spo]
@@ -488,7 +490,10 @@ def swapBackend(trip, ureps):
 def backend_refactor(filenames, get_values):
     ureps = get_values()
     print('Start writing')
-    trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, swapBackend, ureps) for f in filenames)
+    if len(filenames) == 1:
+        trips_lists = [do_file(f, swapBackend, ureps) for f in filenames]
+    else:
+        trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, swapBackend, ureps) for f in filenames)
     print('Done writing')
     embed()
 
