@@ -12,7 +12,7 @@ from IPython import embed
 from utils import TODAY, rowParse, refile
 from core import makePrefixes, makeGraph, createOntology
 from ilx_utils import ILXREPLACE
-from parcellation import OntMeta
+from core import OntMeta, TEMP
 from obo_io import OboFile
 from scigraph_client import Graph, Vocabulary
 sgg = Graph(cache=True, verbose=True)
@@ -40,27 +40,26 @@ fast_phenotype = 'ilxtr:FastSpikingPhenotype'
 reg_phenotype = 'ilxtr:RegularSpikingNonPyramidalPhenotype'
 expression_edge = 'ilxtr:hasExpressionPhenotype'
 expression_defined = 'ilxtr:ExpressionClassifiedNeuron'
-NIFCELL_NEURON = 'NIFCELL:sao1417703748'
+NIFCELL_NEURON = 'SAO:1417703748'  # 'NIFCELL:sao1417703748'
 
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
 
-PREFIXES = makePrefixes('ilxtr',
-                        'ILX',
-                        'ILXREPLACE',
-                        'skos',
-                        'owl',
-                        'dc',
-                        'nsu',
-                        'NCBITaxon',
-                        'oboInOwl',
-                        'NIFEXT',
-                        'NIFRID',
-                        'NIFQUAL',
-                        'NIFCELL',
-                        'NIFMOL',
-                        'UBERON',
-                        'PR',)
+PREFIXES = {**makePrefixes('ilxtr',
+                           'ILX',
+                           'ILXREPLACE',
+                           'skos',
+                           'owl',
+                           'dc',
+                           'nsu',
+                           'NCBITaxon',
+                           'oboInOwl',
+                           'NIFEXT',
+                           'NIFRID',
+                           'NLXCELL',
+                           'SAO',
+                           'UBERON',
+                           'PR',), 'TEMP':str(TEMP)}
 
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
@@ -197,10 +196,12 @@ def get_transitive_closure(graph, edge, root):
 
 def make_phenotypes():
     ilx_start = 50114
-    graph = createOntology(filename='NIF-Phenotype-Core',
+    graph = createOntology(filename='phenotype-core',
+                           name='NIF Phenotype Core',
                            path='ttl/',
                            prefixes=PREFIXES)
-    graph2 = createOntology(filename='NIF-Phenotypes',
+    graph2 = createOntology(filename='phenotypes',
+                            name='NIF Phenotypes',
                             path='ttl/',
                             prefixes=PREFIXES)
     
@@ -211,9 +212,14 @@ def make_phenotypes():
                    'NIFNEUDEF',
                    'This file contains defined classes derived from neuron phenotypes.',
                    TODAY)
-    defined_graph = makeGraph(eont.filename, prefixes=PREFIXES)
-    ontid = eont.path + eont.filename + '.ttl'
-    defined_graph.add_ont(ontid, *eont[2:])
+    defined_graph = createOntology(filename=eont.filename,
+                                   path='ttl/',
+                                   prefixes=PREFIXES)
+    #ontid = eont.path + eont.filename + '.ttl'
+    #defined_graph.add_ont(ontid, *eont[2:])
+    edg = rdflib.Graph().parse(defined_graph.filename, format='turtle')
+    defined_id_lookup = {o.value:s for s, o in edg.subject_objects(rdflib.RDFS.label)}
+    print('AAAAAAAAAAA', defined_id_lookup)
 
     # do edges first since we will need them for the phenotypes later
     # TODO real ilx_ids and use prefixes to manage human readability
@@ -305,9 +311,10 @@ def make_phenotypes():
                 graph.expand('ilxtr:DendriteMorphologicalPhenotype'):None,
                 graph.expand('ilxtr:SomaPhenotype'):rdflib.URIRef('http://soma.org'),
                 graph.expand('ilxtr:SomaMorphologicalPhenotype'):None,
-                graph.expand('ilxtr:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),
+                graph.expand('ilxtr:NeuronPhenotype'):graph.expand(NIFCELL_NEURON),  # we changed this structure...
                 graph.expand('ilxtr:CellPhenotype'):None,
-                graph.expand('ilxtr:Phenotype'):graph.expand('ilxtr:Phenotype'),
+                #graph.expand('ilxtr:Phenotype'):graph.expand('ilxtr:Phenotype'),
+                graph.expand('ilxtr:Phenotype'):graph.expand(NIFCELL_NEURON),  # FIXME ...
             }
             if self.id_ in lookup:
                 return
@@ -319,13 +326,20 @@ def make_phenotypes():
             # hidden label for consturctions
             graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
 
+            label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
+
             self.ilx_start += 1
-            id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
+            #id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
+            # we have to look up the ids by label now
+            if label.value in defined_id_lookup:
+                id_ = defined_id_lookup[label.value]
+            else:
+                id_ = TEMP['newDefinedName' + str(self.ilx_start)]
             defined = infixowl.Class(id_, graph=defined_graph.g)
+            defined.label = label
             #defined.label = rdflib.Literal(self._label.rstrip(' Phenotype') + ' neuron')  # the extra space in rstrip removes 'et ' as well WTF!
-            defined.label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
             #print(self._label)
-            print('_row_post ilx_start', self.ilx_start, list(defined.label)[0])
+            print('_row_post ilx_start', self.ilx_start, id_.rsplit('_')[-1], list(defined.label)[0])
 
             def getPhenotypeEdge(phenotype):
                 print(phenotype)
@@ -644,22 +658,24 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     cheating = {'vasoactive intestinal peptide':'VIP',
                 'star':None,  # is a morphological phen that is missing but hits scigraph
                }
-    ng = makeGraph('NIF-Neuron', prefixes=PREFIXES)
+    ng = createOntology(filename='NIF-Neuron',
+                        path='ttl/',
+                        prefixes=PREFIXES)
 
     #""" It seemed like a good idea at the time...
     nif_cell = '~/git/NIF-Ontology/ttl/NIF-Cell.ttl'  # need to be on neurons branch
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
-    'NIFCELL:nifext_55',
-    'NIFCELL:nifext_56',
-    'NIFCELL:nifext_57',
-    'NIFCELL:nifext_59',
-    'NIFCELL:nifext_81',
-    'NIFCELL:nlx_cell_091205',
+    'NIFEXT:55',
+    'NIFEXT:56',
+    'NIFEXT:57',
+    'NIFEXT:59',
+    'NIFEXT:81',
+    'NLXCELL:091205',
     NIFCELL_NEURON,
-    'NIFCELL:sao2128417084',
-    'NIFCELL:sao862606388',  # secondary, not explicitly in the hbp import
+    'SAO:2128417084',
+    'SAO:862606388',  # secondary, not explicitly in the hbp import
     )
     for m in missing:
         m = ng.expand(m)
@@ -685,7 +701,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
     ontid = base + ng.name + '.ttl'
     ng.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    ng.add_trip(ontid, rdflib.OWL.imports, base + 'phenotypes.ttl')
     ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
     ng.add_trip(ontid, rdflib.OWL.imports, base + 'hbp-special.ttl')
     #ng.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Cell.ttl')  # NO!
@@ -694,8 +710,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     ng.replace_uriref('ilxtr:hasMolecularPhenotype', 'ilxtr:hasExpressionPhenotype')
 
     #defined_graph = makeGraph('NIF-Neuron-Defined', prefixes=PREFIXES, graph=_g)
-    defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
-    defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    #defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
+    defined_graph.add_trip(defined_graph.ontid, rdflib.OWL.imports, base + 'phenotypes.ttl')
 
     done = True#False
     done_ = set()
@@ -753,6 +769,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                     if not success:
                         for d in data:
+                            print('HELP', d)
                             if 'NIFMOL:' in d['curie']:
                                 sgt = ng.expand(d['curie'])
                                 ng.add_hierarchy(sgt, p, s)
@@ -844,7 +861,7 @@ def add_phenotypes(graph):
     graph.add_class(morpho_phenotype, neuron_phenotype, autogen=True)
 
 class table1:
-    pass # dead
+    pass # dead use neuron_ma2015.py
 
 def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
@@ -875,7 +892,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     base = 'http://ontology.neuinfo.org/NIF/ttl/' 
     ontid = base + graph.name + '.ttl'
     graph.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
-    graph.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Phenotype.ttl')
+    graph.add_trip(ontid, rdflib.OWL.imports, base + 'phenotypes.ttl')
     graph.add_trip(ontid, rdflib.OWL.imports, base + 'NIF-Neuron-Defined.ttl')
 
     def lsn(word):
@@ -995,11 +1012,10 @@ def predicate_disambig(graph):
 
 def main():
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
-    return 
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
-    t = make_table1(syn_mappings, ilx_start, phenotypes)
+    #t = make_table1(syn_mappings, ilx_start, phenotypes)
     embed()
 
 if __name__ == '__main__':
