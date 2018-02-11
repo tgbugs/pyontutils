@@ -7,7 +7,8 @@ from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
 from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.core import makeGraph, makePrefixes, TEMP
+from pyontutils.utils import TermColors as tc
+from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON
 
 __all__ = [
     'AND',
@@ -25,7 +26,7 @@ __all__ = [
     'LogicalPhenotype',
     'Neuron',
     #'NeuronArranger',
-    'NEURON_CLASS',
+    '_NEURON_CLASS',
 ]
 
 # language constructes
@@ -33,7 +34,7 @@ AND = 'owl:intersectionOf'
 OR = 'owl:unionOf'
 
 # utility identifiers
-NEURON_CLASS = 'SAO:1417703748'
+_NEURON_CLASS = 'SAO:1417703748'
 PHENO_ROOT = 'ilxtr:hasPhenotype'  # needs to be qname representation
 DEF_ROOT = 'ilxtr:definedClassNeurons'
 
@@ -82,6 +83,8 @@ class graphBase:
     _predicates = 'ASSIGN ME AFTER IMPORT'
 
     LocalNames = {}
+
+    __import_name__ = __name__
 
     #_sgv = Vocabulary(cache=True)
 
@@ -195,7 +198,8 @@ class graphBase:
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('TEMP',
+        nin_graph = attachPrefixes('TEMP',  # XXX PREFIXES
+                                   'PAXRAT',
                                    'GO',
                                    'CHEBI',
                                    graph=in_graph)
@@ -208,10 +212,11 @@ class graphBase:
             # that we use to serialize so that behavior is consistent
             NeuronBase.existing_pes = {}
             NeuronBase.existing_ids = {}
-        new_graph = attachPrefixes('owl',
+        new_graph = attachPrefixes('owl',   # XXX PREFIXES
                                    'GO',
                                    'PR',
                                    'CHEBI',
+                                   'PAXRAT',
                                    'UBERON',
                                    'NCBITaxon',
                                    'TEMP',
@@ -250,8 +255,8 @@ class graphBase:
 
     @staticmethod
     def python():
-        out = '#!/usr/bin/env python3\n'
-        out += 'from %s import *\n\n' % __name__
+        out = '#!/usr/bin/env python3.6\n'
+        out += f'from {graphBase.__import_name__} import *\n\n'
         #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
         out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
         return out
@@ -795,10 +800,11 @@ class Neuron(NeuronBase):
         # subClassOf restrictions (hacked impl using curie prefixes as a proxy)
         # no panther
         # no uberon
+        usage_ok = {UBERON['0000955'], UBERON['0001950']}
         for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
             for pe in self.pes:
-                if pe.e == predicate and invalid_superclass in pe.p:
-                    print(f'WARNING: subClassOf restriction violated for {invalid_superclass} due to {pe}')
+                if pe.e == predicate and pe.p not in usage_ok and invalid_superclass in pe.p:
+                    print(tc.red(f'WARNING: subClassOf restriction violated for {invalid_superclass} due to {pe}'))
                     #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
         # species matched identifiers TODO
@@ -853,13 +859,13 @@ class Neuron(NeuronBase):
                         pes.append(lpe)
                         continue
                     if isinstance(pr, infixowl.Class):
-                        if id_ == self.expand(NEURON_CLASS):
+                        if id_ == self.expand(_NEURON_CLASS):
                             #print('we got neuron root', id_)
                             continue
                         else:
                             pass  # it is a restriction
 
-                    p = pr.someValuesFrom  # if NEURON_CLASS is not a owl:Class > problems
+                    p = pr.someValuesFrom  # if _NEURON_CLASS is not a owl:Class > problems
                     e = pr.onProperty
                     pes.append(type_(p, e))
                 return tuple(pes)
@@ -890,7 +896,7 @@ class Neuron(NeuronBase):
         """ Lift phenotypeEdges to Restrictions """
         if graph is None:
             graph = self.out_graph
-        members = [self.expand(NEURON_CLASS)]
+        members = [self.expand(_NEURON_CLASS)]
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
@@ -1072,8 +1078,21 @@ class injective(type):
     def __new__(cls, name, bases, inj_dict):
         return super().__new__(cls, name, bases, dict(inj_dict))
 
+    def __len__(self):
+        return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype)])
+
     def __getitem__(self, key):
         return self.__dict__[key]
+
+    def __repr__(self):
+        newline = '\n'
+        t = ' ' * 4
+        lnm = self.mro()[-2].__name__
+        cname = 'class ' + self.__name__ + f'({lnm}):' + '\n'
+        return  cname + '\n'.join(f'{t}{k:<8} = {repr(v).replace(newline, " ")}'
+                                  for k in dir(self)
+                                  for v in (getattr(self, k),)
+                                  if isinstance(v, Phenotype))
 
     def __enter__(self):
         stack = inspect.stack()
@@ -1103,6 +1122,7 @@ class injective(type):
 
 class LocalNameManager(metaclass=injective):
     """ Base class for sets of local names for phenotypes.
+        Local name managers are singletons and do not need to be instantiated.
         Can be used in a context manager or globally via setLocalNames.
         It is possible to subclass to add your custom names to a core. """
 
@@ -1121,7 +1141,7 @@ class LocalNameManager(metaclass=injective):
     'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
     )
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # just in case someone makes an instance by mistake
         return self.__class__.__dict__[key]
 
 
@@ -1233,6 +1253,7 @@ def main():
     PREFIXES = makePrefixes('owl',
                             'skos',
                             'PR',
+                            'PAXRAT',
                             'UBERON',
                             'NCBITaxon',
                             'TEMP',
@@ -1245,9 +1266,9 @@ def main():
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(NEURON_CLASS)))
-    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % NEURON_CLASS)]
-    def_neurons = g.get_equiv_inter(NEURON_CLASS)
+    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(_NEURON_CLASS)))
+    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % _NEURON_CLASS)]
+    def_neurons = g.get_equiv_inter(_NEURON_CLASS)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))
     MeasuredNeuron.out_graph = rdflib.Graph()

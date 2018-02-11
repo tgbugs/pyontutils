@@ -135,7 +135,7 @@ class scigPrint:
 
 def main():
     args = docopt(__doc__, version='scig 0')
-    print(args)
+    #print(args)
     server = None
     api_key = args['--key']
     verbose = False

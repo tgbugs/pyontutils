@@ -46,6 +46,9 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw/',
 config()
 pred = graphBase._predicates
 
+# set the import to this file instead of neurons
+graphBase.__import_name__ = __name__
+
 # add a handy ipython line magic for scig to look up terms
 try:
     ip = get_ipython()
