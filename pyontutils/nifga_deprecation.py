@@ -12,9 +12,10 @@ from rdflib.namespace import SKOS
 import requests
 from IPython import embed
 from scigraph_client import Vocabulary, Graph
-from utils import TODAY, scigPrint, makePrefixes, makeGraph, async_getter, TermColors as tc
+from utils import TODAY, async_getter, TermColors as tc
+from scig import scigPrint
 from hierarchies import creatTree, flatten
-from parcellation import OntMeta
+from core import OntMeta, makePrefixes, makeGraph
 
 sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
 sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
