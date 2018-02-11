@@ -7,8 +7,7 @@ from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
 from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.core import makeGraph, makePrefixes
-from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.core import makeGraph, makePrefixes, TEMP
 
 __all__ = [
     'AND',
@@ -37,6 +36,9 @@ OR = 'owl:unionOf'
 NEURON_CLASS = 'SAO:1417703748'
 PHENO_ROOT = 'ilxtr:hasPhenotype'  # needs to be qname representation
 DEF_ROOT = 'ilxtr:definedClassNeurons'
+
+# utility functions
+
 def getPhenotypePredicates(graph):
     # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
     qstring = ('SELECT DISTINCT ?prop WHERE '
@@ -49,6 +51,28 @@ def getPhenotypePredicates(graph):
     return phenoPreds
 
 # neuron and phenotype representations
+
+def test_notebook():
+    try:
+        if 'IPKernelApp' in get_ipython().config:
+            return True
+        return False
+    except (NameError, KeyError) as e:
+        return False
+
+in_notebook = test_notebook()
+
+def stack_magic(stack):
+    # note: we cannot use globals() because it will be globals of the defining file not the calling file
+    if in_notebook:
+        index = 1  # this seems to work for now
+    else:
+        index = -1
+
+    return stack[index][0].f_locals
+
+#
+# classes
 
 class graphBase:
     core_graph = 'ASSIGN ME AFTER IMPORT!'
@@ -128,10 +152,13 @@ class graphBase:
 
         """
 
+        graphBase.local_base = local_base
+        graphBase.remote_base = remote_base
+
         def makeLocalRemote(suffixes):
-            local = [local_base + s for s in suffixes]
             remote = [remote_base + branch + '/' + s for s in suffixes]
-            return local, remote
+            local = [local_base + s for s in suffixes]
+            return remote, local
 
         def attachPrefixes(*prefixes, graph=None):
             return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
@@ -168,7 +195,7 @@ class graphBase:
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('ILXREPLACE',
+        nin_graph = attachPrefixes('TEMP',
                                    'GO',
                                    'CHEBI',
                                    graph=in_graph)
@@ -187,7 +214,7 @@ class graphBase:
                                    'CHEBI',
                                    'UBERON',
                                    'NCBITaxon',
-                                   'ILXREPLACE',
+                                   'TEMP',
                                    'ilxtr',
                                    'ILX',
                                    'SAO',
@@ -542,7 +569,8 @@ class NeuronBase(graphBase):
             self.id_ = self.expand(id_)
         elif phenotypeEdges:
             #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
-            self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this 
+            #self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this
+            self.id_ = TEMP[str(tuple(sorted(phenotypeEdges))).replace(' ','-')]  # XXX beware changing how __str__ works... really need to do this
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
@@ -1044,13 +1072,39 @@ class injective(type):
     def __new__(cls, name, bases, inj_dict):
         return super().__new__(cls, name, bases, dict(inj_dict))
 
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def __enter__(self):
+        stack = inspect.stack()
+        g = stack_magic(stack)
+        self._existing = set()
+        for k in dir(self):
+            v = getattr(self, k)  # use this instead of __dict__ to get parents
+            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                if k in graphBase.LocalNames:  # name was in enclosing scope
+                    self._existing.add(k)
+                setLocalNameBase(k, v, g)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        stack = inspect.stack()
+        g = stack_magic(stack)
+        #g = inspect.stack()[-1][0].f_locals  #  get globals of calling scope
+        for k in dir(self):
+            v = getattr(self, k)  # use this instead of __dict__ to get parents
+            if k not in self._existing and (isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)):
+                try:
+                    g.pop(k)
+                except KeyError:
+                    raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
+                graphBase.LocalNames.pop(k)
+
 
 class LocalNameManager(metaclass=injective):
     """ Base class for sets of local names for phenotypes.
-        Children should be passed to loadNames to make the names available.
-        It is possible to subclass to add your custom names to a core.
-        Using addLN or addLNT is advised since it will make sure the name
-        set remains injective. """
+        Can be used in a context manager or globally via setLocalNames.
+        It is possible to subclass to add your custom names to a core. """
 
     ORDER = (
     'ilxtr:hasInstanceInSpecies',
@@ -1067,27 +1121,8 @@ class LocalNameManager(metaclass=injective):
     'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
     )
 
-    def __enter__(self):
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-        self._existing = set()
-        for k in dir(self):
-            v = getattr(self, k)  # use this instead of __dict__ to get parents
-            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-                if k in graphBase.LocalNames:  # name was in enclosing scope
-                    self._existing.add(k)
-                setLocalNameBase(k, v, g)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
-        for k in dir(self):
-            v = getattr(self, k)  # use this instead of __dict__ to get parents
-            if k not in self._existing and (isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)):
-                try:
-                    g.pop(k)
-                except KeyError:
-                    raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
-                graphBase.LocalNames.pop(k)
+    def __getitem__(self, key):
+        return self.__class__.__dict__[key]
 
 
 def checkCalledInside(classname, stack):
@@ -1127,14 +1162,14 @@ def addLNBase(LocalName, phenotype, g=None):
                           'It is already bound to %r') % (LocalName, phenotype, inj[phenotype]))
     g[LocalName] = phenotype
 
-def addLN(LocalName, phenotype, g=None):
+def addLN(LocalName, phenotype, g=None):  # XXX deprecated
     if g is None:
         s = inspect.stack()  # horribly inefficient
         checkCalledInside('LocalNameManager', s)
         g = s[1][0].f_locals  # get globals of calling scope
     addLNBase(LocalName, phenotype, g)
 
-def addLNT(LocalName, phenoId, predicate, g=None):
+def addLNT(LocalName, phenoId, predicate, g=None):  # XXX deprecated
     """ Add a local name for a phenotype from a pair of identifiers """ 
     if g is None:
         s = inspect.stack()  # horribly inefficient
@@ -1200,7 +1235,7 @@ def main():
                             'PR',
                             'UBERON',
                             'NCBITaxon',
-                            'ILXREPLACE',
+                            'TEMP',
                             'ilxtr',
                             'ILX',
                             'SAO',
@@ -1229,10 +1264,10 @@ def main():
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
     from neuron_lang import WRITEPYTHON
     WRITEPYTHON(sorted(dns))
-    ng.add_ont(ILXREPLACE('defined-neurons'), 'Defined Neurons', 'NIFDEFNEU',
+    ng.add_ont(TEMP['defined-neurons'], 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
-    ng.add_trip(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
-    ng.add_trip(ILXREPLACE('defined-neurons'), 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
     ng.write()
     bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]
