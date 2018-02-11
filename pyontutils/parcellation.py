@@ -1016,7 +1016,7 @@ class parcCore(Ont):
 
     path = 'ttl/generated/'
     filename = 'parcellation-core'
-    name = 'Parcellation Artifacts'
+    name = 'Parcellation Core'
     #shortname = 'parcore'  # huehuehue
     prefixes = {**makePrefixes('skos'), **Ont.prefixes}
     imports = NIFTTL['nif_backend.ttl'], Artifacts()
