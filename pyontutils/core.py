@@ -13,6 +13,9 @@ from pyontutils.closed_namespaces import *
 
 # prefixes
 
+def interlex_namespace(user):
+    return 'http://uri.interlex.org/' + user + '/'
+
 def _loadPrefixes():
     try:
         with open(refile(__file__, '../scigraph/nifstd_curie_map.yaml'), 'rt') as f:
@@ -68,6 +71,7 @@ def _loadPrefixes():
 
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
+        'TEMP': interlex_namespace('temp/uris'),
         'FIXME':'http://FIXME.org/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
@@ -101,18 +105,14 @@ def makeNamespaces(*prefixes):
 def makeURIs(*prefixes):
     return tuple(PREFIXES[prefix] for prefix in prefixes)
 
-def interlex_namespace(user):
-    return 'http://uri.interlex.org/' + user + '/'
-
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
- ilx) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
-                       'ilxtr', 'ilx')
+ ilx, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
+                       'ilxtr', 'ilx', 'TEMP')
 HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
-TEMP = rdflib.Namespace(interlex_namespace('temp/uris'))
 WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels'))
 
 rdf = rdflib.RDF
