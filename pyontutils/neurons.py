@@ -6,9 +6,11 @@ import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
+from pyontutils.ttlser import natsort
 from pyontutils.scigraph_client import Graph, Vocabulary
 from pyontutils.utils import TermColors as tc
-from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON
+from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
+from pyontutils.qnamefix import cull_prefixes
 
 __all__ = [
     'AND',
@@ -246,7 +248,8 @@ class graphBase:
 
     @staticmethod
     def write():
-        graphBase.ng.write()
+        og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        og.write()
 
     @staticmethod
     def write_python():
@@ -263,7 +266,8 @@ class graphBase:
 
     @staticmethod
     def ttl():
-        return graphBase.out_graph.serialize(format='nifttl').decode()
+        og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        return og.g.serialize(format='nifttl').decode()
 
     @staticmethod
     def neurons():
@@ -271,6 +275,7 @@ class graphBase:
 
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
+    _rank = '0'
     local_names = {
         'NCBITaxon:10116':'Rat',
         'CHEBI:16865':'GABA',
@@ -414,6 +419,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             return ''
 
+    @property
+    def predicates(self):
+        yield self.e
+
+    @property
+    def objects(self):
+        yield self.p
+
+    def _uri_frag(self, index):
+        return self._rank + f'-p{index(self.e)}-' + self.ng.qname(self.p).replace(':','-')
+        #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
+
     def _graphify(self, graph=None):
         if graph is None:
             graph = self.out_graph
@@ -460,10 +477,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
 
 class NegPhenotype(Phenotype):
+    _rank = '1'
     """ Class for Negative Phenotypes to simplfy things """
 
 
 class LogicalPhenotype(graphBase):
+    _rank = '2'
     local_names = {
         AND:'AND',
         OR:'OR',
@@ -494,6 +513,21 @@ class LogicalPhenotype(graphBase):
         if self in inj:
             return inj[self]
         return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
+
+    @property
+    def predicates(self):
+        for pe in sorted(self.pes):
+            yield pe.e
+
+    @property
+    def objects(self):
+        for pe in sorted(self.pes):
+            yield pe.p
+
+    def _uri_frag(self, index):
+        rank = '4' if self.op == AND else '5'  # OR
+        return '-'.join(sorted((rank + f'-p{index(pe.e)}-' + self.ng.qname(pe.p).replace(':','-')
+                                for pe in sorted(self.pes)), key=natsort))
 
     def _graphify(self, graph=None):
         if graph is None:
@@ -563,6 +597,7 @@ class NeuronBase(graphBase):
         self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
         self._predicates.hasExpressionPhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
+        self._predicates.hasPhenotype,  # last
         ]
 
         self._localContext = self.__context
@@ -575,7 +610,15 @@ class NeuronBase(graphBase):
         elif phenotypeEdges:
             #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
             #self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this
-            self.id_ = TEMP[str(tuple(sorted(phenotypeEdges))).replace(' ','-')]  # XXX beware changing how __str__ works... really need to do this
+            #self.id_ = TEMP[str(tuple(sorted(phenotypeEdges))).replace(' ','_').replace("'","=")]  # XXX beware changing how __str__ works... really need to do this
+
+            frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
+                                    for pe in phenotypeEdges),
+                                   key=natsort))
+                                       #*(f'p{self.ORDER.index(p)}/{self.ng.qname(o)}'
+                                         #for p, o in sorted(zip(pe.predicates,
+                                                                #pe.objects)))))
+            self.id_ = TEMP[frag]  # XXX beware changing how __str__ works... really need to do this
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
@@ -1079,7 +1122,7 @@ class injective(type):
         return super().__new__(cls, name, bases, dict(inj_dict))
 
     def __len__(self):
-        return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype)])
+        return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)])
 
     def __getitem__(self, key):
         return self.__dict__[key]
@@ -1092,7 +1135,7 @@ class injective(type):
         return  cname + '\n'.join(f'{t}{k:<8} = {repr(v).replace(newline, " ")}'
                                   for k in dir(self)
                                   for v in (getattr(self, k),)
-                                  if isinstance(v, Phenotype))
+                                  if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype))
 
     def __enter__(self):
         stack = inspect.stack()
@@ -1126,6 +1169,8 @@ class LocalNameManager(metaclass=injective):
         Can be used in a context manager or globally via setLocalNames.
         It is possible to subclass to add your custom names to a core. """
 
+    # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
+
     ORDER = (
     'ilxtr:hasInstanceInSpecies',
     'ilxtr:hasTaxonRank',
@@ -1139,6 +1184,7 @@ class LocalNameManager(metaclass=injective):
     'ilxtr:hasSpikingPhenotype',  # legacy support
     'ilxtr:hasExpressionPhenotype',
     'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+    'ilxtr:hasPhenotype',
     )
 
     def __getitem__(self, key):  # just in case someone makes an instance by mistake
