@@ -6,12 +6,16 @@ from pyontutils.neuron_lang import config  # annoying, but works
 
 __all__ = ['Test',
            'Layers',
+           'PaxRatLayers',
            'Regions',
+           'PaxRatRegions',
            'Species',
            'BBP']
 
+
 class Test(LocalNameManager):
     LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
+
 
 class Layers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
@@ -30,6 +34,25 @@ class Layers(LocalNameManager):
     SLU = Phenotype('UBERON:0007637', 'ilxtr:hasLayerLocationPhenotype')
     SR = Phenotype('UBERON:0005372', 'ilxtr:hasLayerLocationPhenotype')
 
+
+class PaxRatLayers(LocalNameManager):
+    # TODO there might be a way to set a default predicate here...
+    L1 = Phenotype('PAXRAT:509', 'ilxtr:hasLayerLocationPhenotype')
+    L2 = Phenotype('PAXRAT:512', 'ilxtr:hasLayerLocationPhenotype')
+    L3 = Phenotype('PAXRAT:513', 'ilxtr:hasLayerLocationPhenotype')
+    L23 = LogicalPhenotype(OR, L2, L3)
+    L4 = Phenotype('PAXRAT:515', 'ilxtr:hasLayerLocationPhenotype')
+    L5 = Phenotype('PAXRAT:516', 'ilxtr:hasLayerLocationPhenotype')
+    L6 = Phenotype('PAXRAT:519', 'ilxtr:hasLayerLocationPhenotype')
+
+    SO = Phenotype('PAXRAT:675', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
+    SPy = Phenotype('PAXRAT:815', 'ilxtr:hasLayerLocationPhenotype')  # SP
+    #SLA = Phenotype('', 'ilxtr:hasLayerLocationPhenotype')  # paxrat does not seem to have this, only LM
+    SLM = Phenotype('PAXRAT:443', 'ilxtr:hasLayerLocationPhenotype')
+    SLU = Phenotype('PAXRAT:901', 'ilxtr:hasLayerLocationPhenotype')
+    SR = Phenotype('PAXRAT:822', 'ilxtr:hasLayerLocationPhenotype')
+
+
 class Regions(LocalNameManager):
     #('brain = Phenotype('UBERON:0000955', 'ilxtr:hasLocationPhenotype')  # hasLocationPhenotype a high level
     brain = Phenotype('UBERON:0000955', 'ilxtr:hasSomaLocatedIn')
@@ -39,11 +62,22 @@ class Regions(LocalNameManager):
     S1 = Phenotype('UBERON:0008933', 'ilxtr:hasSomaLocatedIn')
     CA1 = Phenotype('UBERON:0003881', 'ilxtr:hasSomaLocatedIn')
 
+
+class PaxRatRegions(LocalNameManager):
+    brain = Phenotype('UBERON:0000955', 'ilxtr:hasSomaLocatedIn')  # paxinos does not go this high
+    CTX = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')  # paxinos does not go this high
+    CA1 = Phenotype('PAXRAT:322', 'ilxtr:hasSomaLocatedIn')
+    CA2 = Phenotype('PAXRAT:323', 'ilxtr:hasSomaLocatedIn')
+    CA3 = Phenotype('PAXRAT:324', 'ilxtr:hasSomaLocatedIn')
+    S1 = Phenotype('PAXRAT:794', 'ilxtr:hasSomaLocatedIn')
+
+
 class Species(LocalNameManager):
     Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
     Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')
 
-class BBP(Layers, Regions, Species):
+
+class BBP(PaxRatLayers, PaxRatRegions, Species):
     # cat old_neuron_example.py | grep -v ^# | grep -o "\w\+\ \=\ Pheno.\+" | sed "s/^/('/" | sed "s/\ \=\ /',/" | sed 's/Phenotype(//' | sed 's/)/)/'
     PC = Phenotype('ilxtr:PyramidalPhenotype', 'ilxtr:hasMorphologicalPhenotype')  # 
     BPC = Phenotype('ilxtr:BiopolarPyramidalPhenotype', 'ilxtr:hasMorphologicalPhenotype')  # collision
@@ -117,9 +151,11 @@ class BBP(Layers, Regions, Species):
     TRI = Phenotype('ilxtr:TrilaminarPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     IVY = Phenotype('ilxtr:IvyPhenotype', 'ilxtr:hasMorphologicalPhenotype')  # check syns on this?
     SCA = Phenotype('GO:1990021', 'ilxtr:hasProjectionPhenotype')  #'ilxtr:hasAssociatedTractPhenotype')  # how to model these... also schaffer collaterals are a MESS in the ontology FIXME
-    STRI = Phenotype('UBERON:0005383', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
+    #STRI = Phenotype('UBERON:0005383', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
+    STRI = Phenotype('PAXRAT:168', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
     MSN = Phenotype('ilxtr:MediumSpinyPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     INT = Phenotype('ilxtr:InterneuronPhenotype', 'ilxtr:hasCircuitRolePhenotype')  # unsatisfactory
-    CER = Phenotype('UBERON:0002037', 'ilxtr:hasSomaLocatedIn')
+    #CER = Phenotype('UBERON:0002037', 'ilxtr:hasSomaLocatedIn')
+    CER = Phenotype('PAXRAT:191', 'ilxtr:hasSomaLocatedIn')
     GRAN = Phenotype('ilxtr:GranulePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # vs granular?
 
