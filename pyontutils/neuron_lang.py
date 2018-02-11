@@ -22,15 +22,15 @@ __all__ = [
     'Neuron',
 ]
 
-def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
+def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw/',
            local_base=        os.path.expanduser('~/git/NIF-Ontology/'),
            branch=            'neurons',
-           core_graph_paths= ['ttl/NIF-Phenotype-Core.ttl',
-                              'ttl/NIF-Phenotypes.ttl'],
+           core_graph_paths= ['ttl/phenotype-core.ttl',
+                              'ttl/phenotypes.ttl'],
            core_graph=        None,
            in_graph_paths=    tuple(),
            out_graph_path=    '/tmp/_Neurons.ttl',
-           out_imports=      ['ttl/NIF-Phenotype-Core.ttl'],
+           out_imports=      ['ttl/phenotype-core.ttl'],
            out_graph=         None,
            force_remote=      False,
            scigraph=          'localhost:9000'):
