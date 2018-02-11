@@ -681,29 +681,44 @@ class Source(tuple):
 
     def __new__(cls):
         if not hasattr(cls, 'data'):
-            if hasattr(cls, 'runonce'):
+            if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
-            cls.raw = cls.loadData()
-            cls.data = cls.validate(*cls.processData())
-            cls._triples_for_ontology = []
-            if os.path.exists(cls.source):  # TODO no expanded stuff
+
+            if cls.source.startswith('http'):
+                if cls.source.endswith('.git'):
+                    cls._type = 'git-remote'
+                    # TODO look for local, if not fetch, pull latest, get head commit
+                else:
+                    cls._type = 'iri'
+                cls.iri = rdflib.URIRef(cls.source)
+            elif os.path.exists(cls.source):  # TODO no expanded stuff
+                cls._type = 'local'
                 file_commit = subprocess.check_output(['git', 'log', '-n', '1',
                                                        '--pretty=format:%H', '--',
                                                        cls.source]).decode().rstrip()
-
                 cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
-            elif cls.source.startswith('http'):
-                cls.iri = rdflib.URIRef(cls.source)
             else:
+                cls._type = None
                 print('Unknown source', cls.source)
+
+            cls.raw = cls.loadData()
+            cls.data = cls.validate(*cls.processData())
+            cls._triples_for_ontology = []
             cls.prov()
         self = super().__new__(cls, cls.data)
         return self
 
     @classmethod
     def loadData(cls):
-        with open(os.path.expanduser(cls.source), 'rt') as f:
-            return f.read()
+        if cls._type == 'local':
+            with open(os.path.expanduser(cls.source), 'rt') as f:
+                return f.read()
+        elif cls._type == 'iri':
+            return tuple()
+        elif cls._type == 'git-remote':
+            return tuple()
+        else:
+            return tuple()
 
     @classmethod
     def processData(cls):
@@ -715,19 +730,22 @@ class Source(tuple):
 
     @classmethod
     def prov(cls):
-        object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
-        if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):
-            cls.iri_head = object
-            if hasattr(cls.artifact, 'hadDerivation'):
-                cls.artifact.hadDerivation.append(object)
-            else:
-                cls.artifact.hadDerivation = [object]
-        elif hasattr(cls, 'source_original') and cls.source_original:
-            cls.iri_head = object
-            if cls.artifact is not None:
-                cls.artifact.source = cls.iri
-        elif cls.source.startswith('http'):
-            print('Source is url and assumed to have no intermediate', cls.source)
+        if cls._type == 'local':
+            object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+            if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):  # FIXME no help on mispelling
+                cls.iri_head = object
+                if hasattr(cls.artifact, 'hadDerivation'):
+                    cls.artifact.hadDerivation.append(object)
+                else:
+                    cls.artifact.hadDerivation = [object]
+            elif hasattr(cls, 'source_original') and cls.source_original:
+                cls.iri_head = object
+                if cls.artifact is not None:
+                    cls.artifact.source = cls.iri
+        elif cls._type == 'git-remote' or cls._type == 'iri':
+            #print('Source is url and assumed to have no intermediate', cls.source)
+            if hasattr(cls, 'source_original') and cls.source_original:
+                cls.artifact = cls  # make the artifact and the source equivalent for prov
         else:
             print('Unknown source', cls.source)
 
@@ -779,7 +797,7 @@ class Ont:
                                      imports=imports)
         self.graph = self._graph.g
         self._extra_triples = set()
-        if hasattr(self, 'sources'):  # FIXME move this to the RegionBase/LabelBase
+        if hasattr(self, 'sources'):  # FIXME also support source = ?
             self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
                                                     for i in self.sources)
                                         if _ is not None)
