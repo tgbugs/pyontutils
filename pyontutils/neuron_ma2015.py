@@ -1,12 +1,15 @@
 #!/usr/bin/env python3.6
 
+from pathlib import Path
 from pyontutils.utils import rowParse, refile
-import pyontutils.neuron_example as ne
+from pyontutils.neuron_lang import *
+from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
 
-context = (ne.Rat, ne.S1, ne.INT, ne.GABA)
-def NeuronC(*args, **kwargs):
-    return ne.Neuron(*args, *context)
+config(out_graph_path=str(Path(graphBase.local_base) / 'ttl/hbp-special.ttl'))
+
+with BBP:
+    context = Neuron(Rat, S1, INT, GABA)
 
 class table1(rowParse):
     citation = 'Markhram et al Cell 2015'
@@ -18,7 +21,7 @@ class table1(rowParse):
         syn = syn.strip()
         abrv = abrv.rstrip(')').strip()
         print((syn, abrv))
-        self._mtype = ne.__dict__[abrv]
+        self._mtype = BBP[abrv]
 
         return self._mtype
 
@@ -45,15 +48,16 @@ class table1(rowParse):
             self.graph.add_trip(self._morpho_parent_id, 'NIFRID:synonym', v)
 
     def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
-        p_edge = ne.pred.hasExpressionPhenotype
-        p_map = {
-            'CB':ne.CB,
-            'PV':ne.PV,
-            'CR':ne.CR,
-            'NPY':ne.NPY,
-            'VIP':ne.VIP,
-            'SOM':ne.SOM,
-        }
+        p_edge = pred.hasExpressionPhenotype
+        with BBP:
+            p_map = {
+                'CB':CB,
+                'PV':PV,
+                'CR':CR,
+                'NPY':NPY,
+                'VIP':VIP,
+                'SOM':SOM,
+            }
         NEGATIVE = False
         POSITIVE = True  # FIXME this requires more processing prior to dispatch...
         e_edge = ''
@@ -79,28 +83,29 @@ class table1(rowParse):
         for v in values:
             abrv, score_paren = v.split(' (')
             score = score_paren.rstrip(')')
-            molecule = ne.__dict__[abrv] #p_map[abrv]
+            molecule = BBP[abrv] #p_map[abrv]
             exists = e_map[score]
             score = s_map[score]
             if exists:
                 self._moltypes.append(molecule)
             else:
-                self._moltypes.append(ne.NegPhenotype(molecule))
+                self._moltypes.append(NegPhenotype(molecule))
 
         return self._moltypes
 
     def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
-        e_map = {
-            'b':ne.b,
-            'c':ne.c,
-            'd':ne.d,
-        }
-        l_map = {
-            'AC':ne.AC,
-            'NAC':ne.NAC,
-            'STUT':ne.STUT,
-            'IR':ne.IR,
-        }
+        with BBP:
+            e_map = {
+                'b':b,
+                'c':c,
+                'd':d,
+            }
+            l_map = {
+                'AC':AC,
+                'NAC':NAC,
+                'STUT':STUT,
+                'IR':IR,
+            }
 
         values = value.split(self._sep)
         self._etypes = []
@@ -109,16 +114,17 @@ class table1(rowParse):
             score = int(score_pct_paren.rstrip('%)'))
             e_name, l_name = early_late[0], early_late[1:]
             #early, late = e_map[e_name], l_map[l_name]
-            early, late = ne.__dict__[e_name], ne.__dict__[l_name]
-            lpe = ne.LogicalPhenotype(ne.AND, early, late)
+            early, late = BBP[e_name], BBP[l_name]
+            lpe = LogicalPhenotype(AND, early, late)
             self._etypes.append(lpe)
 
         return self._etypes
 
     def Other_electrical_classifications(self, value):
-        valid_mappings = {'Fast spiking':ne.FS,
-                          'Non-fast spiking':ne.NegPhenotype(ne.FS),  # only in this very limited context
-                          'Regular spiking non-pyramidal':ne.RSNP}
+        with BBP:
+            valid_mappings = {'Fast spiking':FS,
+                              'Non-fast spiking':NegPhenotype(FS),  # only in this very limited context
+                              'Regular spiking non-pyramidal':RSNP}
 
         values = value.split(self._sep)
         self._other_etypes = []
@@ -129,11 +135,12 @@ class table1(rowParse):
         return self._other_etypes
 
     def _row_post(self):
-        for etype in self._etypes:
-            NeuronC(etype, *self._other_etypes, self._mtype, *self._moltypes)
+        with context:
+            for etype in self._etypes:
+                Neuron(etype, self._mtype, *self._other_etypes, *self._moltypes)
 
     def _end(self):
-        ne.WRITE()
+        graphBase.write()
 
 if __name__ == '__main__':
     import csv
