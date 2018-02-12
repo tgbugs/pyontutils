@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+#!/usr/bin/env pypy3
 """ Common commands for ontology processes. As well as
     various ontology refactors that should be run in the root ttl folder.
 
@@ -95,7 +96,7 @@ class ontologySection:
 #
 # utils
 
-def deadlinks(filenames, rate, timeout=5, verbose=False):
+def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
@@ -113,11 +114,12 @@ def deadlinks(filenames, rate, timeout=5, verbose=False):
             print('Timedout:', url, e)
             return Timedout(url)
     s = time()
-    all_ = Async(rate=rate, debug=verbose)(deferred(head_timeout)(url) for url in urls)
-    not_ok = [_.url for _ in all_ if not _.ok]
+    collector = [] if debug else None
+    all_ = Async(rate=rate, debug=verbose, collector=collector)(deferred(head_timeout)(url) for url in urls)
     o = time()
+    not_ok = [_.url for _ in all_ if not _.ok]
     d = o - s
-    print('Actual time', d)
+    print(f'Actual time: {d}    Effective rate: {len(urls) / d}Hz    diff: {(len(urls) / d) / rate}')
     print('Failed:')
     if not_ok:
         for nok in not_ok:
@@ -128,6 +130,39 @@ def deadlinks(filenames, rate, timeout=5, verbose=False):
         print(f'{ln} urls out of {lt} ({ln / lt * 100}%) are not ok. D:')
     else:
         print(f'OK. All {len(urls)} urls passed! :D')
+    if debug:
+        from matplotlib.pyplot import plot, savefig, figure, show, legend, title
+        from collections import defaultdict
+        def asyncVis(collector):
+            by_thread = defaultdict(lambda: [[], [], [], [], [], [], [], []])
+            min_ = 0
+            for thread, job, start, target_stop, stop, time_per_job, p, i, d in sorted(collector):
+                if not min_:
+                    min_ = stop
+                by_thread[thread][0].append(job)
+                #by_thread[thread][1].append(start - min_)
+                by_thread[thread][2].append(target_stop - stop)
+                by_thread[thread][3].append(stop - min_)
+                by_thread[thread][4].append(time_per_job)
+                by_thread[thread][5].append(p)
+                by_thread[thread][6].append(i)
+                by_thread[thread][7].append(d)
+
+            for thread, (job, y1, y2, y3, y4, y5, y6, y7) in by_thread.items():
+                figure()
+                title(str(thread))
+                plot(job, [0] * len(job), 'r-')
+                #plot(job, y1, label=f'stop')
+                plot(job, y2, label=f'early by')
+                #plot(job, y3, label=f'stop')
+                #plot(job, y4, label=f'time per job')  # now constant...
+                plot(job, y5, label='P')
+                plot(job, y6, label='I')
+                plot(job, y7, label='D')
+                legend()
+            show()
+        asyncVis(collector)
+        embed()
 
 def furls(filename):
     return set(url for t in rdflib.Graph().parse(filename, format='turtle')
@@ -574,6 +609,7 @@ def main():
     args = docopt(__doc__, version='ontutils 0.0.1')
 
     verbose = args['--verbose']
+    debug = args['--debug']
 
     repo_name = args['<repo>']
 
@@ -598,7 +634,7 @@ def main():
     if args['version-iri']:
         version_iris(*filenames, epoch=epoch)
     elif args['deadlinks']:
-        deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose)
+        deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose, debug)
     elif args['iri-commit']:
         make_git_commit_command(git_local, repo_name)
     elif args['uri-switch']:
