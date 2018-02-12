@@ -160,30 +160,19 @@ def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
     if smooth_offset:
         sleep(smooth_offset)
     real_start = time()
-    for i, element in enumerate(chunk):
-        start = time()
+    for element in chunk:
+        real_stop = time_per_job + real_start
+        real_start += time_per_job
         yield element()
         stop = time()
-        delta = stop - start
-        print('drift', stop - real_start - theory_time)
-        real_time_alloted = time_per_job * (i + 1)
-        if delta > time_per_job or cumulative_delta:
-            cumulative_delta += delta
-            time_alloted += time_per_job
-            if debug: print(f'{thread:<3} {start:<8f} {stop:<8f} {delta:<10f}     '
-                            f'{cumulative_delta:<10f} {time_alloted:<10f} '
-                            f'{cumulative_delta - time_alloted:<10f}')
-            if cumulative_delta > time_alloted:
-                continue
-            else:
-                sleep_time = time_alloted - cumulative_delta
-                cumulative_delta = 0
-                time_alloted = 0
+        if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f}     {stop - real_stop:<10f}')
+        if stop > real_stop:
+            sleep(0)  # give the thread a chance to yield
+            continue
         else:
-            sleep_time = time_per_job - delta
-            if debug: print(f'{thread:<3} {start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f}')
-
-        sleep(sleep_time)
+            sleep_time = real_stop - stop
+            #if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f} {sleep_time:<10f}')
+            sleep(sleep_time)
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
