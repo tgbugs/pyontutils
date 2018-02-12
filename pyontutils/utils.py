@@ -105,7 +105,7 @@ def deferred(function):
         return inner
     return wrapper
 
-def Async(rate=None, debug=False):  # ah conclib
+def Async(rate=None, debug=False, collector=None):  # ah conclib
     if rate:
         workers = math.ceil(rate) if rate < 40 else 40  # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
         executor = ThreadPoolExecutor(max_workers=workers)
@@ -129,11 +129,11 @@ def Async(rate=None, debug=False):  # ah conclib
             chunks = chunk_list(funclist, size)
             lc = len(chunks)
             print(f'Time estimate: {time_est}    rate: {rate}Hz    func: {funclist[0]}    args: {len(funclist)}    chunks: {lc}    size: {size}')
-            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % lc)/lc, time_est=time_est, debug=debug, thread=i))  # this was the slowdown culpret
+            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % lc)/lc, time_est=time_est, debug=debug, thread=i, collector=collector))  # this was the slowdown culpret
                          for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
         async def future_loop(future_):
             loop = asyncio.get_event_loop()
-            futures = []
+            futures = []  # not much difference from list comp
             for wrapped_function_or_limgen in generator:
                 future = loop.run_in_executor(executor, wrapped_function_or_limgen)
                 futures.append(future)
@@ -151,27 +151,47 @@ def Async(rate=None, debug=False):  # ah conclib
         loop.run_until_complete(future_loop(future))
         return future.result()
     return inner
-
-def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
+ 
+def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_', collector=None):
     cumulative_delta = 0
     time_alloted = 0
-    time_per_job = (time_est - smooth_offset) / len(chunk)
+    lc = len(chunk)
+    orig_time_per_job = (time_est - smooth_offset) / lc
+    time_per_job = orig_time_per_job
     if debug: print(f'{thread:0>2}    offset: {smooth_offset:<.4f}    jobs: {len(chunk)}    s/job: {time_per_job:<.4f}    total: {time_est:<.4f}s')
     if smooth_offset:
         sleep(smooth_offset)
-    real_start = time()
-    for element in chunk:
-        real_stop = time_per_job + real_start
-        real_start += time_per_job
+    start = time()
+    end = start + time_est
+    old_early_by = 0
+    integral = 0
+    derivative = 0
+    if lc < 5 :
+        Kp, Ki, Kd = 0, 0, 0
+    else:
+        Kp, Ki, Kd = .5, .01, .001  # in theory could build in a prior based on expected error rates
+    # might be able to use old sleep time as well
+    for i, element in enumerate(chunk):
+        target_stop = time_per_job + start
         yield element()
         stop = time()
-        if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f}     {stop - real_stop:<10f}')
-        if stop > real_stop:
-            sleep(0)  # give the thread a chance to yield
+        if debug: print(f'{thread:<3} {stop:<8f} {target_stop:<10f} {time_per_job:<10f}    {stop - target_stop:<10f}')
+        if collector is not None:
+            collector.append((thread, i, start, target_stop, stop, time_per_job, Kp * old_early_by, Ki * integral, Kd * derivative))
+
+        # oh look a pid controller
+        dt = stop - start
+        early_by = target_stop - stop
+        integral += early_by * dt
+        derivative = (early_by - old_early_by) / dt 
+        out = Kp * early_by + Ki * integral + Kd * derivative
+        old_early_by = early_by  # old ahead or behind (behind is negative)
+
+        start += time_per_job
+        if stop > (target_stop + out):
             continue
         else:
-            sleep_time = real_stop - stop
-            #if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f} {sleep_time:<10f}')
+            sleep_time = target_stop - stop + out
             sleep(sleep_time)
 
 def mysql_conn_helper(host, db, user, port=3306):
