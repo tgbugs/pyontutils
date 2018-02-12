@@ -12,19 +12,18 @@ Usage:
     ontutils expand <curie>...
 
 Options:
-    -l --git-local=LBASE            local path to look for ontology <repo> [default: /tmp]
-
-    -u --curies=CURIEFILE           relative path to curie definition file [default: ../scigraph/nifstd_curie_map.yaml]
-
-    -e --epoch=EPOCH                specify the epoch you want to use for versionIRI
-
-    -r --rate=Hz                    rate in Hz at which to limit requests zero is no limit [default: 20]
-
+    -l --git-local=LBASE            local path to look for ontology <repo>     [default: /tmp]
+    -u --curies=CURIEFILE           relative path to curie definition file     [default: ../scigraph/nifstd_curie_map.yaml]
+    -e --epoch=EPOCH                specify the epoch to use for versionIRI
+    -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
+    -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
     -d --debug                      call IPython embed when done
+    -v --verbose                    verbose output
 """
 import os
 from glob import glob
 from time import time, localtime, strftime
+from random import shuffle
 import rdflib
 import requests
 from git.repo import Repo
@@ -96,20 +95,43 @@ class ontologySection:
 #
 # utils
 
-def deadlinks(filenames, rate):
-    urls, = Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames)
+def deadlinks(filenames, rate, timeout=5, verbose=False):
+    urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
+    shuffle(urls)  # try to distribute timeout events evenly across workers
+    if verbose:
+        [print(u) for u in sorted(urls)]
+
+    class Timedout:
+        ok = False
+        def __init__(self, url):
+            self.url = url
+
+    def head_timeout(url):
+        try:
+            return requests.head(url, timeout=timeout)
+        except (requests.ConnectTimeout, requests.ReadTimeout) as e:
+            print('Timedout:', url, e)
+            return Timedout(url)
     s = time()
-    all_ = Async(rate=rate)(deferred(requests.head)(url) for url in urls)
+    all_ = Async(rate=rate, debug=verbose)(deferred(head_timeout)(url) for url in urls)
     not_ok = [_.url for _ in all_ if not _.ok]
     o = time()
     d = o - s
-    print('actual', d)
-    print(not_ok)
+    print('Actual time', d)
+    print('Failed:')
+    if not_ok:
+        for nok in not_ok:
+            print(nok)
+        ln = len(not_ok)
+        lt = len(urls)
+        lo = lt - ln
+        print(f'{ln} urls out of {lt} ({ln / lt * 100}%) are not ok. D:')
+    else:
+        print(f'OK. All {len(urls)} urls passed! :D')
 
 def furls(filename):
-    return [url
-            for t in rdflib.Graph().parse(filename, format='turtle')
-            for url in t if isinstance(url, rdflib.URIRef) and not url.startswith('file://')]
+    return set(url for t in rdflib.Graph().parse(filename, format='turtle')
+               for url in t if isinstance(url, rdflib.URIRef) and not url.startswith('file://'))
 
 def version_iris(*filenames, epoch=None):
     # TODO make sure that when we add versionIRIs the files we are adding them to are either unmodified or in the index
@@ -551,6 +573,8 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontutils 0.0.1')
 
+    verbose = args['--verbose']
+
     repo_name = args['<repo>']
 
     git_local = os.path.expanduser(args['--git-local'])
@@ -574,7 +598,7 @@ def main():
     if args['version-iri']:
         version_iris(*filenames, epoch=epoch)
     elif args['deadlinks']:
-        deadlinks(filenames, int(args['--rate']))
+        deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose)
     elif args['iri-commit']:
         make_git_commit_command(git_local, repo_name)
     elif args['uri-switch']:
