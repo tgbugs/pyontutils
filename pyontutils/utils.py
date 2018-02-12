@@ -14,6 +14,7 @@ from time import time, sleep
 from pathlib import Path
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor
+from joblib import Parallel
 import psutil
 import rdflib
 
@@ -113,6 +114,14 @@ def Async(rate=None, debug=False):  # ah conclib
         workers = executor._max_workers
     if debug: print(rate, workers)
     def inner(generator):
+        #Async(rate=rate/2, debug)(funclist[])
+        #funclist = list(generator)
+        # the real effective throughput I am seeing per os thread is ~350Hz
+        # I can push it to about 400Hz setting it to run at 3000Hz with 3000 entries
+        # but this is trivial to double using multiple processes
+        # pushing the set rate higher does seem to max out around 400Hz
+        # if the min time_per_job < our trouble threshold which is ping dependent
+        #Parallel(generator)
         if rate:
             funclist = list(generator)
             size = math.ceil(len(funclist) / workers) if rate >= 1 else 1  # divide by workers not rate, time_per_job will compensate
@@ -150,11 +159,14 @@ def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
     if debug: print(f'{thread:0>2}    offset: {smooth_offset:<.4f}    jobs: {len(chunk)}    s/job: {time_per_job:<.4f}    total: {time_est:<.4f}s')
     if smooth_offset:
         sleep(smooth_offset)
-    for element in chunk:
+    real_start = time()
+    for i, element in enumerate(chunk):
         start = time()
         yield element()
         stop = time()
         delta = stop - start
+        print('drift', stop - real_start - theory_time)
+        real_time_alloted = time_per_job * (i + 1)
         if delta > time_per_job or cumulative_delta:
             cumulative_delta += delta
             time_alloted += time_per_job
