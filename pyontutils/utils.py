@@ -106,16 +106,12 @@ def deferred(function):
 
 def Async(rate=None, debug=False):  # ah conclib
     if rate:
-        #def scurve(x, a=32, b=1, d=2, c=8, i=20, e=1.5):
-            #return a / (b + e ** (i - x)) + c
-        #workers = scurve(rate)
-        workers = math.ceil(rate) if rate <= 40 else 40
+        workers = math.ceil(rate) if rate < 40 else 40  # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
         executor = ThreadPoolExecutor(max_workers=workers)
     else:
         executor = ThreadPoolExecutor()
         workers = executor._max_workers
-    if debug:
-        print(rate, workers)
+    if debug: print(rate, workers)
     def inner(generator):
         if rate:
             funclist = list(generator)
