@@ -104,24 +104,27 @@ def deferred(function):
         return inner
     return wrapper
 
-def Async(rate=None):  # ah conclib
+def Async(rate=None, debug=False):  # ah conclib
     if rate:
         #def scurve(x, a=32, b=1, d=2, c=8, i=20, e=1.5):
             #return a / (b + e ** (i - x)) + c
         #workers = scurve(rate)
-        workers = rate if rate <= 40 else 40
+        workers = math.ceil(rate) if rate <= 40 else 40
         executor = ThreadPoolExecutor(max_workers=workers)
     else:
         executor = ThreadPoolExecutor()
         workers = executor._max_workers
-    print(rate, workers)
+    if debug:
+        print(rate, workers)
     def inner(generator):
         if rate:
             funclist = list(generator)
-            size = (len(funclist) // rate) if rate >= 1 else 1  # FIXME low rates should not have to worry about haning...
-            print(f'Time estimate at {rate}Hz for apply {funclist[0]} to {len(funclist)} args: {size}s')
+            size = math.ceil(len(funclist) / workers) if rate >= 1 else 1  # divide by workers not rate, time_per_job will compensate
+            time_est = len(funclist) / rate
             chunks = chunk_list(funclist, size)
-            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % workers)/workers))  # this was the slowdown culpret
+            lc = len(chunks)
+            print(f'Time estimate: {time_est}    rate: {rate}Hz    func: {funclist[0]}    args: {len(funclist)}    chunks: {lc}    size: {size}')
+            generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % lc)/lc, time_est=time_est, debug=debug, thread=i))  # this was the slowdown culpret
                          for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
         async def future_loop(future_):
             loop = asyncio.get_event_loop()
@@ -144,32 +147,35 @@ def Async(rate=None):  # ah conclib
         return future.result()
     return inner
 
-def limited_gen(chunk, smooth_offset=0, debug=True):
-    additional = 0
-    additional_sleep = 0
+def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
+    cumulative_delta = 0
+    time_alloted = 0
+    time_per_job = (time_est - smooth_offset) / len(chunk)
+    if debug: print(f'{thread:0>2}    offset: {smooth_offset:<.4f}    jobs: {len(chunk)}    s/job: {time_per_job:<.4f}    total: {time_est:<.4f}s')
     if smooth_offset:
-        print('started running with offset', smooth_offset)
         sleep(smooth_offset)
     for element in chunk:
-        if additional:
-            additional -= 1
-            additional_sleep = sleep_time
         start = time()
         yield element()
         stop = time()
         delta = stop - start
-        if delta > 1:
-            sleep_time = delta % 1
-            additional += int(delta // 1)
-            if debug:
-                print(f'{start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f} {additional_sleep:<10f} {additional} {delta - 1}')
-            continue
+        if delta > time_per_job or cumulative_delta:
+            cumulative_delta += delta
+            time_alloted += time_per_job
+            if debug: print(f'{thread:<3} {start:<8f} {stop:<8f} {delta:<10f}     '
+                            f'{cumulative_delta:<10f} {time_alloted:<10f} '
+                            f'{cumulative_delta - time_alloted:<10f}')
+            if cumulative_delta > time_alloted:
+                continue
+            else:
+                sleep_time = time_alloted - cumulative_delta
+                cumulative_delta = 0
+                time_alloted = 0
         else:
-            sleep_time = 1 - delta
-        if debug:
-            print(f'{start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f} {additional_sleep:<10f} {additional}')
-        sleep(sleep_time + additional_sleep)
-        additional_sleep = 0
+            sleep_time = time_per_job - delta
+            if debug: print(f'{thread:<3} {start:<8f} {stop:<8f} {delta:<10f} {sleep_time:<10f}')
+
+        sleep(sleep_time)
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
