@@ -15,6 +15,7 @@ Options:
     -u --uncompact  use the uncompact turtle serializer
     -j --jsonld     use the rdflib-jsonld serializer
     -f --format=FM  specify the input format (used for pipes)
+    -t --outfmt=F   specify the output format [default: nifttl]
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
     -o --output=FI  serialize all input files to output file
@@ -142,7 +143,7 @@ def main():
     elif args['--jsonld']:
         outfmt = 'json-ld'
     else:
-        outfmt = 'nifttl'
+        outfmt = args['--outfmt']
 
     outpath = args['--output']
     files = args['<file>']
