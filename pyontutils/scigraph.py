@@ -45,7 +45,9 @@ class restService:
         except requests.exceptions.ConnectionError as e:
             host_port = prep.url.split(prep.path_url)[0]
             raise ConnectionError('Could not connect to %s are SciGraph services running?' % host_port) from e
-        if not resp.ok:
+        if resp.status_code == 401:
+            raise ConnectionError(f'{resp.reason}. Did you set {self.__class__.__name__}.api_key = my_api_key?')
+        elif not resp.ok:
             return None
         elif resp.headers['content-type'] == 'application/json':
             return resp.json()
