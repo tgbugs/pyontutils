@@ -10,6 +10,9 @@ from IPython import embed
 def printe(*args, **kwargs):
     print(*(tc.blue(str(a)) for a in args), **kwargs)
 
+def printer(*args, **kwargs):
+    printe(*(tc.red(repr(a)) for a in args), **kwargs)
+
 
 def messup(outer_n):
     print('neurons defined outside local scope')
@@ -70,6 +73,18 @@ with phns.BBP:
     print('fourth', repr(myFourthNeuron))
     print('fifth ', repr(myFifthNeuron))
     print('sixth ', repr(mySixthNeuron))
+
+    do_not_expect = Neuron(Rat)
+    with Neuron(brain) as n0, Neuron(Rat) as n1:  # they appear to combine but observer that n1 != Neuron(Rat)
+        n2 = Neuron(PV)
+        assert n1 != do_not_expect
+        printer(n0, n1, n2)
+
+    expect = Neuron(brain, Rat, PV)
+    with Neuron(SOM) as n3, n1:  # last one wins when setting multiple contexts
+        n4 = Neuron(PV)
+        assert n4 == expect
+        printer(n3, n1, n4)
 
 # addition
 try: myFirstNeuron + mySecondNeuron
