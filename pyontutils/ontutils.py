@@ -6,6 +6,7 @@
 Usage:
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
+    ontutils spell [options] <file> ...
     ontutils version-iri [options] <file>...
     ontutils uri-switch [options] <file>...
     ontutils backend-refactor [options] <file>...
@@ -27,10 +28,11 @@ from time import time, localtime, strftime
 from random import shuffle
 import rdflib
 import requests
+import hunspell
 from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, owl
-from pyontutils.utils import noneMembers, anyMembers, Async, deferred
+from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, skos, definition
+from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
 
@@ -95,6 +97,66 @@ class ontologySection:
 
 #
 # utils
+
+def spell(filenames, debug=False):
+    spell_objects = (u for r in Parallel(n_jobs=9)(delayed(get_spells)(f) for f in filenames) for u in r)
+    hobj = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
+    #nobj = hunspell.HunSpell(os.path.expanduser('~/git/domain_wordlists/neuroscience-en.dic'), '/usr/share/hunspell/en_US.aff')  # segfaults without aff :x
+    collect = set()
+    for filename, s, p, o in spell_objects:
+        missed = False
+        no = []
+        for line in o.split('\n'):
+            nline = []
+            for tok in line.split(' '):
+                prefix, tok, suffix = tokstrip(tok)
+                #print((prefix, tok, suffix))
+                if not hobj.spell(tok):# and not nobj.spell(tok):
+                    missed = True
+                    collect.add(tok)
+                    nline.append(prefix + tc.red(tok) + suffix)
+                else:
+                    nline.append(prefix + tok + suffix)
+            line = ' '.join(nline)
+            no.append(line)
+        o = '\n'.join(no)
+        if missed:
+            #print(filename, s, o)
+            print('>>>', o)
+
+    if debug:
+        [print(_) for _ in sorted(collect)]
+        embed()
+
+_bads = (',', ';', ':', '"', "'", '(', ')', '[',']','{','}',
+         '.', '-', '/', '\\', '%', '$', '*')
+def tokstrip(tok, side=None):
+    front = ''
+    back = ''
+    for bad in _bads:
+        if side is None or True:
+            ftok = tok[1:] if tok.startswith(bad) else tok
+            if ftok != tok:
+                front = front + bad
+                f, tok = tokstrip(ftok, True)
+                front = front + f
+        if side is None or False:
+            btok = tok[:1] if tok.endswith(bad) else tok
+            if btok != tok:
+                back = bad + back
+                tok, b = tokstrip(btok, False)
+                back = b + back
+    if side is None:
+        return front, tok, back
+    elif side:
+        return front, tok
+    else:
+        return tok, back
+
+
+def get_spells(filename):
+    check_spelling = {skos.definition, definition, rdfs.comment}
+    return [(filename, s, p, o) for s, p, o in rdflib.Graph().parse(filename, format='turtle') if p in check_spelling]
 
 def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
@@ -635,6 +697,8 @@ def main():
         version_iris(*filenames, epoch=epoch)
     elif args['deadlinks']:
         deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose, debug)
+    elif args['spell']:
+        spell(filenames, debug)
     elif args['iri-commit']:
         make_git_commit_command(git_local, repo_name)
     elif args['uri-switch']:

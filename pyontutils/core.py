@@ -119,6 +119,7 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 replacedBy = makeURIs('replacedBy')
+definition = makeURIs('definition')
 
 # common funcs
 
