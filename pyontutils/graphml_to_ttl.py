@@ -208,6 +208,8 @@ def main():
     newgraph.write()
     with open(os.path.join(outloc, filename + '.txt'), 'wt') as f:
         f.write(str(t))
+    with open(os.path.join(outloc, filename + '.html'), 'wt') as f:
+        f.write(te.html)
 
 if __name__ == '__main__':
     main()
