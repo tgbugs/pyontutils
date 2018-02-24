@@ -1285,12 +1285,13 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
-               '/tmp/NIF-Neuron-Defined.ttl',
-               '/tmp/NIF-Neuron.ttl',
-               '/tmp/NIF-Phenotype-Core.ttl',
-               '/tmp/NIF-Phenotypes.ttl',
-               '/tmp/hbp-special.ttl')
+    local_prefix = os.path.expanduser('~/git/NIF-Ontology/ttl')
+    sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
+               f'{local_prefix}/NIF-Neuron.ttl',
+               f'{local_prefix}/NIF-Neuron-Phenotype.ttl',
+               f'{local_prefix}/phenotype-core.ttl',
+               f'{local_prefix}/phenotypes.ttl',
+               f'{local_prefix}/hbp-special.ttl')
     for file in sources:
             EXISTING_GRAPH.parse(file, format='turtle')
     EXISTING_GRAPH.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])
