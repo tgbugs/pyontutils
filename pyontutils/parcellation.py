@@ -1042,6 +1042,11 @@ class LabelsBase(Ont):  # this replaces genericPScheme
     prefixes = {}
     comment = None
 
+    @property
+    def triples(self):
+        yield self.iri, ilxtr.rootClass, self.root.iri
+        yield from super().triples
+
 
 class RegionsBase(Ont):
     """ An ontology file containing parcellation regions from the
@@ -1063,7 +1068,7 @@ class LocalSource(Source):
 
     def __new__(cls):
         line = getsourcelines(cls)[-1]
-        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(line=line, commit=getCommit()))  # FIXME latest git blame on class?
+        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
         cls.iri_head = rdflib.URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
         if cls.artifact is None:  # for prov...
             class art:

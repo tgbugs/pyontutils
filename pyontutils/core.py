@@ -775,6 +775,7 @@ class Ont:
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
         wasGeneratedBy=prov.wasGeneratedBy,
+        hasSourceArtifact=ilxtr.hasSourceArtifact,  # the owl:Class it was derived from
     )
 
     def __init__(self, *args, **kwargs):
@@ -802,6 +803,11 @@ class Ont:
             self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
                                                     for i in self.sources)
                                         if _ is not None)
+            self.hasSourceArtifact = tuple()
+            for source in self.sources:
+                if hasattr(source, 'artifact') and source.artifact is not None and source.artifact.iri not in self.wasDerivedFrom:
+                    self.hasSourceArtifact += source.artifact.iri,
+                    source.artifact.addPair(ilxtr.hasDerivedArtifact, self.iri)
             print(self.wasDerivedFrom)
 
     def addTrip(self, subject, predicate, object):
