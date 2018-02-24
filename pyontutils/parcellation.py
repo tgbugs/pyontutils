@@ -995,6 +995,8 @@ class Artifacts(Ont):
                          devstage=UBERON['0000113'],
                         )
 
+    fsl = None  # TODO
+
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
 
@@ -2101,12 +2103,74 @@ class parcBridge(Ont):
 
     # stuff
 
+##
+#  FSL requires a different approach
+##
+
+def makeFSL():
+    ATLAS_PATH = '/usr/share/fsl/data/atlases/'
+    shortnames = {
+        'JHU White-Matter Tractography Atlas':'JHU WM',
+        'Oxford-Imanova Striatal Structural Atlas':'OISS',
+        'Talairach Daemon Labels':'Talairach',
+        'Subthalamic Nucleus Atlas':'SNA',
+        'JHU ICBM-DTI-81 White-Matter Labels':'JHU ICBM WM',
+        'Juelich Histological Atlas':'Juelich',
+        'MNI Structural Atlas':'MNI Struct',
+    }
+
+    sources = []
+    for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
+        tree = etree.parse(xmlfile)
+        name = tree.xpath('header//name')[0].text
+        cname = name + ' concept' if name.endswith('parcellation') else name + ' parcellation concept'
+        shortname = tree.xpath('header//shortname')
+        if shortname:
+            shortname = shortname[0].text
+        else:
+            shortname = shortnames[name]
+        filename = os.path.splitext(os.path.basename(xmlfile))[0]
+
+        artifact = Terminology(iri='file://' + xmlfile,
+                               rdfs_label=name,
+                               shortname=shortname)
+        setattr(Artifacts, shortname.replace(' ',''), artifact)
+
+        def loadData(self, _tree=tree):
+            out = []
+            for node in _tree.xpath('data//label'):
+                index, label = node.get('index'), node.text
+                out.append((index, label))
+            return out
+
+        classdict = dict(iri=artifact.iri,
+                         source=xmlfile,
+                         artifact=artifact,
+                         loadData=loadData)
+        src = type('FSLsource_' + shortname.replace(' ', '_'), (Source,), classdict)
+        sources.append(src)
+
+    print(sources)
+    class FSL(LabelsBase):
+        path = 'ttl/generated/parcellation/'
+        filename = 'fslats'
+        name = 'FSL atlases'
+        shortname = 'fslats'
+        imports = parcCore(),
+        roots = None  # FIXME TODO multiple roots in a single file...
+        
+    setattr(FSL, 'sources', sources)  # sources = sources doesn't quite seem to work...
+
+    doit(FSL)
+
 def doit(ont):
     o = ont()
     o()
     o.validate()
     o.write()
     return o
+
+makeFSL()
 
 def main():
     #paxinos()
