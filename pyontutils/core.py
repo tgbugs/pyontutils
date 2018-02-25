@@ -9,8 +9,9 @@ from collections import namedtuple
 from rdflib.extras import infixowl
 from inspect import getsourcelines, getsourcefile
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, getCommit
+from pyontutils.utils import refile, TODAY, getCommit, TermColors as tc
 from pyontutils.closed_namespaces import *
+from IPython import embed
 
 # prefixes
 
@@ -111,6 +112,7 @@ def makeURIs(*prefixes):
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
  ilx, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
                        'ilxtr', 'ilx', 'TEMP')
+FSLATS = rdflib.Namespace( interlex_namespace('fsl/uris/atlases'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
@@ -592,6 +594,7 @@ class Class:
                     #if self.__class__ == Terminology:
                         #print(self.__class__, kw, arg)
 
+                    # TODO type check and fail or try to caste? eg when iri is string not uriref?
                     def typeCheck(thing):
                         print('ARE WE CHECKING?', type(thing))
                         types_ = rdflib.URIRef, str
@@ -611,7 +614,8 @@ class Class:
                     #typeCheck(arg)
                     setattr(self, kw, arg)
             if kwargs:
-                #print(f'WARNING: {sorted(kwargs)} are not kwargs for {self.__class__.__name__}')  # XXX
+                print(tc.red('WARNING:') + (f' {sorted(kwargs)} are not kwargs '
+                      f'for {self.__class__.__name__}. Did you mispell something?'))
                 pass
         else:
             for kw, arg in kwargs:
@@ -712,11 +716,22 @@ class Source(tuple):
                     cls._type = 'iri'
                 cls.iri = rdflib.URIRef(cls.source)
             elif os.path.exists(cls.source):  # TODO no expanded stuff
-                cls._type = 'local'
-                file_commit = subprocess.check_output(['git', 'log', '-n', '1',
-                                                       '--pretty=format:%H', '--',
-                                                       cls.source]).decode().rstrip()
-                cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
+                try:
+                    file_commit = subprocess.check_output(['git', 'log', '-n', '1',
+                                                           '--pretty=format:%H', '--',
+                                                           cls.source],
+                                                          stderr=subprocess.DEVNULL).decode().rstrip()
+                    cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
+                    cls._type = 'git-local'
+                except subprocess.CalledProcessError as e:
+                    cls._type = 'local'
+                    if e.args[0] == 128:  # hopefully this is the git status code for not a get repo...
+                        if not hasattr(cls, 'iri'):
+                            cls.iri = rdflib.URIRef('file://' + cls.source)
+                        #else:
+                            #print(cls, 'already has an iri', cls.iri)
+                    else:
+                        raise e
             else:
                 cls._type = None
                 print('Unknown source', cls.source)
@@ -730,7 +745,7 @@ class Source(tuple):
 
     @classmethod
     def loadData(cls):
-        if cls._type == 'local':
+        if cls._type == 'local' or cls._type == 'git-local':
             with open(os.path.expanduser(cls.source), 'rt') as f:
                 return f.read()
         elif cls._type == 'iri':
@@ -750,8 +765,11 @@ class Source(tuple):
 
     @classmethod
     def prov(cls):
-        if cls._type == 'local':
-            object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+        if cls._type == 'local' or cls._type == 'git-local':
+            if cls._type == 'git-local':
+                object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+            else:
+                object = rdflib.URIRef(cls.source)
             if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):  # FIXME no help on mispelling
                 cls.iri_head = object
                 if hasattr(cls.artifact, 'hadDerivation'):
@@ -797,6 +815,14 @@ class Ont:
         hasSourceArtifact=ilxtr.hasSourceArtifact,  # the owl:Class it was derived from
     )
 
+    @classmethod
+    def prepare(cls):
+        if hasattr(cls, 'sources'):
+            cls.sources = tuple(s() for s in cls.sources)
+        if hasattr(cls, 'imports'):
+            cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
+                                for i in cls.imports)
+
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
@@ -822,7 +848,7 @@ class Ont:
             for source in self.sources:
                 if not isinstance(source, Source):
                     raise TypeError(f'{source} is not an instance of Source '
-                                    'did you remember to initialize it?')
+                                    'did you remember to call prepare?')
             self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
                                                     for i in self.sources)
                                         if _ is not None)
@@ -831,7 +857,7 @@ class Ont:
                 if hasattr(source, 'artifact') and source.artifact is not None and source.artifact.iri not in self.wasDerivedFrom:
                     self.hasSourceArtifact += source.artifact.iri,
                     source.artifact.addPair(ilxtr.hasDerivedArtifact, self.iri)
-            print(self.wasDerivedFrom)
+            #print(self.wasDerivedFrom)
 
     def addTrip(self, subject, predicate, object):
         # TODO erro if object not an rdflib term to prevent
