@@ -2153,13 +2153,21 @@ class FSL(LabelsBase):
             'MNI Structural Atlas':'MNI Struct',
         }
 
+        prefixes = {
+            'Cerebellar Atlas in MNI152 space after normalization with FLIRT':'CMNIfl',
+            'Cerebellar Atlas in MNI152 space after normalization with FNIRT':'CMNIfn',
+            'Sallet Dorsal Frontal connectivity-based parcellation':'DFCBP',
+            'Neubert Ventral Frontal connectivity-based parcellation':'VFCBP',
+            'Mars Parietal connectivity-based parcellation':'PCBP',
+        }
+
         for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
             filename = os.path.splitext(os.path.basename(xmlfile))[0]
 
             tree = etree.parse(xmlfile)
             parcellation_name = tree.xpath('header//name')[0].text
 
-            # shortnames
+            # shortname
             shortname = tree.xpath('header//shortname')
             if shortname:
                 shortname = shortname[0].text
@@ -2179,11 +2187,19 @@ class FSL(LabelsBase):
             setattr(Artifacts, shortname, artifact)
 
             # LabelRoot
-            root = LabelRoot(iri=FSLATS[shortname],
+            root = LabelRoot(iri=FSLATS[filename + '/labels'],  # too logical (hah)
                              label=parcellation_name + ' label root',
                              shortname=shortname,
                              definingArtifacts=(artifact.iri,))
             cls.roots += root,
+
+            # prefix
+            if parcellation_name in prefixes:
+                prefix = 'fsl' + prefixes[parcellation_name]
+            else:
+                prefix = 'fsl' + shortname
+
+            cls.prefixes[prefix] = root.iri + '/'
 
             # Source
             @classmethod
