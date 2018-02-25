@@ -12,7 +12,7 @@ protobuf = "*"
 psutil = "*"
 "psycopg2" = "*"
 pyyaml = "*"
-rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b3'}
+rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b4'}
 requests = "*"
 robobrowser = "*"
 sqlalchemy = "*"
