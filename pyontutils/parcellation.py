@@ -9,13 +9,14 @@ from collections import namedtuple, defaultdict, Counter
 from inspect import getsourcelines
 import requests
 import rdflib
+from rdflib import Graph, URIRef, Literal
 from rdflib.extras import infixowl
 from lxml import etree
 from hierarchies import creatTree, Query
 from utils import TODAY, async_getter, rowParse, getCommit, subclasses
 from utils import TermColors as tc #TERMCOLORFUNC
 from core import rdf, rdfs, owl, dc, dcterms, skos, prov
-from core import ilxtr, NCBITaxon, UBERON, NIFTTL, HBA, MBA, HCPMMP, NIFRID, PAXMUS, PAXRAT, TEMP, WHSSD
+from core import ilxtr, NCBITaxon, UBERON, NIFTTL, FSLATS,HBA, MBA, HCPMMP, NIFRID, PAXMUS, PAXRAT, TEMP, WHSSD
 from core import Class, Source, Ont, annotations, restriction
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta
 from ttlser import natsort
@@ -781,6 +782,7 @@ class Label(Class):
                    synonyms=tuple(),
                    abbrevs=tuple(),
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class, needed for paxinos
+                   definingCitations=tuple(),
                    iri=None,  # use when a class already exists and we need to know its identifier
                   )
     def __init__(self,
@@ -854,7 +856,9 @@ class Artifacts(Ont):
     filename = 'parcellation-artifacts'
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
-    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes}
+    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes,
+                'FSLATS':str(FSLATS),
+               }
 
     # artifacts
 
@@ -941,7 +945,7 @@ class Artifacts(Ont):
                       )
 
     MBA = Terminology(iri=ilxtr.mbav2,
-                      rdfs_label='Allen Mouse Brain Atlas Terminology',  # TODO version?
+                      rdfs_label='Allen Mouse Brain Atlas Terminology',  # TODO version?  XXX overwritten
                       label='Allen Mouse Brain Atlas Ontology',
                       shortname='MBA',
                       date='2011',  # TODO
@@ -1021,7 +1025,7 @@ class parcCore(Ont):
     name = 'Parcellation Core'
     #shortname = 'parcore'  # huehuehue
     prefixes = {**makePrefixes('skos'), **Ont.prefixes}
-    imports = NIFTTL['nif_backend.ttl'], Artifacts()
+    imports = NIFTTL['nif_backend.ttl'], Artifacts
 
     # stuff
 
@@ -1036,9 +1040,10 @@ class LabelsBase(Ont):  # this replaces genericPScheme
     """ An ontology file containing parcellation labels from a common source. """
 
     path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
-    imports = parcCore(),
+    imports = parcCore,
     sources = tuple()
     root = None  # : LabelRoot 
+    roots = None  # : (LabelRoot, ...)
     filename = None
     name = None
     prefixes = {}
@@ -1046,7 +1051,11 @@ class LabelsBase(Ont):  # this replaces genericPScheme
 
     @property
     def triples(self):
-        yield self.iri, ilxtr.rootClass, self.root.iri
+        if self.root is not None:
+            yield self.iri, ilxtr.rootClass, self.root.iri
+        elif self.roots is not None:
+            for root in self.roots:
+                yield self.iri, ilxtr.rootClass, root.iri
         yield from super().triples
 
 
@@ -1054,7 +1063,7 @@ class RegionsBase(Ont):
     """ An ontology file containing parcellation regions from the
         intersection of an atlas artifact and a set of labels. """
     # TODO find a way to allow these to serialize into one file
-    imports = parcCore(),
+    imports = parcCore,
     atlas = None
     labelRoot = None
     def __init__(self):
@@ -1070,8 +1079,8 @@ class LocalSource(Source):
 
     def __new__(cls):
         line = getsourcelines(cls)[-1]
-        cls.iri = rdflib.URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
-        cls.iri_head = rdflib.URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
+        cls.iri = URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
+        cls.iri_head = URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
         if cls.artifact is None:  # for prov...
             class art:
                 iri = cls.iri
@@ -1473,24 +1482,19 @@ class HCPMMPSrc(Source):
         return d
 
 
-class FSLSrc(Source):
-    pass
-
 #
 # Ontology Instances
 
 #
 # labels
 
-#class FSLLabels(LabelsBase):  # TODO
-    #pass
 
 class HBALabels(LabelsBase):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname = 'hba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
-    sources = HBASrc(),
+    sources = HBASrc,
     root = LabelRoot(iri=ilxtr.hbaroot,
                      label='Allen Human Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1523,7 +1527,7 @@ class HCPMMPLabels(LabelsBase):
     name = 'Human Connectome Project Multi-Modal human cortical parcellation'
     shortname = 'hcpmmp'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HCPMMP':str(HCPMMP)}
-    sources = HCPMMPSrc(),
+    sources = HCPMMPSrc,
     root = LabelRoot(iri=ilxtr.hcpmmproot,
                      label='HCPMMP label root',
                      shortname=shortname,
@@ -1560,7 +1564,7 @@ class MBALabels(HBALabels):
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
-    sources = MBASrc(),
+    sources = MBASrc,
     root = LabelRoot(iri=ilxtr.mbaroot,
                      label='Allen Mouse Brain Atlas parcellation label root',
                      shortname=shortname,
@@ -1651,7 +1655,7 @@ class PaxLabels(LabelsBase):
 
     def _makeIriLookup(self):
         # FIXME need to validate that we didn't write the graph first...
-        g = rdflib.Graph().parse(self._graph.filename, format='turtle')
+        g = Graph().parse(self._graph.filename, format='turtle')
         ids = [s for s in g.subjects(rdf.type, owl.Class) if self.namespace in s]
         index0 = Label.propertyMapping['abbrevs'],
         index1 = Label.propertyMapping['label'], Label.propertyMapping['synonyms']
@@ -1683,7 +1687,7 @@ class PaxLabels(LabelsBase):
             struct = structure if structure else 'zzzzzz'
             self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
             yield from Label(labelRoot=self.root,
-                             ifail='i fail!',
+                             #ifail='i fail!',  # this indeed does fail
                              label=struct,
                              altLabel=None,
                              synonyms=extras,
@@ -1819,7 +1823,7 @@ class PaxMouseLabels(PaxLabels):
     namespace = PAXMUS
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXMUS':str(PAXMUS)}
-    sources = PaxMFix(), PaxMSrAr_2(), PaxMSrAr_3()
+    sources = PaxMFix, PaxMSrAr_2, PaxMSrAr_3
     root = LabelRoot(iri=PAXMUS['0'],
                      label='Paxinos mouse parcellation label root',
                      shortname=shortname,
@@ -1866,7 +1870,7 @@ class PaxRatLabels(PaxLabels):
 
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'PAXRAT':str(PAXRAT)}
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
-    sources = PaxFix(), PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxFix6(), PaxFix4() #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
+    sources = PaxFix, PaxSrAr_6, PaxSr_6, PaxSrAr_4, PaxFix6, PaxFix4 #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=PAXRAT['0'],
                      label='Paxinos rat parcellation label root',
                      shortname=shortname,
@@ -2016,7 +2020,7 @@ class WHSSDLabels(LabelsBase):
     name = 'Waxholm Sprague Dawley Atlas Labels'
     shortname = 'whssd'
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
-    sources = WHSSD2Src(),
+    sources = WHSSD2Src,
     root = LabelRoot(iri=ilxtr.whssdroot,
                      label='Waxholm Space Sprague Dawley parcellation label root',
                      shortname=shortname,
@@ -2081,7 +2085,7 @@ class PaxRegion(RegionsBase):
         cls.things[thing] = value
 
 #
-# Bridge (has to go last)
+# Bridge
 
 class parcBridge(Ont):
     """ Main bridge for importing the various files that
@@ -2095,85 +2099,124 @@ class parcBridge(Ont):
     #shortname = 'parcbridge'
     #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
     #imports = [subclass() for subclass in subclasses(LabelsBase)]
-    imports = []
-    for subclass in subclasses(LabelsBase):
-        if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
-            s = subclass()
-            imports.append(s)
+    imports = (subclass for subclass in subclasses(LabelsBase)  # is this late binding if generator?
+               if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'))
 
-    # stuff
+    @classmethod
+    def _prepare(cls):  # this way it doesn't have to be declared last, just called last
+        imports = []
+        for subclass in subclasses(LabelsBase):
+            if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
+                s = subclass()
+                imports.append(s)
+        cls.imports = tuple(imports)
 
 ##
 #  FSL requires a different approach
 ##
 
-def makeFSL():
-    ATLAS_PATH = '/usr/share/fsl/data/atlases/'
-    shortnames = {
-        'JHU White-Matter Tractography Atlas':'JHU WM',
-        'Oxford-Imanova Striatal Structural Atlas':'OISS',
-        'Talairach Daemon Labels':'Talairach',
-        'Subthalamic Nucleus Atlas':'SNA',
-        'JHU ICBM-DTI-81 White-Matter Labels':'JHU ICBM WM',
-        'Juelich Histological Atlas':'Juelich',
-        'MNI Structural Atlas':'MNI Struct',
-    }
+class FSL(LabelsBase):
+    """ Ontology file containing labels from the FMRIB Software Library (FSL)
+    atlases collection. All identifiers use the number of the index specified
+    in the source xml file. """
 
-    sources = []
-    for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
-        tree = etree.parse(xmlfile)
-        name = tree.xpath('header//name')[0].text
-        cname = name + ' concept' if name.endswith('parcellation') else name + ' parcellation concept'
-        shortname = tree.xpath('header//shortname')
-        if shortname:
-            shortname = shortname[0].text
-        else:
-            shortname = shortnames[name]
-        filename = os.path.splitext(os.path.basename(xmlfile))[0]
+    path = 'ttl/generated/parcellation/'
+    filename = 'fsl'
+    name = 'Terminologies from FSL atlases'
+    shortname = 'fsl'
+    imports = parcCore,
+    prefixes = {**makePrefixes('ilxtr'), **Ont.prefixes,
+                'FSLATS':str(FSLATS),
+               }
+    sources = tuple()  # set by prepare()
+    roots = tuple()  # set by prepare()
 
-        artifact = Terminology(iri='file://' + xmlfile,
-                               rdfs_label=name,
-                               shortname=shortname)
-        setattr(Artifacts, shortname.replace(' ',''), artifact)
+    def _triples(self):
+        for source in self.sources:
+            for index, label in source:
+                iri = URIRef(source.root.iri + '/' + index)
+                yield from Label(labelRoot=source.root,
+                                 label=label,
+                                 iri=iri)
 
-        def loadData(self, _tree=tree):
-            out = []
-            for node in _tree.xpath('data//label'):
-                index, label = node.get('index'), node.text
-                out.append((index, label))
-            return out
+    @classmethod
+    def prepare(cls):
+        ATLAS_PATH = '/usr/share/fsl/data/atlases/'
 
-        classdict = dict(iri=artifact.iri,
-                         source=xmlfile,
-                         artifact=artifact,
-                         loadData=loadData)
-        src = type('FSLsource_' + shortname.replace(' ', '_'), (Source,), classdict)
-        sources.append(src)
+        shortnames = {
+            'JHU White-Matter Tractography Atlas':'JHU WM',
+            'Oxford-Imanova Striatal Structural Atlas':'OISS',
+            'Talairach Daemon Labels':'Talairach',
+            'Subthalamic Nucleus Atlas':'SNA',
+            'JHU ICBM-DTI-81 White-Matter Labels':'JHU ICBM WM',
+            'Juelich Histological Atlas':'Juelich',
+            'MNI Structural Atlas':'MNI Struct',
+        }
 
-    print(sources)
-    class FSL(LabelsBase):
-        path = 'ttl/generated/parcellation/'
-        filename = 'fslats'
-        name = 'FSL atlases'
-        shortname = 'fslats'
-        imports = parcCore(),
-        roots = None  # FIXME TODO multiple roots in a single file...
-        
-    setattr(FSL, 'sources', sources)  # sources = sources doesn't quite seem to work...
+        for xmlfile in glob.glob(ATLAS_PATH + '*.xml'):
+            filename = os.path.splitext(os.path.basename(xmlfile))[0]
 
-    doit(FSL)
+            tree = etree.parse(xmlfile)
+            parcellation_name = tree.xpath('header//name')[0].text
+
+            # shortnames
+            shortname = tree.xpath('header//shortname')
+            if shortname:
+                shortname = shortname[0].text
+            else:
+                shortname = shortnames[parcellation_name]
+            artifact_shortname = shortname
+            shortname = shortname.replace(' ', '')
+
+            # Artifact
+            artifact = Terminology(iri=FSLATS[filename],
+                                   label=parcellation_name,
+                                   docUri='http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases',
+                                   species=NCBITaxon['9606'],
+                                   devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+                                   shortname=artifact_shortname)
+            Artifacts._artifacts += artifact,
+            setattr(Artifacts, shortname, artifact)
+
+            # LabelRoot
+            root = LabelRoot(iri=FSLATS[shortname],
+                             label=parcellation_name + ' label root',
+                             shortname=shortname,
+                             definingArtifacts=(artifact.iri,))
+            cls.roots += root,
+
+            # Source
+            @classmethod
+            def loadData(cls, _tree=tree):
+                out = []
+                for node in _tree.xpath('data//label'):
+                    index, label = node.get('index'), node.text
+                    out.append((index, label))
+                return out
+
+            source = type('FSLsource_' + shortname.replace(' ', '_'),
+                          (Source,),
+                          dict(iri=URIRef('file://' + xmlfile),
+                               source=xmlfile,
+                               source_original=True,
+                               artifact=artifact,
+                               root=root,  # used locally since we have more than one root per ontology here
+                               loadData=loadData))
+            cls.sources += source,
+
+        super().prepare()
+
 
 def doit(ont):
+    ont.prepare()
     o = ont()
     o()
     o.validate()
     o.write()
     return o
 
-makeFSL()
-
 def main():
-    #paxinos()
+    doit(FSL)
     doit(HCPMMPLabels)
     doit(MBALabels)
     doit(HBALabels)
