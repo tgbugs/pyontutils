@@ -12,6 +12,10 @@
 @prefix oboInOwl: <http://www.geneontology.org/formats/oboInOwl#> .
 @prefix other: <http://FIXME.org/other_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prefixA: <http://example.org/A/> .
+@prefix prefixa: <http://example.org/a/> .
+@prefix prefixZ: <http://example.org/Z/> .
+@prefix prefixz: <http://example.org/z/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> .
@@ -300,6 +304,22 @@ other:XMLLiteral_test a owl:Class ;
     """^^rdf:XMLLiteral,
         """<tag>some text</tag> <something-else>another tag</something-else>
     """^^rdf:XMLLiteral .
+
+prefixA: a owl:Class .
+
+prefixa: a owl:Class .
+
+prefixA:0 a owl:Class .
+
+prefixa:0 a owl:Class .
+
+prefixZ: a owl:Class .
+
+prefixz: a owl:Class .
+
+prefixZ:0 a owl:Class .
+
+prefixz:0 a owl:Class .
 
 sco:6 a owl:Class ;
     rdfs:subClassOf sco:6 .
