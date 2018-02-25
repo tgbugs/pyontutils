@@ -16,7 +16,7 @@ from IPython import embed
 # prefixes
 
 def interlex_namespace(user):
-    return 'http://uri.interlex.org/' + user + '/'
+    return 'http://uri.interlex.org/' + user
 
 def _loadPrefixes():
     try:
@@ -73,7 +73,7 @@ def _loadPrefixes():
 
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
-        'TEMP': interlex_namespace('temp/uris'),
+        'TEMP': interlex_namespace('temp/uris/'),
         'FIXME':'http://FIXME.org/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
@@ -110,13 +110,20 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
- ilx, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
+ ilxb, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
                        'ilxtr', 'ilx', 'TEMP')
-FSLATS = rdflib.Namespace( interlex_namespace('fsl/uris/atlases'))
-HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels'))
-PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels'))
-PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels'))
-WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels'))
+ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
+AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
+FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
+HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
+PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
+paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
+PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
+paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
+WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
+
+# retired namespaces kept as a record in the even that we need them for some reason
+_OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 rdf = rdflib.RDF
 rdfs = rdflib.RDFS
@@ -125,6 +132,12 @@ replacedBy = makeURIs('replacedBy')
 definition = makeURIs('definition')
 
 # common funcs
+
+def nsExact(namespace, slash=True):
+    uri = str(namespace)
+    if not slash:
+        uri = uri[:-1]
+    return rdflib.URIRef(uri)
 
 def check_value(v):
     if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
