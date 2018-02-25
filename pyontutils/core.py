@@ -114,6 +114,8 @@ def makeURIs(*prefixes):
                        'ilxtr', 'ilx', 'TEMP')
 ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
 AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
+ilxHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/labels/'))
+ilxMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/labels/'))
 FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
@@ -913,7 +915,7 @@ class Ont:
 
     def validate(self):
         # implement per class
-        pass
+        return self
 
     @property
     def iri(self):

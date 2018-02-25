@@ -15,7 +15,8 @@ from hierarchies import creatTree, Query
 from utils import TODAY, async_getter, rowParse, getCommit, subclasses
 from utils import TermColors as tc #TERMCOLORFUNC
 from core import rdf, rdfs, owl, dc, dcterms, skos, prov
-from core import ilx, ilxtr, AIBS, FSLATS, HBA, MBA, HCPMMP, NIFRID, PAXMUS, PAXRAT, TEMP, WHSSD, paxmusver, paxratver
+from core import NIFRID, ilx, ilxtr, TEMP, AIBS, FSLATS, HBA, MBA, ilxHBA, ilxMBA
+from core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
 from core import NCBITaxon, UBERON, NIFTTL
 from core import Class, Source, Ont, annotations, restriction
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
@@ -24,6 +25,7 @@ from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
 from process_fixed import ProcessPoolExecutor
+from joblib import Parallel, delayed
 
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
@@ -858,6 +860,8 @@ class Artifacts(Ont):
     #shortname = 'parcarts'
     prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes,
                 'FSLATS':str(FSLATS),
+                'paxmusver':str(paxmusver),
+                'paxratver':str(paxratver),
                }
 
     # artifacts
@@ -1071,6 +1075,19 @@ class RegionsBase(Ont):
     def __init__(self):
         self.regionRoot = RegionRoot(atlas=self.atlas,
                                      labelRoot=self.labelRoot)
+
+
+class parcBridge(Ont):
+    """ Main bridge for importing the various files that
+        make up the parcellation ontology. """
+
+    # setup
+
+    path = 'ttl/bridge/'
+    filename = 'parcellation-bridge'
+    name = 'Parcellation Bridge'
+    imports = (subclass for subclass in subclasses(LabelsBase)  # is this late binding if generator? yes
+               if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'))
 
 
 #
@@ -1495,7 +1512,7 @@ class HBALabels(LabelsBase):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname = 'hba'
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA), 'ilxHBA':str(ilxHBA)}
     sources = HBASrc,
     namespace = HBA
     root = LabelRoot(iri=AIBS['human/labels/'],  # ilxtr.hbaroot,
@@ -1565,7 +1582,7 @@ class MBALabels(HBALabels):
     filename = 'mbaslim'
     name = 'Allen Mouse Brain Atlas Ontology'
     shortname='mba'
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA)}
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'MBA':str(MBA), 'ilxMBA':str(ilxMBA)}
     sources = MBASrc,
     namespace = MBA
     root = LabelRoot(iri=AIBS['mouse/labels/'],  # ilxtr.mbaroot,
@@ -1721,6 +1738,7 @@ class PaxLabels(LabelsBase):
         for thing in labels + syns:
             trips = [(s, o) for s in self.graph.subjects(None, thing) for p, o in self.graph.predicate_objects(s)]
             assert 'zzzzzz' not in thing, f'{trips} has bad label/syn suggesting a problem with the source file'
+        return self
         
     def records(self):
         combined_record = {}
@@ -2092,36 +2110,6 @@ class PaxRegion(RegionsBase):
     def addthing(cls, thing, value):
         cls.things[thing] = value
 
-#
-# Bridge
-
-class parcBridge(Ont):
-    """ Main bridge for importing the various files that
-        make up the parcellation ontology. """
-
-    # setup
-
-    path = 'ttl/bridge/'
-    filename = 'parcellation-bridge'
-    name = 'Parcellation Bridge'
-    #shortname = 'parcbridge'
-    #prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')}
-    #imports = [subclass() for subclass in subclasses(LabelsBase)]
-    imports = (subclass for subclass in subclasses(LabelsBase)  # is this late binding if generator?
-               if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'))
-
-    @classmethod
-    def _prepare(cls):  # this way it doesn't have to be declared last, just called last
-        imports = []
-        for subclass in subclasses(LabelsBase):
-            if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
-                s = subclass()
-                imports.append(s)
-        cls.imports = tuple(imports)
-
-##
-#  FSL requires a different approach
-##
 
 class FSL(LabelsBase):
     """ Ontology file containing labels from the FMRIB Software Library (FSL)
@@ -2176,7 +2164,7 @@ class FSL(LabelsBase):
             parcellation_name = tree.xpath('header//name')[0].text
 
             # namespace
-            namespace = Namespace(FSLATS[filename + '/labels'])
+            namespace = Namespace(FSLATS[filename + '/labels/'])
 
             # shortname
             shortname = tree.xpath('header//shortname')
@@ -2235,25 +2223,35 @@ class FSL(LabelsBase):
         super().prepare()
 
 
-def doit(ont):
+def setup(ont):
     ont.prepare()
     o = ont()
+    return o
+
+def make(o):
     o()
     o.validate()
     o.write()
     return o
 
+def doit(ont):
+    return make(setup(ont))
+
 def main():
-    doit(FSL)
-    doit(HCPMMPLabels)
-    doit(MBALabels)
-    doit(HBALabels)
-    doit(WHSSDLabels)
-    doit(PaxRatLabels)
-    doit(PaxMouseLabels)
-    doit(Artifacts)
-    doit(parcBridge)
-    doit(parcCore)
+    onts = (Artifacts,
+            FSL,
+            HBALabels,
+            HCPMMPLabels,
+            MBALabels,
+            PaxMouseLabels,
+            PaxRatLabels,
+            WHSSDLabels,
+            parcBridge,
+            parcCore)
+    # have to use a listcomp here so that all calls to setup finish
+    # before parallel goes to work
+    out = Parallel(n_jobs=9)(delayed(make)(o) for o in
+                             [setup(ont) for ont in onts])
 
     embed()
 
