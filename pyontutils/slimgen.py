@@ -1,10 +1,12 @@
 #!/usr/bin/env python3.6
+#!/usr/bin/env pypy3
 """
     Build lightweight slims from curie lists.
     Used for sources that don't have an owl ontology floating.
 """
 #TODO consider using some of the code from scr_sync.py???
 
+import os
 import gzip
 import json
 from io import BytesIO
@@ -135,13 +137,16 @@ class ChebiOntSrc(Source):
     source_original = True
     @classmethod
     def loadData(cls):
-        #gzed = requests.get(cls.source)
-        #cls._gzed = gzed
-        #raw = BytesIO(gzip.decompress(gzed.content))
-
         source = '/tmp/chebi.gz'
-        with open(source, 'rb') as f:
-            raw = BytesIO(gzip.decompress(f.read()))
+        if not os.path.exists(source):
+            gzed = requests.get(cls.source)
+            cls._gzed = gzed
+            raw = BytesIO(gzip.decompress(gzed.content))
+            with open(source, 'wb') as f:
+                f.write(gzed.content)
+        else:
+            with open(source, 'rb') as f:
+                raw = BytesIO(gzip.decompress(f.read()))
 
         t = etree.parse(raw)
         return t
