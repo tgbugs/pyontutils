@@ -1,5 +1,6 @@
 import os
 import yaml
+import types
 import subprocess
 import rdflib
 import requests
@@ -546,7 +547,7 @@ class Class:
         species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
         devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
-        definingArtifactsS=ilxtr.isDefinedBy,
+        definingArtifactsS=ilxtr.isDefinedBy,  # FIXME type check here...
         definingCitations=NIFRID.definingCitation,
         citation=dcterms.bibliographicCitation,
         source=dc.source,  # replaces NIFRID.externalSourceURI?
@@ -590,6 +591,24 @@ class Class:
                         #print(e)
                     #if self.__class__ == Terminology:
                         #print(self.__class__, kw, arg)
+
+                    def typeCheck(thing):
+                        print('ARE WE CHECKING?', type(thing))
+                        types_ = rdflib.URIRef, str
+                        conts = tuple, list, set
+                        if type(thing) in conts:
+                            for t in thing:
+                                typeCheck(t)
+                        elif type(thing) in types_:
+                            return
+                        else:
+                            raise ValueError(f'Type of {kw} incorrect. '
+                                             f'Is {type(arg)}. '
+                                             f'Should be one of {types_}')
+
+                    if isinstance(arg, types.GeneratorType):
+                        arg = tuple(arg)  # avoid draining generators
+                    #typeCheck(arg)
                     setattr(self, kw, arg)
             if kwargs:
                 #print(f'WARNING: {sorted(kwargs)} are not kwargs for {self.__class__.__name__}')  # XXX
@@ -800,6 +819,10 @@ class Ont:
         self.graph = self._graph.g
         self._extra_triples = set()
         if hasattr(self, 'sources'):  # FIXME also support source = ?
+            for source in self.sources:
+                if not isinstance(source, Source):
+                    raise TypeError(f'{source} is not an instance of Source '
+                                    'did you remember to initialize it?')
             self.wasDerivedFrom = tuple(_ for _ in (i.iri if isinstance(i, Source) else i
                                                     for i in self.sources)
                                         if _ is not None)
@@ -828,8 +851,11 @@ class Ont:
 
     @property
     def triples(self):
-        if hasattr(self, 'root'):
+        if hasattr(self, 'root') and self.root is not None:
             yield from self.root
+        elif hasattr(self, 'roots') and self.roots is not None:
+            for root in self.roots:
+                yield from root
         if hasattr(self, '_triples'):
             yield from self._triples()
         else:
