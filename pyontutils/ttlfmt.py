@@ -87,6 +87,8 @@ def parse(source, format_guess, outpath, graph=None):
             return graph, outpath
         except (StopIteration, BadSyntax, JSONDecodeError) as e:
             print('PARSING FAILED', format, source)
+            if args['--format']:  # or format_guess != None:
+                raise e
             errors.append(e)
             if type(source) == StringIO:
                 source.seek(0)
