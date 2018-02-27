@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 import os
 import inspect
+from pathlib import Path, PurePath as PPath
 from collections import MutableMapping
 import rdflib
 from rdflib.extras import infixowl
@@ -157,12 +158,12 @@ class graphBase:
 
         """
 
-        graphBase.local_base = local_base
+        graphBase.local_base = Path(local_base).expanduser()
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [remote_base + branch + '/' + s for s in suffixes]
-            local = [local_base + s for s in suffixes]
+            remote = [os.path.join(graphBase.remote_base, branch, s) for s in suffixes]
+            local = [(graphBase.local_base / s).as_posix() for s in suffixes]
             return remote, local
 
         def attachPrefixes(*prefixes, graph=None):
@@ -177,7 +178,7 @@ class graphBase:
         remote_out_paths, local_out_paths = makeLocalRemote(out_graph_paths)  # XXX fail w/ tmp
         remote_out_paths = local_out_paths  # can't write to a remote server without magic
 
-        if not force_remote and os.path.exists(local_base):
+        if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
             if repo.active_branch.name != branch:
                 raise FileNotFoundError('Local git repo not on %s branch! Please run `git checkout %s` in %s' % (branch, branch, local_base))
@@ -231,7 +232,7 @@ class graphBase:
 
         # makeGraph setup
         new_graph.filename = out_graph_path
-        ontid = rdflib.URIRef('file://' + out_graph_path)
+        ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
         new_graph.add_ont(ontid, 'Some Neurons')
         for remote_out_import in remote_out_imports:
             new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
@@ -253,7 +254,7 @@ class graphBase:
 
     @staticmethod
     def write_python():
-        with open(os.path.splitext(graphBase.ng.filename)[0] + '.py', 'wt') as f:
+        with open(PPath(graphBase.ng.filename).with_suffix('.py'), 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
@@ -1285,7 +1286,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = os.path.expanduser('~/git/NIF-Ontology/ttl')
+    local_prefix = Path('~/git/NIF-Ontology/ttl').expanduser()
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import inspect
 from git.repo import Repo
 from rdflib import Graph, URIRef
@@ -22,8 +21,8 @@ __all__ = [
     'Neuron',
 ]
 
-def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw/',
-           local_base=        os.path.expanduser('~/git/NIF-Ontology/'),
+def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
+           local_base=        '~/git/NIF-Ontology',
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],
@@ -41,10 +40,19 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw/',
                             in_graph_paths,
                             out_graph_path, out_imports, out_graph,
                             force_remote, scigraph)
+    pred = graphBase._predicates
+    return pred  # because the python module system is opinionated :/
 
-# init the config and make sure pred is bound
-config()
-pred = graphBase._predicates
+try:
+    pred = config()
+except FileNotFoundError as e:
+    pred = None
+    from pyontutils.utils import TermColors as tc
+    print(e)
+    print(tc.red('WARNING:'),
+          'config() failed to run at import (see the above error). Please',
+          'call pred = config(*args, **kwargs) again in your local file with',
+          'corrected arguments.')
 
 # set the import to this file instead of neurons
 graphBase.__import_name__ = __name__
