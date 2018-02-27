@@ -155,10 +155,14 @@ def make_node(id_, field, value, column_to_predicate=_column_to_predicate):
     return id_, column_to_predicate[field], value
 
 def get_records(field_mapping=_field_mapping):
-    DB_URI = 'mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db}'
+    DB_URI = 'mysql+{driver}://{user}:{password}@{host}:{port}/{db}'
     #config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
     config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-    engine = create_engine(DB_URI.format(**config))
+    #config = mysql_conn_helper('localhost', 'nif_eelg', 'nif_eelg_secure', 33060)
+    try:
+        engine = create_engine(DB_URI.format(driver='mysqlconnector', **config))
+    except ModuleNotFoundError:
+        engine = create_engine(DB_URI.format(driver='pymysql', **config))
     config = None  # all weakrefs should be gone by now?
     del(config)  # i wonder whether this actually cleans it up when using **config
     insp = inspect(engine)
