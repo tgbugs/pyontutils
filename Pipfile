@@ -1,28 +1,11 @@
-[packages]
+[requires]
+python_version = '3.6'  # also works with pypy3
 
-docopt = "*"
-flask = "*"
-gitpython = "*"
-ipython = "*"
-joblib = "*"
-lxml = "*"
-mysql-connector = "*"
-numpy = "*"
-protobuf = "*"
-psutil = "*"
-"psycopg2" = "*"
-pyyaml = "*"
+[dev-packages]
+"e1839a8" = {path = ".", extras = ["dev"], editable = true}
+
+[packages]
 rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b4'}
-requests = "*"
-robobrowser = "*"
-sqlalchemy = "*"
 "e1839a8" = {path = ".", editable = true}
 
 
-[dev-packages]
-
-
-
-[requires]
-
-python_version = '3.6'

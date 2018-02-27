@@ -30,7 +30,6 @@ files = [
     'pyontutils/utils.py',
 ]
 
-
 try:
     os.mkdir('export')
     for f in files:
@@ -58,15 +57,16 @@ try:
             'numpy',
             'psutil',
             'psycopg2',
+            'pymysql',
             'pyyaml',
             'rdflib',
             'requests',
             'robobrowser',
             'sqlalchemy',
-            'mysql-connector',
-            'protobuf',
         ],
-        #extras_require
+        extras_require={'dev':['protobuf',
+                               'mysql-connector',
+        ]},
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={
