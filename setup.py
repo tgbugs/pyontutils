@@ -56,7 +56,6 @@ try:
             'lxml',
             'numpy',
             'psutil',
-            'psycopg2',
             'pymysql',
             'pyyaml',
             'rdflib',
@@ -65,6 +64,7 @@ try:
             'sqlalchemy',
         ],
         extras_require={'dev':['protobuf',
+                               'psycopg2',
                                'mysql-connector',
         ]},
         #package_data
