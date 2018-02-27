@@ -8,4 +8,3 @@ python_version = '3.6'  # also works with pypy3
 rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b4'}
 "e1839a8" = {path = ".", editable = true}
 
-
