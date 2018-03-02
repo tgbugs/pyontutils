@@ -133,7 +133,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         zip_dir = os.path.dirname(zip_path)
         zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
         return graph_path, zip_path, zip_command
-    
+
     graph_path, zip_path, zip_command = make_folder_zip()
     wild_graph_path, wild_zip_path = make_folder_zip(wild=True)
 
@@ -195,7 +195,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
     commit_log_path = jpth(local, COMMIT_LOG)
 
     load_base = (
-        'cd {}; '.format(jpth(local, 'SciGraph-core')) + 
+        'cd {}; '.format(jpth(local, 'SciGraph-core')) +
         'mvn exec:java '
         '-Dexec.mainClass="io.scigraph.owlapi.loader.BatchOwlLoader" '
         '-Dexec.args="-c {config_path}"')
@@ -369,9 +369,10 @@ def loadall(git_local, repo_name, local=False):
             #raise BaseException('Evil file found %s' % f)
 
     def repeat(dobig=False):  # we don't really know when to stop, so just adjust
-        for s, o in graph.subject_objects(owl.imports):
+        for s, o in graph.subject_objects(predicate=owl.imports):
             if os.path.basename(o) not in done and o not in done:
-            #if (o, rdf.type, owl.Ontology) not in graph:
+                if '/ext.owl' in str(o): continue #BUG
+                #if (o, rdf.type, owl.Ontology) not in graph:
                 print(o)
                 done.append(o)
                 ext = os.path.splitext(o)[1]
@@ -384,7 +385,8 @@ def loadall(git_local, repo_name, local=False):
     #if local:
         #repeat(False)
     #else:
-    if not local:
+    if local:
+        print('Yep, this helps')
         for i in range(10):
             repeat(True)
 

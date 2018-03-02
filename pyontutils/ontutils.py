@@ -298,7 +298,7 @@ def get_epoch(*filenames, min_=True):
             return 0
         else:
             return 0  # XXX this may cause errors down the line
-        
+
     return comp_epoch
 
 #
@@ -512,7 +512,7 @@ def swapUriSwitch(trip, ureps, fragment_prefixes):
 
 #
 # backend
-
+#TROY
 def backend_refactor_values():
     uri_reps_lit = {
         # from https://github.com/information-artifact-ontology/IAO/blob/master/docs/BFO%201.1%20to%202.0%20conversion/mapping.txt
