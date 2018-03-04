@@ -1437,8 +1437,8 @@ class PaxLabels(LabelsBase):
         fixes_abbrevs = set()
         for f in self._fixes:
             fixes_abbrevs.add(f[0])
-        for (abrv, *_), *_ in self._dupes.values():
-            fixes_abbrevs.add(abrv)
+        for dupe in self._dupes.values():
+            fixes_abbrevs.add(dupe.alt_abbrevs[0])
         return fixes_abbrevs
 
     @property
@@ -1452,8 +1452,8 @@ class PaxLabels(LabelsBase):
     @property
     def dupes_structs(self):
         ds = {'cerebellar lobules', 'cerebellar lobule'}
-        for d in self._dupes.values():
-            for struct in d[1]:
+        for dupe in self._dupes.values():
+            for struct in dupe.structures:
                 ds.add(struct)
         return ds
 
@@ -1589,15 +1589,15 @@ class PaxLabels(LabelsBase):
             elif artiri not in struct_prov[structure]:
                 struct_prov[structure].append(artiri)
 
-        def do_abbrev_prov(abbrev, primary_struct, source=None, artiri=None, overwrite=False):
+        def do_abbrev_prov(abbrev, primary_struct, source=None, artiri=None, overwrite=False, debug=None):
             if artiri is None:
                 artiri = source.artifact.iri
             try:
-                if abbrev in ('4&5',) or isinstance(artiri, list):
+                if abbrev in ('4&5',) or isinstance(artiri, list) or primary_struct == 'hippocampal fissure':
                     pass
                 else:
                     int(abbrev)
-                print(abbrev, primary_struct, artiri)
+                print(debug, abbrev, primary_struct, artiri)
             except ValueError: pass
             if overwrite:
                 abbrev_prov[abbrev, primary_struct] = artiri if isinstance(artiri, list) else [artiri]
@@ -1619,7 +1619,7 @@ class PaxLabels(LabelsBase):
                         collisions[a, ss[0]] = {se.artifact.iri:f}
                         continue  # skip the entries that we create manually TODO
 
-                do_abbrev_prov(a, ss[0], se)
+                do_abbrev_prov(a, ss[0], se, debug='line 1622')
                 if a in combined_record:
                     _, structures, figures, artifacts = combined_record[a]
                     if f:
@@ -1639,35 +1639,38 @@ class PaxLabels(LabelsBase):
                             if ss: print(f'WARNING adding structure {struct} in merge of {a}')
                             ss.append(struct)
                     for aa in alt_abbrevs:
-                        do_abbrev_prov(aa, ss[0], se)
+                        if ss[0] == 'hippocampal fissure': embed()
+                        do_abbrev_prov(aa, ss[0], se, debug='line 1643')
                     alt_abbrevs.append(a)
                     figures[se.artifact.iri] = f
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
                 else:
                     ss = [s for s in ss if s is not None]
-                    alt_abbrevs = self._dupes[a][0] if a in self._dupes else []
+                    alt_abbrevs = self._dupes[a].alt_abbrevs if a in self._dupes else []
                     for aa in alt_abbrevs:
-                        do_abbrev_prov(aa, ss[0], se)
+                        for artiri in self._dupes[a].artiris:  # TODO check if matches current source art iri?
+                            do_abbrev_prov(aa, ss[0], artiri=artiri, debug='line 1653')
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                         for s in ss:
                             do_struct_prov(s, se)
                     if alt_abbrevs:  # TODO will need this for some abbrevs too...
-                        arts = self._dupes[a][-1]
-                        for s in self._dupes[a][1]:
+                        artiris = self._dupes[a].artiris
+                        for s in self._dupes[a].structures:
                             if s not in ss:
                                 ss.append(s)
-                            for art in arts:
+                            for artiri in artiris:
                                 artifacts = combined_record[a][-1]
-                                if art not in artifacts:
-                                    artifacts.append(art)
-                                do_struct_prov(s, artiri=art)
+                                if artiri not in artifacts:
+                                    artifacts.append(artiri)
+                                do_struct_prov(s, artiri=artiri)
                         #abbrev_prov[a, ss[0]] = [se.artifact.iri]  # FIXME overwritten?
-                        do_abbrev_prov(a, ss[0], se)#, overwrite=True)
+                        do_abbrev_prov(a, ss[0], se, debug='line 1668')
                         for alt in alt_abbrevs:
                             if alt not in abbrev_prov:
-                                do_abbrev_prov(alt, ss[0], artiri=arts, overwrite=True)
+                                for artiri in artiris:
+                                    do_abbrev_prov(alt, ss[0], artiri=artiri, debug='line 1671')
                             # TODO elif...
 
         return combined_record, struct_prov, collisions, abbrev_prov
@@ -1723,6 +1726,11 @@ class PaxMouseLabels(PaxLabels):
         'STS':'BSTS',
     }
 
+class DupeRecord:
+    def __init__(self, alt_abbrevs=tuple(), structures=tuple(), i_have_no_idea=None, artiris=tuple()):
+        self.alt_abbrevs = alt_abbrevs
+        self.structures = structures
+        self.artiris = artiris
 
 class PaxRatLabels(PaxLabels):
     """ Compilation of all labels used to name rat brain regions
@@ -1750,28 +1758,28 @@ class PaxRatLabels(PaxLabels):
 
     _dupes = {
         # for 4e the numbers in the index are to the cranial nerve nuclei entries
-        '3N': (['3'], ['oculomotor nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '4N': (['4'], ['trochlear nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '6N': (['6'], ['abducens nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '7N': (['7'], ['facial nucleus'], {}, [Artifacts.PaxRat4.iri]),
-        '10N': (['10'], ['dorsal motor nucleus of vagus'], {}, [Artifacts.PaxRat4.iri]),
+        '3N':DupeRecord(alt_abbrevs=['3'], structures=['oculomotor nucleus'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4N':DupeRecord(alt_abbrevs=['4'], structures=['trochlear nucleus'],  i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6N':DupeRecord(alt_abbrevs=['6'], structures=['abducens nucleus'],   i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '7N':DupeRecord(alt_abbrevs=['7'], structures=['facial nucleus'],     i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '10N':DupeRecord(alt_abbrevs=['10'], structures=['dorsal motor nucleus of vagus'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
 
         # FIXME need comments about the index entries
-        '1Cb':(['1'], ['cerebellar lobule 1'], {}, [Artifacts.PaxRat4.iri]),
-        '2Cb':(['2'], ['cerebellar lobule 2'], {}, [Artifacts.PaxRat4.iri]),
-        '2/3Cb':(['2&3'], ['cerebellar lobules 2&3'], {}, [Artifacts.PaxRat4.iri]),
-        '3Cb':(['3'], ['cerebellar lobule 3'], {}, [Artifacts.PaxRat4.iri]),
-        '4Cb':(['4'], ['cerebellar lobule 4'], {}, [Artifacts.PaxRat4.iri]),
-        '4/5Cb':(['4&5'], ['cerebellar lobules 4&5'], {}, [Artifacts.PaxRat4.iri]),
-        '5Cb':(['5'], ['cerebellar lobule 5'], {}, [Artifacts.PaxRat4.iri]),
-        '6Cb':(['6'], ['cerebellar lobule 6'], {}, [Artifacts.PaxRat4.iri]),
-        '6aCb':(['6a'], ['cerebellar lobule 6a'], {}, [Artifacts.PaxRat4.iri]),
-        '6bCb':(['6b'], ['cerebellar lobule 6b'], {}, [Artifacts.PaxRat4.iri]),
-        '6cCb':(['6c'], ['cerebellar lobule 6c'], {}, [Artifacts.PaxRat4.iri]),
-        '7Cb':(['7'], ['cerebellar lobule 7'], {}, [Artifacts.PaxRat4.iri]),
-        '8Cb':(['8'], ['cerebellar lobule 8'], {}, [Artifacts.PaxRat4.iri]),
-        '9Cb':(['9'], ['cerebellar lobule 9'], {}, [Artifacts.PaxRat4.iri]),
-        '10Cb':(['10'], ['cerebellar lobule 10'], {}, [Artifacts.PaxRat4.iri]),
+        '1Cb':DupeRecord(alt_abbrevs=['1'], structures=['cerebellar lobule 1'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '2Cb':DupeRecord(alt_abbrevs=['2'], structures=['cerebellar lobule 2'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '2/3Cb':DupeRecord(alt_abbrevs=['2&3'], structures=['cerebellar lobules 2&3'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '3Cb':DupeRecord(alt_abbrevs=['3'], structures=['cerebellar lobule 3'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4Cb':DupeRecord(alt_abbrevs=['4'], structures=['cerebellar lobule 4'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4/5Cb':DupeRecord(alt_abbrevs=['4&5'], structures=['cerebellar lobules 4&5'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '5Cb':DupeRecord(alt_abbrevs=['5'], structures=['cerebellar lobule 5'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6Cb':DupeRecord(alt_abbrevs=['6'], structures=['cerebellar lobule 6'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6aCb':DupeRecord(alt_abbrevs=['6a'], structures=['cerebellar lobule 6a'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6bCb':DupeRecord(alt_abbrevs=['6b'], structures=['cerebellar lobule 6b'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6cCb':DupeRecord(alt_abbrevs=['6c'], structures=['cerebellar lobule 6c'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '7Cb':DupeRecord(alt_abbrevs=['7'], structures=['cerebellar lobule 7'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '8Cb':DupeRecord(alt_abbrevs=['8'], structures=['cerebellar lobule 8'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '9Cb':DupeRecord(alt_abbrevs=['9'], structures=['cerebellar lobule 9'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '10Cb':DupeRecord(alt_abbrevs=['10'], structures=['cerebellar lobule 10'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
     }
 
     _merge = {  # abbrevs that have identical structure names
@@ -2081,21 +2089,20 @@ def doit(ont):
 
 def main():
     onts = (Artifacts,
-            FSL,
-            HBALabels,
-            HCPMMPLabels,
-            MBALabels,
+            #FSL,
+            #HBALabels,
+            #HCPMMPLabels,
+            #MBALabels,
             PaxMouseLabels,
             PaxRatLabels,
-            WHSSDLabels,
-            parcBridge,
+            #WHSSDLabels,
+            #parcBridge,
             parcCore)
     # have to use a listcomp here so that all calls to setup finish
     # before parallel goes to work
     # set n_jobs=1 for debug
     out = Parallel(n_jobs=9)(delayed(make)(o) for o in
                              [setup(ont) for ont in onts])
-    embed()
 
 if __name__ == '__main__':
     main()
