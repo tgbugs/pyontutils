@@ -531,7 +531,17 @@ def main():
 
 #
 # New impl
+# helpers
+
+class DupeRecord:
+    def __init__(self, alt_abbrevs=tuple(), structures=tuple(), i_have_no_idea=None, artiris=tuple()):
+        self.alt_abbrevs = alt_abbrevs
+        self.structures = structures
+        self.artiris = artiris
+
+
 # classes
+
 
 class Artifact(Class):
     """ Parcellation artifacts are the defining information sources for
@@ -1620,6 +1630,8 @@ class PaxLabels(LabelsBase):
                         continue  # skip the entries that we create manually TODO
 
                 do_abbrev_prov(a, ss[0], se, debug='line 1622')
+                for s in ss:
+                    do_struct_prov(s, se)
                 if a in combined_record:
                     _, structures, figures, artifacts = combined_record[a]
                     if f:
@@ -1629,7 +1641,6 @@ class PaxLabels(LabelsBase):
                     for s in ss:
                         if s is not None and s not in structures:
                             structures.append(s)
-                        do_struct_prov(s, se)
                     if se.artifact.iri not in artifacts:
                         artifacts.append(se.artifact.iri)
                 elif a in merge and merge[a] in combined_record:
@@ -1639,7 +1650,6 @@ class PaxLabels(LabelsBase):
                             if ss: print(f'WARNING adding structure {struct} in merge of {a}')
                             ss.append(struct)
                     for aa in alt_abbrevs:
-                        if ss[0] == 'hippocampal fissure': embed()
                         do_abbrev_prov(aa, ss[0], se, debug='line 1643')
                     alt_abbrevs.append(a)
                     figures[se.artifact.iri] = f
@@ -1653,8 +1663,6 @@ class PaxLabels(LabelsBase):
                             do_abbrev_prov(aa, ss[0], artiri=artiri, debug='line 1653')
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
-                        for s in ss:
-                            do_struct_prov(s, se)
                     if alt_abbrevs:  # TODO will need this for some abbrevs too...
                         artiris = self._dupes[a].artiris
                         for s in self._dupes[a].structures:
@@ -1726,11 +1734,6 @@ class PaxMouseLabels(PaxLabels):
         'STS':'BSTS',
     }
 
-class DupeRecord:
-    def __init__(self, alt_abbrevs=tuple(), structures=tuple(), i_have_no_idea=None, artiris=tuple()):
-        self.alt_abbrevs = alt_abbrevs
-        self.structures = structures
-        self.artiris = artiris
 
 class PaxRatLabels(PaxLabels):
     """ Compilation of all labels used to name rat brain regions
