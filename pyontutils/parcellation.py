@@ -534,7 +534,7 @@ def main():
 # helpers
 
 class DupeRecord:
-    def __init__(self, alt_abbrevs=tuple(), structures=tuple(), i_have_no_idea=None, artiris=tuple()):
+    def __init__(self, alt_abbrevs=tuple(), structures=tuple(), figures=None, artiris=tuple()):
         self.alt_abbrevs = alt_abbrevs
         self.structures = structures
         self.artiris = artiris
@@ -1754,28 +1754,28 @@ class PaxRatLabels(PaxLabels):
 
     _dupes = {
         # for 4e the numbers in the index are to the cranial nerve nuclei entries
-        '3N':DupeRecord(alt_abbrevs=['3'], structures=['oculomotor nucleus'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '4N':DupeRecord(alt_abbrevs=['4'], structures=['trochlear nucleus'],  i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '6N':DupeRecord(alt_abbrevs=['6'], structures=['abducens nucleus'],   i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '7N':DupeRecord(alt_abbrevs=['7'], structures=['facial nucleus'],     i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '10N':DupeRecord(alt_abbrevs=['10'], structures=['dorsal motor nucleus of vagus'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '3N':DupeRecord(alt_abbrevs=['3'], structures=['oculomotor nucleus'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4N':DupeRecord(alt_abbrevs=['4'], structures=['trochlear nucleus'],  figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6N':DupeRecord(alt_abbrevs=['6'], structures=['abducens nucleus'],   figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '7N':DupeRecord(alt_abbrevs=['7'], structures=['facial nucleus'],     figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '10N':DupeRecord(alt_abbrevs=['10'], structures=['dorsal motor nucleus of vagus'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
 
         # FIXME need comments about the index entries
-        '1Cb':DupeRecord(alt_abbrevs=['1'], structures=['cerebellar lobule 1'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '2Cb':DupeRecord(alt_abbrevs=['2'], structures=['cerebellar lobule 2'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '2/3Cb':DupeRecord(alt_abbrevs=['2&3'], structures=['cerebellar lobules 2&3'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '3Cb':DupeRecord(alt_abbrevs=['3'], structures=['cerebellar lobule 3'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '4Cb':DupeRecord(alt_abbrevs=['4'], structures=['cerebellar lobule 4'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '4/5Cb':DupeRecord(alt_abbrevs=['4&5'], structures=['cerebellar lobules 4&5'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '5Cb':DupeRecord(alt_abbrevs=['5'], structures=['cerebellar lobule 5'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '6Cb':DupeRecord(alt_abbrevs=['6'], structures=['cerebellar lobule 6'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '6aCb':DupeRecord(alt_abbrevs=['6a'], structures=['cerebellar lobule 6a'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '6bCb':DupeRecord(alt_abbrevs=['6b'], structures=['cerebellar lobule 6b'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '6cCb':DupeRecord(alt_abbrevs=['6c'], structures=['cerebellar lobule 6c'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '7Cb':DupeRecord(alt_abbrevs=['7'], structures=['cerebellar lobule 7'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '8Cb':DupeRecord(alt_abbrevs=['8'], structures=['cerebellar lobule 8'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '9Cb':DupeRecord(alt_abbrevs=['9'], structures=['cerebellar lobule 9'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
-        '10Cb':DupeRecord(alt_abbrevs=['10'], structures=['cerebellar lobule 10'], i_have_no_idea={}, artiris=[Artifacts.PaxRat4.iri]),
+        '1Cb':DupeRecord(alt_abbrevs=['1'], structures=['cerebellar lobule 1'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '2Cb':DupeRecord(alt_abbrevs=['2'], structures=['cerebellar lobule 2'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '2/3Cb':DupeRecord(alt_abbrevs=['2&3'], structures=['cerebellar lobules 2&3'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '3Cb':DupeRecord(alt_abbrevs=['3'], structures=['cerebellar lobule 3'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4Cb':DupeRecord(alt_abbrevs=['4'], structures=['cerebellar lobule 4'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '4/5Cb':DupeRecord(alt_abbrevs=['4&5'], structures=['cerebellar lobules 4&5'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '5Cb':DupeRecord(alt_abbrevs=['5'], structures=['cerebellar lobule 5'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6Cb':DupeRecord(alt_abbrevs=['6'], structures=['cerebellar lobule 6'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6aCb':DupeRecord(alt_abbrevs=['6a'], structures=['cerebellar lobule 6a'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6bCb':DupeRecord(alt_abbrevs=['6b'], structures=['cerebellar lobule 6b'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '6cCb':DupeRecord(alt_abbrevs=['6c'], structures=['cerebellar lobule 6c'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '7Cb':DupeRecord(alt_abbrevs=['7'], structures=['cerebellar lobule 7'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '8Cb':DupeRecord(alt_abbrevs=['8'], structures=['cerebellar lobule 8'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '9Cb':DupeRecord(alt_abbrevs=['9'], structures=['cerebellar lobule 9'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
+        '10Cb':DupeRecord(alt_abbrevs=['10'], structures=['cerebellar lobule 10'], figures={}, artiris=[Artifacts.PaxRat4.iri]),
     }
 
     _merge = {  # abbrevs that have identical structure names
