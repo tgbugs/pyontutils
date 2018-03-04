@@ -1599,16 +1599,9 @@ class PaxLabels(LabelsBase):
             elif artiri not in struct_prov[structure]:
                 struct_prov[structure].append(artiri)
 
-        def do_abbrev_prov(abbrev, primary_struct, source=None, artiri=None, overwrite=False, debug=None):
+        def do_abbrev_prov(abbrev, primary_struct, source=None, artiri=None, overwrite=False):
             if artiri is None:
                 artiri = source.artifact.iri
-            try:
-                if abbrev in ('4&5',) or isinstance(artiri, list) or primary_struct == 'hippocampal fissure':
-                    pass
-                else:
-                    int(abbrev)
-                print(debug, abbrev, primary_struct, artiri)
-            except ValueError: pass
             if overwrite:
                 abbrev_prov[abbrev, primary_struct] = artiri if isinstance(artiri, list) else [artiri]
             else:
@@ -1629,7 +1622,7 @@ class PaxLabels(LabelsBase):
                         collisions[a, ss[0]] = {se.artifact.iri:f}
                         continue  # skip the entries that we create manually TODO
 
-                do_abbrev_prov(a, ss[0], se, debug='line 1622')
+                do_abbrev_prov(a, ss[0], se)
                 for s in ss:
                     do_struct_prov(s, se)
                 if a in combined_record:
@@ -1647,10 +1640,10 @@ class PaxLabels(LabelsBase):
                     alt_abbrevs, structures, figures, artifacts = combined_record[merge[a]]
                     for struct in structures:  # allow merge of terms with non exact matching but warn
                         if struct not in ss:
-                            if ss: print(f'WARNING adding structure {struct} in merge of {a}')
+                            if ss: print(tc.red('WARNING:'), f'adding structure {struct} in merge of {a}')
                             ss.append(struct)
                     for aa in alt_abbrevs:
-                        do_abbrev_prov(aa, ss[0], se, debug='line 1643')
+                        do_abbrev_prov(aa, ss[0], se)
                     alt_abbrevs.append(a)
                     figures[se.artifact.iri] = f
                     if se.artifact.iri not in artifacts:
@@ -1660,7 +1653,7 @@ class PaxLabels(LabelsBase):
                     alt_abbrevs = self._dupes[a].alt_abbrevs if a in self._dupes else []
                     for aa in alt_abbrevs:
                         for artiri in self._dupes[a].artiris:  # TODO check if matches current source art iri?
-                            do_abbrev_prov(aa, ss[0], artiri=artiri, debug='line 1653')
+                            do_abbrev_prov(aa, ss[0], artiri=artiri)
                     if ss:  # skip terms without structures
                         combined_record[a] = alt_abbrevs, ss, {se.artifact.iri:f}, [se.artifact.iri]
                     if alt_abbrevs:  # TODO will need this for some abbrevs too...
@@ -1674,11 +1667,11 @@ class PaxLabels(LabelsBase):
                                     artifacts.append(artiri)
                                 do_struct_prov(s, artiri=artiri)
                         #abbrev_prov[a, ss[0]] = [se.artifact.iri]  # FIXME overwritten?
-                        do_abbrev_prov(a, ss[0], se, debug='line 1668')
+                        do_abbrev_prov(a, ss[0], se)
                         for alt in alt_abbrevs:
                             if alt not in abbrev_prov:
                                 for artiri in artiris:
-                                    do_abbrev_prov(alt, ss[0], artiri=artiri, debug='line 1671')
+                                    do_abbrev_prov(alt, ss[0], artiri=artiri)
                             # TODO elif...
 
         return combined_record, struct_prov, collisions, abbrev_prov
@@ -2092,14 +2085,14 @@ def doit(ont):
 
 def main():
     onts = (Artifacts,
-            #FSL,
-            #HBALabels,
-            #HCPMMPLabels,
-            #MBALabels,
+            FSL,
+            HBALabels,
+            HCPMMPLabels,
+            MBALabels,
             PaxMouseLabels,
             PaxRatLabels,
-            #WHSSDLabels,
-            #parcBridge,
+            WHSSDLabels,
+            parcBridge,
             parcCore)
     # have to use a listcomp here so that all calls to setup finish
     # before parallel goes to work
