@@ -6,15 +6,11 @@ from sqlalchemy import create_engine, inspect, Table, Column
 import scicrunch_client_slow_stable as scicrunch_client
 import sys
 import pandas as pd
+from args_reader import read_args
 
+args = read_args(keys='../keys.txt', production='-p')
 curr_stage = 'production'
-
-if curr_stage == 'beta':
-    sci = scicrunch_client.scicrunch(base_path='https://beta.scicrunch.org', key='ricaGK0njWn4Pru9YWIwkFdXXsGdQpj8')
-    engine_key = 'mysql+mysqlconnector://nif_eelg_secure:5Aruchug@dudley.crbs.ucsd.edu:3306/nif_eelg' #beta
-elif curr_stage == 'production':
-    sci = scicrunch_client.scicrunch(base_path='https://scicrunch.org', key='uePSzjBoXkB5S9gB7AeB4aWue9oPSV9S')
-    engine_key = 'mysql+mysqlconnector://nif_eelg_secure:5Aruchug@nif-mysql.crbs.ucsd.edu:3306/nif_eelg' #production
+engine_key=args['engine_key']
 
 def get_subj_to_tid(engine_key):
     engine = create_engine(engine_key)
