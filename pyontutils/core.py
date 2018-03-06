@@ -112,10 +112,18 @@ def makeURIs(*prefixes):
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
  ilxb, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
                        'ilxtr', 'ilx', 'TEMP')
+
+# note that these will cause problems in SciGraph because I've run out of hacks still no https
+DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
+DMBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
+
+# interlex namespaces
 ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
 AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
 ilxHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/labels/'))
 ilxMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/labels/'))
+ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
+ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
 FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
@@ -834,7 +842,7 @@ class Ont:
     def prepare(cls):
         if hasattr(cls, 'sources'):
             cls.sources = tuple(s() for s in cls.sources)
-        if hasattr(cls, 'imports'):
+        if hasattr(cls, 'imports') and not isinstance(cls.imports, property):
             cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
                                 for i in cls.imports)
 
