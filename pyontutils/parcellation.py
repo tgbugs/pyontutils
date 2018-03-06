@@ -11,13 +11,13 @@ import requests
 from rdflib import Graph, URIRef, Literal, Namespace
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, rowParse, getCommit, subclasses
+from utils import TODAY, async_getter, rowParse, getCommit, subclasses, Async, deferred
 from utils import TermColors as tc #TERMCOLORFUNC
 from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
 from core import NCBITaxon, UBERON, NIFTTL
-from core import Class, Source, Ont, annotations, restriction
+from core import Class, Source, Ont, LabelsBase, annotations, restriction
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
@@ -848,33 +848,11 @@ class parcCore(Ont):
             yield from parent.class_triples()
 
 
-class LabelsBase(Ont):  # this replaces genericPScheme
-    """ An ontology file containing parcellation labels from a common source. """
-
-    path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
-    imports = parcCore,
-    sources = tuple()
-    root = None  # : LabelRoot 
-    roots = None  # : (LabelRoot, ...)
-    filename = None
-    name = None
-    prefixes = {}
-    comment = None
-
-    @property
-    def triples(self):
-        if self.root is not None:
-            yield self.iri, ilxtr.rootClass, self.root.iri
-        elif self.roots is not None:
-            for root in self.roots:
-                yield self.iri, ilxtr.rootClass, root.iri
-        yield from super().triples
-
-
 class RegionsBase(Ont):
     """ An ontology file containing parcellation regions from the
         intersection of an atlas artifact and a set of labels. """
     # TODO find a way to allow these to serialize into one file
+    __pythonOnly = True  # FIXME for now perevent export
     imports = parcCore,
     atlas = None
     labelRoot = None
@@ -892,9 +870,15 @@ class parcBridge(Ont):
     path = 'ttl/bridge/'
     filename = 'parcellation-bridge'
     name = 'Parcellation Bridge'
+    imports = ((g[subclass.__name__]
+                if subclass.__name__ in g and subclass.__module__ == 'parcellation'  # parcellation is insurance for name reuse
+                else subclass)
+               for g in (globals(),)
+               for subclass in subclasses(LabelsBase)  # XXX wow, well apparently __main__.Class != module.Class
+               if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'))
 
     @property
-    def imports(self):
+    def __imports(self):
         for subclass in subclasses(LabelsBase):
             if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
                 yield subclass()
@@ -1288,6 +1272,7 @@ class HCPMMPLabels(LabelsBase):
     filename = 'hcpmmp'
     name = 'Human Connectome Project Multi-Modal human cortical parcellation'
     shortname = 'hcpmmp'
+    imports = parcCore,
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HCPMMP':str(HCPMMP)}
     sources = HCPMMPSrc,
     namespace = HCPMMP
@@ -1324,6 +1309,7 @@ class PaxLabels(LabelsBase):
     """ Base class for processing paxinos indexes. """
     __pythonOnly = True
     path = 'ttl/generated/parcellation/'
+    imports = parcCore,
     _fixes = []
     _dupes = {}
     _merge = {}
@@ -1777,6 +1763,7 @@ class WHSSDLabels(LabelsBase):
     filename = 'waxholm-rat-labels'
     name = 'Waxholm Sprague Dawley Atlas Labels'
     shortname = 'whssd'
+    imports = parcCore,
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
     sources = WHSSD2Src,
     namespace = WHSSD
@@ -1818,6 +1805,7 @@ class PaxRecord:
 
 
 class PaxRegion(RegionsBase):
+    __pythonOnly = True  # TODO
     path = 'ttl/generated/parcellation/'
     filename = 'paxinos-rat-regions'
     name = 'Paxinos & Watson Rat Parcellation Regions'
@@ -1973,23 +1961,20 @@ def build(*onts, n_jobs=9):
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(make)(o) for o in
-                                   [setup(ont) for ont in onts])
+                                   Async()(deferred(setup)(ont) for ont in onts
+                                             if ont.__name__ != 'parcBridge'))
+                                   #[setup(ont) for ont in onts])
 
 def main():
-    from parc_aba import allenLabels, abaArts, abaOnts  # sight synchronizing
-    asdf = [o for o in abaOnts()]
+    # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
+    from parc_aba import allenLabels, abaArts # sight synchronizing
     Artifacts._artifacts += tuple(abaArts())
-    out = build(Artifacts,
-                FSL,
-                HCPMMPLabels,
-                PaxMouseLabels,
-                PaxRatLabels,
-                WHSSDLabels,
+    out = build(*(l for l in subclasses(Ont)
+                  if l.__name__ != 'parcBridge' and
+                  l.__module__ != 'parcellation' and
+                  not hasattr(l, f'_{l.__name__}__pythonOnly')),
                 parcBridge,
-                parcCore,
-                *allenLabels(),
-                n_jobs=1)
-    print(asdf)
+                n_jobs=9)
     embed()
 
 if __name__ == '__main__':

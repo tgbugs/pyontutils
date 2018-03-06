@@ -1,9 +1,12 @@
-from utils import Async, deferred, subclasses
+import requests
+from utils import Async, deferred
+from core import rdf, rdfs, owl, dc, dcterms, skos, prov
+from core import NIFRID, ilx, ilxtr, TEMP
 from core import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
 from core import NCBITaxon, UBERON
-from core import makePrefixes, Source
+from core import makePrefixes, Source, LabelsBase, restriction
 import parcellation as parc
-from parcellation import LabelsBase, LabelRoot, Artifacts, Terminology, build
+from parcellation import parcCore, LabelRoot, Label, Artifacts, Terminology, build
 
 # TODO! there is way more metadata that we need to provide here...
 # proof that staging is a good idea -- we can can reuse allen's numbers
@@ -161,6 +164,7 @@ class HBALabels(LabelsBase):
     filename = 'hbaslim'
     name = 'Allen Human Brain Atlas Ontology'
     shortname = 'hba'
+    imports = parcCore,
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'), 'HBA':str(HBA), 'ilxHBA':str(ilxHBA)}
     sources = HBASrc,
     namespace = HBA
@@ -242,9 +246,6 @@ def abaArts():
     for k, v in ABA.__dict__.items():
         if v is not None and isinstance(v, parc.Artifact):
             yield v
-
-def abaOnts():
-    return (subclass for subclass in subclasses(parc.LabelsBase) if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'))
 
 def main():
     getOnts()

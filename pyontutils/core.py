@@ -842,7 +842,7 @@ class Ont:
     def prepare(cls):
         if hasattr(cls, 'sources'):
             cls.sources = tuple(s() for s in cls.sources)
-        if hasattr(cls, 'imports') and not isinstance(cls.imports, property):
+        if hasattr(cls, 'imports'):# and not isinstance(cls.imports, property):
             cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
                                 for i in cls.imports)
 
@@ -933,4 +933,27 @@ class Ont:
         # TODO warn in ttl file when run when __file__ has not been committed
         self._graph.write()
 
+
+class LabelsBase(Ont):  # this replaces genericPScheme
+    """ An ontology file containing parcellation labels from a common source. """
+
+    __pythonOnly = True
+    path = 'ttl/generated/parcellation/'  # XXX warning just a demo...
+    imports = tuple()  # set parcCore manually...
+    sources = tuple()
+    root = None  # : LabelRoot
+    roots = None  # : (LabelRoot, ...)
+    filename = None
+    name = None
+    prefixes = {}
+    comment = None
+
+    @property
+    def triples(self):
+        if self.root is not None:
+            yield self.iri, ilxtr.rootClass, self.root.iri
+        elif self.roots is not None:
+            for root in self.roots:
+                yield self.iri, ilxtr.rootClass, root.iri
+        yield from super().triples
 
