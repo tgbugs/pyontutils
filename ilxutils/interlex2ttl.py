@@ -8,19 +8,12 @@ from sqlalchemy import create_engine, inspect, Table, Column
 import pandas as pd
 from datetime import date
 import progressbar
-#export PYTHONPATH=~/Desktop/work/pyontutils
+from args_reader import read_args
 TODAY = date.isoformat(date.today())
-#sign in for the NIF server
-config = mysql_conn_helper('dudley.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-DB_URI = 'mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db}'
-#print(DB_URI.format(**config))
-#mysql+mysqlconnector://nif_eelg_secure:5Aruchug@dudley.crbs.ucsd.edu:3306/nif_eelg
-#engine = create_engine(DB_URI.format(**config))
-engine_key = 'mysql+mysqlconnector://nif_eelg_secure:5Aruchug@nif-mysql.crbs.ucsd.edu:3306/nif_eelg' #production
-engine = create_engine(engine_key)
-config = None  # all weakrefs should be gone by now?
-#del(config)  # i wonder whether this actually cleans it up when using **config
-#insp = inspect(engine)
+
+args = read_args(keys='../keys.txt', production='-p')
+engine = create_engine(args['engine_key'])
+
 MIN_LIMITER = 0
 MAX_LIMITER = float('inf')
 

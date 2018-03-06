@@ -17,6 +17,19 @@ class interlex_sql():
                 """.format(self.constraint)
         return pd.read_sql(data, engine)
 
+    def get_labels_to_ids_dict(self):
+        df = self.get_terms()
+        visited = {}
+        label_to_id = {}
+        for row in df.itertuples():
+            label = row.label.lower().strip()
+            if visited.get(label):
+                continue
+            else:
+                label_to_id[label] = row.id
+                visited[label]=True
+        return label_to_id
+
     def get_existing_ids(self):
         engine = create_engine(self.engine_key)
         data =  """

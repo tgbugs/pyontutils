@@ -64,15 +64,17 @@ def main():
     #print(output)
     annotations = []
     for labels_data in new_label_data[:]:
-        for value in labels_data['value']:
-            annotations.append({
-                'annotation_tid':labels_data['annotation_tid'],
-                'tid':output[labels_data['label'].replace("'",'&#39;')]['id'], #need ID to continue; get it from addTerm output
-                'value':value,
-            })
+        if labels_data.get('value'):
+            for value in labels_data['value']:
+                annotations.append({
+                    'annotation_tid':labels_data['annotation_tid'],
+                    'tid':output[labels_data['label'].replace("'",'&#39;')]['id'], #need ID to continue; get it from addTerm output
+                    'value':value,
+                })
 
-    #print(annotations)
-    sci.addAnnotations(annotations)
+    if annotations:
+        #print(annotations)
+        sci.addAnnotations(annotations)
 
 if __name__ == '__main__':
     main()
