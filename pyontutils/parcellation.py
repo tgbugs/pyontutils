@@ -690,24 +690,15 @@ class Region(Class):
 #
 # ontologies
 
-class Artifacts(Ont):
-    """ Ontology file for artifacts that define labels or
-        geometry for parcellation schemes. """
 
-    # setup
+class ArtHolder:
+    @classmethod
+    def __call__(cls):
+        for k, v in cls.__dict__.items():
+            if v is not None and isinstance(v, Artifact):
+                yield v
 
-    path = 'ttl/generated/'
-    filename = 'parcellation-artifacts'
-    name = 'Parcellation Artifacts'
-    #shortname = 'parcarts'
-    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes,
-                'FSLATS':str(FSLATS),
-                'paxmusver':str(paxmusver),
-                'paxratver':str(paxratver),
-               }
-
-    # artifacts
-
+class Artifacts(ArtHolder):
     class PaxMouseAt(Atlas):
         """ Any atlas artifact with Paxinos as an author for the adult rat. """
         iri = ilx['paxinos/uris/mouse']  # ilxtr.paxinosMouseAtlas
@@ -816,11 +807,32 @@ class Artifacts(Ont):
                          devstage=UBERON['0000113'],
                         )
 
-    _artifacts = PaxRat4, PaxRat6, PaxRat7, WHSSD2, HCPMMP, PaxMouse2, PaxMouse3, PaxMouse4
+class parcArts(Ont):
+    """ Ontology file for artifacts that define labels or
+        geometry for parcellation schemes. """
+
+    # setup
+
+    path = 'ttl/generated/'
+    filename = 'parcellation-artifacts'
+    name = 'Parcellation Artifacts'
+    #shortname = 'parcarts'
+    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes,
+                'FSLATS':str(FSLATS),
+                'paxmusver':str(paxmusver),
+                'paxratver':str(paxratver),
+    }
+
+    #_artifacts = PaxRat4, PaxRat6, PaxRat7, WHSSD2, HCPMMP, PaxMouse2, PaxMouse3, PaxMouse4
+
+    @property
+    def _artifacts(self):
+        for art in subclasses(ArtHolder):
+            yield from art()
 
     def _triples(self):
         yield from Artifact.class_triples()
-        for art_type in subclasses(Artifact):
+        for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
             yield from art_type.class_triples() 
         for art in self._artifacts:
             for t in art:
@@ -837,7 +849,7 @@ class parcCore(Ont):
     name = 'Parcellation Core'
     #shortname = 'parcore'  # huehuehue
     prefixes = {**makePrefixes('skos'), **Ont.prefixes}
-    imports = NIFTTL['nif_backend.ttl'], Artifacts
+    imports = NIFTTL['nif_backend.ttl'], parcArts
 
     # stuff
 
@@ -897,7 +909,9 @@ class LocalSource(Source):
         if cls.artifact is None:  # for prov...
             class art:
                 iri = cls.iri
+
             cls.artifact = art
+
         self = super().__new__(cls)
         return self
 
@@ -959,10 +973,12 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
+
                 #asdf = l.rsplit(' ', 1)
                 #print(asdf)
                 struct, abbrev = l.rsplit(' ', 1)
                 sr.append((abbrev, struct))
+
         ar = []
         for l in loa.split('\n'):
             if l and not l[0] == ';':
@@ -970,6 +986,7 @@ class PaxSrAr(Source):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
+
                 #asdf = l.rsplit(' ', 1)
                 #print(asdf)
                 abbrev, rest = l.split(' ', 1)
@@ -980,6 +997,7 @@ class PaxSrAr(Source):
                     z = pr[0].isdigit()
                     if not z or i > 0 and z and pr[-1] != ',':
                         break
+
                 struct = ' '.join(parts[:-i])
                 figs = tuple(tuple(int(_) for _ in p.split('-'))
                              if '-' in p
@@ -1009,6 +1027,7 @@ class PaxSrAr(Source):
                 if s not in out[a][0]:
                     print(f'Found new label from ar for {a}:\n{s}\n{out[a][0]}')
                     out[a][0].append(s)
+
         schild = {}
         for a, s in sr:
             if ', layer 1' in s or s.endswith(' layer 1'):
@@ -1110,11 +1129,13 @@ class PaxTree_6(Source):
             elif old_depth == depth:
                 if len(parent_stack) - 1 > depth:
                     parent_stack.pop()
+
                 parent = parent_stack[-1]
                 parent_stack.append(abbrev)
             elif old_depth > depth:  # bump back
                 for _ in range(old_depth - depth + 1):
                     parent_stack.pop()
+
                 parent = parent_stack[-1]
                 parent_stack.append(abbrev)
                 old_depth = depth
@@ -1128,9 +1149,11 @@ class PaxTree_6(Source):
                     if parent == 'Unknown':  # XXX special cases
                         if maybe_parent == 'Pi':  # i think this was probably caused by an ocr error from Pir3 -> Pi3
                             continue
+
                     assert maybe_parent == parent, f'you fall into a trap {maybe_parent} {parent}'
                     if parent not in layers:
                         layers[parent] = []
+
                     layers[parent].append((layer, o))  # FIXME where does layer come from here?
             elif struct is not None and ', layer 1' in struct:
                 # remove the precomposed, we will deal with them systematically
@@ -1142,9 +1165,11 @@ class PaxTree_6(Source):
                         parent = 'LOT'
                     elif parent_ == 'Tu':
                         parent = 'Tu'
+
                 assert parent_ == parent, f'wrong turn friend {parent_} {parent}'
                 if parent not in layers:
                     layers[parent] = []
+
                 layers[parent].append((layer, o))
             else:
                 recs.append(o)
@@ -1280,7 +1305,7 @@ class HCPMMPLabels(LabelsBase):
                      label='HCPMMP label root',
                      shortname=shortname,
                      definingArtifacts=(s.artifact.iri for s in sources),
-                    )
+    )
 
     def _triples(self):
         for source in self.sources:
@@ -1295,6 +1320,7 @@ class HCPMMPLabels(LabelsBase):
                 cites = tuple(s.strip() for s in Key_Studies.split(','))
                 if Newly_Described in ('Yes*', 'Yes'):
                     cites = cites + ('Glasser and Van Essen 2016',)
+
                 yield from Label(labelRoot=self.root,
                                  label=Area_Description,
                                  altLabel=Area_Name,
@@ -1345,6 +1371,7 @@ class PaxLabels(LabelsBase):
         for a, (ss, f, arts) in self._fixes:
             if (a, ss[0]) in collisions:
                 f.update(collisions[a, ss[1]])  # have to use 1 since we want "layer n" as the pref
+
             yield a, ([], ss, f, arts)
 
     def _prov(self, iri, abrv, struct, struct_prov, extras, alt_abbrevs, abbrev_prov):
@@ -1362,6 +1389,7 @@ class PaxLabels(LabelsBase):
                             continue
                         else:
                             predicate = annotation_predicate
+
                         self._prov_dict[t].append((predicate, artifact))
 
         if struct in struct_prov:
@@ -1373,6 +1401,7 @@ class PaxLabels(LabelsBase):
                     predicate = definition_predicate
                 else:
                     predicate = annotation_predicate
+
                 self._prov_dict[t].append((predicate, artifact))
 
         for extra in extras:
@@ -1384,6 +1413,7 @@ class PaxLabels(LabelsBase):
                     predicate = definition_predicate
                 else:
                     predicate = annotation_predicate
+
                 self._prov_dict[t].append((predicate, artifact))
 
     def _makeIriLookup(self):
@@ -1414,8 +1444,8 @@ class PaxLabels(LabelsBase):
             else:
                 struct_prov[k] = v
         for i, (abrv, (alts, (structure, *extras), figures, artifacts)) in enumerate(
-            sorted(list(combined_record.items()) + list(self.fixes),
-                   key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
+                sorted(list(combined_record.items()) + list(self.fixes),
+                       key=lambda d:natsort(d[1][1][0] if d[1][1][0] is not None else 'zzzzzzzzzzzzzzzzzzzz'))):  # sort by structure not abrev
             iri = self.namespace[str(i + 1)]  # TODO load from existing
             struct = structure if structure else 'zzzzzz'
             self._prov(iri, abrv, struct, struct_prov, extras, alts, abbrev_prov)
@@ -1453,7 +1483,7 @@ class PaxLabels(LabelsBase):
             trips = [(s, o) for s in self.graph.subjects(None, thing) for p, o in self.graph.predicate_objects(s)]
             assert 'zzzzzz' not in thing, f'{trips} has bad label/syn suggesting a problem with the source file'
         return self
-        
+
     def records(self):
         combined_record = {}
         struct_prov = {}
@@ -1516,6 +1546,7 @@ class PaxLabels(LabelsBase):
                             ss.append(struct)
                     for aa in alt_abbrevs:
                         do_abbrev_prov(aa, ss[0], se)
+
                     alt_abbrevs.append(a)
                     figures[se.artifact.iri] = f
                     if se.artifact.iri not in artifacts:
@@ -1537,6 +1568,7 @@ class PaxLabels(LabelsBase):
                                 artifacts = combined_record[a][-1]
                                 if artiri not in artifacts:
                                     artifacts.append(artiri)
+
                                 do_struct_prov(s, artiri=artiri)
                         #abbrev_prov[a, ss[0]] = [se.artifact.iri]  # FIXME overwritten?
                         do_abbrev_prov(a, ss[0], se)
@@ -1544,6 +1576,7 @@ class PaxLabels(LabelsBase):
                             if alt not in abbrev_prov:
                                 for artiri in artiris:
                                     do_abbrev_prov(alt, ss[0], artiri=artiri)
+
                             # TODO elif...
 
         return combined_record, struct_prov, collisions, abbrev_prov
@@ -1563,13 +1596,13 @@ class PaxMouseLabels(PaxLabels):
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'),
                 'PAXMUS':str(PAXMUS),
                 'paxmusver':str(paxmusver),
-               }
+    }
     sources = PaxMFix, PaxMSrAr_2, PaxMSrAr_3
     root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
                      label='Paxinos mouse parcellation label root',
                      shortname=shortname,
                      definingArtifactsS=(Artifacts.PaxMouseAt.iri,),
-                    )
+    )
 
     _merge = {
         '4/5Cb':'4&5Cb',
@@ -1612,7 +1645,7 @@ class PaxRatLabels(PaxLabels):
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'),
                 'PAXRAT':str(PAXRAT),
                 'paxratver':str(paxratver),
-               }
+    }
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     sources = PaxFix, PaxSrAr_6, PaxSr_6, PaxSrAr_4, PaxFix6, PaxFix4 #, PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = LabelRoot(iri=nsExact(namespace),  # PAXRAT['0'],
@@ -1620,7 +1653,7 @@ class PaxRatLabels(PaxLabels):
                      shortname=shortname,
                      #definingArtifactsS=None,#Artifacts.PaxRatAt.iri,
                      definingArtifactsS=(Artifacts.PaxRatAt.iri,),
-                    )
+    )
 
     _fixes = []
 
@@ -1698,7 +1731,7 @@ class PaxRatLabels(PaxLabels):
         print(len(in_four_not_in_six), len(in_six_not_in_four),
               len(in_tree_not_in_six), len(in_six_not_in_tree),
               len(in_six2_not_in_six), len(in_six_not_in_six2),
-             )
+        )
         tr_struct_abrv = {}
         for abrv, ((struct, *extra), _, parent) in tr.items():
             tr_struct_abrv[struct] = abrv
@@ -1706,6 +1739,7 @@ class PaxRatLabels(PaxLabels):
                 #print(abrv, struct, parent)
                 if struct and struct not in sx[abrv][0]:
                     print(f'Found new label from tr for {abrv}:\n{struct}\n{sx[abrv][0]}\n')
+
         # can't run these for tr yet
         #reduced = set(tr_struct_abrv.values())
         #print(sorted(_ for _ in tr if _ not in reduced))
@@ -1717,6 +1751,7 @@ class PaxRatLabels(PaxLabels):
             if abrv in sx:
                 if struct and struct not in sx[abrv][0]:
                     print(f'Found new label from sx2 for {abrv}:\n{struct}\n{sx[abrv][0]}\n')
+
         reduced = set(sx2_struct_abrv.values())
         print(sorted(_ for _ in reduced if _ not in sx2))  # ah inconsistent scoping rules in class defs...
         assert len(sx2_struct_abrv) == len(sx2), 'there is a duplicate struct'
@@ -1724,6 +1759,7 @@ class PaxRatLabels(PaxLabels):
         sx_struct_abrv = {}
         for abrv, ((struct, *extra), _) in sx.items():
             sx_struct_abrv[struct] = abrv
+
         reduced = set(sx_struct_abrv.values())
         print(sorted(_ for _ in reduced if _ not in sx))
         assert len(sx_struct_abrv) == len(sx), 'there is a duplicate struct'
@@ -1771,7 +1807,7 @@ class WHSSDLabels(LabelsBase):
                      label='Waxholm Space Sprague Dawley parcellation label root',
                      shortname=shortname,
                      definingArtifacts=(s.artifact.iri for s in sources),
-                    )
+    )
 
     def _triples(self):
         for source in self.sources:
@@ -1781,6 +1817,7 @@ class WHSSDLabels(LabelsBase):
                                  label=label,
                                  iri=iri,
                 )
+
             yield from source.isVersionOf
 
 #
@@ -1817,9 +1854,9 @@ class PaxRegion(RegionsBase):
     # sources need to go in the order with which we want the labels to take precedence (ie in this case 6e > 4e)
     #sources = PaxSrAr_6(), PaxSr_6(), PaxSrAr_4(), PaxTree_6()  # tree has been successfully used for crossreferencing, additional terms need to be left out at the moment (see in_tree_not_in_six)
     root = RegionRoot(iri=TEMP['FIXME'],  # FIXME these should probably be EquivalentTo Parcellation Region HasLabel some label HasAtlas some atlas...
-                     label='Paxinos rat parcellation region root',
-                     shortname=shortname,
-                    )
+                      label='Paxinos rat parcellation region root',
+                      shortname=shortname,
+    )
     # atlas version
     # label identifier
     # figures
@@ -1843,7 +1880,7 @@ class FSL(LabelsBase):
     imports = parcCore,
     prefixes = {**makePrefixes('ilxtr'), **Ont.prefixes,
                 'FSLATS':str(FSLATS),
-               }
+    }
     sources = tuple()  # set by prepare()
     roots = tuple()  # set by prepare()
 
@@ -1892,6 +1929,7 @@ class FSL(LabelsBase):
                 shortname = shortname[0].text
             else:
                 shortname = shortnames[parcellation_name]
+
             artifact_shortname = shortname
             shortname = shortname.replace(' ', '')
 
@@ -1902,7 +1940,7 @@ class FSL(LabelsBase):
                                    species=NCBITaxon['9606'],
                                    devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
                                    shortname=artifact_shortname)
-            Artifacts._artifacts += artifact,
+            #Artifacts._artifacts += artifact,
 
             # LabelRoot
             root = LabelRoot(iri=nsExact(namespace),
@@ -1961,14 +1999,13 @@ def build(*onts, n_jobs=9):
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(make)(o) for o in
+                                   #[setup(ont) for ont in onts])
                                    Async()(deferred(setup)(ont) for ont in onts
                                              if ont.__name__ != 'parcBridge'))
-                                   #[setup(ont) for ont in onts])
 
 def main():
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    from parc_aba import allenLabels, abaArts # sight synchronizing
-    Artifacts._artifacts += tuple(abaArts())
+    import parc_aba
     out = build(*(l for l in subclasses(Ont)
                   if l.__name__ != 'parcBridge' and
                   l.__module__ != 'parcellation' and
