@@ -17,7 +17,7 @@ from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
 from core import NCBITaxon, UBERON, NIFTTL
-from core import Class, Source, Ont, LabelsBase, annotations, restriction
+from core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
@@ -691,14 +691,8 @@ class Region(Class):
 # ontologies
 
 
-class ArtHolder:
-    @classmethod
-    def __call__(cls):
-        for k, v in cls.__dict__.items():
-            if v is not None and isinstance(v, Artifact):
-                yield v
-
-class Artifacts(ArtHolder):
+class Artifacts(Collector):
+    collects = Artifact
     class PaxMouseAt(Atlas):
         """ Any atlas artifact with Paxinos as an author for the adult rat. """
         iri = ilx['paxinos/uris/mouse']  # ilxtr.paxinosMouseAtlas
@@ -823,12 +817,11 @@ class parcArts(Ont):
                 'paxratver':str(paxratver),
     }
 
-    #_artifacts = PaxRat4, PaxRat6, PaxRat7, WHSSD2, HCPMMP, PaxMouse2, PaxMouse3, PaxMouse4
-
     @property
     def _artifacts(self):
-        for art in subclasses(ArtHolder):
-            yield from art()
+        for collector in subclasses(Collector):
+            if collector.__module__ != 'parcellation':  # just run __main__
+                yield from collector.arts()
 
     def _triples(self):
         yield from Artifact.class_triples()
@@ -1884,6 +1877,11 @@ class FSL(LabelsBase):
     sources = tuple()  # set by prepare()
     roots = tuple()  # set by prepare()
 
+    class Artifacts(Collector):
+        """ Artifacts for FSL """
+        collects = Artifact
+
+
     def _triples(self):
         for source in self.sources:
             for index, label in source:
@@ -1940,7 +1938,7 @@ class FSL(LabelsBase):
                                    species=NCBITaxon['9606'],
                                    devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
                                    shortname=artifact_shortname)
-            #Artifacts._artifacts += artifact,
+            setattr(cls.Artifacts, shortname, artifact)
 
             # LabelRoot
             root = LabelRoot(iri=nsExact(namespace),
@@ -2005,7 +2003,7 @@ def build(*onts, n_jobs=9):
 
 def main():
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    import parc_aba
+    from parc_aba import Artifacts as abaArts
     out = build(*(l for l in subclasses(Ont)
                   if l.__name__ != 'parcBridge' and
                   l.__module__ != 'parcellation' and

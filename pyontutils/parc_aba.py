@@ -4,9 +4,9 @@ from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import NIFRID, ilx, ilxtr, TEMP
 from core import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
 from core import NCBITaxon, UBERON
-from core import makePrefixes, Source, LabelsBase, restriction
+from core import makePrefixes, Source, LabelsBase, Collector, restriction
 import parcellation as parc
-from parcellation import parcCore, LabelRoot, Label, Artifacts, Terminology, build
+from parcellation import parcCore, LabelRoot, Label, Terminology, build
 
 # TODO! there is way more metadata that we need to provide here...
 # proof that staging is a good idea -- we can can reuse allen's numbers
@@ -50,8 +50,11 @@ def getOnts():
     # the mapping between atlasid and 
     # structure query
     # http://api.brain-map.org/api/v2/data/Structure/3999   # id vs atlas_id !??!
+    # atlas
+    # http://atlas.brain-map.org/atlas?atlas={}
 
-class ABA:
+class Artifacts(Collector):
+    collects = Terminology
     MBA = Terminology(iri=AIBS['mouse/versions/2'],  # ilxtr.mbav2,
                       rdfs_label='Allen Mouse Brain Atlas Terminology',  # TODO version?  XXX overwritten
                       label='Allen Mouse Brain Atlas Ontology',
@@ -108,12 +111,11 @@ class ABA:
     MBAxCCFv2 = None  # TODO
     MBAxCCFv3 = None  # TODO
 
-
-for k, v in ABA.__dict__.items():
-    if v is not None and isinstance(v, parc.Artifact):
-        setattr(parc.Artifacts, k, v)  # still needed for the time being
-        parc.Artifacts._artifacts += v,
-        print(k, v)
+#for k, v in ABA.__dict__.items():
+    #if v is not None and isinstance(v, parc.Artifact):
+        #setattr(parc.Artifacts, k, v)  # still needed for the time being
+        #parc.Artifacts._artifacts += v,
+        #print(k, v)
 
 
 class ABASrc(Source):  # NOTE cannot inherit directly from MBASrc because __new__ sets data for all subclasses

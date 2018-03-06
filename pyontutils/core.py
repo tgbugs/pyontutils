@@ -957,3 +957,11 @@ class LabelsBase(Ont):  # this replaces genericPScheme
                 yield self.iri, ilxtr.rootClass, root.iri
         yield from super().triples
 
+
+class Collector:
+    @classmethod
+    def arts(cls):
+        for k, v in cls.__dict__.items():
+            if v is not None and isinstance(v, cls.collects):
+                yield v
+
