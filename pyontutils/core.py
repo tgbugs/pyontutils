@@ -108,7 +108,7 @@ def makeNamespaces(*prefixes):
     return tuple(rdflib.Namespace(PREFIXES[prefix]) for prefix in prefixes)
 
 def makeURIs(*prefixes):
-    return tuple(PREFIXES[prefix] for prefix in prefixes)
+    return tuple(rdflib.URIRef(PREFIXES[prefix]) for prefix in prefixes)
 
 # namespaces
 
@@ -499,7 +499,9 @@ class makeGraph:
         else:
             label_edge = self.expand(label_edge)
         json_ = {'nodes':[], 'edges':[]}
-        if edge == 'isDefinedBy':
+        if isinstance(edge, rdflib.URIRef):
+            restriction = edge
+        elif edge == 'isDefinedBy':
             restriction = self.expand('rdfs:isDefinedBy')
         else:
             restriction = self.expand(edge)
@@ -892,9 +894,18 @@ class Ont:
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
-        commit = getCommit()
-        line = getsourcelines(self.__class__)[-1]
-        file = getsourcefile(self.__class__)
+        if not hasattr(self, '_repo') and self._repo:
+            commit = getCommit()
+        else:
+            commit = 'FAKE-COMMIT'
+
+        try:
+            line = getsourcelines(self.__class__)[-1]
+            file = getsourcefile(self.__class__)
+        except TypeError:  # emacs is silly
+            line = 'noline'
+            file = 'nofile'
+
         self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
                                                          line=line,
                                                          file=Path(file).name)
