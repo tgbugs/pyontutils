@@ -199,8 +199,13 @@ def olit(subject, predicate, *objects):
     for object in objects:
         yield subject, predicate, rdflib.Literal(object)
 
-def olist(bnode, *members):
-    pass
+def olist(subject, *members):
+    for member in members:
+        yield subject, rdf.first, member
+        next_subject = rdflib.BNode()
+        yield subject, rdf.rest, next_subject
+        subject = next_subject
+    TODO rdf.nil
 
 def oec(subject, *members, relation=owl.intersectionOf):
     n0 = rdflib.BNode()
@@ -208,6 +213,8 @@ def oec(subject, *members, relation=owl.intersectionOf):
     yield from oc(n0)
     n1 = rdflib.BNode()
     yield n0, owl.intersectionOf, n1
+    for member in members:
+    restriction(owl.someValuesFrom, n0, r_predicate, r_object)
     yield from olist(n1, *members)
 
 def restriction(lift, s, p, o):
