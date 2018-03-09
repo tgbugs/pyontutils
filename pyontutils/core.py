@@ -6,10 +6,11 @@ import rdflib
 import requests
 from pathlib import Path
 from collections import namedtuple
-from rdflib.extras import infixowl
 from inspect import getsourcelines, getsourcefile
+from rdflib.extras import infixowl
+from joblib import Parallel, delayed
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, getCommit, TermColors as tc
+from pyontutils.utils import refile, TODAY, getCommit, Async, deferred, TermColors as tc
 from pyontutils.closed_namespaces import *
 from IPython import embed
 
@@ -36,6 +37,8 @@ def _loadPrefixes():
         'bearerOf':'http://purl.obolibrary.org/obo/RO_0000053',
         'participatesIn':'http://purl.obolibrary.org/obo/RO_0000056',
         'hasParticipant':'http://purl.obolibrary.org/obo/RO_0000057',
+        'hasInput':'http://purl.obolibrary.org/obo/RO_0002233',
+        'hasOutput':'http://purl.obolibrary.org/obo/RO_0002234',
         'adjacentTo':'http://purl.obolibrary.org/obo/RO_0002220',
         'derivesFrom':'http://purl.obolibrary.org/obo/RO_0001000',
         'derivesInto':'http://purl.obolibrary.org/obo/RO_0001001',
@@ -109,9 +112,9 @@ def makeURIs(*prefixes):
 
 # namespaces
 
-(HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, ilxtr,
+(HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, BFO, ilxtr,
  ilxb, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
-                       'ilxtr', 'ilx', 'TEMP')
+                       'BFO', 'ilxtr', 'ilx', 'TEMP')
 
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
@@ -138,8 +141,10 @@ _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
-replacedBy = makeURIs('replacedBy')
-definition = makeURIs('definition')
+(replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
+) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
+             'hasInput', 'hasOutput',
+            )
 
 # common funcs
 
@@ -156,6 +161,43 @@ def check_value(v):
         return rdflib.URIRef(v)
     else:
         return rdflib.Literal(v)
+
+def ont_setup(ont):
+    ont.prepare()
+    o = ont()
+    return o
+
+def ont_make(o):
+    o()
+    o.validate()
+    o.write()
+    return o
+
+def ont_doit(ont):
+    return make(ont_setup(ont))
+
+def build(*onts, n_jobs=9):
+    """ Set n_jobs=1 for debug or embed() will crash. """
+    # have to use a listcomp so that all calls to setup()
+    # finish before parallel goes to work
+    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
+                                   #[ont_setup(ont) for ont in onts])
+                                   Async()(deferred(ont_setup)(ont) for ont in onts
+                                             if ont.__name__ != 'parcBridge'))
+
+def oc(iri, subClassOf=None):
+    yield iri, rdf.type, owl.Class
+    if subClassOf is not None:
+        yield iri, rdfs.subClassOf, subClassOf
+
+def oop(iri, subPropertyOf=None):
+    yield iri, rdf.type, owl.ObjectProperty
+    if subPropertyOf is not None:
+        yield iri, rdfs.subPropertyOf, subPropertyOf
+
+def olit(subject, predicate, *objects):
+    for object in objects:
+        yield subject, predicate, rdflib.Literal(object)
 
 def restriction(lift, s, p, o):
     n0 = rdflib.BNode()
@@ -964,4 +1006,6 @@ class Collector:
         for k, v in cls.__dict__.items():
             if v is not None and isinstance(v, cls.collects):
                 yield v
+
+
 

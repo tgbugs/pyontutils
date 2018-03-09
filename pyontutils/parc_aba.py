@@ -4,9 +4,9 @@ from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import NIFRID, ilx, ilxtr, TEMP
 from core import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
 from core import NCBITaxon, UBERON
-from core import makePrefixes, Source, LabelsBase, Collector, restriction
+from core import makePrefixes, Source, LabelsBase, Collector, restriction, build
 import parcellation as parc
-from parcellation import parcCore, LabelRoot, Label, Terminology, build
+from parcellation import parcCore, LabelRoot, Label, Terminology
 
 # TODO! there is way more metadata that we need to provide here...
 # proof that staging is a good idea -- we can can reuse allen's numbers

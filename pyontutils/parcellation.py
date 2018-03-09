@@ -11,20 +11,19 @@ import requests
 from rdflib import Graph, URIRef, Literal, Namespace
 from lxml import etree
 from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, rowParse, getCommit, subclasses, Async, deferred
+from utils import TODAY, async_getter, rowParse, getCommit, subclasses
 from utils import TermColors as tc #TERMCOLORFUNC
 from core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from core import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
 from core import NCBITaxon, UBERON, NIFTTL
-from core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction
+from core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
 from scigraph_client import Vocabulary
 from IPython import embed
 from process_fixed import ProcessPoolExecutor
-from joblib import Parallel, delayed
 
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
@@ -1977,29 +1976,6 @@ class FSL(LabelsBase):
 
         super().prepare()
 
-
-def setup(ont):
-    ont.prepare()
-    o = ont()
-    return o
-
-def make(o):
-    o()
-    o.validate()
-    o.write()
-    return o
-
-def doit(ont):
-    return make(setup(ont))
-
-def build(*onts, n_jobs=9):
-    """ Set n_jobs=1 for debug or embed() will crash. """
-    # have to use a listcomp so that all calls to setup()
-    # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(make)(o) for o in
-                                   #[setup(ont) for ont in onts])
-                                   Async()(deferred(setup)(ont) for ont in onts
-                                             if ont.__name__ != 'parcBridge'))
 
 def main():
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
