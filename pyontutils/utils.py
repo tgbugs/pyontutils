@@ -9,7 +9,7 @@ import math
 import asyncio
 import inspect
 import subprocess
-from datetime import date
+from datetime import datetime, date
 from time import time, sleep
 from pathlib import Path
 from functools import wraps
@@ -19,10 +19,31 @@ import psutil
 import rdflib
 
 TODAY = date.isoformat(date.today())
+def UTCNOW(): return datetime.isoformat(datetime.utcnow())
+
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
+
+def test_notebook():
+    try:
+        if 'IPKernelApp' in get_ipython().config:
+            return True
+        return False
+    except (NameError, KeyError) as e:
+        return False
+
+in_notebook = test_notebook()
+
+def stack_magic(stack):
+    # note: we cannot use globals() because it will be globals of the defining file not the calling file
+    if in_notebook:
+        index = 1  # this seems to work for now
+    else:
+        index = -1
+
+    return stack[index][0].f_locals
 
 def subclasses(start):
     for sc in start.__subclasses__():

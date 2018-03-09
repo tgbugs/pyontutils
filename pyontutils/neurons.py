@@ -9,7 +9,7 @@ from git.repo import Repo
 from IPython import embed
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.utils import TermColors as tc
+from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
 from pyontutils.qnamefix import cull_prefixes
 
@@ -53,27 +53,6 @@ def getPhenotypePredicates(graph):
     classDict['_litmap'] = literal_map
     phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
     return phenoPreds
-
-# neuron and phenotype representations
-
-def test_notebook():
-    try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        return False
-    except (NameError, KeyError) as e:
-        return False
-
-in_notebook = test_notebook()
-
-def stack_magic(stack):
-    # note: we cannot use globals() because it will be globals of the defining file not the calling file
-    if in_notebook:
-        index = 1  # this seems to work for now
-    else:
-        index = -1
-
-    return stack[index][0].f_locals
 
 #
 # classes
@@ -250,6 +229,7 @@ class graphBase:
     @staticmethod
     def write():
         og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        og.filename = graphBase.ng.filename
         og.write()
 
     @staticmethod

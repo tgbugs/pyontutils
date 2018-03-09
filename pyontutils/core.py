@@ -10,7 +10,7 @@ from inspect import getsourcelines, getsourcefile
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, getCommit, Async, deferred, TermColors as tc
+from pyontutils.utils import refile, TODAY, UTCNOW, getCommit, Async, deferred, TermColors as tc
 from pyontutils.closed_namespaces import *
 from IPython import embed
 
@@ -198,6 +198,17 @@ def oop(iri, subPropertyOf=None):
 def olit(subject, predicate, *objects):
     for object in objects:
         yield subject, predicate, rdflib.Literal(object)
+
+def olist(bnode, *members):
+    pass
+
+def oec(subject, *members, relation=owl.intersectionOf):
+    n0 = rdflib.BNode()
+    yield subject, owl.equivalentClass, n0
+    yield from oc(n0)
+    n1 = rdflib.BNode()
+    yield n0, owl.intersectionOf, n1
+    yield from olist(n1, *members)
 
 def restriction(lift, s, p, o):
     n0 = rdflib.BNode()
@@ -1019,4 +1030,111 @@ class Collector:
                 yield v
 
 
+def flattenTriples(triples):
+    for triple_or_generator in triples:
+        if isinstance(triple_or_generator, tuple):
+            yield triple_or_generator
+        else:
+            yield from triple_or_generator
+
+def simpleOnt(filename=f'temp-{UTCNOW()}',
+              prefixes=tuple(),
+              imports=tuple(),
+              triples=tuple(),
+              comment=None,
+              path='ttl/',
+              temp_path='/tmp',
+              _repo=True,
+              debug=False):
+
+    from pyontutils.hierarchies import creatTree, Query
+
+    class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
+
+        def _triples(self):
+            yield from flattenTriples(triples)
+        
+    Simple._repo = _repo
+    Simple.path = path
+    Simple.filename = filename
+    Simple.comment = comment
+    Simple.prefixes = makePrefixes(*prefixes)
+    Simple.imports = imports
+
+    out = build(Simple, n_jobs=1)
+    graph = out[0].graph
+    g = out[0]._graph
+
+    skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty
+    byto = {owl.ObjectProperty:(rdfs.subPropertyOf, owl.topObjectProperty),
+            owl.AnnotationProperty:(rdfs.subPropertyOf, ilxtr.topAnnotationProperty),
+            owl.Class:(rdfs.subClassOf, owl.Thing),}
+
+    def add_supers(s, ito=None):
+        if s in skip:
+            return
+        tos = graph.objects(s, rdf.type)
+        to = None
+        for to in tos:
+            _super = False
+            if to in skip:
+                continue
+            else:
+                p, bo = byto[to]
+                for o in graph.objects(s, p):
+                    _super = o
+                    add_supers(_super, ito=to)
+                if not _super:
+                    graph.add((s, p, bo))
+            continue
+            if to == owl.ObjectProperty or to == owl.AnnotationProperty:
+                for o in graph.objects(s, rdfs.subPropertyOf):
+                    _super = o
+                    add_supers(_super, ito=to)
+                if not _super:
+                    graph.add((s, rdfs.subPropertyOf, owl.topObjectProperty))
+
+            elif to == owl.Class:
+                for o in graph.objects(s, rdfs.subClassOf):
+                    _super = o
+                    add_supers(_super, ito=to)
+                if not _super:
+                    graph.add((s, rdfs.subClassOf, owl.Thing))
+
+            elif to == owl.Ontology:
+                pass
+            else:
+                raise TypeError(f'subject {s} has no type!')
+
+        if to is None:# and s not in (owl.Thing, owl.topObjectProperty):
+            p, bo = byto[ito]
+            #print('FAILED ADDING', (s, p, bo))
+            graph.add((s, p, bo))
+            #if (bo, p, bo) not in graph:
+                #graph.add((bo, p, bo))
+
+
+    for s in set(graph.subjects(None, None)):
+        add_supers(s)
+
+    [graph.add(t) for t in flattenTriples((
+        oc(owl.Thing),
+        olit(owl.Thing, rdfs.label, 'Thing'),
+        oop(owl.topObjectProperty),
+        olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
+
+
+    if debug:
+        _ = [print(*(g.qname(e) for e in t), '.') for t in sorted(graph)]
+    for pred, root in ((rdfs.subClassOf, owl.Thing), (rdfs.subPropertyOf, owl.topObjectProperty)):
+        j = g.make_scigraph_json(pred, direct=True)
+        tree, extras = creatTree(*Query(g.qname(root), pred, 'INCOMING', 10), json=j)
+        if debug:
+            print(j)
+            print(tree)
+            # 3.5 behavior forces str here
+            with open(str(Path(temp_path) / (g.qname(root) + '.txt')), 'wt') as f:
+                f.write(str(tree))
+            with open(str(Path(temp_path) / (g.qname(root) + '.html')), 'wt') as f:
+                f.write(extras.html)
 
