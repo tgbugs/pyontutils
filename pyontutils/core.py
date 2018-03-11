@@ -223,6 +223,8 @@ def oop(iri, subPropertyOf=None):
         yield iri, rdfs.subPropertyOf, subPropertyOf
 
 def olit(subject, predicate, *objects):
+    if not objects:
+        raise ValueError(f'{subject} {predicate} Objects is empty?')
     for object in objects:
         yield subject, predicate, rdflib.Literal(object)
 
@@ -701,6 +703,12 @@ class makeGraph:
 
         return json_
 
+
+__helper_graph = makeGraph('', prefixes=PREFIXES)
+def qname(uri):
+    """ compute qname from defaults """
+    return __helper_graph.qname(uri)
+
 def createOntology(filename=    'temp-graph',
                    name=        'Temp Ontology',
                    prefixes=    None,  # is a dict
@@ -1019,10 +1027,10 @@ class Ont:
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
-        if not hasattr(self, '_repo') and self._repo:
-            commit = getCommit()
-        else:
+        if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
+        else:
+            commit = getCommit()
 
         try:
             line = getsourcelines(self.__class__)[-1]
@@ -1167,6 +1175,10 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
 
     from pyontutils.hierarchies import creatTree, Query
 
+    for i in imports:
+        if not isinstance(i, rdflib.URIRef):
+            raise TypeError(f'Import {i} is not a URIRef!')
+
     class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
 
         def _triples(self):
@@ -1179,9 +1191,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
 
-    out = build(Simple, n_jobs=1)
-    graph = out[0].graph
-    g = out[0]._graph
+    built_ont, = build(Simple, n_jobs=1)
+    graph = built_ont.graph
+    g = built_ont._graph
 
     skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty
     byto = {owl.ObjectProperty:(rdfs.subPropertyOf, owl.topObjectProperty),
@@ -1235,23 +1247,32 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     for s in set(graph.subjects(None, None)):
         add_supers(s)
 
-    [graph.add(t) for t in flattenTriples((
-        oc(owl.Thing),
-        olit(owl.Thing, rdfs.label, 'Thing'),
-        oop(owl.topObjectProperty),
-        olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
+    [graph.add(t)
+     for t in flattenTriples((oc(owl.Thing),
+                              olit(owl.Thing, rdfs.label, 'Thing'),
+                              oop(owl.topObjectProperty),
+                              olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
 
     if debug:
-        _ = [print(*(g.qname(e) for e in t), '.') for t in sorted(graph)]
+        _ = [print(*(e[:5]
+                     if isinstance(e, rdflib.BNode) else
+                     g.qname(e)
+                     for e in t), '.')
+             for t in sorted(graph)]
     for pred, root in ((rdfs.subClassOf, owl.Thing), (rdfs.subPropertyOf, owl.topObjectProperty)):
+        try: next(graph.subjects(pred, root))
+        except StopIteration: continue
+
         j = g.make_scigraph_json(pred, direct=True)
+        if debug: print(j)
         tree, extras = creatTree(*Query(g.qname(root), pred, 'INCOMING', 10), json=j)
         if debug:
-            print(j)
             print(tree)
             # 3.5 behavior forces str here
             with open(str(Path(temp_path) / (g.qname(root) + '.txt')), 'wt') as f:
                 f.write(str(tree))
             with open(str(Path(temp_path) / (g.qname(root) + '.html')), 'wt') as f:
                 f.write(extras.html)
+
+    return built_ont
 
