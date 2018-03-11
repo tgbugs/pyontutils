@@ -4,6 +4,7 @@ import types
 import subprocess
 import rdflib
 import requests
+from types import FunctionType
 from pathlib import Path
 from collections import namedtuple
 from inspect import getsourcelines, getsourcefile
@@ -182,8 +183,34 @@ def build(*onts, n_jobs=9):
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
                                    #[ont_setup(ont) for ont in onts])
-                                   Async()(deferred(ont_setup)(ont) for ont in onts
-                                             if ont.__name__ != 'parcBridge'))
+                                   (Async()(deferred(ont_setup)(ont)
+                                           for ont in onts
+                                           if ont.__name__ != 'parcBridge')
+                                    if n_jobs > 1
+                                    else [ont_setup(ont)
+                                          for ont in onts
+                                          if ont.__name__ != 'parcBridge']))
+
+def make_predicate_object_thunk(function, p, o):
+    """ Thunk to hold predicate object pairs until a subject is supplied and then
+        call a function that accepts a subject, predicate, and object.
+
+        Create a thunk to defer production of a triple until the missing pieces are supplied.
+        Note that the naming here tells you what is stored IN the thunk. The argument to the
+        thunk is the piece that is missing. """
+    def predicate_object_thunk(subject):
+        return function(subject, p, o)
+    return predicate_object_thunk
+
+def make_object_thunk(function, o):
+    def object_thunk(subject, predicate):
+        return function(subject, predicate, o)
+    return object_thunk
+
+def make_subject_object_thunk(s, function, o):
+    def subject_object_thunk(predicate):
+        return function(s, predicate, o)
+    return subject_object_thunk
 
 def oc(iri, subClassOf=None):
     yield iri, rdf.type, owl.Class
@@ -199,25 +226,105 @@ def olit(subject, predicate, *objects):
     for object in objects:
         yield subject, predicate, rdflib.Literal(object)
 
-def olist(subject, *members):
-    for member in members:
-        yield subject, rdf.first, member
-        next_subject = rdflib.BNode()
-        yield subject, rdf.rest, next_subject
-        subject = next_subject
-    TODO rdf.nil
 
-def oec(subject, *members, relation=owl.intersectionOf):
+class Triple:
+    """ All the BNodes should remain hidden. """
+    def __init__(self):
+        pass
+
+    def __call__(self, s, p, o):
+        yield from self.serialize(s, p, o)
+
+    def parse(self, *triples, graph=None):
+        """ Convert a subgraph into a triple. """
+        raise NotImplemented('Do this in derived classes.')
+        return 'subject', 'predicate', 'object', self.__class__.__name__
+
+    def serialize(self, s, p, o, *args, **kwargs):
+        raise NotImplemented('Do this in derived classes.')
+
+    def _test_roundtrip(self, s, p, o):
+        assert self.parse(self.serialize(s, p, o)) == (s, p, o, self.__class__.__name__)
+
+
+class Restriction(Triple):
+    def __init__(self, predicate, scope=owl.someValuesFrom):
+        self.predicate = predicate
+        self.scope = scope
+
+    def serialize(self, s, p, o):  # lift, serialize, expand
+        subject = rdflib.BNode()
+        yield s, self.predicate, subject
+        yield subject, rdf.type, owl.Restriction
+        yield subject, owl.onProperty, p
+        yield subject, self.scope, o
+
+    def parse(self, *triples, root=None, graph=None):  # drop, parse, contract
+        if graph is None:
+            graph = rdflib.Graph()
+            [graph.add(t) for t in triples]
+
+        for r_s in graph.subjects(rdf.type, owl.Restriction):
+            s = next(graph.subjects(self.predicate, r_s))  # FIXME cases where there is more than one???
+            p = next(graph.objects(r_s, owl.onProperty))
+            o = next(graph.objects(r_s, self.scope))
+            yield s, p, o  # , self.__class__.__name__
+
+restriction = Restriction(rdfs.subClassOf)
+
+def restrictions(*predicate_objects, scope=owl.someValuesFrom):
+    """ restriction_object_thunk """
+    for p, o in predicate_objects:
+        def function(subject, predicate, object, p=p):
+            # note that in this case object = o
+            r = Restriction(predicate, scope)
+            yield from r.serialize(subject, p, object)
+        yield make_object_thunk(function, o)
+
+class List(Triple):
+    def __call__(self, s, p, *object_thunks):
+        """ Normal objects are accepted as well as object thunks.
+            But if you have to deal with BNodes, use an object thunk. """
+        yield from self.serialize(s, p, *object_thunks)
+
+    def serialize(self, s, p, *object_thunks):
+        # FIXME for restrictions we can't pass the restriction in, we have to know the bnode in advance
+        # OR list has to deal with restrictions which is NOT what we want at all...
+        subject = rdflib.BNode()
+        yield s, p, subject
+        stop = len(object_thunks) - 1
+        for i, object_thunk in enumerate(object_thunks):
+            if not isinstance(object_thunk, FunctionType):
+                # assume that it is a URIRef or Literal
+                yield subject, rdf.first, object_thunk
+            else:
+                yield from object_thunk(subject, rdf.first)
+
+            if i < stop:  # why would you design a list this way >_<
+                next_subject = rdflib.BNode()
+            else:
+                next_subject = rdf.nil
+
+            yield subject, rdf.rest, next_subject
+            subject = next_subject
+
+    def parse(self, *triples, graph=None):
+        if graph is None:
+            graph = rdflib.Graph()
+            [graph.add(t) for t in triples]
+        objects = triples  # TODO
+        for object in objects:
+            yield object
+
+olist = List()
+
+def oec(subject, *object_thunks, relation=owl.intersectionOf):
     n0 = rdflib.BNode()
     yield subject, owl.equivalentClass, n0
     yield from oc(n0)
-    n1 = rdflib.BNode()
-    yield n0, owl.intersectionOf, n1
-    for member in members:
-    restriction(owl.someValuesFrom, n0, r_predicate, r_object)
-    yield from olist(n1, *members)
+    yield from olist(n0, relation, *object_thunks)
 
-def restriction(lift, s, p, o):
+def _restriction(lift, s, p, o):
     n0 = rdflib.BNode()
     yield s, rdfs.subClassOf, n0
     yield n0, rdf.type, owl.Restriction
@@ -989,7 +1096,11 @@ class Ont:
 
     def __call__(self):  # FIXME __iter__ and __call__ ala Class?
         for t in self:
-            self.graph.add(t)
+            try:
+                self.graph.add(t)
+            except ValueError as e:
+                print(tc.red('AAAAAAAAAAA'), t)
+                raise e
         return self
 
     def validate(self):
@@ -1060,7 +1171,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
 
         def _triples(self):
             yield from flattenTriples(triples)
-        
+
     Simple._repo = _repo
     Simple.path = path
     Simple.filename = filename
@@ -1078,7 +1189,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
             owl.Class:(rdfs.subClassOf, owl.Thing),}
 
     def add_supers(s, ito=None):
-        if s in skip:
+        if s in skip or isinstance(s, rdflib.BNode):
             return
         tos = graph.objects(s, rdf.type)
         to = None
@@ -1129,7 +1240,6 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
         olit(owl.Thing, rdfs.label, 'Thing'),
         oop(owl.topObjectProperty),
         olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
-
 
     if debug:
         _ = [print(*(g.qname(e) for e in t), '.') for t in sorted(graph)]
