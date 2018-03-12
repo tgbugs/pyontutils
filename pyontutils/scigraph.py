@@ -116,7 +116,7 @@ operation_code = FAKECLASS.make()
 class State:
     def __init__(self, api_url):
         self.shebang = "#!/usr/bin/env python3\n"
-        self.imports = "import builtins\nimport requests\nfrom json import dumps\n\n"
+        self.imports = "import builtins\nimport requests\nfrom json import dumps\nfrom urllib import parse\n\n"
         self.api_url = api_url
         self.current_path = self.api_url
         self.exten_mapping = {}
@@ -286,7 +286,7 @@ class State:
             if cond in param_rest:
                 params_conditional += (
                     "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
-                    "{t}{t}{t}{cond} = {cond}.replace('/', '%2F').replace('#','%23')").format(cond=cond, t=self.tab)
+                    "{t}{t}{t}{cond} = parse.quote({cond}, safe='')").format(cond=cond, t=self.tab)
 
         if 'produces' in api_dict:  # ICK but the alt is nastier
             outputs, default_output = self.make_produces(api_dict['produces'])

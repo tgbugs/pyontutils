@@ -9,6 +9,7 @@
 import builtins
 import requests
 from json import dumps
+from urllib import parse
 
 BASEPATH = 'https://scicrunch.org/api/1/scigraph'
 
@@ -311,7 +312,7 @@ class Annotations(restService):
         """
 
         if url and url.startswith('http:'):
-            url = url.replace('/', '%2F').replace('#','%23')
+            url = parse.quote(url, safe='')
         kwargs = {'url':url, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -429,7 +430,7 @@ class Graph(restService):
         """
 
         if type and type.startswith('http:'):
-            type = type.replace('/', '%2F').replace('#','%23')
+            type = parse.quote(type, safe='')
         kwargs = {'type':type, 'entail':entail, 'limit':limit, 'skip':skip, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('type', **kwargs)
@@ -466,7 +467,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -503,7 +504,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -556,7 +557,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'hint':hint, 'relationships':relationships, 'lbls':lbls, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -607,7 +608,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -713,7 +714,7 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -806,7 +807,7 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -875,7 +876,7 @@ class Vocabulary(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
