@@ -226,7 +226,8 @@ def olit(subject, predicate, *objects):
     if not objects:
         raise ValueError(f'{subject} {predicate} Objects is empty?')
     for object in objects:
-        yield subject, predicate, rdflib.Literal(object)
+        if object not in (None, ''):
+            yield subject, predicate, rdflib.Literal(object)
 
 
 class Triple:
@@ -1259,6 +1260,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
                      g.qname(e)
                      for e in t), '.')
              for t in sorted(graph)]
+
     for pred, root in ((rdfs.subClassOf, owl.Thing), (rdfs.subPropertyOf, owl.topObjectProperty)):
         try: next(graph.subjects(pred, root))
         except StopIteration: continue
