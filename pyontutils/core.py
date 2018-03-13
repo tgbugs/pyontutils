@@ -10,6 +10,7 @@ from collections import namedtuple
 from inspect import getsourcelines, getsourcefile
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
+import ontquery
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getCommit, Async, deferred, TermColors as tc
 from pyontutils.closed_namespaces import *
@@ -62,6 +63,10 @@ def _loadPrefixes():
         'obsReason':'http://purl.obolibrary.org/obo/IAO_0000231',
         'curatorNote':'http://purl.obolibrary.org/obo/IAO_0000232',
         'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
+
+        # realizes the proper way to connect a process to a continuant
+        'realizedIn':'http://purl.obolibrary.org/obo/BFO_0000054',
+        'realizes':'http://purl.obolibrary.org/obo/BFO_0000055',
 
         'partOf':'http://purl.obolibrary.org/obo/BFO_0000050',
         'hasPart':'http://purl.obolibrary.org/obo/BFO_0000051',
@@ -143,8 +148,9 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
+ realizes,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
-             'hasInput', 'hasOutput',
+             'hasInput', 'hasOutput', 'realizes'
             )
 
 # common funcs
@@ -733,6 +739,17 @@ def createOntology(filename=    'temp-graph',
     return graph
 
 #
+# query
+
+ontquery.OntCuries(PREFIXES)
+# ontquery.SciGraphRemote.verbose = True
+ontquery.OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote())
+
+class OntTerm(ontquery.OntTerm, rdflib.URIRef):
+    def __str__(self):
+        return rdflib.URIRef.__str__(self)
+
+#
 # classes
 
 class Class:
@@ -1170,11 +1187,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               triples=tuple(),
               comment=None,
               path='ttl/',
-              temp_path='/tmp',
-              _repo=True,
-              debug=False):
-
-    from pyontutils.hierarchies import creatTree, Query
+              _repo=True):
 
     for i in imports:
         if not isinstance(i, rdflib.URIRef):
@@ -1193,17 +1206,30 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.imports = imports
 
     built_ont, = build(Simple, n_jobs=1)
-    graph = built_ont.graph
-    g = built_ont._graph
 
+    return built_ont
+
+def displayGraph(graph_,
+                 temp_path='/tmp',
+                 debug=False):
+    from pyontutils.hierarchies import creatTree, Query, dematerialize
+    graph = rdflib.Graph()
+    # load prefixes here so that makeGraph will get them automatically
+    # and so that rdflib doesn't try to generate its own prefixes
+    [graph.bind(k, v) for k, v in graph_.namespaces()]
+    [graph.add(t) for t in graph_]
+    g = makeGraph('', graph=graph)
     skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty
     byto = {owl.ObjectProperty:(rdfs.subPropertyOf, owl.topObjectProperty),
             owl.AnnotationProperty:(rdfs.subPropertyOf, ilxtr.topAnnotationProperty),
             owl.Class:(rdfs.subClassOf, owl.Thing),}
 
     def add_supers(s, ito=None):
+        #print(s)
         if s in skip or isinstance(s, rdflib.BNode):
             return
+        try: next(graph.objects(s, rdfs.label))
+        except StopIteration: graph.add((s, rdfs.label, rdflib.Literal(g.qname(s))))
         tos = graph.objects(s, rdf.type)
         to = None
         for to in tos:
@@ -1214,45 +1240,29 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
                 p, bo = byto[to]
                 for o in graph.objects(s, p):
                     _super = o
-                    add_supers(_super, ito=to)
+                    if _super == s:
+                        print(tc.red('WARNING:'), f'{s} subClassOf itself!')
+                    else:
+                        add_supers(_super, ito=to)
+
                 if not _super:
                     graph.add((s, p, bo))
-            continue
-            if to == owl.ObjectProperty or to == owl.AnnotationProperty:
-                for o in graph.objects(s, rdfs.subPropertyOf):
-                    _super = o
-                    add_supers(_super, ito=to)
-                if not _super:
-                    graph.add((s, rdfs.subPropertyOf, owl.topObjectProperty))
 
-            elif to == owl.Class:
-                for o in graph.objects(s, rdfs.subClassOf):
-                    _super = o
-                    add_supers(_super, ito=to)
-                if not _super:
-                    graph.add((s, rdfs.subClassOf, owl.Thing))
-
-            elif to == owl.Ontology:
-                pass
-            else:
-                raise TypeError(f'subject {s} has no type!')
-
-        if to is None:# and s not in (owl.Thing, owl.topObjectProperty):
+        if to is None and ito is not None:
             p, bo = byto[ito]
             #print('FAILED ADDING', (s, p, bo))
             graph.add((s, p, bo))
             #if (bo, p, bo) not in graph:
                 #graph.add((bo, p, bo))
 
-
-    for s in set(graph.subjects(None, None)):
-        add_supers(s)
-
     [graph.add(t)
      for t in flattenTriples((oc(owl.Thing),
                               olit(owl.Thing, rdfs.label, 'Thing'),
                               oop(owl.topObjectProperty),
                               olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
+
+    for s in set(graph.subjects(None, None)):
+        add_supers(s)
 
     if debug:
         _ = [print(*(e[:5]
@@ -1267,14 +1277,16 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
 
         j = g.make_scigraph_json(pred, direct=True)
         if debug: print(j)
-        tree, extras = creatTree(*Query(g.qname(root), pred, 'INCOMING', 10), json=j)
-        if debug:
-            print(tree)
-            # 3.5 behavior forces str here
-            with open(str(Path(temp_path) / (g.qname(root) + '.txt')), 'wt') as f:
-                f.write(str(tree))
-            with open(str(Path(temp_path) / (g.qname(root) + '.html')), 'wt') as f:
-                f.write(extras.html)
+        prefixes = {k:str(v) for k, v in g.namespaces.items()}
+        start = g.qname(root)
+        tree, extras = creatTree(*Query(start, pred, 'INCOMING', 10), prefixes=prefixes, json=j)
+        dematerialize(next(iter(tree.keys())), tree)
+        print(f'\n{tree}\n')
+        # 3.5 behavior forces str here
+        with open(str(Path(temp_path) / (g.qname(root) + '.txt')), 'wt') as f:
+            f.write(str(tree))
+        with open(str(Path(temp_path) / (g.qname(root) + '.html')), 'wt') as f:
+            f.write(extras.html)
 
-    return built_ont
+    return graph
 

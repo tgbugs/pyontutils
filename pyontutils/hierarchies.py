@@ -137,11 +137,12 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
         #print(child_name)
         new_lleaves = dematerialize(child_name, children)
-        if child_name == 'Fornix':  # debugging failing demat
+        if child_name == 'magnetic resonance imaging':  # debugging failing demat
             pass
             #embed()
             
-        if child_name in new_lleaves:  # if it is a leaf!
+        if child_name in new_lleaves or all(l in lleaves for l in new_lleaves):
+            # if it is a leaf or all childs are leaves as well
             if child_name in lleaves:  # if it has previously been identified as a leaf!
                 #print('MATERIALIZATION DETECTED! LOWER PARENT:',
                       #lleaves[child_name],'ZAPPING!:', child_name,

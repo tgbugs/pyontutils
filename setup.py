@@ -56,6 +56,7 @@ try:
             'joblib',
             'lxml',
             'numpy',
+            'ontquery',
             'psutil',
             'pymysql',
             'pyyaml',
