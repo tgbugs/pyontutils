@@ -273,10 +273,23 @@ class Restriction(Triple):
             graph = rdflib.Graph()
             [graph.add(t) for t in triples]
 
+        self.triples = []
         for r_s in graph.subjects(rdf.type, owl.Restriction):
-            s = next(graph.subjects(self.predicate, r_s))  # FIXME cases where there is more than one???
-            p = next(graph.objects(r_s, owl.onProperty))
-            o = next(graph.objects(r_s, self.scope))
+            local_trips = [(r_s, rdf.type, owl.Restriction)]
+            try:
+                s = next(graph.subjects(self.predicate, r_s))  # FIXME cases where there is more than one???
+                t = s, self.predicate, r_s
+                local_trips.append(t)
+                p = next(graph.objects(r_s, owl.onProperty))
+                t = r_s, owl.onProperty, p
+                local_trips.append(t)
+                o = next(graph.objects(r_s, self.scope))
+                t = r_s, self.scope, o
+                local_trips.append(t)
+            except StopIteration:
+                print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
+                continue
+            self.triples.extend(local_trips)
             yield s, p, o  # , self.__class__.__name__
 
 restriction = Restriction(rdfs.subClassOf)
@@ -1290,3 +1303,16 @@ def displayGraph(graph_,
 
     return graph
 
+def main():
+    graph = rdflib.Graph().parse('/home/tom/git/NIF-Ontology/ttl/bridge/uberon-bridge.ttl', format='turtle')
+    r = Restriction(rdfs.subClassOf)#, scope=owl.allValuesFrom)#NIFRID.has_proper_part)
+    l = list(r.parse(graph=graph))
+    for t in r.triples:
+        graph.remove(t)
+    ng = makeGraph('thing', graph=graph)
+    ng.write()
+    #print(l)
+    embed()
+
+if __name__ == '__main__':
+    main()
