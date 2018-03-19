@@ -353,7 +353,34 @@ def _restriction(lift, s, p, o):
     yield n0, owl.onProperty, p
     yield n0, lift, o
 
-def annotation(ap, ao, s, p, o):
+class Annotation(Triple):
+    def serialize(self, triple, ap, ao):
+        s, p, o = triple
+        r_s = rdflib.BNode()
+        yield r_s, rdf.type, owl.Axiom
+        yield r_s, owl.annotatedSource, s
+        yield r_s, owl.annotatedProperty, p
+        yield r_s, owl.annotatedTarget, check_value(o)
+        yield r_s, ap, check_value(ao)
+
+    def parse(self, *triples, graph=None):
+        if graph is None:  # TODO decorator for this
+            graph = rdflib.Graph()
+            [graph.add(t) for t in triples]
+        rspt = rdf.type, owl.annotatedSource, owl.annotatedProperty, owl.annotatedTarget
+        for r_s in graph.subjects(rdf.type, owl.Axiom):
+            s_s = next(graph.objects(r_s, owl.annotatedSource))
+            s_p = next(graph.objects(r_s, owl.annotatedProperty))
+            s_o = next(graph.objects(r_s, owl.annotatedTarget))
+            triple = s_s, s_p, s_o
+            for a_p, a_o in graph.predicate_objects(r_s):
+                if a_p not in rspt:
+                    yield triple, a_p, a_o
+
+
+annotation = Annotation()
+
+def _annotation(ap, ao, s, p, o):
     n0 = rdflib.BNode()
     yield n0, rdf.type, owl.Axiom
     yield n0, owl.annotatedSource, s
