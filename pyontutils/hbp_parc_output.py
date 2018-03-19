@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+import subprocess
 from pathlib import Path
 from collections import defaultdict
 import rdflib
@@ -17,6 +18,13 @@ def edkey(line):
 
 for filename in ('mbaslim', 'hbaslim', 'paxinos-rat-labels', 'waxholm-rat-labels'):
     filepath = Path.home() / 'git/NIF-Ontology/ttl/generated/parcellation' / (filename + '.ttl')
+    dir_ = filepath.parent.as_posix()
+    print(dir_)
+    file_commit = subprocess.check_output(['git', 'log', '-n', '1',
+                                           '--pretty=format:%H', '--',
+                                           filepath.name],
+                                          cwd=dir_,
+                                          stderr=subprocess.DEVNULL).decode().rstrip()
     graph = rdflib.Graph().parse(filepath.as_posix(), format='ttl')
     g = makeGraph('', graph=graph)
 
@@ -100,10 +108,10 @@ for filename in ('mbaslim', 'hbaslim', 'paxinos-rat-labels', 'waxholm-rat-labels
                     continue
                 editions.append('{ed}|{label}|{abbrev}|{curie}'.format(ed=g.qname(ed), **kwargs))
 
-    with open('/tmp/' + filename + '.psv', 'wt') as f:
+    with open('/tmp/' + filename + f'-{file_commit[:8]}.psv', 'wt') as f:
         f.write(out_header + '\n'.join(sorted(out, key=labelkey)))
     if editions:
-        with open('/tmp/' + filename + '-editions.psv', 'wt') as f:
+        with open('/tmp/' + filename + f'-editions-{file_commit[:8]}.psv', 'wt') as f:
             f.write(editions_header + '\n'.join(sorted(editions, key=edkey)))
 
 
