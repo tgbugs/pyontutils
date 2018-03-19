@@ -14,7 +14,7 @@ def labelkey(line):
 
 def edkey(line):
     ed, label, *rest = line.split('|', 2)
-    return natsort(ed + label)
+    return natsort(ed + ' ' + label)
 
 for filename in ('mbaslim', 'hbaslim', 'paxinos-rat-labels', 'waxholm-rat-labels'):
     filepath = Path.home() / 'git/NIF-Ontology/ttl/generated/parcellation' / (filename + '.ttl')
