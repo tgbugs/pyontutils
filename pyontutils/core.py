@@ -4,7 +4,6 @@ import types
 import subprocess
 import rdflib
 import requests
-from types import FunctionType
 from pathlib import Path
 from collections import namedtuple
 from inspect import getsourcelines, getsourcefile
@@ -262,13 +261,33 @@ class ObjectThunk(Thunk):
     
 
 class POThunk(Thunk):
+    def __new__(cls, predicate, object):
+        if isinstance(object, type) and issubclass(object, ObjectThunk):
+            class InnerThunk(object):
+                _predicate = predicate
+                def __call__(self, subject):
+                    return super().__call__(subject, self._predicate)
+
+            return InnerThunk
+        else:
+            self = super().__new__(cls)
+            self.__init__(predicate, object)
+            return self
+
+
     def __init__(self, predicate, object):
         self.predicate = predicate
         self.object = object
 
-    def __call__(self, subject):
+    def __call__(self, subject, *pothunks):
         """ Overwrite this function for more complex expansions. """
+        # seems unlikely that same object multiple predicates would occur, will impl if needed
         yield subject, self.predicate, self.object
+        for thunk in pothunks:
+            #if isinstance(thunk, types.GeneratorType):
+                #thunk = next(thunk)  # return the trapped thunk ;_;
+            #else:
+            yield from thunk(subject)
 
     def __repr__(self):
         p = qname(self.predicate)
@@ -390,7 +409,7 @@ class List(Triple):
 
     def __call__(self, *objects_or_thunks):
         """ thunk maker """
-        class ListThunk(POThunk):
+        class ListThunk(Thunk):
             outer_self = self
             def __init__(self, *objects_or_thunk):
                 self.predicate = rdf.first
@@ -411,7 +430,7 @@ class List(Triple):
         yield s, p, subject
         stop = len(objects_or_thunks) - 1
         for i, object_thunk in enumerate(objects_or_thunks):
-            if isinstance(object_thunk, FunctionType) or isinstance(object_thunk, Thunk):
+            if isinstance(object_thunk, types.FunctionType) or isinstance(object_thunk, Thunk):
                 #if isinstance(object_thunk, POThunk):
                     #yield from object_thunk(subject)  # in cases where rdf.first already specified
                 #elif isinstance(object_thunk, ObjectThunk): 
@@ -554,7 +573,7 @@ class EquivalentClass(Triple):
 
     def __call__(self, *objects_or_thunks):
         """ thunk maker """
-        class EquivalentClassThunk(POThunk):
+        class EquivalentClassThunk(Thunk):
             outer_self = self
             def __init__(self, *thunks):
                 self.thunks = thunks
@@ -1527,19 +1546,27 @@ def main():
     ll = List(lift_rules={owl.Restriction:restriction})
     trips = tuple(ll.parse(graph=graph))
     oec = EquivalentClass()
+    oc = POThunk(rdf.type, owl.Class)  # FIXME but we want oc to resolve pothunks too right?
+    #subClassOf = PredicateThunk(rdfs.subClassOf)  # TODO should be able to do POThunk(rdfs.subClassOf, 0bjectThunk)
+    subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
+    superDuperClass = subClassOf(TEMP.superDuperClass)  # has to exist prior to triples
     ec = oec(TEMP.ec1, TEMP.ec2,
              restriction(TEMP.predicate0, TEMP.target1),
              restriction(TEMP.predicate1, TEMP.target2),)
     egraph = rdflib.Graph()
     athunk = annotation((TEMP.testSubject, rdf.type, owl.Class), (TEMP.hoh, 'FUN'))
-    for t in athunk((TEMP.annotation, 'annotation value')):
-        egraph.add(t)
-    for t in athunk((TEMP.anotherAnnotation, 'annotation value again')):
-        egraph.add(t)
-    for t in oc(TEMP.testSubject):
-        egraph.add(t)
-    for t in ec(TEMP.testSubject):
-        egraph.add(t)
+    ft = flattenTriples((athunk((TEMP.annotation, 'annotation value')),
+                         athunk((TEMP.anotherAnnotation, 'annotation value again')),
+                         oc(TEMP.c1, superDuperClass),
+                         oc(TEMP.c2, superDuperClass),
+                         oc(TEMP.c3, superDuperClass),
+                         oc(TEMP.c4, superDuperClass),
+                         oc(TEMP.c5, superDuperClass),
+                         oc(TEMP.wat, subClassOf(TEMP.watParent)),
+                         oc(TEMP.testSubject),
+                         ec(TEMP.testSubject),
+                         oc(TEMP.more, oec(TEMP.ec3, restriction(TEMP.predicate10, TEMP.target10))),),)
+    [egraph.add(t) for t in ft]
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
     embed()
