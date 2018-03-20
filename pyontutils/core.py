@@ -258,23 +258,8 @@ class ObjectThunk(Thunk):
             o = self.object
         return f"{self.__class__.__name__}({o!r})"
 
-    
 
-class POThunk(Thunk):
-    def __new__(cls, predicate, object):
-        if isinstance(object, type) and issubclass(object, ObjectThunk):
-            class InnerThunk(object):
-                _predicate = predicate
-                def __call__(self, subject):
-                    return super().__call__(subject, self._predicate)
-
-            return InnerThunk
-        else:
-            self = super().__new__(cls)
-            self.__init__(predicate, object)
-            return self
-
-
+class _POThunk(Thunk):
     def __init__(self, predicate, object):
         self.predicate = predicate
         self.object = object
@@ -298,6 +283,54 @@ class POThunk(Thunk):
         else:
             o = self.object
         return f"{self.__class__.__name__}({p!r}, {o!r})"
+
+
+class POThunk(_POThunk):
+    def __new__(cls, predicate, object):
+        if isinstance(object, type) and issubclass(object, ObjectThunk):
+            class InnerThunk(object):
+                _predicate = predicate
+                def __call__(self, subject):
+                    return super().__call__(subject, self._predicate)
+
+            return InnerThunk
+        else:
+            self = super().__new__(cls)
+            self.__init__(predicate, object)
+            return self
+
+
+oc_ = POThunk(rdf.type, owl.Class)
+
+
+class RestrictionThunk(_POThunk):
+    def __call__(self, subject, predicate=None):
+        print(self.predicate, self.object)
+        generator = self.outer_self.serialize(subject, self.predicate, self.object)
+        if self.outer_self.predicate is None and predicate is None:
+            raise TypeError(f'No predicate defined for {self!r}')
+        elif self.outer_self.predicate is not None and predicate is not None:
+            if self.outer_self.predicate != predicate:
+                raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
+        elif self.outer_self.predicate is None:
+            self.outer_self.predicate = predicate
+            yield from generator
+            self.outer_self.predicate = None
+        else:
+            yield from generator
+
+
+class RestrictionsThunk(RestrictionThunk):
+    def __init__(self, *predicate_objects):
+        self.predicate_objects = predicate_objects
+
+    def __call__(self, subject, predicate=None):
+        call = super().__call__
+        for self.predicate, self.object in self.predicate_objects:
+            yield from call(subject, predicate)
+
+        del self.predicate
+        del self.object
 
 
 class Triple:
@@ -329,29 +362,14 @@ class Restriction(Triple):
 
     def __call__(self, predicate=None, object=None):
         """ thunk maker """
-        class RestrictionThunk(POThunk):
-            outer_self = self
-            def __call__(self, subject, predicate=None):
-                print(self.predicate, self.object)
-                generator = self.outer_self.serialize(subject, self.predicate, self.object)
-                if self.outer_self.predicate is None and predicate is None:
-                    raise TypeError(f'No predicate defined for {self!r}')
-                elif self.outer_self.predicate is not None and predicate is not None:
-                    if self.outer_self.predicate != predicate:
-                        raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
-                elif self.outer_self.predicate is None:
-                    self.outer_self.predicate = predicate
-                    yield from generator
-                    self.outer_self.predicate = None
-                else:
-                    yield from generator
-
         if object is not None:
             p = predicate
             o = object
         else:
             _, p, o = predicate
-        return RestrictionThunk(p, o)
+
+        rt = type('RestrictionThunk', (RestrictionThunk,), dict(outer_self=self))
+        return rt(p, o)
 
     def serialize(self, s, p, o):  # lift, serialize, expand
         subject = rdflib.BNode()
@@ -386,7 +404,19 @@ class Restriction(Triple):
 
 restriction = Restriction(rdfs.subClassOf)
 
-def restrictions(*predicate_objects, scope=owl.someValuesFrom):
+class Restrictions(Restriction):
+    def __call__(self, *predicate_objects):
+        rt = type('RestrictionsThunk', (RestrictionsThunk,), dict(outer_self=self))
+        return rt(*predicate_objects)
+
+restrictions = Restrictions(None)
+
+def __restrictions(*rests):
+    for rest in rests:
+        yield from restriction(*rest)
+
+
+def _restrictions(*predicate_objects, scope=owl.someValuesFrom):
     """ restriction_object_thunk """
     for p, o in predicate_objects:
         def function(subject, predicate, object, p=p):
@@ -480,14 +510,14 @@ class List(Triple):
             except StopIteration:
                 print(subject)
                 yield tuple(firsts(subject))
-        
+
 olist = List()
 
 def oec(subject, *object_thunks, relation=owl.intersectionOf):
     n0 = rdflib.BNode()
     yield subject, owl.equivalentClass, n0
     yield from oc(n0)
-    yield from olist(n0, relation, *object_thunks)
+    yield from olist.serialize(n0, relation, *object_thunks)
 
 def _restriction(lift, s, p, o):
     n0 = rdflib.BNode()
@@ -514,7 +544,7 @@ class Annotation(Triple):
                     yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
 
         return AnnotationThunk(triple)
-        
+
     def serialize(self, triple, a_p, a_o, a_s=None):
         s, p, o = triple
         if a_s is None:
@@ -598,6 +628,7 @@ class EquivalentClass(Triple):
     def parse(self, *triples, graph=None):
         return subject, members 
 
+oec = EquivalentClass()
 
 def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdflib.Graph?
     yield s, p, o
@@ -1546,7 +1577,6 @@ def main():
     ll = List(lift_rules={owl.Restriction:restriction})
     trips = tuple(ll.parse(graph=graph))
     oec = EquivalentClass()
-    oc = POThunk(rdf.type, owl.Class)  # FIXME but we want oc to resolve pothunks too right?
     #subClassOf = PredicateThunk(rdfs.subClassOf)  # TODO should be able to do POThunk(rdfs.subClassOf, 0bjectThunk)
     subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
     superDuperClass = subClassOf(TEMP.superDuperClass)  # has to exist prior to triples
@@ -1557,15 +1587,15 @@ def main():
     athunk = annotation((TEMP.testSubject, rdf.type, owl.Class), (TEMP.hoh, 'FUN'))
     ft = flattenTriples((athunk((TEMP.annotation, 'annotation value')),
                          athunk((TEMP.anotherAnnotation, 'annotation value again')),
-                         oc(TEMP.c1, superDuperClass),
-                         oc(TEMP.c2, superDuperClass),
-                         oc(TEMP.c3, superDuperClass),
-                         oc(TEMP.c4, superDuperClass),
-                         oc(TEMP.c5, superDuperClass),
-                         oc(TEMP.wat, subClassOf(TEMP.watParent)),
-                         oc(TEMP.testSubject),
+                         oc_(TEMP.c1, superDuperClass),
+                         oc_(TEMP.c2, superDuperClass),
+                         oc_(TEMP.c3, superDuperClass),
+                         oc_(TEMP.c4, superDuperClass),
+                         oc_(TEMP.c5, superDuperClass),
+                         oc_(TEMP.wat, subClassOf(TEMP.watParent)),
+                         oc_(TEMP.testSubject),
                          ec(TEMP.testSubject),
-                         oc(TEMP.more, oec(TEMP.ec3, restriction(TEMP.predicate10, TEMP.target10))),),)
+                         oc_(TEMP.more, oec(TEMP.ec3, restriction(TEMP.predicate10, TEMP.target10))),),)
     [egraph.add(t) for t in ft]
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
