@@ -303,20 +303,37 @@ class Triple:
 
 class Restriction(Triple):
     def __init__(self, predicate, scope=owl.someValuesFrom):
+        """ You may explicitly pass None to predicate if the call to the thunk
+            will recieve the predicate. """
         self.predicate = predicate
         self.scope = scope
 
-    def thunk(self, triple, object=None):
+    def __call__(self, predicate=None, object=None):
+        return self.thunk(predicate, object)
+
+    def thunk(self, predicate=None, object=None):
         class RestrictionThunk(POThunk):
             outer_self = self
-            def __call__(self, subject):
-                yield from self.outer_self.serialize(subject, self.predicate, self.object)
+            def __call__(self, subject, predicate=None):
+                print(self.predicate, self.object)
+                generator = self.outer_self.serialize(subject, self.predicate, self.object)
+                if self.outer_self.predicate is None and predicate is None:
+                    raise TypeError(f'No predicate defined for {self!r}')
+                elif self.outer_self.predicate is not None and predicate is not None:
+                    if self.outer_self.predicate != predicate:
+                        raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
+                elif self.outer_self.predicate is None:
+                    self.outer_self.predicate = predicate
+                    yield from generator
+                    self.outer_self.predicate = None
+                else:
+                    yield from generator
 
         if object is not None:
-            p = triple
+            p = predicate
             o = object
         else:
-            _, p, o = triple
+            _, p, o = predicate
         return RestrictionThunk(p, o)
 
     def serialize(self, s, p, o):  # lift, serialize, expand
@@ -386,15 +403,6 @@ class List(Triple):
             def __repr__(self):
                 return f'{self.objects!r}'
 
-            def _bad__call__(self, subject, _=None):
-                if isinstance(self.object, POThunk):
-                    yield from self.object(subject)
-                elif isinstance(self.object, ObjectThunk):
-                    yield from self.object(subject, self.predicate)
-                else:
-                    for object in self.objects:
-                        yield subject, self.predicate, object
-
         return ListThunk(*objects_or_thunks)
 
     def serialize(self, s, p, *objects_or_thunks):
@@ -405,12 +413,12 @@ class List(Triple):
         stop = len(objects_or_thunks) - 1
         for i, object_thunk in enumerate(objects_or_thunks):
             if isinstance(object_thunk, FunctionType) or isinstance(object_thunk, Thunk):
-                if isinstance(object_thunk, POThunk):
-                    yield from object_thunk(subject)  # in cases where rdf.first already specified
-                elif isinstance(object_thunk, ObjectThunk): 
-                    yield from object_thunk(subject, rdf.first)
-                else:
-                    raise TypeError('Unknown Thunk type {object_thunk}')
+                #if isinstance(object_thunk, POThunk):
+                    #yield from object_thunk(subject)  # in cases where rdf.first already specified
+                #elif isinstance(object_thunk, ObjectThunk): 
+                yield from object_thunk(subject, rdf.first)  # thunk call must accept a predicate
+                #else:
+                    #raise TypeError('Unknown Thunk type {object_thunk}')
             else:
                 # assume that it is a URIRef or Literal
                 yield subject, rdf.first, object_thunk
@@ -526,13 +534,16 @@ class EquivalentClass(Triple):
                 self.thunks = thunks
 
             def __call__(self, subject):
-                yield from self.outer_self(subject, *self.thunks)
+                yield from self.outer_self.serialize(subject, *self.thunks)
 
             def __repr__(self):
                 return f'{self.thunks!r}'
         return EquivalentClassThunk(*objects_or_thunks)
 
-    def __call__(self, subject, *objects_or_thunks):
+    def __call__(self, *objects_or_thunks):
+        return self.thunk(*objects_or_thunks)
+
+    def _old__call__(self, subject, *objects_or_thunks):
         yield from self.serialize(subject, *objects_or_thunks)
 
     def serialize(self, subject, *objects_or_thunks):
@@ -1488,17 +1499,17 @@ def main():
     ng = makeGraph('thing', graph=graph)
     ng.write()
     #print(l)
-    rl = Restriction(rdf.first)
-    ll = List(lift_rules={owl.Restriction:rl})
+    restriction = Restriction(None)#rdf.first)
+    ll = List(lift_rules={owl.Restriction:restriction})
     trips = tuple(ll.parse(graph=graph))
     oec = EquivalentClass()
-    ec = tuple(oec(TEMP.testSubject, TEMP.ec1, TEMP.ec2,
-                   rl.thunk(TEMP.predicate0, TEMP.target1),
-                   rl.thunk(TEMP.predicate1, TEMP.target2),))
+    ec = oec(TEMP.ec1, TEMP.ec2,
+             restriction(TEMP.predicate0, TEMP.target1),
+             restriction(TEMP.predicate1, TEMP.target2),)
     egraph = rdflib.Graph()
-    for t in ec:
-        egraph.add(t)
     for t in oc(TEMP.testSubject):
+        egraph.add(t)
+    for t in ec(TEMP.testSubject):
         egraph.add(t)
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
