@@ -309,9 +309,7 @@ class Restriction(Triple):
         self.scope = scope
 
     def __call__(self, predicate=None, object=None):
-        return self.thunk(predicate, object)
-
-    def thunk(self, predicate=None, object=None):
+        """ thunk maker """
         class RestrictionThunk(POThunk):
             outer_self = self
             def __call__(self, subject, predicate=None):
@@ -385,12 +383,13 @@ class List(Triple):
         else:
             self.lift_rules = {}
 
-    def __call__(self, s, p, *objects_or_thunks):
+    def _old__call__(self, s, p, *objects_or_thunks):
         """ Normal objects are accepted as well as object thunks.
             But if you have to deal with BNodes, use an object thunk. """
         yield from self.serialize(s, p, *objects_or_thunks)
 
-    def thunk(self, *objects_or_thunks):
+    def __call__(self, *objects_or_thunks):
+        """ thunk maker """
         class ListThunk(POThunk):
             outer_self = self
             def __init__(self, *objects_or_thunk):
@@ -442,7 +441,7 @@ class List(Triple):
                     rdftype = next(graph.objects(object_first, rdf.type))  # FIXME > 1 types
                     print(rdftype)
                     typep = self.lift_rules[rdftype]
-                    yield from (typep.thunk(t) for t in # FIXME rule needs to be prefixed...
+                    yield from (typep(t) for t in # FIXME rule needs to be prefixed...
                                 typep.parse(*((object_first, p, o)
                                              for p, o in
                                               graph.predicate_objects(object_first)),
@@ -478,15 +477,35 @@ def _restriction(lift, s, p, o):
     yield n0, owl.onProperty, p
     yield n0, lift, o
 
+
 class Annotation(Triple):
-    def serialize(self, triple, ap, ao):
+    def __call__(self, triple, *predicate_objects):
+        class AnnotationThunk(Thunk):
+            a_s = rdflib.BNode()
+            outer_self = self
+            existing = predicate_objects
+            def __init__(self, triple):
+                self.triple = triple
+                self.stored = ((p, o) for p, o in ((rdf.type, owl.Axiom),) + self.existing)
+
+            def __call__(self, *predicate_objects):
+                for a_p, a_o in predicate_objects:
+                    yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
+                for a_p, a_o in self.stored:  # since it is a generator it will only run once
+                    yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
+
+        return AnnotationThunk(triple)
+        
+    def serialize(self, triple, a_p, a_o, a_s=None):
         s, p, o = triple
-        a_s = rdflib.BNode()
-        yield a_s, rdf.type, owl.Axiom
+        if a_s is None:
+            a_s = rdflib.BNode()
+            yield a_s, rdf.type, owl.Axiom
+
         yield a_s, owl.annotatedSource, s
         yield a_s, owl.annotatedProperty, p
         yield a_s, owl.annotatedTarget, check_value(o)
-        yield a_s, ap, check_value(ao)
+        yield a_s, a_p, check_value(a_o)
 
     def parse(self, *triples, graph=None):
         if graph is None:  # TODO decorator for this
@@ -498,9 +517,15 @@ class Annotation(Triple):
             s_p = next(graph.objects(a_s, owl.annotatedProperty))
             s_o = next(graph.objects(a_s, owl.annotatedTarget))
             triple = s_s, s_p, s_o
-            for a_p, a_o in graph.predicate_objects(a_s):
-                if a_p not in rspt:
-                    yield triple, a_p, a_o
+
+            # TODO thunk? or not in this case?
+            yield triple, tuple((a_p, a_o) for a_p, a_o in graph.predicate_objects(a_s) if a_p not in rspt)
+
+            # duplicated
+            #for a_p, a_o in graph.predicate_objects(a_s):
+                #if a_p not in rspt:
+                    #yield triple, a_p, a_o
+
 
 
 annotation = Annotation()
@@ -527,7 +552,8 @@ class EquivalentClass(Triple):
         self.operator = operator
         self._list = List({owl.Restriction:Restriction(rdf.first)})
 
-    def thunk(self, *objects_or_thunks):
+    def __call__(self, *objects_or_thunks):
+        """ thunk maker """
         class EquivalentClassThunk(POThunk):
             outer_self = self
             def __init__(self, *thunks):
@@ -540,9 +566,6 @@ class EquivalentClass(Triple):
                 return f'{self.thunks!r}'
         return EquivalentClassThunk(*objects_or_thunks)
 
-    def __call__(self, *objects_or_thunks):
-        return self.thunk(*objects_or_thunks)
-
     def _old__call__(self, subject, *objects_or_thunks):
         yield from self.serialize(subject, *objects_or_thunks)
 
@@ -551,12 +574,13 @@ class EquivalentClass(Triple):
         ec_s = rdflib.BNode()
         yield subject, owl.equivalentClass, ec_s
         yield from oc(ec_s)
-        yield from self._list(ec_s, self.operator, *objects_or_thunks)
+        yield from self._list.serialize(ec_s, self.operator, *objects_or_thunks)
 
     def parse(self, *triples, graph=None):
         return subject, members 
 
-def yield_recursive(s, p, o, source_graph):
+
+def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdflib.Graph?
     yield s, p, o
     new_s = o
     if isinstance(new_s, rdflib.BNode):
@@ -1507,6 +1531,11 @@ def main():
              restriction(TEMP.predicate0, TEMP.target1),
              restriction(TEMP.predicate1, TEMP.target2),)
     egraph = rdflib.Graph()
+    athunk = annotation((TEMP.testSubject, rdf.type, owl.Class), (TEMP.hoh, 'FUN'))
+    for t in athunk((TEMP.annotation, 'annotation value')):
+        egraph.add(t)
+    for t in athunk((TEMP.anotherAnnotation, 'annotation value again')):
+        egraph.add(t)
     for t in oc(TEMP.testSubject):
         egraph.add(t)
     for t in ec(TEMP.testSubject):
