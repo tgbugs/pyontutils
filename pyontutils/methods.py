@@ -1,8 +1,9 @@
-from pyontutils.core import qname, simpleOnt, displayGraph, oc, oop, olit, oec, olist, flattenTriples, OntTerm
+from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntTerm
+from pyontutils.core import oc, oop, olit, oec
 from pyontutils.core import restrictions, annotation
 from pyontutils.core import NIFTTL, NIFRID, ilxtr
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import owl, rdf, rdfs
+from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from methods_core import methods_core, asp, tech
 
 filename = 'methods'
@@ -37,7 +38,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple()):
 
 
     yield from oc(subject)
-    yield from oec(subject, *members, *restrictions(*rests))
+    yield from oec.serialize(subject, *members, restrictions(*rests))
     yield from olit(subject, rdfs.label, label)
     if def_:
         yield from olit(subject, definition, def_)
@@ -217,10 +218,10 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('DroNc-seq',)),
 
-    _t(i.d, '10x Genomics',
+    _t(i.d, '10x Genomics sequencing',
        (ilxtr.hasSomething, i.d),
        def_='commercialized drop seq',
-       synonyms=('10x',)),
+       synonyms=('10x Genomics', '10x sequencing', '10x',)),
 
     _t(i.d, 'MAP seq',
        (ilxtr.hasSomething, i.d),
@@ -248,10 +249,9 @@ triples = (
        (ilxtr.hasSomething, i.d),
     ),
 
-    _t(tech.ISH, 'in situ hybridization technique',
+    _t(OntTerm('NLXINV:20090610'), 'in situ hybridization technique',  # TODO
        (ilxtr.hasSomething, i.d),
-       synonyms=('in situ hybridization', 'ISH'),
-    ),
+       synonyms=('in situ hybridization', 'ISH'),),
 
     _t(tech.FISH, 'fluorescence in situ hybridization technique',
        (ilxtr.hasSomething, i.d),
@@ -274,11 +274,6 @@ triples = (
                  'multiplexed error-robust FISH',
                  'multiplexed error robust FISH',
                  'MERFISH'),
-    ),
-
-    _t(tech.ISH, 'in situ hybridization technique',
-       (ilxtr.hasSomething, i.d),
-       synonyms=('in situ hybridization', 'ISH'),
     ),
 
     _t(i.d, 'genetic technique',
@@ -339,12 +334,24 @@ triples = (
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'rocket delivery technique',
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'injection technique',
+
+    _t(OntTerm('BIRNLEX:2135'), 'injection technique',
+       (ilxtr.hasSomething, i.d),
+       synonyms=('injection',)),
+
+    _t(i.d, 'ballistic injection technique',
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'ballistic technique',
+
+    _t(i.d, 'pressure injection technique',
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'pressure technique',
-       (ilxtr.hasSomething, i.d)),
+
+    _t(i.d, 'brain injection technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000955')),
+       synonyms=('brain injection', 'injection into the brain')),
+
+    _t(OntTerm('BIRNLEX:2136'), 'intracellular injection technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
+       synonyms=('intracellular injection',)),
 
     _t(i.d, 'electrical delivery technique',
        (ilxtr.hasSomething, i.d)),
@@ -373,15 +380,31 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'tracing technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('axon tracing technique',
+                 'axonal tracing technique',
+                 'axon tracing',
+                 'axonal tracing',)),
     _t(i.d, 'anterograde tracing technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d),
+       synonyms=( 'anterograde tracing',)
+    ),
     _t(i.d, 'retrograde tracing technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('retrograde tracing',)
+    ),
     _t(i.d, 'diffusion tracing technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('diffusion tracing',)
+    ),
     _t(i.d, 'transsynaptic tracing technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d),
+       synonyms=( 'transsynaptic tracing',)
+    ),
+    _t(i.d, 'multisynapse transsynaptic tracing technique',
+       (ilxtr.hasSomething, i.d),
+       synonyms=('multisynaptic transsynaptic tracing technique',
+                 'multisynaptic transsynaptic tracing')),
 
     _t(i.d, 'statistical technique',
        (ilxtr.hasSomething, i.d)),
@@ -484,6 +507,11 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('crystallization',)),
 
+    _t(i.d, 'CLARITY technique',
+       (ilxtr.hasSomething, i.d),
+       def_='A tissue clearing technique',
+       synonyms=('CLARITY',)),
+
     _t(tech.fixation, 'fixation technique',
        # prevent decay, decomposition
        # modify the mechanical properties to prevent disintegration
@@ -499,7 +527,7 @@ triples = (
     _t(i.d, 'sensitization technique',
        (ilxtr.hasSomething, i.d),
     ),
-    _t(i.d, 'permeabalization technique',
+    _t(i.d, 'permeabilization technique',
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -612,18 +640,21 @@ triples = (
        (ilxtr.hasPrimaryAspect, ilxtr.contrast),  # some contrast
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        synonyms=('contrast enhancement',),),
-    _t(i.d, 'taggin technique',
+    _t(i.d, 'tagging technique',
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'staining technique',
+
+    _t(OntTerm('BIRNLEX:2107'), 'staining technique',  # TODO integration
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'immunochemical technique',
        (ilxtr.hasSomething, i.d)),
+
     _t(i.d,'immunocytochemical technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('immunocytochemistry technique',
                  'immunocytochemistry')),
-    _t(i.d,'immunohistochemical technique',
+
+    _t(OntTerm('NLXINV:20090609'), 'immunohistochemical technique',  # TODO
        (ilxtr.hasSomething, i.d),
        synonyms=('immunohistochemistry technique',
                  'immunohistochemistry')),
@@ -677,12 +708,12 @@ triples = (
     _t(i.d, 'electrophoresis technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('electrophoresis',),),
-    _t(i.d, 'centrefugation technique',
+    _t(i.d, 'centrifugation technique',
        (ilxtr.hasSomething, i.d),
-       synonyms=('centrefugation',),),
-    _t(i.d, 'ultracentrefugation technique',
+       synonyms=('centrifugation',),),
+    _t(i.d, 'ultracentrifugation technique',
        (ilxtr.hasSomething, i.d),
-       synonyms=('ultracentrefugation',),),
+       synonyms=('ultracentrifugation',),),
 
     _t(tech.measure, 'measurement technique',
        (hasParticipant,
@@ -692,6 +723,10 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        synonyms=('measure',),
     ),
+
+    _t(i.d, 'biological activity measurement technique',
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # TODO
+       synonyms=('activity measurement technique', 'bioassay')),
 
     _t(i.d, 'observational technique',
        tech.measure,
@@ -712,7 +747,7 @@ triples = (
     ),
 
     _t(tech.ising, 'ising technique',
-       (ilxtr.hasPrimaryAspect, ilxtr['is']),),
+       (ilxtr.hasPrimaryAspect, asp['is']),),
 
     _t(tech.creating, 'creating technique',   # FIXME mightent we want to subclass off of these directly?
        tech.ising,
@@ -720,7 +755,20 @@ triples = (
        synonyms=('synthesis technique',),
     ),
 
+
+    # attempt to create a class that explicitly does not have relationships to the same other class
+    #oc(ilxtr._helper0),
+    #olit(ilxtr._helper0, 'that have classes that are primary participants and outputs of the same technique'),
+    #disjointwith(oec(None, ilxtr.technique,
+                  #*restrictions((ilxtr.hasPrimaryParticipant,
+                                  #OntTerm('continuant', prefix='BFO'))))),
+    #obnode(object_predicate_thunk(rdf.type, owl.Class),
+           #oec_thunk(ilxtr.technique,
+                     #(ilxtr.hasPrimaryParticipant,)
+                     #(hasOutput,))),
+
     _t(tech.destroying, 'destroying technique',
+       # owl.unionOf with not ilxtr.disjointWithOutput of? not this will not work
        tech.ising,
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),),
 
@@ -737,7 +785,7 @@ triples = (
     _t(i.d, 'data processing technique',
        (ilxtr.hasInformationInput, ilxtr.informationArtifact),
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),
-       synonyms=('data processing',),),
+       synonyms=('data processing', 'data transformation technique'),),
 
     _t(i.d, 'image processing technique',
        (ilxtr.hasInformationInput, ilxtr.image),
@@ -778,6 +826,20 @@ triples = (
        synonyms=('microscopy',),
     ),
 
+    _t(i.d, 'light microscopy technique',
+       (hasParticipant, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
+       #(ilxtr.detects, OntTerm(search='visible light', prefix='obo')),
+       #(ilxtr.detects, OntTerm(search='photon', prefix='NIFSTD')),
+       (ilxtr.detects, ilxtr.visibleLight),  # TODO photos?
+       #(hasParticipant, OntTerm(term='visible light')),  # FIXME !!! detects vs participant ???
+       synonyms=('light microscopy',)),
+
+    _t(i.d, 'confocal microscopy technique',
+       (hasParticipant, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
+
+       (ilxtr.hasProtocol, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
+       synonyms=('confocal microscopy',)),
+
     _t(tech.imaging, 'imaging technique',
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('imaging',),
@@ -794,6 +856,7 @@ triples = (
 
     _t(tech.opticalImaging, 'optical imaging',
        tech.imaging,
+       # FIXME TODO what is the difference between optical imaging and light microscopy?
        (ilxtr.detects, ilxtr.visibleLight),  # owl:Class photon and hasWavelenght range ...
        synonyms=('light imaging', 'visible light imaging'),
     ),
@@ -1070,8 +1133,16 @@ triples = (
     ),
 
     _t(tech.sectioning, 'sectioning technique',
-       (ilxtr.hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
+       (hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
        synonyms=('sectioning',),),  # FIXME
+
+    _t(i.d, 'tissue sectioning technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000479', label='tissue')),
+       synonyms=('tissue sectioning',)),
+
+    _t(i.d, 'brain sectioning technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000955', label='brain')),
+       synonyms=('brain sectioning',)),
 
     _t(i.d, 'block face sectioning technique',
        tech.sectioning,
@@ -1094,20 +1165,27 @@ triples = (
        synonyms=('array tomography', 'array tomography technique')
     ),
 
+    _t(tech.em, 'electron microscopy technique',
+       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
+       (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
+       synonyms=('electron microscopy',)),
+    (tech.em, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
+
+
     _t(i.d, 'correlative light-electron microscopy technique',
-       (hasParticipant, ilxtr.electronMicroscope),
+       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
        (hasParticipant, ilxtr.lightMicroscope),
        synonyms=('correlative light-electron microscopy',)
     ),
 
     _t(i.d, 'serial blockface electron microscopy technique',
-       (hasParticipant, ilxtr.electronMicroscope),
+       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
        (hasParticipant, ilxtr.ultramicrotome),
        synonyms=('serial blockface electron microscopy',)
     ),
 
     _t(i.d, 'super resolution microscopy technique',
-       (hasParticipant, ilxtr.microscope),  # FIXME more
+       (hasParticipant, OntTerm('BIRNLEX:2106', label='Microscope', synonyms=[])),  # TODO more
        (ilxtr.isConstrainedBy, ilxtr.superResolutionAlgorithem),
        synonyms=('super resolution microscopy',)
     ),
@@ -1229,8 +1307,8 @@ def expand(_makeGraph, *graphs, debug=False):
     closure = rdfc.OWLRL_Semantics
     rdfc.DeductiveClosure(closure).expand(eg)
     [not graph.add((s, rdfs.subClassOf, o))
-     and [graph.add(t) for t in annotation(ilxtr.isDefinedBy, closure.__name__,
-                                           s, rdfs.subClassOf, o)]
+     and [graph.add(t) for t in annotation.serialize((s, rdfs.subClassOf, o),
+                                                     ilxtr.isDefinedBy, closure.__name__)]
      for s, o in eg.subject_objects(rdfs.subClassOf)
      if s != o and  # prevent cluttering the graph
      #o not in [to for o_ in eg.objects(s, rdfs.subClassOf)  # not working correctly
@@ -1238,7 +1316,7 @@ def expand(_makeGraph, *graphs, debug=False):
      not isinstance(s, rdflib.BNode) and
      not isinstance(o, rdflib.BNode) and
      'interlex' in s and 'interlex' in o]
-    g.write()
+    #g.write()
     displayGraph(graph, debug=debug)
 
 #displayGraph(methods.graph, debug)
@@ -1247,6 +1325,6 @@ methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showi
 methods._graph.add_namespace('tech', str(tech))
 #mc = methods.graph.__class__()
 #mc.add(t) for t in methods_core.graph if t[0] not in
-expand(methods._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 

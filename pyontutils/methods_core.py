@@ -1,5 +1,5 @@
 import rdflib
-from pyontutils.core import simpleOnt, oc, oop, olit, oec, olist
+from pyontutils.core import simpleOnt, oc, oc_, oop, olit, oec, olist
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput
@@ -20,8 +20,22 @@ triples = (
     oop(ilxtr.hasOperationDefinition),
     oop(ilxtr.hasDefiningProtocol, ilxtr.hasOperationDefinition),
 
+    oop(ilxtr.hasExecutor, hasParticipant),
+    olit(ilxtr.hasExecutor, rdfs.label, 'has executor'),
+    olit(ilxtr.hasExecutor, NIFRID.synonym, 'has executing agent'),
+    olit(ilxtr.hasExecutor, definition,
+         'The relationship between a technique and a thing that executes it.'),
+    olit(ilxtr.hasExecutor, rdfs.comment,
+         ('For example, a scientific protocol hasExecutor some graduateStudent.'
+          'A case like some parallelProcess hasExecutor personA, personB suggests'
+          'that the technique is a composite technique and should be broken down.'
+          'We may ultimately add a cardinality restriction to enforce this and require'
+          'composite techniques to be modelled using hasPart or hasInputFromPart,'
+          'but this is too complex to model in owl directly.')),
+
     oop(ilxtr.wasDiscoveredBy),
     olit(ilxtr.wasDiscoveredBy, rdfs.label, 'was discovered by'),
+    olit(ilxtr.wasDiscoveredBy, NIFRID.synonym, 'was invented by'),
     olit(ilxtr.wasDiscoveredBy, definition,
          'The relationship between a process and the person who discovered it.'),
 
@@ -136,14 +150,19 @@ triples = (
          # FIXME dAdSdt ?? also include the aspect at different points in time?
          #'has intended change in primary aspect as a function of sub parts of the primary participant'
          #'has intended change in primary aspect with respect to subset of the primary participant.'
-         'has intended change in primary aspect as a function of the subset of the primary participant.'),
+         #'has intended change in primary aspect as a function of the subset of the primary participant.'
+         'has expected difference in the primary aspect with respect to the subset of the primary participant'
+),
     olit(ilxtr.hasPrimaryAspect_dAdS, NIFRID.synonym,
          'has intended dA/dS',
-         'has intended dAspect/dSubset'),
+         'has intended dAspect/dSubset'
+    ),
     olit(ilxtr.hasPrimaryAspect_dAdS, rdfs.comment,
          ('Full specification requires a rule to determine those subsets. '
           'Subsets may be spatial, temporal, or spatio-temporal as long as the temporal '
-          'component occurs within the temporal confines of the execution of the technique.')),
+          'component occurs within the temporal confines of the execution of the technique. '
+          'Subsets are defined by hasPrimaryParticipantSubsetRule.'
+         )),
 
     oop(ilxtr.hasPrimaryParticipantSubsetRule, ilxtr.hasIntention),
     olit(ilxtr.hasPrimaryParticipantSubsetRule, rdfs.label, 'has intended primary participant subset rule'),
@@ -168,6 +187,16 @@ triples = (
     #oop(ilxtr.),
 
     # classes
+    oc(ilxtr.executor),
+    olit(ilxtr.executor, rdfs.label, 'executor'),
+    olit(ilxtr.executor, NIFRID.synonym, 'executing agent'),
+    olit(ilxtr.executor, definition,
+         'An executor is the primary agentous being that participates in a '
+         'technique and is usually the vehicle by which prior information '
+         'constrains a technique. Human beings usually play this role, but '
+         'computers and robots can be considered to be executors when the prior '
+         'information has been encoded directly into them and their behavior.'),
+
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
 
@@ -212,16 +241,16 @@ triples = (
 
     oc(ilxtr.protocol, ilxtr.informationEntity),
     olit(ilxtr.protocol, rdfs.label, 'protocol'),
+    olit(ilxtr.protocol, NIFRID.synonym, 'technique specification'),
 
     oc(ilxtr.protocolArtifact, ilxtr.informationArtifact),
     (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
     olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
 
-    oc(ilxtr.protocolExecution),
+    oc_(ilxtr.protocolExecution,
+       oec(ilxtr.technique,
+           restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
     olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
-    oec(ilxtr.protocolExecution,
-        ilxtr.technique,
-        *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),
 
     ## techniques
     oc(BFO['0000015']),
@@ -242,3 +271,4 @@ methods_core = simpleOnt(filename=filename,
                          triples=triples,
                          comment=comment,
                          _repo=_repo)
+
