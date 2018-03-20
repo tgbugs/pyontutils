@@ -30,9 +30,10 @@ for filename in ('mbaslim', 'hbaslim', 'paxinos-rat-labels', 'waxholm-rat-labels
 
     annos = defaultdict(set)
     anno_trips = defaultdict(set)
-    for triple, a_p, a_o in annotation.parse(graph=graph):
-        annos[a_p, a_o].add(triple)
-        anno_trips[triple].add((a_p, a_o))
+    for triple, predicate_objects in annotation.parse(graph=graph):
+        for a_p, a_o in predicate_objects:
+            annos[a_p, a_o].add(triple)
+            anno_trips[triple].add((a_p, a_o))
 
     anno_trips = {k:v for k, v in anno_trips.items()}
 
