@@ -329,8 +329,10 @@ class RestrictionsThunk(RestrictionThunk):
         for self.predicate, self.object in self.predicate_objects:
             yield from call(subject, predicate)
 
-        del self.predicate
-        del self.object
+        if hasattr(self, 'predicate'):
+            del self.predicate
+        if hasattr(self, 'object'):
+            del self.object
 
 
 class Triple:
