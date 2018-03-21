@@ -242,6 +242,25 @@ class Thunk:
         yield subject, predicate, object
 
 
+class ThunkIt(Thunk):
+    def __init__(self, outer_self, *args, **kwargs):
+        self.outer_self = outer_self
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self):
+        yield from self.outer_self.__call__(*self.args, **self.kwargs)
+        
+    def __repr__(self):
+        return f'{self.outer_self.__class__.__name__} {self.args} {self.kwargs}'
+
+    def serialize(self, graph=None):
+        for t in self():
+            yield t
+            if graph is not None:
+                graph.add(t)
+        
+
 class ObjectThunk(Thunk):
     def __init__(self, object):
         self.object = object
@@ -263,6 +282,9 @@ class _POThunk(Thunk):
     def __init__(self, predicate, object):
         self.predicate = predicate
         self.object = object
+
+    def full_thunk(self, subject, *pothunks):
+        return ThunkIt(self, subject, *pothunks)
 
     def __call__(self, subject, *pothunks):
         """ Overwrite this function for more complex expansions. """
@@ -1612,10 +1634,11 @@ def main():
     ecgraph = rdflib.Graph()
     oec = EquivalentClass()
     test = tuple(oec.parse(graph=graph))
-    # seems that the list thunk is missing a first for one of its rests...
-    # weirdness = tuple(test[0][1].thunks[0](TEMP.parent, TEMP.linker))
-    # tc0 = lambda : tuple(test[0][1].thunks[0].objects[1](TEMP.parent))  # correct
-    # tc1 = lambda : tuple(test[0][1].thunks[0].objects[1](TEMP.parent, rdf.first))  # fixed
+
+    ft = oc_.full_thunk(test[0][0], test[0][1])
+    ftng = makeGraph('thing3', prefixes=makePrefixes('owl', 'TEMP'))
+    *ft.serialize(ftng.g),
+    ftng.write()
 
     _roundtrip = list(test[0][1](test[0][0]))
     roundtrip = oc_(test[0][0], test[0][1])  # FIXME not quite there yet...
