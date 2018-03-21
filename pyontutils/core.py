@@ -305,13 +305,15 @@ oc_ = POThunk(rdf.type, owl.Class)
 
 class RestrictionThunk(_POThunk):
     def __call__(self, subject, predicate=None):
-        print(self.predicate, self.object)
+        print('in RestrictionThunk:', self.predicate, self.object)
         generator = self.outer_self.serialize(subject, self.predicate, self.object)
         if self.outer_self.predicate is None and predicate is None:
             raise TypeError(f'No predicate defined for {self!r}')
         elif self.outer_self.predicate is not None and predicate is not None:
             if self.outer_self.predicate != predicate:
                 raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
+            else:  # this branch was missing
+                yield from generator
         elif self.outer_self.predicate is None:
             self.outer_self.predicate = predicate
             yield from generator
@@ -337,6 +339,10 @@ class RestrictionsThunk(RestrictionThunk):
 
 class Triple:
     """ All the BNodes should remain hidden. """
+
+    def _objects(self, graph, subject, predicate):
+        yield from graph.objects(subject, predicate)
+
     def __init__(self):
         pass
 
@@ -356,6 +362,10 @@ class Triple:
 
 
 class Restriction(Triple):
+    class RestrictionTriple(tuple):
+        def __repr__(self):
+            return f"{self.__class__.__name__}{super().__repr__()}"
+
     def __init__(self, predicate, scope=owl.someValuesFrom):
         """ You may explicitly pass None to predicate if the call to the thunk
             will recieve the predicate. """
@@ -402,7 +412,7 @@ class Restriction(Triple):
                 print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
                 continue
             self.triples.extend(local_trips)
-            yield s, p, o  # , self.__class__.__name__
+            yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
 
 restriction = Restriction(rdfs.subClassOf)
 
@@ -411,21 +421,9 @@ class Restrictions(Restriction):
         rt = type('RestrictionsThunk', (RestrictionsThunk,), dict(outer_self=self))
         return rt(*predicate_objects)
 
+
 restrictions = Restrictions(None)
 
-def __restrictions(*rests):
-    for rest in rests:
-        yield from restriction(*rest)
-
-
-def _restrictions(*predicate_objects, scope=owl.someValuesFrom):
-    """ restriction_object_thunk """
-    for p, o in predicate_objects:
-        def function(subject, predicate, object, p=p):
-            # note that in this case object = o
-            r = Restriction(predicate, scope)
-            yield from r.serialize(subject, p, object)
-        yield make_object_thunk(function, o)
 
 class List(Triple):
     def __init__(self, lift_rules=None):
@@ -433,11 +431,6 @@ class List(Triple):
             self.lift_rules = lift_rules
         else:
             self.lift_rules = {}
-
-    def _old__call__(self, s, p, *objects_or_thunks):
-        """ Normal objects are accepted as well as object thunks.
-            But if you have to deal with BNodes, use an object thunk. """
-        yield from self.serialize(s, p, *objects_or_thunks)
 
     def __call__(self, *objects_or_thunks):
         """ thunk maker """
@@ -451,7 +444,7 @@ class List(Triple):
                 yield from self.outer_self.serialize(subject, predicate, *self.objects)
 
             def __repr__(self):
-                return f'{self.objects!r}'
+                return f'{self.__class__.__name__}{self.objects!r}'
 
         return ListThunk(*objects_or_thunks)
 
@@ -481,7 +474,7 @@ class List(Triple):
             yield subject, rdf.rest, next_subject
             subject = next_subject
 
-    def parse(self, *triples, graph=None):
+    def parse(self, *triples, root=None, graph=None):
         if graph is None:
             graph = rdflib.Graph()
             [graph.add(t) for t in triples]
@@ -505,13 +498,19 @@ class List(Triple):
                 if object_rest != rdf.nil:
                     yield from firsts(object_rest)
 
-        # find heads of lists
-        for subject in graph.subjects(rdf.first, None):
+        def process_list(subject):
             try:  # subject should not be the member of a rdf.rest
                 next(graph.subjects(rdf.rest, subject))
             except StopIteration:
                 print(subject)
-                yield tuple(firsts(subject))
+                yield self(*firsts(subject))
+
+        if root is not None:
+            yield from process_list(root)
+        else:
+            # find heads of lists
+            for subject in graph.subjects(rdf.first, None):
+                yield from process_list(subject)
 
 olist = List()
 
@@ -599,9 +598,13 @@ def annotations(pairs, s, p, o):
         yield n0, predicate, check_value(object)
 
 class EquivalentClass(Triple):
+    """ That moment when you realize you are reimplementing a crappy version of
+        owl functional syntax in python. """
+    predicate = owl.equivalentClass
     def __init__(self, operator=owl.intersectionOf):
         self.operator = operator
         self._list = List({owl.Restriction:Restriction(rdf.first)})
+        self.lift_rules = {rdf.first:self._list, rdf.rest:None}
 
     def __call__(self, *objects_or_thunks):
         """ thunk maker """
@@ -614,21 +617,58 @@ class EquivalentClass(Triple):
                 yield from self.outer_self.serialize(subject, *self.thunks)
 
             def __repr__(self):
-                return f'{self.thunks!r}'
-        return EquivalentClassThunk(*objects_or_thunks)
+                return f'{self.__class__.__name__}{self.thunks!r}'
 
-    def _old__call__(self, subject, *objects_or_thunks):
-        yield from self.serialize(subject, *objects_or_thunks)
+        return EquivalentClassThunk(*objects_or_thunks)
 
     def serialize(self, subject, *objects_or_thunks):
         """ object_thunks may also be URIRefs or Literals """
         ec_s = rdflib.BNode()
-        yield subject, owl.equivalentClass, ec_s
+        yield subject, self.predicate, ec_s
         yield from oc(ec_s)
         yield from self._list.serialize(ec_s, self.operator, *objects_or_thunks)
 
     def parse(self, *triples, graph=None):
-        return subject, members 
+        if graph is None:  # TODO decorator for this
+            graph = rdflib.Graph()
+            [graph.add(t) for t in triples]
+
+        for subject, ec_s in graph.subject_objects(self.predicate):
+            #rdftype = next(graph.objects(subject, rdf.type))  # FIXME > 1
+            def parts(predicate, object):
+                #print('aaaaaaaaaaaaa', predicate, object)
+                if predicate == rdf.type:
+                    if object != owl.Class:
+                        raise TypeError('owl:equivalentClass members need to be owl:Classes not {rdftype}')
+                elif predicate == self.operator:
+                    #yield subject, tuple((p, o) for p, o in graph.predicate_objects(object))
+                    for p, o in graph.predicate_objects(object):
+                        typep = self.lift_rules[p]
+                        if typep is None:
+                            continue
+                        print(p, typep)
+                        if p == rdf.first:
+                            # FIXME should not have to be explicit? or are lists special?
+                            # equivalent class does not need explicit list thunking at the moment
+                            # so we just get the objects in the list for now
+                            # it looks weird on repr, but that is ok
+                            yield from next(typep.parse(root=object, graph=graph)).objects
+                        else:
+                            #print('AAAAAAAAAAAAA', typep)
+                            triples = ((o, _p, _o) for _p, _o in graph.predicate_objects(o))
+                            yield from typep.parse(*triples)
+                            #yield from typep.parse((o, _p, _o) for _p, _o in graph.predicate_objects(o))
+                else:
+                    print(f'failed to parse {subject} owl:equivalentClass {predicate} != {self.operator}')
+
+            # FIXME None to get them all?
+            thunks = tuple(t for p, o in graph.predicate_objects(ec_s)
+                           #for mt in parts(p, o)  # FIXME somewhere someone is not yielding properly
+                           # no actually this is correct, it is just that there is indeed a list in there
+                           # that is not property thunked
+                           #for t in mt)
+                           for t in parts(p, o))
+            yield subject, self(*thunks)
 
 oec = EquivalentClass()
 
@@ -1568,6 +1608,23 @@ def displayGraph(graph_,
 def main():
     graph = rdflib.Graph().parse('/home/tom/git/NIF-Ontology/ttl/bridge/uberon-bridge.ttl', format='turtle')
     graph.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Neuron-Circuit-Role-Bridge.ttl', format='ttl')
+
+    ecgraph = rdflib.Graph()
+    oec = EquivalentClass()
+    test = tuple(oec.parse(graph=graph))
+    # seems that the list thunk is missing a first for one of its rests...
+    # weirdness = tuple(test[0][1].thunks[0](TEMP.parent, TEMP.linker))
+    # tc0 = lambda : tuple(test[0][1].thunks[0].objects[1](TEMP.parent))  # correct
+    # tc1 = lambda : tuple(test[0][1].thunks[0].objects[1](TEMP.parent, rdf.first))  # fixed
+
+    _roundtrip = list(test[0][1](test[0][0]))
+    roundtrip = oc_(test[0][0], test[0][1])  # FIXME not quite there yet...
+    for t in roundtrip:
+        ecgraph.add(t)
+    ecng = makeGraph('thing2', graph=ecgraph, prefixes=makePrefixes('owl', 'TEMP'))
+    ecng.write()
+    embed()
+    return
     r = Restriction(rdfs.subClassOf)#, scope=owl.allValuesFrom)#NIFRID.has_proper_part)
     l = tuple(r.parse(graph=graph))
     for t in r.triples:
@@ -1578,7 +1635,6 @@ def main():
     restriction = Restriction(None)#rdf.first)
     ll = List(lift_rules={owl.Restriction:restriction})
     trips = tuple(ll.parse(graph=graph))
-    oec = EquivalentClass()
     #subClassOf = PredicateThunk(rdfs.subClassOf)  # TODO should be able to do POThunk(rdfs.subClassOf, 0bjectThunk)
     subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
     superDuperClass = subClassOf(TEMP.superDuperClass)  # has to exist prior to triples
