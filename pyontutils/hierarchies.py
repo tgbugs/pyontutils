@@ -5,7 +5,6 @@ from html import escape as html_escape
 from collections import namedtuple
 from collections import defaultdict as base_dd
 import requests
-import numpy as np
 from pyontutils.scigraph_client import Graph
 from pyontutils.core import PREFIXES as uPREFIXES
 from pyontutils.utils import TermColors as tc
@@ -608,7 +607,7 @@ def main():
 
         level_sizes = [len(levels(tree, i)) for i in range(11)]
         print('level sizes', level_sizes)
-        parent_counts = np.unique([len(v) for v in extra[-4].values()])
+        parent_counts = sorted(set(len(v) for v in extra[-4].values()))
         print('unique parent counts', parent_counts)
         print('num terms', len(extra[2]))
 
