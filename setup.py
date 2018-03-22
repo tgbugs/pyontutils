@@ -55,7 +55,6 @@ try:
             'ipython',
             'joblib',
             'lxml',
-            'numpy',
             'ontquery',
             'psutil',
             'pymysql',
