@@ -394,10 +394,10 @@ BLX:20 a owl:ObjectProperty ;
 
 # sub class of ordering additional tests
 
-sco:1 a owl:Ontology ;
-    owl:imports sco:0 .
+sco:0 a owl:Ontology ;
+    owl:imports sco:1 .
 
-sco:0 a owl:Ontology .
+sco:1 a owl:Ontology .  # this should appear above sco:0
 
 sco:2 a owl:AnnotationProperty ;
     rdfs:subPropertyOf sco:3 .
