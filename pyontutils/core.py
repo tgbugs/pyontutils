@@ -1085,7 +1085,11 @@ class OntTerm(ontquery.OntTerm, rdflib.URIRef):
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
-OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(), upstream=OntTerm)
+def get_api_key():
+    try: return os.environ['SCICRUNCH_API_KEY']
+    except KeyError: return None
+
+OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()), upstream=OntTerm)
 #
 # classes
 
