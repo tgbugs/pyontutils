@@ -192,8 +192,7 @@ class HBALabels(LabelsBase):
                 superpart = record['parent_structure_id']
                 if superpart:
                     superpart_iri = self.namespace[str(superpart)]
-                    yield from restriction(owl.someValuesFrom,
-                                           iri, ilxtr.labelPartOf, superpart_iri)
+                    yield from restriction.serialize(iri, ilxtr.labelPartOf, superpart_iri)
 
 
 class MBALabels(HBALabels):
