@@ -1202,18 +1202,18 @@ class Class:
         yield iri, rdf.type, self.rdf_type
         for key, predicate in self_or_cls.propertyMapping.items():
             if key in self.lift:
-                lift = self.lift[key]
+                restriction = Restriction(rdfs.subClassOf, scope=self.lift[key])
             else:
-                lift = None
+                restriction = None
             if hasattr(self_or_cls, key):
                 value = getattr(self_or_cls, key)
                 #print(key, predicate, value)
                 if value is not None:
                     #(f'{key} are not kwargs for {self.__class__.__name__}')
-                    def makeTrip(value, iri=iri, predicate=predicate, lift=lift):
+                    def makeTrip(value, iri=iri, predicate=predicate, restriction=restriction):
                         t = iri, predicate, check_value(value)
-                        if lift is not None:
-                            yield from restriction(lift, *t)
+                        if restriction is not None:
+                            yield from restriction.serialize(*t)
                         else:
                             yield t
                     if not isinstance(value, str) and hasattr(self._kwargs[key], '__iter__'):  # FIXME do generators have __iter__?
