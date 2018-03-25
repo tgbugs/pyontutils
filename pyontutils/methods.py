@@ -58,8 +58,30 @@ class I:
 i = I()
 
 triples = (
-    oc(ilxtr.analysisRole,
-       OntTerm('BFO:0000023', label='role')
+    # biccn
+
+    _t(i.d, 'common coordinate framework',
+       synonyms=('CCF', 'atlas coordinate framework')),
+
+    _t(i.d, 'atlas registration technique',
+       synonyms=('registration technique',
+                 'atlas registration',
+                 'registration')),
+
+    # 'spatial transcriptomics'
+
+    # 'anatomy registration'
+    # feducial points
+    # '3d atlas registration'
+    # '2d atlas registration'
+    # 'image registration'
+    # fresh frozen ventricles are smaller
+    # 4% pfa non perfused
+
+    # 'ROI based atlas registration technique'
+
+    # biccn 
+    oc(ilxtr.analysisRole, OntTerm('BFO:0000023', label='role')
     ),
 
     _t(i.d, 'randomization technique',  # FIXME this is not defined correctly
@@ -152,6 +174,9 @@ triples = (
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        synonyms=('RNA-seq',)),
 
+    # Split-seq single cell single nuclei
+    # SPLiT-seq
+
     _t(i.d, 'mRNA-seq',
        (ilxtr.hasPrimaryParticipant,
         #OntTerm(term='mRNA')
@@ -170,6 +195,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        (hasParticipant, OntTerm('SAO:1813327414', label='Cell')),
        synonyms=('scRNA-Seq',
+                 'scRNA-seq',
                  'single cell RNAseq',)),
         # 'deep-dive scRNA-Seq'  # deep-dive vs wide-shallow I think is what this is
 
@@ -187,7 +213,9 @@ triples = (
 
     _t(i.d, 'snmC-seq',
        (hasParticipant, OntTerm('GO:0005634', label='nucleus')),
-    ),
+       synonyms=('snmC-Seq',)),
+
+    # mCH
 
     _t(tech.ATACseq, 'ATAC-seq',
        (ilxtr.hasSomething, i.d),
@@ -216,26 +244,31 @@ triples = (
 
     _t(i.d, 'Drop-seq',
        (ilxtr.hasSomething, i.d),
-       synonyms=('DroNc-seq',)),
+       synonyms=('DroNc-seq',)  #???? is this the same
+    ),
 
     _t(i.d, '10x Genomics sequencing',
        (ilxtr.hasSomething, i.d),
        def_='commercialized drop seq',
+       # snRNA-seq 10x Genomics Chromium v2
+       # 10x Genomics Chromium V2 scRNA-seq
+       # 10X (sigh)
        synonyms=('10x Genomics', '10x sequencing', '10x',)),
 
     _t(i.d, 'MAP seq',
        (ilxtr.hasSomething, i.d),
+       synonyms=("MAPseq",),
     ),
 
     _t(i.d, 'Smart-seq',
        (ilxtr.hasSomething, i.d),
+       # Clontech
        synonyms=('Smart-seq2',
                  'SMART-seq',
+                 'SMART-Seq v4',
                  'SMART-seq v4',)),
 
     # 'deep smart seq',
-
-
 
     _t(i.d, ' technique',
        (ilxtr.hasSomething, i.d),
@@ -405,6 +438,9 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('multisynaptic transsynaptic tracing technique',
                  'multisynaptic transsynaptic tracing')),
+
+    # 'TRIO'
+    # 'tracing the relationship between input and output'
 
     _t(i.d, 'statistical technique',
        (ilxtr.hasSomething, i.d)),
@@ -1145,6 +1181,7 @@ triples = (
        synonyms=('brain sectioning',)),
 
     _t(i.d, 'block face sectioning technique',
+       # SBEM vs block face for gross anatomical registration
        tech.sectioning,
        (ilxtr.hasSomething, i.d),
     ),
