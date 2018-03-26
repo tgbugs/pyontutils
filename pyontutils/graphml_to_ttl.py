@@ -202,7 +202,8 @@ def main():
         
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
     json = newgraph.make_scigraph_json('rdfs:subClassOf', direct=True)
-    t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)
+    t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # methods
+    t, te = creatTree(*Query('FIXME:n236', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # techniques
     print(t)
 
     newgraph.write()

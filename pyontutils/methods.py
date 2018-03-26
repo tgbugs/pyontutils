@@ -783,7 +783,24 @@ triples = (
     ),
 
     _t(tech.ising, 'ising technique',
-       (ilxtr.hasPrimaryAspect, asp['is']),),
+       (ilxtr.hasPrimaryAspect, asp['is']),
+       def_=('Ising techniques are techniques that affect whether a thing \'is\' or not. '
+             'Whether they primary participant \'is\' in this context must shall be determined '
+             'by whether measurements made on the putative primary particiant '
+             'provide data that meet the necessary and sufficient criteria for the putative primary '
+             'participant to be assigned the categorical name as defined by the '
+             'primary particiant\'s owl:Class. For example if the primary particiant of a technique '
+             'is 100ml of liquid water, then a boiling technique which produces gaseous water from '
+             'liquid water negatively affects the isness of the 100ml of liquid water because we can '
+             'no longer assign the name liquid water to the steam that is produced by boiling.')),
+
+    (tech.ising, rdfs.comment,
+     ('Because \'isness\' or \'being\' is modelled as an aspect it is implied that '
+      '\'being\' in this context depends entirely on some measurement process and some '
+      'additional process for classifying or categorizing the object based on that measurement, '
+      'so that it can be assigned a name. The objective here is to demistify the process of '
+      'assigning a name to a thing so that it will be possible to provide exact provenance '
+      'for how the assignment of the name was determined.')),
 
     _t(tech.creating, 'creating technique',   # FIXME mightent we want to subclass off of these directly?
        tech.ising,

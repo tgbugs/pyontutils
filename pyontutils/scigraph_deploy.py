@@ -45,6 +45,7 @@ import socket
 import inspect
 from os.path import join as jpth
 from shlex import quote as squote
+from pathlib import Path
 from functools import wraps
 from collections import namedtuple
 import yaml
@@ -438,6 +439,8 @@ class Builder:
             self.graph_folder = services_config['graphConfiguration']['location']
         #print(self.graph_folder)
         services_config_path = jpth(self.zip_location, self.services_config)  # save loc
+        p = Path(services_config_path)
+        if not p.parent.exists(): p.parent.mkdir(parents=True)
         with open(services_config_path, 'wt') as f:
             yaml.dump(services_config, f, default_flow_style=False)
 
@@ -748,10 +751,6 @@ def run(args):
     kwargs = {k.strip('--').strip('<').rstrip('>').replace('-','_'):v for k, v in args.items()}
     b = Builder(args, **kwargs)
     code = b.run()
-    if b.local:
-        return
-        #if b.check_built:
-            #return
     if b.debug:
         FILE = '/tmp/test.sh'
         with open(FILE, 'wt') as f:
@@ -761,6 +760,10 @@ def run(args):
         with open(FILE, 'rt') as f:
             print(f.read())
         #embed()
+    if b.local:
+        return
+        #if b.check_built:
+            #return
     else:
         print(code)
 

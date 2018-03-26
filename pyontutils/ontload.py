@@ -16,6 +16,7 @@ Options:
     -l --git-local=LBASE            local path to look for ontology <repo>      [default: /tmp]
     -z --zip-location=ZIPLOC        local path in which to deposit build files  [default: /tmp]
     -f --scigraph-config-folder=TP  templates files live here                   [default: ../scigraph/]
+    -a --patches-folder=PF          patch files live here                       [default: ../patches/]
 
     -t --graphload-config=CFG       graphload.yaml location                     [default: graphload.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
@@ -30,9 +31,11 @@ Options:
     -C --scigraph-commit=SCOMMIT    scigraph commit to build                    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file          [default: user@localhost:/tmp/scigraph/]
 
+    -p --patch-config               patchs.yaml location                        [default: patches.yaml]
     -u --curies=CURIEFILE           curie definition file                       [default: nifstd_curie_map.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
 
+    -P --patch                      retrieve ontologies to patch and modify import chain accordingly
     -K --check-built                check whether a local copy is present but do not build if it is not
 
     -d --debug                      call IPython embed when done
@@ -520,6 +523,7 @@ def run(args):
     git_local = args['--git-local']
     zip_location = args['--zip-location']
     scigraph_config_folder = args['--scigraph-config-folder']
+    patches_folder = args['--patches-folder']
     graphload_config = args['--graphload-config']
     org = args['--org']
     branch = args['--branch']
@@ -529,7 +533,9 @@ def run(args):
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
     sscp = args['--scigraph-scp-loc']
+    patch_config = args['--patch-config']
     curies_location = args['--curies']
+    patch = args['--patch']
     check_built = args['--check-built']
     debug = args['--debug']
     log = args['--logfile']  # TODO
@@ -543,6 +549,9 @@ def run(args):
         graphload_config = jpth(scigraph_config_folder, graphload_config)
     if '/' not in curies_location:
         curies_location = jpth(scigraph_config_folder, curies_location)
+    if '/' not in patch_config:
+        patch_config = jpth(patches_folder, patch_config)
+
     graphload_config = locate_config_file(graphload_config, git_local)
     curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)

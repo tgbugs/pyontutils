@@ -1,0 +1,10 @@
+--- a/ttl/external/doid.owl
++++ b/ttl/external/doid.owl
+@@ -12,7 +12,6 @@
+      xmlns:dc="http://purl.org/dc/elements/1.1/">
+     <owl:Ontology rdf:about="http://purl.obolibrary.org/obo/doid.owl">
+         <owl:versionIRI rdf:resource="http://purl.obolibrary.org/obo/doid/releases/2018-03-02/doid.owl"/>
+-        <owl:imports rdf:resource="http://purl.obolibrary.org/obo/doid/obo/ext.owl"/>
+         <oboInOwl:date rdf:datatype="http://www.w3.org/2001/XMLSchema#string">02:03:2018 14:00</oboInOwl:date>
+         <oboInOwl:default-namespace rdf:datatype="http://www.w3.org/2001/XMLSchema#string">disease_ontology</oboInOwl:default-namespace>
+         <oboInOwl:saved-by rdf:datatype="http://www.w3.org/2001/XMLSchema#string">lschriml</oboInOwl:saved-by>
