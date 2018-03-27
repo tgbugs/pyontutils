@@ -1092,6 +1092,7 @@ def get_api_key():
 
 OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
 ontquery.QueryResult._OntTerm = OntTerm
+query = ontquery.OntQueryCli(query=OntTerm.query)
 
 #
 # classes
