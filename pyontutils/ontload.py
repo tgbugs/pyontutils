@@ -31,7 +31,7 @@ Options:
     -C --scigraph-commit=SCOMMIT    scigraph commit to build                    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file          [default: user@localhost:/tmp/scigraph/]
 
-    -p --patch-config               patchs.yaml location                        [default: patches.yaml]
+    -p --patch-config=PATCHLOC      patchs.yaml location                        [default: patches.yaml]
     -u --curies=CURIEFILE           curie definition file                       [default: nifstd_curie_map.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
 

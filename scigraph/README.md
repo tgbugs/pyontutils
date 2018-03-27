@@ -1,5 +1,10 @@
-# TODO
-scigraph-services.conf also needs to be generated per server due to matrix urls
+# Commands to generate config files and graph on the build host
+``` bash
+export TARGET=localhost  # set this!
+export BUILD_DIR=/tmp/scigraph-build
+scigraph-deploy config --local ${HOSTNAME} ${TARGET} -l ${BUILD_DIR} -z ${BUILD_DIR}
+ontload graph --local NIF-Ontology NIF -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
+```
 
 # oneshots for centos 7
 ```
