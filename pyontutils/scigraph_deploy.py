@@ -437,6 +437,11 @@ class Builder:
             services_config['graphConfiguration']['location'] = self.graph_folder
         else:
             self.graph_folder = services_config['graphConfiguration']['location']
+        port = services_config['server']['connector']['port']
+        url = services_config['serviceMetadata']['preview']['url']
+        services_config['serviceMetadata']['preview']['url'] = url.format(HOSTNAME=self.services_host, PORT=port)
+        url = services_config['serviceMetadata']['view']['url']
+        services_config['serviceMetadata']['view']['url'] = url.format(HOSTNAME=self.services_host, PORT=port)
         #print(self.graph_folder)
         services_config_path = jpth(self.zip_location, self.services_config)  # save loc
         p = Path(services_config_path)

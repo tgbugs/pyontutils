@@ -75,10 +75,10 @@ serviceMetadata:
   identifierSpace: http://neuinfo.org/
   schemaSpace: http://neuinfo.org/
   view: {
-    url: 'http://matrix.neuinfo.org:9000/scigraph/refine/view/{{id}}'
+    url: 'http://{HOSTNAME}:{PORT}/scigraph/refine/view/{{id}}'
   }
   preview: {
-    url: 'http://matrix.neuinfo.org:9000/scigraph/refine/preview/{{id}}',
+    url: 'http://{HOSTNAME}:{PORT}/scigraph/refine/preview/{{id}}',
     width: 400,
     height: 400
   }
