@@ -27,10 +27,10 @@
 <http://testurl.org/filename.ttl> a owl:Ontology ;
     rdfs:label "U WOT M8" .
 
-sco:0 a owl:Ontology .
+sco:0 a owl:Ontology ;
+    owl:imports sco:1 .
 
-sco:1 a owl:Ontology ;
-    owl:imports sco:0 .
+sco:1 a owl:Ontology .
 
 ### Object Properties
 
@@ -466,7 +466,6 @@ sco:8 a owl:Class .
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "ARDS"^^xsd:string ;
     oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ] .
-
 
 [ a (
             "BB"

@@ -381,7 +381,7 @@ BLX:20 a owl:ObjectProperty ;
 
 # collections as subjects
 
-("this" "is" "a" "bare" "list") a rdf:List .
+# ("this" "is" "a" "bare" "list") a rdf:List .  # TODO check on what the spec says this should serialize to...
 ("this" "is" "a" "bare" "list") other:UsedAP "huehuehuehue" .
 
 # trying to reveal issues with summing list ranks
