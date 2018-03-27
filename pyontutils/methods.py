@@ -794,13 +794,13 @@ triples = (
              'liquid water negatively affects the isness of the 100ml of liquid water because we can '
              'no longer assign the name liquid water to the steam that is produced by boiling.')),
 
-    (tech.ising, rdfs.comment,
-     ('Because \'isness\' or \'being\' is modelled as an aspect it is implied that '
-      '\'being\' in this context depends entirely on some measurement process and some '
-      'additional process for classifying or categorizing the object based on that measurement, '
-      'so that it can be assigned a name. The objective here is to demistify the process of '
-      'assigning a name to a thing so that it will be possible to provide exact provenance '
-      'for how the assignment of the name was determined.')),
+    olit(tech.ising, rdfs.comment,
+         ('Because \'isness\' or \'being\' is modelled as an aspect it is implied that '
+          '\'being\' in this context depends entirely on some measurement process and some '
+          'additional process for classifying or categorizing the object based on that measurement, '
+          'so that it can be assigned a name. The objective here is to demistify the process of '
+          'assigning a name to a thing so that it will be possible to provide exact provenance '
+          'for how the assignment of the name was determined.')),
 
     _t(tech.creating, 'creating technique',   # FIXME mightent we want to subclass off of these directly?
        tech.ising,
