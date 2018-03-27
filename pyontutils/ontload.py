@@ -31,11 +31,11 @@ Options:
     -C --scigraph-commit=SCOMMIT    scigraph commit to build                    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file          [default: user@localhost:/tmp/scigraph/]
 
-    -p --patch-config=PATCHLOC      patchs.yaml location                        [default: patches.yaml]
+    -P --patch-config=PATCHLOC      patchs.yaml location                        [default: patches.yaml]
     -u --curies=CURIEFILE           curie definition file                       [default: nifstd_curie_map.yaml]
                                     if only the filename is given assued to be in scigraph-config-folder
 
-    -P --patch                      retrieve ontologies to patch and modify import chain accordingly
+    -p --patch                      retrieve ontologies to patch and modify import chain accordingly
     -K --check-built                check whether a local copy is present but do not build if it is not
 
     -d --debug                      call IPython embed when done
@@ -46,9 +46,11 @@ import os
 import shutil
 import json
 import yaml
+import subprocess
 from os.path import join as jpth
 from io import BytesIO
 from glob import glob
+from pathlib import Path
 from contextlib import contextmanager
 import rdflib
 import requests
@@ -58,7 +60,7 @@ from docopt import parse_defaults
 from joblib import Parallel, delayed
 from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl
 from pyontutils.core import makeGraph, makePrefixes  # TODO make prefixes needs an all...
-from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile
+from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile, TermColors as tc
 from pyontutils.hierarchies import creatTree
 from collections import namedtuple
 from IPython import embed
@@ -96,8 +98,8 @@ def getBranch(repo, branch):
         raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
 def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, commit,
-                 remote_base, load_base, graphload_config, scigraph_commit,
-                 post_clone=lambda: None, check_built=False):
+                 remote_base, load_base, graphload_config, patch_config, patch,
+                 scigraph_commit, post_clone=lambda: None, check_built=False):
     local_base = jpth(git_local, repo_name)
     git_base = jpth(git_remote, org, repo_name)
     if not os.path.exists(local_base):
@@ -156,18 +158,21 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
     with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
     ontologies = [ont['url'] for ont in config['ontologies']]
-    load_command = load_base.format(config_path=config_path)
+    load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
     print(load_command)
 
-
     def reset_state(original_branch=nob):
+        repo.git.checkout('--', local_base)
         original_branch.checkout()
-        # return to original state (reset --hard)
-        repo.head.reset(index=True, working_tree=True)  # FIXME we need to not run anything if there are files added to staging
 
     with execute_regardless(reset_state):  # FIXME start this immediately after we obtain nob?
         # main
-        itrips = local_imports(remote_base, local_base, ontologies)  # SciGraph doesn't support catalog.xml
+        if patch:
+            # FIXME TODO XXX does scigraph load from the catalog!??!??
+            # because it seems like doid loads correctly without using local_versions
+            # which would be cool, if confusing
+            local_versions = tuple(do_patch(patch_config, local_base))
+        itrips = local_imports(remote_base, local_base, ontologies, local_versions=local_versions)  # SciGraph doesn't support catalog.xml
         maybe_zip_path = glob(wild_zip_path)
         if not maybe_zip_path:
             if check_built:
@@ -180,12 +185,11 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
             else:
                 os.rename(config_path,  # save the config for eaiser debugging
                           jpth(graph_path,
-                                       os.path.basename(config_path)))
+                               os.path.basename(config_path)))
                 failure = os.system(zip_command)  # graphload zip
         else:
             zip_path = maybe_zip_path[0]  # this way we get the actual date
             print('Graph already loaded at', zip_path)
-
 
     return zip_path, itrips
 
@@ -271,7 +275,38 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
 
     return scigraph_commit, load_base, services_zip, reset_state
 
-def local_imports(remote_base, local_base, ontologies, readonly=False, dobig=False):
+def do_patch(patch_config, local_base):
+    repo_base = Path(local_base)
+    config_path = Path(patch_config)
+    with open(patch_config, 'rt') as f:
+        config = yaml.load(f)
+
+    for patchset, patches in config.items():
+        for patch, target_remote in patches.items():
+            patchfile = config_path.parent / patch
+            if not patchfile.exists():
+                raise FileNotFoundError(f'Cannot find {patchfile} specified in {config_path}')
+            target = target_remote['target']
+            targetfile = repo_base / target
+            if 'remote' in target_remote and not targetfile.exists():
+                remote = target_remote['remote']
+                resp = requests.get(remote)
+                with open(targetfile, 'wb') as f:
+                    f.write(resp.content)
+            
+            print(tc.blue('INFO: patching'), patchset, patchfile, targetfile)
+            try:
+                out = subprocess.check_output(['patch', '-p1', '-N', '-i', patchfile.as_posix()],
+                                            cwd=repo_base.as_posix(),
+                                            stderr=subprocess.STDOUT).decode().rstrip()
+                print(out)
+                yield targetfile.as_posix()
+            except subprocess.CalledProcessError as e:
+                if e.returncode > 1:  # 1 means already applied
+                    print(e.stdout.decode())
+                    raise e
+
+def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False):
     """ Read the import closure and use the local versions of the files. """
     done = []
     triples = set()
@@ -472,8 +507,10 @@ def deploy_scp(local_path, remote_spec):
         #os.system(update_latest)
 
 def locate_config_file(location_spec, git_local):
+    # FIXME this is awful...
     dflt = defaults['--scigraph-config-folder']
-    if location_spec.startswith(dflt):
+    pflt = defaults['--patches-folder']
+    if location_spec.startswith(dflt) or location_spec.startswith(pflt):
         this_path = os.path.realpath(__file__)
         #print(this_path)
         test = jpth(os.path.dirname(this_path), '..', '.git')
@@ -545,13 +582,14 @@ def run(args):
         remote_base = 'http://ontology.neuinfo.org/NIF'
     if '~' in git_local:
         git_local = os.path.expanduser(git_local)
+    if '/' not in patch_config:
+        patch_config = jpth(patches_folder, patch_config)
     if '/' not in graphload_config:
         graphload_config = jpth(scigraph_config_folder, graphload_config)
     if '/' not in curies_location:
         curies_location = jpth(scigraph_config_folder, curies_location)
-    if '/' not in patch_config:
-        patch_config = jpth(patches_folder, patch_config)
 
+    patch_config = locate_config_file(patch_config, git_local)
     graphload_config = locate_config_file(graphload_config, git_local)
     curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
@@ -571,7 +609,8 @@ def run(args):
             graph_zip, itrips = repro_loader(zip_location, git_remote, org,
                                              git_local, repo_name, branch,
                                              commit, remote_base, load_base,
-                                             graphload_config, scigraph_commit,
+                                             graphload_config, patch_config,
+                                             patch, scigraph_commit,
                                              check_built=check_built)
         if not check_built:
             deploy_scp(services_zip, sscp)
