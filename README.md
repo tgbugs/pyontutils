@@ -25,6 +25,7 @@ to accomplish this.
 3. `pipenv install --skip-lock`. If you want to use pypy3 run `pipenv --python pypy3 install --skip-lock`
 4. `pipenv shell` to enter the virtual environment where everything should work.
 
+### Development Installation
 Note that the optional development packages are not actually required and if you have
 installation issues development can proceed normally without them, some database
 queries will just be slower becuase they use a pure python mysql connector.
