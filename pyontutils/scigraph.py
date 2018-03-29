@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
-"""
-    Client library generator for SciGraph REST api.
+from pyontutils.core import devconfig
+__doc__ = f"""Client library generator for SciGraph REST api.
+
+Usage:
+    scigraph-codegen [options]
+
+Options:
+    -o --output-file=FILE       save client library here    [default: /tmp/scigraph_client.py]
+
+    -h --host=HOST              host to build from          [default: {devconfig.scigraph_host}]
+    -p --port=PORT              port for scigraph           [default: {devconfig.scigraph_port}]
+    -v --scigraph-version=VER   API docs version            [default: 2]
+
+    -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]
+
 """
 
 import inspect
@@ -114,9 +127,10 @@ operation_code = FAKECLASS.make()
 
 
 class State:
-    def __init__(self, api_url):
+    def __init__(self, api_url, basepath=None):
         self.shebang = "#!/usr/bin/env python3\n"
         self.imports = "import builtins\nimport requests\nfrom json import dumps\nfrom urllib import parse\n\n"
+        self._basepath = basepath if basepath is not None else api_url.rsplit('/', 1)[0]
         self.api_url = api_url
         self.current_path = self.api_url
         self.exten_mapping = {}
@@ -133,7 +147,7 @@ class State:
         code += self.shebang
         code += self.make_doc()
         code += self.imports
-        code += "BASEPATH = '%s'\n\n" % self.api_url.rsplit('/', 1)[0]
+        code += f'BASEPATH = {self._basepath!r}\n\n'
         code += "exten_mapping = {%s}\n\n" % ', '.join(["'" + '\': \''.join(_) + "'" for _ in sorted(self.exten_mapping.items())])
         code += self.make_baseclass()
         code += self._code
@@ -158,7 +172,7 @@ class State:
         code = '\n' + inspect.getsource(CLASSNAME) + '\n'
         classname = dict_['resourcePath'].strip('/').capitalize()
         docstring = dict_['docstring']
-        print('HELLO', classname)
+        print('Generating:', classname)
         #_, basePath = self.basePath_(dict_['basePath'])
         return code.replace('CLASSNAME', classname).replace('DOCSTRING', docstring).replace("'BASEPATH'", 'BASEPATH')
 
@@ -241,7 +255,7 @@ class State:
                     return_type = scm['type']
 
         if return_type is None:
-            print('NO TYPE')
+            print(f'    No return type for {api_dict["operationId"]}')
 
         type_return_dict = {  # TODO source from asdf['definitions'] for 2.0
             'array': '[]',
@@ -323,7 +337,7 @@ class State:
         return None, ''
 
     def apis(self, list_):
-        print('TRYING')
+        print('    Starting ...')
         try:
             for api in list_:
                 if 'operations' in api:
@@ -400,7 +414,7 @@ class State:
         blocks = []
         methods = {k:v for k, v in inspect.getmembers(self) if k != 'code' and inspect.ismethod(v)}  # ismethod calls properties :/
         for key, value in dict_.items():
-            print('trying with key:', key)
+            #print('trying with key:', key)
             if key in methods:
                 #name, code = methods[key](self, value)
                 name, code = methods[key](value)
@@ -498,13 +512,27 @@ class State2(State):
 
 
 def main():
-    target = '/tmp/scigraph_client.py'
-    #s = State('http://matrix.neuinfo.org:9000/scigraph/api-docs')
-    #s = State('http://localhost:9000/scigraph/api-docs')
-    s = State2('http://localhost:9000/scigraph/swagger.json')  # 2.0
-    code = s.code()  # had to change this because inspect.getmembers breaks properties :/
-    with open(target, 'wt') as f:
+    from docopt import docopt
+    args = docopt(__doc__, version='scigraph-codegen 1.0.0')
+    output_file, host, port, version, basepath = (
+        args['--' + k]
+        for k in ('output-file', 'host', 'port', 'scigraph-version', 'basepath'))
+    version = int(version)
+    basepath = None if basepath == 'default' else basepath
+    if version < 2:
+        state = State
+        docs_path = 'scigraph/api-docs'
+    else:
+        state = State2
+        docs_path = 'scigraph/swagger.json'
+
+    api_url = f'http://{host}:{port}/{docs_path}'
+    s = state(api_url, basepath)
+    code = s.code()
+    with open(output_file, 'wt') as f:
         f.write(code)
+    import os
+    os.system(f'python {output_file}')
 
 if __name__ == '__main__':
     main()
