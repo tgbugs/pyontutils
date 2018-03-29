@@ -5,6 +5,8 @@ import subprocess
 import rdflib
 import requests
 from pathlib import Path
+from functools import wraps
+from tempfile import gettempdir
 from collections import namedtuple
 from inspect import getsourcelines, getsourcefile
 from rdflib.extras import infixowl
@@ -14,6 +16,76 @@ from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getCommit, Async, deferred, TermColors as tc
 from pyontutils.closed_namespaces import *
 from IPython import embed
+
+def default(value):
+    def decorator(function, devault_value=value):
+        @wraps(function)
+        def inner(*args, **kwargs):
+            try:
+                return function(*args, **kwargs)
+            except FileNotFoundError:
+                return default_value
+        return property(inner)
+    return decorator
+
+tempdir = gettempdir()
+
+class DevConfig:
+    def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
+        self.config_file = config_file
+
+    @property
+    def config(self):
+        """ Allows changing the config on the fly """
+        with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
+            return yaml.load(f)
+
+    def write(self):
+        with open(Path(__file__).parent / 'devconfig.yaml', 'wt') as f:
+            yaml.dump('TODO', f)
+
+    @default('https://github.com')
+    def git_remote_base(self):
+        return self.config['git_remote_base']
+
+    @default('SciCrunch')
+    def ontology_org(self):
+        return self.config['ontology_org']
+
+    @default('NIF-Ontology')
+    def ontology_repo(self):
+        return self.config['ontology_repo']
+
+    @property
+    def ontology_remote_repo(self):
+        return str(Path(git_remote_base, ontology_org, ontology_repo))
+
+    @property
+    def ontology_local_repo(self):
+        try:
+            olr = self.config['ontology_local_repo']
+            if olr:
+                return olr
+            else:
+                raise ValueError('ontology_local_repo is empty')
+        except (KeyError, ValueError, FileNotFoundError) as e:
+            maybe_repo = Path(__file__).parent.parent / self.ontology_repo
+            if maybe_repo.exists():
+                return str(maybe_repo)
+            else:
+                return tempdir
+
+    @default('localhost')
+    def scigraph_host(self):
+        return self.config['scigraph_host']
+
+    @default(9000)
+    def scigraph_port(self):
+        return self.config['scigraph_port']
+
+
+
+devconfig = DevConfig()
 
 # prefixes
 
@@ -1358,7 +1430,7 @@ class Source(tuple):
 
 class Ont:
     #rdf_type = owl.Ontology
-
+    local_base = devconfig.ontology_local_repo
     path = 'ttl/generated/'  # sane default
     filename = None
     name = None
@@ -1411,6 +1483,7 @@ class Ont:
                                      prefixes={**self.prefixes, **makePrefixes('prov')},
                                      comment=self.comment,
                                      shortname=self.shortname,
+                                     local_base=self.local_base,
                                      path=self.path,
                                      version=self.version,
                                      imports=imports)
