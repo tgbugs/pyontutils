@@ -3,7 +3,7 @@
 export TARGET=localhost  # set this!
 export BUILD_DIR=/tmp/scigraph-build
 scigraph-deploy config --local ${HOSTNAME} ${TARGET} -l ${BUILD_DIR} -z ${BUILD_DIR}
-ontload graph --local NIF-Ontology NIF -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
+ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 ```
 
 # oneshots for centos 7
