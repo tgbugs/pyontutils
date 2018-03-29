@@ -2,7 +2,7 @@
 """ convert graphml files to ttl files
 
 Usage:
-    graphml_to_ttl [options] <file>
+    graphml-to-ttl [options] <file>
 
 Options:
     -o --output-location=LOC    write converted files to [default: /tmp/]

@@ -73,7 +73,7 @@ try:
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={
             'console_scripts': [
-                'graphml_to_ttl=pyontutils.graphml_to_ttl:main',
+                'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
                 'necromancy=pyontutils.necromancy.py:main',
                 'ontload=pyontutils.ontload:main',
