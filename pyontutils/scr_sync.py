@@ -1,7 +1,22 @@
 #!/usr/bin/env python3.6
-"""
-    Sync the scicrunch registry to a ttl
-    file for loading into scigraph for autocomplete. 
+""" Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
+
+Usage:
+    registry-sync [options]
+
+Options:
+    -u --user=USER                  [default: nif_eelg_secure]
+    -h --host=HOST                  [default: nif-mysql.crbs.ucsd.edu]
+    -p --port=PORT                  [default: 3306]
+    -d --database=DB                [default: nif_eelg]
+
+    -g --git-remote=GBASE           remote git hosting                          [default: https://github.com/]
+    -l --git-local=LBASE            local path to look for ontology <repo>      [default: /tmp]
+
+    -o --org=ORG                    user/org to clone/load ontology from        [default: SciCrunch]
+    -b --branch=BRANCH              ontology branch to load                     [default: master]
+    -c --commit=COMMIT              ontology commit to load                     [default: HEAD]
+
 """
 
 # XXX TODO sanity checks
@@ -12,10 +27,13 @@ import os
 from datetime import date
 
 import rdflib
-from IPython import embed
+from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
 from pyontutils.core import makePrefixes, createOntology
 from pyontutils.utils import mysql_conn_helper
+from IPython import embed
+
+defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
 _remap_supers = {
     'Resource':'NIFSTD:nlx_63400',  # FIXME do not want to use : but broken because of defaulting to add : to all scr ids (can fix just not quite yet)
@@ -154,11 +172,16 @@ def make_node(id_, field, value, column_to_predicate=_column_to_predicate):
             #value = rdflib.Literal(False)
     return id_, column_to_predicate[field], value
 
-def get_records(field_mapping=_field_mapping):
+def get_records(user=defaults['--user'],
+                host=defaults['--host'],
+                port=defaults['--port'],
+                database=defaults['--database'],
+                field_mapping=_field_mapping):
     DB_URI = 'mysql+{driver}://{user}:{password}@{host}:{port}/{db}'
     #config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-    config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
+    #config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
     #config = mysql_conn_helper('localhost', 'nif_eelg', 'nif_eelg_secure', 33060)
+    config = mysql_conn_helper(host, database, user)
     try:
         engine = create_engine(DB_URI.format(driver='mysqlconnector', **config))
     except ModuleNotFoundError:
@@ -221,7 +244,12 @@ def make_file(graph, records):
     graph.write()
 
 def main():
-    records = get_records()
+    from docopt import docopt
+    args = docopt(__doc__, version='registry-sync 1.0.0')
+    user, host, port, database = (args['--' + k]
+                                  for k in ('user', 'host', 'port', 'database'))
+
+    records = get_records(user=user, host=host, port=port, database=database)
     graph = createOntology('scicrunch-registry',
                            'scicrunch registry exported ontology',
                            makePrefixes('owl',
