@@ -1,9 +1,11 @@
 #!/usr/bin/env python3.6
 #!/usr/bin/env pypy3
-""" Common commands for ontology processes. As well as
+from pyontutils.core import devconfig
+__doc__ = f"""Common commands for ontology processes. As well as
     various ontology refactors that should be run in the root ttl folder.
 
 Usage:
+    ontutils devconfig
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
     ontutils spell [options] <file> ...
@@ -14,6 +16,7 @@ Usage:
     ontutils expand <curie>...
 
 Options:
+    -o --output-file=FILE           output file for command in question
     -l --git-local=LBASE            local path to look for ontology <repo>     [default: /tmp]
     -u --curies=CURIEFILE           relative path to curie definition file     [default: ../scigraph/nifstd_curie_map.yaml]
     -e --epoch=EPOCH                specify the epoch to use for versionIRI
@@ -693,7 +696,10 @@ def main():
                      'generated/NIF-NIFSTD-mapping.ttl')
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
-    if args['version-iri']:
+    if args['devconfig']:
+        file = devconfig.write(args['--output-file'])
+        print(f'config written to {file}')
+    elif args['version-iri']:
         version_iris(*filenames, epoch=epoch)
     elif args['deadlinks']:
         deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose, debug)

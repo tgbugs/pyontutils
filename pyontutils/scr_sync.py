@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
-""" Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
+from pyontutils.core import devconfig
+__doc__ = f"""Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
 
 Usage:
     registry-sync [options]
@@ -10,12 +11,11 @@ Options:
     -p --port=PORT                  [default: 3306]
     -d --database=DB                [default: nif_eelg]
 
-    -g --git-remote=GBASE           remote git hosting                          [default: https://github.com/]
-    -l --git-local=LBASE            local path to look for ontology <repo>      [default: /tmp]
+    -g --git-remote=GBASE           remote git hosting                          [default: {devconfig.git_remote_base}]
+    -l --git-local=LBASE            local path to look for ontology <repo>      [default: {devconfig.git_local_base}]
 
-    -o --org=ORG                    user/org to clone/load ontology from        [default: SciCrunch]
-    -b --branch=BRANCH              ontology branch to load                     [default: master]
-    -c --commit=COMMIT              ontology commit to load                     [default: HEAD]
+    -o --org=ORG                    user/org to clone/load ontology from        [default: {devconfig.ontology_org}]
+    -r --repo=REPO                  name of ontology repo                       [default: {devconfig.ontology_repo}]
 
 """
 
@@ -24,12 +24,15 @@ Options:
 # garbage in the alt id field
 
 import os
+from pathlib import Path
 from datetime import date
 
 import rdflib
 from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
-from pyontutils.core import makePrefixes, createOntology
+from pyontutils.core import makePrefixes, Ont, Source, build
+from pyontutils.core import rdf, rdfs, owl, NIFRID, oboInOwl, definition
+from pyontutils.core import OntId
 from pyontutils.utils import mysql_conn_helper
 from IPython import embed
 
@@ -37,13 +40,13 @@ defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc
 
 _remap_supers = {
     'Resource':'NIFSTD:nlx_63400',  # FIXME do not want to use : but broken because of defaulting to add : to all scr ids (can fix just not quite yet)
-    'Commercial Organization':'NIFSTD:nlx_152342',
-    'Organization':'NIFSTD:nlx_152328',
-    'University':'NIFSTD:NEMO_0569000',  # UWOTM8
+    'Commercial Organization':OntId('NIFSTD:nlx_152342'),
+    'Organization':OntId('NIFSTD:nlx_152328'),
+    'University':OntId('NIFSTD:NEMO_0569000'),  # UWOTM8
 
-    'Institution':'NIFSTD:birnlex_2085',
-    'Institute':'NIFSTD:SIO_000688',
-    'Government granting agency':'NIFSTD:birnlex_2431',
+    'Institution':OntId('NIFSTD:birnlex_2085'),
+    'Institute':OntId('NIFSTD:SIO_000688'),
+    'Government granting agency':OntId('NIFSTD:birnlex_2431'),
 }
 
 _field_mapping = {
@@ -61,16 +64,16 @@ _field_mapping = {
 }
 
 _column_to_predicate = {
-    'abbrev':'NIFRID:abbrev',
-    'alt_id':'oboInOwl:hasDbXref',
-    'definition':'definition:',
-    #'definition':'skos:definition',
-    'id':'rdf:type',
-    'label':'rdfs:label',
-    'old_id':'oboInOwl:hasDbXref',  # old vs alt id?
-    'deprecated':'owl:deprecated',
-    'superclass':'rdfs:subClassOf',  # translation required
-    'synonym':'NIFRID:synonym',
+    'abbrev':NIFRID.abbrev,
+    'alt_id':oboInOwl.hasDbXref,
+    'definition':definition,
+    #'definition':skos.definition,
+    'id':rdf.type,
+    'label':rdfs.label,
+    'old_id':oboInOwl.hasDbXref,  # old vs alt id?
+    'deprecated':owl.deprecated,
+    'superclass':rdfs.subClassOf,  # translation required
+    'synonym':NIFRID.synonym,
     'type':'FIXME:type',  # bloody type vs superclass :/ ask james
 }
 
@@ -158,13 +161,13 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
 
     return output
 
-def make_node(id_, field, value, column_to_predicate=_column_to_predicate):
+def make_triple(id_, field, value, column_to_predicate=_column_to_predicate):
     if field == 'id':
         if value.startswith('SCR:'):
-            value = 'owl:NamedIndividual'
+            value = owl.NamedIndividual
         else:
             print(value)
-            value = 'owl:Class'
+            value = owl.Class
     #if type(value) == bool:
         #if value:
             #value = rdflib.Literal(True)
@@ -178,10 +181,7 @@ def get_records(user=defaults['--user'],
                 database=defaults['--database'],
                 field_mapping=_field_mapping):
     DB_URI = 'mysql+{driver}://{user}:{password}@{host}:{port}/{db}'
-    #config = mysql_conn_helper('mysql5-stage.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-    #config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-    #config = mysql_conn_helper('localhost', 'nif_eelg', 'nif_eelg_secure', 33060)
-    config = mysql_conn_helper(host, database, user)
+    config = mysql_conn_helper(host, database, user, port)
     try:
         engine = create_engine(DB_URI.format(driver='mysqlconnector', **config))
     except ModuleNotFoundError:
@@ -239,35 +239,91 @@ def make_file(graph, records):
             #if field == 'alt_id' and id_[1:] == value:
                 print('caught a mainid appearing as altid', field, value)
                 continue
-            graph.add_trip(*make_node(id_, field, value))
+            yield make_triple(id_, field, value)
 
     graph.write()
+
+
+class RegistrySource(Source):
+    iri = OntId('SCR:005400')
+
+    @classmethod
+    def loadData(cls):
+        pass
+
+    @classmethod
+    def validate(cls, tup):
+        return tuple()
+
+class Registry(Ont):
+    path = ''
+    filename = 'scicrunch-registry'
+    name = 'scicrunch registry exported ontology'
+    shortname = 'screxp'
+    comment = 'Turtle export of the SciCrunch Registry'
+    sources = RegistrySource,
+    prefixes = makePrefixes('definition',  # these aren't really from OBO files but they will be friendly known identifiers to people in the community
+                            'SCR',  # generate base from this directly?
+                            #'obo':'http://purl.obolibrary.org/obo/',
+                            #'FIXME':'http://fixme.org/',
+                            'NIFSTD',  # for old ids??
+                            'NIFRID',
+                            'oboInOwl')
+    prepared = False
+
+    @classmethod
+    def config(cls, user=None, host=None, port=None, database=None):
+        cls.user = user
+        cls.host = host
+        cls.port = port
+        cls.database = database
+
+    @classmethod
+    def prepare(cls):
+        # we have to do this here because Source only supports the tuple interface right now
+        if not cls.prepared:
+            cls.records = get_records(user=cls.user, host=cls.host, port=cls.port, database=cls.database)
+            super().prepare()
+            cls.prepared = True
+
+    def _triples(self):
+        for id_, rec in self.records.items():
+            for field, value in rec:
+                #print(field, value)
+                if not value:  # don't add empty edges  # FIXME issue with False literal
+                    print('caught an empty value on field', id_, field)
+                    continue
+                if field != 'id' and (str(value).replace('_',':') in id_ or str(value) in id_):
+                #if field == 'alt_id' and id_[1:] == value:
+                    print('caught a mainid appearing as altid', field, value)
+                    continue
+                s, p, o = make_triple(id_, field, value)
+
+                if not isinstance(o, rdflib.URIRef):
+                    try:
+                        if o.startswith(':') and ' ' in o:  # not a compact repr AND starts with a : because humans are insane
+                            o = ' ' + o
+                        o = self._graph.check_thing(o)
+                    except (AttributeError, KeyError, ValueError) as e:
+                        o = rdflib.Literal(o)  # trust autoconv
+
+                #yield OntId(s), OntId(p), self._graph.check_thing(o)  # FIXME OntId(p) breaks rdflib rdf:type -> a
+                yield OntId(s), p, o
 
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='registry-sync 1.0.0')
-    user, host, port, database = (args['--' + k]
-                                  for k in ('user', 'host', 'port', 'database'))
-
-    records = get_records(user=user, host=host, port=port, database=database)
-    graph = createOntology('scicrunch-registry',
-                           'scicrunch registry exported ontology',
-                           makePrefixes('owl',
-                                        'rdf',
-                                        'rdfs',
-                                        'skos',
-                                        'definition',
-                                        'SCR',  # generate base from this directly?
-                                        #'obo':'http://purl.obolibrary.org/obo/',
-                                        #'FIXME':'http://fixme.org/',
-                                        'NIFSTD',  # for old ids??
-                                        'NIFRID',
-                                        'oboInOwl'), # these aren't really from OBO files but they will be friendly known identifiers to people in the community
-                           'screxp',
-                           'This file is automatically generated from the SciCrunch resource registry on a weekly basis via https://github.com/tgbugs/pyontutils/blob/master/scr_sync.py.',
-                           path='')
-
-    make_file(graph, records)
+    (user, host, port, database, git_remote, git_local,
+     org, repo) = (args['--' + k]
+                   for k in ('user', 'host', 'port', 'database',
+                             'git-remote', 'git-local', 'org', 'repo'))
+    remote = os.path.join(git_remote, org, repo)
+    local = Path(git_local, repo)
+    if not local.exists():
+        local.parent
+    RegistrySource.source = f'{host}:{port}/{database}'
+    Registry.config(user=user, host=host, port=port, database=database)
+    graph, = build(Registry, n_jobs=1)
 
 if __name__ == '__main__':
     main()

@@ -18,12 +18,12 @@ from pyontutils.closed_namespaces import *
 from IPython import embed
 
 def default(value):
-    def decorator(function, devault_value=value):
+    def decorator(function, default_value=value):
         @wraps(function)
         def inner(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
-            except FileNotFoundError:
+            except (TypeError, FileNotFoundError) as e:
                 return default_value
         return property(inner)
     return decorator
@@ -31,22 +31,50 @@ def default(value):
 tempdir = gettempdir()
 
 class DevConfig:
+    skip = 'config', 'write', 'ontology_remote_repo'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
         self.config_file = config_file
 
     @property
     def config(self):
         """ Allows changing the config on the fly """
+        # TODO more efficient to read once and put watch on the file
         with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
-            return yaml.load(f)
+            config = yaml.load(f)
 
-    def write(self):
-        with open(Path(__file__).parent / 'devconfig.yaml', 'wt') as f:
-            yaml.dump('TODO', f)
+        return config if config else None
+
+    @property
+    def _config(self):
+        out = {}  # do it this way to read first
+        for name in dir(self):
+            if not name.startswith('_') and name not in self.skip:
+                thing = getattr(self.__class__, name, None)
+                if isinstance(thing, property):
+                    out[name] = getattr(self, name)
+
+        return out
+
+    def write(self, file=None):
+        if file is None:
+            file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
+
+        config = self._config
+        if config:
+            with open(file, 'wt') as f:
+                yaml.dump(config, f, default_flow_style=False)
+        else:
+            raise ValueError('devconfig is empty?!')
+
+        return file
 
     @default('https://github.com')
     def git_remote_base(self):
         return self.config['git_remote_base']
+
+    @default(tempdir)
+    def git_local_base(self):
+        return os.path.expanduser(self.config['git_local_base'])
 
     @default('SciCrunch')
     def ontology_org(self):
@@ -58,7 +86,7 @@ class DevConfig:
 
     @property
     def ontology_remote_repo(self):
-        return str(Path(git_remote_base, ontology_org, ontology_repo))
+        return os.path.join(self.git_remote_base, self.ontology_org, self.ontology_repo)
 
     @property
     def ontology_local_repo(self):
@@ -67,12 +95,13 @@ class DevConfig:
             if olr:
                 return olr
             else:
-                raise ValueError('ontology_local_repo is empty')
+                raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, FileNotFoundError) as e:
-            maybe_repo = Path(__file__).parent.parent / self.ontology_repo
+            maybe_repo = Path(__file__).parent.parent.parent / self.ontology_repo
             if maybe_repo.exists():
                 return str(maybe_repo)
             else:
+                print(TermColors.red('WARNING:'), f'No repository found at {maybe_repo}')
                 return tempdir
 
     @default('localhost')
@@ -82,7 +111,6 @@ class DevConfig:
     @default(9000)
     def scigraph_port(self):
         return self.config['scigraph_port']
-
 
 
 devconfig = DevConfig()
@@ -252,7 +280,7 @@ def ont_make(o):
     return o
 
 def ont_doit(ont):
-    return make(ont_setup(ont))
+    return ont_make(ont_setup(ont))
 
 def build(*onts, n_jobs=9):
     """ Set n_jobs=1 for debug or embed() will crash. """
@@ -1123,6 +1151,7 @@ class makeGraph:
 __helper_graph = makeGraph('', prefixes=PREFIXES)
 def qname(uri):
     """ compute qname from defaults """
+    print(TermColors.red('WARNING:'), TermColors.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
 def createOntology(filename=    'temp-graph',
@@ -1153,9 +1182,12 @@ def createOntology(filename=    'temp-graph',
 ontquery.OntCuries(PREFIXES)
 # ontquery.SciGraphRemote.verbose = True
 
-class OntTerm(ontquery.OntTerm, rdflib.URIRef):
+class OntId(ontquery.OntId, rdflib.URIRef):
     def __str__(self):
         return rdflib.URIRef.__str__(self)
+
+class OntTerm(ontquery.OntTerm, OntId):
+    pass
 
 
 def get_api_key():

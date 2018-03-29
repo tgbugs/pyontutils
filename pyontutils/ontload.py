@@ -172,6 +172,8 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
             # because it seems like doid loads correctly without using local_versions
             # which would be cool, if confusing
             local_versions = tuple(do_patch(patch_config, local_base))
+        else:
+            local_versions = tuple()
         itrips = local_imports(remote_base, local_base, ontologies, local_versions=local_versions)  # SciGraph doesn't support catalog.xml
         maybe_zip_path = glob(wild_zip_path)
         if not maybe_zip_path:
@@ -302,6 +304,7 @@ def do_patch(patch_config, local_base):
                 print(out)
                 yield targetfile.as_posix()
             except subprocess.CalledProcessError as e:
+                # FIXME this is not failing on other types of patching errors!
                 if e.returncode > 1:  # 1 means already applied
                     print(e.stdout.decode())
                     raise e
