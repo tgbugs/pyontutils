@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
-""" Use SciGraph to load an ontology from a loacal git repository.
+from pyontutils.core import devconfig
+__doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
  Remote imports are replaced with local imports.
  NIF -> http://ontology.neuinfo.org/NIF
 
@@ -12,34 +13,32 @@ Usage:
     ontload --view-defaults
 
 Options:
-    -g --git-remote=GBASE           remote git hosting                          [default: https://github.com/]
-    -l --git-local=LBASE            local path to look for ontology <repo>      [default: /tmp]
-    -z --zip-location=ZIPLOC        local path in which to deposit build files  [default: /tmp]
-    -f --scigraph-config-folder=TP  templates files live here                   [default: ../scigraph/]
-    -a --patches-folder=PF          patch files live here                       [default: ../patches/]
+    -g --git-remote=GBASE           remote git hosting          [default: {devconfig.git_remote_base}]
+    -l --git-local=LBASE            local git folder            [default: {devconfig.git_local_base}]
+    -z --zip-location=ZIPLOC        local path for build files  [default: {devconfig.zip_location}]
 
-    -t --graphload-config=CFG       graphload.yaml location                     [default: graphload.yaml]
+    -t --graphload-config=CFG       graphload.yaml location     [default: {devconfig.scigraph_graphload}]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
-    -o --org=ORG                    user/org to clone/load ontology from        [default: SciCrunch]
-    -b --branch=BRANCH              ontology branch to load                     [default: master]
-    -c --commit=COMMIT              ontology commit to load                     [default: HEAD]
-    -s --scp-loc=SCP                where to scp the zipped graph file          [default: user@localhost:/tmp/graph/]
+    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_repo}]
+    -b --branch=BRANCH              ontology branch to load     [default: master]
+    -c --commit=COMMIT              ontology commit to load     [default: HEAD]
+    -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
 
-    -O --scigraph-org=SORG          user/org to clone/build scigraph from       [default: SciCrunch]
-    -B --scigraph-branch=SBRANCH    scigraph branch to build                    [default: upstream]
-    -C --scigraph-commit=SCOMMIT    scigraph commit to build                    [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     where to scp the zipped graph file          [default: user@localhost:/tmp/scigraph/]
+    -O --scigraph-org=SORG          user/org for scigraph       [default: SciCrunch]
+    -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
+    -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
+    -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:/tmp/scigraph/]
 
-    -P --patch-config=PATCHLOC      patchs.yaml location                        [default: patches.yaml]
-    -u --curies=CURIEFILE           curie definition file                       [default: nifstd_curie_map.yaml]
+    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {devconfig.patch_config}]
+    -u --curies=CURIEFILE           curie definition file       [default: {devconfig.curies}]
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -p --patch                      retrieve ontologies to patch and modify import chain accordingly
     -K --check-built                check whether a local copy is present but do not build if it is not
 
     -d --debug                      call IPython embed when done
-    -i --logfile=LOG                log output here                             [default: ontload.log]
+    -i --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
 """
 import os
@@ -562,8 +561,6 @@ def run(args):
     git_remote = args['--git-remote']
     git_local = args['--git-local']
     zip_location = args['--zip-location']
-    scigraph_config_folder = args['--scigraph-config-folder']
-    patches_folder = args['--patches-folder']
     graphload_config = args['--graphload-config']
     org = args['--org']
     branch = args['--branch']
@@ -580,21 +577,15 @@ def run(args):
     debug = args['--debug']
     log = args['--logfile']  # TODO
 
+    if args['--view-defaults']:
+        for k, v in defaults.items():
+            print(f'{k:<22} {v}')
+        return
+
     # post parse mods
     if remote_base == 'NIF':
         remote_base = 'http://ontology.neuinfo.org/NIF'
-    if '~' in git_local:
-        git_local = os.path.expanduser(git_local)
-    if '/' not in patch_config:
-        patch_config = jpth(patches_folder, patch_config)
-    if '/' not in graphload_config:
-        graphload_config = jpth(scigraph_config_folder, graphload_config)
-    if '/' not in curies_location:
-        curies_location = jpth(scigraph_config_folder, curies_location)
 
-    patch_config = locate_config_file(patch_config, git_local)
-    graphload_config = locate_config_file(graphload_config, git_local)
-    curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     itrips = None

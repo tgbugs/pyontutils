@@ -23,7 +23,7 @@ def default(value):
         def inner(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
-            except (TypeError, FileNotFoundError) as e:
+            except (TypeError, KeyError, FileNotFoundError) as e:
                 return default_value
         return property(inner)
     return decorator
@@ -31,7 +31,7 @@ def default(value):
 tempdir = gettempdir()
 
 class DevConfig:
-    skip = 'config', 'write', 'ontology_remote_repo'
+    skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
         self.config_file = config_file
 
@@ -67,6 +67,19 @@ class DevConfig:
             raise ValueError('devconfig is empty?!')
 
         return file
+
+    def _colluser(self, path):
+        path = Path(path)
+        prefix = path.home()
+        return '~' + path.as_posix().strip(prefix.as_posix())
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
+    def curies(self):
+        return self.config['curies']
+
+    @default((Path(__file__).parent.parent / 'patches' / 'patches.yaml').as_posix())
+    def patch_config(self):
+        return self.config['patch_config']
 
     @default('https://github.com')
     def git_remote_base(self):
@@ -111,6 +124,18 @@ class DevConfig:
     @default(9000)
     def scigraph_port(self):
         return self.config['scigraph_port']
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
+    def scigraph_graphload(self):
+        return self.config['scigraph_graphload']
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'services.yaml').as_posix())
+    def scigraph_services(self):
+        return self.config['scigraph_services']
+
+    @default('/tmp')
+    def zip_location(self):
+        return self.config['zip_location']
 
 
 devconfig = DevConfig()

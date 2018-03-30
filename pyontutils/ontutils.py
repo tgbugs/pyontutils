@@ -16,9 +16,9 @@ Usage:
     ontutils expand <curie>...
 
 Options:
-    -o --output-file=FILE           output file for command in question
-    -l --git-local=LBASE            local path to look for ontology <repo>     [default: /tmp]
-    -u --curies=CURIEFILE           relative path to curie definition file     [default: ../scigraph/nifstd_curie_map.yaml]
+    -o --output-file=FILE           output file
+    -l --git-local=LBASE            local git folder        [default: {devconfig.git_local_base}]
+    -u --curies=CURIEFILE           curie definition file   [default: {devconfig.curies}]
     -e --epoch=EPOCH                specify the epoch to use for versionIRI
     -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
     -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
@@ -683,7 +683,7 @@ def main():
     epoch = args['--epoch']
 
     curies_location = args['--curies']
-    curies_location = locate_config_file(curies_location, git_local)
+    #curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     filenames = args['<file>']

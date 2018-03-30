@@ -1,27 +1,29 @@
 #!/usr/bin/env python3.6
-""" Deploy SciGraph services and loaded graph.
+from pyontutils.core import devconfig
+__doc__ = f"""Deploy SciGraph services and loaded graph.
 
 Usage:
     scigraph-deploy all [options] <repo> <remote_base> <build_host> <services_host>
     scigraph-deploy graph [options] <repo> <remote_base> <build_host> <services_host>
     scigraph-deploy config [options] <build_host> <services_host>
     scigraph-deploy services [options] <build_host> <services_host>
+    scigraph-deploy --view-defaults
 
 Options:
-    -U --build-user=USER                build_user                          [default: bamboo]
-    -E --services-user=USER             services_user                       [default: bamboo]
+    -U --build-user=USER                build_user              [default: bamboo]
+    -E --services-user=USER             services_user           [default: bamboo]
 
-    -G --graph-latest-url=LAG           url to look up most recent build    [default: file:///tmp/graph/LATEST]
-    -A --services-latest-url=LAS        url to look up most recent build    [default: file:///tmp/scigraph/LATEST]
-    -F --graph-folder=DLOC              override the graph location         [default: from-services-config]
-    -V --services-folder=PATH           jars sent here                      [default: /opt/scigraph-services/]
-    -T --services-config=SCFG           services.yaml location              [default: services.yaml]
+    -G --graph-latest-url=LAG           url to latest graph     [default: file:///tmp/graph/LATEST]
+    -A --services-latest-url=LAS        url to latest services  [default: file:///tmp/scigraph/LATEST]
+    -F --graph-folder=DLOC              set graph location      [default: from-services-config]
+    -V --services-folder=PATH           jars sent here          [default: /opt/scigraph-services/]
+    -T --services-config=SCFG           services.yaml location  [default: {devconfig.scigraph_services}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config              [default: scigraph-services.service]
+    -y --systemd-config=FILE            name of systemd config  [default: scigraph-services.service]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -j --java-config=FILE               name of java template               [default: scigraph-services.conf]
+    -j --java-config=FILE               name of java template   [default: scigraph-services.conf]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
@@ -30,7 +32,7 @@ Options:
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log-loc=FOLDER           services logs                       [default: /var/log/scigraph-services/]
+    --services-log-loc=FOLDER           services logs           [default: /var/log/scigraph-services/]
 
     -H --ssh-user                       if
 """
@@ -64,7 +66,7 @@ defaults.update({'<repo>':None,
                  '<remote_base>':None,
                  '<build_host>':None,
                  '<services_host>':None})  # these don't need values
-combined_defaults = {**defaults, **ontload_defaults}
+combined_defaults = {**ontload_defaults, **defaults}
 
 USER = os.environ['USER']
 HOST = socket.gethostname()
@@ -103,10 +105,11 @@ class Builder:
         if self.all or self.graph:
             self.ontload_args['graph'] = True
         self.ontload_args.update({'imports':None,'chain':None,'extra':None,'<ontologies>':[]})
-        self.mode = [k for k, v in self.args.items()
-                     if not k.startswith('-')
-                     and not k.startswith('<')
-                     and v][0]
+        mode = [k for k, v in self.args.items()
+                if not k.startswith('-')
+                and not k.startswith('<')
+                and v]
+        self.mode = mode[0] if mode else None
         self.build_services_config()  # needed to update self.graph_folder  XXX hack fixme
         self._init_more()
 
@@ -428,7 +431,7 @@ class Builder:
 
     def build_services_config(self):
         services_config_template = self.locate_config_template(self.services_config)
-        curies_location = self.locate_config(self.curies)
+        curies_location = self.curies
         curies, _ = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
             services_config = yaml.load(f)
@@ -548,7 +551,8 @@ class Builder:
 
     def locate_config_template(self, config):
         extension = '.template'  # XXX this line defines the expected template extension
-        return self.locate_config(config) + extension
+        #return self.locate_config(config) + extension
+        return config + extension
 
     def _deploy(self, commands_only=False):
         scigraph_commands = self.build_scigraph(build_host, commands_only=True)
@@ -755,7 +759,14 @@ def run(args):
 
     kwargs = {k.strip('--').strip('<').rstrip('>').replace('-','_'):v for k, v in args.items()}
     b = Builder(args, **kwargs)
-    code = b.run()
+    if b.mode is not None:
+        code = b.run()
+    else:
+        if args['--view-defaults']:
+            for k, v in combined_defaults.items():
+                print(f'{k:<22} {v}')
+        return
+
     if b.debug:
         FILE = '/tmp/test.sh'
         with open(FILE, 'wt') as f:

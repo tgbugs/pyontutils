@@ -17,6 +17,8 @@ Options:
     -o --org=ORG                    user/org to clone/load ontology from        [default: {devconfig.ontology_org}]
     -r --repo=REPO                  name of ontology repo                       [default: {devconfig.ontology_repo}]
 
+    --test
+
 """
 
 # XXX TODO sanity checks
@@ -323,7 +325,8 @@ def main():
         local.parent
     RegistrySource.source = f'{host}:{port}/{database}'
     Registry.config(user=user, host=host, port=port, database=database)
-    graph, = build(Registry, n_jobs=1)
+    if not args['--test']:
+        graph, = build(Registry, n_jobs=1)
 
 if __name__ == '__main__':
     main()
