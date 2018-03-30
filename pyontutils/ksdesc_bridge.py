@@ -2,8 +2,8 @@
 
 import os
 from glob import glob
-from core import Ont, Source, makePrefixes, skos
 from rdflib import Literal
+from pyontutils.core import Ont, Source, makePrefixes, skos
 
 top_level = glob(os.path.expanduser('~/git/ksdesc/') + '*')
 

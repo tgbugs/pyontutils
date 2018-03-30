@@ -10,7 +10,7 @@ from pyontutils.ilx_utils import ILXREPLACE
 
 from IPython import embed
 
-source = 'https://raw.githubusercontent.com/BlueBrain/nat/master/nat/modelingDictionary.csv'
+source = 'https://raw.githubusercontent.com/BlueBrain/nat/master/nat/data/modelingDictionary.csv'
 delimiter = ';'
 
 

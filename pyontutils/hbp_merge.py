@@ -4,7 +4,7 @@ import os
 import csv
 from glob import glob
 import rdflib
-from utils import rowParse, async_getter
+from pyontutils.utils import rowParse, async_getter
 from pyontutils.scigraph import Graph, Vocabulary
 from IPython import embed
 

@@ -4,7 +4,7 @@ from pyontutils.core import restrictions, annotation
 from pyontutils.core import NIFTTL, NIFRID, ilxtr
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from methods_core import methods_core, asp, tech
+from pyontutils.methods_core import methods_core, asp, tech
 
 filename = 'methods'
 prefixes = ('ilxtr', 'NIFRID', 'definition', 'realizes', 'hasParticipant', 'hasPart', 'hasInput', 'hasOutput')

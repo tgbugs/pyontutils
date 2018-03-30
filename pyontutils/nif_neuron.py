@@ -8,13 +8,14 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from IPython import embed
-from utils import TODAY, rowParse, refile
-from core import makePrefixes, makeGraph, createOntology
-from ilx_utils import ILXREPLACE
-from core import OntMeta, TEMP
-from obo_io import OboFile
+from pyontutils.core import makePrefixes, makeGraph, createOntology
+from pyontutils.core import OntMeta, TEMP
+from pyontutils.utils import TODAY, rowParse, refile
+from pyontutils.obo_io import OboFile
+from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.scigraph import Graph, Vocabulary
+from IPython import embed
+
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
 

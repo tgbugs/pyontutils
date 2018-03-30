@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 
 import rdflib
-from utils import makePrefixes, makeGraph
+from pyontutils.core import makePrefixes, makeGraph
 
 PREFIXES = makePrefixes('NIFGA', 'NIFSTD', 'owl')
 

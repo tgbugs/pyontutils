@@ -10,18 +10,17 @@ import os
 import gzip
 import json
 from io import BytesIO
+from pathlib import Path
 from datetime import date
 import rdflib
-from rdflib.extras import infixowl
 import requests
 from lxml import etree
-
-from ilx_utils import ILXREPLACE
-from core import makePrefixes, makeGraph, createOntology, yield_recursive
-from core import rdf, rdfs, owl, oboInOwl, replacedBy
-from core import Ont, Source, PREFIXES as uPREFIXES
-from utils import chunk_list, dictParse, memoryCheck
-
+from rdflib.extras import infixowl
+from pyontutils.core import makePrefixes, makeGraph, createOntology, yield_recursive
+from pyontutils.core import rdf, rdfs, owl, oboInOwl, replacedBy
+from pyontutils.core import Ont, Source, PREFIXES as uPREFIXES
+from pyontutils.utils import chunk_list, dictParse, memoryCheck
+from pyontutils.ilx_utils import ILXREPLACE
 from IPython import embed
 
 
@@ -72,7 +71,7 @@ class ncbi(dictParse):
                 self.g.add_trip(self.identifier, 'NIFRID:synonym', synonym)
 
 def ncbigene_make():
-    IDS_FILE = 'resources/gene-subset-ids.txt'
+    IDS_FILE = (Path(__file__).parent / 'resources/gene-subset-ids.txt').as_posix()
     with open(IDS_FILE, 'rt') as f:  # this came from neuroNER
         ids = [l.split(':')[1].strip() for l in f.readlines()]
 
@@ -117,7 +116,7 @@ def ncbigene_make():
 
 
 class ChebiIdsSrc(Source):
-    source = 'resources/chebi-subset-ids.txt'
+    source = (Path(__file__).parent / 'resources/chebi-subset-ids.txt').as_posix()
     source_original = True
     @classmethod
     def loadData(cls):

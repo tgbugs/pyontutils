@@ -34,16 +34,34 @@ class TestCli(unittest.TestCase):
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
 class TestScripts(unittest.TestCase):
-    """ Test other random python scripts that are not run frequently """
+    """ Import everything and run main() on a subset of those """
 
+    skip = ('neurons',
+            'neuron_lang',
+            'neuron_example',
+            'neuron_ma2015',
+            'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
+            'old_neuron_example',
+           )
+
+    mains = ('nif_cell',
+            )
+
+    _modules = []
     for path in sorted(Path(core.__file__).parent.glob('*.py')):
-        __import__('pyontutils.' + path.stem)
+        stem = path.stem
+        if stem not in skip:
+            print('TESTING:', stem)
+            module = __import__('pyontutils.' + stem)
+            if stem in mains:
+                print('    will test', stem, module)
+                #_modules.append(module)  # TODO doens't quite work
 
-    scripts = []
+    print(_modules)
 
     def test_scripts(self):
         failed = []
-        for script in scripts:
+        for script in self._modules:
             try:
                 script.main()
             except BaseException as e:

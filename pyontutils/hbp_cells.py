@@ -5,9 +5,10 @@ import json
 from datetime import date
 import rdflib
 from rdflib.extras import infixowl
-from IPython import embed
-from utils import makeGraph, add_hierarchy
+from pyontutils.core import makeGraph, makePrefixes
 from pyontutils.scigraph import Vocabulary
+from IPython import embed
+
 v = Vocabulary()
 
 PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFSTD', 'NIFRID', 'SAO', 'NIFEXT', 'NLXCELL')

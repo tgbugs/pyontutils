@@ -1,9 +1,10 @@
 #!/usr/bin/env python3.6
 
-from lxml import etree
-from utils import makePrefixes, makeGraph, createOntology
-from pyontutils.scigraph import Vocabulary
 import rdflib
+from pathlib import Path
+from lxml import etree
+from pyontutils.core import devconfig, makePrefixes, makeGraph, createOntology
+from pyontutils.scigraph import Vocabulary
 from IPython import embed
 
 # extract existing chebi classes from NIF-Chemical and NIF-Molecule
@@ -25,7 +26,8 @@ def chebi_imp():
                             'skos',
                             'oboInOwl')
     ug = makeGraph('utilgraph', prefixes=PREFIXES)
-    with open('resources/chebi-subset-ids.txt', 'rt') as f:
+    file = Path(__file__).parent / 'resources' / 'chebi-subset-ids.txt'
+    with open(file.as_posix(), 'rt') as f:
         ids_raw = set((_.strip() for _ in f.readlines()))
         ids = sorted(set((ug.expand(_.strip()) for _ in ids_raw)))
 
@@ -55,25 +57,21 @@ def chebi_imp():
     chemg = rdflib.Graph()
     molg = rdflib.Graph()
 
-    #g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebislim.ttl', format='turtle')
-    cg.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebislim.ttl', format='turtle')
+    cg.parse(devconfig.ontology_local_repo + '/ttl/generated/chebislim.ttl', format='turtle')
     list(g.add(t) for t in cg)
     a1 = check_chebis(g)
 
-    #g.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebi-dead.ttl', format='turtle')
-    cd.parse('/home/tom/git/NIF-Ontology/ttl/generated/chebi-dead.ttl', format='turtle')
+    cd.parse(devconfig.ontology_local_repo + '/ttl/generated/chebi-dead.ttl', format='turtle')
     list(g.add(t) for t in cd)
     a2 = check_chebis(g)
 
-    #g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Chemical.ttl', format='turtle')
-    chemg.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Chemical.ttl', format='turtle')
+    chemg.parse(devconfig.ontology_local_repo + '/ttl/NIF-Chemical.ttl', format='turtle')
     chemgg = makeGraph('NIF-Chemical', graph=chemg)
     fixIons(chemg)
     list(g.add(t) for t in chemg)
     a3 = check_chebis(g)
 
-    #g.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Molecule.ttl', format='turtle')
-    molg.parse('/home/tom/git/NIF-Ontology/ttl/NIF-Molecule.ttl', format='turtle')
+    molg.parse(devconfig.ontology_local_repo + '/ttl/NIF-Molecule.ttl', format='turtle')
     molgg = makeGraph('NIF-Molecule', graph=molg)
     fixIons(molg)
     list(g.add(t) for t in molg)
@@ -96,13 +94,13 @@ def chebi_imp():
     def fixHasAltId(g):
         ng = makeGraph('', graph=g, prefixes=makePrefixes('oboInOwl', 'NIFCHEM', 'NIFRID'))
         ng.replace_uriref('NIFCHEM:hasAlternativeId', 'oboInOwl:hasAlternativeId')
-        ng.replace_uriref('NIFRID:ChEBIid', 'oboInOwl:id')
+        # ng.replace_uriref('NIFRID:ChEBIid', 'oboInOwl:id')  # :id does not exist, do we need an alternative?
 
     list(map(fixHasAltId, (g, cg, chemg)))
 
     def fixAltIdIsURIRef(g):
         hai = ug.expand('oboInOwl:hasAlternativeId')
-        i = ug.expand('oboInOwl:id')
+        # i = ug.expand('oboInOwl:id')  # :id does not exist
         makeGraph('', graph=g, prefixes=makePrefixes('CHEBI'))  # amazlingly sometimes this is missing...
 
         def inner(s, p, o):
@@ -115,8 +113,8 @@ def chebi_imp():
 
         for s, o in g.subject_objects(hai):
             inner(s, hai, o)
-        for s, o in g.subject_objects(i):
-            inner(s, i, o)
+        #for s, o in g.subject_objects(i):  # :id does not exist
+            #inner(s, i, o)
 
     list(map(fixAltIdIsURIRef, (g, cg, chemg)))
 
@@ -261,6 +259,8 @@ def chebi_imp():
     chemgg.write()
     molgg.write()
 
-    embed()
+    if __name__ == '__main__':
+        embed()
 
-chebi_imp()
+if __name__ == '__main__':
+    chebi_imp()

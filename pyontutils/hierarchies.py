@@ -529,7 +529,7 @@ def inv_edges(json):
 
 def main():
     sgg = Graph(cache=True)
-    sgg_local = Graph('http://localhost:9000/scigraph', cache=True)
+    sgg_local = Graph(cache=True)
 
     cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
     nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
@@ -573,7 +573,7 @@ def main():
         fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, graph=sgg_local)
 
         childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
-        g = Graph('http://localhost:9000/scigraph')
+        g = Graph(cache=True)
         parent_nodes = []
         for curie in childs:
             json = g.getNeighbors(curie, relationshipType='subClassOf')

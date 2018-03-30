@@ -5,25 +5,25 @@ import os
 import re
 import csv
 import glob
-from collections import namedtuple, defaultdict, Counter
 from inspect import getsourcelines
+from collections import namedtuple, defaultdict, Counter
 import requests
-from rdflib import Graph, URIRef, Literal, Namespace
 from lxml import etree
-from hierarchies import creatTree, Query
-from utils import TODAY, async_getter, rowParse, getCommit, subclasses
-from utils import TermColors as tc #TERMCOLORFUNC
-from core import rdf, rdfs, owl, dc, dcterms, skos, prov
-from core import NIFRID, ilx, ilxtr, TEMP, FSLATS
-from core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
-from core import NCBITaxon, UBERON, NIFTTL
-from core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
-from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
-from ttlser import natsort
-from ilx_utils import ILXREPLACE
+from rdflib import Graph, URIRef, Literal, Namespace
+from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
+from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
+from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
+from pyontutils.core import NCBITaxon, UBERON, NIFTTL
+from pyontutils.core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
+from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
+from pyontutils.utils import TODAY, async_getter, rowParse, getCommit, subclasses
+from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
+from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
+from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.hierarchies import creatTree, Query
+from pyontutils.process_fixed import ProcessPoolExecutor
 from IPython import embed
-from process_fixed import ProcessPoolExecutor
 
 WRITELOC = '/tmp/parc/'
 GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'

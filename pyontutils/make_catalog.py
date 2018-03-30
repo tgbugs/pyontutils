@@ -23,7 +23,7 @@ mapping = [(remote_base + file.split('/ttl/', 1)[-1], file.split('/ttl/', 1)[-1]
            or file.endswith('.owl')]
 
 # check for mismatched import and ontology iris
-itrips = local_imports(remote_base, local_base, onts, readonly=True, dobig=True)
+itrips = local_imports(remote_base, local_base, onts, readonly=True, dobig=False)  # XXX these files are big and slow, run at own peril
 sa = {os.path.basename(o):s for s, p, o in itrips if 'sameAs' in p}
 
 # FIXME should be able to do this by checking what is tracked by git...
