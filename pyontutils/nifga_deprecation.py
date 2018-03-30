@@ -11,7 +11,7 @@ from rdflib import URIRef, RDFS, RDF, OWL
 from rdflib.namespace import SKOS
 import requests
 from IPython import embed
-from scigraph_client import Vocabulary, Graph
+from pyontutils.scigraph import Vocabulary, Graph
 from utils import TODAY, async_getter, TermColors as tc
 from scig import scigPrint
 from hierarchies import creatTree, flatten

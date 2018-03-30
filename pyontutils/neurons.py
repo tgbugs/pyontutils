@@ -8,7 +8,7 @@ from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
 from pyontutils.ttlser import natsort
-from pyontutils.scigraph_client import Graph, Vocabulary
+from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
 from pyontutils.qnamefix import cull_prefixes

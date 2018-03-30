@@ -5,7 +5,7 @@ import csv
 from glob import glob
 import rdflib
 from utils import rowParse, async_getter
-from scigraph_client import Graph, Vocabulary
+from pyontutils.scigraph import Graph, Vocabulary
 from IPython import embed
 
 sgg = Graph(cache=True)

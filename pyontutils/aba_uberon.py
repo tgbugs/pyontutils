@@ -5,7 +5,7 @@ from os.path import expanduser
 from collections import namedtuple, OrderedDict
 import rdflib
 import requests
-from scigraph_client import Vocabulary, Graph
+from pyontutils.scigraph import Vocabulary, Graph
 from obo_io import OboFile, Header, Term, TVPair
 from IPython import embed
 from utils import makePrefixes, createOntology

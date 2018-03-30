@@ -3,7 +3,7 @@
 import os
 import csv
 import json
-from scigraph_client import Cypher, Vocabulary
+from pyontutils.scigraph import Cypher, Vocabulary
 from utils import async_getter
 
 c = Cypher()

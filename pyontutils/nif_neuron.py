@@ -14,7 +14,7 @@ from core import makePrefixes, makeGraph, createOntology
 from ilx_utils import ILXREPLACE
 from core import OntMeta, TEMP
 from obo_io import OboFile
-from scigraph_client import Graph, Vocabulary
+from pyontutils.scigraph import Graph, Vocabulary
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
 

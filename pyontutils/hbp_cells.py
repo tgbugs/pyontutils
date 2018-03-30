@@ -7,7 +7,7 @@ import rdflib
 from rdflib.extras import infixowl
 from IPython import embed
 from utils import makeGraph, add_hierarchy
-from scigraph_client import Vocabulary
+from pyontutils.scigraph import Vocabulary
 v = Vocabulary()
 
 PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFSTD', 'NIFRID', 'SAO', 'NIFEXT', 'NLXCELL')

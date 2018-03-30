@@ -22,7 +22,7 @@ import rdflib
 from docopt import docopt, parse_defaults
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort
 from pyontutils.hierarchies import Query, creatTree, dematerialize
-from pyontutils.scigraph_client import Graph, Vocabulary
+from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.core import makeGraph
 from IPython import embed
 

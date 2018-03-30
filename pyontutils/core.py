@@ -114,7 +114,7 @@ class DevConfig:
             if maybe_repo.exists():
                 return str(maybe_repo)
             else:
-                print(TermColors.red('WARNING:'), f'No repository found at {maybe_repo}')
+                print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')
                 return tempdir
 
     @default('localhost')
@@ -123,7 +123,13 @@ class DevConfig:
 
     @default(9000)
     def scigraph_port(self):
-        return self.config['scigraph_port']
+        port = self.config['scigraph_port']
+        if port is None:
+            return ''
+        elif port == 80:
+            return ''
+        else:
+            return port
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
@@ -1176,7 +1182,7 @@ class makeGraph:
 __helper_graph = makeGraph('', prefixes=PREFIXES)
 def qname(uri):
     """ compute qname from defaults """
-    print(TermColors.red('WARNING:'), TermColors.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
+    print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
 def createOntology(filename=    'temp-graph',

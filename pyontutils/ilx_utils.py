@@ -8,7 +8,7 @@ from functools import wraps
 import robobrowser
 import rdflib
 from pyontutils.core import makePrefixes, makeGraph
-from pyontutils.scigraph_client import Vocabulary
+from pyontutils.scigraph import Vocabulary
 
 # ilx api implementation (will change)
 import csv

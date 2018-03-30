@@ -2,7 +2,7 @@
 
 from lxml import etree
 from utils import makePrefixes, makeGraph, createOntology
-from scigraph_client import Vocabulary
+from pyontutils.scigraph import Vocabulary
 import rdflib
 from IPython import embed
 

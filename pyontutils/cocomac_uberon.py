@@ -3,7 +3,7 @@
 import csv
 from os.path import expanduser
 import rdflib
-from pyontutils.scigraph_client import Vocabulary, Graph
+from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
 
 dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'

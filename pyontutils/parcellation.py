@@ -21,7 +21,7 @@ from core import Class, Source, Ont, LabelsBase, Collector, annotations, restric
 from core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from ttlser import natsort
 from ilx_utils import ILXREPLACE
-from scigraph_client import Vocabulary
+from pyontutils.scigraph import Vocabulary
 from IPython import embed
 from process_fixed import ProcessPoolExecutor
 

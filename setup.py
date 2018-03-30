@@ -82,7 +82,7 @@ try:
                 'overlaps=pyontutils.overlaps:main',
                 'qnamefix=pyontutils.qnamefix:main',
                 'registry-sync=pyontutils.scr_sync:main',
-                'scigraph-codegen=pyontutils.scigraph:main',
+                'scigraph-codegen=pyontutils.scigraph_codegen:main',
                 'scigraph-deploy=pyontutils.scigraph_deploy:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',
