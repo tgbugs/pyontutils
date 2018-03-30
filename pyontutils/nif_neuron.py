@@ -204,7 +204,7 @@ def make_phenotypes():
                             name='NIF Phenotypes',
                             path='ttl/',
                             prefixes=PREFIXES)
-    
+
 
     eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
                    'NIF-Neuron-Defined',
@@ -225,7 +225,7 @@ def make_phenotypes():
     # TODO real ilx_ids and use prefixes to manage human readability
     with open(refile(__file__, 'resources/neuron_phenotype_edges.csv'), 'rt') as f:
         rows = [r for r in csv.reader(f)]
-    
+
     lookup = {
         'asymmetric':'owl:AsymmetricProperty',
         'irreflexive':'owl:IrreflexiveProperty',
@@ -415,12 +415,12 @@ def make_phenotypes():
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
     graph.write()  # moved below to incorporate uwotm8
-    
+
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_trip(ontid2, 'owl:imports', ontid)
     graph2.write()
-    
+
     syn_mappings = {}
     for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('NIFRID:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -509,8 +509,8 @@ def _rest_make_phenotypes():
                 if subject in s2:
                     #print('YES IT EXISTS')
                     #print(syns, label, [subject, s])
-                    s2[subject]['syns'].update(syns) 
-                    s2[subject]['syns'].add(label) 
+                    s2[subject]['syns'].update(syns)
+                    s2[subject]['syns'].add(label)
                     s2[subject]['xrefs'] += [subject, s]
                 else:
                     s2[subject] = {'label': label.toPython(), 'o': o.toPython(), 'xrefs':[subject, s], 'syns':syns}  # FIXME overwrites
@@ -642,7 +642,7 @@ def _rest_make_phenotypes():
         g2.add_trip(*t)  # only way to clean prefixes :/
 
     g2.write(convert=False)
-    
+
     syn_mappings = {}
     for sub, syn in [_ for _ in g.g.subject_objects(g.expand('NIFRID:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -697,7 +697,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
         if s != rdflib.URIRef('http://ontology.neuinfo.org/NIF/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'):
             ng.g.add((s,p,o))
 
-    base = 'http://ontology.neuinfo.org/NIF/ttl/' 
+    base = 'http://ontology.neuinfo.org/NIF/ttl/'
 
     ontid = base + ng.name + '.ttl'
     ng.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
@@ -866,7 +866,7 @@ class table1:
 def make_table1(syn_mappings, ilx_start, phenotypes):
     # TODO when to explicitly subClassOf? I think we want this when the higher level phenotype bag is shared
     # it may turn out that things like the disjointness exist at a higher level while correlated properties
-    # should be instantiated together as sub classes, for example if cck and 
+    # should be instantiated together as sub classes, for example if cck and
     # FIXME disagreement about nest basket cells
     # TODO hasPhenotypes needs to be function to get phenotypeOf to work via reasoner??? this seems wrong.
     #  this also works if phenotypeOf is inverseFunctional
@@ -889,7 +889,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     with open(refile(__file__, 'resources/26451489 table 1.csv'), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
-    base = 'http://ontology.neuinfo.org/NIF/ttl/' 
+    base = 'http://ontology.neuinfo.org/NIF/ttl/'
     ontid = base + graph.name + '.ttl'
     graph.add_trip(ontid, rdflib.RDF.type, rdflib.OWL.Ontology)
     graph.add_trip(ontid, rdflib.OWL.imports, base + 'phenotypes.ttl')
@@ -1002,7 +1002,7 @@ def predicate_disambig(graph):
         out = (ui, graph.expand(p), graph.expand(o))
         graph.add_trip(*out)
         return out
-        
+
     uit('ilxtr:hasLayerLocation', 'UBERON:0005390')
     uit('ilxtr:hasLayerLocation', 'UBERON:0005391')
     uit('ilxtr:hasLayerLocation', 'UBERON:0005392')

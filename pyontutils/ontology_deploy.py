@@ -59,7 +59,7 @@ def main():
             'COMMIT':COMMIT,
             'filepath':filepath,
         }
-        string = template.format(**kwargs) 
+        string = template.format(**kwargs)
         commands.append(string)
 
     TIMESTAMP = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')  # ISO8601 boys

@@ -46,9 +46,9 @@ edge_replace = lambda a: edge_to_ttl[a] if a in edge_to_ttl else a  # FIXME it i
 
 import re
 
-def natural_sort(l): 
-    convert = lambda text: int(text) if text.isdigit() else text.lower() 
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)] 
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(l, key = alphanum_key)
 
 def xpath(node, expression):  # this is how to (sortof) do xpaths with the nasty uris
@@ -199,7 +199,7 @@ def main():
             newgraph.add_trip(source, 'rdfs:comment', note)
         clabel = label.capitalize()
         newgraph.add_trip(source, 'rdfs:label', clabel)
-        
+
     Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
     json = newgraph.make_scigraph_json('rdfs:subClassOf', direct=True)
     t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # methods

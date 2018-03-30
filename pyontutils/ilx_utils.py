@@ -231,7 +231,7 @@ def createRecordsFromGraph(graph, existing, target_graph=None):
         namespace = str(mg.namespaces['ILXREPLACE'])
     else:
         print('Nothing needs to be replaced in', mg.filename)
-        return 
+        return
     query = ("SELECT DISTINCT ?v "
              "WHERE { {?v ?p ?o} UNION {?s ?v ?o} UNION {?s ?p ?v} . "
              "FILTER("
@@ -317,7 +317,7 @@ def getSubOrder(existing):
 
 def replaceFile(filename):
     readFile(filename)
-    
+
 def ilx_json_to_tripples(j):  # this will be much eaiser if everything can be exported as a relationship or an anotation
     g = makeGraph('do not write me', prefixes=makePrefixes('ILX', 'ilx', 'owl', 'skos', 'NIFRID'))
     def pref(inp): return makePrefixes('ilx')['ilx'] + inp

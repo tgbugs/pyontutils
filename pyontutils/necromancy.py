@@ -130,7 +130,7 @@ def extract(og, ng, curie):
                 ng.add_trip(s, p, o)
                 ng.add_trip(s, owl.deprecated, True)
                 ng.add_trip(s, 'replacedBy:', replacedByClass)
-    
+
     ng.write()
 
 def main():

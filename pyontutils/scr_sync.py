@@ -135,7 +135,7 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
             #output[scrid].append(('type', type_))  # this should come via the scigraph cats func
             if status == 'Rejected':
                 output[scrid].append(('deprecated', True))
-        
+
         if value_name in field_mapping['MULTI']:
             values = [v.strip() for v in value.split(',')]  # XXX DANGER ZONE
             values = [v for v in values if v != 'Inc' and v != 'Inc.']  # XXX temporary fix for a common misuse of commas

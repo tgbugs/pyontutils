@@ -31,7 +31,7 @@ def async_func(id_):
         if out:
             return id_, out['curie']
     return id_, 'NLXONLY'
-        
+
 id_curie = async_getter(async_func, ids)
 j = {id_:curie for id_, curie in id_curie}
 

@@ -47,7 +47,7 @@ def getOnts():
     # http://api.brain-map.org/api/v2/tree_search/Structure/10154.json?descendants=true
     # hierarchical
     # http://api.brain-map.org/api/v2/structure_graph_download/{1,12,7,11,4,10}.json
-    # the mapping between atlasid and 
+    # the mapping between atlasid and
     # structure query
     # http://api.brain-map.org/api/v2/data/Structure/3999   # id vs atlas_id !??!
     # atlas

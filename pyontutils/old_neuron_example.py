@@ -12,7 +12,7 @@ ca1_cont = (Rat, CA1)
 # organism
 
 # pyramidal phenotypes (cortex)
-P = P = PC = Phenotype('ilxtr:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  # 
+P = P = PC = Phenotype('ilxtr:PyramidalPhenotype', pred.hasMorphologicalPhenotype)  #
 PB = BP = BPC = Phenotype('ilxtr:BiopolarPyramidalPhenotype', pred.hasMorphologicalPhenotype)  # collision
 PH = HP = HPC = Phenotype('ilxtr:HorizontalPyramidalPhenotype', pred.hasMorphologicalPhenotype)
 PI = IP = IPC = Phenotype('ilxtr:InvertedPyramidalPhenotype', pred.hasMorphologicalPhenotype)

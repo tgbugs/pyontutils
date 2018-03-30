@@ -132,14 +132,14 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
                                           #key=lambda a: f'{a[0]}'.split('>')[1] if '>' in f'{a[0]}' else f'a[0]'),
                                           #key=lambda a: a[0].split('>') if '>' in a[0] else a[0]),
                                    key=tcsort))  # make sure we hit deepest first
-    
+
     for child_name, _ in children_ord:  # get list so we can go ahead and pop
         #print(child_name)
         new_lleaves = dematerialize(child_name, children)
         if child_name == 'magnetic resonance imaging':  # debugging failing demat
             pass
             #embed()
-            
+
         if child_name in new_lleaves or all(l in lleaves for l in new_lleaves):
             # if it is a leaf or all childs are leaves as well
             if child_name in lleaves:  # if it has previously been identified as a leaf!
@@ -243,7 +243,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                 v = str(value)
 
             items.append((str(key), v, ds))
-            
+
         items_list = sorted(sorted(((f'{k}', v)  # XXX best
                                     for k, v in self.items()),
                                    key=alphasortkey),
@@ -262,7 +262,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         output += '\n'.join(['{3}{0}{1}{2}'.format(''.join(self.prefix), k, v, ds) for k, v, ds in items[:-1]])
         self.__class__.prefix[-1] = BOT_STEM
         output += '\n' + '{3}{0}{1}{2}'.format(''.join(self.prefix), *items[-1])
-        
+
         if len(self.__class__.prefix) > 1:
             self.__class__.prefix.pop()
 
@@ -271,7 +271,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
     def __str__(self, html=False):
         output = self.print_tree(html=html)
         # FIXME gotta do cleanup here for now :/
-        self.__class__.prefix = []   
+        self.__class__.prefix = []
         self.__class__.existing = {}  # clean up new mess
         self.__class__.current_parent = None
         return output
@@ -295,7 +295,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         output += ',\n'.join(['{}{}: {}'.format(pad, k, v) for k, v in items])
 
         output += '}'
-            
+
         return output
 
     def __html__(self):
@@ -431,7 +431,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
                 existing[sub] = t[obj][sub]
 
         return t, existing
-        # for each list of subjects 
+        # for each list of subjects
         # look up the subjects of that subject as if it were and object
         # and and look up those subjects subjects until there are no subjects
         # but we are not guranteed to have started at the right place

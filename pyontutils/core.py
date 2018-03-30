@@ -375,7 +375,7 @@ class ThunkIt(Thunk):
 
     def __call__(self):
         yield from self.outer_self.__call__(*self.args, **self.kwargs)
-        
+
     def __repr__(self):
         return f'{self.outer_self.__class__.__name__} {self.args} {self.kwargs}'
 
@@ -384,7 +384,7 @@ class ThunkIt(Thunk):
             yield t
             if graph is not None:
                 graph.add(t)
-        
+
 
 class ObjectThunk(Thunk):
     def __init__(self, object):
@@ -605,7 +605,7 @@ class List(Triple):
             if isinstance(object_thunk, types.FunctionType) or isinstance(object_thunk, Thunk):
                 #if isinstance(object_thunk, POThunk):
                     #yield from object_thunk(subject)  # in cases where rdf.first already specified
-                #elif isinstance(object_thunk, ObjectThunk): 
+                #elif isinstance(object_thunk, ObjectThunk):
                 yield from object_thunk(subject, rdf.first)  # thunk call must accept a predicate
                 #else:
                     #raise TypeError('Unknown Thunk type {object_thunk}')
@@ -1388,7 +1388,7 @@ class Class:
 
 
 class Source(tuple):
-    """ Manages loading and converting source files into ontology representations """ 
+    """ Manages loading and converting source files into ontology representations """
     iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None

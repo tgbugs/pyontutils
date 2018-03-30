@@ -189,14 +189,14 @@ class OboFile:
         #stores = [self.header.__ttl__()]
         stores = []
         stores += [s.__ttl__() for s in self.Terms.values()]
-        stores += [s.__ttl__() for s in self.Typedefs.values()] 
+        stores += [s.__ttl__() for s in self.Typedefs.values()]
         stores += [s.__ttl__() for s in self.Instances.values()]
         return '\n'.join(stores)
 
     def __str__(self):
         stores = [str(self.header)]
         stores += [str(s) for s in self.Terms.values()]
-        stores += [str(s) for s in self.Typedefs.values()] 
+        stores += [str(s) for s in self.Typedefs.values()]
         stores += [str(s) for s in self.Instances.values()]
         return '\n'.join(stores) + '\n'
 
@@ -255,7 +255,7 @@ class TVPair:  #TODO these need to be parented to something!
             if self.value in self._reserved_ids:
                 raise AttributeError('You may not use reserved term %s as an id.' % self.value)
         # TODO validate kwargs
-        # 
+        #
         #warn if we are loading an ontology and there is an error but don't fail
         #id
         #name
@@ -285,7 +285,7 @@ class TVPair:  #TODO these need to be parented to something!
                 comment = comment.strip()
                 comm_split[-1] = tail
                 value = '\!'.join(comm_split)
-                
+
             except ValueError:
                 comment = None
 
@@ -307,7 +307,7 @@ class TVPair:  #TODO these need to be parented to something!
                 self.comment = comment
         except BaseException as e:
             embed()
-            raise 
+            raise
 
         self.tag = tag
         self.trailing_modifiers = trailing_modifiers
@@ -332,7 +332,7 @@ class TVPair:  #TODO these need to be parented to something!
                 self.comment = self.__comment
         else:
             self.value = value
-            
+
     def __eq__(self, other):
         if type(self) == type(other):
             if self.value == other.value:
@@ -375,7 +375,7 @@ class TVPair:  #TODO these need to be parented to something!
                 value = self.value.lower()  # capitalize only proper nouns as needed
             else:
                 value = self.value
-            
+
             return obo_tag_to_ttl[self.tag] % value
         else:
             return ''
@@ -493,7 +493,7 @@ class TVPairStore:
                 sord = sorted(tosort, key=lambda a: a.lower())  # FIXME isn't quit right
                 out += sord.index(tvpair._value()) / (len(sord) + 1)
             return out
-            
+
         tosort = []
         if not source_dict:
             source_dict = self.__dict__
@@ -593,7 +593,7 @@ class Stanza(TVPairStore):
         ('is_anonymous', 1),
         ('name',1),
         ('namespace', 1),
-        ('alt_id', N), 
+        ('alt_id', N),
         ('def', 1),
         ('comment', 1),
         ('subset', N),
@@ -675,7 +675,7 @@ class Stanza(TVPairStore):
         else:
             existing = type_od.names.pop(self.name.value)
             type_od.names[self.name.value] = [existing, self]
-            
+
     def __str__(self):
         return '['+ self.__class__.__name__ +']\n' + super().__str__()
 
@@ -923,7 +923,7 @@ class Property_value(Value):
         out += self.type_id + s + self.val
         if self.datatype:
             out += s + self.datatype
-        return out 
+        return out
 
     @classmethod
     def parse(cls, value, *args):
@@ -936,7 +936,7 @@ class Property_value(Value):
         split = (type_id, val, datatype)
         return super().parse(split)
 
-   
+
 class Subsetdef(Value):
     tag = 'subsetdef'
     seps = ' ', '"'

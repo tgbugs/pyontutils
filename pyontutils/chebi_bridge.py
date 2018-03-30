@@ -87,7 +87,7 @@ def chebi_imp():
             ng.replace_uriref(f, r)
             ng.add_trip(r, 'oboInOwl:hasAlternateId', rdflib.Literal(f, datatype=rdflib.XSD.string))
             g.remove((r, replacedBy, r))  # in case the replaced by was already in
-    
+
     switch_dead(g)
     switch_dead(cg)
     switch_dead(chemg)
@@ -121,7 +121,7 @@ def chebi_imp():
     list(map(fixAltIdIsURIRef, (g, cg, chemg)))
 
     matches = [_ for _ in zip(a1, a2, a3, a4)]
-    changed = [len(set(_)) != 1 for _ in matches] 
+    changed = [len(set(_)) != 1 for _ in matches]
     review = [(id_, m) for id_, changed, m in zip(ids, changed, matches) if changed and m[0]]
     # for reasons currently lost to implementation details this returns a list of empty lists if run from ipython
     wat_c = [set([(s, str(o.toPython())) for s, p, o in cg.triples((u, None, None))]) for u, _ in review]

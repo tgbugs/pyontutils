@@ -38,7 +38,7 @@ Options:
 """
 #    -J --java-config-loc=FILEPATH       location to deploy java config [default: /etc/]
 # yes we could have tried to do this in make...
-# on the build server you need pyontutils SciGraph NIF-Ontology 
+# on the build server you need pyontutils SciGraph NIF-Ontology
 # on the services deploy server you only need pyontutils...
 #  so just use the build server too, its easier than fighting bamboo
 
@@ -117,7 +117,7 @@ class Builder:
         if self.local and self.build_only:
             if self.check_built:
                 self.local_dispatch()
-            return 
+            return
         elif self.build_host == self.services_host and self.build_user == self.build_user:
             self.same_remotes = True
             # the executor is different from the remotes
@@ -168,7 +168,7 @@ class Builder:
                '--check-built',
                '--debug',
               }
-        #not_pyontutils = '--systemd-config', '--java-config', '--services-log-loc', 
+        #not_pyontutils = '--systemd-config', '--java-config', '--services-log-loc',
         self.repo_arg_skip_mapping = {
             self.scigraph_repo:{'--scp-loc'},
             self.repo:{'--scigraph-scp-loc'},
@@ -390,7 +390,7 @@ class Builder:
     # pass along commands to build
 
     def build(self, mode=None, check=False):
-        """ Just shuffle the current call off to the build server with --local attached """ 
+        """ Just shuffle the current call off to the build server with --local attached """
         kwargs = {}
         if not self.build_only:  # don't try to deploy twice
             kwargs[' --build-only'] = True
@@ -540,7 +540,7 @@ class Builder:
             return jpth(self.scigraph_config_folder, config)
         else:
             return config
-        
+
     def locate_folder(self, path):
         return locate_config_file(path, self.git_local)
 
@@ -568,7 +568,7 @@ class Builder:
             'echo wat',
         )
         return self.makeOutput(SER, commands, commands_only)
-        
+
     # stuff that the executor server calls on services machine
 
     def fetch(self, repo):
@@ -737,7 +737,7 @@ class Builder:
         return self.runOnExecutor(*dependencies,
                                   commands,
                                   oper=AND)
-    
+
 
 def run(args):
     if args['--debug']:

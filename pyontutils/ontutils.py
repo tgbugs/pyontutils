@@ -301,7 +301,7 @@ def get_epoch(*filenames, min_=True):
             return 0
         else:
             return 0  # XXX this may cause errors down the line
-        
+
     return comp_epoch
 
 #

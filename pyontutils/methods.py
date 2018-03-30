@@ -80,7 +80,7 @@ triples = (
 
     # 'ROI based atlas registration technique'
 
-    # biccn 
+    # biccn
     oc(ilxtr.analysisRole, OntTerm('BFO:0000023', label='role')
     ),
 

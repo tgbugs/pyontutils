@@ -51,7 +51,7 @@ def ilx_add_ids(ilx_labels):
     new_text = '\n'.join(new_lines)
     with open(os.path.expanduser('interlex_reserved.txt.new'), 'wt') as f:
         f.write(new_text)
-    
+
 
 def ilx_conv(graph, prefix, ilx_start):
     """ convert a set of temporary identifiers to ilx and modify the graph in place """
@@ -212,7 +212,7 @@ def clean_hbp_cell():
             newgraph.add((triple[0], edge, triple[2]))
 
     # final cleanup for forward references (since we iterate through sorted)
-    
+
     tt = rdflib.URIRef(expand('HBP_CELL:0000033'))
     tf = rdflib.URIRef(expand('HBP_CELL:0000034'))
     newgraph.remove((None, None, tt))

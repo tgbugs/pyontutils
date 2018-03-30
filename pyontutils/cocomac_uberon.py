@@ -95,7 +95,7 @@ for s, o in sos:
                 smap_.append((cc_label, cc_id, s_existing_label, s_existing_id, s_existing_fma))
             #break  # FOW :/
 
-    
+
 _ = [print(a) for a in sorted(smap_, key=lambda a: int(a[1].split(':')[1]))]
 with open('/tmp/coco_uber_match.csv', 'wt') as f:
     writer = csv.writer(f)

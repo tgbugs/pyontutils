@@ -75,7 +75,7 @@ def ncbigene_make():
     IDS_FILE = 'resources/gene-subset-ids.txt'
     with open(IDS_FILE, 'rt') as f:  # this came from neuroNER
         ids = [l.split(':')[1].strip() for l in f.readlines()]
-    
+
     #url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?retmode=json&retmax=5000&db=gene&id='
     #for id_ in ids:
         #data = requests.get(url + id_).json()['result'][id_]
@@ -92,7 +92,7 @@ def ncbigene_make():
         data['id'] = ','.join(idset),
         resp = requests.post(url, data=data).json()
         chunks.append(resp)
-    
+
     base = chunks[0]['result']
     uids = base['uids']
     for more in chunks[1:]:
@@ -101,7 +101,7 @@ def ncbigene_make():
         base.update(data)
     #base['uids'] = uids  # i mean... its just the keys
     base.pop('uids')
- 
+
     ng = createOntology('ncbigeneslim',
                         'NIF NCBI Gene subset',
                         makePrefixes('ILXREPLACE', 'ilxtr', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),

@@ -151,14 +151,14 @@ class genericPScheme:
     PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
 
     def __new__(cls, validate=False):
-        error = 'Expected %s got %s' 
+        error = 'Expected %s got %s'
         if type(cls.ont) != OntMeta:
             raise TypeError(error % (OntMeta, type(cls.ont)))
         elif type(cls.concept) != PScheme:
             raise TypeError(error % (PScheme, type(cls.concept)))
         elif type(cls.atlas) != PSArtifact:
             raise TypeError(error % (PSArtifact, type(cls.atlas)))
-            
+
         ontid = cls.ont.path + cls.ont.filename + '.ttl'
         PREFIXES = {k:v for k, v in cls.PREFIXES.items()}
         PREFIXES.update(genericPScheme.PREFIXES)
@@ -175,7 +175,7 @@ class genericPScheme:
         graph.write()
         if validate or getattr(cls, 'VALIDATE', False):
             cls.validate(graph)
-        return ontid, cls.atlas 
+        return ontid, cls.atlas
 
     @classmethod
     def datagetter(cls):
@@ -291,7 +291,7 @@ def swanson():
     definingCitationID = 'ISBN:9780195340624'
     new_graph.add_trip(ontid, 'NIFRID:definingCitation', definingCitation)
     new_graph.add_trip(ontid, 'NIFRID:definingCitationID', definingCitationID)
-            
+
     with open(source, 'rt') as f:
         lines = [l.strip() for l in f.readlines()]
 
@@ -300,7 +300,7 @@ def swanson():
     #fix for capitalization since this header is reused
     fixed = ' or '.join([' ('.join([n.capitalize() for n in _.split(' (')]) for _ in lines[635].lower().split(' or ')]).replace('human','HUMAN')
     lines[635] = fixed
-    
+
     data = []
     for l in lines:
         if not l.startswith('#'):
@@ -320,7 +320,7 @@ def swanson():
             else:
                 area_name = l
                 citation = None
-            
+
             d = (level, area_name, citation, None)
             #print(d)
             data.append(d)
@@ -464,7 +464,7 @@ def swanson():
     #print('\n'.join(tp))
     #print(sp.appendicies[1].keys())
     #print(sp.nodes[1].keys())
-    nbase = PREFIXES['SWAN'] + '%s' 
+    nbase = PREFIXES['SWAN'] + '%s'
     json_ = {'nodes':[],'edges':[]}
     parent = ILXREPLACE('swansonBrainRegionConcept')
     for node, anns in sp.nodes.items():
@@ -650,7 +650,7 @@ class Label(Class):
     @property
     def rdfs_subClassOf(self):
         return self.labelRoot.iri
-        
+
 
 class RegionRoot(Class):
     """ Parcellation regions are 'anatomical entities' that correspond to some
@@ -825,7 +825,7 @@ class parcArts(Ont):
     def _triples(self):
         yield from Artifact.class_triples()
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
-            yield from art_type.class_triples() 
+            yield from art_type.class_triples()
         for art in self._artifacts:
             for t in art:
                 yield t
@@ -1469,7 +1469,7 @@ class PaxLabels(LabelsBase):
         # remove expected numeric/layer/lobule duplicates
         filt = [a for a in abrevs if not a.isdigit() and a.value not in ('6a', '6b')]
         assert len(filt) == len(set(filt)), f'DUPES! {Counter(filt).most_common()[:5]}'
-        # check for abbreviations without corresponding structure ie 'zzzzzz' 
+        # check for abbreviations without corresponding structure ie 'zzzzzz'
         syns = list(self.graph.objects(None, NIFRID.synonym))
         for thing in labels + syns:
             trips = [(s, o) for s in self.graph.subjects(None, thing) for p, o in self.graph.predicate_objects(s)]

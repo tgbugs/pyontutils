@@ -137,7 +137,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         zip_dir = os.path.dirname(zip_path)
         zip_command = ' '.join(('cd', zip_dir, ';', 'zip -r', zip_name, folder))
         return graph_path, zip_path, zip_command
-    
+
     graph_path, zip_path, zip_command = make_folder_zip()
     wild_graph_path, wild_zip_path = make_folder_zip(wild=True)
 
@@ -203,7 +203,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
     commit_log_path = jpth(local, COMMIT_LOG)
 
     load_base = (
-        'cd {}; '.format(jpth(local, 'SciGraph-core')) + 
+        'cd {}; '.format(jpth(local, 'SciGraph-core')) +
         'mvn exec:java '
         '-Dexec.mainClass="io.scigraph.owlapi.loader.BatchOwlLoader" '
         '-Dexec.args="-c {config_path}"')
@@ -294,7 +294,7 @@ def do_patch(patch_config, local_base):
                 resp = requests.get(remote)
                 with open(targetfile, 'wb') as f:
                     f.write(resp.content)
-            
+
             print(tc.blue('INFO: patching'), patchset, patchfile, targetfile)
             try:
                 out = subprocess.check_output(['patch', '-p1', '-N', '-i', patchfile.as_posix()],

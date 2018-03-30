@@ -175,7 +175,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
         graph.add_trip(nifga, OWL.deprecated, True)
 
         # review nifga relations, specifically has_proper_part, proper_part_of
-        # put those relations on the uberon term in the 
+        # put those relations on the uberon term in the
         # if there is no uberon term raise an error so we can look into it
 
         #if uberon not in uedges:
@@ -593,7 +593,7 @@ def main():
     multi = {k:v for k, v in asdf.items() if len(v) > 1}
     conflated = {k:[_ for _ in v if _ not in deprecated] for k, v in multi.items() if len([_ for _ in v if _ not in deprecated]) > 1 and k != 'NOREP'}
     #_ = [print(k, sgv.findById(k)['labels'][0], '\n\t', [(_, sgv.findById(_)['labels'][0]) for _ in v]) for k, v in sorted(conflated.items())]
-   
+
     graph, bridge, uedges = do_deprecation(replaced_by, g, {}, conflated)  # additional_edges)  # TODO
     bridge.write()
     graph.write()

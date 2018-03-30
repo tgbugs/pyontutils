@@ -73,7 +73,7 @@ class graphBase:
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
-        
+
         if type(self.in_graph) == str:
             self.in_graph = self.core_graph
 
@@ -147,7 +147,7 @@ class graphBase:
 
         def attachPrefixes(*prefixes, graph=None):
             return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
-        
+
         # file location setup
         remote_core_paths,  local_core_paths =  makeLocalRemote(core_graph_paths)
         remote_in_paths,    local_in_paths =    makeLocalRemote(in_graph_paths)
@@ -305,7 +305,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
-        # use this specify consistent patterns for modifying labels 
+        # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
 
     def checkPhenotype(self, phenotype):
@@ -641,7 +641,7 @@ class NeuronBase(graphBase):
         # a different result
         # of course this can be very powerful if we have a set of neurons that
         # we want to instantiate in different contexts
-        
+
         # we are implementing this in this way so that it is clear that you cannot
         # change the context of a neuron after it has been created
         if not neuron_or_phenotypeEdges:
@@ -731,7 +731,7 @@ class NeuronBase(graphBase):
         #except StopIteration:
             #print(new_label)
         return new_label
-        
+
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -794,7 +794,7 @@ class NeuronBase(graphBase):
 
 class Neuron(NeuronBase):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
-    
+
     def validate(self):
         # Fact++ factpp can do some reasoning bits, but struggles with disjoint classes that are SubClasses of themselves :/
         # until factpp is working more seemlessly (tricky given the size of certain phenotype proxy ontologies)
@@ -939,7 +939,7 @@ class Neuron(NeuronBase):
 class TypeNeuron(Neuron):  # TODO
     """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.
         TypeNeurons can be use to construct rules based taxonomies from
-        collections of bindary phenotypes. """ 
+        collections of bindary phenotypes. """
 
 
 class MeasuredNeuron(NeuronBase):  # XXX DEPRECATED retained for loading from some existing ontology files
@@ -1217,7 +1217,7 @@ def addLN(LocalName, phenotype, g=None):  # XXX deprecated
     addLNBase(LocalName, phenotype, g)
 
 def addLNT(LocalName, phenoId, predicate, g=None):  # XXX deprecated
-    """ Add a local name for a phenotype from a pair of identifiers """ 
+    """ Add a local name for a phenotype from a pair of identifiers """
     if g is None:
         s = inspect.stack()  # horribly inefficient
         checkCalledInside('LocalNameManager', s)
