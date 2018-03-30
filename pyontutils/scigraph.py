@@ -9,7 +9,23 @@ scigraph_client.BASEPATH = (f'http://{devconfig.scigraph_host}'
 __all__ = [e for e in dir(scigraph_client) if type(getattr(scigraph_client, e)) == type]
 
 ###
+Analyzer = scigraph_client.Analyzer
 
+Annotations = scigraph_client.Annotations
+
+Cypher = scigraph_client.Cypher
+
+Dynamic = scigraph_client.Dynamic
+
+Graph = scigraph_client.Graph
+
+Lexical = scigraph_client.Lexical
+
+Refine = scigraph_client.Refine
+
+Vocabulary = scigraph_client.Vocabulary
+
+restService = scigraph_client.restService
 ###
 
 def main():
