@@ -88,7 +88,9 @@ class restService:
 class Analyzer(restService):
     """ Analysis services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -136,7 +138,9 @@ class Analyzer(restService):
 class Annotations(restService):
     """ Annotation services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -325,7 +329,9 @@ class Annotations(restService):
 class Cypher(restService):
     """ Cypher utility services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -389,7 +395,9 @@ class Cypher(restService):
 class Dynamic(restService):
     """ Dynamic Cypher resources """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -400,7 +408,9 @@ class Dynamic(restService):
 class Graph(restService):
     """ Graph services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -621,7 +631,9 @@ class Graph(restService):
 class Lexical(restService):
     """ Lexical services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -698,7 +710,9 @@ class Lexical(restService):
 class Refine(restService):
     """ OpenRefine Reconciliation Services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -820,7 +834,9 @@ class Refine(restService):
 class Vocabulary(restService):
     """ Vocabulary services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)

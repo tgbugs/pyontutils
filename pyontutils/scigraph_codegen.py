@@ -94,7 +94,9 @@ class restService:
 class CLASSNAME(restService):
     """ DOCSTRING """
 
-    def __init__(self, basePath='BASEPATH', verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
