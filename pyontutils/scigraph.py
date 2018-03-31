@@ -1,4 +1,4 @@
-from pyontutils.core import devconfig, get_api_key
+from pyontutils.config import devconfig, get_api_key
 from pyontutils import scigraph_client
 from IPython import embed
 
