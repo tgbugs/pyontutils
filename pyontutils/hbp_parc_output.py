@@ -8,6 +8,9 @@ from pyontutils.utils import TermColors as tc
 from pyontutils.core import restriction, annotation, owl, rdf, rdfs, skos, NIFRID, qname, ilxtr, makeGraph
 from IPython import embed
 
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 def labelkey(line):
     label, *rest = line.split('|', 1)
     return natsort(label)
@@ -17,7 +20,7 @@ def edkey(line):
     return natsort(ed + ' ' + label)
 
 for filename in ('mbaslim', 'hbaslim', 'paxinos-rat-labels', 'waxholm-rat-labels'):
-    filepath = Path.home() / 'git/NIF-Ontology/ttl/generated/parcellation' / (filename + '.ttl')
+    filepath = gitf / 'NIF-Ontology/ttl/generated/parcellation' / (filename + '.ttl')
     dir_ = filepath.parent.as_posix()
     print(dir_)
     file_commit = subprocess.check_output(['git', 'log', '-n', '1',
