@@ -15,10 +15,10 @@ python:
   - 3.6
 
 before_install:
-  - cd "${TRAVIS_BUILD_DIR}/../"
-  - pwd
+  - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
+  - popd
 
 install:
   - pip install pipenv
