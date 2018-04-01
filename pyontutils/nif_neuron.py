@@ -4,6 +4,7 @@ import os
 import re
 import csv
 import types
+from pathlib import Path
 from collections import defaultdict
 from urllib.parse import quote
 import rdflib
@@ -15,6 +16,9 @@ from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.scigraph import Graph, Vocabulary
 from IPython import embed
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -437,10 +441,11 @@ def make_phenotypes():
 
 def _rest_make_phenotypes():
     #phenotype sources
-    neuroner = '~/git/neuroNER/resources/bluima/neuroner/hbp_morphology_ontology.obo'
-    neuroner1 = '~/git/neuroNER/resources/bluima/neuroner/hbp_electrophysiology_ontology.obo'
-    neuroner2 = '~/git/neuroNER/resources/bluima/neuroner/hbp_electrophysiology-triggers_ontology.obo'
-    nif_qual = '~/git/NIF-Ontology/ttl/NIF-Quality.ttl'
+    neuroner = (gitf / 'neuroNER/resources/bluima/neuroner/hbp_morphology_ontology.obo').as_posix()
+    neuroner1 = (gitf / 'neuroNER/resources/bluima/neuroner/hbp_electrophysiology_ontology.obo').as_posix()
+    neuroner2 = (gitf /
+                 'neuroNER/resources/bluima/neuroner/hbp_electrophysiology-triggers_ontology.obo').as_posix()
+    nif_qual = (gitf / 'NIF-Ontology/ttl/NIF-Quality.ttl').as_posix()
 
     mo = OboFile(os.path.expanduser(neuroner))
     mo1 = OboFile(os.path.expanduser(neuroner1))
@@ -664,7 +669,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                         prefixes=PREFIXES)
 
     #""" It seemed like a good idea at the time...
-    nif_cell = '~/git/NIF-Ontology/ttl/NIF-Cell.ttl'  # need to be on neurons branch
+    nif_cell = (gitf / 'NIF-Ontology/ttl/NIF-Cell.ttl').as_posix()  # need to be on neurons branch
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
@@ -691,7 +696,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #cg = None
     #"""
 
-    hbp_cell = '~/git/NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl'  # need to be on neurons branch
+    hbp_cell = (gitf /
+                'NIF-Ontology/ttl/generated/NIF-Neuron-HBP-cell-import.ttl').as_posix()  # need to be on neurons branch
     _temp = rdflib.Graph()  # use a temp to strip nasty namespaces
     _temp.parse(os.path.expanduser(hbp_cell), format='turtle')
     for s, p, o in _temp.triples((None,None,None)):

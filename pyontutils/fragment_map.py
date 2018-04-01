@@ -3,8 +3,12 @@
 import os
 import csv
 import json
+from pathlib import Path
 from pyontutils.utils import async_getter
 from pyontutils.scigraph import Cypher, Vocabulary
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 c = Cypher()
 v = Vocabulary(cache=True)
@@ -13,7 +17,7 @@ curies = c.getCuries()
 curies.pop('')  # don't want NIFSTD uris just yet
 
 def main():
-    with open(os.path.expanduser('~/git/nlxeol/neurolex_full.csv'), 'rt') as f:
+    with open((gitf / 'nlxeol/neurolex_full.csv').as_posix(), 'rt') as f:
         rows = [r for r in csv.reader(f)]
 
     Id = rows[0].index('Id')

@@ -38,10 +38,11 @@ def do_serialize(graph, reps, filename):
     return out
 
 def run(reps=2):
-    filenames = "~/git/NIF-Ontology/ttl/NIF-Chemical.ttl", "~/git/NIF-Ontology/ttl/NIF-Molecule.ttl", "/tmp/uberon.ttl"
+    filenames = "NIF-Ontology/ttl/NIF-Chemical.ttl", "NIF-Ontology/ttl/NIF-Molecule.ttl", "/tmp/uberon.ttl"
     sys.stdout.write('[')
     for filename in filenames:
-        filename = os.path.expanduser(filename)
+        if not filename.startswith('/'):
+            filename = (gitf / filename).as_posix()
         graph = rdflib.Graph()
         graph.parse(filename, format='turtle')
         out = do_serialize(graph, reps, os.path.basename(filename))

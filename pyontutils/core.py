@@ -16,6 +16,9 @@ from pyontutils.config import get_api_key, devconfig
 from pyontutils.closed_namespaces import *
 from IPython import embed
 
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 # prefixes
 
 def interlex_namespace(user):
@@ -1070,7 +1073,7 @@ def createOntology(filename=    'temp-graph',
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY,
                    path=        'ttl/generated/',
-                   local_base=  os.path.expanduser('~/git/NIF-Ontology/'),
+                   local_base=  os.path.expanduser((gitf / 'NIF-Ontology/').as_posix()),
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):

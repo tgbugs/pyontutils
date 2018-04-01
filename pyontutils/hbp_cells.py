@@ -2,12 +2,16 @@
 import os
 import csv
 import json
+from pathlib import Path
 from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, makePrefixes
 from pyontutils.scigraph import Vocabulary
 from IPython import embed
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 v = Vocabulary()
 
@@ -23,7 +27,8 @@ def expand(curie):
 
 
 def ilx_get_start():
-    with open(os.path.expanduser('~/git/NIF-Ontology/interlex_reserved.txt'), 'rt') as f:
+    with open((gitf /
+               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
         for line in f.readlines()[::-1]:  # go backward to find the first non empty
             new_ilx_id, label = line.strip().split(':')
             if label:
@@ -37,7 +42,8 @@ def ilx_get_start():
 
 
 def ilx_add_ids(ilx_labels):
-    with open(os.path.expanduser('~/git/NIF-Ontology/interlex_reserved.txt'), 'rt') as f:
+    with open((gitf /
+               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
         new_lines = []
         for line in f.readlines():
             ilx_id, label = line.strip().split(':')
@@ -92,7 +98,9 @@ NEURON = 'SAO:1417703748'
 def clean_hbp_cell():
     #old graph
     g = rdflib.Graph()
-    g.parse(os.path.expanduser('~/git/methodsOntology/ttl/hbp_cell_ontology.ttl'), format='turtle')
+    embed()
+    g.parse((gitf /
+             'methodsOntology/ttl/hbp_cell_ontology.ttl').as_posix(), format='turtle')
     g.remove((None, rdflib.OWL.imports, None))
     g.remove((None, rdflib.RDF.type, rdflib.OWL.Ontology))
 

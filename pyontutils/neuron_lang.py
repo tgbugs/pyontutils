@@ -5,6 +5,8 @@ from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from IPython import embed
 
+current_file = Path(__file__).absolute()
+
 __all__ = [
     'AND',
     'OR',
@@ -22,7 +24,8 @@ __all__ = [
 ]
 
 def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
-           local_base=        '~/git/NIF-Ontology',
+           local_base=        (current_file.parent.parent.parent /
+                               'NIF-Ontology').as_posix(),
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],

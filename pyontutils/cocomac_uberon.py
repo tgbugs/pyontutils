@@ -7,16 +7,21 @@ import rdflib
 from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
 
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
-with open(expanduser('~/git/entity_mapping/mappings/uberon-nervous'), 'rt') as f:
+with open((gitf / 'entity_mapping/mappings/uberon-nervous').as_posix(), 'rt') as f:
     brain_only = set([l.strip() for l in f.readlines()])
 
 v = Vocabulary(cache=True)
 sg = Graph(cache=True)
 
 g = rdflib.Graph()
-g.parse(expanduser('~/git/NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl'), format='turtle')
+g.parse((gitf /
+         'NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
+        format='turtle')
 sos = [so for so in g.subject_objects(rdflib.RDFS.label)]
 
 map_ = []
@@ -118,7 +123,9 @@ with open('/tmp/coco_uber_search.csv', 'wt') as f:
 def lnc(string):
     return string.lower().replace(',',' ')  # matches the conv in NIF_conn
 
-ccslim = rdflib.Graph().parse(expanduser('~/git/NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl'), format='turtle')
+ccslim = rdflib.Graph().parse((gitf /
+                               'NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
+                              format='turtle')
 coco_all = [l for l in ccslim.objects(None, rdflib.RDFS.label)]
 
 intcon = Path(__file__).parent / 'resources' / 'NIF_conn_allcols_minimal_clean_filtered2.csv'

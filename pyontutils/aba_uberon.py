@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import re
-from os.path import expanduser
+from pathlib import Path
 from collections import namedtuple, OrderedDict
 import rdflib
 import requests
@@ -10,13 +10,16 @@ from pyontutils.obo_io import OboFile, Header, Term, TVPair
 from pyontutils.core import makePrefixes, createOntology
 from IPython import embed
 
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 v = Vocabulary(cache=True)
 g = Graph(cache=True)
 
 def main():
     abagraph = rdflib.Graph()
-    abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/generated/parcellation/mbaslim.ttl'), format='turtle')
-    abagraph.parse(expanduser('~/git/NIF-Ontology/ttl/bridge/aba-bridge.ttl'), format='turtle')
+    abagraph.parse((gitf / 'NIF-Ontology/ttl/generated/parcellation/mbaslim.ttl').as_posix(), format='turtle')
+    abagraph.parse((gitf / 'NIF-Ontology/ttl/bridge/aba-bridge.ttl').as_posix(), format='turtle')
     nses = {k:rdflib.Namespace(v) for k, v in abagraph.namespaces()}
     #nses['ABA'] = nses['MBA']  # enable quick check against the old xrefs
     syn_iri = nses['NIFRID']['synonym']

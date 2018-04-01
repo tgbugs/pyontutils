@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 import os
 from glob import glob
+from pathlib import Path
 from pyontutils.utils import anyMembers
+from pyontutils.config import devconfig
 from pyontutils.ontload import local_imports
 
 remote_base = 'http://ontology.neuinfo.org/NIF/ttl/'
-base = '~/git/NIF-Ontology/ttl/'
+local_base = Path(devconfig.git_local_base, 'NIF-Ontology/ttl/').as_posix()
 
 #list of all nif ontologies
-local_base = os.path.expanduser(base)
 b = local_base
 fs = glob(b + '*')
 fs += glob(b + '*/*')

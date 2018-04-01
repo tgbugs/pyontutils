@@ -2,10 +2,14 @@
 
 import os
 from glob import glob
+from pathlib import Path
 from rdflib import Literal
 from pyontutils.core import Ont, Source, makePrefixes, skos
 
-top_level = glob(os.path.expanduser('~/git/ksdesc/') + '*')
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
+top_level = glob((gitf / 'ksdesc/').as_posix() + '*')
 
 class ksDefsSource(Source):
     source = 'https://github.com/OpenKnowledgeSpace/ksdesc.git'

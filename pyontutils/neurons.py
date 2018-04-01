@@ -13,6 +13,9 @@ from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
 from pyontutils.qnamefix import cull_prefixes
 
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 __all__ = [
     'AND',
     'OR',
@@ -1266,7 +1269,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = Path('~/git/NIF-Ontology/ttl').expanduser()
+    local_prefix = (gitf / 'NIF-Ontology/ttl').expanduser()
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',
