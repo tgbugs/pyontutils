@@ -351,8 +351,11 @@ class RestrictionsThunk(RestrictionThunk):
 
     def __call__(self, subject, predicate=None):
         call = super().__call__
-        for self.predicate, self.object in self.predicate_objects:
-            yield from call(subject, predicate)
+        try:
+            for self.predicate, self.object in self.predicate_objects:
+                yield from call(subject, predicate)
+        except ValueError as e:
+            raise ValueError(f'tried to unpack {self.predicate_objects} into predicate, object') from e
 
         if hasattr(self, 'predicate'):
             del self.predicate

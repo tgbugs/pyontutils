@@ -1,4 +1,4 @@
-from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntTerm
+from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
 from pyontutils.core import oc, oop, olit, oec
 from pyontutils.core import restrictions, annotation
 from pyontutils.core import NIFTTL, NIFRID, ilxtr
@@ -12,6 +12,8 @@ imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/ta
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
+
+OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -28,7 +30,10 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple()):
     _rests = tuple()
     for rest in rests:
         if isinstance(rest, tuple):
-            _rests += rest,
+            if len(rest) == 2:
+                _rests += rest,
+            else:
+                raise ValueError(f'length of {rest} is not 2!')
         else:
             members += rest,
 
@@ -54,7 +59,21 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple()):
 class I:
     counter = iter(range(999999))
     @property
-    def d(self): return TEMP[str(next(self.counter))]
+    def d(self):
+        current = TEMP[str(next(self.counter))]
+        self.current = current
+        return current
+
+    @property
+    def b(self):
+        """ blank node """
+        current = next(self.counter)
+        return TEMP[str(current)]
+
+    @property
+    def p(self):
+        return self.current
+
 i = I()
 
 triples = (
@@ -134,7 +153,7 @@ triples = (
         ),
        (ilxtr.hasPrimaryAspect,
         #OntTerm(term='sequence')
-        OntTerm('SO:0000001', label='sequence')  # label='region'
+        OntTerm('SO:0000001', label='region', synonyms=['sequence'])  # label='region'
        ),
         ),
 
@@ -334,21 +353,33 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'knock in technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.b),
+    ),
+    (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000121')),
 
     _t(i.d, 'knock down technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('underexpression technique',),
     ),
 
+    # endogenous genetic manipulation   HRM 'HBP_MEM:0000119'
+    # conditional knockout 'HBP_MEM:0000122'
+    # morpholino 'HBP_MEM:0000124'
+    # RNA interference 'HBP_MEM:0000123'
+    # dominant-negative inhibition   sigh 'HBP_MEM:0000125'
+
     _t(i.d, 'knock out technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.b),
+    ),
+    (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000120')),
 
     _t(i.d, 'mutagenesis technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d)
+    ),
 
     _t(i.d, 'overexpression technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d)
+    ),
 
     _t(i.d, 'delivery technique',
        (ilxtr.hasSomething, i.d),
@@ -865,6 +896,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        synonyms=('electrophysiology', 'electrophysiological technique'),
     ),
+    (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000014')),
 
     _t(tech.contrastDetection, 'contrast detection technique',
        # a subclass could be differential contrast to electron scattering or something...
@@ -1257,41 +1289,70 @@ triples = (
        synonyms=('wester blot',)
     ),
 
-    _t(i.d, 'patch clamp technique',
+    _t(i.d, 'intracellular electrophysiology technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
+    ),
+
+    _t(tech.extracellularEphys, 'extracellular electrophysiology technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
+    ),
+    (tech.extracellularEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000015')),
+
+    _t(tech.singleElectrodeEphys, 'single electrode extracellular electrophysiology technique',
+       # FIXME extracellular space that is part of some other participant... how to convey this...
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
+       synonyms=('single extracellular electrode technique',)),
+       (tech.singleElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000019')),
+
+    _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
+       (ilxtr.hasSomething, i.d),
+       synonyms=('sharp electrode technique',)),
+       (tech.sharpElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000023')),
+
+    _t(tech.patchClamp, 'patch clamp technique',
        (ilxtr.hasSomething, i.d),
     ),
+       (tech.patchClamp, ilxtr.hasTempId, OntId('HBP_MEM:0000017')),
 
     _t(i.d, 'cell attached patch technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000029')),
 
     _t(i.d, 'inside out patch technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000028')),
 
     _t(i.d, 'loose patch technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000024')),
 
     _t(i.d, 'outside out patch technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000026')),
 
     _t(i.d, 'perforated patch technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000025')),
 
     _t(i.d, 'whole cell patch clamp technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000027')),
 
     _t(i.d, 'current clamp technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000204')),
 
     _t(i.d, 'voltage clamp technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
     ),
+       (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000203')),
 
     _t(i.d, ' technique',
        (ilxtr.hasSomething, i.d),
@@ -1300,8 +1361,8 @@ triples = (
     _t(i.d, ' technique',
        (ilxtr.hasSomething, i.d),
     ),
-
-) + (  # aspects
+)
+triples += (  # aspects
     oc(asp.amount, ilxtr.aspect),
     oc(asp['count'], ilxtr.amount),
 
@@ -1318,8 +1379,9 @@ triples = (
     oc(asp.current, asp.electrical),
     oc(asp.charge, asp.electrical),
     oc(asp.magnetic, asp.electromagnetic),
+)
 
-) + (  # other
+triples += (  # other
     oc(ilxtr.thingWithSequence),
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
 )
