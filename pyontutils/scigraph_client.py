@@ -35,6 +35,9 @@ class restService:
         if key is not None:
             self.api_key = key
 
+    def __del__(self):
+        self._session.close()
+
     def _normal_get(self, method, url, params=None, output=None):
         s = self._session
         if self.api_key is not None:
