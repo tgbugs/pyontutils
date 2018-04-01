@@ -54,6 +54,7 @@ try:
             'docopt',
             'flask',
             'gitpython',
+            'hunspell',
             'ipython',
             'joblib',
             'lxml',
