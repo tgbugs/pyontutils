@@ -18,6 +18,8 @@ exten_mapping = {'application/graphml+xml': 'graphml+xml', 'application/graphson
 class restService:
     """ Base class for SciGraph rest services. """
 
+    api_key = None
+
     def __init__(self, cache=False, key=None):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
@@ -32,8 +34,6 @@ class restService:
 
         if key is not None:
             self.api_key = key
-        else:
-            self.api_key = None
 
     def _normal_get(self, method, url, params=None, output=None):
         s = self._session

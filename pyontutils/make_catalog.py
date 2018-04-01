@@ -7,7 +7,7 @@ from pyontutils.config import devconfig
 from pyontutils.ontload import local_imports
 
 remote_base = 'http://ontology.neuinfo.org/NIF/ttl/'
-local_base = Path(devconfig.git_local_base, 'NIF-Ontology/ttl/').as_posix()
+local_base = Path(devconfig.git_local_base, 'NIF-Ontology/ttl/').as_posix() + '/'
 
 #list of all nif ontologies
 b = local_base

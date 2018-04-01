@@ -1,10 +1,22 @@
 """ Tests for the various cli programs """
 
+import os
 import unittest
 import subprocess
 from glob import glob
 from pathlib import Path
+
+from pyontutils import scigraph_client
+
+orig_basepath = scigraph_client.BASEPATH
+
+from pyontutils import scigraph
 from pyontutils import core
+
+if 'SCICRUNCH_API_KEY' in os.environ:
+    scigraph.scigraph_client.BASEPATH = orig_basepath
+else:
+    scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
 
 class TestCli(unittest.TestCase):
     commands = (
@@ -42,6 +54,7 @@ class TestScripts(unittest.TestCase):
             'neuron_ma2015',
             'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
             'old_neuron_example',
+            'cocomac_uberon'
            )
 
     mains = ('nif_cell',
