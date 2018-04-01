@@ -15,9 +15,12 @@ python:
   - 3.6
 
 before_install:
+  - sudo apt-get install hunspell
+  - sudo apt-get install libhunspell-dev
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
+  - git clone https://github.com/BlueBrain/nat.git
   - popd
 
 install:

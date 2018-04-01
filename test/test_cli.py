@@ -8,7 +8,8 @@ from pathlib import Path
 
 from pyontutils import scigraph_client
 
-orig_basepath = scigraph_client.BASEPATH
+# orig_basepath = scigraph_client.BASEPATH
+orig_basepath = 'https://scicrunch.org/api/1/scigraph'
 
 from pyontutils import scigraph
 from pyontutils import core
