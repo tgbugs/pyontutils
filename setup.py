@@ -77,7 +77,7 @@ try:
             'console_scripts': [
                 'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
-                'necromancy=pyontutils.necromancy.py:main',
+                'necromancy=pyontutils.necromancy:main',
                 'ontload=pyontutils.ontload:main',
                 'ontree=pyontutils.ontree:main',
                 'ontutils=pyontutils.ontutils:main',

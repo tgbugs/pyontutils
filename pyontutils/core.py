@@ -1471,7 +1471,7 @@ class Ont:
         if hasattr(self, '_triples'):
             yield from self._triples()
         else:
-            raise StopIteration
+            return
         for t in self._extra_triples:  # last so _triples can populate
             yield t
 
