@@ -16,7 +16,7 @@ import rdflib
 import requests
 from lxml import etree
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology, yield_recursive
+from pyontutils.core import makePrefixes, makeGraph, createOntology, yield_recursive, build
 from pyontutils.core import rdf, rdfs, owl, oboInOwl, replacedBy
 from pyontutils.core import Ont, Source, PREFIXES as uPREFIXES
 from pyontutils.utils import chunk_list, dictParse, memoryCheck
@@ -201,7 +201,7 @@ chebi_dead = ChebiDead()
 
 
 class Chebi(Ont):
-    sources = ChebiIdsSrc(), ChebiOntSrc()
+    sources = ChebiIdsSrc, ChebiOntSrc
     filename = 'chebislim'
     name = 'NIF ChEBI slim'
     shortname = 'chebislim'
@@ -267,7 +267,7 @@ def main():
     memoryCheck(7300000000)
     #ncbigene_make()
     #chebi_make()
-    Chebi()().write()
+    build(Chebi, n_jobs=1)
     chebi_dead().write()
     embed()
 
