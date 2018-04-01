@@ -1080,7 +1080,8 @@ def createOntology(filename=    'temp-graph',
 #
 # query
 
-ontquery.OntCuries(PREFIXES)
+OntCuries = ontquery.OntCuries
+OntCuries(PREFIXES)
 # ontquery.SciGraphRemote.verbose = True
 
 class OntId(ontquery.OntId, rdflib.URIRef):
