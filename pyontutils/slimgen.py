@@ -24,8 +24,6 @@ from pyontutils.ilx_utils import ILXREPLACE
 from IPython import embed
 
 
-memoryCheck(7300000000)
-
 #ncbi_map = {
     #'name':,
     #'description':,
@@ -266,6 +264,7 @@ class Chebi(Ont):
 
 
 def main():
+    memoryCheck(7300000000)
     #ncbigene_make()
     #chebi_make()
     Chebi()().write()
