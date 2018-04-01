@@ -235,7 +235,7 @@ def olit(subject, predicate, *objects):
         if object not in (None, ''):
             yield subject, predicate, rdflib.Literal(object)
 
-class Thunk:
+class Thunk:  # FIXME naming, these aren't really thunks, they are combinators
     def __init__(self, *present):
         raise NotImplemented
 
@@ -328,7 +328,7 @@ oc_ = POThunk(rdf.type, owl.Class)
 
 class RestrictionThunk(_POThunk):
     def __call__(self, subject, predicate=None):
-        print('in RestrictionThunk:', self.predicate, self.object)
+        #print('in RestrictionThunk:', self.predicate, self.object)
         generator = self.outer_self.serialize(subject, self.predicate, self.object)
         if self.outer_self.predicate is None and predicate is None:
             raise TypeError(f'No predicate defined for {self!r}')
@@ -349,7 +349,7 @@ class RestrictionsThunk(RestrictionThunk):
     def __init__(self, *predicate_objects):
         self.predicate_objects = predicate_objects
 
-    def __call__(self, subject, predicate=None):
+    def __call__(self, subject, predicate=None):  # FIXME this attaches everything to the same subject
         call = super().__call__
         try:
             for self.predicate, self.object in self.predicate_objects:
@@ -361,6 +361,9 @@ class RestrictionsThunk(RestrictionThunk):
             del self.predicate
         if hasattr(self, 'object'):
             del self.object
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}{tuple(sorted(self.predicate_objects))!r}"
 
 
 class Triple:
@@ -444,8 +447,10 @@ restriction = Restriction(rdfs.subClassOf)
 
 class Restrictions(Restriction):
     def __call__(self, *predicate_objects):
-        rt = type('RestrictionsThunk', (RestrictionsThunk,), dict(outer_self=self))
-        return rt(*predicate_objects)
+        #rt = type('RestrictionsThunk', (RestrictionsThunk,), dict(outer_self=self))
+        #return rt(*predicate_objects)
+        rt = type('RestrictionThunk', (RestrictionThunk,), dict(outer_self=self))
+        return (rt(*p_o) for p_o in predicate_objects)
 
 
 restrictions = Restrictions(None)

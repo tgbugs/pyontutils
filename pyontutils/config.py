@@ -3,6 +3,7 @@ import yaml
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
+from pyontutils.utils import TermColors as tc
 
 def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
@@ -105,7 +106,7 @@ class DevConfig:
             if maybe_repo.exists():
                 return str(maybe_repo)
             else:
-                print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')
+                print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
                 return tempdir
 
     @default('localhost')
