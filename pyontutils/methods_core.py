@@ -1,4 +1,5 @@
 import rdflib
+from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, oop, olit, oec, olist
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
@@ -10,6 +11,7 @@ asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
+OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = NIFTTL['nif_backend.ttl'],
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
@@ -200,7 +202,7 @@ triples = (
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
 
-    oc(ilxtr.aspect, BFO['0000019']),
+    oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
     olit(ilxtr.aspect, rdfs.comment,
          'PATO has good coverage of many of these aspects though their naming is not alway consistent.'),
@@ -249,18 +251,19 @@ triples = (
 
     oc_(ilxtr.protocolExecution,
        oec(ilxtr.technique,
-           restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
+           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
     olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
 
     ## techniques
     oc(BFO['0000015']),
     olit(BFO['0000015'], rdfs.label, 'process'),
 
-    oc(ilxtr.technique, BFO['0000015']),
+    oc(ilxtr.technique, BFO['0000015']),  # FIXME technique/
     olit(ilxtr.technique, rdfs.label, 'technique'),
     olit(ilxtr.technique, NIFRID.synonym, 'method'),
     olit(ilxtr.technique, definition,
          'A repeatable process that is constrained by some prior information.'),
+    (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
 
 )
 
@@ -272,3 +275,8 @@ methods_core = simpleOnt(filename=filename,
                          comment=comment,
                          _repo=_repo)
 
+methods_core._graph.add_namespace('asp', str(asp))
+methods_core._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+#methods_core._graph.add_namespace('tech', str(tech))
+methods_core._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+methods_core._graph.write()

@@ -7,13 +7,17 @@ from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import methods_core, asp, tech
 
 filename = 'methods'
-prefixes = ('ilxtr', 'NIFRID', 'definition', 'realizes', 'hasParticipant', 'hasPart', 'hasInput', 'hasOutput')
+prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
+            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
+            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
+            'NLX',
+)
+OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
 
-OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -43,7 +47,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple()):
 
 
     yield from oc(subject)
-    yield from oec.serialize(subject, *members, restrictions(*rests))
+    yield from oec.serialize(subject, *members, *restrictions(*rests))
     yield from olit(subject, rdfs.label, label)
     if def_:
         yield from olit(subject, definition, def_)
@@ -499,12 +503,17 @@ triples = (
        (ilxtr.isConstrainedBy, ilxtr.radonTransform),
        synonyms=('tomography',)),
     _t(i.d, 'positron emission tomography',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, i.b),
        synonyms=('PET', 'PET scan')),
+    (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000009')),
+
+    # "Single-Proton emission computerized tomography"
+    # "HBP_MEM:0000010"  # TODO
 
     _t(i.d, 'stereology technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('stereology',)),
+
     _t(i.d, 'design based stereology technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('design based stereology',)),
@@ -725,6 +734,10 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('immunohistochemistry technique',
                  'immunohistochemistry')),
+    (OntTerm('NLXINV:20090609'), ilxtr.hasTempId, OntId("HBP_MEM:0000115")),
+    
+    # TODO "HBP_MEM:0000116"
+    # "Immunoelectron microscopy"
 
     _t(i.d, 'direct immunohistochemical technique',
        (ilxtr.hasSomething, i.d),
@@ -930,6 +943,16 @@ triples = (
        synonyms=('imaging',),
     ),
 
+    _t(i.d, 'functional brain imaging',
+       (hasParticipant, OntTerm('UBERON:0000955', label='brain')),
+       (ilxtr.hasPrimaryAspect, asp.anySpatioTemporalMeasure),  # FIXME and thus we see that 'functional' is a buzzword!
+       (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
+       (ilxtr.hasInformationOutput, ilxtr.image),
+
+       synonyms=('imaging that relies on contrast provided by differential aspects of some biological process',)
+       ),
+    (i.p, ilxtr.hasTempId, OntId('HBP_MEM:0000007')),
+
     _t(i.d, 'photographic technique',
        (ilxtr.hasInformationOutput, ilxtr.photograph),
        synonyms=('photography',),
@@ -945,6 +968,7 @@ triples = (
        (ilxtr.detects, ilxtr.visibleLight),  # owl:Class photon and hasWavelenght range ...
        synonyms=('light imaging', 'visible light imaging'),
     ),
+    (tech.opticalImaging, ilxtr.hasTempId, OntId("HBP_MEM:0000013")),
 
     _t(i.d, 'intrinsic optical imaging',
        tech.opticalImaging,
@@ -993,6 +1017,7 @@ triples = (
          ('Note that this deals explicitly only with the image acquistion portion of fMRI. '
           'Other parts of the full process and techniques in an fMRI study should be modelled separately. '
           'They can be tied to fMRI using hasPart: or hasPriorTechnique something similar.')),  # TODO
+    (tech.fMRI, ilxtr.hasTempId, OntId("HBP_MEM:0000008")),
 
     _t(tech.dwMRI, 'diffusion weighted magnetic resonance imaging',
        tech.MRI,
@@ -1003,6 +1028,16 @@ triples = (
        tech.dwMRI,
        synonyms=('DTI',),),
 
+    _t(i.d, 'electroencephalography',
+       (ilxtr.hasSomething, i.b),
+       synonyms=('EEG',)),
+    (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000011")),
+
+    _t(i.d, 'magnetoencephalography',
+       (ilxtr.hasSomething, i.b),
+       synonyms=('MEG',)),
+    (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000012")),
+       
     # modification techniques
     _t(i.d, 'modification technique',
        (ilxtr.hasPrimaryAspect, asp['']),
@@ -1285,9 +1320,9 @@ triples = (
        synonyms=('southern blot',)
     ),
     _t(i.d, 'western blotting technique',
-       (ilxtr.hasSomething, i.d),
-       synonyms=('wester blot',)
-    ),
+       (ilxtr.hasSomething, i.b),
+       synonyms=('wester blot',)),
+    (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000112")),
 
     _t(i.d, 'intracellular electrophysiology technique',
        (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
@@ -1439,8 +1474,10 @@ def expand(_makeGraph, *graphs, debug=False):
 methods._graph.add_namespace('asp', str(asp))
 methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
 methods._graph.add_namespace('tech', str(tech))
+methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+methods._graph.write()
 #mc = methods.graph.__class__()
 #mc.add(t) for t in methods_core.graph if t[0] not in
-expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
-expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+#expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+#expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
