@@ -7,6 +7,7 @@ from setuptools import setup, find_packages
 files = [
     'pyontutils/__init__.py',
     'pyontutils/closed_namespaces.py',
+    'pyontutils/config.py',
     'pyontutils/core.py',
     'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
