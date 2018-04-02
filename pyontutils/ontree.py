@@ -6,7 +6,8 @@ Usage:
     ontree server [options]
 
 Options:
-    -k --key=APIKEY         apikey for SciGraph instance [default: None]
+    -a --api=API            SciGraph api endpoint
+    -k --key=APIKEY         apikey for SciGraph instance
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
     -o --outgoing           if not specified defaults to incoming
     -b --both               if specified goes in both directions
@@ -21,13 +22,13 @@ from urllib.error import HTTPError
 import rdflib
 from docopt import docopt, parse_defaults
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort
+from pyontutils import scigraph
 from pyontutils.hierarchies import Query, creatTree, dematerialize
-from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.core import makeGraph
 from IPython import embed
 
-sgg = Graph(cache=False, verbose=True)
-sgv = Vocabulary(cache=False, verbose=True)
+sgg = scigraph.Graph(cache=False, verbose=True)
+sgv = scigraph.Vocabulary(cache=False, verbose=True)
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -260,8 +261,12 @@ def main():
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
     if args['server']:
+        api = args['--api']
+        if api is not None:
+            scigraph.scigraph_client.BASEPATH = api
+            sgg._basePath = api
+            sgv._basePath = api
         k = args['--key']
-        k = k if k != defaults['--key'] else None
         server(k)
     else:
         direction = both if args['--both'] else out if args['--incoming'] else inc
