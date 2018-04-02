@@ -110,11 +110,11 @@ class DevConfig:
                 return tempdir
 
     @default('localhost')
-    def scigraph_host(self):
+    def _scigraph_host(self):
         return self.config['scigraph_host']
 
     @default(9000)
-    def scigraph_port(self):
+    def _scigraph_port(self):
         port = self.config['scigraph_port']
         if port is None:
             return ''
@@ -122,6 +122,10 @@ class DevConfig:
             return ''
         else:
             return port
+
+    @default('http://localhost:9000/scigraph')
+    def scigraph_api(self):
+        return self.config['scigraph_api']
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):

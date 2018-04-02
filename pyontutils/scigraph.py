@@ -2,9 +2,7 @@ from pyontutils.config import devconfig, get_api_key
 from pyontutils import scigraph_client
 from IPython import embed
 
-scigraph_client.BASEPATH = (f'http://{devconfig.scigraph_host}'
-                            f'{":" if devconfig.scigraph_port else ""}'
-                            f'{devconfig.scigraph_port}/scigraph')
+scigraph_client.BASEPATH = (f'{devconfig.scigraph_api}')
 
 scigraph_client.restService.api_key = get_api_key()
 

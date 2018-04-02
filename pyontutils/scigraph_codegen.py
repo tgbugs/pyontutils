@@ -8,8 +8,7 @@ Usage:
 Options:
     -o --output-file=FILE       save client library here    [default: /tmp/scigraph_client.py]
 
-    -h --host=HOST              host to build from          [default: {devconfig.scigraph_host}]
-    -p --port=PORT              port for scigraph           [default: {devconfig.scigraph_port}]
+    -a --api=API                API endpoint to build from  [default: {devconfig.scigraph_api}]
     -v --scigraph-version=VER   API docs version            [default: 2]
 
     -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]
@@ -519,19 +518,20 @@ class State2(State):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='scigraph-codegen 1.0.0')
-    output_file, host, port, version, basepath = (
+    output_file, api, version, basepath = (
         args['--' + k]
-        for k in ('output-file', 'host', 'port', 'scigraph-version', 'basepath'))
+        for k in ('output-file', 'api', 'scigraph-version', 'basepath'))
     version = int(version)
     basepath = None if basepath == 'default' else basepath
     if version < 2:
         state = State
-        docs_path = 'scigraph/api-docs'
+        docs_path = 'api-docs'
     else:
         state = State2
-        docs_path = 'scigraph/swagger.json'
+        docs_path = 'swagger.json'
 
-    api_url = f'http://{host}:{port}/{docs_path}'
+    api_url = f'{api}/{docs_path}'
+    print(api_url)
     s = state(api_url, basepath)
     code = s.code()
     with open(output_file, 'wt') as f:
