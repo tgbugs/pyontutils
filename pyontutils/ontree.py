@@ -90,6 +90,9 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
 
         return abort(422, message)
 
+class fakeRequest:
+    args = {}
+
 def getArgs(request):
     want = {'direction':inc,  # INCOMING OUTGOING BOTH
             'depth':10,
@@ -126,6 +129,35 @@ def getArgs(request):
 def sanitize(pred, kwargs):
     if pred == 'isDefinedBy' and kwargs['depth'] > 1:
         return abort(400, 'isDefinedBy not allowed for queries with depth > 1.')
+
+examples = (
+    ('Brain parts', hpp, 'UBERON:0000955', '?direction=OUTGOING'),  # FIXME direction=lol doesn't cause issues...
+    ('Brain parts alt', po, 'UBERON:0000955'),
+    ('Anatomical entities', a, 'UBERON:0001062'),
+    ('Cell parts', a, 'GO:0044464'),
+    ('Cells', a, 'SAO:1813327414'),
+    ('Proteins', a, 'SAO:26622963'),
+    ('GPCRs', a, 'NIFEXT:5012'),
+    ('Mulitmeric ion channels', a, 'NIFEXT:2502'),
+    ('Monomeric ion channels', a, 'NIFEXT:2500'),
+    ('Diseases', a, 'DOID:4'),
+    ('Vertebrata', a, 'NCBITaxon:7742', '?depth=40'),
+    ('Metazoa', a, 'NCBITaxon:33208', '?depth=40'),
+    ('Rodentia', a, 'NCBITaxon:9989'),
+    ('Neurotransmitters', hr, 'CHEBI:25512'),
+    ('Neurotransmitters', a, 'NLXMOL:100306'),
+    ('IRIs ok for roots', a, 'http://uri.neuinfo.org/nif/nifstd/nlx_mol_100306'),
+    ('Provenance', 'isDefinedBy',
+     'http://ontology.neuinfo.org/NIF/ttl/generated/chebislim.ttl', '?depth=1'),
+)
+
+file_examples = (
+    ('Resources', a, 'NLXRES:20090101', 'ttl/resources.ttl'),
+    ('Staging branch', a, 'PAXRAT:',
+     'ttl/generated/parcellation/paxinos-rat-labels.ttl', '?branch=staging'),
+    ('Restriction example', hpp, 'UBERON:0000955',
+     'ttl/bridge/uberon-bridge.ttl', '?direction=OUTGOING&restriction=true'),
+)
 
 def server(api_key=None):
     f = os.path.realpath(__file__)
@@ -166,33 +198,6 @@ def server(api_key=None):
 
     @app.route(f'/{basename}/examples', methods=['GET'])
     def route_examples():
-        examples = (
-            ('Brain parts', hpp, 'UBERON:0000955', '?direction=OUTGOING'),  # FIXME direction=lol doesn't cause issues...
-            ('Brain parts alt', po, 'UBERON:0000955'),
-            ('Anatomical entities', a, 'UBERON:0001062'),
-            ('Cell parts', a, 'GO:0044464'),
-            ('Cells', a, 'SAO:1813327414'),
-            ('Proteins', a, 'SAO:26622963'),
-            ('GPCRs', a, 'NIFEXT:5012'),
-            ('Mulitmeric ion channels', a, 'NIFEXT:2502'),
-            ('Monomeric ion channels', a, 'NIFEXT:2500'),
-            ('Diseases', a, 'DOID:4'),
-            ('Vertebrata', a, 'NCBITaxon:7742', '?depth=40'),
-            ('Metazoa', a, 'NCBITaxon:33208', '?depth=40'),
-            ('Rodentia', a, 'NCBITaxon:9989'),
-            ('Neurotransmitters', hr, 'CHEBI:25512'),
-            ('Neurotransmitters', a, 'NLXMOL:100306'),
-            ('IRIs ok for roots', a, 'http://uri.neuinfo.org/nif/nifstd/nlx_mol_100306'),
-            ('Provenance', 'isDefinedBy',
-             'http://ontology.neuinfo.org/NIF/ttl/generated/chebislim.ttl', '?depth=1'),
-        )
-        file_examples = (
-            ('Resources', a, 'NLXRES:20090101', 'ttl/resources.ttl'),
-            ('Parcellation branch', a, 'PAXRAT:0',
-             'ttl/generated/parcellation/paxinos-rat-labels.ttl', '?branch=parcellation'),
-            ('Restriction example', hpp, 'UBERON:0000955',
-             'ttl/bridge/uberon-bridge.ttl', '?direction=OUTGOING&restriction=true'),
-        )
         links = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_query", pred=pred, root=root)}{args[0] if args else ""}">'
                            f'../query/{pred}/{root}{args[0] if args else ""}</a></td></tr>')
                           for name, pred, root, *args in examples)
@@ -247,13 +252,33 @@ def server(api_key=None):
         except HTTPError:
             return abort(404, 'Unknown ontology file.')  # TODO 'Unknown git branch.'
 
-    if api_key:
-        sgg.api_key = api_key
-        sgv.api_key = api_key
-    app.debug = False
-    app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
-    # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
-    os.sys.exit()
+    return app
+
+def test():
+    global request
+    request = fakeRequest()
+    request.args['depth'] = 1
+    app = server()
+    (route_, route_docs, route_filequery, route_examples, route_iriquery,
+     route_query) = (app.view_functions[k]
+                     for k in ('route_', 'route_docs', 'route_filequery',
+                               'route_examples', 'route_iriquery', 'route_query'))
+
+    for _, predicate, root, *_ in examples:
+        if root.startswith('http'):
+            root = root.split('://')[-1]  # FIXME nginx behavior...
+            route_iriquery(predicate, root)
+        else:
+            route_query(predicate, root)
+
+    for _, predicate, root, file, *args in file_examples:
+        if args and 'restriction' in args[0]:
+            request.args['restriction'] = 'true'
+
+        route_filequery(predicate, root, file)
+
+        if args and 'restriction' in args[0]:
+            request.args.pop('restriction')
 
 def main():
     from docopt import docopt
@@ -266,8 +291,15 @@ def main():
             scigraph.scigraph_client.BASEPATH = api
             sgg._basePath = api
             sgv._basePath = api
-        k = args['--key']
-        server(k)
+        api_key = args['--key']
+        if api_key:
+            sgg.api_key = api_key
+            sgv.api_key = api_key
+        app = server()
+        app.debug = False
+        app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
+        # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
+        os.sys.exit()
     else:
         direction = both if args['--both'] else out if args['--incoming'] else inc
         # TODO default direction table to match to expected query behavior based on rdf direction
