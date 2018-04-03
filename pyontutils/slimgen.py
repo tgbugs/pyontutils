@@ -1,29 +1,28 @@
 #!/usr/bin/env python3.6
+#!/usr/bin/env pypy3
 """
     Build lightweight slims from curie lists.
     Used for sources that don't have an owl ontology floating.
 """
 #TODO consider using some of the code from scr_sync.py???
 
+import os
 import gzip
 import json
 from io import BytesIO
+from pathlib import Path
 from datetime import date
 import rdflib
-from rdflib.extras import infixowl
 import requests
 from lxml import etree
-
-from ilx_utils import ILXREPLACE
-from core import makePrefixes, makeGraph, createOntology, yield_recursive
-from core import rdf, rdfs, owl, oboInOwl, replacedBy
-from core import Ont, Source, PREFIXES as uPREFIXES
-from utils import chunk_list, dictParse, memoryCheck
-
+from rdflib.extras import infixowl
+from pyontutils.core import makePrefixes, makeGraph, createOntology, yield_recursive, build
+from pyontutils.core import rdf, rdfs, owl, oboInOwl, replacedBy
+from pyontutils.core import Ont, Source, PREFIXES as uPREFIXES
+from pyontutils.utils import chunk_list, dictParse, memoryCheck
+from pyontutils.ilx_utils import ILXREPLACE
 from IPython import embed
 
-
-memoryCheck(7300000000)
 
 #ncbi_map = {
     #'name':,
@@ -70,10 +69,10 @@ class ncbi(dictParse):
                 self.g.add_trip(self.identifier, 'NIFRID:synonym', synonym)
 
 def ncbigene_make():
-    IDS_FILE = 'resources/gene-subset-ids.txt'
+    IDS_FILE = (Path(__file__).parent / 'resources/gene-subset-ids.txt').as_posix()
     with open(IDS_FILE, 'rt') as f:  # this came from neuroNER
         ids = [l.split(':')[1].strip() for l in f.readlines()]
-    
+
     #url = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?retmode=json&retmax=5000&db=gene&id='
     #for id_ in ids:
         #data = requests.get(url + id_).json()['result'][id_]
@@ -90,7 +89,7 @@ def ncbigene_make():
         data['id'] = ','.join(idset),
         resp = requests.post(url, data=data).json()
         chunks.append(resp)
-    
+
     base = chunks[0]['result']
     uids = base['uids']
     for more in chunks[1:]:
@@ -99,7 +98,7 @@ def ncbigene_make():
         base.update(data)
     #base['uids'] = uids  # i mean... its just the keys
     base.pop('uids')
- 
+
     ng = createOntology('ncbigeneslim',
                         'NIF NCBI Gene subset',
                         makePrefixes('ILXREPLACE', 'ilxtr', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
@@ -115,7 +114,7 @@ def ncbigene_make():
 
 
 class ChebiIdsSrc(Source):
-    source = 'resources/chebi-subset-ids.txt'
+    source = (Path(__file__).parent / 'resources/chebi-subset-ids.txt').as_posix()
     source_original = True
     @classmethod
     def loadData(cls):
@@ -135,13 +134,16 @@ class ChebiOntSrc(Source):
     source_original = True
     @classmethod
     def loadData(cls):
-        #gzed = requests.get(cls.source)
-        #cls._gzed = gzed
-        #raw = BytesIO(gzip.decompress(gzed.content))
-
         source = '/tmp/chebi.gz'
-        with open(source, 'rb') as f:
-            raw = BytesIO(gzip.decompress(f.read()))
+        if not os.path.exists(source):
+            gzed = requests.get(cls.source)
+            cls._gzed = gzed
+            raw = BytesIO(gzip.decompress(gzed.content))
+            with open(source, 'wb') as f:
+                f.write(gzed.content)
+        else:
+            with open(source, 'rb') as f:
+                raw = BytesIO(gzip.decompress(f.read()))
 
         t = etree.parse(raw)
         return t
@@ -199,7 +201,7 @@ chebi_dead = ChebiDead()
 
 
 class Chebi(Ont):
-    sources = ChebiIdsSrc(), ChebiOntSrc()
+    sources = ChebiIdsSrc, ChebiOntSrc
     filename = 'chebislim'
     name = 'NIF ChEBI slim'
     shortname = 'chebislim'
@@ -262,9 +264,10 @@ class Chebi(Ont):
 
 
 def main():
+    memoryCheck(7300000000)
     #ncbigene_make()
     #chebi_make()
-    Chebi()().write()
+    build(Chebi, n_jobs=1)
     chebi_dead().write()
     embed()
 

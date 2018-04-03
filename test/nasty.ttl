@@ -19,6 +19,10 @@
 @prefix C: <http://cc.org/prefix_> .
 @prefix c: <http://c.org/prefix_> .
 @prefix sco: <http://sco.lol/> .
+@prefix prefixA: <http://example.org/A/> .
+@prefix prefixZ: <http://example.org/Z/> .
+@prefix prefixa: <http://example.org/a/> .
+@prefix prefixz: <http://example.org/z/> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
 @base <http://ihavenoqname.org/> .  # this will be stripped and we prefer proper prefixes
 
@@ -377,7 +381,7 @@ BLX:20 a owl:ObjectProperty ;
 
 # collections as subjects
 
-("this" "is" "a" "bare" "list") a rdf:List .
+# ("this" "is" "a" "bare" "list") a rdf:List .  # TODO check on what the spec says this should serialize to...
 ("this" "is" "a" "bare" "list") other:UsedAP "huehuehuehue" .
 
 # trying to reveal issues with summing list ranks
@@ -390,10 +394,10 @@ BLX:20 a owl:ObjectProperty ;
 
 # sub class of ordering additional tests
 
-sco:1 a owl:Ontology ;
-    owl:imports sco:0 .
+sco:0 a owl:Ontology ;
+    owl:imports sco:1 .
 
-sco:0 a owl:Ontology .
+sco:1 a owl:Ontology .  # this should appear above sco:0
 
 sco:2 a owl:AnnotationProperty ;
     rdfs:subPropertyOf sco:3 .
@@ -423,4 +427,18 @@ other:XMLLiteral_test a owl:Class ;
     """^^rdf:XMLLiteral,
     """<tag>some text</tag> <something-else>another tag</something-else>
     """^^rdf:XMLLiteral .
+
+# empty qname ordering
+
+prefixA:0 a owl:Class .
+prefixA: a owl:Class .
+
+prefixZ:0 a owl:Class .
+prefixZ: a owl:Class .
+
+prefixa:0 a owl:Class .
+prefixa: a owl:Class .
+
+prefixz:0 a owl:Class .
+prefixz: a owl:Class .
 

@@ -1,15 +1,18 @@
 # pyontutils
+[![Build Status](https://travis-ci.org/tgbugs/pyontutils.svg?branch=master)](https://travis-ci.org/tgbugs/pyontutils)
+
 python utilities for working with ontologies
 
 ## Requirements
-This repo requires Python3.6 or later.
-See Pipfile for additional requirements.
+This repo requires PyPy3 or >=Python3.6.
+See and setup.py and Pipfile for additional requirements.
 ontload requires Java8 and >=maven3.3 in order to build SciGraph.
 [parcellation.py](pyontutils/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
 to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
-some other way. In order to build all the packages required by this repo you will need
+some other way. In order to build the packages required by this repo you will need
 gcc (and toolchain) installed and will need to have the development packages for
-`postgresql`, `libxml`, and `protobuf`  installed on your system.
+`libxml` installed. To build the development dependencies you will also need the
+development packages for `postgresql`, and `protobuf` installed on your system.
 
 ## Installation
 The easiest way to install pyontutils is to use pipenv. It makes it easy to manage
@@ -21,14 +24,25 @@ to accomplish this.
 
 1. In your preferred folder `git clone https://github.com/tgbugs/pyontutils.git`
 2. `cd pyontutils`
-3. `pipenv install --skip-lock`. Note that `mysql-connector` (aka `mysql-connector-python`) often cannot find the
-files it needs to build.  When installing pass them in as environment variables (you may need to adjust
-exact paths for your system). `MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --skip-lock`. There are some systems on which even this is not sufficient. If you encounter this situation modify to mysql-connector entry in Pipfile from `"*"` => `"==2.1.6"`. And then run the command without environment variables.
+3. `pipenv install --skip-lock`. If you want to use pypy3 run `pipenv --python pypy3 install --skip-lock`
 4. `pipenv shell` to enter the virtual environment where everything should work.
 
-Alternately, if manage your packages via another system you can create a development setup
-by adding this folder to your `PYTHONPATH` environment variable using
-`export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
+### Development Installation
+Note that the optional development packages are not actually required and if you have
+installation issues development can proceed normally without them, some database
+queries will just be slower becuase they use a pure python mysql connector.
+
+If you are installing a development setup note that `mysql-connector` (aka `mysql-connector-python`)
+often cannot find the files it needs to build.  When installing pass them in as environment variables
+(you may need to adjust exact paths for your system).
+`MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --skip-lock`.
+There are some systems on which even this is not sufficient.
+If you encounter this situation modify to mysql-connector entry in Pipfile from `"*"` => `"==2.1.6"`.
+And then run the command without environment variables.
+
+Alternately, if you manage your packages via another system you can create a
+development setup by adding this folder to your `PYTHONPATH` environment variable
+using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
 If you use a development setup you will need to create symlinks described below.
 
 ## Utility Scripts

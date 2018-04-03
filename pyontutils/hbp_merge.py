@@ -3,16 +3,20 @@
 import os
 import csv
 from glob import glob
+from pathlib import Path
 import rdflib
-from utils import rowParse, async_getter
-from scigraph_client import Graph, Vocabulary
+from pyontutils.utils import rowParse, async_getter
+from pyontutils.scigraph import Graph, Vocabulary
 from IPython import embed
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 sgg = Graph(cache=True)
 sgv = Vocabulary(cache=True)
 
 def main():
-    files = glob(os.path.expanduser('~/git/methodsOntology-upstream/to_be_integrated_in_NIF/*'))
+    files = glob((gitf / 'methodsOntology-upstream/to_be_integrated_in_NIF/').as_posix() + '*')
     rows = []
     got_header = False
     for file in files:

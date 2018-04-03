@@ -1,28 +1,12 @@
-[packages]
-
-docopt = "*"
-flask = "*"
-gitpython = "*"
-ipython = "*"
-joblib = "*"
-lxml = "*"
-mysql-connector = "*"
-numpy = "*"
-protobuf = "*"
-psutil = "*"
-"psycopg2" = "*"
-pyyaml = "*"
-rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b3'}
-requests = "*"
-robobrowser = "*"
-sqlalchemy = "*"
-"e1839a8" = {path = ".", editable = true}
-
+[requires]
+python_version = '3.6'  # also works with pypy3
 
 [dev-packages]
+RDFClosure = {git = 'https://github.com/rdflib/OWL-RL.git', ref = '0c74fd060176255463e23abbdf4d91c14a0145a8', editable = true}
+"e1839a8" = {path = ".", extras = ["dev"], editable = true}
 
+[packages]
+ontquery = {git = 'https://github.com/tgbugs/ontquery.git'}
+rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b4'}
+"e1839a8" = {path = ".", editable = true}
 
-
-[requires]
-
-python_version = '3.6'

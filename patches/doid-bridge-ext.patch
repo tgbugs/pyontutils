@@ -1,0 +1,10 @@
+--- a/ttl/bridge/doid-bridge.ttl
++++ b/ttl/bridge/doid-bridge.ttl
+@@ -12,6 +12,7 @@
+         <http://ontology.neuinfo.org/NIF/ttl/generated/symp-dead.ttl>,
+         <http://ontology.neuinfo.org/NIF/ttl/generated/trans-dead.ttl>,
+         <http://ontology.neuinfo.org/NIF/ttl/nif_backend.ttl>,
++        <http://ontology.neuinfo.org/NIF/ttl/external/doid-ext.owl>,
+         <http://purl.obolibrary.org/obo/doid.owl> .
+ 
+ ### Annotations

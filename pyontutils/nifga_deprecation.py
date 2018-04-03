@@ -10,22 +10,23 @@ import rdflib
 from rdflib import URIRef, RDFS, RDF, OWL
 from rdflib.namespace import SKOS
 import requests
+from pyontutils.scigraph import Vocabulary, Graph
+from pyontutils.utils import TODAY, async_getter, TermColors as tc
+from pyontutils.scig import scigPrint
+from pyontutils.hierarchies import creatTree, flatten
+from pyontutils.core import devconfig, OntMeta, makePrefixes, makeGraph
+from pyontutils.core import NIFRID, oboInOwl
 from IPython import embed
-from scigraph_client import Vocabulary, Graph
-from utils import TODAY, async_getter, TermColors as tc
-from scig import scigPrint
-from hierarchies import creatTree, flatten
-from core import OntMeta, makePrefixes, makeGraph
 
-sgg = Graph(cache=True, basePath='http://localhost:9000/scigraph')
-sgv = Vocabulary(cache=True, basePath='http://localhost:9000/scigraph')
+sgg = Graph(cache=True)
+sgv = Vocabulary(cache=True)
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
-CON = 'http://www.geneontology.org/formats/oboInOwl#consider'
-DBX = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'  #FIXME also behaves as objectProperty :/
-AID =  'http://www.geneontology.org/formats/oboInOwl#hasAlternativeId'
-IRBC = 'http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#isReplacedByClass'
+CON = oboInOwl.consider
+DBX = oboInOwl.hasDbXref  # FIXME also behaves as objectProperty :/
+AID =  oboInOwl.hasAlternativeId
+IRBC = NIFRID.isReplacedByClass
 
 PREFIXES = makePrefixes('UBERON',
                         'ro',
@@ -39,9 +40,9 @@ NIFPREFIXES = makePrefixes('NIFGA',
 
 NIFPREFIXES.update(PREFIXES)
 
-nifga_path = os.path.expanduser('~/git/NIF-Ontology/ttl/NIF-GrossAnatomy.ttl')
-uberon_path = os.path.expanduser('~/git/NIF-Ontology/ttl/external/uberon.owl')
-uberon_bridge_path = 'http://berkeleybop.org/ontologies/uberon/bridge/uberon-bridge-to-nifstd.owl'
+nifga_path = devconfig.ontology_local_repo + '/ttl/NIF-GrossAnatomy.ttl'
+uberon_path = devconfig.ontology_local_repo + '/ttl/external/uberon.owl'
+uberon_bridge_path = 'http://purl.obolibrary.org/obo/uberon/bridge/uberon-bridge-to-nifstd.owl'
 #bridge_path = os.path.expanduser('~/git/NIF-Ontology/ttl/uberon-bridge-to-nifstd.ttl')  # scigraph's got us
 
 #uberon_obsolete = {'UBERON:0022988',  # obsolete regional part of thalamaus
@@ -175,7 +176,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
         graph.add_trip(nifga, OWL.deprecated, True)
 
         # review nifga relations, specifically has_proper_part, proper_part_of
-        # put those relations on the uberon term in the 
+        # put those relations on the uberon term in the
         # if there is no uberon term raise an error so we can look into it
 
         #if uberon not in uedges:
@@ -340,11 +341,8 @@ def make_uberon_graph():
     #ub = rdflib.Graph()
     #ub.parse(uberon_path)  # LOL rdflib your parser is slow
     SANITY = rdflib.Graph()
-    #ont = requests.get(uberon_bridge_path).text
-    with open('/home/tom/files/onts/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
+    ont = requests.get(uberon_bridge_path).text
     split_on = 263
-    #with open('/mnt/tstr/downloads/monarch/uberon-bridge-to-nifstd.owl', 'rt') as f: ont = f.read()  # temp fix during internet out version does not match
-    #split_on = 362
 
     prefs = ('xmlns:NIFSTD="http://uri.neuinfo.org/nif/nifstd/"\n'
              'xmlns:UBERON="http://purl.obolibrary.org/obo/UBERON_"\n')
@@ -593,7 +591,7 @@ def main():
     multi = {k:v for k, v in asdf.items() if len(v) > 1}
     conflated = {k:[_ for _ in v if _ not in deprecated] for k, v in multi.items() if len([_ for _ in v if _ not in deprecated]) > 1 and k != 'NOREP'}
     #_ = [print(k, sgv.findById(k)['labels'][0], '\n\t', [(_, sgv.findById(_)['labels'][0]) for _ in v]) for k, v in sorted(conflated.items())]
-   
+
     graph, bridge, uedges = do_deprecation(replaced_by, g, {}, conflated)  # additional_edges)  # TODO
     bridge.write()
     graph.write()

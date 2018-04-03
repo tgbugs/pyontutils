@@ -1,9 +1,11 @@
 #!/usr/bin/env python3.6
 #!/usr/bin/env pypy3
-""" Common commands for ontology processes. As well as
+from pyontutils.core import devconfig
+__doc__ = f"""Common commands for ontology processes. As well as
     various ontology refactors that should be run in the root ttl folder.
 
 Usage:
+    ontutils devconfig
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
     ontutils spell [options] <file> ...
@@ -14,8 +16,9 @@ Usage:
     ontutils expand <curie>...
 
 Options:
-    -l --git-local=LBASE            local path to look for ontology <repo>     [default: /tmp]
-    -u --curies=CURIEFILE           relative path to curie definition file     [default: ../scigraph/nifstd_curie_map.yaml]
+    -o --output-file=FILE           output file
+    -l --git-local=LBASE            local git folder        [default: {devconfig.git_local_base}]
+    -u --curies=CURIEFILE           curie definition file   [default: {devconfig.curies}]
     -e --epoch=EPOCH                specify the epoch to use for versionIRI
     -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
     -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
@@ -28,13 +31,17 @@ from time import time, localtime, strftime
 from random import shuffle
 import rdflib
 import requests
-import hunspell
 from git.repo import Repo
 from joblib import Parallel, delayed
 from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, skos, definition
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
+
+try:
+    import hunspell
+except ImportError:
+    hunspell = None
 
 # common
 
@@ -99,6 +106,10 @@ class ontologySection:
 # utils
 
 def spell(filenames, debug=False):
+    if hunspell is None:
+        raise ImportError('hunspell is not installed on your system. If you want '
+                          'to run `ontutils spell` please run pipenv install --dev --skip-lock. '
+                          'You will need the development libs for hunspell on your system.')
     spell_objects = (u for r in Parallel(n_jobs=9)(delayed(get_spells)(f) for f in filenames) for u in r)
     hobj = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
     #nobj = hunspell.HunSpell(os.path.expanduser('~/git/domain_wordlists/neuroscience-en.dic'), '/usr/share/hunspell/en_US.aff')  # segfaults without aff :x
@@ -680,7 +691,7 @@ def main():
     epoch = args['--epoch']
 
     curies_location = args['--curies']
-    curies_location = locate_config_file(curies_location, git_local)
+    #curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     filenames = args['<file>']
@@ -693,7 +704,10 @@ def main():
                      'generated/NIF-NIFSTD-mapping.ttl')
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
-    if args['version-iri']:
+    if args['devconfig']:
+        file = devconfig.write(args['--output-file'])
+        print(f'config written to {file}')
+    elif args['version-iri']:
         version_iris(*filenames, epoch=epoch)
     elif args['deadlinks']:
         deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose, debug)

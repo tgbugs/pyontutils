@@ -1,16 +1,20 @@
 #!/usr/bin/env python3.6
 import os
 import inspect
+from pathlib import Path, PurePath as PPath
 from collections import MutableMapping
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
 from IPython import embed
 from pyontutils.ttlser import natsort
-from pyontutils.scigraph_client import Graph, Vocabulary
-from pyontutils.utils import TermColors as tc
+from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
 from pyontutils.qnamefix import cull_prefixes
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 __all__ = [
     'AND',
@@ -53,27 +57,6 @@ def getPhenotypePredicates(graph):
     phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
     return phenoPreds
 
-# neuron and phenotype representations
-
-def test_notebook():
-    try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        return False
-    except (NameError, KeyError) as e:
-        return False
-
-in_notebook = test_notebook()
-
-def stack_magic(stack):
-    # note: we cannot use globals() because it will be globals of the defining file not the calling file
-    if in_notebook:
-        index = 1  # this seems to work for now
-    else:
-        index = -1
-
-    return stack[index][0].f_locals
-
 #
 # classes
 
@@ -93,7 +76,7 @@ class graphBase:
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
-        
+
         if type(self.in_graph) == str:
             self.in_graph = self.core_graph
 
@@ -157,17 +140,17 @@ class graphBase:
 
         """
 
-        graphBase.local_base = local_base
+        graphBase.local_base = Path(local_base).expanduser()
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [remote_base + branch + '/' + s for s in suffixes]
-            local = [local_base + s for s in suffixes]
+            remote = [os.path.join(graphBase.remote_base, branch, s) for s in suffixes]
+            local = [(graphBase.local_base / s).as_posix() for s in suffixes]
             return remote, local
 
         def attachPrefixes(*prefixes, graph=None):
             return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
-        
+
         # file location setup
         remote_core_paths,  local_core_paths =  makeLocalRemote(core_graph_paths)
         remote_in_paths,    local_in_paths =    makeLocalRemote(in_graph_paths)
@@ -177,7 +160,7 @@ class graphBase:
         remote_out_paths, local_out_paths = makeLocalRemote(out_graph_paths)  # XXX fail w/ tmp
         remote_out_paths = local_out_paths  # can't write to a remote server without magic
 
-        if not force_remote and os.path.exists(local_base):
+        if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
             if repo.active_branch.name != branch:
                 raise FileNotFoundError('Local git repo not on %s branch! Please run `git checkout %s` in %s' % (branch, branch, local_base))
@@ -231,7 +214,7 @@ class graphBase:
 
         # makeGraph setup
         new_graph.filename = out_graph_path
-        ontid = rdflib.URIRef('file://' + out_graph_path)
+        ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
         new_graph.add_ont(ontid, 'Some Neurons')
         for remote_out_import in remote_out_imports:
             new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
@@ -249,11 +232,12 @@ class graphBase:
     @staticmethod
     def write():
         og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        og.filename = graphBase.ng.filename
         og.write()
 
     @staticmethod
     def write_python():
-        with open(os.path.splitext(graphBase.ng.filename)[0] + '.py', 'wt') as f:
+        with open(PPath(graphBase.ng.filename).with_suffix('.py'), 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
@@ -324,7 +308,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
-        # use this specify consistent patterns for modifying labels 
+        # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
 
     def checkPhenotype(self, phenotype):
@@ -660,7 +644,7 @@ class NeuronBase(graphBase):
         # a different result
         # of course this can be very powerful if we have a set of neurons that
         # we want to instantiate in different contexts
-        
+
         # we are implementing this in this way so that it is clear that you cannot
         # change the context of a neuron after it has been created
         if not neuron_or_phenotypeEdges:
@@ -750,7 +734,7 @@ class NeuronBase(graphBase):
         #except StopIteration:
             #print(new_label)
         return new_label
-        
+
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -813,7 +797,7 @@ class NeuronBase(graphBase):
 
 class Neuron(NeuronBase):
     """ Class that takes a bag of phenotypes and adds equivalentClass axioms"""
-    
+
     def validate(self):
         # Fact++ factpp can do some reasoning bits, but struggles with disjoint classes that are SubClasses of themselves :/
         # until factpp is working more seemlessly (tricky given the size of certain phenotype proxy ontologies)
@@ -958,7 +942,7 @@ class Neuron(NeuronBase):
 class TypeNeuron(Neuron):  # TODO
     """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.
         TypeNeurons can be use to construct rules based taxonomies from
-        collections of bindary phenotypes. """ 
+        collections of bindary phenotypes. """
 
 
 class MeasuredNeuron(NeuronBase):  # XXX DEPRECATED retained for loading from some existing ontology files
@@ -1236,7 +1220,7 @@ def addLN(LocalName, phenotype, g=None):  # XXX deprecated
     addLNBase(LocalName, phenotype, g)
 
 def addLNT(LocalName, phenoId, predicate, g=None):  # XXX deprecated
-    """ Add a local name for a phenotype from a pair of identifiers """ 
+    """ Add a local name for a phenotype from a pair of identifiers """
     if g is None:
         s = inspect.stack()  # horribly inefficient
         checkCalledInside('LocalNameManager', s)
@@ -1285,12 +1269,13 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    sources = ('/tmp/NIF-Neuron-Phenotype.ttl',
-               '/tmp/NIF-Neuron-Defined.ttl',
-               '/tmp/NIF-Neuron.ttl',
-               '/tmp/NIF-Phenotype-Core.ttl',
-               '/tmp/NIF-Phenotypes.ttl',
-               '/tmp/hbp-special.ttl')
+    local_prefix = (gitf / 'NIF-Ontology/ttl').expanduser()
+    sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
+               f'{local_prefix}/NIF-Neuron.ttl',
+               f'{local_prefix}/NIF-Neuron-Phenotype.ttl',
+               f'{local_prefix}/phenotype-core.ttl',
+               f'{local_prefix}/phenotypes.ttl',
+               f'{local_prefix}/hbp-special.ttl')
     for file in sources:
             EXISTING_GRAPH.parse(file, format='turtle')
     EXISTING_GRAPH.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])

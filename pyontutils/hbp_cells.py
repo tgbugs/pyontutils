@@ -2,12 +2,17 @@
 import os
 import csv
 import json
+from pathlib import Path
 from datetime import date
 import rdflib
 from rdflib.extras import infixowl
+from pyontutils.core import makeGraph, makePrefixes
+from pyontutils.scigraph import Vocabulary
 from IPython import embed
-from utils import makeGraph, add_hierarchy
-from scigraph_client import Vocabulary
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
+
 v = Vocabulary()
 
 PREFIXES = makePrefixes('ilx', 'owl', 'skos', 'NIFSTD', 'NIFRID', 'SAO', 'NIFEXT', 'NLXCELL')
@@ -22,7 +27,8 @@ def expand(curie):
 
 
 def ilx_get_start():
-    with open(os.path.expanduser('~/git/NIF-Ontology/interlex_reserved.txt'), 'rt') as f:
+    with open((gitf /
+               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
         for line in f.readlines()[::-1]:  # go backward to find the first non empty
             new_ilx_id, label = line.strip().split(':')
             if label:
@@ -36,7 +42,8 @@ def ilx_get_start():
 
 
 def ilx_add_ids(ilx_labels):
-    with open(os.path.expanduser('~/git/NIF-Ontology/interlex_reserved.txt'), 'rt') as f:
+    with open((gitf /
+               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
         new_lines = []
         for line in f.readlines():
             ilx_id, label = line.strip().split(':')
@@ -51,7 +58,7 @@ def ilx_add_ids(ilx_labels):
     new_text = '\n'.join(new_lines)
     with open(os.path.expanduser('interlex_reserved.txt.new'), 'wt') as f:
         f.write(new_text)
-    
+
 
 def ilx_conv(graph, prefix, ilx_start):
     """ convert a set of temporary identifiers to ilx and modify the graph in place """
@@ -91,7 +98,9 @@ NEURON = 'SAO:1417703748'
 def clean_hbp_cell():
     #old graph
     g = rdflib.Graph()
-    g.parse(os.path.expanduser('~/git/methodsOntology/ttl/hbp_cell_ontology.ttl'), format='turtle')
+    embed()
+    g.parse((gitf /
+             'methodsOntology/ttl/hbp_cell_ontology.ttl').as_posix(), format='turtle')
     g.remove((None, rdflib.OWL.imports, None))
     g.remove((None, rdflib.RDF.type, rdflib.OWL.Ontology))
 
@@ -212,7 +221,7 @@ def clean_hbp_cell():
             newgraph.add((triple[0], edge, triple[2]))
 
     # final cleanup for forward references (since we iterate through sorted)
-    
+
     tt = rdflib.URIRef(expand('HBP_CELL:0000033'))
     tf = rdflib.URIRef(expand('HBP_CELL:0000034'))
     newgraph.remove((None, None, tt))

@@ -19,7 +19,7 @@ Options:
 
 """
 from docopt import docopt
-from pyontutils.scigraph_client import *
+from pyontutils.scigraph import *
 from pyontutils.core import PREFIXES
 
 

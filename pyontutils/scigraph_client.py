@@ -9,6 +9,7 @@
 import builtins
 import requests
 from json import dumps
+from urllib import parse
 
 BASEPATH = 'https://scicrunch.org/api/1/scigraph'
 
@@ -16,6 +17,8 @@ exten_mapping = {'application/graphml+xml': 'graphml+xml', 'application/graphson
 
 class restService:
     """ Base class for SciGraph rest services. """
+
+    api_key = None
 
     def __init__(self, cache=False, key=None):
         self._session = requests.Session()
@@ -31,8 +34,9 @@ class restService:
 
         if key is not None:
             self.api_key = key
-        else:
-            self.api_key = None
+
+    def __del__(self):
+        self._session.close()
 
     def _normal_get(self, method, url, params=None, output=None):
         s = self._session
@@ -87,7 +91,9 @@ class restService:
 class Analyzer(restService):
     """ Analysis services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -135,7 +141,9 @@ class Analyzer(restService):
 class Annotations(restService):
     """ Annotation services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -311,7 +319,7 @@ class Annotations(restService):
         """
 
         if url and url.startswith('http:'):
-            url = url.replace('/', '%2F').replace('#','%23')
+            url = parse.quote(url, safe='')
         kwargs = {'url':url, 'includeCat':includeCat, 'excludeCat':excludeCat, 'minLength':minLength, 'longestOnly':longestOnly, 'includeAbbrev':includeAbbrev, 'includeAcronym':includeAcronym, 'includeNumbers':includeNumbers, 'ignoreTag':ignoreTag, 'stylesheet':stylesheet, 'scripts':scripts, 'targetId':targetId, 'targetClass':targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -324,7 +332,9 @@ class Annotations(restService):
 class Cypher(restService):
     """ Cypher utility services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -388,7 +398,9 @@ class Cypher(restService):
 class Dynamic(restService):
     """ Dynamic Cypher resources """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -399,7 +411,9 @@ class Dynamic(restService):
 class Graph(restService):
     """ Graph services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -429,7 +443,7 @@ class Graph(restService):
         """
 
         if type and type.startswith('http:'):
-            type = type.replace('/', '%2F').replace('#','%23')
+            type = parse.quote(type, safe='')
         kwargs = {'type':type, 'entail':entail, 'limit':limit, 'skip':skip, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('type', **kwargs)
@@ -466,7 +480,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -503,7 +517,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'depth':depth, 'blankNodes':blankNodes, 'relationshipType':relationshipType, 'direction':direction, 'entail':entail, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -556,7 +570,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'hint':hint, 'relationships':relationships, 'lbls':lbls, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -607,7 +621,7 @@ class Graph(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id, 'project':project, 'callback':callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -620,7 +634,9 @@ class Graph(restService):
 class Lexical(restService):
     """ Lexical services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -697,7 +713,9 @@ class Lexical(restService):
 class Refine(restService):
     """ OpenRefine Reconciliation Services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -713,7 +731,7 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -806,7 +824,7 @@ class Refine(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -819,7 +837,9 @@ class Refine(restService):
 class Vocabulary(restService):
     """ Vocabulary services """
 
-    def __init__(self, basePath=BASEPATH, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+        if basePath is None:
+            basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
         super().__init__(cache, key)
@@ -875,7 +895,7 @@ class Vocabulary(restService):
         """
 
         if id and id.startswith('http:'):
-            id = id.replace('/', '%2F').replace('#','%23')
+            id = parse.quote(id, safe='')
         kwargs = {'id':id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)

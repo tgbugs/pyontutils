@@ -1,6 +1,16 @@
-# Local files
+# Local build files
 scigraph/services.yaml*
 scigraph/graphload.yaml*
+scigraph/start.sh*
+scigraph/stop.sh*
+test/actual*.ttl*
+resolver/uri-*-map.conf
+
+# local config file
+pyontutils/devconfig.py
+
+# temp files
+*.bak
 
 # Vim
 *.swp

@@ -7,6 +7,8 @@ from setuptools import setup, find_packages
 files = [
     'pyontutils/__init__.py',
     'pyontutils/closed_namespaces.py',
+    'pyontutils/config.py',
+    'pyontutils/core.py',
     'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
     'pyontutils/ilxcli.py',
@@ -25,11 +27,11 @@ files = [
     'pyontutils/scigraph.py',
     'pyontutils/scigraph_deploy.py',
     'pyontutils/scigraph_client.py',
+    'pyontutils/scr_sync.py',
     'pyontutils/ttlfmt.py',
     'pyontutils/ttlser.py',
     'pyontutils/utils.py',
 ]
-
 
 try:
     os.mkdir('export')
@@ -55,31 +57,35 @@ try:
             'ipython',
             'joblib',
             'lxml',
-            'numpy',
+            'ontquery',
             'psutil',
-            'psycopg2',
+            'pymysql',
             'pyyaml',
             'rdflib',
             'requests',
             'robobrowser',
             'sqlalchemy',
+        ],
+        extras_require={'dev':[
+            'hunspell',
             'mysql-connector',
             'protobuf',
-        ],
-        #extras_require
+            'psycopg2',
+        ]},
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={
             'console_scripts': [
-                'graphml_to_ttl=pyontutils.graphml_to_ttl:main',
+                'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
-                'necromancy=pyontutils.necromancy.py:main',
+                'necromancy=pyontutils.necromancy:main',
                 'ontload=pyontutils.ontload:main',
                 'ontree=pyontutils.ontree:main',
                 'ontutils=pyontutils.ontutils:main',
                 'overlaps=pyontutils.overlaps:main',
                 'qnamefix=pyontutils.qnamefix:main',
-                'scigraph-codegen=pyontutils.scigraph:main',
+                'registry-sync=pyontutils.scr_sync:main',
+                'scigraph-codegen=pyontutils.scigraph_codegen:main',
                 'scigraph-deploy=pyontutils.scigraph_deploy:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',

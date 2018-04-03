@@ -1,0 +1,10 @@
+doid-import-patchset:
+  doid-ext.patch:
+    target: ttl/external/doid.owl
+    remote: http://purl.obolibrary.org/obo/doid.owl
+  doid-ext-so.patch:
+    target: ttl/external/doid-ext.owl
+    remote: http://purl.obolibrary.org/obo/doid/obo/ext.owl
+  doid-bridge-ext.patch:
+    target: ttl/bridge/doid-bridge.ttl
+

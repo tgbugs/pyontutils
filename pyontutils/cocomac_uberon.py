@@ -2,20 +2,26 @@
 
 import csv
 from os.path import expanduser
+from pathlib import Path
 import rdflib
-from pyontutils.scigraph_client import Vocabulary, Graph
+from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
+
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
-with open(expanduser('~/git/entity_mapping/mappings/uberon-nervous'), 'rt') as f:
+with open((gitf / 'entity_mapping/mappings/uberon-nervous').as_posix(), 'rt') as f:
     brain_only = set([l.strip() for l in f.readlines()])
 
-v = Vocabulary('http://localhost:9000/scigraph')
-sg = Graph('http://localhost:9000/scigraph')
+v = Vocabulary(cache=True)
+sg = Graph(cache=True)
 
 g = rdflib.Graph()
-g.parse(expanduser('~/git/NIF-Ontology/ttl/generated/cocomacslim.ttl'), format='turtle')
+g.parse((gitf /
+         'NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
+        format='turtle')
 sos = [so for so in g.subject_objects(rdflib.RDFS.label)]
 
 map_ = []
@@ -42,7 +48,13 @@ for s, o in sos:
 
     for cand in cands:
         existing_fma = ''
-        existing_id = cand['curie']
+        if 'curie' in cand:
+            existing_id = cand['curie']
+        elif 'cocomac' in cand['iri']:
+            continue
+        else:
+            raise ValueError(f'What is this thing? {curie["iri"]}')
+
         existing_label = cand['labels'][0]
         if existing_id.startswith('UBERON'):
             if existing_id not in brain_only:
@@ -68,9 +80,11 @@ for s, o in sos:
         map_.append((cc_label, cc_id, existing_label, existing_id, existing_fma))
 
     for scand in scands:
-        if not scand['curie']:
-            print(scand)
+
+        if 'cocomac' in scand['iri']:
             continue
+        elif not scand['curie']:
+            continue  # good old remove the key instead of set it to None
 
         s_existing_fma = ''
         if scand['curie'].startswith('UBERON'):
@@ -95,7 +109,7 @@ for s, o in sos:
                 smap_.append((cc_label, cc_id, s_existing_label, s_existing_id, s_existing_fma))
             #break  # FOW :/
 
-    
+
 _ = [print(a) for a in sorted(smap_, key=lambda a: int(a[1].split(':')[1]))]
 with open('/tmp/coco_uber_match.csv', 'wt') as f:
     writer = csv.writer(f)
@@ -109,15 +123,21 @@ with open('/tmp/coco_uber_search.csv', 'wt') as f:
 def lnc(string):
     return string.lower().replace(',',' ')  # matches the conv in NIF_conn
 
-ccslim = rdflib.Graph().parse(expanduser('~/git/NIF-Ontology/ttl/generated/cocomacslim.ttl'), format='turtle')
+ccslim = rdflib.Graph().parse((gitf /
+                               'NIF-Ontology/ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
+                              format='turtle')
 coco_all = [l for l in ccslim.objects(None, rdflib.RDFS.label)]
 
-with open(expanduser('~/files/disco/NIF_conn_allcols_minimal_clean_filtered2.csv'), 'rt') as f:
+intcon = Path(__file__).parent / 'resources' / 'NIF_conn_allcols_minimal_clean_filtered2.csv'
+with open(intcon.as_posix(), 'rt') as f:
     ber_rows = [r for r in csv.reader(f)]
 
 ber_set = set([c for c in zip(*[r for r in ber_rows if r[0] == 'CoCoMac'])][1])
 coco_match_lower_no_comma = set([lnc(t) for t in [c for c in zip(*map_)][0]])
-coco_search_lower_no_comma = set([lnc(t) for t in [c for c in zip(*smap_)][0]])
+if smap_:
+    coco_search_lower_no_comma = set([lnc(t) for t in [c for c in zip(*smap_)][0]])
+else:
+    coco_search_lower_no_comma = set()
 coco_all_lower_no_comma = set([lnc(t) for t in coco_all])
 matched = ber_set.intersection(coco_match_lower_no_comma)
 searched = ber_set.intersection(coco_search_lower_no_comma)

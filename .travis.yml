@@ -1,0 +1,32 @@
+# https://travis-ci.org/tgbugs/pyontutils
+sudo: false
+language: python
+env:
+  global:
+    - PIPENV_VENV_IN_PROJECT=1
+    - PIPENV_IGNORE_VIRTUALENVS=1
+branches:
+  only:
+    - master
+  git:
+    depth: 3
+
+python:
+  - 3.6
+
+before_install:
+  - sudo apt-get install hunspell
+  - sudo apt-get install libhunspell-dev
+  - pushd "${TRAVIS_BUILD_DIR}/../"
+  - git clone https://github.com/SciCrunch/NIF-Ontology.git
+  - git clone https://github.com/tgbugs/entity_mapping.git
+  - git clone https://github.com/BlueBrain/nat.git
+  - popd
+
+install:
+  - pip install pipenv
+  - pipenv install --dev --system --skip-lock
+
+script:
+  - PYTHONWARNINGS=default pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
+
