@@ -4,7 +4,7 @@ from pyontutils.core import restrictions, annotation
 from pyontutils.core import NIFTTL, NIFRID, ilxtr
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import methods_core, asp, tech
+from pyontutils.methods_core import asp, tech, methods_core
 
 filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
@@ -1421,6 +1421,19 @@ triples += (  # other
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
 )
 
+methods = simpleOnt(filename=filename,
+                    prefixes=prefixes,
+                    imports=imports,
+                    triples=triples,
+                    comment=comment,
+                    _repo=_repo)
+
+methods._graph.add_namespace('asp', str(asp))
+methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+methods._graph.add_namespace('tech', str(tech))
+methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+methods._graph.write()
+
 def halp():
     import rdflib
     from IPython import embed
@@ -1431,13 +1444,6 @@ def halp():
     embed()
     return trips
 #trips = halp()
-
-methods = simpleOnt(filename=filename,
-                    prefixes=prefixes,
-                    imports=imports,
-                    triples=triples,
-                    comment=comment,
-                    _repo=_repo)
 
 def expand(_makeGraph, *graphs, debug=False):
     import rdflib
@@ -1470,14 +1476,13 @@ def expand(_makeGraph, *graphs, debug=False):
     #g.write()
     displayGraph(graph, debug=debug)
 
-#displayGraph(methods.graph, debug)
-methods._graph.add_namespace('asp', str(asp))
-methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
-methods._graph.add_namespace('tech', str(tech))
-methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods._graph.write()
-#mc = methods.graph.__class__()
-#mc.add(t) for t in methods_core.graph if t[0] not in
-#expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
-#expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+def main():
+    #displayGraph(methods.graph, debug)
+    #mc = methods.graph.__class__()
+    #mc.add(t) for t in methods_core.graph if t[0] not in
+    #expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+    #expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+    pass
 
+if __name__ == '__main__':
+    main()

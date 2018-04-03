@@ -54,7 +54,6 @@ try:
             'docopt',
             'flask',
             'gitpython',
-            'hunspell',
             'ipython',
             'joblib',
             'lxml',
@@ -67,9 +66,11 @@ try:
             'robobrowser',
             'sqlalchemy',
         ],
-        extras_require={'dev':['protobuf',
-                               'psycopg2',
-                               'mysql-connector',
+        extras_require={'dev':[
+            'hunspell',
+            'mysql-connector',
+            'protobuf',
+            'psycopg2',
         ]},
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro

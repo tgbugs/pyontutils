@@ -59,23 +59,30 @@ class TestScripts(unittest.TestCase):
            )
 
     mains = ('nif_cell',
-            )
+    )
+    tests = ('ontree',
+    )
 
-    _modules = []
+    _do_mains = []
+    _do_tests = []
     for path in sorted(Path(core.__file__).parent.glob('*.py')):
         stem = path.stem
         if stem not in skip:
             print('TESTING:', stem)
             module = __import__('pyontutils.' + stem)
             if stem in mains:
-                print('    will test', stem, module)
+                print('    will main', stem, module)
+                _do_mains.append(getattr(module, stem))
                 #_modules.append(module)  # TODO doens't quite work
+            elif stem in tests:
+                print('    will test', stem, module)
+                _do_tests.append(getattr(module, stem))
 
-    print(_modules)
+    print(_do_mains, _do_tests)
 
-    def test_scripts(self):
+    def test_mains(self):
         failed = []
-        for script in self._modules:
+        for script in self._do_mains:
             try:
                 script.main()
             except BaseException as e:
@@ -83,3 +90,13 @@ class TestScripts(unittest.TestCase):
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
+
+    def test_tests(self):
+        failed = []
+        for script in self._do_tests:
+            try:
+                script.test()
+            except BaseException as e:
+                failed.append((script, e))
+
+        assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)

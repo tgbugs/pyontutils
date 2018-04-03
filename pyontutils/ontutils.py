@@ -31,13 +31,17 @@ from time import time, localtime, strftime
 from random import shuffle
 import rdflib
 import requests
-import hunspell
 from git.repo import Repo
 from joblib import Parallel, delayed
 from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, skos, definition
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
 from pyontutils.ontload import loadall, locate_config_file, getCuries
 from IPython import embed
+
+try:
+    import hunspell
+except ImportError:
+    hunspell = None
 
 # common
 
@@ -102,6 +106,10 @@ class ontologySection:
 # utils
 
 def spell(filenames, debug=False):
+    if hunspell is None:
+        raise ImportError('hunspell is not installed on your system. If you want '
+                          'to run `ontutils spell` please run pipenv install --dev --skip-lock. '
+                          'You will need the development libs for hunspell on your system.')
     spell_objects = (u for r in Parallel(n_jobs=9)(delayed(get_spells)(f) for f in filenames) for u in r)
     hobj = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
     #nobj = hunspell.HunSpell(os.path.expanduser('~/git/domain_wordlists/neuroscience-en.dic'), '/usr/share/hunspell/en_US.aff')  # segfaults without aff :x
