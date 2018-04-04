@@ -1371,6 +1371,7 @@ class Source(tuple):
 
 class Ont:
     #rdf_type = owl.Ontology
+    _debug = False
     local_base = devconfig.ontology_local_repo
     path = 'ttl/generated/'  # sane default
     filename = None
@@ -1463,6 +1464,8 @@ class Ont:
 
     @property
     def triples(self):
+        if self._debug:
+            embed()
         if hasattr(self, 'root') and self.root is not None:
             yield from self.root
         elif hasattr(self, 'roots') and self.roots is not None:
