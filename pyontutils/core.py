@@ -973,7 +973,10 @@ class makeGraph:
             prefix, namespace, name = self.g.namespace_manager.compute_qname(uri, generate=generate)
             qname = ':'.join((prefix, name))
             return qname
-        except (KeyError, ValueError) as e :
+        except (KeyError, ValueError) as e:
+            for k, v in self.g.namespaces():  # FIXME why is compute_qname not doing this?!?!
+                if v == uri:
+                    return k + ':'
             return uri.toPython() if isinstance(uri, rdflib.URIRef) else uri
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
