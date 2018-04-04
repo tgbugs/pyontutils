@@ -25,13 +25,16 @@ class scicrunch():
         url = self.base_path + '/api/1/term/view/' + str(identifier) + '?key=' + self.key
         headers = {'Content-type': 'application/json'}
         async with session.get(url) as response:
-            output = await response.json()
             if response.status not in [200, 201]:
+                output = await response.text
                 problem = str(output)
                 sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
+            output = await response.json()
+            #print(output)
             output={int(output['data']['id']):output['data']}
             self.terms.update(output)
             #return output
+
     async def get_all(self, total_data, connector, loop):
         """Launch requests for all web pages."""
         tasks = []
@@ -45,7 +48,8 @@ class scicrunch():
             bar.finish()
             _ = await asyncio.gather(*tasks)
             #return data
-    def identifierSearchs(self, data):
+    def identifierSearchs(self, data=None, HELP=False):
+        if HELP: sys.exit('parameters( data = "list of term_ids" )')
         connector = TCPConnector(limit=50) # rate limiter; should be between 20 and 80; 100 maxed out server
         loop = asyncio.get_event_loop() # event loop initialize
         future = asyncio.ensure_future(self.get_all(data, connector, loop)) # tasks to do; data is in json format [{},]
@@ -68,10 +72,11 @@ class scicrunch():
         params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
         headers = {'Content-type': 'application/json'}
         async with session.post(url, data=json.dumps(params), headers=headers) as response:
-            output = await response.json()
             if response.status not in [200, 201]:
+                output = await response.text
                 problem = str(output)
                 sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
+            output = await response.json()
             print(i, output['data']['label'])
 
     async def update_terms(self, total_data, connector):
@@ -88,7 +93,7 @@ class scicrunch():
             _ = await asyncio.gather(*tasks)
 
     def updateTerms(self, data):
-        connector = TCPConnector(limit=50) # rate limiter; should be between 20 and 80; 100 maxed out server
+        connector = TCPConnector(limit=25) # rate limiter; should be between 20 and 80; 100 maxed out server
         loop = asyncio.get_event_loop() # event loop initialize
         future = asyncio.ensure_future(self.update_terms(data, connector)) # tasks to do; data is in json format [{},]
         loop.run_until_complete(future) # loop until done
@@ -110,8 +115,10 @@ class scicrunch():
         async with session.post(url, data=json.dumps(params), headers=headers) as response:
             output = await response.json()
             if response.status not in [200, 201]:
+                output = await response.text
                 problem = str(output)
                 sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
+            output = await response.json()
             print(i, output['data'])
 
     async def add_annotations(self, total_data, connector):
@@ -128,7 +135,7 @@ class scicrunch():
             _ = await asyncio.gather(*tasks)
 
     def addAnnotations(self, data):
-        connector = TCPConnector(limit=50) # rate limiter; should be between 20 and 80; 100 maxed out server
+        connector = TCPConnector(limit=25) # rate limiter; should be between 20 and 80; 100 maxed out server
         loop = asyncio.get_event_loop() # event loop initialize
         future = asyncio.ensure_future(self.add_annotations(data, connector)) # tasks to do; data is in json format [{},]
         loop.run_until_complete(future) # loop until done
@@ -225,7 +232,7 @@ class scicrunch():
             annotations = await asyncio.gather(*tasks)
             return annotations
     def getAnnotationsVIAtid(self, data):
-        connector = TCPConnector(limit=50) # rate limiter; should be between 20 and 80; 100 maxed out server
+        connector = TCPConnector(limit=20) # rate limiter; should be between 20 and 80; 100 maxed out server
         loop = asyncio.get_event_loop() # event loop initialize
         future = asyncio.ensure_future(self.get_annotations(data, connector)) # tasks to do; data is in json format [{},]
         annotations = loop.run_until_complete(future) # loop until done
@@ -258,7 +265,7 @@ class scicrunch():
                 data['ilx'] = post_ilx['data']['ilx']
             except:
                 data['ilx'] = post_ilx['data']['fragment']
-
+        print(post_ilx)
         """ add to scicrunch """
         url = self.base_path + '/api/1/term/add'
         params = {
@@ -268,8 +275,10 @@ class scicrunch():
             'type':data['type'],
             'ilx':data['ilx'],
             'cid':'0',
-            'synonyms':[{'literal':data.get('synonyms')}],
         }
+        if data.get('synonyms'):
+            params['synonyms'] = [{'literal':data.get('synonyms')}]
+
         if data.get('superclass_ilx'):
             params['superclasses'] = [{
                     'label':data.get('superclass_label'),
@@ -311,16 +320,22 @@ class scicrunch():
         #url  = self.base_path + '/php/batch-upsert-terms.php?key=' + self.key
         #r.get(url)
 
+
 def main():
     args = read_args()
     sci=scicrunch(key=args['api_key'], base_path=args['base_path'])
-    total_annotations=sci.getAnnotationsVIAtid([19189])
+    sci.identifierSearchs(help=True)
+    #total_annotations=sci.getAnnotationsVIAtid([304379])
+    #print(total_annotations)
+    #sys.exit()
     #production
-    annotation_ids = []
-    for annotations in total_annotations:
-        for annotation in annotations:
-            annotation_ids.append(annotation['id'])
-    sci.deleteAnnotationsVIAannotationId(annotation_ids)
+    #annotation_ids = []
+    #for annotations in total_annotations:
+    #    for annotation in annotations:
+    #        if annotation['value'] == 'None':
+    #            annotation_ids.append(annotation['id'])
+    #print(annotation_ids)
+    #sci.deleteAnnotationsVIAannotationId(annotation_ids)
 
     #sci.deleteAnnotationsVIAid(ids)
 if __name__ == '__main__':

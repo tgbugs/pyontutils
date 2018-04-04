@@ -1103,9 +1103,9 @@ class OntTerm(ontquery.OntTerm, OntId):
     pass
 
 
-OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
-ontquery.QueryResult._OntTerm = OntTerm
-query = ontquery.OntQueryCli(query=OntTerm.query)
+#OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
+#ontquery.QueryResult._OntTerm = OntTerm
+#query = ontquery.OntQueryCli(query=OntTerm.query)
 
 #
 # classes

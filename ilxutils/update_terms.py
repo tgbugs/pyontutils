@@ -82,8 +82,11 @@ def main():
 
     new_label_data = {labels_to_ids_dict.get(label.lower().strip().replace("'",'&#39;')):label_data for label, label_data in data.items() if labels_to_ids_dict.get(label.lower().strip().replace("'",'&#39;'))}
 
-    batch_ids = list(new_label_data)[141500:] #DEBUG
-    seg_length = 50
+    batch_ids = list(new_label_data)[198700:] #DEBUG
+    #batch_data = {k:v for k, v in new_label_data.items() if k in batch_ids}
+    #with open('remaining-second-tier-cdes.json', 'w') as f: json.dump(batch_data, f, indent=4)
+    #sys.exit()
+    seg_length = 25
     total_batch_ids = [batch_ids[x:x+seg_length] for x in range(0,len(batch_ids),seg_length)]
     total_count = m.floor(len(batch_ids) / seg_length)
 
