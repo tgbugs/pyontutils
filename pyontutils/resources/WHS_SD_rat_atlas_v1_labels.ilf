@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<milf>
+<meta>
+<filename>WHS_SD_rat_atlas_v1_labels.ilf</filename>
+</meta>
+<structure>
+<label abbreviation="White matter" color="#ffffff" id="100" name="White matter" description="3.4">
+	<label abbreviation="corpus callosum and associated subcortical white matter" color="#ff6e00" id="67" name="corpus callosum and associated subcortical white matter" description="3.4.1"/>
+	<label abbreviation="Anterior commissure" color="#ffffff" id="101" name="Anterior commissure" description="3.4.2">
+		<label abbreviation="anterior commissure, anterior part" color="#7cfc00" id="36" name="anterior commissure, anterior part" description="3.4.2"/>
+		<label abbreviation="anterior commissure, posterior part" color="#ffba00" id="37" name="anterior commissure, posterior part" description="3.4.2"/>
+		<label abbreviation="anterior commissure, intrabulbar part" color="#ff4fce" id="73" name="anterior commissure, intrabulbar part" description="3.4.2"/>
+	</label>
+	<label abbreviation="Hippocampal white matter" color="#ffffff" id="102" name="Hippocampal white matter" description="3.4.3">
+		<label abbreviation="alveus of the hippocampus" color="#ff00ff" id="6" name="alveus of the hippocampus" description="3.4.3"/>
+		<label abbreviation="ventral hippocampal commissure" color="#ae00e8" id="38" name="ventral hippocampal commissure" description="3.4.3"/>
+		<label abbreviation="fornix" color="#15c0ff" id="52" name="fornix" description="3.4.3"/>
+		<label abbreviation="fimbria of the hippocampus" color="#00ff1d" id="59" name="fimbria of the hippocampus" description="3.4.3"/>
+	</label>
+	<label abbreviation="Corticofugal pathways" color="#ffffff" id="103" name="Corticofugal pathways" description="3.4.4">
+		<label abbreviation="corticofugal pathways" color="#ff3427" id="1" name="corticofugal pathways" description="3.4.4"/>
+		<label abbreviation="pyramidal decussation" color="#7209d4" id="85" name="pyramidal decussation" description="3.4.4"/>
+	</label>
+	<label abbreviation="Medial lemniscus" color="#ffffff" id="104" name="Medial lemniscus" description="3.4.5">
+		<label abbreviation="medial lemniscus" color="#d4ff00" id="34" name="medial lemniscus" description="3.4.5"/>
+		<label abbreviation="medial lemniscus decussation" color="#4196ff" id="84" name="medial lemniscus decussation" description="3.4.5"/>
+	</label>
+	<label abbreviation="Thalamic tracts" color="#ffffff" id="105" name="Thalamic tracts" description="3.4.6">
+		<label abbreviation="mammillothalamic tract" color="#eeba00" id="53" name="mammillothalamic tract" description="3.4.6"/>
+		<label abbreviation="commissural stria terminalis" color="#adff2f" id="54" name="commissural stria terminalis" description="3.4.6"/>
+		<label abbreviation="fasciculus retroflexus" color="#f44345" id="60" name="fasciculus retroflexus" description="3.4.6"/>
+		<label abbreviation="stria medullaris of the thalamus" color="#fffc00" id="61" name="stria medullaris of the thalamus" description="3.4.6"/>
+		<label abbreviation="stria terminalis" color="#ee7533" id="62" name="stria terminalis" description="3.4.6"/>
+		<label abbreviation="habenular commissure" color="#45ebca" id="80" name="habenular commissure" description="3.4.6"/>
+	</label>
+	<label abbreviation="posterior commissure" color="#ff00da" id="63" name="posterior commissure" description="3.4.7"/>
+	<label abbreviation="Facial nerve" color="#ffffff" id="106" name="Facial nerve" description="3.4.8">
+		<label abbreviation="facial nerve" color="#00b03f" id="35" name="facial nerve" description="3.4.8"/>
+		<label abbreviation="ascending fibers of the facial nerve" color="#b31c35" id="72" name="ascending fibers of the facial nerve" description="3.4.8"/>
+		<label abbreviation="genu of the facial nerve" color="#faf4f7" id="57" name="genu of the facial nerve" description="3.4.8"/>
+	</label>
+	<label abbreviation="Optic fiber system and supraoptic decussation" color="#ffffff" id="107" name="Optic fiber system and supraoptic decussation" description="3.4.9">
+		<label abbreviation="optic nerve" color="#30da00" id="41" name="optic nerve" description="3.4.9"/>
+		<label abbreviation="optic tract and optic chiasm" color="#267eff" id="42" name="optic tract and optic chiasm" description="3.4.9"/>
+		<label abbreviation="supraoptic decussation" color="#faaa40" id="83" name="supraoptic decussation" description="3.4.9"/>
+	</label>
+	<label abbreviation="spinal trigeminal tract" color="#fa8072" id="76" name="spinal trigeminal tract" description="3.4.10"/>
+	<label abbreviation="White matter of the tectum" color="#ffffff" id="108" name="White matter of the tectum" description="3.4.11">
+		<label abbreviation="commissure of the superior colliculus" color="#21e6ff" id="46" name="commissure of the superior colliculus" description="3.4.11"/>
+		<label abbreviation="brachium of the superior colliculus" color="#bc20ad" id="68" name="brachium of the superior colliculus" description="3.4.11"/>
+		<label abbreviation="commissure of the inferior colliculus" color="#93ff27" id="69" name="commissure of the inferior colliculus" description="3.4.11"/>
+	</label>
+	<label abbreviation="Cerebellar and precerebellar white matter" color="#ffffff" id="109" name="Cerebellar and precerebellar white matter" description="3.4.12">
+		<label abbreviation="inferior cerebellar peduncle" color="#34ff0d" id="7" name="inferior cerebellar peduncle" description="3.4.12"/>
+		<label abbreviation="middle cerebellar peduncle" color="#86cc4c" id="78" name="middle cerebellar peduncle" description="3.4.12"/>
+		<label abbreviation="transverse fibers of the pons" color="#80aaff" id="79" name="transverse fibers of the pons" description="3.4.12"/>
+	</label>
+</label>
+<label abbreviation="Gray matter" color="#808080" id="2" name="Gray matter" description="3.5">
+
+	<label abbreviation="Olfactory system" color="#808080" id="111" name="Olfactory system" description="3.5.1">
+		<label abbreviation="glomerular layer of the accessory olfactory bulb" color="#0f6de6" id="64" name="glomerular layer of the accessory olfactory bulb" description="3.5.1"/>
+		<label abbreviation="glomerular layer of the olfactory bulb" color="#ffe300" id="65" name="glomerular layer of the olfactory bulb" description="3.5.1"/>
+		<label abbreviation="olfactory bulb" color="#ff8700" id="66" name="olfactory bulb" description="3.5.1"/>
+	</label>
+	<label abbreviation="Cerebral cortex including the neocortex and the hippocampus" color="#808080" id="112" name="Cerebral cortex including the neocortex and the hippocampus" description="3.5.2">
+		<label abbreviation="frontal association cortex" color="#ced307" id="77" name="frontal association cortex" description="3.5.2"/>
+		<label abbreviation="hippocampal formation" color="#0e47e2" id="86" name="hippocampal formation" description="3.5.2"/>
+		<label abbreviation="subiculum" color="#ddd951" id="87" name="subiculum" description="3.5.2"/>
+		<label abbreviation="postrhinal cortex" color="#89d355" id="88" name="postrhinal cortex" description="3.5.2"/>
+		<label abbreviation="ventral-intermediate entorhinal area" color="#8b008b" id="89" name="ventral-intermediate entorhinal area" description="3.5.2"/>
+		<label abbreviation="medial entorhinal field" color="#41ff27" id="90" name="medial entorhinal field" description="3.5.2"/>
+		<label abbreviation="caudal entorhinal field" color="#ffbb0d" id="91" name="caudal entorhinal field" description="3.5.2"/>
+		<label abbreviation="neocortex" color="#03c12d" id="92" name="neocortex" description="3.5.2"/>
+		<label abbreviation="cingulate cortex, area 2" color="#1d68eb" id="10" name="cingulate cortex, area 2" description="3.5.2"/>
+		<label abbreviation="dorsal-lateral entorhinal area" color="#2e8b57" id="14" name="dorsal-lateral entorhinal area" description="3.5.2"/>
+		<label abbreviation="dorsal-intermediate entorhinal area" color="#7f81ff" id="15" name="dorsal-intermediate entorhinal area" description="3.5.2"/>
+		<label abbreviation="perirhinal cortex" color="#dd6479" id="17" name="perirhinal cortex" description="3.5.2"/>
+	</label>
+	<label abbreviation="striatum" color="#814fff" id="30" name="striatum" description="3.5.3"/>
+	<label abbreviation="globus pallidus" color="#ff91ba" id="31" name="globus pallidus" description="3.5.4"/>
+	<label abbreviation="entopeduncular nucleus" color="#1ae7ff" id="32" name="entopeduncular nucleus" description="3.5.5"/>
+	<label abbreviation="subthalamic nucleus" color="#0000ff" id="3" name="subthalamic nucleus" description="3.5.6"/>
+	<label abbreviation="basal forebrain region" color="#e1f00d" id="82" name="basal forebrain region" description="3.5.7"/>
+	<label abbreviation="septal region" color="#ff0800" id="40" name="septal region" description="3.5.8"/>
+	<label abbreviation="thalamus" color="#006400" id="39" name="thalamus" description="3.5.9"/>
+	<label abbreviation="bed nucleus of the stria terminalis" color="#0008b6" id="93" name="bed nucleus of the stria terminalis" description="3.5.10"/>
+	<label abbreviation="nucleus of the stria medullaris" color="#de07ed" id="81" name="nucleus of the stria medullaris" description="3.5.11"/>
+	<label abbreviation="hypothalamic region" color="#e278a1" id="48" name="hypothalamic region" description="3.5.12"/>
+	<label abbreviation="pineal gland" color="#daaa3e" id="43" name="pineal gland" description="3.5.13"/>
+	<label abbreviation="Tectum" color="#808080" id="113" name="Tectum" description="3.5.14">
+		<label abbreviation="inferior colliculus" color="#ee2f2c" id="49" name="inferior colliculus" description="3.5.14"/>
+		<label abbreviation="pretectal region" color="#ff571e" id="94" name="pretectal region" description="3.5.14"/>
+		<label abbreviation="superficial gray layer of the superior colliculus" color="#5600dd" id="50" name="superficial gray layer of the superior colliculus" description="3.5.14"/>
+		<label abbreviation="deeper layers of the superior colliculus" color="#e1970f" id="55" name="deeper layers of the superior colliculus" description="3.5.14"/>
+	</label>
+	<label abbreviation="substantia nigra" color="#ffba00" id="2" name="substantia nigra" description="3.5.15"/>
+	<label abbreviation="interpeduncular nucleus" color="#3fc0ff" id="71" name="interpeduncular nucleus" description="3.5.16"/>
+	<label abbreviation="periaqueductal gray" color="#07ff59" id="51" name="periaqueductal gray" description="3.5.17"/>
+	<label abbreviation="pontine nuclei" color="#00d70b" id="58" name="pontine nuclei" description="3.5.18"/>
+	<label abbreviation="Cerebellum" color="#808080" id="114" name="Cerebellum" description="3.5.2">
+		<label abbreviation="molecular cell layer of the cerebellum" color="#ffff00" id="4" name="molecular cell layer of the cerebellum" description="3.5.19"/>
+		<label abbreviation="deeper cerebellum" color="#00ffff" id="5" name="deeper cerebellum" description="3.5.19"/>
+	</label>
+	<label abbreviation="inferior olive" color="#00f60e" id="74" name="inferior olive" description="3.5.20"/>
+	<label abbreviation="spinal trigeminal nucleus" color="#5bf1ff" id="75" name="spinal trigeminal nucleus" description="3.5.21"/>
+	<label abbreviation="periventricular gray" color="#eb57ff" id="56" name="periventricular gray" description="3.5.22"/>
+	<label abbreviation="brain stem" color="#9953ff" id="47" name="brain stem" description="3.5.23"/>
+</label>
+<label abbreviation="ventricular system" color="#022cff" id="33" name="ventricular system" description="3.6"/>
+<label abbreviation="Spinal cord" color="#86ff5a" id="115" name="Spinal cord" description="3.7">
+	<label abbreviation="spinal cord" color="#86ff5a" id="45" name="spinal cord" description="3.7"/>
+	<label abbreviation="central canal" color="#27f4fd" id="70" name="central canal" description="3.7"/>
+</label>
+<label abbreviation="inner ear" color="#00a515" id="44" name="inner ear" description=""/>
+</structure>
+</milf>
