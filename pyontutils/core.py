@@ -1462,6 +1462,23 @@ class Ont:
                     else:
                         yield self.iri, predicate, check_value(value)
 
+    def triple_check(self, triple):
+        s, p, o = triple
+        error = TypeError(f'bad triple in {self} {triple}')
+        if not isinstance(s, rdflib.URIRef) and not isinstance(s, rdflib.BNode):
+            raise error
+        elif not isinstance(p, rdflib.URIRef):
+            raise error
+        elif (not isinstance(o, rdflib.URIRef) and
+              not isinstance(o, rdflib.BNode) and
+              not isinstance(o, rdflib.Literal)):
+            raise error
+
+    def _triple_check(self, triples):
+        for triple in triples:
+            self.triple_check(triple)
+            yield triple
+
     @property
     def triples(self):
         if self._debug:
@@ -1472,7 +1489,7 @@ class Ont:
             for root in self.roots:
                 yield from root
         if hasattr(self, '_triples'):
-            yield from self._triples()
+            yield from self._triple_check(self._triples())
         else:
             return
         for t in self._extra_triples:  # last so _triples can populate
