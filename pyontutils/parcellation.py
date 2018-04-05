@@ -1,5 +1,14 @@
 #!/usr/bin/env python3.6
 #!/usr/bin/env pypy3
+__doc__ = f"""Generate NIF parcellation schemes from external resources.
+
+Usage:
+    parcellation [options]
+
+Options:
+    -j --jobs=NJOBS              number of parallel jobs to run [default: 9]
+
+"""
 
 import os
 import re
@@ -615,6 +624,12 @@ class LabelRoot(Class):
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
                    definingArtifactsS=tuple(),
                   )
+
+    def __init__(self, *args, **kwargs):
+        for it_name in ('definingArtifacts', 'definingArtifactsS'):  # TODO abstract to type
+            if it_name in kwargs: 
+                kwargs[it_name] = tuple(set(kwargs[it_name]))
+        super().__init__(*args, **kwargs)
 
 
 class Label(Class):
@@ -1259,6 +1274,41 @@ class WHSSD2Src(Source):
         return d
 
 
+class WHSSD2ilfSrc(Source):
+    source = 'resources/WHS_SD_rat_atlas_v2_labels.ilf'
+    source_original = True
+    artifact = Artifacts.WHSSD2
+
+    @classmethod
+    def loadData(cls):
+        tree = etree.parse(cls.source)
+        return tree
+
+    @classmethod
+    def processData(cls):
+        tree = cls.raw
+        def recurse(label_node, parent=None):
+            name = label_node.get('name')
+            abbrev = label_node.get('abbreviation')
+            id = label_node.get('id')
+            yield id, name, abbrev, parent
+            for child in label_node.getchildren():
+                if child.tag == 'label':
+                    yield from recurse(child, parent=id)
+
+        records = tuple()
+        for structure in tree.xpath('//structure'):
+            for lab in structure.getchildren():
+                if lab.tag == 'label':
+                    records += tuple(recurse(lab, None))
+
+        return records,
+
+    @classmethod
+    def validate(cls, d):
+        return d
+
+
 class HCPMMPSrc(Source):
     source = 'resources/human_connectome_project_2016.csv'
     source_original = True
@@ -1793,7 +1843,7 @@ class WHSSDLabels(LabelsBase):
     shortname = 'whssd'
     imports = parcCore,
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
-    sources = WHSSD2Src,
+    sources = WHSSD2Src, WHSSD2ilfSrc
     namespace = WHSSD
     root = LabelRoot(iri=nsExact(namespace),  # ilxtr.whssdroot,
                      label='Waxholm Space Sprague Dawley parcellation label root',
@@ -1803,14 +1853,24 @@ class WHSSDLabels(LabelsBase):
 
     def _triples(self):
         for source in self.sources:
-            for index, label in source:
+            for index, label, *rest in source:
+                abbrev, parent = rest if rest else (False, False)  # a tricky one if you miss the parens
+                abbrevs = (abbrev,) if abbrev and abbrev != label else tuple()
+                if int(index) >= 1000:  # FIXME this is the WRONG way to do this
+                    # FIXME parentless structures in the ilf files?
+                    label += ' (structure)'
                 iri = WHSSD[str(index)]
                 yield from Label(labelRoot=self.root,
                                  label=label,
+                                 abbrevs=abbrevs,
                                  iri=iri,
                 )
+                if parent:
+                    parent = WHSSD[str(parent)]
+                    yield from restriction.serialize(iri, ilxtr.labelPartOf, parent)
 
             yield from source.isVersionOf
+
 
 #
 # regions
@@ -1978,6 +2038,8 @@ class FSL(LabelsBase):
 
 
 def main():
+    from docopt import docopt
+    args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     from parc_aba import Artifacts as abaArts
     out = build(*(l for l in subclasses(Ont)
@@ -1985,7 +2047,7 @@ def main():
                   l.__module__ != 'parcellation' and
                   not hasattr(l, f'_{l.__name__}__pythonOnly')),
                 parcBridge,
-                n_jobs=9)
+                n_jobs=int(args['--jobs']))
     embed()
 
 if __name__ == '__main__':

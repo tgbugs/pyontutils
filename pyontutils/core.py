@@ -973,7 +973,7 @@ class makeGraph:
             prefix, namespace, name = self.g.namespace_manager.compute_qname(uri, generate=generate)
             qname = ':'.join((prefix, name))
             return qname
-        except (KeyError, ValueError) as e :
+        except (KeyError, ValueError) as e:
             return uri.toPython() if isinstance(uri, rdflib.URIRef) else uri
 
     def make_scigraph_json(self, edge, label_edge=None, direct=False):  # for checking trees
@@ -1371,6 +1371,7 @@ class Source(tuple):
 
 class Ont:
     #rdf_type = owl.Ontology
+    _debug = False
     local_base = devconfig.ontology_local_repo
     path = 'ttl/generated/'  # sane default
     filename = None
@@ -1461,15 +1462,34 @@ class Ont:
                     else:
                         yield self.iri, predicate, check_value(value)
 
+    def triple_check(self, triple):
+        s, p, o = triple
+        error = TypeError(f'bad triple in {self} {triple}')
+        if not isinstance(s, rdflib.URIRef) and not isinstance(s, rdflib.BNode):
+            raise error
+        elif not isinstance(p, rdflib.URIRef):
+            raise error
+        elif (not isinstance(o, rdflib.URIRef) and
+              not isinstance(o, rdflib.BNode) and
+              not isinstance(o, rdflib.Literal)):
+            raise error
+
+    def _triple_check(self, triples):
+        for triple in triples:
+            self.triple_check(triple)
+            yield triple
+
     @property
     def triples(self):
+        if self._debug:
+            embed()
         if hasattr(self, 'root') and self.root is not None:
             yield from self.root
         elif hasattr(self, 'roots') and self.roots is not None:
             for root in self.roots:
                 yield from root
         if hasattr(self, '_triples'):
-            yield from self._triples()
+            yield from self._triple_check(self._triples())
         else:
             return
         for t in self._extra_triples:  # last so _triples can populate

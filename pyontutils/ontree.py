@@ -63,6 +63,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
         try:
             kwargs['json'] = g.make_scigraph_json(pred, direct=not restriction)
+            kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}
         except KeyError as e:
             print(e)
             return abort(422, 'Unknown predicate.')
@@ -75,7 +76,16 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
     kwargs['html_head'] = prov
     try:
         if root.startswith('http'):
-            rec = sgv.findById(root)
+            if 'prefixes' in kwargs:
+                rec = None
+                for k, v in kwargs.items():
+                    if root.startswith(v):
+                        rec = k + 'r:' + root.strip(v)
+                        break
+                if rec is None:
+                    raise KeyError('no prefix found for {root}')
+            else:
+                rec = sgv.findById(root)
             if 'curie' in rec:
                 root = rec['curie']
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
