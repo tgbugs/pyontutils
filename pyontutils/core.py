@@ -7,6 +7,7 @@ import requests
 from pathlib import Path
 from collections import namedtuple
 from inspect import getsourcelines, getsourcefile
+from git import Repo
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
@@ -138,6 +139,7 @@ ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
 ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
 FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
+DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
 paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
@@ -1277,6 +1279,8 @@ class Source(tuple):
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
+    sourceFile = None
+    # source_original = None  # FIXME this should probably be defined on the artifact not the source?
     artifact = None
 
     def __new__(cls):
@@ -1288,9 +1292,33 @@ class Source(tuple):
                 if cls.source.endswith('.git'):
                     cls._type = 'git-remote'
                     # TODO look for local, if not fetch, pull latest, get head commit
+                    glb = Path(devconfig.git_local_base)
+                    repo = glb / Path(cls.source).stem
+                    rap = repo.as_posix()
+                    print(rap)
+                    if not repo.exists():
+                        cls.repo = Repo.clone_from(cls.source, rap)
+                    else:
+                        cls.repo = Repo(rap)
+                        # cls.repo.remote().pull()  # XXX remove after testing finishes
+
+                    if cls.sourceFile is not None:
+                        file = repo / cls.sourceFile
+                        file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                        commit_path = os.path.join('blob', file_commit, cls.sourceFile)
+                        print(commit_path)
+                        if 'github' in cls.source:
+                            cls.iri_prefix = cls.source.rstrip('.git') + '/'
+                        else:
+                            # using github syntax for now since it is possible to convert out
+                            cls.iri_prefix = cls.source + '::'
+                        cls.iri = rdflib.URIRef(cls.iri_prefix + commit_path)
+                    else:
+                        raise ValueError(f'No sourceFile specified for {cls}')
                 else:
                     cls._type = 'iri'
-                cls.iri = rdflib.URIRef(cls.source)
+                    cls.iri = rdflib.URIRef(cls.source)
+
             elif os.path.exists(cls.source):  # TODO no expanded stuff
                 try:
                     file_commit = subprocess.check_output(['git', 'log', '-n', '1',
@@ -1356,7 +1384,23 @@ class Source(tuple):
                 cls.iri_head = object
                 if cls.artifact is not None:
                     cls.artifact.source = cls.iri
-        elif cls._type == 'git-remote' or cls._type == 'iri':
+
+        elif cls._type == 'git-remote':
+            origin = next(r for r in cls.repo.remotes if r.name == 'origin')
+            origin_branch = next(r.reference.remote_head for r in origin.refs if r.remote_head == 'HEAD')
+            default_path = os.path.join('blob', origin_branch, cls.sourceFile)
+            object = rdflib.URIRef(cls.iri_prefix + default_path)
+            if hasattr(cls, 'source_original') and cls.source_original:
+                cls.iri_head = object
+                if cls.artifact is not None:
+                    cls.artifact.source = cls.iri  # FIXME there may be more than one source
+            else:
+                if hasattr(cls.artifact, 'hadDerivation'):
+                    cls.artifact.hadDerivation.append(object)
+                else:
+                    cls.artifact.hadDerivation = [object]
+
+        elif cls._type == 'iri':
             #print('Source is url and assumed to have no intermediate', cls.source)
             if hasattr(cls, 'source_original') and cls.source_original:
                 cls.artifact = cls  # make the artifact and the source equivalent for prov
@@ -1379,6 +1423,7 @@ class Ont:
     shortname = None
     comment = None  # about how the file was generated, nothing about what it contains
     version = TODAY
+    namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
@@ -1399,6 +1444,10 @@ class Ont:
         if hasattr(cls, 'imports'):# and not isinstance(cls.imports, property):
             cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
                                 for i in cls.imports)
+        if cls.namespace is not None and cls.shortname:
+            iri_prefix = str(cls.namespace)
+            if iri_prefix not in tuple(cls.prefixes.values()):
+                cls.prefixes[cls.shortname.upper()] = iri_prefix  # sane default
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -1532,7 +1581,6 @@ class LabelsBase(Ont):  # this replaces genericPScheme
     roots = None  # : (LabelRoot, ...)
     filename = None
     name = None
-    prefixes = {}
     comment = None
 
     @property
