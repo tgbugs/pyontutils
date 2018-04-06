@@ -1228,7 +1228,9 @@ class Class:
                 restriction = None
             if hasattr(self_or_cls, key):
                 value = getattr(self_or_cls, key)
-                #print(key, predicate, value)
+                #a, b, c = (qname(key), qname(predicate),
+                           #qname(value) if isinstance(value, rdflib.URIRef) else value)
+                #print(tc.red('aaaaaaaaaaaaaaaaa'), f'{a:<30}{c}')
                 if value is not None:
                     #(f'{key} are not kwargs for {self.__class__.__name__}')
                     def makeTrip(value, iri=iri, predicate=predicate, restriction=restriction):
@@ -1535,15 +1537,18 @@ class Ont:
     def triples(self):
         if self._debug:
             embed()
+
         if hasattr(self, 'root') and self.root is not None:
             yield from self.root
         elif hasattr(self, 'roots') and self.roots is not None:
             for root in self.roots:
                 yield from root
+
         if hasattr(self, '_triples'):
             yield from self._triple_check(self._triples())
         else:
             return
+
         for t in self._extra_triples:  # last so _triples can populate
             yield t
 

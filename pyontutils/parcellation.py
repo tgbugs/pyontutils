@@ -841,10 +841,11 @@ class parcArts(Ont):
     def _triples(self):
         yield from Artifact.class_triples()
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
+            # do not comment this out it is what makes the
+            # upper classes in the artifacts hierarchy
             yield from art_type.class_triples()
-        for art in self._artifacts:
-            for t in art:
-                yield t
+        for artifact in self._artifacts:
+            yield from artifact
 
 
 class parcCore(Ont):
@@ -2042,12 +2043,14 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    #from parc_aba import Artifacts as abaArts
+    from parc_aba import Artifacts as abaArts
     from parc_mndbgl import Artifacts as mndbglArts
-    out = build(*(l for l in subclasses(Ont)
-                  if l.__name__ != 'parcBridge' and
-                  l.__module__ != 'parcellation' and
-                  not hasattr(l, f'_{l.__name__}__pythonOnly')),
+    onts = tuple(l for l in subclasses(Ont)
+                 if l.__name__ != 'parcBridge' and
+                 l.__module__ != 'pyontutils.parcellation' and
+                 not hasattr(l, f'_{l.__name__}__pythonOnly'))
+    #_ = *(print(ont) for ont in onts),
+    out = build(*onts,
                 parcBridge,
                 n_jobs=int(args['--jobs']))
     embed()
