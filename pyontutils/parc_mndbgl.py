@@ -38,12 +38,16 @@ class Artifacts(Collector):
                       species=NCBITaxon['9606'],
                       devstage=UBERON['0000113'],)
 
+
 class MNDBGLSrc(Source):
-    artifact = Artifacts.MNDBGL
-    # source = 'https://github.com/nipy/mindboggle/blob/master/mindboggle/mio/labels.py'
     source = 'https://github.com/nipy/mindboggle.git'
     sourceFile = 'mindboggle/mio/labels.py'  # subclass if you have more than one file
     source_original = True
+    artifact = Artifacts.MNDBGL
+
+    #def __new__(cls):
+        #print('ccccc', cls, hasattr(cls, 'data'))
+        #return super().__new__(cls)
 
     @classmethod
     def loadData(cls):
@@ -63,6 +67,10 @@ class MNDBGLSrc(Source):
 class DKTSrc(MNDBGLSrc):
     artifact = Artifacts.DKT
 
+    #def __new__(cls):
+        #print('bbbbb', cls, hasattr(cls, 'data'))
+        #return super().__new__(cls)
+
     @classmethod
     def processData(cls):
         dkt = cls.dkt
@@ -70,6 +78,7 @@ class DKTSrc(MNDBGLSrc):
         sul = tuple(zip(iter(lambda:DKTs, 0), dkt.sulcus_numbers, dkt.sulcus_names))
         return dkt31 + sul,
 
+DKTSrc()
 
 class MNDBGLLabels(LabelsBase):
     """ Parcellation labels from Mindboggle. """

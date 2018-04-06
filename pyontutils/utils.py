@@ -50,6 +50,13 @@ def subclasses(start):
         yield sc
         yield from subclasses(sc)
 
+def getSourceLine(cls):
+    try:
+        return inspect.getsourcelines(cls)[-1]
+    except OSError:  # we are probably in a debugger
+        print(TermColors.red('WARNING:'), TermColors.yellow(f'No source found for {cls} are you in a debugger?'))
+        return 'NO-SOURCE-FOUND'
+
 def getCommit():
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()
     return commit

@@ -6,13 +6,13 @@ import rdflib
 import requests
 from pathlib import Path
 from collections import namedtuple
-from inspect import getsourcelines, getsourcefile
+from inspect import getsourcefile
 from git import Repo
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, getCommit, Async, deferred, TermColors as tc
+from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine, getCommit, Async, deferred, TermColors as tc
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.closed_namespaces import *
 from IPython import embed
@@ -188,22 +188,27 @@ def ont_make(o):
     o.write()
     return o
 
-def ont_doit(ont):
-    return ont_make(ont_setup(ont))
-
 def build(*onts, n_jobs=9):
     """ Set n_jobs=1 for debug or embed() will crash. """
+    if len(onts) > 1:
+        for i, ont in enumerate(onts):
+            if ont.__name__ == 'parcBridge' and i != len(onts) - 1:
+                raise ValueError('parcBridge should be built last to avoid weird errors!')
+    # ont_setup must be run first on all ontologies
+    # or we will get weird import errors
+    if n_jobs == 1:
+        return tuple(ont_make(ont) for ont in
+                     [ont_setup(ont) for ont in onts])
+
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
                                    #[ont_setup(ont) for ont in onts])
                                    (Async()(deferred(ont_setup)(ont)
-                                           for ont in onts
-                                           if ont.__name__ != 'parcBridge')
+                                            for ont in onts)
                                     if n_jobs > 1
                                     else [ont_setup(ont)
-                                          for ont in onts
-                                          if ont.__name__ != 'parcBridge']))
+                                          for ont in onts]))
 
 def make_predicate_object_thunk(function, p, o):
     """ Thunk to hold predicate object pairs until a subject is supplied and then
@@ -1288,7 +1293,7 @@ class Source(tuple):
     artifact = None
 
     def __new__(cls):
-        if not hasattr(cls, 'data'):
+        if not hasattr(cls, '_data'):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
 
@@ -1346,10 +1351,10 @@ class Source(tuple):
                 print('Unknown source', cls.source)
 
             cls.raw = cls.loadData()
-            cls.data = cls.validate(*cls.processData())
+            cls._data = cls.validate(*cls.processData())
             cls._triples_for_ontology = []
             cls.prov()
-        self = super().__new__(cls, cls.data)
+        self = super().__new__(cls, cls._data)
         return self
 
     @classmethod
@@ -1464,7 +1469,7 @@ class Ont:
             commit = getCommit()
 
         try:
-            line = getsourcelines(self.__class__)[-1]
+            line = getSourceLine(self.__class__)
             file = getsourcefile(self.__class__)
         except TypeError:  # emacs is silly
             line = 'noline'

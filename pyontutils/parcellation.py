@@ -14,7 +14,6 @@ import os
 import re
 import csv
 import glob
-from inspect import getsourcelines
 from collections import namedtuple, defaultdict, Counter
 import requests
 from lxml import etree
@@ -25,7 +24,7 @@ from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
 from pyontutils.core import NCBITaxon, UBERON, NIFTTL
 from pyontutils.core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
 from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
-from pyontutils.utils import TODAY, async_getter, rowParse, getCommit, subclasses
+from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, getCommit, subclasses
 from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
@@ -832,10 +831,13 @@ class parcArts(Ont):
                 'paxratver':str(paxratver),
     }
 
+    def __call__(self):
+        return super().__call__()
+
     @property
     def _artifacts(self):
         for collector in subclasses(Collector):
-            if collector.__module__ != 'parcellation':  # just run __main__
+            if collector.__module__ != 'pyontutils.parcellation':  # just run __main__
                 yield from collector.arts()
 
     def _triples(self):
@@ -892,7 +894,7 @@ class parcBridge(Ont):
     filename = 'parcellation-bridge'
     name = 'Parcellation Bridge'
     imports = ((g[subclass.__name__]
-                if subclass.__name__ in g and subclass.__module__ == 'parcellation'  # parcellation is insurance for name reuse
+                if subclass.__name__ in g and subclass.__module__ == 'pyontutils.parcellation'  # parcellation is insurance for name reuse
                 else subclass)
                for g in (globals(),)
                for subclass in subclasses(LabelsBase)  # XXX wow, well apparently __main__.Class != module.Class
@@ -909,10 +911,10 @@ class parcBridge(Ont):
 # Sources (input files)
 
 class LocalSource(Source):
-    data = tuple()
+    _data = tuple()
 
     def __new__(cls):
-        line = getsourcelines(cls)[-1]
+        line = getSourceLine(cls)
         cls.iri = URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
         cls.iri_head = URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
         if cls.artifact is None:  # for prov...
@@ -1197,7 +1199,7 @@ class PaxTree_6(Source):
 
 class PaxFix4(LocalSource):
     artifact = Artifacts.PaxRat4
-    data = ({
+    _data = ({
         # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
         '1':(['layer 1 of cortex'], tuple()),
         '1a':(['layer 1a of cortex'], tuple()),
@@ -1217,7 +1219,7 @@ class PaxFix4(LocalSource):
 
 class PaxFix6(LocalSource):
     artifact = Artifacts.PaxRat6
-    data = ({
+    _data = ({
         '1':(['layer 1 of cortex'], tuple()),
         '1a':(['layer 1a of cortex'], (8,)),
         '1b':(['layer 1b of cortex'], (8,)),
@@ -1235,7 +1237,7 @@ class PaxFix6(LocalSource):
 
 
 class PaxFix(LocalSource):
-    data = ({
+    _data = ({
         '1':(['layer 1'], tuple()),
         '1a':(['layer 1a'], (8,)),
         '1b':(['layer 1b'], (8,)),
@@ -1253,7 +1255,7 @@ class PaxFix(LocalSource):
 
 
 class PaxMFix(LocalSource):
-    data = ({}, {})
+    _data = ({}, {})
 
 
 class WHSSD2Src(Source):
@@ -1398,7 +1400,7 @@ class PaxLabels(LabelsBase):
         _fixes_prov = {}
         for f in self._fixes:
             for l in f[1][0]:
-                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getsourcelines(self.__class__)[-1])]  # FIXME per file
+                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getSourceLine(self.__class__))]  # FIXME per file
         return _fixes_prov
 
     @property
@@ -2049,7 +2051,7 @@ def main():
                  if l.__name__ != 'parcBridge' and
                  l.__module__ != 'pyontutils.parcellation' and
                  not hasattr(l, f'_{l.__name__}__pythonOnly'))
-    #_ = *(print(ont) for ont in onts),
+    _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
                 n_jobs=int(args['--jobs']))
