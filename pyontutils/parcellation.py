@@ -933,8 +933,12 @@ class LocalSource(Source):
 
 # Source instances  TODO put everything under one class as we do for Artifacts?
 
-class PaxSr_6(Source):
-    source = 'resources/paxinos09names.txt'
+class resSource(Source):
+    source = 'https://github.com/tgbugs/pyontutils.git'
+
+
+class PaxSr_6(resSource):
+    sourceFile = 'pyontutils/resources/paxinos09names.txt'
     artifact = Artifacts.PaxRat6
 
     @classmethod
@@ -964,8 +968,7 @@ class PaxSr_6(Source):
         return out, errata
 
 
-class PaxSrAr(Source):
-    source = None
+class PaxSrAr(resSource):
     artifact = None
 
     @classmethod
@@ -1094,22 +1097,22 @@ class PaxSrAr(Source):
 
 
 class PaxSrAr_4(PaxSrAr):
-    source = 'resources/pax-4th-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/pax-4th-ed-indexes.txt'
     artifact = Artifacts.PaxRat4
 
 
 class PaxSrAr_6(PaxSrAr):
-    source = 'resources/pax-6th-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/pax-6th-ed-indexes.txt'
     artifact = Artifacts.PaxRat6
 
 
 class PaxMSrAr_2(PaxSrAr):
-    source = 'resources/paxm-2nd-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/paxm-2nd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse2
 
 
 class PaxMSrAr_3(PaxSrAr):
-    source = 'resources/paxm-3rd-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/paxm-3rd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse3
 
 
@@ -1258,8 +1261,8 @@ class PaxMFix(LocalSource):
     _data = ({}, {})
 
 
-class WHSSD2Src(Source):
-    source = 'resources/WHS_SD_rat_atlas_v2.label'
+class WHSSD2Src(resSource):
+    sourceFile = 'pyontutils/resources/WHS_SD_rat_atlas_v2.label'
     source_original = True
     artifact = Artifacts.WHSSD2
 
@@ -1278,8 +1281,8 @@ class WHSSD2Src(Source):
         return d
 
 
-class WHSSD2ilfSrc(Source):
-    source = 'resources/WHS_SD_rat_atlas_v2_labels.ilf'
+class WHSSD2ilfSrc(resSource):
+    sourceFile = 'pyontutils/resources/WHS_SD_rat_atlas_v2_labels.ilf'
     source_original = True
     artifact = Artifacts.WHSSD2
 
@@ -1313,8 +1316,8 @@ class WHSSD2ilfSrc(Source):
         return d
 
 
-class HCPMMPSrc(Source):
-    source = 'resources/human_connectome_project_2016.csv'
+class HCPMMPSrc(resSource):
+    sourceFile = 'pyontutils/resources/human_connectome_project_2016.csv'
     source_original = True
     artifact = Artifacts.HCPMMP
 

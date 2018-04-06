@@ -1169,7 +1169,7 @@ class Class:
             self.rdfs_subClassOf = self._rdfs_subClassOf
 
         self.args = args
-        self._extra_triples = []  # TODO ?
+        self._extra_triples = set()  # TODO ?
         if self._kwargs:
             for kw, arg in self._kwargs.items():
                 if kw in kwargs:
@@ -1217,10 +1217,10 @@ class Class:
         return graph  # enable chaining
 
     def addSubGraph(self, triples):
-        self._extra_triples.extend(triples)
+        self._extra_triples.update(triples)
 
     def addPair(self, predicate, object):
-        self._extra_triples.append((self.iri, predicate, object))
+        self._extra_triples.add((self.iri, predicate, object))
 
     def __iter__(self):
         yield from self.triples
@@ -1329,8 +1329,12 @@ class Source(tuple):
                             # using github syntax for now since it is possible to convert out
                             cls.iri_prefix = cls.source + '::'
                         cls.iri = rdflib.URIRef(cls.iri_prefix + commit_path)
+                        cls.source = file.as_posix()
                     else:
-                        raise ValueError(f'No sourceFile specified for {cls}')
+                        # assume the user knows what they are doing
+                        #raise ValueError(f'No sourceFile specified for {cls}')
+                        cls.iri = rdflib.URIRef(cls.source)
+                        pass
                 else:
                     cls._type = 'iri'
                     cls.iri = rdflib.URIRef(cls.source)
@@ -1371,7 +1375,11 @@ class Source(tuple):
         elif cls._type == 'iri':
             return tuple()
         elif cls._type == 'git-remote':
-            return tuple()
+            if cls.sourceFile is not None:
+                with open(cls.source, 'rt') as f:
+                    return f.read()
+            else:
+                return tuple()
         else:
             return tuple()
 
@@ -1402,15 +1410,22 @@ class Source(tuple):
                     cls.artifact.source = cls.iri
 
         elif cls._type == 'git-remote':
-            origin = next(r for r in cls.repo.remotes if r.name == 'origin')
-            origin_branch = next(r.reference.remote_head for r in origin.refs if r.remote_head == 'HEAD')
-            default_path = os.path.join('blob', origin_branch, cls.sourceFile)
-            object = rdflib.URIRef(cls.iri_prefix + default_path)
-            if hasattr(cls, 'source_original') and cls.source_original:
+            if cls.sourceFile is not None:
+                origin = next(r for r in cls.repo.remotes if r.name == 'origin')
+                origin_branch = next(r.reference.remote_head for r in origin.refs if r.remote_head == 'HEAD')
+                default_path = os.path.join('blob', origin_branch, cls.sourceFile)
+                object = rdflib.URIRef(cls.iri_prefix + default_path)
                 cls.iri_head = object
+            else:
+                object = None
+
+            if hasattr(cls, 'source_original') and cls.source_original:
                 if cls.artifact is not None:
                     cls.artifact.source = cls.iri  # FIXME there may be more than one source
             else:
+                if object is None:
+                    object = cls.iri
+
                 if hasattr(cls.artifact, 'hadDerivation'):
                     cls.artifact.hadDerivation.append(object)
                 else:

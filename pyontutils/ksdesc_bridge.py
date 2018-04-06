@@ -4,12 +4,12 @@ import os
 from glob import glob
 from pathlib import Path
 from rdflib import Literal
-from pyontutils.core import Ont, Source, makePrefixes, skos
+from pyontutils.core import Ont, Source, makePrefixes, skos, build
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
 
-top_level = glob((gitf / 'ksdesc/').as_posix() + '*')
+top_level = glob((gitf / 'ksdesc').as_posix() + '/*')
 
 class ksDefsSource(Source):
     source = 'https://github.com/OpenKnowledgeSpace/ksdesc.git'
@@ -20,7 +20,7 @@ class ksDefs(Ont):
     filename = 'ksdesc-defs'
     name = 'Knolwedge Space Defs'
     shortname = 'ksdefs'
-    sources = ksDefsSource(),
+    sources = ksDefsSource,
     prefixes = makePrefixes('SCR', 'MBA', 'UBERON', 'PR',
                             #'NIFMOL', 'NIFCELL', 'NIFGA', 'NIFNEURMOR',
                             'NLXMOL', 'SAO', 'NLXCELL', 'NIFEXT', 'BIRNLEX')
@@ -46,5 +46,4 @@ class ksDefs(Ont):
                         skipped_prefixes.add(prefix)
         print(sorted(skipped_prefixes))
 
-k = ksDefs()
-k().write()
+build(ksDefs, n_jobs=1)
