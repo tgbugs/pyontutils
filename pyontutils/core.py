@@ -1306,6 +1306,7 @@ class Source(tuple):
             if cls.source.startswith('http'):
                 if cls.source.endswith('.git'):
                     cls._type = 'git-remote'
+                    cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
                     glb = Path(devconfig.git_local_base)
                     cls.repo_path = glb / Path(cls.source).stem
@@ -1313,7 +1314,7 @@ class Source(tuple):
                     print(rap)
                     # TODO branch and commit as usual
                     if not cls.repo_path.exists():
-                        cls.repo = Repo.clone_from(cls.source, rap)
+                        cls.repo = Repo.clone_from(cls.sourceRepo, rap)
                     else:
                         cls.repo = Repo(rap)
                         # cls.repo.remote().pull()  # XXX remove after testing finishes

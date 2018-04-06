@@ -14,8 +14,10 @@ import os
 import re
 import csv
 import glob
+from pathlib import Path
 from collections import namedtuple, defaultdict, Counter
 import requests
+from git import Repo
 from lxml import etree
 from rdflib import Graph, URIRef, Literal, Namespace
 from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
@@ -923,8 +925,28 @@ class LocalSource(Source):
 
             cls.artifact = art
 
+        cls._this_file = Path(__file__).absolute()
+        repobase = cls._this_file.parent.parent.as_posix()
+        cls.repo = Repo(repobase)
+
         self = super().__new__(cls)
         return self
+
+    @classmethod
+    def prov(cls):
+        from inspect import getsourcelines
+        #source_lines = getSourceLine
+        source_lines, start = getsourcelines(cls)
+        end = start + len(source_lines)
+        embed()
+        i = 0
+        for commit, lines in cls.repo.blame('HEAD', cls._this_file.as_posix()):
+            for line in lines:
+                if start <= i <= end:
+                    print(line, commit)
+                elif i > end:
+                    break
+                i += 1
 
 
 ##

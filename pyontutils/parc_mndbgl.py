@@ -45,10 +45,6 @@ class MNDBGLSrc(Source):
     source_original = True
     artifact = Artifacts.MNDBGL
 
-    #def __new__(cls):
-        #print('ccccc', cls, hasattr(cls, 'data'))
-        #return super().__new__(cls)
-
     @classmethod
     def loadData(cls):
         sys.path.append(cls.repo_path.as_posix())
@@ -67,10 +63,6 @@ class MNDBGLSrc(Source):
 class DKTSrc(MNDBGLSrc):
     artifact = Artifacts.DKT
 
-    #def __new__(cls):
-        #print('bbbbb', cls, hasattr(cls, 'data'))
-        #return super().__new__(cls)
-
     @classmethod
     def processData(cls):
         dkt = cls.dkt
@@ -78,7 +70,6 @@ class DKTSrc(MNDBGLSrc):
         sul = tuple(zip(iter(lambda:DKTs, 0), dkt.sulcus_numbers, dkt.sulcus_names))
         return dkt31 + sul,
 
-DKTSrc()
 
 class MNDBGLLabels(LabelsBase):
     """ Parcellation labels from Mindboggle. """
