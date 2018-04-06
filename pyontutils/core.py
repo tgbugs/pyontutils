@@ -139,7 +139,10 @@ ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
 ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
 FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
-DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/labels/'))
+DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/'))
+DKTr = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/region/labels/'))
+DKTs = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/sulcus/labels/'))
+MNDBGL = rdflib.Namespace(interlex_namespace('mindboggle/uris/mndbgl/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
 paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
@@ -1191,10 +1194,9 @@ class Class:
                         arg = tuple(arg)  # avoid draining generators
                     #typeCheck(arg)
                     setattr(self, kw, arg)
-            if kwargs:
+            if kwargs:  # some kwargs did not get popped off
                 print(tc.red('WARNING:') + (f' {sorted(kwargs)} are not kwargs '
                       f'for {self.__class__.__name__}. Did you mispell something?'))
-                pass
         else:
             for kw, arg in kwargs:
                 setattr(self, kw, arg)
@@ -1293,17 +1295,18 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     # TODO look for local, if not fetch, pull latest, get head commit
                     glb = Path(devconfig.git_local_base)
-                    repo = glb / Path(cls.source).stem
-                    rap = repo.as_posix()
+                    cls.repo_path = glb / Path(cls.source).stem
+                    rap = cls.repo_path.as_posix()
                     print(rap)
-                    if not repo.exists():
+                    # TODO branch and commit as usual
+                    if not cls.repo_path.exists():
                         cls.repo = Repo.clone_from(cls.source, rap)
                     else:
                         cls.repo = Repo(rap)
                         # cls.repo.remote().pull()  # XXX remove after testing finishes
 
                     if cls.sourceFile is not None:
-                        file = repo / cls.sourceFile
+                        file = cls.repo_path / cls.sourceFile
                         file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
                         commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                         print(commit_path)

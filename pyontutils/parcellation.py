@@ -620,6 +620,7 @@ class LabelRoot(Class):
     class_label = 'Parcellation Label'
     _kwargs = dict(iri=None,
                    label=None,
+                   comment=None,
                    shortname=None,  # used to construct the rdfs:label
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
                    definingArtifactsS=tuple(),
@@ -2041,8 +2042,8 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    from parc_aba import Artifacts as abaArts
-    from parc_dkt import Artifacts as dktArts
+    #from parc_aba import Artifacts as abaArts
+    from parc_mndbgl import Artifacts as mndbglArts
     out = build(*(l for l in subclasses(Ont)
                   if l.__name__ != 'parcBridge' and
                   l.__module__ != 'parcellation' and
