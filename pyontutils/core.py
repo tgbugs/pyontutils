@@ -190,22 +190,28 @@ def ont_make(o):
 
 def build(*onts, n_jobs=9):
     """ Set n_jobs=1 for debug or embed() will crash. """
-    if len(onts) > 1:
+    tail = lambda:tuple()
+    lonts = len(onts)
+    if lonts > 1:
         for i, ont in enumerate(onts):
-            if ont.__name__ == 'parcBridge' and i != len(onts) - 1:
-                raise ValueError('parcBridge should be built last to avoid weird errors!')
+            if ont.__name__ == 'parcBridge':
+                onts = onts[:-1]
+                def tail(o=ont):
+                    return ont_setup(o),
+                if i != lonts - 1:
+                    raise ValueError('parcBridge should be built last to avoid weird errors!')
     # ont_setup must be run first on all ontologies
     # or we will get weird import errors
     if n_jobs == 1:
         return tuple(ont_make(ont) for ont in
-                     [ont_setup(ont) for ont in onts])
+                     tuple(ont_setup(ont) for ont in onts) + tail())
 
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
     return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
                                    #[ont_setup(ont) for ont in onts])
-                                   (Async()(deferred(ont_setup)(ont)
-                                            for ont in onts)
+                                   (tuple(Async()(deferred(ont_setup)(ont)
+                                                  for ont in onts)) + tail()
                                     if n_jobs > 1
                                     else [ont_setup(ont)
                                           for ont in onts]))
