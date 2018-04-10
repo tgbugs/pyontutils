@@ -20,10 +20,10 @@ Options:
     -T --services-config=SCFG           services.yaml location  [default: {devconfig.scigraph_services}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config  [default: scigraph-services.service]
+    -y --systemd-config=FILE            name of systemd config  [default: {devconfig.scigraph_systemd}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -j --java-config=FILE               name of java template   [default: scigraph-services.conf]
+    -j --java-config=FILE               name of java template   [default: {devconfig.scigraph_java}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
@@ -84,8 +84,8 @@ class Builder:
     """ Build and/or run the SciGraph build and deploy chain. """
     # filenames currently not set by options [default: ]
     scigraph_repo = 'SciGraph'
-    start_script = 'start.sh'
-    stop_script = 'stop.sh'
+    start_script = f'{devconfig.scigraph_start}'
+    stop_script = f'{devconfig.scigraph_stop}'
     services_jar = 'scigraph-services.jar'
     heap_dump = 'head.dump'
     garbage_collection_log = 'gc.log'

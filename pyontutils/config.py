@@ -135,6 +135,22 @@ class DevConfig:
     def scigraph_services(self):
         return self.config['scigraph_services']
 
+    @default((Path(__file__).parent.parent / 'scigraph' / 'start.sh').as_posix())
+    def scigraph_start(self):
+        return self.config['scigraph_start']
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'stop.sh').as_posix())
+    def scigraph_stop(self):
+        return self.config['scigraph_stop']
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'scigraph-services.service').as_posix())
+    def scigraph_systemd(self):
+        return self.config['scigraph_systemd']
+
+    @default((Path(__file__).parent.parent / 'scigraph' / 'scigraph-services.conf').as_posix())
+    def scigraph_java(self):
+        return self.config['scigraph_java']
+
     @default('/tmp')
     def zip_location(self):
         return self.config['zip_location']
