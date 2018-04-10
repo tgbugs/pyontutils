@@ -18,11 +18,13 @@ sudo chown ${USER}:${USER} /etc/scigraph-services.conf
 sudo mkdir -p /var/scigraph-services/
 sudo chown -R ${USER}:${USER} /var/scigraph-services
 ```
-# oneshots for ec2
+# oneshots for rhel 7 on ec2
 ```
 sudo yum install screen vim
 sudo yum install unzip  # wat
-sudo yum install xvfb
+sudo yum install xorg-x11-server-Xvfb  # capitalization matters and need to enable rhel-server-optional
+sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  # for nginx
+sudo yum install nginx
 ```
 
 ## if not handled by puppet
