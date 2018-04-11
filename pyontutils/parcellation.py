@@ -2091,7 +2091,7 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    #from parc_aba import Artifacts as abaArts
+    from parc_aba import Artifacts as abaArts
     from parc_mndbgl import Artifacts as mndbglArts
     onts = tuple(l for l in subclasses(Ont)
                  if l.__name__ != 'parcBridge' and
