@@ -13,7 +13,7 @@
 #  LABEL:   Label description 
 ################################################
     0     0    0    0        0  0  0    "Clear Label"
-    1   255   52   39        1  1  1    "corticofugal pathways"
+    1   255   52   39        1  1  1    "descending corticofugal pathways"
     2   255  186    0        1  1  1    "substantia nigra"
     3     0    0  255        1  1  1    "subthalamic nucleus"
     4   255  255    0        1  1  1    "molecular cell layer of the cerebellum"
@@ -41,7 +41,7 @@
    44     0  165   21        1  1  1    "inner ear"
    45   134  255   90     1  1  1    "spinal cord"
    46    33  230  255        1  1  1    "commissure of the superior colliculus"
-   47   153   83  255        1  1  1    "brain stem"
+   47   153   83  255        1  1  1    "brainstem"
    48   226  120  161        1  1  1    "hypothalamic region"
    49   238   47   44        1  1  1    "inferior colliculus"
    50    86    0  221        1  1  1    "superficial gray layer of the superior colliculus"
