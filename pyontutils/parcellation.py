@@ -939,32 +939,35 @@ class LocalSource(Source):
     def prov(cls):
         from inspect import getsourcelines
         #source_lines = getSourceLine
+
+        def get_commit_data(start, end):
+            records = cls.repo.git.blame('--line-porcelain', f'-L {start},{end}', cls._this_file.as_posix()).split('\n')
+            rl = 13
+            linenos = [(hexsha, int(nowL), int(thenL)) for r in records[::rl]
+                       for hexsha, nowL, thenL, *n in (r.split(' '),)]
+            author_times = [int(epoch) for r in records[3::rl] for _, epoch in (r.split(' '),)]
+            lines = [r.strip('\t') for r in records[12::rl]]
+            index, time = max(enumerate(author_times), key=lambda iv: iv[1])
+            commit, then, now = linenos[index]
+            # there are some hefty assumptions that go into this
+            # that other lines have not been deleted from or added to the code block
+            # between commits, or essentially that the code in the block is the
+            # same length and has only been shifted by the distance defined by the
+            # single commit that that has the maximum timestamp, so beware that
+            # this can and will break which is why I use start and end instead of
+            # just start like I do with the rest of the lines where I know for sure.
+            # This can probably be improved with pickaxe or similar.
+            shift = then - now
+            then_start = start + shift
+            then_end = end + shift
+            return commit, then_start, then_end
+
         source_lines, start = getsourcelines(cls)
         end = start + len(source_lines)
-        i = 0
-        print(tc.blue(''.join(source_lines)), start, end)
-        out = []
-        commits = set()
-        for commit, lines in cls.repo.blame(None, cls._this_file.as_posix(), n=True):
-            for line in lines:
-                out.append(line) 
-                i += 1
-                if start <= i <= end:
-                    print(f'{i:<6}{tc.yellow(line):<90}{commit}')
-                    commits.add(commit)
-                elif i > end:
-                    print(f'{i:<6}{tc.red(line):<90}{commit}')
-                    break
-                else:
-                    print(f'{i:<6}{tc.green(line):<90}{commit}')
+        most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
 
-        print(commits)
-        most_recent_block_commit = sorted((c for c in commits), key=lambda c:c.committed_date)[-1]
-        # '#L{start}-L{end}'  # TODO get lines at commit
-        # approaching a solution
-        # [r.split('\n') for r in cls.repo.git.blame('-p', '-L 1278,1294', cls._this_file.as_posix()).split('\t')]
-        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit) + f'{cls._this_file.name}')
-        embed()
+        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit)
+                         + f'{cls._this_file.name}#L{then_start}-L{then_end}')
 
 
 ##
