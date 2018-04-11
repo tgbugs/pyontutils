@@ -918,17 +918,20 @@ class LocalSource(Source):
     def __new__(cls):
         line = getSourceLine(cls)
         cls.iri = URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
-        cls.iri_head = URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
+        cls.iri_head = URIRef(cls.iri_prefix_hd + Path(__file__).name)
         if cls.artifact is None:  # for prov...
             class art:
                 iri = cls.iri
+                def addPair(self, *args, **kwargs):
+                    pass
 
-            cls.artifact = art
+            cls.artifact = art()
 
         cls._this_file = Path(__file__).absolute()
         repobase = cls._this_file.parent.parent.as_posix()
         cls.repo = Repo(repobase)
 
+        cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         self = super().__new__(cls)
         return self
 
@@ -938,15 +941,30 @@ class LocalSource(Source):
         #source_lines = getSourceLine
         source_lines, start = getsourcelines(cls)
         end = start + len(source_lines)
-        embed()
         i = 0
-        for commit, lines in cls.repo.blame('HEAD', cls._this_file.as_posix()):
+        print(tc.blue(''.join(source_lines)), start, end)
+        out = []
+        commits = set()
+        for commit, lines in cls.repo.blame(None, cls._this_file.as_posix(), n=True):
             for line in lines:
-                if start <= i <= end:
-                    print(line, commit)
-                elif i > end:
-                    break
+                out.append(line) 
                 i += 1
+                if start <= i <= end:
+                    print(f'{i:<6}{tc.yellow(line):<90}{commit}')
+                    commits.add(commit)
+                elif i > end:
+                    print(f'{i:<6}{tc.red(line):<90}{commit}')
+                    break
+                else:
+                    print(f'{i:<6}{tc.green(line):<90}{commit}')
+
+        print(commits)
+        most_recent_block_commit = sorted((c for c in commits), key=lambda c:c.committed_date)[-1]
+        # '#L{start}-L{end}'  # TODO get lines at commit
+        # approaching a solution
+        # [r.split('\n') for r in cls.repo.git.blame('-p', '-L 1278,1294', cls._this_file.as_posix()).split('\t')]
+        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit) + f'{cls._this_file.name}')
+        embed()
 
 
 ##
@@ -2070,7 +2088,7 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    from parc_aba import Artifacts as abaArts
+    #from parc_aba import Artifacts as abaArts
     from parc_mndbgl import Artifacts as mndbglArts
     onts = tuple(l for l in subclasses(Ont)
                  if l.__name__ != 'parcBridge' and

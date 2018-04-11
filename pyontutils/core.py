@@ -142,6 +142,7 @@ HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
 DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/'))
 DKTr = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/region/labels/'))
 DKTs = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/sulcus/labels/'))
+FSCL = rdflib.Namespace(interlex_namespace('freesurfer/uris/FreeSurferColorLUT/labels/'))
 MNDBGL = rdflib.Namespace(interlex_namespace('mindboggle/uris/mndbgl/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
 paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
@@ -1422,7 +1423,7 @@ class Source(tuple):
 
             if hasattr(cls, 'source_original') and cls.source_original:
                 if cls.artifact is not None:
-                    cls.artifact.source = cls.iri  # FIXME there may be more than one source
+                    cls.artifact.source = cls.iri_head  # do not use cls.iri here # FIXME there may be more than one source
             else:
                 if object is None:
                     object = cls.iri
