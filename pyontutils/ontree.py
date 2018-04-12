@@ -75,12 +75,12 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
-        if root.startswith('http'):
+        if root.startswith('http'):  # FIXME this codepath is completely busted?
             if 'prefixes' in kwargs:
                 rec = None
                 for k, v in kwargs.items():
                     if root.startswith(v):
-                        rec = k + 'r:' + root.strip(v)
+                        rec = k + 'r:' + root.strip(v)  # FIXME what?!
                         break
                 if rec is None:
                     raise KeyError('no prefix found for {root}')
@@ -95,6 +95,13 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         print(e)
         if sgg.getNode(root):
             message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
+        elif 'json' in kwargs:
+            message = 'Unknown root.'
+            r = g.expand(root) 
+            for s in g.g.subjects():
+                if r == s: 
+                    message = "No results. You are querying a ttl file directly, did you remember to set ?restriction=true?"
+                    break
         else:
             message = 'Unknown root.'
 
