@@ -1,4 +1,4 @@
-### ilxutils
+## ilxutils
 ilxutils is an api wrapper for SciCrunch. The package has 3 core functionalities:
 Add/Update/Delete SciCrunch elements (api_wrapper.py), convert elements into local turtle file
 (interlex2ttl.py), and compare Interlex to NIF Ontology (nif-ilx-comparator.py).
@@ -22,10 +22,11 @@ urllib3==1.22
 python3==3.6.3
 
 ## Using SciCrunch Client Wrapper
-Usage:  api_wrapper.py [-h | --help]
-        api_wrapper.py [-v | --version]
-        api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b]
-        api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b] [--index=<int>]
+Usage:
+    api_wrapper.py [-h | --help]
+    api_wrapper.py [-v | --version]
+    api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b]
+    api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b] [--index=<int>]
 
 Arugments:
     addTerms                    Add terms|cdes|annotations|relationships to SciCrunch
@@ -44,7 +45,7 @@ Options:
     -b, --beta                  Beta SciCrunch
     -i, --index=<int>           index of -f FILE that you which to start [default: 0]
 
-#The functionality of scicrunch_client.py
+##The functionality of scicrunch_client.py
 Get functions need a list of term ids
 Post functions need a list of dictionaries with their needed/optional keys & values
 
@@ -58,7 +59,7 @@ updateAnntationType         (self, data, HELP=False, LIMIT=50)
 deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
 addRelationship             (self, data, HELP=False, LIMIT=50)
 
-#The format of addTerms (list of dictionaries of the following)
+##The format of addTerms (list of dictionaries of the following)
 need:
         label           <str>
 options:
@@ -68,7 +69,7 @@ options:
         synonym         {'literal':<str>}
         existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
-#The format of UpdateTerms (list of dictionaries of the following)
+##The format of UpdateTerms (list of dictionaries of the following)
 need:
         id              <int> or <str>
 options:
@@ -79,7 +80,7 @@ options:
         synonym         {'literal':<str>}
         existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
-#The format of all annotation functions (list of dictionaries of the following)
+##The format of all annotation functions (list of dictionaries of the following)
 need:
         tid             <int> or <str>
         annotation_tid  <int> or <str>
