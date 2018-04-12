@@ -24,11 +24,15 @@ class Artifacts(Collector):
         docUri='https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/AnatomicalROI/FreeSurferColorLUT'
         citation='https://doi.org/10.1016/j.neuroimage.2012.01.021'
         species=NCBITaxon['9606']
-        devstage=UBERON['0000113']
+        devstage=UBERON['0000113']  # FIXME not sure if this is accurate
 
-    FreeSurferColorLUT1_105 = Terminology(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
-                                          version='1.105'
-                                         )
+    fsclut = FreeSurferColorLUT()
+
+    FreeSurferColorLUT1_105 = FreeSurferColorLUT(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
+                                                 abbrevs=('FSCL1.105',),
+                                                 # TODO FIXME the metadata on this version will be wrong
+                                                 # because of how python inheritance works :/
+                                                 version='1.105')
 
     """  # FreeSurferColorLUT is the correct source for these
          # mindboggle semantics may be different, but I think that they
@@ -126,6 +130,7 @@ class FreeSurferLabels(LabelsBase):
     name = 'FreeSurfer color LUT Parcellation Labels'
     shortname = 'fscl'  # can't use fsl because that is already in use by another fMRI package...
     namespace = FSCL
+    prefixes = {**LabelsBase.prefixes}  # FIXME it would be nice to be able to automate this...
     imports = parcCore,
     sources = FreeSurferSrc,
     root = LabelRoot(iri=nsExact(namespace),  # ilxtr.hcpmmproot,

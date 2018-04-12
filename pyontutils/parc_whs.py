@@ -19,9 +19,11 @@ class Artifacts(Collector):
         citation = 'https://www.ncbi.nlm.nih.gov/pubmed/24726336'
         species=NCBITaxon['10116']
         devstage=UBERON['0000113']
-        comment = ('Versions of the .label file added and remove entries and '
+        comment = ('Versions of the .label file add and remove entries and '
                    'sometimes slightly modify the label, but indexes are never '
                    'reused and retain their meaning.')
+
+    whssd = WHSSD()  # FIXME need to clean up how this works wrt subclassing
 
     WHSSD1 = WHSSD(iri=ilx['waxholm/uris/sd/versions/1'],
                    rdfs_label='Waxholm Space Sprague Dawley Terminology v1',
@@ -71,7 +73,7 @@ class WHSSDilfSrc(resSource):
     sourceFile = lambda v: f'pyontutils/resources/WHS_SD_rat_atlas_v{v}_labels.ilf'
     source_original = True
     artifact = lambda v: getattr(Artifacts, f'WHSSD{v}')
-    predicates = lambda v: {ilxtr.labelPartOf: ilxtr[f'labelPartOf/whssd/{v}']}  # FIXME
+    predicates = lambda v: {ilxtr.labelPartOf: ilxtr[f'labelPartOf-whssd-{v}']}  # FIXME
 
     @classmethod
     def loadData(cls):
@@ -133,6 +135,7 @@ class WHSSDLabels(LabelsBase):
 
     def _triples(self):
         for source in self.sources:
+            preds = False
             for index, label, *rest in source:
                 abbrev, parent = rest if rest else (False, False)  # a tricky one if you miss the parens
                 abbrevs = (abbrev,) if abbrev and abbrev != label else tuple()
@@ -146,11 +149,14 @@ class WHSSDLabels(LabelsBase):
                                  iri=iri,
                 )
                 if parent:
+                    preds = True
                     parent = WHSSD[str(parent)]
                     yield from restriction.serialize(iri, source.predicates[ilxtr.labelPartOf], parent)
 
             yield from source.isVersionOf
-
+            if preds:
+                for parent, child in source.predicates.items():  # FIXME annotationProperty vs objectProperty
+                    yield child, rdfs.subPropertyOf, parent
 
 def main():
     build(WHSSDLabels)

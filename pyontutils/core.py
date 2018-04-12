@@ -183,13 +183,30 @@ def ont_setup(ont):
     o = ont()
     return o
 
-def ont_make(o):
+def standard_checks(graph):
+    def cardinality(predicate, card=1):
+        for subject in sorted(set(graph.subjects())):
+            for i, object in enumerate(graph.objects(subject, predicate)):
+                if i == 0:
+                    first_error = tc.red('ERROR:'), subject, 'has more than one label!', object
+                elif i >= card:
+                    print(tc.red('ERROR:'), subject, 'has more than one label!', object)
+                    if i == card:
+                        print(*first_error)
+
+    cardinality(rdfs.label)
+
+def ont_make(o, fail=False):
     o()
     o.validate()
+    failed = standard_checks(o.graph)
+    o.failed = failed
+    if fail:
+        raise BaseException('Ontology validation failed!')
     o.write()
     return o
 
-def build(*onts, n_jobs=9):
+def build(*onts, fail=False, n_jobs=9):
     """ Set n_jobs=1 for debug or embed() will crash. """
     tail = lambda:tuple()
     lonts = len(onts)
@@ -204,12 +221,12 @@ def build(*onts, n_jobs=9):
     # ont_setup must be run first on all ontologies
     # or we will get weird import errors
     if n_jobs == 1:
-        return tuple(ont_make(ont) for ont in
+        return tuple(ont_make(ont, fail=fail) for ont in
                      tuple(ont_setup(ont) for ont in onts) + tail())
 
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
+    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail) for o in
                                    #[ont_setup(ont) for ont in onts])
                                    (tuple(Async()(deferred(ont_setup)(ont)
                                                   for ont in onts)) + tail()
@@ -1480,7 +1497,11 @@ class Ont:
         if cls.namespace is not None and cls.shortname:
             iri_prefix = str(cls.namespace)
             if iri_prefix not in tuple(cls.prefixes.values()):
-                cls.prefixes[cls.shortname.upper()] = iri_prefix  # sane default
+                # need the print to keep things sane means maybe
+                # this isn't such a good idea after all?
+                prefix = cls.shortname.upper()
+                print(tc.blue(f'Adding default namespace {cls.namespace} to {cls} as {prefix}'))
+                cls.prefixes[prefix] = iri_prefix  # sane default
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -1650,6 +1671,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               triples=tuple(),
               comment=None,
               path='ttl/',
+              fail=False,
               _repo=True):
 
     for i in imports:
@@ -1668,7 +1690,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
 
-    built_ont, = build(Simple, n_jobs=1)
+    built_ont, = build(Simple, fail=fail, n_jobs=1)
 
     return built_ont
 

@@ -6,7 +6,9 @@ Usage:
     parcellation [options]
 
 Options:
-    -j --jobs=NJOBS              number of parallel jobs to run [default: 9]
+    -f --fail                   fail loudly on common common validation checks
+    -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
+    -l --local                  only build files with local source copies
 
 """
 
@@ -1987,7 +1989,8 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    from parc_aba import Artifacts as abaArts
+    if not args['--local']:
+        from parc_aba import Artifacts as abaArts
     from parc_freesurfer import Artifacts as fsArts
     from parc_whs import Artifacts as whsArts
     onts = tuple(l for l in subclasses(Ont)
@@ -1997,6 +2000,7 @@ def main():
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
+                fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
     embed()
 
