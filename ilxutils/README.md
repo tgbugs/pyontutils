@@ -49,8 +49,9 @@ Options:
     -i, --index=<int>           index of -f FILE that you which to start [default: 0]
 
 ### The functionality of scicrunch_client.py
-=> Get functions need a list of term ids
-=> Post functions need a list of dictionaries with their needed/optional keys & values
+-> GET functions need a list of term ids
+
+-> POST functions need a list of dictionaries with their needed/optional keys & values
 
 Functions/Parameters:
 
