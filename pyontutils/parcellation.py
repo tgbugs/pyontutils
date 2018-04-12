@@ -1988,7 +1988,7 @@ def main():
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     from parc_aba import Artifacts as abaArts
-    from parc_mndbgl import Artifacts as mndbglArts
+    from parc_freesurfer import Artifacts as fsArts
     from parc_whs import Artifacts as whsArts
     onts = tuple(l for l in subclasses(Ont)
                  if l.__name__ != 'parcBridge' and
