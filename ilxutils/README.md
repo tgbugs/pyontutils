@@ -1,4 +1,4 @@
-## ilxutils
+### ilxutils
 ilxutils is an api wrapper for SciCrunch. The package has 3 core functionalities:
 Add/Update/Delete SciCrunch elements (api_wrapper.py), convert elements into local turtle file
 (interlex2ttl.py), and compare Interlex to NIF Ontology (nif-ilx-comparator.py).
@@ -59,7 +59,7 @@ updateAnntationType         (self, data, HELP=False, LIMIT=50)
 deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
 addRelationship             (self, data, HELP=False, LIMIT=50)
 
-##The format of addTerms (list of dictionaries of the following)
+# The format of addTerms (list of dictionaries of the following)
 need:
         label           <str>
 options:
@@ -69,7 +69,7 @@ options:
         synonym         {'literal':<str>}
         existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
-##The format of UpdateTerms (list of dictionaries of the following)
+# The format of UpdateTerms (list of dictionaries of the following)
 need:
         id              <int> or <str>
 options:
@@ -80,7 +80,7 @@ options:
         synonym         {'literal':<str>}
         existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
-##The format of all annotation functions (list of dictionaries of the following)
+# The format of all annotation functions (list of dictionaries of the following)
 need:
         tid             <int> or <str>
         annotation_tid  <int> or <str>
