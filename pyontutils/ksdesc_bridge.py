@@ -1,4 +1,7 @@
 #!/usr/bin/env python3.6
+from pyontutils.config import devconfig
+""" Synchronize KnowledgeSpace definitions to the ontology
+"""
 
 import os
 from glob import glob
@@ -6,8 +9,7 @@ from pathlib import Path
 from rdflib import Literal
 from pyontutils.core import Ont, Source, makePrefixes, skos, build
 
-current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
+gitf = Path(devconfig.git_local_base)
 
 top_level = glob((gitf / 'ksdesc').as_posix() + '/*')
 
@@ -46,4 +48,8 @@ class ksDefs(Ont):
                         skipped_prefixes.add(prefix)
         print(sorted(skipped_prefixes))
 
-build(ksDefs, n_jobs=1)
+def main():
+    build(ksDefs, n_jobs=1)
+
+if __name__ == '__main__':
+    main()
