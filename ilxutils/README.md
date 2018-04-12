@@ -23,12 +23,14 @@ python3==3.6.3
 
 ## Using SciCrunch Client Wrapper
 Usage:
+
     api_wrapper.py [-h | --help]
     api_wrapper.py [-v | --version]
     api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b]
     api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b] [--index=<int>]
 
 Arugments:
+
     addTerms                    Add terms|cdes|annotations|relationships to SciCrunch
     updateTerms                 Update terms|cdes|annotations|relationships in SciCrunch
     addAnnotations              Add annotations to existing elements
@@ -36,6 +38,7 @@ Arugments:
     updateAnntationType         Update annotation connector aka annotation_type via annoatation_tid
 
 Options:
+
     -h, --help                  Display this help message
     -v, --version               Current version of file
     -f, --file=<path>           File that holds the data you wish to upload to Scicrunch
@@ -61,37 +64,47 @@ addRelationship             (self, data, HELP=False, LIMIT=50)
 
 ### The format of addTerms (list of dictionaries of the following)
 need:
-        label           <str>
+
+    label           <str>
+
 options:
-        definition      <str> #bug with qutations
-        superclasses    {'id':int}
-        type            term, cde, anntation, or relationship <str>
-        synonym         {'literal':<str>}
-        existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
+
+    definition      <str> #bug with qutations
+    superclasses    {'id':int}
+    type            term, cde, anntation, or relationship <str>
+    synonym         {'literal':<str>}
+    existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
 ### The format of UpdateTerms (list of dictionaries of the following)
 need:
-        id              <int> or <str>
+
+    id              <int> or <str>
+
 options:
-        label           <str>
-        definition      <str> #bug with qutations
-        superclasses    {'id':int}
-        type            term, cde, anntation, or relationship <str>
-        synonym         {'literal':<str>}
-        existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
+
+    label           <str>
+    definition      <str> #bug with qutations
+    superclasses    {'id':int}
+    type            term, cde, anntation, or relationship <str>
+    synonym         {'literal':<str>}
+    existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
 
 ### The format of all annotation functions (list of dictionaries of the following)
 need:
-        tid             <int> or <str>
-        annotation_tid  <int> or <str>
-        value           <str>
+
+    tid             <int> or <str>
+    annotation_tid  <int> or <str>
+    value           <str>
 
 ## Using Interlex2ttl.py to create ttl of current Interlex
-Usage:  interlex2ttl.py [-h | --help]
-        interlex2ttl.py [-v | --version]
-        interlex2ttl.py [-e ENGINE_KEY] [-p | -b] [-o OUTPUT]
+Usage:
+
+    interlex2ttl.py [-h | --help]
+    interlex2ttl.py [-v | --version]
+    interlex2ttl.py [-e ENGINE_KEY] [-p | -b] [-o OUTPUT]
 
 Options:
+
     -h, --help                  Display this help message
     -v, --version               Current version of file
     -e, --engine_key=<path>     Engine key path [default: ../production_engine_scicrunch_key.txt]
