@@ -49,18 +49,20 @@ Options:
     -i, --index=<int>           index of -f FILE that you which to start [default: 0]
 
 ### The functionality of scicrunch_client.py
-Get functions need a list of term ids
-Post functions need a list of dictionaries with their needed/optional keys & values
+=> Get functions need a list of term ids
+=> Post functions need a list of dictionaries with their needed/optional keys & values
 
-identifierSearches          (identifierSearches(self, ids=None, HELP=False, LIMIT=50)
-updateTerms                 (self, data, HELP=False, LIMIT=50, sql=False)
-addTerms                    (self, data, HELP=False, LIMIT=50, sql=False)
-addAnnotations              (self, data, HELP=False, LIMIT=50, sql=False)
-getAnnotations              (self, tids, HELP=False, LIMIT=50)
-updateAnntationValues       (self, data, HELP=False, LIMIT=50)
-updateAnntationType         (self, data, HELP=False, LIMIT=50)
-deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
-addRelationship             (self, data, HELP=False, LIMIT=50)
+Functions/Parameters:
+
+    identifierSearches          (identifierSearches(self, ids=None, HELP=False, LIMIT=50)
+    updateTerms                 (self, data, HELP=False, LIMIT=50, sql=False)
+    addTerms                    (self, data, HELP=False, LIMIT=50, sql=False)
+    addAnnotations              (self, data, HELP=False, LIMIT=50, sql=False)
+    getAnnotations              (self, tids, HELP=False, LIMIT=50)
+    updateAnntationValues       (self, data, HELP=False, LIMIT=50)
+    updateAnntationType         (self, data, HELP=False, LIMIT=50)
+    deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
+    addRelationship             (self, data, HELP=False, LIMIT=50)
 
 ### The format of addTerms (list of dictionaries of the following)
 need:
