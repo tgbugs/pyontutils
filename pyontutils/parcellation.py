@@ -22,11 +22,11 @@ from lxml import etree
 from rdflib import Graph, URIRef, Literal, Namespace
 from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
-from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
+from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
 from pyontutils.core import NCBITaxon, UBERON, NIFTTL
 from pyontutils.core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
 from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
-from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, getCommit, subclasses
+from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, subclasses
 from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
@@ -791,18 +791,6 @@ class Artifacts(Collector):
                        **_PaxRatShared
                       )
 
-    WHSSD2 = Terminology(iri=ilx['waxholm/uris/sd/versions/2'],  # ilxtr.whssdv2,
-                         rdfs_label='Waxholm Space Sprague Dawley Terminology v2',
-                         shortname='WHSSD2',
-                         date='2015-02-02',
-                         version='2',
-                         citation='https://www.ncbi.nlm.nih.gov/pubmed/24726336',
-                         comment=('There is an earlier version of the .label file '
-                                  'but indexes are unique and are not reused, only renamed'),
-                         species=NCBITaxon['10116'],
-                         devstage=UBERON['0000113'],
-                        )
-
     HCPMMP = Terminology(iri=ilx['hcp/uris/mmp/versions/1.0'],  # ilxtr.hcpmmpv1,
                          rdfs_label='Human Connectome Project Multi-Modal human cortical parcellation',
                          shortname='HCPMMP',
@@ -917,8 +905,11 @@ class LocalSource(Source):
 
     def __new__(cls):
         line = getSourceLine(cls)
-        cls.iri = URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
         cls.iri_head = URIRef(cls.iri_prefix_hd + Path(__file__).name)
+        cls._this_file = Path(__file__).absolute()
+        repobase = cls._this_file.parent.parent.as_posix()
+        cls.repo = Repo(repobase)
+        cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         if cls.artifact is None:  # for prov...
             class art:
                 iri = cls.iri
@@ -927,11 +918,6 @@ class LocalSource(Source):
 
             cls.artifact = art()
 
-        cls._this_file = Path(__file__).absolute()
-        repobase = cls._this_file.parent.parent.as_posix()
-        cls.repo = Repo(repobase)
-
-        cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         self = super().__new__(cls)
         return self
 
@@ -1302,61 +1288,6 @@ class PaxFix(LocalSource):
 
 class PaxMFix(LocalSource):
     _data = ({}, {})
-
-
-class WHSSD2Src(resSource):
-    sourceFile = 'pyontutils/resources/WHS_SD_rat_atlas_v2.label'
-    source_original = True
-    artifact = Artifacts.WHSSD2
-
-    @classmethod
-    def loadData(cls):
-        with open(cls.source, 'rt') as f:
-            lines = [l.strip() for l in f.readlines() if not l.startswith('#')]
-        return [(l[:3].strip(), l.split('"',1)[1].strip('"')) for l in lines]
-
-    @classmethod
-    def processData(cls):
-        return cls.raw,
-
-    @classmethod
-    def validate(cls, d):
-        return d
-
-
-class WHSSD2ilfSrc(resSource):
-    sourceFile = 'pyontutils/resources/WHS_SD_rat_atlas_v2_labels.ilf'
-    source_original = True
-    artifact = Artifacts.WHSSD2
-
-    @classmethod
-    def loadData(cls):
-        tree = etree.parse(cls.source)
-        return tree
-
-    @classmethod
-    def processData(cls):
-        tree = cls.raw
-        def recurse(label_node, parent=None):
-            name = label_node.get('name')
-            abbrev = label_node.get('abbreviation')
-            id = label_node.get('id')
-            yield id, name, abbrev, parent
-            for child in label_node.getchildren():
-                if child.tag == 'label':
-                    yield from recurse(child, parent=id)
-
-        records = tuple()
-        for structure in tree.xpath('//structure'):
-            for lab in structure.getchildren():
-                if lab.tag == 'label':
-                    records += tuple(recurse(lab, None))
-
-        return records,
-
-    @classmethod
-    def validate(cls, d):
-        return d
 
 
 class HCPMMPSrc(resSource):
@@ -1887,41 +1818,6 @@ class PaxRatLabels(PaxLabels):
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
-class WHSSDLabels(LabelsBase):
-    filename = 'waxholm-rat-labels'
-    name = 'Waxholm Sprague Dawley Atlas Labels'
-    shortname = 'whssd'
-    imports = parcCore,
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
-    sources = WHSSD2Src, WHSSD2ilfSrc
-    namespace = WHSSD
-    root = LabelRoot(iri=nsExact(namespace),  # ilxtr.whssdroot,
-                     label='Waxholm Space Sprague Dawley parcellation label root',
-                     shortname=shortname,
-                     definingArtifacts=(s.artifact.iri for s in sources),
-    )
-
-    def _triples(self):
-        for source in self.sources:
-            for index, label, *rest in source:
-                abbrev, parent = rest if rest else (False, False)  # a tricky one if you miss the parens
-                abbrevs = (abbrev,) if abbrev and abbrev != label else tuple()
-                if int(index) >= 1000:  # FIXME this is the WRONG way to do this
-                    # FIXME parentless structures in the ilf files?
-                    label += ' (structure)'
-                iri = WHSSD[str(index)]
-                yield from Label(labelRoot=self.root,
-                                 label=label,
-                                 abbrevs=abbrevs,
-                                 iri=iri,
-                )
-                if parent:
-                    parent = WHSSD[str(parent)]
-                    yield from restriction.serialize(iri, ilxtr.labelPartOf, parent)
-
-            yield from source.isVersionOf
-
-
 #
 # regions
 
@@ -2093,6 +1989,7 @@ def main():
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     from parc_aba import Artifacts as abaArts
     from parc_mndbgl import Artifacts as mndbglArts
+    from parc_whs import Artifacts as whsArts
     onts = tuple(l for l in subclasses(Ont)
                  if l.__name__ != 'parcBridge' and
                  l.__module__ != 'pyontutils.parcellation' and

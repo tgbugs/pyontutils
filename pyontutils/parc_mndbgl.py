@@ -1,12 +1,10 @@
 import sys
-import requests
 from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, DKT, DKTr, DKTs, MNDBGL, FSCL
 from pyontutils.core import NCBITaxon, UBERON
 from pyontutils.core import nsExact
 from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, restriction, build
 from pyontutils.utils import Async, deferred
-# import pyontutils.parcellation as parc
 from pyontutils.parcellation import parcCore, LabelRoot, Label, Terminology
 from IPython import embed
 
@@ -18,14 +16,19 @@ class Artifacts(Collector):
     #  the artifact that we are referring to a an equivalent operational identifier
     #  such as a github url and then we can use the prov: relationships to track
     #  the changes at maximum granularity. I think that this is the right approach.
-    FreeSurferColorLUT = Terminology(iri=ilx['freesurfer/uris/FreeSurferColorLUT/'],
-                               rdfs_label='FreeSurfer Color LUT parcellation terminology',
-                               abbrevs=('FSCL',),
-                               date='2003-05-07',  # git log --name-status --follow distribution/FreeSurferColorLUT.txt
-                               docUri='https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/AnatomicalROI/FreeSurferColorLUT',
-                               citation='https://doi.org/10.1016/j.neuroimage.2012.01.021',
-                               species=NCBITaxon['9606'],
-                               devstage=UBERON['0000113'],)
+    class FreeSurferColorLUT(Terminology):
+        iri=ilx['freesurfer/uris/FreeSurferColorLUT/']
+        class_label='FreeSurfer Color LUT parcellation terminology'
+        abbrevs=('FSCL',)
+        date='2003-05-07'  # git log --name-status --follow distribution/FreeSurferColorLUT.txt
+        docUri='https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/AnatomicalROI/FreeSurferColorLUT'
+        citation='https://doi.org/10.1016/j.neuroimage.2012.01.021'
+        species=NCBITaxon['9606']
+        devstage=UBERON['0000113']
+
+    FreeSurferColorLUT1_105 = Terminology(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
+                                          version='1.105'
+                                         )
 
     """  # FreeSurferColorLUT is the correct source for these
          # mindboggle semantics may be different, but I think that they
@@ -62,7 +65,7 @@ class FreeSurferSrc(Source):
     source = 'https://github.com/freesurfer/freesurfer.git'
     sourceFile = 'distribution/FreeSurferColorLUT.txt'  # subclass if you have more than one file
     source_original = True
-    artifact = Artifacts.FreeSurferColorLUT
+    artifact = Artifacts.FreeSurferColorLUT1_105
 
     @classmethod
     def loadData(cls):
@@ -143,7 +146,7 @@ class FreeSurferLabels(LabelsBase):
 
 #class MNDBGLLabels(LabelsBase):
 class MNDBGLLabels():
-    """ Parcellation labels from Mindboggle. """
+    """ DEPRECATED use FreeSurfer """
     filename = 'mndbgl-labels'
     name = 'Mindboggle Parcellation Labels'
     shortname = 'mndbgl'

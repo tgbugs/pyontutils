@@ -57,7 +57,7 @@ def getSourceLine(cls):
         print(TermColors.red('WARNING:'), TermColors.yellow(f'No source found for {cls} are you in a debugger?'))
         return 'NO-SOURCE-FOUND'
 
-def getCommit():
+def getCurrentCommit():
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()
     return commit
 
