@@ -6,7 +6,9 @@ Usage:
     parcellation [options]
 
 Options:
-    -j --jobs=NJOBS              number of parallel jobs to run [default: 9]
+    -f --fail                   fail loudly on common common validation checks
+    -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
+    -l --local                  only build files with local source copies
 
 """
 
@@ -14,18 +16,19 @@ import os
 import re
 import csv
 import glob
-from inspect import getsourcelines
+from pathlib import Path
 from collections import namedtuple, defaultdict, Counter
 import requests
+from git import Repo
 from lxml import etree
 from rdflib import Graph, URIRef, Literal, Namespace
 from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
-from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, WHSSD, HCPMMP
+from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
 from pyontutils.core import NCBITaxon, UBERON, NIFTTL
 from pyontutils.core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
 from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
-from pyontutils.utils import TODAY, async_getter, rowParse, getCommit, subclasses
+from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, subclasses
 from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
@@ -620,6 +623,7 @@ class LabelRoot(Class):
     class_label = 'Parcellation Label'
     _kwargs = dict(iri=None,
                    label=None,
+                   comment=None,
                    shortname=None,  # used to construct the rdfs:label
                    definingArtifacts=tuple(),  # leave blank if defined for the parent class
                    definingArtifactsS=tuple(),
@@ -789,18 +793,6 @@ class Artifacts(Collector):
                        **_PaxRatShared
                       )
 
-    WHSSD2 = Terminology(iri=ilx['waxholm/uris/sd/versions/2'],  # ilxtr.whssdv2,
-                         rdfs_label='Waxholm Space Sprague Dawley Terminology v2',
-                         shortname='WHSSD2',
-                         date='2015-02-02',
-                         version='2',
-                         citation='https://www.ncbi.nlm.nih.gov/pubmed/24726336',
-                         comment=('There is an earlier version of the .label file '
-                                  'but indexes are unique and are not reused, only renamed'),
-                         species=NCBITaxon['10116'],
-                         devstage=UBERON['0000113'],
-                        )
-
     HCPMMP = Terminology(iri=ilx['hcp/uris/mmp/versions/1.0'],  # ilxtr.hcpmmpv1,
                          rdfs_label='Human Connectome Project Multi-Modal human cortical parcellation',
                          shortname='HCPMMP',
@@ -831,19 +823,23 @@ class parcArts(Ont):
                 'paxratver':str(paxratver),
     }
 
+    def __call__(self):
+        return super().__call__()
+
     @property
     def _artifacts(self):
         for collector in subclasses(Collector):
-            if collector.__module__ != 'parcellation':  # just run __main__
+            if collector.__module__ != 'pyontutils.parcellation':  # just run __main__
                 yield from collector.arts()
 
     def _triples(self):
         yield from Artifact.class_triples()
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
+            # do not comment this out it is what makes the
+            # upper classes in the artifacts hierarchy
             yield from art_type.class_triples()
-        for art in self._artifacts:
-            for t in art:
-                yield t
+        for artifact in self._artifacts:
+            yield from artifact
 
 
 class parcCore(Ont):
@@ -890,7 +886,7 @@ class parcBridge(Ont):
     filename = 'parcellation-bridge'
     name = 'Parcellation Bridge'
     imports = ((g[subclass.__name__]
-                if subclass.__name__ in g and subclass.__module__ == 'parcellation'  # parcellation is insurance for name reuse
+                if subclass.__name__ in g and subclass.__module__ == 'pyontutils.parcellation'  # parcellation is insurance for name reuse
                 else subclass)
                for g in (globals(),)
                for subclass in subclasses(LabelsBase)  # XXX wow, well apparently __main__.Class != module.Class
@@ -907,20 +903,59 @@ class parcBridge(Ont):
 # Sources (input files)
 
 class LocalSource(Source):
-    data = tuple()
+    _data = tuple()
 
     def __new__(cls):
-        line = getsourcelines(cls)[-1]
-        cls.iri = URIRef(Ont.wasGeneratedBy.format(file=__file__, line=line, commit=getCommit()))  # FIXME latest git blame on class?
-        cls.iri_head = URIRef(cls.iri_prefix_hd + os.path.basename(__file__))
+        line = getSourceLine(cls)
+        cls.iri_head = URIRef(cls.iri_prefix_hd + Path(__file__).name)
+        cls._this_file = Path(__file__).absolute()
+        repobase = cls._this_file.parent.parent.as_posix()
+        cls.repo = Repo(repobase)
+        cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         if cls.artifact is None:  # for prov...
             class art:
                 iri = cls.iri
+                def addPair(self, *args, **kwargs):
+                    pass
 
-            cls.artifact = art
+            cls.artifact = art()
 
         self = super().__new__(cls)
         return self
+
+    @classmethod
+    def prov(cls):
+        from inspect import getsourcelines
+        #source_lines = getSourceLine
+
+        def get_commit_data(start, end):
+            records = cls.repo.git.blame('--line-porcelain', f'-L {start},{end}', cls._this_file.as_posix()).split('\n')
+            rl = 13
+            linenos = [(hexsha, int(nowL), int(thenL)) for r in records[::rl]
+                       for hexsha, nowL, thenL, *n in (r.split(' '),)]
+            author_times = [int(epoch) for r in records[3::rl] for _, epoch in (r.split(' '),)]
+            lines = [r.strip('\t') for r in records[12::rl]]
+            index, time = max(enumerate(author_times), key=lambda iv: iv[1])
+            commit, then, now = linenos[index]
+            # there are some hefty assumptions that go into this
+            # that other lines have not been deleted from or added to the code block
+            # between commits, or essentially that the code in the block is the
+            # same length and has only been shifted by the distance defined by the
+            # single commit that that has the maximum timestamp, so beware that
+            # this can and will break which is why I use start and end instead of
+            # just start like I do with the rest of the lines where I know for sure.
+            # This can probably be improved with pickaxe or similar.
+            shift = then - now
+            then_start = start + shift
+            then_end = end + shift
+            return commit, then_start, then_end
+
+        source_lines, start = getsourcelines(cls)
+        end = start + len(source_lines)
+        most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
+
+        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit)
+                         + f'{cls._this_file.name}#L{then_start}-L{then_end}')
 
 
 ##
@@ -929,8 +964,12 @@ class LocalSource(Source):
 
 # Source instances  TODO put everything under one class as we do for Artifacts?
 
-class PaxSr_6(Source):
-    source = 'resources/paxinos09names.txt'
+class resSource(Source):
+    source = 'https://github.com/tgbugs/pyontutils.git'
+
+
+class PaxSr_6(resSource):
+    sourceFile = 'pyontutils/resources/paxinos09names.txt'
     artifact = Artifacts.PaxRat6
 
     @classmethod
@@ -960,8 +999,7 @@ class PaxSr_6(Source):
         return out, errata
 
 
-class PaxSrAr(Source):
-    source = None
+class PaxSrAr(resSource):
     artifact = None
 
     @classmethod
@@ -1090,22 +1128,22 @@ class PaxSrAr(Source):
 
 
 class PaxSrAr_4(PaxSrAr):
-    source = 'resources/pax-4th-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/pax-4th-ed-indexes.txt'
     artifact = Artifacts.PaxRat4
 
 
 class PaxSrAr_6(PaxSrAr):
-    source = 'resources/pax-6th-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/pax-6th-ed-indexes.txt'
     artifact = Artifacts.PaxRat6
 
 
 class PaxMSrAr_2(PaxSrAr):
-    source = 'resources/paxm-2nd-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/paxm-2nd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse2
 
 
 class PaxMSrAr_3(PaxSrAr):
-    source = 'resources/paxm-3rd-ed-indexes.txt'
+    sourceFile = 'pyontutils/resources/paxm-3rd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse3
 
 
@@ -1195,7 +1233,7 @@ class PaxTree_6(Source):
 
 class PaxFix4(LocalSource):
     artifact = Artifacts.PaxRat4
-    data = ({
+    _data = ({
         # 1-6b are listed in fig 19 of 4e, no 3/4, 5a, or 5b
         '1':(['layer 1 of cortex'], tuple()),
         '1a':(['layer 1a of cortex'], tuple()),
@@ -1215,7 +1253,7 @@ class PaxFix4(LocalSource):
 
 class PaxFix6(LocalSource):
     artifact = Artifacts.PaxRat6
-    data = ({
+    _data = ({
         '1':(['layer 1 of cortex'], tuple()),
         '1a':(['layer 1a of cortex'], (8,)),
         '1b':(['layer 1b of cortex'], (8,)),
@@ -1233,7 +1271,7 @@ class PaxFix6(LocalSource):
 
 
 class PaxFix(LocalSource):
-    data = ({
+    _data = ({
         '1':(['layer 1'], tuple()),
         '1a':(['layer 1a'], (8,)),
         '1b':(['layer 1b'], (8,)),
@@ -1251,66 +1289,11 @@ class PaxFix(LocalSource):
 
 
 class PaxMFix(LocalSource):
-    data = ({}, {})
+    _data = ({}, {})
 
 
-class WHSSD2Src(Source):
-    source = 'resources/WHS_SD_rat_atlas_v2.label'
-    source_original = True
-    artifact = Artifacts.WHSSD2
-
-    @classmethod
-    def loadData(cls):
-        with open(cls.source, 'rt') as f:
-            lines = [l.strip() for l in f.readlines() if not l.startswith('#')]
-        return [(l[:3].strip(), l.split('"',1)[1].strip('"')) for l in lines]
-
-    @classmethod
-    def processData(cls):
-        return cls.raw,
-
-    @classmethod
-    def validate(cls, d):
-        return d
-
-
-class WHSSD2ilfSrc(Source):
-    source = 'resources/WHS_SD_rat_atlas_v2_labels.ilf'
-    source_original = True
-    artifact = Artifacts.WHSSD2
-
-    @classmethod
-    def loadData(cls):
-        tree = etree.parse(cls.source)
-        return tree
-
-    @classmethod
-    def processData(cls):
-        tree = cls.raw
-        def recurse(label_node, parent=None):
-            name = label_node.get('name')
-            abbrev = label_node.get('abbreviation')
-            id = label_node.get('id')
-            yield id, name, abbrev, parent
-            for child in label_node.getchildren():
-                if child.tag == 'label':
-                    yield from recurse(child, parent=id)
-
-        records = tuple()
-        for structure in tree.xpath('//structure'):
-            for lab in structure.getchildren():
-                if lab.tag == 'label':
-                    records += tuple(recurse(lab, None))
-
-        return records,
-
-    @classmethod
-    def validate(cls, d):
-        return d
-
-
-class HCPMMPSrc(Source):
-    source = 'resources/human_connectome_project_2016.csv'
+class HCPMMPSrc(resSource):
+    sourceFile = 'pyontutils/resources/human_connectome_project_2016.csv'
     source_original = True
     artifact = Artifacts.HCPMMP
 
@@ -1396,7 +1379,7 @@ class PaxLabels(LabelsBase):
         _fixes_prov = {}
         for f in self._fixes:
             for l in f[1][0]:
-                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getsourcelines(self.__class__)[-1])]  # FIXME per file
+                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getSourceLine(self.__class__))]  # FIXME per file
         return _fixes_prov
 
     @property
@@ -1837,41 +1820,6 @@ class PaxRatLabels(PaxLabels):
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
-class WHSSDLabels(LabelsBase):
-    filename = 'waxholm-rat-labels'
-    name = 'Waxholm Sprague Dawley Atlas Labels'
-    shortname = 'whssd'
-    imports = parcCore,
-    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'), 'WHSSD':str(WHSSD)}
-    sources = WHSSD2Src, WHSSD2ilfSrc
-    namespace = WHSSD
-    root = LabelRoot(iri=nsExact(namespace),  # ilxtr.whssdroot,
-                     label='Waxholm Space Sprague Dawley parcellation label root',
-                     shortname=shortname,
-                     definingArtifacts=(s.artifact.iri for s in sources),
-    )
-
-    def _triples(self):
-        for source in self.sources:
-            for index, label, *rest in source:
-                abbrev, parent = rest if rest else (False, False)  # a tricky one if you miss the parens
-                abbrevs = (abbrev,) if abbrev and abbrev != label else tuple()
-                if int(index) >= 1000:  # FIXME this is the WRONG way to do this
-                    # FIXME parentless structures in the ilf files?
-                    label += ' (structure)'
-                iri = WHSSD[str(index)]
-                yield from Label(labelRoot=self.root,
-                                 label=label,
-                                 abbrevs=abbrevs,
-                                 iri=iri,
-                )
-                if parent:
-                    parent = WHSSD[str(parent)]
-                    yield from restriction.serialize(iri, ilxtr.labelPartOf, parent)
-
-            yield from source.isVersionOf
-
-
 #
 # regions
 
@@ -2041,12 +1989,18 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
-    from parc_aba import Artifacts as abaArts
-    out = build(*(l for l in subclasses(Ont)
-                  if l.__name__ != 'parcBridge' and
-                  l.__module__ != 'parcellation' and
-                  not hasattr(l, f'_{l.__name__}__pythonOnly')),
+    if not args['--local']:
+        from parc_aba import Artifacts as abaArts
+    from parc_freesurfer import Artifacts as fsArts
+    from parc_whs import Artifacts as whsArts
+    onts = tuple(l for l in subclasses(Ont)
+                 if l.__name__ != 'parcBridge' and
+                 l.__module__ != 'pyontutils.parcellation' and
+                 not hasattr(l, f'_{l.__name__}__pythonOnly'))
+    _ = *(print(ont) for ont in onts),
+    out = build(*onts,
                 parcBridge,
+                fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
     embed()
 

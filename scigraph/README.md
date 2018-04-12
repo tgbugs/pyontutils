@@ -8,14 +8,23 @@ ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 
 # oneshots for centos 7
 ```
+export $USER=bamboo
 sudo mkdir /opt/scigraph-services/
-sudo chown bamboo:bamboo /opt/scigraph-services/
+sudo chown ${USER}:${USER} /opt/scigraph-services/
 sudo mkdir /var/log/scigraph-services/
-sudo chown bamboo:bamboo /var/log/scigraph-services/
+sudo chown ${USER}:${USER} /var/log/scigraph-services/
 sudo touch /etc/scigraph-services.conf
-sudo chown bamboo:bamboo /etc/scigraph-services.conf
+sudo chown ${USER}:${USER} /etc/scigraph-services.conf
 sudo mkdir -p /var/scigraph-services/
-sudo chown -R bamboo:bamboo /var/scigraph-services
+sudo chown -R ${USER}:${USER} /var/scigraph-services
+```
+# oneshots for rhel 7 on ec2
+```
+sudo yum install screen vim
+sudo yum install unzip  # wat
+sudo yum install xorg-x11-server-Xvfb  # capitalization matters and need to enable rhel-server-optional
+sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  # for nginx
+sudo yum install nginx
 ```
 
 ## if not handled by puppet
@@ -37,10 +46,11 @@ scp /tmp/SciGraph-*-services-*.zip ${TARGET}:~/
 
 2. remote services ssh to target
 ```
+export $USER=bamboo
 export SERVICES_FOLDER=/opt/scigraph-services/  # FIXME from ontload as well?
 unzip SciGraph-*-services-*.zip
 export SERVICES_NAME=$(echo scigraph-services-*-SNAPSHOT/)
-sudo chown -R bamboo:bamboo ${SERVICES_NAME}
+sudo chown -R ${USER}:${USER} ${SERVICES_NAME}
 sudo rm -rf ${SERVICES_FOLDER}scigraph*
 sudo rm -rf ${SERVICES_FOLDER}lib
 sudo mv ${SERVICES_NAME}* ${SERVICES_FOLDER}
@@ -81,10 +91,11 @@ sudo cp scigraph-services.conf /etc/
 export GRAPH_FOLDER=$(grep location services.yaml | cut -d':' -f2 | tr -d '[:space:]')
 export GRAPH_PARENT_FOLDER=$(dirname ${GRAPH_FOLDER})/
 # get a graph build TODO
+export $USER=bamboo
 curl -LOk $(curl --silent https://api.github.com/repos/SciCrunch/NIF-Ontology/releases/latest | awk '/browser_download_url/ { print $2 }' | sed 's/"//g')
 sudo unzip NIF-Ontology-*-graph-*.zip
 export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)
-sudo chown -R bamboo:bamboo $GRAPH_NAME
+sudo chown -R ${USER}:${USER} $GRAPH_NAME
 sudo mv ${GRAPH_NAME} ${GRAPH_PARENT_FOLDER}
 sudo systemctl stop scigraph-services
 sudo unlink ${GRAPH_FOLDER}

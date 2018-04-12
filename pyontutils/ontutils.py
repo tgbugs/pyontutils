@@ -8,6 +8,7 @@ Usage:
     ontutils devconfig
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
+    ontutils scigraph-stress [options]
     ontutils spell [options] <file> ...
     ontutils version-iri [options] <file>...
     ontutils uri-switch [options] <file>...
@@ -16,6 +17,7 @@ Usage:
     ontutils expand <curie>...
 
 Options:
+    -a --scigraph-api=API           SciGraph API endpoint   [default: {devconfig.scigraph_api}]
     -o --output-file=FILE           output file
     -l --git-local=LBASE            local git folder        [default: {devconfig.git_local_base}]
     -u --curies=CURIEFILE           curie definition file   [default: {devconfig.curies}]
@@ -29,6 +31,7 @@ import os
 from glob import glob
 from time import time, localtime, strftime
 from random import shuffle
+from pathlib import Path
 import rdflib
 import requests
 from git.repo import Repo
@@ -169,8 +172,18 @@ def get_spells(filename):
     check_spelling = {skos.definition, definition, rdfs.comment}
     return [(filename, s, p, o) for s, p, o in rdflib.Graph().parse(filename, format='turtle') if p in check_spelling]
 
+def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=devconfig.scigraph_api):
+    # TODO use the api classes
+    with open((Path(__file__).resolve().absolute().parent / 'resources' / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
+        urls = [os.path.join(scigraph, f'vocabulary/id/{curie.strip()}') for curie in f.readlines()]
+    print(urls)
+    url_blaster(urls, rate, timeout, verbose, debug)
+
 def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
+    url_blaster(urls, rate, timeout, verbose, debug)
+
+def url_blaster(urls, rate, timeout=5, verbose=False, debug=False):
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]
@@ -709,6 +722,8 @@ def main():
         print(f'config written to {file}')
     elif args['version-iri']:
         version_iris(*filenames, epoch=epoch)
+    elif args['scigraph-stress']:
+        scigraph_stress(int(args['--rate']), int(args['--timeout']), verbose, debug)
     elif args['deadlinks']:
         deadlinks(filenames, int(args['--rate']), int(args['--timeout']), verbose, debug)
     elif args['spell']:

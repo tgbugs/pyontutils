@@ -6,12 +6,13 @@ import rdflib
 import requests
 from pathlib import Path
 from collections import namedtuple
-from inspect import getsourcelines, getsourcefile
+from inspect import getsourcefile
+from git import Repo
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, getCommit, Async, deferred, TermColors as tc
+from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine, getCurrentCommit, Async, deferred, TermColors as tc
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.closed_namespaces import *
 from IPython import embed
@@ -138,6 +139,11 @@ ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
 ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
 FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
 HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
+DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/'))
+DKTr = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/region/labels/'))
+DKTs = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/sulcus/labels/'))
+FSCL = rdflib.Namespace(interlex_namespace('freesurfer/uris/FreeSurferColorLUT/labels/'))
+MNDBGL = rdflib.Namespace(interlex_namespace('mindboggle/uris/mndbgl/labels/'))
 PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
 paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
@@ -177,28 +183,56 @@ def ont_setup(ont):
     o = ont()
     return o
 
-def ont_make(o):
+def standard_checks(graph):
+    def cardinality(predicate, card=1):
+        for subject in sorted(set(graph.subjects())):
+            for i, object in enumerate(graph.objects(subject, predicate)):
+                if i == 0:
+                    first_error = tc.red('ERROR:'), subject, 'has more than one label!', object
+                elif i >= card:
+                    print(tc.red('ERROR:'), subject, 'has more than one label!', object)
+                    if i == card:
+                        print(*first_error)
+
+    cardinality(rdfs.label)
+
+def ont_make(o, fail=False):
     o()
     o.validate()
+    failed = standard_checks(o.graph)
+    o.failed = failed
+    if fail:
+        raise BaseException('Ontology validation failed!')
     o.write()
     return o
 
-def ont_doit(ont):
-    return ont_make(ont_setup(ont))
-
-def build(*onts, n_jobs=9):
+def build(*onts, fail=False, n_jobs=9):
     """ Set n_jobs=1 for debug or embed() will crash. """
+    tail = lambda:tuple()
+    lonts = len(onts)
+    if lonts > 1:
+        for i, ont in enumerate(onts):
+            if ont.__name__ == 'parcBridge':
+                onts = onts[:-1]
+                def tail(o=ont):
+                    return ont_setup(o),
+                if i != lonts - 1:
+                    raise ValueError('parcBridge should be built last to avoid weird errors!')
+    # ont_setup must be run first on all ontologies
+    # or we will get weird import errors
+    if n_jobs == 1:
+        return tuple(ont_make(ont, fail=fail) for ont in
+                     tuple(ont_setup(ont) for ont in onts) + tail())
+
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o) for o in
+    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail) for o in
                                    #[ont_setup(ont) for ont in onts])
-                                   (Async()(deferred(ont_setup)(ont)
-                                           for ont in onts
-                                           if ont.__name__ != 'parcBridge')
+                                   (tuple(Async()(deferred(ont_setup)(ont)
+                                                  for ont in onts)) + tail()
                                     if n_jobs > 1
                                     else [ont_setup(ont)
-                                          for ont in onts
-                                          if ont.__name__ != 'parcBridge']))
+                                          for ont in onts]))
 
 def make_predicate_object_thunk(function, p, o):
     """ Thunk to hold predicate object pairs until a subject is supplied and then
@@ -1153,7 +1187,7 @@ class Class:
             self.rdfs_subClassOf = self._rdfs_subClassOf
 
         self.args = args
-        self._extra_triples = []  # TODO ?
+        self._extra_triples = set()  # TODO ?
         if self._kwargs:
             for kw, arg in self._kwargs.items():
                 if kw in kwargs:
@@ -1189,10 +1223,9 @@ class Class:
                         arg = tuple(arg)  # avoid draining generators
                     #typeCheck(arg)
                     setattr(self, kw, arg)
-            if kwargs:
+            if kwargs:  # some kwargs did not get popped off
                 print(tc.red('WARNING:') + (f' {sorted(kwargs)} are not kwargs '
                       f'for {self.__class__.__name__}. Did you mispell something?'))
-                pass
         else:
             for kw, arg in kwargs:
                 setattr(self, kw, arg)
@@ -1202,10 +1235,10 @@ class Class:
         return graph  # enable chaining
 
     def addSubGraph(self, triples):
-        self._extra_triples.extend(triples)
+        self._extra_triples.update(triples)
 
     def addPair(self, predicate, object):
-        self._extra_triples.append((self.iri, predicate, object))
+        self._extra_triples.add((self.iri, predicate, object))
 
     def __iter__(self):
         yield from self.triples
@@ -1224,7 +1257,9 @@ class Class:
                 restriction = None
             if hasattr(self_or_cls, key):
                 value = getattr(self_or_cls, key)
-                #print(key, predicate, value)
+                #a, b, c = (qname(key), qname(predicate),
+                           #qname(value) if isinstance(value, rdflib.URIRef) else value)
+                #print(tc.red('aaaaaaaaaaaaaaaaa'), f'{a:<30}{c}')
                 if value is not None:
                     #(f'{key} are not kwargs for {self.__class__.__name__}')
                     def makeTrip(value, iri=iri, predicate=predicate, restriction=restriction):
@@ -1277,20 +1312,52 @@ class Source(tuple):
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
+    sourceFile = None
+    # source_original = None  # FIXME this should probably be defined on the artifact not the source?
     artifact = None
 
     def __new__(cls):
-        if not hasattr(cls, 'data'):
+        if not hasattr(cls, '_data'):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
 
             if cls.source.startswith('http'):
                 if cls.source.endswith('.git'):
                     cls._type = 'git-remote'
+                    cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
+                    glb = Path(devconfig.git_local_base)
+                    cls.repo_path = glb / Path(cls.source).stem
+                    rap = cls.repo_path.as_posix()
+                    print(rap)
+                    # TODO branch and commit as usual
+                    if not cls.repo_path.exists():
+                        cls.repo = Repo.clone_from(cls.sourceRepo, rap)
+                    else:
+                        cls.repo = Repo(rap)
+                        # cls.repo.remote().pull()  # XXX remove after testing finishes
+
+                    if cls.sourceFile is not None:
+                        file = cls.repo_path / cls.sourceFile
+                        file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                        commit_path = os.path.join('blob', file_commit, cls.sourceFile)
+                        print(commit_path)
+                        if 'github' in cls.source:
+                            cls.iri_prefix = cls.source.rstrip('.git') + '/'
+                        else:
+                            # using github syntax for now since it is possible to convert out
+                            cls.iri_prefix = cls.source + '::'
+                        cls.iri = rdflib.URIRef(cls.iri_prefix + commit_path)
+                        cls.source = file.as_posix()
+                    else:
+                        # assume the user knows what they are doing
+                        #raise ValueError(f'No sourceFile specified for {cls}')
+                        cls.iri = rdflib.URIRef(cls.source)
+                        pass
                 else:
                     cls._type = 'iri'
-                cls.iri = rdflib.URIRef(cls.source)
+                    cls.iri = rdflib.URIRef(cls.source)
+
             elif os.path.exists(cls.source):  # TODO no expanded stuff
                 try:
                     file_commit = subprocess.check_output(['git', 'log', '-n', '1',
@@ -1313,10 +1380,10 @@ class Source(tuple):
                 print('Unknown source', cls.source)
 
             cls.raw = cls.loadData()
-            cls.data = cls.validate(*cls.processData())
+            cls._data = cls.validate(*cls.processData())
             cls._triples_for_ontology = []
             cls.prov()
-        self = super().__new__(cls, cls.data)
+        self = super().__new__(cls, cls._data)
         return self
 
     @classmethod
@@ -1327,7 +1394,11 @@ class Source(tuple):
         elif cls._type == 'iri':
             return tuple()
         elif cls._type == 'git-remote':
-            return tuple()
+            if cls.sourceFile is not None:
+                with open(cls.source, 'rt') as f:
+                    return f.read()
+            else:
+                return tuple()
         else:
             return tuple()
 
@@ -1356,7 +1427,30 @@ class Source(tuple):
                 cls.iri_head = object
                 if cls.artifact is not None:
                     cls.artifact.source = cls.iri
-        elif cls._type == 'git-remote' or cls._type == 'iri':
+
+        elif cls._type == 'git-remote':
+            if cls.sourceFile is not None:
+                origin = next(r for r in cls.repo.remotes if r.name == 'origin')
+                origin_branch = next(r.reference.remote_head for r in origin.refs if r.remote_head == 'HEAD')
+                default_path = os.path.join('blob', origin_branch, cls.sourceFile)
+                object = rdflib.URIRef(cls.iri_prefix + default_path)
+                cls.iri_head = object
+            else:
+                object = None
+
+            if hasattr(cls, 'source_original') and cls.source_original:
+                if cls.artifact is not None:
+                    cls.artifact.source = cls.iri_head  # do not use cls.iri here # FIXME there may be more than one source
+            else:
+                if object is None:
+                    object = cls.iri
+
+                if hasattr(cls.artifact, 'hadDerivation'):
+                    cls.artifact.hadDerivation.append(object)
+                else:
+                    cls.artifact.hadDerivation = [object]
+
+        elif cls._type == 'iri':
             #print('Source is url and assumed to have no intermediate', cls.source)
             if hasattr(cls, 'source_original') and cls.source_original:
                 cls.artifact = cls  # make the artifact and the source equivalent for prov
@@ -1379,6 +1473,7 @@ class Ont:
     shortname = None
     comment = None  # about how the file was generated, nothing about what it contains
     version = TODAY
+    namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
@@ -1399,6 +1494,14 @@ class Ont:
         if hasattr(cls, 'imports'):# and not isinstance(cls.imports, property):
             cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
                                 for i in cls.imports)
+        if cls.namespace is not None and cls.shortname:
+            iri_prefix = str(cls.namespace)
+            if iri_prefix not in tuple(cls.prefixes.values()):
+                # need the print to keep things sane means maybe
+                # this isn't such a good idea after all?
+                prefix = cls.shortname.upper()
+                print(tc.blue(f'Adding default namespace {cls.namespace} to {cls} as {prefix}'))
+                cls.prefixes[prefix] = iri_prefix  # sane default
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -1407,10 +1510,10 @@ class Ont:
         if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
         else:
-            commit = getCommit()
+            commit = getCurrentCommit()
 
         try:
-            line = getsourcelines(self.__class__)[-1]
+            line = getSourceLine(self.__class__)
             file = getsourcefile(self.__class__)
         except TypeError:  # emacs is silly
             line = 'noline'
@@ -1483,15 +1586,18 @@ class Ont:
     def triples(self):
         if self._debug:
             embed()
+
         if hasattr(self, 'root') and self.root is not None:
             yield from self.root
         elif hasattr(self, 'roots') and self.roots is not None:
             for root in self.roots:
                 yield from root
+
         if hasattr(self, '_triples'):
             yield from self._triple_check(self._triples())
         else:
             return
+
         for t in self._extra_triples:  # last so _triples can populate
             yield t
 
@@ -1532,7 +1638,6 @@ class LabelsBase(Ont):  # this replaces genericPScheme
     roots = None  # : (LabelRoot, ...)
     filename = None
     name = None
-    prefixes = {}
     comment = None
 
     @property
@@ -1566,6 +1671,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               triples=tuple(),
               comment=None,
               path='ttl/',
+              fail=False,
               _repo=True):
 
     for i in imports:
@@ -1584,7 +1690,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
 
-    built_ont, = build(Simple, n_jobs=1)
+    built_ont, = build(Simple, fail=fail, n_jobs=1)
 
     return built_ont
 

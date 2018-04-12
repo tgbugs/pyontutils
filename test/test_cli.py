@@ -3,8 +3,8 @@
 import os
 import unittest
 import subprocess
-from glob import glob
 from pathlib import Path
+from git import Repo
 
 from pyontutils import scigraph_client
 
@@ -65,8 +65,10 @@ class TestScripts(unittest.TestCase):
 
     _do_mains = []
     _do_tests = []
-    for path in sorted(Path(core.__file__).parent.glob('*.py')):
-        stem = path.stem
+    parent = Path(core.__file__).absolute().parent.parent
+    repo = Repo(parent.as_posix())
+    for path in sorted(repo.git.ls_files('pyontutils/*.py').split('\n')):
+        stem = Path(path).stem
         if stem not in skip:
             print('TESTING:', stem)
             module = __import__('pyontutils.' + stem)
