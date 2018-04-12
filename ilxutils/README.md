@@ -100,11 +100,14 @@ Options:
     -b, --beta                  Beta SciCrunch
 
 ## Using NIF vs Interlex Graph Comparator ( nif-ilx-comparator.py )
-Usage:  foo.py [-h | --help]
-        foo.py [-v | --version]
-        foo.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
+Usage:  
+
+    foo.py [-h | --help]
+    foo.py [-v | --version]
+    foo.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Options:
+
     -h, --help                  Display this help message
     -v, --version               Current version of file
 
