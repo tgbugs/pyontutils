@@ -600,17 +600,41 @@ class Terminology(Artifact):
         spatial definitions. For example Allen MBA. """
 
     iri = ilxtr.parcellationTerminology
-    class_label = 'Parcellation Terminology'
+    class_label = 'Parcellation terminology'
     #class_definition = ('An artifact that only contains semantic information, '
                         #'not geometric information, about a parcellation.')
 
 
+class CoordinateSystem(Artifact):
+    """ An artifact that defines the geometric coordinates used by
+        one or more parcellations. """
+
+    iri = ilxtr.parcellationCoordinateSystem
+    class_label = 'Parcellation coordinate system'
+
+
+class Delineation(Artifact):
+    """ An artifact that defines the spatial boundaries or landmarks for a parcellation.
+        Delineations must be explicitly spatial and are distinct from delineation criteria
+        which may provide a non-spatial definition for regions. """
+
+    iri = ilxtr.parcellationDelineation
+    class_label = 'Parcellation delineation'
+    # TODO registrationCriteria => processive, usually matching delineationCriteria where practical
+    # TODO delineationCriteria => definitional
+
+
 class Atlas(Artifact):
-    """ An artifact that contains geometric information and
-        may contain semantic information about a parcellation. """
+    """ An artifact that contains information about the terminology,
+        delineation, and coordinate system for a parcellation. These
+        are usually physical atlases where it is not possibly to uniquely
+        identify any of the component parts, but only all the parts taken
+        together (e.g. via ISBN). """
 
     iri = ilxtr.parcellationAtlas
-    class_label = 'Parcellation Atlas'
+    class_label = 'Parcellation atlas'
+    # hasPart Delineation, hasPart CoordinateSystem, hasPart Terminology
+    # alternately hasPart DelineationCriteria and/or RegistrationCriteria
     # TODO links to identifying atlas pictures
 
 
