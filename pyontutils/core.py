@@ -1293,7 +1293,7 @@ class Class:
 
     @classmethod
     def class_triples(cls):
-        if not hasattr(cls, 'class_definition') and cls.__doc__:
+        if 'class_definition' not in cls.__dict__ and cls.__doc__:  # can't use hasattr due to parents
             cls.class_definition = ' '.join(_.strip() for _ in cls.__doc__.split('\n'))
         yield cls.iri, rdf.type, owl.Class
         mro = cls.mro()
@@ -1301,7 +1301,8 @@ class Class:
             yield cls.iri, rdfs.subClassOf, mro[1].iri
         for arg, predicate in cls.classPropertyMapping.items():
             if hasattr(cls, arg):
-                yield cls.iri, predicate, check_value(getattr(cls, arg))
+                value = check_value(getattr(cls, arg))
+                yield cls.iri, predicate, value
 
     @property
     def _rdfs_subClassOf(self):
