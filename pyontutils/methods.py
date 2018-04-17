@@ -1,8 +1,9 @@
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
-from pyontutils.core import oc, oop, olit, oec
-from pyontutils.core import restrictions, annotation
+from pyontutils.core import oc, oc_, oop, olit, oec
+from pyontutils.core import restrictions, annotation, restriction
 from pyontutils.core import NIFTTL, NIFRID, ilxtr
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
+from pyontutils.core import partOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, methods_core
 
@@ -301,9 +302,19 @@ triples = (
        (ilxtr.hasSomething, i.d),
     ),
 
-    _t(i.d, ' technique',
-       (ilxtr.hasSomething, i.d),
+    _t(i.d, 'anaesthesia technique',
+       # anaesthesia is an excellent example of a case where
+       # just the use of an anaesthetic is not sufficient
+       # and should not be part of the definition
+       (ilxtr.hasPrimaryParticipant,
+        oc_(restriction(partOf, OntTerm('UBERON:0001016', label='nervous system')))),
+       (ilxtr.hasPrimaryAspect, ilxtr.nervousResponsiveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       #(hasInput, OntTerm('CHEBI:38867', label='anaesthetic')),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
     ),
+    # local anaesthesia technique
+    # global anaesthesia technique
 
     _t(OntTerm('NLXINV:20090610'), 'in situ hybridization technique',  # TODO
        (ilxtr.hasSomething, i.d),
@@ -940,6 +951,7 @@ triples = (
 
     _t(tech.imaging, 'imaging technique',
        (ilxtr.hasInformationOutput, ilxtr.image),
+       def_='Imaging is the process of forming an image.',
        synonyms=('imaging',),
     ),
 
@@ -983,7 +995,8 @@ triples = (
     ),
 
     _t(i.d, 'x-ray imaging',
-       tech.imaging,
+       #tech.imaging,
+       (ilxtr.hasInformationOutput, ilxtr.image),
        # VS contrast in the primary aspect being the signal created by the xrays...
        # can probably expand detects in cases where there are non-aspects...
        # still not entirely sure these shouldn't all be aspects too...
@@ -991,9 +1004,12 @@ triples = (
     ),  # owl:Class photon and hasWavelenght range ...
 
     _t(tech.MRI, 'magnetic resonance imaging',
-       tech.imaging,
+       #tech.imaging,
        tech.contrastDetection,
+       (ilxtr.hasInformationOutput, ilxtr.image),
+       # FIXME the output image for MRI should be subClassOf image, and not done this way
        # NRM is an aspect not one of the mediators
+       (ilxtr.hasInformationOutput, ilxtr.spatialFrequencyImageStack),  # TODO FIXME
        (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
        # as long as the primaryAspect is subClassOf ilxtr.nuclearMagneticResonance then we are ok
        # and we won't get duplication of primary aspects
@@ -1419,6 +1435,15 @@ triples += (  # aspects
 triples += (  # other
     oc(ilxtr.thingWithSequence),
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+    oc(ilxtr.image),
+    olit(ilxtr.image,
+         definition,
+         ('A symbolic representation of some spatial or spatial-temporal '
+          'aspect of a participant. Often takes the form of a 2d or 3d matrix '
+          'that has some mapping to sensor space and may also be collected at '
+          'multiple timepoints. Regardless of the ultimate format has some '
+          'part that can be reduced to a two dimensional matrix.'  # TODO
+         )),
 )
 
 methods = simpleOnt(filename=filename,

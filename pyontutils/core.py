@@ -157,9 +157,9 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes,
+ realizes, partOf,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
-             'hasInput', 'hasOutput', 'realizes'
+             'hasInput', 'hasOutput', 'realizes', 'partOf',
             )
 
 # common funcs
@@ -454,7 +454,12 @@ class Restriction(Triple):
         yield s, self.predicate, subject
         yield subject, rdf.type, owl.Restriction
         yield subject, owl.onProperty, p
-        yield subject, self.scope, o
+        if isinstance(o, Thunk):
+            # only pothunks really work here
+            thunk = o
+            o = rdflib.BNode()
+            yield from thunk(o)
+        yield subject, self.scope, o  # TODO serialization of the combinators
 
     def parse(self, *triples, root=None, graph=None):  # drop, parse, contract
         if graph is None:
