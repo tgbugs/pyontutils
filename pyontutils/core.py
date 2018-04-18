@@ -1100,9 +1100,10 @@ class makeGraph:
 
 
 __helper_graph = makeGraph('', prefixes=PREFIXES)
-def qname(uri):
+def qname(uri, warning=False):
     """ compute qname from defaults """
-    print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
+    if warning:
+        print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
 def createOntology(filename=    'temp-graph',
@@ -1700,6 +1701,14 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
 
     return built_ont
 
+def displayTriples(triples, qname=qname):
+    """ triples can also be an rdflib Graph instance """
+    [print(*(e[:5]
+             if isinstance(e, rdflib.BNode) else
+             qname(e)
+             for e in t), '.')
+             for t in sorted(triples)]
+
 def displayGraph(graph_,
                  temp_path='/tmp',
                  debug=False):
@@ -1756,11 +1765,7 @@ def displayGraph(graph_,
         add_supers(s)
 
     if debug:
-        _ = [print(*(e[:5]
-                     if isinstance(e, rdflib.BNode) else
-                     g.qname(e)
-                     for e in t), '.')
-             for t in sorted(graph)]
+        displayTriples(graph, qname=g.qname)
 
     for pred, root in ((rdfs.subClassOf, owl.Thing), (rdfs.subPropertyOf, owl.topObjectProperty)):
         try: next(graph.subjects(pred, root))
