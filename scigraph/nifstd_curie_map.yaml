@@ -35,7 +35,7 @@
 'DICOM': 'http://uri.interlex.org/dicom/uris/terms/'
 'PAR': 'http://uri.interlex.org/fakeobo/uris/obo/PAR_'
 'PAXRAT': 'http://uri.interlex.org/paxinos/uris/rat/labels/'
-'NDA.CDE':'http://uri.interlex.org/NDA/uris/datadictionary/elements/'
+'NDA.CDE': 'http://uri.interlex.org/NDA/uris/datadictionary/elements/'
 
 # alternate ids
 'GBIF': 'http://www.gbif.org/species/'
