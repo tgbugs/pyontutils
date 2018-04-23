@@ -205,7 +205,7 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False):
     o = time()
     not_ok = [_.url for _ in all_ if not _.ok]
     d = o - s
-    print(f'Actual time: {d}    Effective rate: {len(urls) / d}Hz    diff: {(len(urls) / d) / rate}')
+    print(f'Actual time: {d}    Effective rate: {len(urls) / d}Hz    diff: {(len(urls) / d) / rate if rate else 1}')
     print('Failed:')
     if not_ok:
         for nok in not_ok:
