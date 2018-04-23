@@ -2,7 +2,6 @@ import json
 from sqlalchemy import create_engine, inspect, Table, Column
 import pandas as pd
 from args_reader import read_args
-from scicrunch_client import scicrunch
 import sys
 import time
 import math as m
@@ -25,7 +24,8 @@ ranking = [
     'NLXRES',
     'BIRNLEX',
     'SAO',
-    'ILX'
+    'NDA',
+    'ILX',
 ]
 
 def superclasses_bug_fix(term_data):

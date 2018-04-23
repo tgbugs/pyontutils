@@ -56,6 +56,14 @@ class interlex_sql():
                 visited[label]=True
         return label_to_ilx
 
+    def get_ilx_to_label(self):
+        df = self.get_terms(records=True)
+        return {line['ilx']:line['label'] for line in df}
+
+    def get_ilx_to_row(self):
+        df = self.get_terms(records=True)
+        return {line['ilx']:line for line in df}
+
     def get_existing_ids(self, records=False):
         #SELECT ti.curie, t.label, ti.tid, ti.iri, t.ilx
         engine = create_engine(self.engine_key)

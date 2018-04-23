@@ -6,7 +6,7 @@ import dictlib
 from scicrunch_client import scicrunch
 
 
-
+sys.exit()
 def file_opener(infile):
     return json.load(open(infile))
 

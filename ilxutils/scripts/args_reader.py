@@ -19,7 +19,7 @@ Options:
     -h, --help                  Display this help message
     -v, --version               Current version of file
 
-    -f, --file=<path>           File that holds the data you wish to upload to Scicrunch
+    -f, --file=<path>           File that holds the data you wish to upload to Scicrunch [default: None]
     -a, --api_key=<path>        Key path [default: ../production_api_scicrunch_key.txt]
     -e, --engine_key=<path>     Engine key path [default: ../production_engine_scicrunch_key.txt]
     -o, --output=<path>         Output path
@@ -45,20 +45,23 @@ def myopen(path):
     return open(path, 'r').read().strip()
 
 def test(args):
-    url = args['--base_path'] + '/api/1/term/view/1?key=' + args['--api_key']
-    req = r.get(url)
-    try:
-        req.json()['data']
-    except:
-        sys.exit('Api key is incorrect or client choice does not match api submitted.')
-    engine = create_engine(args['--engine_key'])
-    data =  """
-            SELECT t.*
-            FROM terms as t
-            LIMIT 5;
-            """
-    if pd.read_sql(data, engine).empty:
-        sys.exit('Engine key provided does not work.')
+    if args.api_key:
+        url = args.base_path + '/api/1/term/view/1?key=' + args.api_key
+        req = r.get(url)
+        try:
+            req.json()['data']
+        except:
+            sys.exit('Api key is incorrect or client choice does not match api submitted.')
+
+    if args.engine_key:
+        engine = create_engine(args.engine_key)
+        data =  """
+                SELECT t.*
+                FROM terms as t
+                LIMIT 5;
+                """
+        if pd.read_sql(data, engine).empty:
+            sys.exit('Engine key provided does not work.')
 
 def read_args(**args):
 
@@ -67,7 +70,6 @@ def read_args(**args):
         if args.get(k.replace('--', '')):
             doc[k] = args[k.replace('--', '')]
     args = doc
-
     if args['--engine_key']:
         args['--engine_key'] = myopen(args['--engine_key'])
     else:
@@ -85,9 +87,10 @@ def read_args(**args):
     else:
         sys.exit('Need to specify the client version (-b BETA | -p PRODUCTION)')
 
+    args = pd.Series({k.replace('--',''):v for k, v in args.items()})
     test(args)
 
-    return pd.Series({k.replace('--',''):v for k, v in args.items()})
+    return args
 
 
 
@@ -98,4 +101,4 @@ if __name__ == '__main__':
        api_key='../production_api_scicrunch_key.txt',
        production=True,)
     print(inline)
-    print(read_args())
+    #print(read_args())
