@@ -158,9 +158,9 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes,
+ realizes, partOf,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
-             'hasInput', 'hasOutput', 'realizes'
+             'hasInput', 'hasOutput', 'realizes', 'partOf',
             )
 
 # common funcs
@@ -455,7 +455,12 @@ class Restriction(Triple):
         yield s, self.predicate, subject
         yield subject, rdf.type, owl.Restriction
         yield subject, owl.onProperty, p
-        yield subject, self.scope, o
+        if isinstance(o, Thunk):
+            # only pothunks really work here
+            thunk = o
+            o = rdflib.BNode()
+            yield from thunk(o)
+        yield subject, self.scope, o  # TODO serialization of the combinators
 
     def parse(self, *triples, root=None, graph=None):  # drop, parse, contract
         if graph is None:
@@ -1103,9 +1108,10 @@ class makeGraph:
 
 
 __helper_graph = makeGraph('', prefixes=PREFIXES)
-def qname(uri):
+def qname(uri, warning=False):
     """ compute qname from defaults """
-    print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
+    if warning:
+        print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
 def createOntology(filename=    'temp-graph',
@@ -1295,7 +1301,7 @@ class Class:
 
     @classmethod
     def class_triples(cls):
-        if not hasattr(cls, 'class_definition') and cls.__doc__:
+        if 'class_definition' not in cls.__dict__ and cls.__doc__:  # can't use hasattr due to parents
             cls.class_definition = ' '.join(_.strip() for _ in cls.__doc__.split('\n'))
         yield cls.iri, rdf.type, owl.Class
         mro = cls.mro()
@@ -1303,7 +1309,8 @@ class Class:
             yield cls.iri, rdfs.subClassOf, mro[1].iri
         for arg, predicate in cls.classPropertyMapping.items():
             if hasattr(cls, arg):
-                yield cls.iri, predicate, check_value(getattr(cls, arg))
+                value = check_value(getattr(cls, arg))
+                yield cls.iri, predicate, value
 
     @property
     def _rdfs_subClassOf(self):
@@ -1701,6 +1708,14 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
 
     return built_ont
 
+def displayTriples(triples, qname=qname):
+    """ triples can also be an rdflib Graph instance """
+    [print(*(e[:5]
+             if isinstance(e, rdflib.BNode) else
+             qname(e)
+             for e in t), '.')
+             for t in sorted(triples)]
+
 def displayGraph(graph_,
                  temp_path='/tmp',
                  debug=False):
@@ -1757,11 +1772,7 @@ def displayGraph(graph_,
         add_supers(s)
 
     if debug:
-        _ = [print(*(e[:5]
-                     if isinstance(e, rdflib.BNode) else
-                     g.qname(e)
-                     for e in t), '.')
-             for t in sorted(graph)]
+        displayTriples(graph, qname=g.qname)
 
     for pred, root in ((rdfs.subClassOf, owl.Thing), (rdfs.subPropertyOf, owl.topObjectProperty)):
         try: next(graph.subjects(pred, root))

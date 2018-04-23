@@ -132,6 +132,18 @@ triples = (
     # oop(ilxtr.hasPrimaryParticipantIntentionAspect, ilxtr.hasParticipantIntentionAspect),
     # oop(ilxtr.hasPrimaryParticipantIntentionPrimaryAspect, ilxtr.hasPrimaryParticipantIntentionAspect),
 
+    oop(ilxtr.hasConstrainingAspect, ilxtr.TODO),  # TODO
+    olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
+    olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
+         'has constraining primary participant aspect',
+         'constrained by aspect'),
+    olit(ilxtr.constrainedByAspect, definition,
+         # these are definitional to the technique so they are not intentions
+         # they must be achieved prior in time to the execution of the technique
+         # FIXME is this true? what if you mess up the measurement?
+         ('The relationship between a technique and an aspect of the primary '
+          'participant that is constrained as part of a technique.')),
+
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
     olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has intended primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
@@ -223,6 +235,10 @@ triples = (
          ('There are cases where the value could be ? depending on how one '
           'operationalizes certain concepts from quantum physics.')),
 
+    oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
+    olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
+    olit(asp.isClassifiedAs, NIFRID.synonym, 'is named as'),
+
     oc(asp.flatness, ilxtr.aspect),
     olit(asp.flatness, rdfs.label, 'flatness'),
     olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
@@ -230,6 +246,9 @@ triples = (
          ('How flat a thing is. There are a huge variety of operational '
           'definitions depending on the type of thing in question.')),
 
+    oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
+    olit(asp.weight, rdfs.label, 'weight'),
+    olit(asp.weight, NIFRID.synonym, 'weight aspect'),
 
     oc(ilxtr.informationEntity),
     olit(ilxtr.informationEntity, rdfs.label, 'information entity'),

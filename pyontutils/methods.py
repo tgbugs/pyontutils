@@ -1,8 +1,9 @@
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
-from pyontutils.core import oc, oop, olit, oec
-from pyontutils.core import restrictions, annotation
-from pyontutils.core import NIFTTL, NIFRID, ilxtr
+from pyontutils.core import oc, oc_, oop, olit, oec
+from pyontutils.core import restrictions, annotation, restriction
+from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
+from pyontutils.core import partOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, methods_core
 
@@ -83,10 +84,12 @@ i = I()
 triples = (
     # biccn
 
-    _t(i.d, 'common coordinate framework',
-       synonyms=('CCF', 'atlas coordinate framework')),
-
     _t(i.d, 'atlas registration technique',
+       # ilxtr.hasPrimaryParticipant, restriction(partOf, some animalia)
+       # TODO this falls into an extrinsic classification technique...
+       # or a context classification/naming technique...
+       (ilxtr.isConstrainedBy, ilxtr.parcellationArtifact),
+       (ilxtr.hasPrimaryAspect, asp.location),
        synonyms=('registration technique',
                  'atlas registration',
                  'registration')),
@@ -301,9 +304,19 @@ triples = (
        (ilxtr.hasSomething, i.d),
     ),
 
-    _t(i.d, ' technique',
-       (ilxtr.hasSomething, i.d),
+    _t(i.d, 'anaesthesia technique',
+       # anaesthesia is an excellent example of a case where
+       # just the use of an anaesthetic is not sufficient
+       # and should not be part of the definition
+       #(ilxtr.hasPrimaryParticipant,
+        #oc_(restriction(partOf, OntTerm('UBERON:0001016', label='nervous system')))),
+       (ilxtr.hasPrimaryAspect, ilxtr.nervousResponsiveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       #(hasInput, OntTerm('CHEBI:38867', label='anaesthetic')),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
     ),
+    # local anaesthesia technique
+    # global anaesthesia technique
 
     _t(OntTerm('NLXINV:20090610'), 'in situ hybridization technique',  # TODO
        (ilxtr.hasSomething, i.d),
@@ -601,10 +614,19 @@ triples = (
        synonyms=('tissue fixation',)),
 
     _t(i.d, 'sensitization technique',
-       (ilxtr.hasSomething, i.d),
+       # If we were to try to model this fully in the ontology
+       # then we would have a giant hiearchy of sensitivities to X
+       # when in fact sensitivity is a defined measure/aspect not
+       # a fundamental aspect. It is fair to say that there could be
+       # an aspect for every different way there is to measure sensitivity
+       # to sunlight since the term is so broad
+       (ilxtr.hasPrimaryAspect, asp.sensitivity),
     ),
+
     _t(i.d, 'permeabilization technique',
-       (ilxtr.hasSomething, i.d),
+       # TODO how to model 'the permeability of a membrane to X'
+       #  check go
+       (ilxtr.hasPrimaryAspect, asp.permeability),
     ),
 
     _t(i.d, 'chemical synthesis technique',
@@ -631,7 +653,6 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('dissolve',),),
 
-
     _t(i.d, 'husbandry technique',
        # FIXME maintenance vs growth
        # also how about associated techniques?? like feeding
@@ -644,6 +665,51 @@ triples = (
         OntTerm('NCBITaxon:1', label='ncbitaxon')
        ),
        synonyms=('culture technique', 'husbandry', 'culture'),),
+
+    _t(i.d, 'feeding technique',
+       # metabolism required so no viruses
+       # TODO how to get this to classify as a maintenance technique
+       #  without having to include the entailment explicitly
+       #  i.e. how do we deal side effects of processes
+
+       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (hasInput, ilxtr.food),
+       synonyms=('feeding',)),
+
+       (i.p, rdfs.subClassOf, tech.maintaining),
+       # this is a legitimate case where there is no easy
+       # way to communicate a side effect of feeding
+       # I will thing a bit more on this but I think it is the easiest way
+       # maybe a general class axiom or something like that could do it
+       # FIXME the issue is that the primary aspects will then start to fight...
+       #  there might be a way to create a class that will work using
+       #  ilxtr.hasSideEffectTechnique or ilxtr.hasSideEffect?
+
+    _t(i.d, 'high-fat diet feeding technique',
+       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (ilxtr.hasPrimaryAspect, asp.weight),
+       (hasInput, ilxtr.highFatDiet),
+    ),
+
+    _t(i.d, 'mouse circadian based high-fat diet feeding technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
+       # ie that if one were to measure rather than specify
+       # the mouse should be in in the same phase during the activity
+       (ilxtr.hasConstrainingAspect, ilxtr.circadianPhase),  # TODO? 'NBO:0000169'
+       (ilxtr.hasPrimaryAspect, asp.weight),
+       (hasInput, ilxtr.highFatDiet),
+       ),
+
+    _t(i.d, 'mouse age based high-fat diet feeding technique',
+       # TODO there are a whole bunch of other high fat diet feeding techniques
+       # 'MmusDv:0000050'
+       # as opposed to the primary aspect being the current point in the cyrcadian cycle
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
+       (ilxtr.hasConstrainingAspect, OntTerm('PATO:0000011', label='age')),  # FIXME not quite right
+       (ilxtr.hasPrimaryAspect, asp.weight),  # FIXME not quite right
+       (hasInput, ilxtr.highFatDiet),
+       # (hasInput, ilx['researchdiets/uris/productnumber/D12492']),  # too specific
+       ),
 
     _t(i.d, 'bacterial culture technique',
        tech.maintaining,
@@ -686,19 +752,15 @@ triples = (
        synonyms=('fly culture',),),
 
     _t(i.d, 'rodent husbandry technique',
+       tech.maintaining,
        (ilxtr.hasPrimaryParticipant,
         OntTerm('NCBITaxon:9989', label='Rodentia')  # FIXME population vs individual?
        ),
        synonyms=('rodent husbandry', 'rodent culture technique'),),
 
-
     _t(i.d, 'enclosure design technique',  # FIXME design technique? produces some information artifact?
        (ilxtr.hasSomething, i.d)),
 
-    _t(i.d, 'feeding technique',
-       (ilxtr.hasSomething, i.d),
-       synonyms=('feeding',),
-    ),
     _t(i.d, 'housing technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('housing',),
@@ -847,11 +909,10 @@ triples = (
           'for how the assignment of the name was determined.')),
 
     _t(tech.creating, 'creating technique',   # FIXME mightent we want to subclass off of these directly?
-       tech.ising,
+       (ilxtr.hasPrimaryAspect, asp['is']),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        synonyms=('synthesis technique',),
     ),
-
 
     # attempt to create a class that explicitly does not have relationships to the same other class
     #oc(ilxtr._helper0),
@@ -866,11 +927,11 @@ triples = (
 
     _t(tech.destroying, 'destroying technique',
        # owl.unionOf with not ilxtr.disjointWithOutput of? not this will not work
-       tech.ising,
+       (ilxtr.hasPrimaryAspect, asp['is']),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),),
 
     _t(tech.maintaining, 'maintaining technique',
-       tech.ising,
+       (ilxtr.hasPrimaryAspect, asp['is']),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero),
        synonyms=('maintenance technique',),
     ),
@@ -940,6 +1001,7 @@ triples = (
 
     _t(tech.imaging, 'imaging technique',
        (ilxtr.hasInformationOutput, ilxtr.image),
+       def_='Imaging is the process of forming an image.',
        synonyms=('imaging',),
     ),
 
@@ -983,7 +1045,8 @@ triples = (
     ),
 
     _t(i.d, 'x-ray imaging',
-       tech.imaging,
+       #tech.imaging,
+       (ilxtr.hasInformationOutput, ilxtr.image),
        # VS contrast in the primary aspect being the signal created by the xrays...
        # can probably expand detects in cases where there are non-aspects...
        # still not entirely sure these shouldn't all be aspects too...
@@ -991,10 +1054,14 @@ triples = (
     ),  # owl:Class photon and hasWavelenght range ...
 
     _t(tech.MRI, 'magnetic resonance imaging',
-       tech.imaging,
-       tech.contrastDetection,
+       #tech.imaging,
+       (ilxtr.hasPrimaryAspect, ilxtr.contrast),  # contrast to something? FIXME this seems a bit off...
+       (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
+
+       # FIXME the output image for MRI should be subClassOf image, and not done this way
        # NRM is an aspect not one of the mediators
-       (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
+       (ilxtr.hasInformationOutput, ilxtr.spatialFrequencyImageStack),  # TODO FIXME
+       (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),  # FIXME hasPrimaryAspect appears twice
        # as long as the primaryAspect is subClassOf ilxtr.nuclearMagneticResonance then we are ok
        # and we won't get duplication of primary aspects
        synonyms=('MRI', 'nuclear magnetic resonance imaging'),
@@ -1010,6 +1077,8 @@ triples = (
        #(hasPart, tech.bloodOxygenLevel),
        #(ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
        tech.MRI,  # FIXME vs respeccing everything?
+       #(ilxtr.hasPrimaryParticipantSubeset, ilxtr.haemoglobin)
+       #(ilxtr.hasPrimaryParticipantPart, ilxtr.haemoglobin)
        (ilxtr.hasPrimaryParticipant, ilxtr.haemoglobin),
        (ilxtr.hasPrimaryParticipantSubsetRule, ilxtr.hasBoundOxygen),  # FIXME not quite right still?
        synonyms=('fMRI', 'functional nuclear magnetic resonance imaging'),),
@@ -1021,6 +1090,8 @@ triples = (
 
     _t(tech.dwMRI, 'diffusion weighted magnetic resonance imaging',
        tech.MRI,
+       # FIXME the primary participant isn't really water so much as it is
+       #  the water that is part of the primary participant...
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
        synonyms=('dwMRI', 'diffusion weighted nuclear magnetic resonance imaging'),),
 
@@ -1040,7 +1111,9 @@ triples = (
        
     # modification techniques
     _t(i.d, 'modification technique',
-       (ilxtr.hasPrimaryAspect, asp['']),
+       (ilxtr.hasPrimaryAspect, asp.isClassifiedAs),
+       # is classified as
+       synonyms=('state creation technique', 'state induction technique')
     ),
 
     _t(i.d, 'activation technique',
@@ -1419,6 +1492,31 @@ triples += (  # aspects
 triples += (  # other
     oc(ilxtr.thingWithSequence),
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+    oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
+    oc(ilxtr.image, ilxtr.informationArtifact),
+    olit(ilxtr.image,
+         definition,
+         ('A symbolic representation of some spatial or spatial-temporal '
+          'aspect of a participant. Often takes the form of a 2d or 3d matrix '
+          'that has some mapping to sensor space and may also be collected at '
+          'multiple timepoints. Regardless of the ultimate format has some '
+          'part that can be reduced to a two dimensional matrix.'  # TODO
+         )),
+    oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
+
+    oc(ilxtr.food),  # TODO edible organic matter with variable nutritional value depending on the organism
+    oc(ilxtr.highFatDiet, ilxtr.food),
+    oc(ilxtr.DIODiet, ilxtr.highFatDiet),
+    oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
+
+    # TODO have parcellation-artifacts import methods-core?
+    oc(ilxtr.parcellationArtifact, ilxtr.informationArtifact),
+    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+    oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
+    olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
+    olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
+
 )
 
 methods = simpleOnt(filename=filename,
@@ -1477,12 +1575,11 @@ def expand(_makeGraph, *graphs, debug=False):
     displayGraph(graph, debug=debug)
 
 def main():
-    #displayGraph(methods.graph, debug)
-    #mc = methods.graph.__class__()
+    displayGraph(methods.graph, debug=debug)
+    mc = methods.graph.__class__()
     #mc.add(t) for t in methods_core.graph if t[0] not in
-    #expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
-    #expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
-    pass
+    expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
+    expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
 if __name__ == '__main__':
     main()
