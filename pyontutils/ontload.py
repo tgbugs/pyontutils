@@ -409,10 +409,9 @@ def loadall(git_local, repo_name, local=False):
             #raise BaseException('Evil file found %s' % f)
 
     def repeat(dobig=False):  # we don't really know when to stop, so just adjust
-        for s, o in graph.subject_objects(predicate=owl.imports):
+        for s, o in graph.subject_objects(owl.imports):
             if os.path.basename(o) not in done and o not in done:
-                if '/ext.owl' in str(o): continue #BUG
-                #if (o, rdf.type, owl.Ontology) not in graph:
+            #if (o, rdf.type, owl.Ontology) not in graph:
                 print(o)
                 done.append(o)
                 ext = os.path.splitext(o)[1]
@@ -425,8 +424,7 @@ def loadall(git_local, repo_name, local=False):
     #if local:
         #repeat(False)
     #else:
-    if local:
-        print('Yep, this helps')
+    if not local:
         for i in range(10):
             repeat(True)
 

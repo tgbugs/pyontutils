@@ -16,7 +16,6 @@ from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine, getCurrentCom
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.closed_namespaces import *
 from IPython import embed
-import json
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
@@ -468,7 +467,6 @@ class Restriction(Triple):
             [graph.add(t) for t in triples]
 
         self.triples = []
-        hits = []; count = 0
         for r_s in graph.subjects(rdf.type, owl.Restriction):
             local_trips = [(r_s, rdf.type, owl.Restriction)]
             try:
@@ -482,15 +480,10 @@ class Restriction(Triple):
                 t = r_s, self.scope, o
                 local_trips.append(t)
             except StopIteration:
-                #print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
-                hits.append(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
-                count+=1
+                print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
                 continue
             self.triples.extend(local_trips)
-            #yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
-        #print(count)
-        return hits
-        #json.dump(hits, open('/home/troy/Desktop/restriction_check.json', 'w'), indent=4)
+            yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
 
 restriction = Restriction(rdfs.subClassOf)
 
@@ -848,7 +841,6 @@ class makeGraph:
     def write(self):
         """ Serialize self.g and write to self.filename"""
         ser = self.g.serialize(format='nifttl')
-        #self.filename = self.filename.replace('pypy', 'work')
         with open(self.filename, 'wb') as f:
             f.write(ser)
             #print('yes we wrote the first version...', self.name)
@@ -1138,8 +1130,9 @@ def createOntology(filename=    'temp-graph',
 
 #
 # query
-OntCuries = ontquery.OntCuries #FIXME
-OntCuries(PREFIXES) #FIXME
+
+OntCuries = ontquery.OntCuries
+OntCuries(PREFIXES)
 # ontquery.SciGraphRemote.verbose = True
 
 class OntId(ontquery.OntId, rdflib.URIRef):
@@ -1150,9 +1143,9 @@ class OntTerm(ontquery.OntTerm, OntId):
     pass
 
 
-#OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
-#ontquery.QueryResult._OntTerm = OntTerm
-#query = ontquery.OntQueryCli(query=OntTerm.query)
+OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
+ontquery.QueryResult._OntTerm = OntTerm
+query = ontquery.OntQueryCli(query=OntTerm.query)
 
 #
 # classes

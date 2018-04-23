@@ -10,7 +10,6 @@ import builtins
 import requests
 from json import dumps
 from urllib import parse
-import sys
 
 BASEPATH = 'https://scicrunch.org/api/1/scigraph'
 
@@ -19,7 +18,7 @@ exten_mapping = {'application/graphml+xml': 'graphml+xml', 'application/graphson
 class restService:
     """ Base class for SciGraph rest services. """
 
-    api_key = 'uePSzjBoXkB5S9gB7AeB4aWue9oPSV9S'
+    api_key = None
 
     def __init__(self, cache=False, key=None):
         self._session = requests.Session()
@@ -72,8 +71,7 @@ class restService:
             pkey = '?' + '&'.join(['%s=%s' % (k,v) for k,v in sorted(params.items()) if v is not None])
         else:
             pkey = ''
-        key = 'troy' + url + pkey + ' ' + method + ' ' + str(output)
-        #sys.exit(key)
+        key = url + pkey + ' ' + method + ' ' + str(output)
         if  key in self._cache:
             if self._verbose:
                 print('cache hit', key)
@@ -303,7 +301,7 @@ class Annotations(restService):
         """ Annotate a URL from: /annotations/url
 
             Arguments:
-            url:
+            url: 
             includeCat: A set of categories to include
             excludeCat: A set of categories to exclude
             minLength: The minimum number of characters in annotated entities
@@ -726,7 +724,7 @@ class Refine(restService):
         """  from: /refine/preview/{id}
 
             Arguments:
-            id:
+            id: 
             outputs:
                 application/json
                 application/javascript
@@ -819,7 +817,7 @@ class Refine(restService):
         """  from: /refine/view/{id}
 
             Arguments:
-            id:
+            id: 
             outputs:
                 application/json
                 application/javascript
@@ -986,3 +984,4 @@ class Vocabulary(restService):
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
         return output if output else []
+

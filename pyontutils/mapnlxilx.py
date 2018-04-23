@@ -16,17 +16,8 @@ from pyontutils.utils import Async, deferred, noneMembers, anyMembers, mysql_con
 from pyontutils.scigraph_client import Vocabulary, Graph as sGraph
 from pyontutils.qnamefix import cull_prefixes
 from IPython import embed
-import rdflib
 
 gitf = Path(devconfig.git_local_base)
-
-#Troy
-gitf = Path('/home/troy/Desktop/work')
-class SetEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        return json.JSONEncoder.default(self, obj)
 
 ilxtr = Namespace(uPREFIXES['ilxtr'])
 ilx = Namespace(uPREFIXES['ilx'])
@@ -39,12 +30,10 @@ def _check_dupes(thing, known=tuple()):
     assert len(test) == len(set(test)), f'duplicate mappings to same ilx! {Counter(test).most_common()[:5]}'
 
 DB_URI = 'mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db}'
-
-if socket.gethostname() != 'orpheus' and socket.gethostname() != 'love': #FIXME
+if socket.gethostname() != 'orpheus':
     config = mysql_conn_helper('localhost', 'nif_eelg', 'nif_eelg_secure', 33060)  # see .ssh/config
 else:
     config = mysql_conn_helper('nif-mysql.crbs.ucsd.edu', 'nif_eelg', 'nif_eelg_secure')
-
 engine = create_engine(DB_URI.format(**config), echo=True)
 config = None
 del(config)
@@ -323,39 +312,29 @@ print(report)
 
 def reverse_report():
     ilx = Graph()
-    #ilx.parse('/tmp/interlex.ttl', format='turtle')
-    ilx.parse('/home/troy/Desktop/interlex.ttl',format='turtle')
+    ilx.parse('/tmp/interlex.ttl', format='turtle')
     not_in_ontology = set()
     annotations = set()
     relations = set()
     drugbank = set()
     t3db = set()
-    neurolex = set()
     for subject in ilx.subjects(rdf.type, owl.Class):
-        if (subject, rdf.type, owl.AnnotationProperty) in ilx:  # FIXME for troy these need to be cleared up
-            annotations.add(subject)
-        elif (subject, rdf.type, owl.ObjectProperty) in ilx:
-            relations.add(subject)
         ok = False
-        #pred = oboInOwl.hasDbXref
-        pred = rdflib.term.URIRef('http://uri.interlex.org/tgbugs/uris/readable/existingId')
-        for object in ilx.objects(subject, pred): #oboInOwl.hasDbXref no longer used. now using ilxtr
+        for object in ilx.objects(subject, oboInOwl.hasDbXref):
             if anyMembers(object, 'uri.neuinfo.org', 'GO_', 'CHEBI_', 'PR_',
                           'PATO_', 'HP_', 'OBI_', 'DOID_', 'COGPO_', 'CAO_',
-                          'UBERON_', 'NCBITaxon_', 'SO_', 'IAO_',):
+                          'UBERON_', 'NCBITaxon_', 'SO_', 'IAO_'):
                 # FIXME doe we areally import HP?
                 ok = True
+            
             if (subject, rdf.type, owl.AnnotationProperty) in ilx:  # FIXME for troy these need to be cleared up
                 annotations.add(subject)
             elif (subject, rdf.type, owl.ObjectProperty) in ilx:
                 relations.add(subject)
-
-            if 'drugbank' in object:
+            elif 'drugbank' in object:
                 drugbank.add(subject)
             elif 't3db.org' in object:
                 t3db.add(subject)
-            elif 'neurolex.org' in object:
-                neurolex.add(subject)
 
         if not ok:
             not_in_ontology.add(subject)
@@ -363,25 +342,21 @@ def reverse_report():
 
     drugbank = drugbank & not_in_ontology
     t3db = t3db & not_in_ontology
-    neurolex = neurolex & not_in_ontology
     annotations = annotations & not_in_ontology
     relations = relations & not_in_ontology
-    unaccounted = not_in_ontology - drugbank - t3db - annotations - relations - neurolex
-    json.dump(unaccounted, open('/home/troy/Desktop/unaccounted.json', 'w'), indent=4, cls=SetEncoder)
+    unaccounted = not_in_ontology - drugbank - t3db - annotations - relations
     report = (
         f'Total       {len(not_in_ontology)}\n'
         f'annotations {len(annotations)}\n'
         f'relations   {len(relations)}\n'
         f'drugbank    {len(drugbank)}\n'
         f't3db        {len(t3db)}\n'
-        f'neurolex    {len(neurolex)}\n'
         f'unaccounted {len(unaccounted)}\n'
     )
     print(report)
-    return (not_in_ontology, drugbank, t3db, annotations, relations, unaccounted, neurolex)
+    return (not_in_ontology, drugbank, unaccounted)
 
-not_in_ontology, drugbank, t3db, annotations, relations, unaccounted, neurolex = reverse_report()
-un = unaccounted
+_, _, un = reverse_report()
 
 h_uris = set(e for t in hng.g for e in t if 'uri.neuinfo.org' in e)
 real_problems = problem_uris - h_uris

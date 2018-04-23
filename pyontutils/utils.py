@@ -389,3 +389,4 @@ class _TermColors:
             return string + self.ENDCOLOR
 
 TermColors = _TermColors()
+
