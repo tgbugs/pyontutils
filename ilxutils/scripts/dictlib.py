@@ -63,43 +63,44 @@ def merge(new, old):
             if old['synonyms']:
                 literals = [s['literal'].lower().strip() for s in old['synonyms']]
                 for v in vals:
-                    if v['literal'].lower().strip() not in literals:
-                        old['synonyms'].append(v)
+                    if vals['literal'].lower().strip() not in literals:
+                        old['synonyms'].append(vals)
             else:
                 old['synonyms'].append(new['synonyms'])
             print(old['synonyms'])
 
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
-            for v in vals:
-                if 'change' not in list(v):
-                    sys.exit('Need "change" key for existing_ids!')
-                elif v['iri'] not in iris and v['change'] == True:
-                    sys.exit('You want to change iri that doesnt exist', '\n', new)
-                elif v['iri'] not in iris and v['change'] == False:
-                    old['existing_ids'].append(v)
-                elif v['iri'] in iris and v['change'] == True:
+
+            if 'change' not in list(vals):
+                sys.exit('Need "change" key for existing_ids!')
+            elif vals['iri'] not in iris and vals['change'] == True:
+                sys.exit('You want to change iri that doesnt exist', '\n', new)
+            elif vals['iri'] not in iris and vals['change'] == False:
+                old['existing_ids'].append(vals)
+            elif vals['iri'] in iris and vals['change'] == True:
+                new_existing_ids = []
+                for e in old['existing_ids']:
+                    if e['iri'] == vals['iri']:
+                        new_existing_ids.append(vals)
+                    else:
+                        new_existing_ids.append(e)
+                old['existing_ids'] = new_existing_ids
+                #print(old['existing_ids'])
+            elif vals['iri'] in iris and vals['change'] == False:
+                pass #for sanity readability
+            if vals.get('delete') == True:
+                if vals['iri'] in iris:
                     new_existing_ids = []
                     for e in old['existing_ids']:
-                        if e['iri'] == v['iri']:
-                            new_existing_ids.append(v)
+                        if e['iri'] == vals['iri']:
+                            new_existing_ids.append(vals)
                         else:
                             new_existing_ids.append(e)
                     old['existing_ids'] = new_existing_ids
-                    #print(old['existing_ids'])
-                elif v['iri'] in iris and v['change'] == False:
-                    pass #for sanity readability
-                if v.get('delete') == True:
-                    if v['iri'] in iris:
-                        new_existing_ids = []
-                        for e in old['existing_ids']:
-                            if e['iri'] == v['iri']:
-                                new_existing_ids.append(v)
-                            else:
-                                new_existing_ids.append(e)
-                        old['existing_ids'] = new_existing_ids
-                    else:
-                        sys.exit("You want to delete an iri that doesn't exist", '\n', new)
+                else:
+                    sys.exit("You want to delete an iri that doesn't exist", '\n', new)
+
             old = preferred_change(old)
 
         elif k in ['definition', 'superclasses', 'id', 'type', 'comment']:

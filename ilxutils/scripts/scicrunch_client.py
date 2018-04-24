@@ -136,7 +136,7 @@ class scicrunch():
                 superclasses    {'id':int}
                 type            term, cde, anntation, or relationship <str>
                 synonym         {'literal':<str>}
-                existing_ids    {'iri<str>','prefix:<str>','change':<bool>, delete:<bool>}
+                existing_ids    {'iri<str>','curie:<str>','change':<bool>, delete:<bool>}
     '''
     def updateTerms(self, data, HELP=False, LIMIT=50, sql=False):
         if HELP:

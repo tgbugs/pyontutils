@@ -1,4 +1,5 @@
-"""
+""" Combines any number of turtle formated files into one files with all the contents.
+
 Usage:
     foo.py [-h | --help]
     foo.py [-v | -- version]
@@ -6,9 +7,10 @@ Usage:
     foo.py [-d DIRECTORY] [-o OUTPUT] [--pickle]
 
 Options:
-    -f, --file=<path>
-    -d, --directory=<path>
-    -o, --output=<path>
+    -d, --directory=<path>  Path to folder that containes all the turtle files to be used
+    -o, --output=<path>     Merged file name and path [default: ../merged.ttl]
+    --pickle                If used, will make another file of the same name as --output
+                            that is a pandas dataframe of the same data.
 """
 from docopt import docopt
 import pandas as pd

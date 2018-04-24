@@ -1,12 +1,13 @@
-"""
+""" Changes turtle files to pandas dataframe stored in pickle. Maintains all its dataself.
+
 Usage:
     ttl2pd.py [-h | --help]
     ttl2pd.py [-v | -- version]
     ttl2pd.py [-f FILE] [-o OUTPUT]
 
 Options:
-    -f, --file=<path>
-    -o, --output=<path>
+    -f, --file=<path>       Path to turtle file to be converted to pandas DataFrame
+    -o, --output=<path>     Path to output file that is the pickled pandas DataFrame
 """
 from docopt import docopt
 import pandas as pd

@@ -1,4 +1,15 @@
-"""
+""" Compares Interlex turtle (reference) to NIF/External merged turtle file (target).
+    Output is a json file with a structure:
+
+        dict[ interlex_id ] : {
+            shared_iris : {
+                'ilx_only'     : (predicate, object),
+                'nif_only'     : (predicate, object),
+                'both_contain' : (predicate, object),
+                'expo'         : (predicate, object),   #experimental comparisons
+            }
+        }
+
 Usage:  foo.py [-h | --help]
         foo.py [-v | --version]
         foo.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]

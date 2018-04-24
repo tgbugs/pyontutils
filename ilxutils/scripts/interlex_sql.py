@@ -68,7 +68,7 @@ class interlex_sql():
         #SELECT ti.curie, t.label, ti.tid, ti.iri, t.ilx
         engine = create_engine(self.engine_key)
         data =  """
-                SELECT t.id, tei.tid, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
+                SELECT t.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
                 FROM terms AS t
                 JOIN term_existing_ids AS tei ON t.id=tei.tid
                 WHERE t.type != '{0}'

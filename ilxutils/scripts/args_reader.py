@@ -1,4 +1,5 @@
-"""
+""" Used as a master args reader for scripts that read, add, and update Interlex data through its API
+
 Usage:  foo.py [-h | --help]
         foo.py [-v | --version]
         foo.py [-a API_KEY] [-e ENGINE_KEY] [-p | -b]

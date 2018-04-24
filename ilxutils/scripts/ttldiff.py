@@ -1,13 +1,16 @@
-"""
+#IN PROGRESS
+""" Generic comparator of 2 turtle files
+
 Usage:
     ttldiff.py [-h | --help]
     ttldiff.py [-v | -- version]
     ttldiff.py [-r REFERENCE] [-t TARGET] [-o OUTPUT]
 
 Options:
-    -r, --refernce=<path>
-    -t, --target=<path>
-    -o, --output=<path>
+    -r, --refernce=<path>       Path to turtle file that will be used as reference data to contruct comparison
+    -t, --target=<path>         Path to target turtle file that will use the reference as a template to see
+                                what this turtle file may have that is the same or different.
+    -o, --output=<path>         Path to output pandas DataFrame that will house the comparitive data
 """
 from docopt import docopt
 import pandas as pd
@@ -17,7 +20,7 @@ from collections import defaultdict
 from ttl2pd import get_df_from_ttl
 from pathlib import Path
 import pickle
-VERSION = '0.0.1'
+VERSION = '0.0.1.beta'
 
 
 

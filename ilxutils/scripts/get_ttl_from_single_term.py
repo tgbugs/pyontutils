@@ -1,4 +1,5 @@
-"""
+""" Uses term ID to contruct a personal turtle file of its data from interlex
+
 Usage:  foo.py [-h | --help]
         foo.py [-v | --version]
         foo.py [-e ENGINE_KEY] [-o OUTPUT] [--id ID]
