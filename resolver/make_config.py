@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 
 import rdflib
-from pyontutils.utils import PREFIXES as uPREFIXES
+from pyontutils.core import PREFIXES as uPREFIXES
 
 ilxtr = rdflib.Namespace(uPREFIXES['ilxtr'])
 
