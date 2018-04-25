@@ -7,6 +7,7 @@ import os
 import re
 import math
 import asyncio
+import hashlib
 import inspect
 import subprocess
 from datetime import datetime, date
@@ -76,6 +77,19 @@ def memoryCheck(vms_max_kb):
     free_gigs = vm.available / 1024 ** 2
     if vm.available < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
+
+def orderInvariantHash(graph, cypher=hashlib.sha256):
+    # this is probably not the fastest way to do this but
+    # it works
+    def convForHash(e):
+        return (str(e)
+                if isinstance(e, rdflib.URIRef)
+                else ('BNODE'  # FIXME are there cases where this can fail?
+                      if isinstance(e, rdflib.BNode)
+                      else str(e) + str(e.datatype) + str(e.language)))
+    m = cypher()
+    [m.update(str(t).encode()) for t in sorted(tuple(convForHash(e) for e in t) for t in graph)]
+    return m.hexdigest()
 
 def noneMembers(container, *args):
     for a in args:
