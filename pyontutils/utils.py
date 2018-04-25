@@ -89,7 +89,7 @@ def orderInvariantHash(graph, cypher=hashlib.sha256):
                       else str(e) + str(e.datatype) + str(e.language)))
     m = cypher()
     [m.update(str(t).encode()) for t in sorted(tuple(convForHash(e) for e in t) for t in graph)]
-    return m.hexdigest()
+    return m.digest()
 
 def noneMembers(container, *args):
     for a in args:
