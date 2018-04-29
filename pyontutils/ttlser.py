@@ -24,28 +24,31 @@ SDEBUG = False
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return tuple(int(t) if t.isdigit() else t.lower() for t in pat.split(s))
 
-def litsort(l):
-    v = l.value
-    if type(v) == bool:
-        out = 0, v
-    elif type(v) == int:
-        out = 1, v, str(l)
-    elif type(v) == Decimal:
-        out = 1, v, str(l)
-    elif type(v) == float:
-        n = v
-        m, e = f'{n:e}'.split('e')
-        s = f'{m.rstrip("0").rstrip(".")}e{e}'
-        out = 1, n, s
-    elif type(v) == datetime:
-        # we make no assumptions about the original timestamp so we
-        # put zone naieve datetimes first
-        out = 2, bool(v.tzinfo), v
-    else:
-        dt = l.datatype if l.datatype is not None else ''
-        lang = l.language if l.language is not None else ''
-        out = 3, natsort(l), dt, lang
-    return out
+def make_litsort(sortkey=natsort):
+    def litsort(l):
+        v = l.value
+        if type(v) == bool:
+            out = 0, v
+        elif type(v) == int:
+            out = 1, v, str(l)
+        elif type(v) == Decimal:
+            out = 1, v, str(l)
+        elif type(v) == float:
+            n = v
+            m, e = f'{n:e}'.split('e')
+            s = f'{m.rstrip("0").rstrip(".")}e{e}'
+            out = 1, n, s
+        elif type(v) == datetime:
+            # we make no assumptions about the original timestamp so we
+            # put zone naieve datetimes first
+            out = 2, bool(v.tzinfo), v
+        else:
+            dt = l.datatype if l.datatype is not None else ''
+            lang = l.language if l.language is not None else ''
+            out = 3, sortkey(l), dt, lang
+        return out
+
+    return litsort
 
 def qname_mp(self, uri):  # for monkey patching Graph
     try:
@@ -133,6 +136,8 @@ class CustomTurtleSerializer(TurtleSerializer):
     _name = 'pyontutils deterministic'
     __version = 'v1.1.3'
     _newline = True
+    sortkey = staticmethod(natsort)
+    make_litsortkey = staticmethod(make_litsort)
 
     topClasses = [OWL.Ontology,
                   RDF.Property,
@@ -220,11 +225,13 @@ class CustomTurtleSerializer(TurtleSerializer):
             else:
                 raise TypeError('Why do you have a class that is disjoint with itself?')
         super(CustomTurtleSerializer, self).__init__(store)
+        self.litsortkey = self.make_litsortkey(self.sortkey)
         self.rank_init = 0
         self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
         self.predicate_rank = self._PredRank()
         self.object_rank = self._LitUriRank()
-        self.max_or = max(self.object_rank.values()) + 1
+        or_values = tuple(self.object_rank.values())
+        self.max_or = (max(or_values) + 1) if or_values else 1
         self.list_rankers = self._ListRank()
         self.max_lr = len(self.list_rankers)
         self._list_helpers = {n:p for p, lr in self.list_rankers.items() for n in lr.nodes}
@@ -353,7 +360,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     def _PredRank(self):
         pr = sorted(sorted(set(self.store.predicates(None, None)),
                            key=self.store.qname),
-                    key=lambda p: natsort(self.store.qname(p)))
+                    key=lambda p: self.sortkey(self.store.qname(p)))
         a = [p for p in self.predicateOrder if p in pr]  # remove predicateOrder not in pr
         b = [p for p in pr if p not in self.predicateOrder]  # dedupe pr before merging
         self.predicateOrder = a + b  # predicateOrder first, then any remaining
@@ -370,12 +377,12 @@ class CustomTurtleSerializer(TurtleSerializer):
                     sorted(  # doublesort needed for stability wrt case for literals
                            sorted((_ for _ in self.store.objects()
                                    if isinstance(_, Literal))),
-                           key=litsort) +
+                           key=self.litsortkey) +
                     sorted(
                         sorted(set(_ for t in self.store for _ in t
                                    if isinstance(_, URIRef)),
                                key=self.store.qname),
-                        key=lambda _: natsort(self.store.qname(_))))}
+                        key=lambda _: self.sortkey(self.store.qname(_))))}
 
     def _ListRank(self):
         list_rankers = {}
@@ -402,7 +409,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def startDocument(self):  # modified to natural sort prefixes
         self._started = True
-        ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (natsort(kv[0]), kv[1]))
+        ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (self.sortkey(kv[0]), kv[1]))
         for prefix, uri in ns_list:
             self.write(self.indent() + '@prefix %s: <%s> .\n' % (prefix, uri))
         if ns_list and self._spacious:
@@ -668,9 +675,9 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
         store.namespace_manager.reset()
         if self._compact:
             #existing = set(n for q, n in store.namespace_manager.namespaces())
-            #pne = sorted(sorted((_ for _ in preds if _ not in existing)), key=natsort)
-            pne = sorted(sorted(preds), key=natsort)
-            for p, q in zip(pne, sorted(sorted(makeSymbolPrefixes(len(pne))), key=natsort)):
+            #pne = sorted(sorted((_ for _ in preds if _ not in existing)), key=self.sortkey)
+            pne = sorted(sorted(preds), key=self.sortkey)
+            for p, q in zip(pne, sorted(sorted(makeSymbolPrefixes(len(pne))), key=self.sortkey)):
                 store.bind(q, p, override=False)
         #print(store.namespace_manager._NamespaceManager__trie)
         #print(list(store.namespaces()))
@@ -701,6 +708,13 @@ class UncompactTurtleSerializer(CompactTurtleSerializer):
     _name = 'pyontutils uncompact deterministic'
     _newline = False
     _compact = False
+
+
+class DeterministicTurtleSerializer(UncompactTurtleSerializer):
+    """ Serializer used for ranking triples for calculating hashes of graphs.  """
+
+    predicateOrder = []
+    sortkey = staticmethod(lambda v:v)
 
 
 class SubClassOfTurtleSerializer(CustomTurtleSerializer):
@@ -773,7 +787,7 @@ class SubClassOfTurtleSerializer(CustomTurtleSerializer):
         def nq(n):
             if isinstance(n, BNode):
                 return '',
-            return natsort(qname(n))
+            return self.sortkey(qname(n))
 
 
         #for k, v in supers.items():
@@ -785,7 +799,7 @@ class SubClassOfTurtleSerializer(CustomTurtleSerializer):
                     sorted(  # doublesort needed for stability wrt case for literals
                            sorted((_ for _ in self.store.objects()
                                    if isinstance(_, Literal))),
-                           key=litsort) +
+                           key=self.litsortkey) +
                     sorted(
                         sorted(uris, key=self.store.qname),
                         key=wrapsort))}
