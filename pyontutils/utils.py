@@ -113,7 +113,7 @@ def orderInvariantHash(iterable, cypher=hashlib.sha256):
     #bytes_ = [makeByteTuple(t) for t in sorted(tuples)]
     #embed()
     m = cypher()
-    [m.update(makeByteTuple) for t in sorted(iterable)]
+    [m.update(makeByteTuple(t)) for t in sorted(iterable)]
     return m.digest()
 
 def noneMembers(container, *args):
