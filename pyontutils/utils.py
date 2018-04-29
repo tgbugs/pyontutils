@@ -78,17 +78,42 @@ def memoryCheck(vms_max_kb):
     if vm.available < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
 
-def orderInvariantHash(graph, cypher=hashlib.sha256):
-    # this is probably not the fastest way to do this but
-    # it works
-    def convForHash(e):
-        return (str(e)
-                if isinstance(e, rdflib.URIRef)
-                else ('BNODE'  # FIXME are there cases where this can fail?
-                      if isinstance(e, rdflib.BNode)
-                      else str(e) + str(e.datatype) + str(e.language)))
+def convertToBytes(e, encoding='utf-8'):
+    if isinstance(e, rdflib.BNode):
+        raise TypeError('BNode detected, please convert bnodes to '
+                        'ints in a deterministic manner first.')
+    elif isinstance(e, rdflib.URIRef):
+        return e.encode(encoding)
+    elif isinstance(e, rdflib.Literal):
+        return makeByteTuple((str(e), e.datatype, e.language))
+    elif isinstance(e, int):
+        return str(e).encode(encoding)
+    elif isinstance(e, bytes):
+        return e
+    elif isinstance(e, str):
+        return e.encode(encoding)
+    else:
+        raise TypeError(f'Unhandled type on {e!r} {type(e)}')
+
+def makeByteTuple(t):
+    return b'(' + b' '.join(convertToBytes(e)
+                            for e in t
+                            if e is not None) + b')'
+
+def orderInvariantHash(iterable, cypher=hashlib.sha256):
+    # convert all strings bytes
+    # keep existing bytes as bytes
+    # join as follows b'(http://s http://p http://o)'
+    # join as follows b'(http://s http://p http://o)'
+    # bnodes local indexes are treated as strings and converted
+    # literals are treated as tuples of strings
+    # if lang is not present then the tuple is only 2 elements
+
+    # this is probably not the fastest way to do this but it works
+    #bytes_ = [makeByteTuple(t) for t in sorted(tuples)]
+    #embed()
     m = cypher()
-    [m.update(str(t).encode()) for t in sorted(tuple(convForHash(e) for e in t) for t in graph)]
+    [m.update(makeByteTuple) for t in sorted(iterable)]
     return m.digest()
 
 def noneMembers(container, *args):
