@@ -78,43 +78,52 @@ def memoryCheck(vms_max_kb):
     if vm.available < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
 
-def convertToBytes(e, encoding='utf-8'):
-    if isinstance(e, rdflib.BNode):
-        raise TypeError('BNode detected, please convert bnodes to '
-                        'ints in a deterministic manner first.')
-    elif isinstance(e, rdflib.URIRef):
-        return e.encode(encoding)
-    elif isinstance(e, rdflib.Literal):
-        return makeByteTuple((str(e), e.datatype, e.language))
-    elif isinstance(e, int):
-        return str(e).encode(encoding)
-    elif isinstance(e, bytes):
-        return e
-    elif isinstance(e, str):
-        return e.encode(encoding)
-    else:
-        raise TypeError(f'Unhandled type on {e!r} {type(e)}')
 
-def makeByteTuple(t):
-    return b'(' + b' '.join(convertToBytes(e)
-                            for e in t
-                            if e is not None) + b')'
+class OrderInvariantHash:
+    def __init__(self, cypher=hashlib.sha256, encoding='utf-8'):
+        self.cypher = cypher
+        self.encoding = encoding
 
-def orderInvariantHash(iterable, cypher=hashlib.sha256):
-    # convert all strings bytes
-    # keep existing bytes as bytes
-    # join as follows b'(http://s http://p http://o)'
-    # join as follows b'(http://s http://p http://o)'
-    # bnodes local indexes are treated as strings and converted
-    # literals are treated as tuples of strings
-    # if lang is not present then the tuple is only 2 elements
+    def convertToBytes(self, e):
+        if isinstance(e, rdflib.BNode):
+            raise TypeError('BNode detected, please convert bnodes to '
+                            'ints in a deterministic manner first.')
+        elif isinstance(e, rdflib.URIRef):
+            return e.encode(self.encoding)
+        elif isinstance(e, rdflib.Literal):
+            return self.makeByteTuple((str(e), e.datatype, e.language))
+        elif isinstance(e, int):
+            return str(e).encode(self.encoding)
+        elif isinstance(e, bytes):
+            return e
+        elif isinstance(e, str):
+            return e.encode(self.encoding)
+        else:
+            raise TypeError(f'Unhandled type on {e!r} {type(e)}')
 
-    # this is probably not the fastest way to do this but it works
-    #bytes_ = [makeByteTuple(t) for t in sorted(tuples)]
-    #embed()
-    m = cypher()
-    [m.update(makeByteTuple(t)) for t in sorted(iterable)]
-    return m.digest()
+    def makeByteTuple(self, t):
+        return b'(' + b' '.join(self.convertToBytes(e)
+                                for e in t
+                                if e is not None) + b')'
+
+    def __call__(self, iterable):
+        # convert all strings bytes
+        # keep existing bytes as bytes
+        # join as follows b'(http://s http://p http://o)'
+        # join as follows b'(http://s http://p http://o)'
+        # bnodes local indexes are treated as strings and converted
+        # literals are treated as tuples of strings
+        # if lang is not present then the tuple is only 2 elements
+
+        # this is probably not the fastest way to do this but it works
+        #bytes_ = [makeByteTuple(t) for t in sorted(tuples)]
+        #embed()
+        m = self.cypher()
+        # when everything is replaced by an integer or a bytestring
+        # it is safe to sort last because identity is ensured
+        [m.update(b) for b in sorted(self.makeByteTuple(t) for t in iterable)]
+        return m.digest()
+
 
 def noneMembers(container, *args):
     for a in args:
