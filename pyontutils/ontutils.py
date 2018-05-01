@@ -183,7 +183,7 @@ def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     url_blaster(urls, rate, timeout, verbose, debug)
 
-def url_blaster(urls, rate, timeout=5, verbose=False, debug=False):
+def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'):
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]
@@ -193,15 +193,16 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False):
         def __init__(self, url):
             self.url = url
 
-    def head_timeout(url):
+    r_method = getattr(requests, method)
+    def method_timeout(url, _method=r_method):
         try:
-            return requests.head(url, timeout=timeout)
+            return _method(url, timeout=timeout)
         except (requests.ConnectTimeout, requests.ReadTimeout) as e:
             print('Timedout:', url, e)
             return Timedout(url)
     s = time()
     collector = [] if debug else None
-    all_ = Async(rate=rate, debug=verbose, collector=collector)(deferred(head_timeout)(url) for url in urls)
+    all_ = Async(rate=rate, debug=verbose, collector=collector)(deferred(method_timeout)(url) for url in urls)
     o = time()
     not_ok = [_.url for _ in all_ if not _.ok]
     d = o - s
