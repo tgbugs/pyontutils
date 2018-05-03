@@ -1,3 +1,4 @@
+from rdflib import Literal
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
 from pyontutils.core import oc, oc_, oop, olit, oec
 from pyontutils.core import restrictions, annotation, restriction
@@ -551,17 +552,40 @@ triples = (
        synonyms=('angiography',)),
 
     _t(i.d, 'ex vivo technique',
-       (hasParticipant, ilxtr.somethingThatUsedToBeAlive),
+       # (hasParticipant, ilxtr.somethingThatUsedToBeAlive),
+       # more like 'was' a cellular organism
+       # ah time... 
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       # has part some technique destroying primary participant
+       # we really really need dead organisms to still have that type
+       # which restricts our operational definitions a bit, but that is probably a good thing
+       # 'dead but can still sequence its dna to confirm that -presently- its dna is that of a mouse'
+       # the technique needs to have killed the exact member otherwise you can kill one mouse and study
+       # a living one
+       # (ilxtr.hasPriorTechnique, tech.killing),  # FIXME HRMMMMMM with same primary participant...
+       (ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
+       (ilxtr.hasConstrainingAspect_value, ilxtr.false), # Literal(False)),  # FIXME dataProperty???
+       #(ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
+       # (ilxtr.hasConstrainingAspect, ilxtr['is']),
        synonyms=('ex vivo',),),
     _t(i.d, 'in situ technique',  # TODO FIXME
        # detecting something in the location that it was originally in
        # not in the dissociated remains thereof...
+       # hasPrimaryParticipantLocatedIn
        (ilxtr.hasSomething, i.d),
        synonyms=('in situ',),),
     _t(i.d, 'in vivo technique',
-       (hasParticipant, ilxtr.somethingThatIsAlive),
+       # (hasParticipant, ilxtr.somethingThatIsAlive),
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME rocks can have aspect aliveness,
+       # aspects don't tell you about the universality of a result in the way that a quality might
+       # because right now we only care about the details of the process and what we are measuring
+       # that is what the value is included explicitly, because some day we might find out that our
+       # supposedly universal axiom is not, and then we are cooked
+       (ilxtr.hasConstrainingAspect_value, ilxtr.true), #  FIXME data property  Literal(True)),
        synonyms=('in vivo',),),
     _t(i.d, 'in utero technique',
+       # has something in 
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
        synonyms=('in vitro',),),
     _t(i.d, 'in vitro technique',
@@ -1124,9 +1148,14 @@ triples = (
        (ilxtr.hasSomething, i.d),
     ),
 
+    _t(tech.killing, 'killing technique',
+       (ilxtr.hasPrimaryAspect, asp.aliveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+      ),
+
     _t(i.d, 'euthanasia technique',
-       tech.destroying,  # FIXME this is not quite right
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasPrimaryAspect, asp.aliveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
     _t(i.d, 'pharmacological technique',
