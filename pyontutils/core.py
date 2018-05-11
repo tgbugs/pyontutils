@@ -123,8 +123,8 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, BFO, ilxtr,
- ilxb, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
-                       'BFO', 'ilxtr', 'ilx', 'TEMP')
+ ilxb, TEMP, ILX) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
+                       'BFO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
 
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
@@ -327,6 +327,8 @@ class _POThunk(Thunk):
     def __call__(self, subject, *pothunks):
         """ Overwrite this function for more complex expansions. """
         # seems unlikely that same object multiple predicates would occur, will impl if needed
+        if subject is None:
+            subject = rdflib.BNode()
         yield subject, self.predicate, self.object
         for thunk in pothunks:
             #if isinstance(thunk, types.GeneratorType):
@@ -697,9 +699,13 @@ class EquivalentClass(Triple):
     def serialize(self, subject, *objects_or_thunks):
         """ object_thunks may also be URIRefs or Literals """
         ec_s = rdflib.BNode()
-        yield subject, self.predicate, ec_s
+        if subject is not None:
+            yield subject, self.predicate, ec_s
         yield from oc(ec_s)
-        yield from self._list.serialize(ec_s, self.operator, *objects_or_thunks)
+        if self.operator is not None:
+            yield from self._list.serialize(ec_s, self.operator, *objects_or_thunks)
+        else:
+            raise NotImplemented('TODO a normal list')
 
     def parse(self, *triples, graph=None):
         if graph is None:  # TODO decorator for this
