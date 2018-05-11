@@ -384,8 +384,15 @@ BLX:20 a owl:ObjectProperty ;
 
 l:0 rdfs:label (1 2 3 4), (1 2 3 4) .
 
-
 l:1 rdfs:label ( (1 2 3 4) (1 2 3 4) ) .
+
+l:2 rdfs:label (1 2 3 4), (1 2), (3 4) .
+
+l:3 rdfs:label (1 2), (3 4 1 2), (3 4) .
+
+l:4 rdfs:label ( (1 2 3 4) (1 2) (3 4) ) .
+
+l:5 rdfs:label ( (1 2) (3 4 1 2) (3 4) ) .
 
 [ rdfs:label (1 2 3 4), (1 2 3 4) ] .
 
