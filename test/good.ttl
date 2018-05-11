@@ -7,6 +7,7 @@
 @prefix c: <http://c.org/prefix_> .
 @prefix C: <http://cc.org/prefix_> .
 @prefix doid: <http://purl.obolibrary.org/obo/doid#> .
+@prefix l: <http://list.org/> .
 @prefix ns1: <http://myduplicateprefix.org/> .
 @prefix obo: <http://purl.obolibrary.org/obo/> .
 @prefix oboInOwl: <http://www.geneontology.org/formats/oboInOwl#> .
@@ -511,6 +512,17 @@ sco:8 a owl:Class .
             other:bb
             other:cc ) ] .
 
+[ rdfs:label (
+            1
+            2
+            3
+            4 ),
+        (
+            1
+            2
+            3
+            4 ) ] .
+
 [ other:UsedAP "huehuehuehue" ;
     rdf:first "this" ;
     rdf:rest (
@@ -524,3 +536,26 @@ sco:8 a owl:Class .
 BLX:9 rdfs:subClassOf [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom B:1 ] .
+
+l:0 rdfs:label (
+            1
+            2
+            3
+            4 ),
+        (
+            1
+            2
+            3
+            4 ) .
+
+l:1 rdfs:label (
+            (
+                1
+                2
+                3
+                4 )
+            (
+                1
+                2
+                3
+                4 ) ) .
