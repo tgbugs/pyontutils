@@ -265,6 +265,11 @@ def oop(iri, subPropertyOf=None):
     if subPropertyOf is not None:
         yield iri, rdfs.subPropertyOf, subPropertyOf
 
+def odp(iri, subPropertyOf=None):
+    yield iri, rdf.type, owl.DatatypeProperty
+    if subPropertyOf is not None:
+        yield iri, rdfs.subPropertyOf, subPropertyOf
+
 def olit(subject, predicate, *objects):
     if not objects:
         raise ValueError(f'{subject} {predicate} Objects is empty?')
@@ -286,8 +291,9 @@ class ThunkIt(Thunk):
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self):
-        yield from self.outer_self.__call__(*self.args, **self.kwargs)
+    def __call__(self, *args, **kwargs):
+        # FIXME might get two subjects by accident...
+        yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
     def __repr__(self):
         return f'{self.outer_self.__class__.__name__} {self.args} {self.kwargs}'
@@ -304,7 +310,13 @@ class ObjectThunk(Thunk):
         self.object = object
 
     def __call__(self, subject, predicate):
-        yield subject, predicate, self.object
+        if isinstance(self.object, Thunk):
+            if hasattr(self.object, 'predicate'):
+                yield from self.object(subject)
+            else:
+                yield from self.object(subject, predicate)
+        else:
+            yield subject, predicate, self.object
 
     def __repr__(self):
         if isinstance(self.object, rdflib.URIRef):
@@ -321,8 +333,8 @@ class _POThunk(Thunk):
         self.predicate = predicate
         self.object = object
 
-    def full_thunk(self, subject, *pothunks):
-        return ThunkIt(self, subject, *pothunks)
+    def full_thunk(self, subject_or_pothunk, *pothunks):  # FIXME this is not right...?
+        return ThunkIt(self, subject_or_pothunk, *pothunks)
 
     def __call__(self, subject, *pothunks):
         """ Overwrite this function for more complex expansions. """
@@ -348,17 +360,17 @@ class _POThunk(Thunk):
 
 
 class POThunk(_POThunk):
-    def __new__(cls, predicate, object):
+    def __new__(cls, predicate_, object):
         if isinstance(object, type) and issubclass(object, ObjectThunk):
             class InnerThunk(object):
-                _predicate = predicate
+                predicate = predicate_
                 def __call__(self, subject):
-                    return super().__call__(subject, self._predicate)
+                    return super().__call__(subject, self.predicate)
 
             return InnerThunk
         else:
             self = super().__new__(cls)
-            self.__init__(predicate, object)
+            self.__init__(predicate_, object)
             return self
 
 
@@ -652,7 +664,6 @@ class Annotation(Triple):
                     #yield triple, a_p, a_o
 
 
-
 annotation = Annotation()
 
 def _annotation(ap, ao, s, p, o):
@@ -750,6 +761,40 @@ class EquivalentClass(Triple):
             yield subject, self(*thunks)
 
 oec = EquivalentClass()
+
+
+class hasAspectChangeThunk(_POThunk):
+    def __init__(self, aspect, change):
+        """
+        0 a Restriction
+        0 onProperty hasAspectChange
+        0 someValuesFrom 1
+        1 a Class
+        1 subClassOf aspect
+        1 subClassOf 2
+        2 a Restriction
+        2 onProperty hasChangeOverTechnique
+        2 someValuesFrom change
+        """
+        subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
+        restrictionL = Restriction(rdf.first)
+
+        self.po_thunk = restriction(ilxtr.hasAspectChange,
+                                    oc_.full_thunk(subClassOf(aspect),
+                                                   subClassOf(restriction(ilxtr.hasChangeOverTechnique,
+                                                                          change))))
+
+        self.po_thunk = restriction(ilxtr.hasAspectChange,
+                                    oc_.full_thunk(oec(aspect,
+                                                       restrictionL(ilxtr.hasChangeOverTechnique,
+                                                                    change))))
+    def __call__(self, subject):
+        # the caller does correctly yield from thing(subject)
+        return self.po_thunk(subject)
+
+    def serialize(self, subject):
+        yield from self.po_thunk(subject)
+
 
 def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdflib.Graph?
     yield s, p, o
@@ -1725,8 +1770,9 @@ def displayGraph(graph_,
     [graph.bind(k, v) for k, v in graph_.namespaces()]
     [graph.add(t) for t in graph_]
     g = makeGraph('', graph=graph)
-    skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty
+    skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty, owl.topDataProperty
     byto = {owl.ObjectProperty:(rdfs.subPropertyOf, owl.topObjectProperty),
+            owl.DatatypeProperty:(rdfs.subPropertyOf, owl.topDataProperty),
             owl.AnnotationProperty:(rdfs.subPropertyOf, ilxtr.topAnnotationProperty),
             owl.Class:(rdfs.subClassOf, owl.Thing),}
 

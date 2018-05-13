@@ -1,11 +1,12 @@
 import rdflib
 from pyontutils.core import OntId, OntCuries
-from pyontutils.core import simpleOnt, oc, oc_, oop, olit, oec, olist
+from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput
 from pyontutils.core import owl, rdf, rdfs
 
+prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
@@ -196,7 +197,7 @@ triples = (
     olit(ilxtr.hasPrimaryAspect_dAdT, definition,
          'The intended change in primary aspect of primary participant before and after technique'),
 
-    oop(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),
+    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
     olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
          'has constraining aspect value'),
     olit(ilxtr.hasConstrainingAspect_value, definition,

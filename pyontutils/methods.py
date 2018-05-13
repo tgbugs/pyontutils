@@ -1,12 +1,12 @@
 from rdflib import Literal
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
-from pyontutils.core import oc, oc_, oop, olit, oec
+from pyontutils.core import oc, oc_, oop, odp, olit, oec
 from pyontutils.core import restrictions, annotation, restriction
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf
+from pyontutils.core import partOf, hasAspectChangeThunk
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, methods_core
+from pyontutils.methods_core import asp, tech, prot, methods_core
 
 filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
@@ -20,7 +20,6 @@ comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
 
-
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
     yield from olit(subject, rdfs.label, label)
@@ -29,7 +28,6 @@ def t(subject, label, def_, *synonyms):
 
     if synonyms:
         yield from olit(subject, NIFRID.synonyms, *synonyms)
-
 
 def _t(subject, label, *rests, def_=None, synonyms=tuple()):
     members = tuple()
@@ -564,7 +562,7 @@ triples = (
        # a living one
        # (ilxtr.hasPriorTechnique, tech.killing),  # FIXME HRMMMMMM with same primary participant...
        (ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
-       (ilxtr.hasConstrainingAspect_value, ilxtr.false), # Literal(False)),  # FIXME dataProperty???
+       (ilxtr.hasConstrainingAspect_value, Literal(False)), # Literal(False)),  # FIXME dataProperty???
        #(ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
        # (ilxtr.hasConstrainingAspect, ilxtr['is']),
        synonyms=('ex vivo',),),
@@ -582,7 +580,7 @@ triples = (
        # because right now we only care about the details of the process and what we are measuring
        # that is what the value is included explicitly, because some day we might find out that our
        # supposedly universal axiom is not, and then we are cooked
-       (ilxtr.hasConstrainingAspect_value, ilxtr.true), #  FIXME data property  Literal(True)),
+       (ilxtr.hasConstrainingAspect_value, Literal(True)), #  FIXME data property  Literal(True)),
        synonyms=('in vivo',),),
     _t(i.d, 'in utero technique',
        # has something in 
@@ -617,11 +615,27 @@ triples = (
        synonyms=('atlas guided microdissection',),),
 
     _t(i.d, 'crystallization technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasPrimaryAspect, asp.latticePeriodicity),  # physical order
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       # cyrstallized vs amorphous
+       # xray diffraction can tell you what proportion of the whole samle is crystallized (S. Manna)
+       def_=('A technique for enducing a regular crystal patterning '
+             'on a set of non-patterend components'),
        synonyms=('crystallization',)),
 
+    _t(i.d, 'crystal quality evalulation technique',
+       (ilxtr.hasPrimaryAspect, asp.physicalOrderedness),
+       # (ilxtr.hasPrimaryAspect, asp.percentCrystallinity),
+       # there are many other metrics that can be used that are subclasses
+      ),
+
+    _t(i.d, 'tissue clearing technique',
+       (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
+      ),
+
     _t(i.d, 'CLARITY technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.isConstrainedBy, prot.CLARITY),
+       (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
        def_='A tissue clearing technique',
        synonyms=('CLARITY',)),
 
@@ -629,8 +643,21 @@ triples = (
        # prevent decay, decomposition
        # modify the mechanical properties to prevent disintegration
        # usually crosslinks proteins?
-       (ilxtr.hasSomething, i.d),
+       # cyrofixation also for improving the mechanical properties
+       # literally "fix" something so that it doesn't move or changed, it is "fixed" in time
+       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
+       #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       #(ilxtr.hasPrimaryAspect, asp.likelinessToDecompose),
+       #(ilxtr.hasPrimaryAspect, asp.mechanicalRigidity),
+       #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        synonyms=('fixation',)),
+
+    oc_(tech.fixation,
+        hasAspectChangeThunk(asp.mechanicalRigidity, ilxtr.positive),
+        hasAspectChangeThunk(asp.spontaneousChangeInStructure, ilxtr.negative),
+       ),
+
 
     _t(i.d, 'tissue fixation technique',
        tech.fixation,
@@ -1020,7 +1047,7 @@ triples = (
     _t(i.d, 'confocal microscopy technique',
        (hasParticipant, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
 
-       (ilxtr.hasProtocol, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
+       (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
        synonyms=('confocal microscopy',)),
 
     _t(tech.imaging, 'imaging technique',
