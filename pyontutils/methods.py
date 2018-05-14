@@ -1,10 +1,10 @@
 from rdflib import Literal
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
 from pyontutils.core import oc, oc_, oop, odp, olit, oec
-from pyontutils.core import restrictions, annotation, restriction, EquivalentClass
+from pyontutils.core import restrictions, annotation, restriction, restrictionN
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasAspectChangeThunk, unionOf, Restriction
+from pyontutils.core import partOf, hasAspectChangeThunk, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, prot, methods_core
 
@@ -21,6 +21,7 @@ _repo = True
 debug = False
 
 restHasValue = Restriction(None, owl.hasValue)
+restrictionS = Restriction(owl.someValuesFrom)
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -117,11 +118,14 @@ triples = (
     ),
 
     _t(i.d, 'chemical technique',  # FIXME but not molecular? or are molecular subset?
-       (hasParticipant,
+       (hasParticipant,  # FIXME hasParticipant is incorrect? too broad?
         OntTerm('CHEBI:24431', label='chemical entity')
        ),),
 
     _t(i.d, 'molecular technique',  # FIXME help I have no idea how to model this same with chemical technique
+       # TODO FIXME I think it is clear that there are certain techniques which are
+       # named in a way that is assertional, not definitional
+       # it seems appropriate for those arbitrarily named techniques to use subClassOf?
        (hasParticipant,
         OntTerm('CHEBI:25367', label='molecule')
        ),),
@@ -132,17 +136,26 @@ triples = (
        ),),
 
     _t(i.d, 'cell type induction technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1813327414', label='Cell')),
        (hasParticipant, ilxtr.inducationFactor),
     ),
 
-    _t(i.d, 'cloning technique',
-       (hasParticipant,
-        OntTerm('CHEBI:16991', label='deoxyribonucleic acid')
+    _t(i.d, 'molecular cloning technique',
+
+       (ilxtr.hasPrimaryParticipant,
+        OntTerm('CHEBI:33696', label='nucleic acid')
+        #OntTerm('CHEBI:16991', label='deoxyribonucleic acid')
         # FIXME other options are OntTerm('SAO:454034570') or OntTerm('SO:0000352')
         ),
+       # the objective is to isolate a _specific_ sequence of DNA/RNA
+       # amplification is the next step
+       (ilxtr.hasPrimaryAspect, asp['count']),  # the general objective being to increase the DNA
+       synonyms=('cloning technique', 'molecular cloning')
     ),
+
     _t(i.d, 'microarray technique',
        (hasInput,
+        # TODO leverage EFO here
         # OntTerm(search='microarray', limit=20, prefix='NIFSTD')  # nice trick
         OntTerm('BIRNLEX:11031', label='Microarray platform')
         ),
@@ -151,6 +164,7 @@ triples = (
     _t(tech.sequencing, 'sequencing technique',
        # hasParticipant molecule or chemical?
        (hasParticipant, ilxtr.thingWithSequence),  # peptide nucleotie sacharide
+       (ilxtr.hasPrimaryAspect, asp.sequence),  # nucleic and peptidergic, and chemical etc.
         ),
 
     _t(tech._naSeq, 'nucleic acid sequencing technique',
@@ -161,35 +175,40 @@ triples = (
         ),
        (ilxtr.hasPrimaryAspect,
         #OntTerm(term='sequence')
-        OntTerm('SO:0000001', label='region', synonyms=['sequence'])  # label='region'
+        #OntTerm('SO:0000001', label='region', synonyms=['sequence'])  # label='region'
+        asp.sequence,  # pretty sure that SO:0000001 is not really an aspect...
        ),
         ),
 
     _t(i.d, 'deep sequencing technique',
        tech._naSeq,
+       (ilxtr.isConstrainedBy, prot.deepSequencing),  # FIXME circular
        synonyms=('deep sequencing',)
     ),
 
     _t(i.d, 'sanger sequencing technique',
        tech._naSeq,
+       (ilxtr.isConstrainedBy, prot.sangerSequencing),
+       # we want these to differentiate based on the nature of the technqiue
        synonyms=('sanger sequencing',)
     ),
 
     _t(i.d, 'shotgun sequencing technique',
        tech._naSeq,
+       (ilxtr.isConstrainedBy, prot.shotgunSequencing),
        synonyms=('shotgun sequencing',)
     ),
 
     _t(i.d, 'single cell sequencing technique',
-       tech.sequencing,
        # FIXME vs pp -> *NA from a single cell
+       (hasParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in a single cell
        (hasParticipant, OntTerm('SAO:1813327414', label='Cell')),
        # (ilxtr.hasPrimaryParticipantCardinality, 1)  # FIXME need this...
        synonyms=('single cell sequencing',)
     ),
 
     _t(i.d, 'single nucleus sequencing technique',
-       tech.sequencing,
+       (hasParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in the nucleus...
        (hasParticipant, OntTerm('GO:0005634', label='nucleus')),
        # (ilxtr.hasPrimaryParticipantCardinality, 1)  # FIXME need this...
        synonyms=('single nucleus sequencing',)
@@ -348,23 +367,33 @@ triples = (
 
     _t(i.d, 'genetic technique',
        (hasParticipant,
-        OntTerm('SO:0000704', label='gene')  # prefer SO for this case
+        # the participant is really some DNA that corresponds to a gene
+        OntTerm('SO:0000704', label='gene')  # prefer SO for this case?
         #OntTerm(term='gene', prefix='obo')  # representing a gene
         ),
        # FIXME OR has participant some nucleic acid...
     ),
 
-    _t(i.d, 'amplification technique',
+    _t(tech.enrichment, 'enrichment technique',
+       #(ilxtr.hasSomething, i.d),
+       (ilxtr.hasPrimaryAspect, asp.proportion),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       def_='increase proporation',  # the count stays the same
+       # this is a purification technique
+       # amplification is a creating technique
+    ),
+
+    _t(tech.amplification, 'amplification technique',
        (ilxtr.hasPrimaryAspect, asp['count']),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.increase),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        def_='increase number',
     ),
 
-    _t(i.d, 'enrichment technique',
-       (ilxtr.hasSomething, i.d),
-       def_='increase proporation',
-    ),
-
+    _t(i.d, 'nucleic acid amplification technique',
+       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),
+       (ilxtr.hasPrimaryAspect, asp['count']),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+      ),
     _t(i.d, 'expression manipulation technique',
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'conditional expression manipulation technique',
@@ -492,9 +521,14 @@ triples = (
     # 'tracing the relationship between input and output'
 
     _t(i.d, 'statistical technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'computational technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d)
+       #(hasPart, tech.statistics)
+      ),
+
+    _t(i.d, 'computational technique',  # these seem inherantly circulat... they use computation...
+       (ilxtr.hasSomething, i.d)
+      ),
+
     _t(i.d, 'simulation technique',
        (ilxtr.hasSomething, i.d)),
 
@@ -502,7 +536,9 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'preservation technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, i.d)
+
+      ),
 
     _t(i.d, 'tissue preservation technique',
        (ilxtr.hasSomething, i.d)),
@@ -579,6 +615,7 @@ triples = (
 
     _t(i.d, 'in vivo technique',
        # (hasParticipant, ilxtr.somethingThatIsAlive),
+       ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        (ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME rocks can have aspect aliveness,
        # aspects don't tell you about the universality of a result in the way that a quality might
@@ -1363,27 +1400,46 @@ triples = (
     ),
 
     _t(i.d, 'dietary technique',
-       (ilxtr.hasSomething, i.d),
+       ilxtr.technique,
+       # unionOf hasPart dietary technique OR hasPrimaryParticipant food
+       unionOf(intersectionOf(
+           restrictionN(ilxtr.hasPrimaryParticipant, ilxtr.food_and_water),  # metabolic input
+           restrictionN(ilxtr.hasPrimaryAspect, asp.allocation)),
+           restrictionN(hasPart, i.p))
     ),
 
     _t(i.d, 'dietary restriction technique',
        (ilxtr.hasSomething, i.d),
+       (hasParticipant, ilxtr.food_and_water),  # metabolic input
+       # reduction in some metabolic input
     ),
 
     _t(i.d, 'food deprivation technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.food),
-       (ilxtr.hasPrimaryAspect, asp.amount),
+       (ilxtr.hasPrimaryAspect, asp.allocation),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       # the above is correct, use hasPart
+       # where the food amount is decresed, how to bind food to negative
+       # do we have to use has part?!
+       #hasPart, food
+       #(hasParticipant, ilxtr.food),
+       #(ilxtr.hasConstrainingAspect, asp.amount),
+       #oc_(ilxtr.food,
+           #asp.amount, ilxtr.negative),
+       #hasAspectChangeThunk(asp.amount, ilxtr.negative),
        synonyms=('starvation technique',
                  'food restriction technique',
-       )
+                )
     ),
+
+    _t(i.b, 'technique that makes use of food deprivation',
+       (hasPart, i.p),),
 
     _t(i.d, 'water deprivation technique',
        (ilxtr.hasPrimaryParticipant,
         OntTerm('CHEBI:15377', label='water')
        ),
-       (ilxtr.hasPrimaryAspect, asp.amount),
+       (ilxtr.hasPrimaryAspect, asp.allocation),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        synonyms=('water restriction technique',
                  'water restriction',
@@ -1391,8 +1447,28 @@ triples = (
     ),
 
     _t(tech.sectioning, 'sectioning technique',
-       (hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
-       synonyms=('sectioning',),),  # FIXME
+       tech.destroying,  # ok to assert here
+       # easier than having say inputs are not outputs every time
+       # NOTE: the thing to be sectioned is thus the primary participant
+       # conservation of mass/energy implies that it is also a creating technique
+       # if viewed from the persective of the sections
+       # we should be able to infer that the outputs
+       # from a sectioning technique were 'created'
+       #(hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
+       (hasOutput,
+        oc_.full_thunk(intersectionOf(
+            restrictionN(partOf,
+                         restrictionN(ilxtr.primaryParticipantIn,
+                                      tech.sectioning)),
+            restrictionN(ilxtr.hasAssessedAspect,
+                         asp.flatness)))),
+                        #intersectionOf(
+                        # hasAssessedAspect better than hasAspect?
+                        # implies there is another technique...
+                        # you can measure the flatness of the himallayals
+                        # or of an electron if you wanted
+                        # so hasAspect is maybe not the best?
+       synonyms=('sectioning',)),  # FIXME
 
     _t(i.d, 'tissue sectioning technique',
        (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000479', label='tissue')),
@@ -1536,51 +1612,66 @@ triples = (
     ),
 )
 triples += (  # aspects
-    oc(asp.amount, ilxtr.aspect),
-    oc(asp['count'], ilxtr.amount),
+            oc(asp.amount, asp['is']),
+            oc(asp['count'], asp.amount),
 
-    oc(asp.behavioral, ilxtr.aspect),
+            oc(asp.allocation, ilxtr.aspect),
+            olit(asp.allocation, definition,
+                 ('Allocation is the amount of something in a given place '
+                  'rather than the total universal amount of a thing. '
+                  'For example if I move 100 grains of salt from a container '
+                  'to a scale, I have changed the allocation of the salt (solid). '
+                  'If I dissolve the salt in water then I have negatively impacted '
+                  'the amount of total salt (solid) in the universe since that salt '
+                  'is now ionized in solution.')),
 
-    oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
+            oc(asp.behavioral, ilxtr.aspect),
 
-    oc(asp.sensory, ilxtr.aspect),
-    oc(asp.vision, asp.sensory),
+            oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
 
-    oc(asp.electromagnetic, ilxtr.aspect),
-    oc(asp.electrical, asp.electromagnetic),
-    oc(asp.voltage, asp.electrical),
-    oc(asp.current, asp.electrical),
-    oc(asp.charge, asp.electrical),
-    oc(asp.magnetic, asp.electromagnetic),
+            oc(asp.sequence, ilxtr.aspect),
+            #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
+
+            oc(asp.sensory, ilxtr.aspect),
+            oc(asp.vision, asp.sensory),
+
+            oc(asp.electromagnetic, ilxtr.aspect),
+            oc(asp.electrical, asp.electromagnetic),
+            oc(asp.voltage, asp.electrical),
+            oc(asp.current, asp.electrical),
+            oc(asp.charge, asp.electrical),
+            oc(asp.magnetic, asp.electromagnetic),
 )
 
 triples += (  # other
-    oc(ilxtr.thingWithSequence),
-    oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
-    oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
-    oc(ilxtr.image, ilxtr.informationArtifact),
-    olit(ilxtr.image,
-         definition,
-         ('A symbolic representation of some spatial or spatial-temporal '
-          'aspect of a participant. Often takes the form of a 2d or 3d matrix '
-          'that has some mapping to sensor space and may also be collected at '
-          'multiple timepoints. Regardless of the ultimate format has some '
-          'part that can be reduced to a two dimensional matrix.'  # TODO
-         )),
-    oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
+            oc(ilxtr.thingWithSequence),
+            oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+            oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
+            oc(ilxtr.image, ilxtr.informationArtifact),
+            olit(ilxtr.image,
+                 definition,
+                 ('A symbolic representation of some spatial or spatial-temporal '
+                  'aspect of a participant. Often takes the form of a 2d or 3d matrix '
+                  'that has some mapping to sensor space and may also be collected at '
+                  'multiple timepoints. Regardless of the ultimate format has some '
+                  'part that can be reduced to a two dimensional matrix.'  # TODO
+                 )),
+            oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
 
-    oc(ilxtr.food),  # TODO edible organic matter with variable nutritional value depending on the organism
-    oc(ilxtr.highFatDiet, ilxtr.food),
-    oc(ilxtr.DIODiet, ilxtr.highFatDiet),
-    oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
+            oc(ilxtr.food),  # TODO edible organic matter with variable nutritional value depending on the organism
+            oc(ilxtr.highFatDiet, ilxtr.food),
+            oc(ilxtr.DIODiet, ilxtr.highFatDiet),
+            oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
 
-    # TODO have parcellation-artifacts import methods-core?
-    oc(ilxtr.parcellationArtifact, ilxtr.informationArtifact),
-    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
-    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
-    oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
-    olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
-    olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
+            # TODO have parcellation-artifacts import methods-core?
+            oc(ilxtr.parcellationArtifact, ilxtr.informationArtifact),
+            oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+            oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+            oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
+            olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
+            olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
+
+            (ilxtr.negative, owl.disjointWith, ilxtr.positive),
 
 )
 

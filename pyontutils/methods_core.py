@@ -121,6 +121,11 @@ triples = (
     olit(ilxtr.hasPrimaryParticipant, rdfs.comment,
          'This property should be used to mark the key input and/or output of a process if its type is not generic.'),
 
+    oop(ilxtr.primaryParticipantIn),
+    olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
+    (ilxtr.primaryParticipantIn, owl.inverseOf, ilxtr.hasPrimaryParticipant),
+
+
     ## intentions
     oop(ilxtr.hasIntention),  # not really sco realizes:? it also includes intended changes in qualities?
     olit(ilxtr.hasIntention, rdfs.label, 'has intention'),

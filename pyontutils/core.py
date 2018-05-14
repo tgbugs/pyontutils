@@ -500,6 +500,7 @@ class Restriction(Triple):
             yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
 
 restriction = Restriction(rdfs.subClassOf)
+restrictionN = Restriction(None)
 
 class Restrictions(Restriction):
     def __call__(self, *predicate_objects):
@@ -827,14 +828,13 @@ class hasAspectChangeThunk(_POThunk):
         2 someValuesFrom change
         """
         subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
-        restrictionN = Restriction(None)
 
         #self.pothunk = restrictionN(ilxtr.hasAspectChange,
                                     #oc_.full_thunk(subClassOf(aspect),
                                                    #subClassOf(restriction(ilxtr.hasChangeOverTechnique,
                                                                           #change))))
 
-        self.pothunk = restrictionN(ilxtr.hasAspectChange,
+        self.pothunk = restrictionN(ilxtr.hasAspectChange,  # FIXME this is too complex...
                                     oc_.full_thunk(intersectionOf(aspect,
                                                                   restrictionN(ilxtr.hasChangeOverTechnique,
                                                                                change))))
