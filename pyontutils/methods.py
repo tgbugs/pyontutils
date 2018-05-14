@@ -1,10 +1,10 @@
 from rdflib import Literal
 from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
 from pyontutils.core import oc, oc_, oop, odp, olit, oec
-from pyontutils.core import restrictions, annotation, restriction
+from pyontutils.core import restrictions, annotation, restriction, EquivalentClass
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasAspectChangeThunk
+from pyontutils.core import partOf, hasAspectChangeThunk, unionOf, Restriction
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, prot, methods_core
 
@@ -20,6 +20,8 @@ comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
 
+restHasValue = Restriction(None, owl.hasValue)
+
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
     yield from olit(subject, rdfs.label, label)
@@ -29,7 +31,7 @@ def t(subject, label, def_, *synonyms):
     if synonyms:
         yield from olit(subject, NIFRID.synonyms, *synonyms)
 
-def _t(subject, label, *rests, def_=None, synonyms=tuple()):
+def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec):
     members = tuple()
     _rests = tuple()
     for rest in rests:
@@ -47,7 +49,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple()):
 
 
     yield from oc(subject)
-    yield from oec.serialize(subject, *members, *restrictions(*rests))
+    yield from equivalentClass.serialize(subject, *members, *restrictions(*rests))
     yield from olit(subject, rdfs.label, label)
     if def_:
         yield from olit(subject, definition, def_)
@@ -553,6 +555,7 @@ triples = (
        # (hasParticipant, ilxtr.somethingThatUsedToBeAlive),
        # more like 'was' a cellular organism
        # ah time... 
+       ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        # has part some technique destroying primary participant
        # we really really need dead organisms to still have that type
@@ -562,16 +565,18 @@ triples = (
        # a living one
        # (ilxtr.hasPriorTechnique, tech.killing),  # FIXME HRMMMMMM with same primary participant...
        (ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
-       (ilxtr.hasConstrainingAspect_value, Literal(False)), # Literal(False)),  # FIXME dataProperty???
+       restHasValue(ilxtr.hasConstrainingAspect_value, Literal(False)), # Literal(False)),  # FIXME dataProperty???
        #(ilxtr.hasConstrainingAspect, asp.livingness),  # FIXME aliveness?
        # (ilxtr.hasConstrainingAspect, ilxtr['is']),
        synonyms=('ex vivo',),),
+
     _t(i.d, 'in situ technique',  # TODO FIXME
        # detecting something in the location that it was originally in
        # not in the dissociated remains thereof...
        # hasPrimaryParticipantLocatedIn
        (ilxtr.hasSomething, i.d),
        synonyms=('in situ',),),
+
     _t(i.d, 'in vivo technique',
        # (hasParticipant, ilxtr.somethingThatIsAlive),
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
@@ -580,12 +585,14 @@ triples = (
        # because right now we only care about the details of the process and what we are measuring
        # that is what the value is included explicitly, because some day we might find out that our
        # supposedly universal axiom is not, and then we are cooked
-       (ilxtr.hasConstrainingAspect_value, Literal(True)), #  FIXME data property  Literal(True)),
+       restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)), #  FIXME data property  Literal(True)),
        synonyms=('in vivo',),),
+
     _t(i.d, 'in utero technique',
        # has something in 
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
        synonyms=('in vitro',),),
+
     _t(i.d, 'in vitro technique',
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAGlassContainer),
        synonyms=('in vitro',),),
@@ -651,12 +658,14 @@ triples = (
        #(ilxtr.hasPrimaryAspect, asp.likelinessToDecompose),
        #(ilxtr.hasPrimaryAspect, asp.mechanicalRigidity),
        #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       ilxtr.technique,
+       unionOf(hasAspectChangeThunk(asp.mechanicalRigidity, ilxtr.positive),
+               hasAspectChangeThunk(asp.spontaneousChangeInStructure, ilxtr.negative)),
+       #equivalentClass=EquivalentClass(owl.unionOf),
        synonyms=('fixation',)),
 
-    oc_(tech.fixation,
-        hasAspectChangeThunk(asp.mechanicalRigidity, ilxtr.positive),
-        hasAspectChangeThunk(asp.spontaneousChangeInStructure, ilxtr.negative),
-       ),
+    #oc_(tech.fixation,
+       #),
 
 
     _t(i.d, 'tissue fixation technique',

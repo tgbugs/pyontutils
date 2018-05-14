@@ -683,6 +683,57 @@ def annotations(pairs, s, p, o):
     for predicate, object in pairs:
         yield n0, predicate, check_value(object)
 
+class PredicateList(Triple):
+    predicate = rdf.List
+    typeWhenSubjectIsBlank = owl.Class
+
+    def __init__(self):
+        self._list = List({owl.Restriction:Restriction(rdf.first)})
+        self.lift_rules = {rdf.first:self._list, rdf.rest:None}
+
+    def __call__(self, *objects_or_thunks):
+        class IntersectionOfThunk(Thunk):
+            outer_self = self
+            def __init__(self):
+                self.thunks = objects_or_thunks
+
+            def __call__(self, subject, predicate=None):
+                # FIXME hrm... there should be a way to regularize this?
+                # or is it the case than an PO combinator needs to know
+                # what to do when upstream doesn't know what it is
+                # but want's to attach to an object which doesn't exist yet
+                if predicate is not None:
+                    s1 = subject
+                    subject = rdflib.BNode()
+                    yield s1, predicate, subject
+                    yield subject, rdf.type, self.outer_self.typeWhenSubjectIsBlank
+
+                yield from self.outer_self.serialize(subject, self.thunks)
+
+            def __repr__(self):
+                return f'{self.__class__.__name__}{self.thunks!r}'
+
+        return IntersectionOfThunk()
+
+    def serialize(self, subject, objects_or_thunks):
+        if subject is None:
+            subject = rdflib.BNode()
+
+        yield from self._list.serialize(subject, self.predicate, *objects_or_thunks)
+
+
+class IntersectionOf(PredicateList):
+    predicate = owl.intersectionOf
+
+intersectionOf = IntersectionOf()
+
+
+class UnionOf(PredicateList):
+    predicate = owl.unionOf
+
+unionOf = UnionOf()
+
+
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of
         owl functional syntax in python. """
@@ -762,7 +813,6 @@ class EquivalentClass(Triple):
 
 oec = EquivalentClass()
 
-
 class hasAspectChangeThunk(_POThunk):
     def __init__(self, aspect, change):
         """
@@ -777,23 +827,23 @@ class hasAspectChangeThunk(_POThunk):
         2 someValuesFrom change
         """
         subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
-        restrictionL = Restriction(rdf.first)
+        restrictionN = Restriction(None)
 
-        self.po_thunk = restriction(ilxtr.hasAspectChange,
-                                    oc_.full_thunk(subClassOf(aspect),
-                                                   subClassOf(restriction(ilxtr.hasChangeOverTechnique,
-                                                                          change))))
+        #self.pothunk = restrictionN(ilxtr.hasAspectChange,
+                                    #oc_.full_thunk(subClassOf(aspect),
+                                                   #subClassOf(restriction(ilxtr.hasChangeOverTechnique,
+                                                                          #change))))
 
-        self.po_thunk = restriction(ilxtr.hasAspectChange,
-                                    oc_.full_thunk(oec(aspect,
-                                                       restrictionL(ilxtr.hasChangeOverTechnique,
-                                                                    change))))
-    def __call__(self, subject):
+        self.pothunk = restrictionN(ilxtr.hasAspectChange,
+                                    oc_.full_thunk(intersectionOf(aspect,
+                                                                  restrictionN(ilxtr.hasChangeOverTechnique,
+                                                                               change))))
+    def __call__(self, subject, *pothunks):
         # the caller does correctly yield from thing(subject)
-        return self.po_thunk(subject)
+        return self.pothunk(subject, *pothunks)
 
     def serialize(self, subject):
-        yield from self.po_thunk(subject)
+        yield from self.pothunk(subject)
 
 
 def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdflib.Graph?
