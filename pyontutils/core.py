@@ -378,22 +378,12 @@ oc_ = POThunk(rdf.type, owl.Class)
 
 
 class RestrictionThunk(_POThunk):
-    def __call__(self, subject, predicate=None):
-        #print('in RestrictionThunk:', self.predicate, self.object)
-        generator = self.outer_self.serialize(subject, self.predicate, self.object)
-        if self.outer_self.predicate is None and predicate is None:
-            raise TypeError(f'No predicate defined for {self!r}')
-        elif self.outer_self.predicate is not None and predicate is not None:
-            if self.outer_self.predicate != predicate:
+    def __call__(self, subject, linking_predicate=None):
+        if self.outer_self.predicate is not None and linking_predicate is not None:
+            if self.outer_self.predicate != linking_predicate:
                 raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
-            else:  # this branch was missing
-                yield from generator
-        elif self.outer_self.predicate is None:
-            self.outer_self.predicate = predicate
-            yield from generator
-            self.outer_self.predicate = None
-        else:
-            yield from generator
+
+        yield from self.outer_self.serialize(subject, self.predicate, self.object, linking_predicate)
 
 
 class RestrictionsThunk(RestrictionThunk):
@@ -463,9 +453,15 @@ class Restriction(Triple):
         rt = type('RestrictionThunk', (RestrictionThunk,), dict(outer_self=self))
         return rt(p, o)
 
-    def serialize(self, s, p, o):  # lift, serialize, expand
+    def serialize(self, s, p, o, linking_predicate=None):  # lift, serialize, expand
         subject = rdflib.BNode()
-        yield s, self.predicate, subject
+        if self.predicate is not None:
+            yield s, self.predicate, subject
+        elif linking_predicate is not None:
+            yield s, linking_predicate, subject
+        else:
+            subject = s  # link directly
+
         yield subject, rdf.type, owl.Restriction
         yield subject, owl.onProperty, p
         if isinstance(o, Thunk):
