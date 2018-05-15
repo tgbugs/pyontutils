@@ -4,7 +4,7 @@ from pyontutils.core import oc, oc_, oop, odp, olit, oec
 from pyontutils.core import restrictions, annotation, restriction, restrictionN
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasAspectChangeThunk, unionOf, intersectionOf, Restriction, EquivalentClass
+from pyontutils.core import partOf, hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, prot, methods_core
 
@@ -15,7 +15,8 @@ prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
             'NLX',
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
+#imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
+imports = methods_core.iri,
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
@@ -91,7 +92,9 @@ triples = (
        # TODO this falls into an extrinsic classification technique...
        # or a context classification/naming technique...
        (ilxtr.isConstrainedBy, ilxtr.parcellationArtifact),
-       (ilxtr.hasPrimaryAspect, asp.location),
+       #(ilxtr.assigns, asp.location),  # FIXME ilxtr.assigns needs to imply naming...
+       (ilxtr.asserts, asp.location),  # FIXME ilxtr.asserts needs to imply naming...
+       # (ilxtr.hasPrimaryAspect, asp.location),
        synonyms=('registration technique',
                  'atlas registration',
                  'registration')),
@@ -696,8 +699,8 @@ triples = (
        #(ilxtr.hasPrimaryAspect, asp.mechanicalRigidity),
        #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        ilxtr.technique,
-       unionOf(hasAspectChangeThunk(asp.mechanicalRigidity, ilxtr.positive),
-               hasAspectChangeThunk(asp.spontaneousChangeInStructure, ilxtr.negative)),
+       unionOf(hasAspectChangeCombinator(asp.mechanicalRigidity, ilxtr.positive),
+               hasAspectChangeCombinator(asp.spontaneousChangeInStructure, ilxtr.negative)),
        #equivalentClass=EquivalentClass(owl.unionOf),
        synonyms=('fixation',)),
 
@@ -954,15 +957,6 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('ultracentrifugation',),),
 
-    _t(tech.measure, 'measurement technique',
-       (hasParticipant,
-        # FIXME vs material entity (alignment to what I mean by 'being')
-        OntTerm('BFO:0000001', label='entity')
-       ),
-       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
-       synonyms=('measure',),
-    ),
-
     _t(i.d, 'biological activity measurement technique',
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # TODO
        synonyms=('activity measurement technique', 'bioassay')),
@@ -985,6 +979,39 @@ triples = (
        synonyms=('acquisition technique', 'procurement', 'acquistion', 'get')
     ),
 
+    _t(i.d, 'technique defined by constraint',
+       (ilxtr.hasConstrainingAspect, ilxtr.aspect),
+      ),
+
+    _t(tech.measuring, 'measuring technique',
+       # TODO is detection distinct from measurement if there is no explicit symbolization?
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
+       (hasParticipant,
+        # FIXME vs material entity (alignment to what I mean by 'being')
+        OntTerm('BFO:0000001', label='entity')
+       ),
+       synonyms=('measure', 'measurment technique'),
+    ),
+
+    _t(tech.probing, 'probing technique',
+       (ilxtr.hasProbe, owl.Thing),
+       #(ilxtr.hasProbe, OntTerm('BFO:0000040', label='material entity')),
+       # FIXME technically could be an informational entity?
+       # if I probe someone by speaking latin but they do not respond
+       # vs if they do it is not the physical content of the sounds
+       # it is how they interact with the state of the other person's brain
+       def_=('Probing techniques attempt to change the state of a thing without changing '
+            'how it is named. Hitting something with just enough light to excite but not to '
+            'bleach would be one example, as would poking something with a non-pointy stick.'
+           ),
+     ),
+
+    _t(tech.allocating, 'allocating technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
+       def_=('Allocating techniques move things around without changing how their participants '
+             'are named. More accurately they move them around without changing any part of their '
+             'functional defintions which are invariant as a function of their location.'),
+      ),
     _t(tech.ising, 'ising technique',
        (ilxtr.hasPrimaryAspect, asp['is']),
        def_=('Ising techniques are techniques that affect whether a thing \'is\' or not. '
@@ -1017,8 +1044,8 @@ triples = (
     #disjointwith(oec(None, ilxtr.technique,
                   #*restrictions((ilxtr.hasPrimaryParticipant,
                                   #OntTerm('continuant', prefix='BFO'))))),
-    #obnode(object_predicate_thunk(rdf.type, owl.Class),
-           #oec_thunk(ilxtr.technique,
+    #obnode(object_predicate_combinator(rdf.type, owl.Class),
+           #oec_combinator(ilxtr.technique,
                      #(ilxtr.hasPrimaryParticipant,)
                      #(hasOutput,))),
 
@@ -1028,6 +1055,8 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),),
 
     _t(tech.maintaining, 'maintaining technique',
+       # if these were not qualified by the primary participant
+       # then this would be both a creating and a destroying technique
        (ilxtr.hasPrimaryAspect, asp['is']),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero),
        synonyms=('maintenance technique',),
@@ -1282,7 +1311,7 @@ triples = (
 
     _t(i.d, 'depolarization technique',
        (ilxtr.hasPrimaryAspect, asp.voltage),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),  # or is it neative (heh)
        # yes this is confusing, but cells have negative membrane potentials
     ),
 
@@ -1426,7 +1455,7 @@ triples = (
        #(ilxtr.hasConstrainingAspect, asp.amount),
        #oc_(ilxtr.food,
            #asp.amount, ilxtr.negative),
-       #hasAspectChangeThunk(asp.amount, ilxtr.negative),
+       #hasAspectChangeCombinator(asp.amount, ilxtr.negative),
        synonyms=('starvation technique',
                  'food restriction technique',
                 )
@@ -1456,7 +1485,7 @@ triples = (
        # from a sectioning technique were 'created'
        #(hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
        (hasOutput,
-        oc_.full_thunk(intersectionOf(
+        oc_.full_combinator(intersectionOf(
             restrictionN(partOf,
                          restrictionN(ilxtr.primaryParticipantIn,
                                       tech.sectioning)),
@@ -1534,7 +1563,8 @@ triples = (
        synonyms=('southern blot',)
     ),
     _t(i.d, 'western blotting technique',
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasPrimaryParticipant, OntTerm('PR:000000001', label='protein')),  # at least one
+       (hasParticipant, OntTerm('BIRNLEX:2110', label='Antibody')),
        synonyms=('wester blot',)),
     (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000112")),
 
@@ -1612,19 +1642,6 @@ triples = (
     ),
 )
 triples += (  # aspects
-            oc(asp.amount, asp['is']),
-            oc(asp['count'], asp.amount),
-
-            oc(asp.allocation, ilxtr.aspect),
-            olit(asp.allocation, definition,
-                 ('Allocation is the amount of something in a given place '
-                  'rather than the total universal amount of a thing. '
-                  'For example if I move 100 grains of salt from a container '
-                  'to a scale, I have changed the allocation of the salt (solid). '
-                  'If I dissolve the salt in water then I have negatively impacted '
-                  'the amount of total salt (solid) in the universe since that salt '
-                  'is now ionized in solution.')),
-
             oc(asp.behavioral, ilxtr.aspect),
 
             oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?

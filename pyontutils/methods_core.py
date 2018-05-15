@@ -3,17 +3,19 @@ from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
 from pyontutils.core import owl, rdf, rdfs
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
+obo, *_ = makeNamespaces('obo')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-imports = NIFTTL['nif_backend.ttl'],
+#imports = NIFTTL['nif_backend.ttl'],
+imports = obo['bfo.owl'],
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
 debug = True
@@ -236,6 +238,21 @@ triples = (
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
 
+    oc(ilxtr.naming),
+    olit(ilxtr.naming, rdfs.label, 'naming'),
+    olit(ilxtr.naming, definition ,
+         ('Naming is an assertional process that is orthogonal to measuring.'
+          'Names may be assigned as a product of measurements, but the assignemtn '
+          'of a name can only be based on aspects of the thing, the name can never be '
+          'an aspect of the thing. Names may also be assigned based on aspects of the '
+          'process that produced the thing, or the prvious state of the thing. '
+          'For example a protein dissociated from its original cell/tissue no longer '
+          'contains sufficient information to reconsturct where it came from based on '
+          'any measurements that can be made on it beyond the species that it came from '
+          'and maybe where the individual lived if there are enough atoms to do an isotope test.'
+          'A cell on the other hand may very well have enough information in its RNA and DNA to '
+          'allow for a bottom up assignment of a name based on its gene expression pattern.')),
+
     oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
     olit(ilxtr.aspect, rdfs.comment,
@@ -261,6 +278,20 @@ triples = (
           'of certain operational definitions, such as livingness, which imply that our '
           'operational definition for isness is invariant to dead.'
          )),
+
+    oc(asp.amount, asp['is']),
+    oc(asp['count'], asp.amount),
+
+    oc(asp.location, ilxtr.aspect),
+    oc(asp.allocation, asp.location),
+    olit(asp.allocation, definition,
+         ('Allocation is the amount of something in a given place '
+          'rather than the total universal amount of a thing. '
+          'For example if I move 100 grains of salt from a container '
+          'to a scale, I have changed the allocation of the salt (solid). '
+          'If I dissolve the salt in water then I have negatively impacted '
+          'the amount of total salt (solid) in the universe since that salt '
+          'is now ionized in solution.')),
 
     oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
     olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
