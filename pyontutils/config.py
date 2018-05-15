@@ -9,18 +9,38 @@ def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
     except KeyError: return None
 
+
+class dproperty(property):
+    default = None
+
+
+class dstr(str):
+    default = None
+
+    @property
+    def isDefault(self):
+        return self == self.default
+
+
 def default(value):
     def decorator(function, default_value=value):
         @wraps(function)
         def inner(*args, **kwargs):
             try:
-                return function(*args, **kwargs)
+                out = dstr(function(*args, **kwargs))
+                out.default = default_value
+                return out
             except (TypeError, KeyError, FileNotFoundError) as e:
                 return default_value
-        return property(inner)
+
+        pinner = dproperty(inner)
+        pinner.default = default_value
+        return pinner
+
     return decorator
 
 tempdir = gettempdir()
+
 
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
@@ -107,7 +127,7 @@ class DevConfig:
                 return str(maybe_repo)
             else:
                 print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
-                return tempdir
+                return None  # force explicit handling downstream
 
     @default('localhost')
     def _scigraph_host(self):

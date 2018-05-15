@@ -13,13 +13,43 @@ orig_basepath = 'https://scicrunch.org/api/1/scigraph'
 
 from pyontutils import scigraph
 from pyontutils import core
+from pyontutils.config import devconfig
 
 if 'SCICRUNCH_API_KEY' in os.environ:
     scigraph.scigraph_client.BASEPATH = orig_basepath
 else:
     scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
 
-class TestCli(unittest.TestCase):
+
+class folders:
+    def setUp(self):
+        if devconfig.ontology_local_repo is None:
+            self.fake_local_repo = Path(devconfig.git_local_base, devconfig.ontology_repo)
+            if not self.fake_local_repo.exits():  # do not klobber existing
+                self.folders = [(self.fake_local_repo / folder) for folder in ('ttl',)]
+                try:
+                    for folder in self.folders:
+                        folder.mkdir(parents=True)
+                except FileExistsError:
+                    continue 
+        else:
+            self.folders = []
+
+    def recursive_clean(self, d):
+        for thing in d:
+            if thing.is_dir():
+                recursive_clean(thing)
+            else:
+                thing.unlink()  # will rm the file
+
+        d.rmdir()
+
+    def tearDown(self):
+        if self.folders:
+            self.recursive_clean(self.fake_local_repo)
+
+
+class TestCli(unittest.TestCase, folders):
     commands = (
         ['graphml-to-ttl', '--help'],
         ['ilxcli', '--help'],
@@ -46,7 +76,7 @@ class TestCli(unittest.TestCase):
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
-class TestScripts(unittest.TestCase):
+class TestScripts(unittest.TestCase, folders):
     """ Import everything and run main() on a subset of those """
 
     skip = ('neurons',
