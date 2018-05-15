@@ -20,7 +20,7 @@ Options:
     -t --graphload-config=CFG       graphload.yaml location     [default: {devconfig.scigraph_graphload}]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
-    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_repo}]
+    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_org}]
     -b --branch=BRANCH              ontology branch to load     [default: master]
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
     -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
