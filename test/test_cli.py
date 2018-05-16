@@ -99,7 +99,8 @@ class TestScripts(Folders):
                 'neuron_ma2015',
                 'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
                 'old_neuron_example',
-                'cocomac_uberon'
+                'cocomac_uberon',
+                'rdflib_profile',  # I think this is what was causing the occasional determinism fails
                )
 
         mains = {'nif_cell': None,
