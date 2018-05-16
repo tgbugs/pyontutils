@@ -7,6 +7,6 @@ RDFClosure = {git = 'https://github.com/rdflib/OWL-RL.git', ref = '0c74fd0601762
 
 [packages]
 ontquery = {git = 'https://github.com/tgbugs/ontquery.git'}
-rdflib = {git = 'https://github.com/tgbugs/rdflib.git', ref = 'v5.0.0-dev-tgbugs-b4'}
+rdflib = {git = 'https://github.com/tgbugs/rdflib.git'}
 "e1839a8" = {path = ".", editable = true}
 
