@@ -10,7 +10,7 @@ Usage:
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload extra [options] <repo>
-    ontload --view-defaults
+    ontload [options]
 
 Options:
     -g --git-remote=GBASE           remote git hosting          [default: {devconfig.git_remote_base}]
@@ -308,7 +308,7 @@ def do_patch(patch_config, local_base):
                     print(e.stdout.decode())
                     raise e
 
-def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False):
+def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False, revert=False):
     """ Read the import closure and use the local versions of the files. """
     done = []
     triples = set()
@@ -354,6 +354,8 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                 for s in scratch.subjects(rdf.type, owl.Ontology):
                     triples.add((s, owl.sameAs, rdflib.URIRef(local_filepath)))
                 for s, o in sorted(scratch.subject_objects(p)):
+                    if revert:
+                        raise NotImplemented('TODO')
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
                     if 'http://' in local_filepath or 'external' in local_filepath:  # FIXME what to do about https used inconsistently :/

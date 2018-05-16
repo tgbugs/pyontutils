@@ -1,6 +1,8 @@
 """ Tests for the various cli programs """
 
+from IPython import embed
 import os
+import sys
 import unittest
 import subprocess
 from pathlib import Path
@@ -74,6 +76,7 @@ class TestCli(Folders):
     )
     
     def test_cli(self):
+        # we still run these tests to make sure that the install process works as expected
         failed = []
         for command in self.commands:
             try:
@@ -99,10 +102,32 @@ class TestScripts(Folders):
                 'cocomac_uberon'
                )
 
-        mains = ('nif_cell',
-        )
-        tests = ('ontree',
-        )
+        mains = {'nif_cell': None,
+                 'methods': None,
+                 'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
+        #['ilxcli', '--help'],
+        'necromancy':['necromancy', 'test/nasty.ttl'],
+        'ontload':[['ontload', '--help'],
+                   ['ontload', 'imports', 'NIF-Ontology', 'NIF',
+                    Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()]],
+        'ontree':['ontree', '--test'],
+        'overlaps':['overlaps', '--help'],
+        'qnamefix':['qnamefix', 'test/nasty.ttl'],
+        'scr_sync':['registry-sync', '--test'],
+        'scigraph_codegen':['scigraph-codegen'],
+        'scigraph_deploy':[
+            ['scigraph-deploy', '--help'],
+            ['scigraph-deploy', 'all', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'graph', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'config', 'localhost', 'localhost', '-L'],
+            ['scigraph-deploy', 'config', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'services', 'localhost', 'localhost'],
+            ['scigraph-deploy', '--view-defaults']],
+        'scig':['scig', 't', '-v', 'brain'],
+        'ttlfmt':['ttlfmt', 'test/nasty.ttl'],
+
+        }
+        tests = tuple()  # moved to mains --test
 
         _do_mains = []
         _do_tests = []
@@ -115,7 +140,14 @@ class TestScripts(Folders):
                 module = __import__('pyontutils.' + stem)
                 if stem in mains:
                     print('    will main', stem, module)
-                    _do_mains.append(getattr(module, stem))
+                    argv = mains[stem]
+                    if argv and type(argv[0]) == list:
+                        argvs = argv
+                    else:
+                        argvs = argv,
+
+                    for argv in argvs:
+                        _do_mains.append((getattr(module, stem), argv))
                     #_modules.append(module)  # TODO doens't quite work
                 elif stem in tests:
                     print('    will test', stem, module)
@@ -124,14 +156,22 @@ class TestScripts(Folders):
         print(_do_mains, _do_tests)
         self._do_mains = _do_mains
         self._do_tests = _do_tests
+        self.argv_orig = sys.argv
 
     def test_mains(self):
         failed = []
-        for script in self._do_mains:
+        for script, argv in self._do_mains:
             try:
+                if argv is not None:
+                    sys.argv = argv
+                else:
+                    sys.argv = self.argv_orig
+
                 script.main()
             except BaseException as e:
-                failed.append((script, e))
+                if isinstance(e, SystemExit):
+                    continue  # --help
+                failed.append((script, e, argv))
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 

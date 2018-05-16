@@ -1127,7 +1127,7 @@ class makeGraph:
             #trips = list(self.g.triples((None, restriction, None)))
             pred = restriction
             done = []
-            print(repr(pred))
+            #print('make_scigraph_json predicate:', repr(pred))
             #for obj, sub in self.g.subject_objects(pred):  # yes these are supposed to be flipped?
             for sub, obj in self.g.subject_objects(pred):  # or maybe they aren't?? which would explain some of my confusion
                 try:
