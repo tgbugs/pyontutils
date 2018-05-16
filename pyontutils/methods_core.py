@@ -1,18 +1,21 @@
 import rdflib
 from pyontutils.core import OntId, OntCuries
-from pyontutils.core import simpleOnt, oc, oc_, oop, olit, oec, olist
+from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
 from pyontutils.core import owl, rdf, rdfs
 
+prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
+obo, *_ = makeNamespaces('obo')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-imports = NIFTTL['nif_backend.ttl'],
+#imports = NIFTTL['nif_backend.ttl'],
+imports = obo['bfo.owl'],
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
 debug = True
@@ -120,6 +123,11 @@ triples = (
     olit(ilxtr.hasPrimaryParticipant, rdfs.comment,
          'This property should be used to mark the key input and/or output of a process if its type is not generic.'),
 
+    oop(ilxtr.primaryParticipantIn),
+    olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
+    (ilxtr.primaryParticipantIn, owl.inverseOf, ilxtr.hasPrimaryParticipant),
+
+
     ## intentions
     oop(ilxtr.hasIntention),  # not really sco realizes:? it also includes intended changes in qualities?
     olit(ilxtr.hasIntention, rdfs.label, 'has intention'),
@@ -196,6 +204,22 @@ triples = (
     olit(ilxtr.hasPrimaryAspect_dAdT, definition,
          'The intended change in primary aspect of primary participant before and after technique'),
 
+    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
+         'has constraining aspect value'),
+    olit(ilxtr.hasConstrainingAspect_value, definition,
+         ('In some cases a protocol is classified based on the value '
+          'that a constraining aspect has, not just that it is constrained on that aspect. ')),
+
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.comment,
+         ('For example, dead and alive are 0 and 1 on livingness respectively. '
+          'we can also define dead and alive, as disjoint, but that does not effectively '
+          'model that they are two sides of the same coin for any binary definition. '
+          'Note that this implies that these are not just qualities, they must have an '
+          'explicit value outcome defined.'
+         )
+        ),
+
     #oop(ilxtr.),
     #oop(ilxtr.),
     #oop(ilxtr.),
@@ -213,6 +237,21 @@ triples = (
 
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
+
+    oc(ilxtr.naming),
+    olit(ilxtr.naming, rdfs.label, 'naming'),
+    olit(ilxtr.naming, definition ,
+         ('Naming is an assertional process that is orthogonal to measuring.'
+          'Names may be assigned as a product of measurements, but the assignemtn '
+          'of a name can only be based on aspects of the thing, the name can never be '
+          'an aspect of the thing. Names may also be assigned based on aspects of the '
+          'process that produced the thing, or the prvious state of the thing. '
+          'For example a protein dissociated from its original cell/tissue no longer '
+          'contains sufficient information to reconsturct where it came from based on '
+          'any measurements that can be made on it beyond the species that it came from '
+          'and maybe where the individual lived if there are enough atoms to do an isotope test.'
+          'A cell on the other hand may very well have enough information in its RNA and DNA to '
+          'allow for a bottom up assignment of a name based on its gene expression pattern.')),
 
     oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
@@ -233,11 +272,31 @@ triples = (
           'good examples where partial beingness is a useful concept, use as a [0,1] aspect would be encouraged.')),
     olit(asp['is'], rdfs.comment,
          ('There are cases where the value could be ? depending on how one '
-          'operationalizes certain concepts from quantum physics.')),
+          'operationalizes certain concepts from quantum physics. Note also that '
+          'isness will be directly affected by the choice of the operational defintion. '
+          'Because of the scope of this ontology, there are implicit decisions about the nature '
+          'of certain operational definitions, such as livingness, which imply that our '
+          'operational definition for isness is invariant to dead.'
+         )),
+
+    oc(asp.amount, asp['is']),
+    oc(asp['count'], asp.amount),
+
+    oc(asp.location, ilxtr.aspect),
+    oc(asp.allocation, asp.location),
+    olit(asp.allocation, definition,
+         ('Allocation is the amount of something in a given place '
+          'rather than the total universal amount of a thing. '
+          'For example if I move 100 grains of salt from a container '
+          'to a scale, I have changed the allocation of the salt (solid). '
+          'If I dissolve the salt in water then I have negatively impacted '
+          'the amount of total salt (solid) in the universe since that salt '
+          'is now ionized in solution.')),
 
     oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
     olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
-    olit(asp.isClassifiedAs, NIFRID.synonym, 'is named as'),
+    olit(asp.isClassifiedAs, NIFRID.synonym,
+         'is named as', 'has operational definition with inclusion criteria that names thing as'),
 
     oc(asp.flatness, ilxtr.aspect),
     olit(asp.flatness, rdfs.label, 'flatness'),
@@ -249,6 +308,11 @@ triples = (
     oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
     olit(asp.weight, rdfs.label, 'weight'),
     olit(asp.weight, NIFRID.synonym, 'weight aspect'),
+
+    oc(asp.livingness, ilxtr.aspect),
+    oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
+    oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
+    (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
 
     oc(ilxtr.informationEntity),
     olit(ilxtr.informationEntity, rdfs.label, 'information entity'),
@@ -283,6 +347,7 @@ triples = (
     olit(ilxtr.technique, definition,
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
+    # NOTE: not all techniques have primary participants, especially in the case of composite techniques
 
 )
 

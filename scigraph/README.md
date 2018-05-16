@@ -6,6 +6,8 @@ scigraph-deploy config --local ${HOSTNAME} ${TARGET} -l ${BUILD_DIR} -z ${BUILD_
 ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 ```
 
+Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l /tmp/scigraph-build -O SciGraph -B patch-issue-264 -b master -p`
+
 # oneshots for centos 7
 ```
 export $USER=bamboo

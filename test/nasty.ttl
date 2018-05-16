@@ -18,6 +18,7 @@
 @prefix B: <http://X.org/prefix_> .
 @prefix C: <http://cc.org/prefix_> .
 @prefix c: <http://c.org/prefix_> .
+@prefix l: <http://list.org/> .
 @prefix sco: <http://sco.lol/> .
 @prefix prefixA: <http://example.org/A/> .
 @prefix prefixZ: <http://example.org/Z/> .
@@ -378,6 +379,22 @@ BLX:20 a owl:ObjectProperty ;
 [ a ("BB" "cc" other:BB other:cc
         [ a (other:BB other:cc) ]
         (other:BB other:cc) ) ] .
+
+# identical list ordering
+
+l:0 rdfs:label (1 2 3 4), (1 2 3 4) .
+
+l:1 rdfs:label ( (1 2 3 4) (1 2 3 4) ) .
+
+l:2 rdfs:label (1 2 3 4), (1 2), (3 4) .
+
+l:3 rdfs:label (1 2), (3 4 1 2), (3 4) .
+
+l:4 rdfs:label ( (1 2 3 4) (1 2) (3 4) ) .
+
+l:5 rdfs:label ( (1 2) (3 4 1 2) (3 4) ) .
+
+[ rdfs:label (1 2 3 4), (1 2 3 4) ] .
 
 # collections as subjects
 

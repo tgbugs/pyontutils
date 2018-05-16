@@ -18,7 +18,6 @@ from pyontutils.closed_namespaces import *
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
 
 # prefixes
 
@@ -123,8 +122,8 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFRID, NIFTTL, UBERON, BFO, ilxtr,
- ilxb, TEMP) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
-                       'BFO', 'ilxtr', 'ilx', 'TEMP')
+ ilxb, TEMP, ILX) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFRID', 'NIFTTL', 'UBERON',
+                       'BFO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
 
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
@@ -234,26 +233,26 @@ def build(*onts, fail=False, n_jobs=9):
                                     else [ont_setup(ont)
                                           for ont in onts]))
 
-def make_predicate_object_thunk(function, p, o):
-    """ Thunk to hold predicate object pairs until a subject is supplied and then
+def make_predicate_object_combinator(function, p, o):
+    """ Combinator to hold predicate object pairs until a subject is supplied and then
         call a function that accepts a subject, predicate, and object.
 
-        Create a thunk to defer production of a triple until the missing pieces are supplied.
-        Note that the naming here tells you what is stored IN the thunk. The argument to the
-        thunk is the piece that is missing. """
-    def predicate_object_thunk(subject):
+        Create a combinator to defer production of a triple until the missing pieces are supplied.
+        Note that the naming here tells you what is stored IN the combinator. The argument to the
+        combinator is the piece that is missing. """
+    def predicate_object_combinator(subject):
         return function(subject, p, o)
-    return predicate_object_thunk
+    return predicate_object_combinator
 
-def make_object_thunk(function, o):
-    def object_thunk(subject, predicate):
+def make_object_combinator(function, o):
+    def object_combinator(subject, predicate):
         return function(subject, predicate, o)
-    return object_thunk
+    return object_combinator
 
-def make_subject_object_thunk(s, function, o):
-    def subject_object_thunk(predicate):
+def make_subject_object_combinator(s, function, o):
+    def subject_object_combinator(predicate):
         return function(s, predicate, o)
-    return subject_object_thunk
+    return subject_object_combinator
 
 def oc(iri, subClassOf=None):
     yield iri, rdf.type, owl.Class
@@ -265,6 +264,11 @@ def oop(iri, subPropertyOf=None):
     if subPropertyOf is not None:
         yield iri, rdfs.subPropertyOf, subPropertyOf
 
+def odp(iri, subPropertyOf=None):
+    yield iri, rdf.type, owl.DatatypeProperty
+    if subPropertyOf is not None:
+        yield iri, rdfs.subPropertyOf, subPropertyOf
+
 def olit(subject, predicate, *objects):
     if not objects:
         raise ValueError(f'{subject} {predicate} Objects is empty?')
@@ -272,7 +276,7 @@ def olit(subject, predicate, *objects):
         if object not in (None, ''):
             yield subject, predicate, rdflib.Literal(object)
 
-class Thunk:  # FIXME naming, these aren't really thunks, they are combinators
+class Combinator:  # FIXME naming, these aren't really thunks, they are combinators
     def __init__(self, *present):
         raise NotImplemented
 
@@ -280,14 +284,15 @@ class Thunk:  # FIXME naming, these aren't really thunks, they are combinators
         yield subject, predicate, object
 
 
-class ThunkIt(Thunk):
+class CombinatorIt(Combinator):
     def __init__(self, outer_self, *args, **kwargs):
         self.outer_self = outer_self
         self.args = args
         self.kwargs = kwargs
 
-    def __call__(self):
-        yield from self.outer_self.__call__(*self.args, **self.kwargs)
+    def __call__(self, *args, **kwargs):
+        # FIXME might get two subjects by accident...
+        yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
     def __repr__(self):
         return f'{self.outer_self.__class__.__name__} {self.args} {self.kwargs}'
@@ -299,12 +304,18 @@ class ThunkIt(Thunk):
                 graph.add(t)
 
 
-class ObjectThunk(Thunk):
+class ObjectCombinator(Combinator):
     def __init__(self, object):
         self.object = object
 
     def __call__(self, subject, predicate):
-        yield subject, predicate, self.object
+        if isinstance(self.object, Combinator):
+            if hasattr(self.object, 'predicate'):
+                yield from self.object(subject)
+            else:
+                yield from self.object(subject, predicate)
+        else:
+            yield subject, predicate, self.object
 
     def __repr__(self):
         if isinstance(self.object, rdflib.URIRef):
@@ -316,23 +327,25 @@ class ObjectThunk(Thunk):
         return f"{self.__class__.__name__}({o!r})"
 
 
-class _POThunk(Thunk):
+class _POCombinator(Combinator):
     def __init__(self, predicate, object):
         self.predicate = predicate
         self.object = object
 
-    def full_thunk(self, subject, *pothunks):
-        return ThunkIt(self, subject, *pothunks)
+    def full_combinator(self, subject_or_pocombinator, *pocombinators):  # FIXME this is not right...?
+        return CombinatorIt(self, subject_or_pocombinator, *pocombinators)
 
-    def __call__(self, subject, *pothunks):
+    def __call__(self, subject, *pocombinators):
         """ Overwrite this function for more complex expansions. """
         # seems unlikely that same object multiple predicates would occur, will impl if needed
+        if subject is None:
+            subject = rdflib.BNode()
         yield subject, self.predicate, self.object
-        for thunk in pothunks:
-            #if isinstance(thunk, types.GeneratorType):
-                #thunk = next(thunk)  # return the trapped thunk ;_;
+        for combinator in pocombinators:
+            #if isinstance(combinator, types.GeneratorType):
+                #combinator = next(combinator)  # return the trapped combinator ;_;
             #else:
-            yield from thunk(subject)
+            yield from combinator(subject)
 
     def __repr__(self):
         p = qname(self.predicate)
@@ -345,44 +358,34 @@ class _POThunk(Thunk):
         return f"{self.__class__.__name__}({p!r}, {o!r})"
 
 
-class POThunk(_POThunk):
-    def __new__(cls, predicate, object):
-        if isinstance(object, type) and issubclass(object, ObjectThunk):
-            class InnerThunk(object):
-                _predicate = predicate
+class POCombinator(_POCombinator):
+    def __new__(cls, predicate_, object):
+        if isinstance(object, type) and issubclass(object, ObjectCombinator):
+            class InnerCombinator(object):
+                predicate = predicate_
                 def __call__(self, subject):
-                    return super().__call__(subject, self._predicate)
+                    return super().__call__(subject, self.predicate)
 
-            return InnerThunk
+            return InnerCombinator
         else:
             self = super().__new__(cls)
-            self.__init__(predicate, object)
+            self.__init__(predicate_, object)
             return self
 
 
-oc_ = POThunk(rdf.type, owl.Class)
+oc_ = POCombinator(rdf.type, owl.Class)
 
 
-class RestrictionThunk(_POThunk):
-    def __call__(self, subject, predicate=None):
-        #print('in RestrictionThunk:', self.predicate, self.object)
-        generator = self.outer_self.serialize(subject, self.predicate, self.object)
-        if self.outer_self.predicate is None and predicate is None:
-            raise TypeError(f'No predicate defined for {self!r}')
-        elif self.outer_self.predicate is not None and predicate is not None:
-            if self.outer_self.predicate != predicate:
+class RestrictionCombinator(_POCombinator):
+    def __call__(self, subject, linking_predicate=None):
+        if self.outer_self.predicate is not None and linking_predicate is not None:
+            if self.outer_self.predicate != linking_predicate:
                 raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
-            else:  # this branch was missing
-                yield from generator
-        elif self.outer_self.predicate is None:
-            self.outer_self.predicate = predicate
-            yield from generator
-            self.outer_self.predicate = None
-        else:
-            yield from generator
+
+        yield from self.outer_self.serialize(subject, self.predicate, self.object, linking_predicate)
 
 
-class RestrictionsThunk(RestrictionThunk):
+class RestrictionsCombinator(RestrictionCombinator):
     def __init__(self, *predicate_objects):
         self.predicate_objects = predicate_objects
 
@@ -433,32 +436,38 @@ class Restriction(Triple):
             return f"{self.__class__.__name__}{super().__repr__()}"
 
     def __init__(self, predicate, scope=owl.someValuesFrom):
-        """ You may explicitly pass None to predicate if the call to the thunk
+        """ You may explicitly pass None to predicate if the call to the combinator
             will recieve the predicate. """
         self.predicate = predicate
         self.scope = scope
 
     def __call__(self, predicate=None, object=None):
-        """ thunk maker """
+        """ combinator maker """
         if object is not None:
             p = predicate
             o = object
         else:
             _, p, o = predicate
 
-        rt = type('RestrictionThunk', (RestrictionThunk,), dict(outer_self=self))
+        rt = type('RestrictionCombinator', (RestrictionCombinator,), dict(outer_self=self))
         return rt(p, o)
 
-    def serialize(self, s, p, o):  # lift, serialize, expand
+    def serialize(self, s, p, o, linking_predicate=None):  # lift, serialize, expand
         subject = rdflib.BNode()
-        yield s, self.predicate, subject
+        if self.predicate is not None:
+            yield s, self.predicate, subject
+        elif linking_predicate is not None:
+            yield s, linking_predicate, subject
+        else:
+            subject = s  # link directly
+
         yield subject, rdf.type, owl.Restriction
         yield subject, owl.onProperty, p
-        if isinstance(o, Thunk):
-            # only pothunks really work here
-            thunk = o
+        if isinstance(o, Combinator):
+            # only pocombinators really work here
+            combinator = o
             o = rdflib.BNode()
-            yield from thunk(o)
+            yield from combinator(o)
         yield subject, self.scope, o  # TODO serialization of the combinators
 
     def parse(self, *triples, root=None, graph=None):  # drop, parse, contract
@@ -489,12 +498,13 @@ class Restriction(Triple):
         return failed_triples
 
 restriction = Restriction(rdfs.subClassOf)
+restrictionN = Restriction(None)
 
 class Restrictions(Restriction):
     def __call__(self, *predicate_objects):
-        #rt = type('RestrictionsThunk', (RestrictionsThunk,), dict(outer_self=self))
+        #rt = type('RestrictionsCombinator', (RestrictionsCombinator,), dict(outer_self=self))
         #return rt(*predicate_objects)
-        rt = type('RestrictionThunk', (RestrictionThunk,), dict(outer_self=self))
+        rt = type('RestrictionCombinator', (RestrictionCombinator,), dict(outer_self=self))
         return (rt(*p_o) for p_o in predicate_objects)
 
 
@@ -508,13 +518,13 @@ class List(Triple):
         else:
             self.lift_rules = {}
 
-    def __call__(self, *objects_or_thunks):
-        """ thunk maker """
-        class ListThunk(Thunk):
+    def __call__(self, *objects_or_combinators):
+        """ combinator maker """
+        class ListCombinator(Combinator):
             outer_self = self
-            def __init__(self, *objects_or_thunk):
+            def __init__(self, *objects_or_combinator):
                 self.predicate = rdf.first
-                self.objects = objects_or_thunk
+                self.objects = objects_or_combinator
 
             def __call__(self, subject, predicate):
                 yield from self.outer_self.serialize(subject, predicate, *self.objects)
@@ -522,25 +532,25 @@ class List(Triple):
             def __repr__(self):
                 return f'{self.__class__.__name__}{self.objects!r}'
 
-        return ListThunk(*objects_or_thunks)
+        return ListCombinator(*objects_or_combinators)
 
-    def serialize(self, s, p, *objects_or_thunks):
+    def serialize(self, s, p, *objects_or_combinators):
         # FIXME for restrictions we can't pass the restriction in, we have to know the bnode in advance
         # OR list has to deal with restrictions which is NOT what we want at all...
         subject = rdflib.BNode()
         yield s, p, subject
-        stop = len(objects_or_thunks) - 1
-        for i, object_thunk in enumerate(objects_or_thunks):
-            if isinstance(object_thunk, types.FunctionType) or isinstance(object_thunk, Thunk):
-                #if isinstance(object_thunk, POThunk):
-                    #yield from object_thunk(subject)  # in cases where rdf.first already specified
-                #elif isinstance(object_thunk, ObjectThunk):
-                yield from object_thunk(subject, rdf.first)  # thunk call must accept a predicate
+        stop = len(objects_or_combinators) - 1
+        for i, object_combinator in enumerate(objects_or_combinators):
+            if isinstance(object_combinator, types.FunctionType) or isinstance(object_combinator, Combinator):
+                #if isinstance(object_combinator, POCombinator):
+                    #yield from object_combinator(subject)  # in cases where rdf.first already specified
+                #elif isinstance(object_combinator, ObjectCombinator):
+                yield from object_combinator(subject, rdf.first)  # combinator call must accept a predicate
                 #else:
-                    #raise TypeError('Unknown Thunk type {object_thunk}')
+                    #raise TypeError('Unknown Combinator type {object_combinator}')
             else:
                 # assume that it is a URIRef or Literal
-                yield subject, rdf.first, object_thunk
+                yield subject, rdf.first, object_combinator
 
             if i < stop:  # why would you design a list this way >_<
                 next_subject = rdflib.BNode()
@@ -590,11 +600,11 @@ class List(Triple):
 
 olist = List()
 
-def oec(subject, *object_thunks, relation=owl.intersectionOf):
+def oec(subject, *object_combinators, relation=owl.intersectionOf):
     n0 = rdflib.BNode()
     yield subject, owl.equivalentClass, n0
     yield from oc(n0)
-    yield from olist.serialize(n0, relation, *object_thunks)
+    yield from olist.serialize(n0, relation, *object_combinators)
 
 def _restriction(lift, s, p, o):
     n0 = rdflib.BNode()
@@ -606,7 +616,7 @@ def _restriction(lift, s, p, o):
 
 class Annotation(Triple):
     def __call__(self, triple, *predicate_objects):
-        class AnnotationThunk(Thunk):
+        class AnnotationCombinator(Combinator):
             a_s = rdflib.BNode()
             outer_self = self
             existing = predicate_objects
@@ -620,7 +630,7 @@ class Annotation(Triple):
                 for a_p, a_o in self.stored:  # since it is a generator it will only run once
                     yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
 
-        return AnnotationThunk(triple)
+        return AnnotationCombinator(triple)
 
     def serialize(self, triple, a_p, a_o, a_s=None):
         s, p, o = triple
@@ -644,14 +654,13 @@ class Annotation(Triple):
             s_o = next(graph.objects(a_s, owl.annotatedTarget))
             triple = s_s, s_p, s_o
 
-            # TODO thunk? or not in this case?
+            # TODO combinator? or not in this case?
             yield triple, tuple((a_p, a_o) for a_p, a_o in graph.predicate_objects(a_s) if a_p not in rspt)
 
             # duplicated
             #for a_p, a_o in graph.predicate_objects(a_s):
                 #if a_p not in rspt:
                     #yield triple, a_p, a_o
-
 
 
 annotation = Annotation()
@@ -673,6 +682,57 @@ def annotations(pairs, s, p, o):
     for predicate, object in pairs:
         yield n0, predicate, check_value(object)
 
+class PredicateList(Triple):
+    predicate = rdf.List
+    typeWhenSubjectIsBlank = owl.Class
+
+    def __init__(self):
+        self._list = List({owl.Restriction:Restriction(rdf.first)})
+        self.lift_rules = {rdf.first:self._list, rdf.rest:None}
+
+    def __call__(self, *objects_or_combinators):
+        class IntersectionOfCombinator(Combinator):
+            outer_self = self
+            def __init__(self):
+                self.combinators = objects_or_combinators
+
+            def __call__(self, subject, predicate=None):
+                # FIXME hrm... there should be a way to regularize this?
+                # or is it the case than an PO combinator needs to know
+                # what to do when upstream doesn't know what it is
+                # but want's to attach to an object which doesn't exist yet
+                if predicate is not None:
+                    s1 = subject
+                    subject = rdflib.BNode()
+                    yield s1, predicate, subject
+                    yield subject, rdf.type, self.outer_self.typeWhenSubjectIsBlank
+
+                yield from self.outer_self.serialize(subject, self.combinators)
+
+            def __repr__(self):
+                return f'{self.__class__.__name__}{self.combinators!r}'
+
+        return IntersectionOfCombinator()
+
+    def serialize(self, subject, objects_or_combinators):
+        if subject is None:
+            subject = rdflib.BNode()
+
+        yield from self._list.serialize(subject, self.predicate, *objects_or_combinators)
+
+
+class IntersectionOf(PredicateList):
+    predicate = owl.intersectionOf
+
+intersectionOf = IntersectionOf()
+
+
+class UnionOf(PredicateList):
+    predicate = owl.unionOf
+
+unionOf = UnionOf()
+
+
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of
         owl functional syntax in python. """
@@ -682,27 +742,31 @@ class EquivalentClass(Triple):
         self._list = List({owl.Restriction:Restriction(rdf.first)})
         self.lift_rules = {rdf.first:self._list, rdf.rest:None}
 
-    def __call__(self, *objects_or_thunks):
-        """ thunk maker """
-        class EquivalentClassThunk(Thunk):
+    def __call__(self, *objects_or_combinators):
+        """ combinator maker """
+        class EquivalentClassCombinator(Combinator):
             outer_self = self
-            def __init__(self, *thunks):
-                self.thunks = thunks
+            def __init__(self, *combinators):
+                self.combinators = combinators
 
             def __call__(self, subject):
-                yield from self.outer_self.serialize(subject, *self.thunks)
+                yield from self.outer_self.serialize(subject, *self.combinators)
 
             def __repr__(self):
-                return f'{self.__class__.__name__}{self.thunks!r}'
+                return f'{self.__class__.__name__}{self.combinators!r}'
 
-        return EquivalentClassThunk(*objects_or_thunks)
+        return EquivalentClassCombinator(*objects_or_combinators)
 
-    def serialize(self, subject, *objects_or_thunks):
-        """ object_thunks may also be URIRefs or Literals """
+    def serialize(self, subject, *objects_or_combinators):
+        """ object_combinators may also be URIRefs or Literals """
         ec_s = rdflib.BNode()
-        yield subject, self.predicate, ec_s
+        if subject is not None:
+            yield subject, self.predicate, ec_s
         yield from oc(ec_s)
-        yield from self._list.serialize(ec_s, self.operator, *objects_or_thunks)
+        if self.operator is not None:
+            yield from self._list.serialize(ec_s, self.operator, *objects_or_combinators)
+        else:
+            raise NotImplemented('TODO a normal list')
 
     def parse(self, *triples, graph=None):
         if graph is None:  # TODO decorator for this
@@ -725,7 +789,7 @@ class EquivalentClass(Triple):
                         print(p, typep)
                         if p == rdf.first:
                             # FIXME should not have to be explicit? or are lists special?
-                            # equivalent class does not need explicit list thunking at the moment
+                            # equivalent class does not need explicit list combinatoring at the moment
                             # so we just get the objects in the list for now
                             # it looks weird on repr, but that is ok
                             yield from next(typep.parse(root=object, graph=graph)).objects
@@ -738,15 +802,47 @@ class EquivalentClass(Triple):
                     print(f'failed to parse {subject} owl:equivalentClass {predicate} != {self.operator}')
 
             # FIXME None to get them all?
-            thunks = tuple(t for p, o in graph.predicate_objects(ec_s)
+            combinators = tuple(t for p, o in graph.predicate_objects(ec_s)
                            #for mt in parts(p, o)  # FIXME somewhere someone is not yielding properly
                            # no actually this is correct, it is just that there is indeed a list in there
-                           # that is not property thunked
+                           # that is not property combinatored
                            #for t in mt)
                            for t in parts(p, o))
-            yield subject, self(*thunks)
+            yield subject, self(*combinators)
 
 oec = EquivalentClass()
+
+class hasAspectChangeCombinator(_POCombinator):
+    def __init__(self, aspect, change):
+        """
+        0 a Restriction
+        0 onProperty hasAspectChange
+        0 someValuesFrom 1
+        1 a Class
+        1 subClassOf aspect
+        1 subClassOf 2
+        2 a Restriction
+        2 onProperty hasChangeOverTechnique
+        2 someValuesFrom change
+        """
+        subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator)
+
+        #self.pocombinator = restrictionN(ilxtr.hasAspectChange,
+                                    #oc_.full_combinator(subClassOf(aspect),
+                                                   #subClassOf(restriction(ilxtr.hasChangeOverTechnique,
+                                                                          #change))))
+
+        self.pocombinator = restrictionN(ilxtr.hasAspectChange,  # FIXME this is too complex...
+                                    oc_.full_combinator(intersectionOf(aspect,
+                                                                  restrictionN(ilxtr.hasChangeOverTechnique,
+                                                                               change))))
+    def __call__(self, subject, *pocombinators):
+        # the caller does correctly yield from thing(subject)
+        return self.pocombinator(subject, *pocombinators)
+
+    def serialize(self, subject):
+        yield from self.pocombinator(subject)
+
 
 def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdflib.Graph?
     yield s, p, o
@@ -1034,7 +1130,7 @@ class makeGraph:
             #trips = list(self.g.triples((None, restriction, None)))
             pred = restriction
             done = []
-            print(repr(pred))
+            #print('make_scigraph_json predicate:', repr(pred))
             #for obj, sub in self.g.subject_objects(pred):  # yes these are supposed to be flipped?
             for sub, obj in self.g.subject_objects(pred):  # or maybe they aren't?? which would explain some of my confusion
                 try:
@@ -1116,7 +1212,7 @@ def createOntology(filename=    'temp-graph',
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY,
                    path=        'ttl/generated/',
-                   local_base=  os.path.expanduser((gitf / 'NIF-Ontology/').as_posix()),
+                   local_base=  devconfig.ontology_local_repo,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
@@ -1722,8 +1818,9 @@ def displayGraph(graph_,
     [graph.bind(k, v) for k, v in graph_.namespaces()]
     [graph.add(t) for t in graph_]
     g = makeGraph('', graph=graph)
-    skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty
+    skip = owl.Thing, owl.topObjectProperty, owl.Ontology, ilxtr.topAnnotationProperty, owl.topDataProperty
     byto = {owl.ObjectProperty:(rdfs.subPropertyOf, owl.topObjectProperty),
+            owl.DatatypeProperty:(rdfs.subPropertyOf, owl.topDataProperty),
             owl.AnnotationProperty:(rdfs.subPropertyOf, ilxtr.topAnnotationProperty),
             owl.Class:(rdfs.subClassOf, owl.Thing),}
 
@@ -1797,7 +1894,7 @@ def main():
     oec = EquivalentClass()
     test = tuple(oec.parse(graph=graph))
 
-    ft = oc_.full_thunk(test[0][0], test[0][1])
+    ft = oc_.full_combinator(test[0][0], test[0][1])
     ftng = makeGraph('thing3', prefixes=makePrefixes('owl', 'TEMP'))
     *ft.serialize(ftng.g),
     ftng.write()
@@ -1820,16 +1917,16 @@ def main():
     restriction = Restriction(None)#rdf.first)
     ll = List(lift_rules={owl.Restriction:restriction})
     trips = tuple(ll.parse(graph=graph))
-    #subClassOf = PredicateThunk(rdfs.subClassOf)  # TODO should be able to do POThunk(rdfs.subClassOf, 0bjectThunk)
-    subClassOf = POThunk(rdfs.subClassOf, ObjectThunk)
+    #subClassOf = PredicateCombinator(rdfs.subClassOf)  # TODO should be able to do POCombinator(rdfs.subClassOf, 0bjectCombinator)
+    subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator)
     superDuperClass = subClassOf(TEMP.superDuperClass)  # has to exist prior to triples
     ec = oec(TEMP.ec1, TEMP.ec2,
              restriction(TEMP.predicate0, TEMP.target1),
              restriction(TEMP.predicate1, TEMP.target2),)
     egraph = rdflib.Graph()
-    athunk = annotation((TEMP.testSubject, rdf.type, owl.Class), (TEMP.hoh, 'FUN'))
-    ft = flattenTriples((athunk((TEMP.annotation, 'annotation value')),
-                         athunk((TEMP.anotherAnnotation, 'annotation value again')),
+    acombinator = annotation((TEMP.testSubject, rdf.type, owl.Class), (TEMP.hoh, 'FUN'))
+    ft = flattenTriples((acombinator((TEMP.annotation, 'annotation value')),
+                         acombinator((TEMP.anotherAnnotation, 'annotation value again')),
                          oc_(TEMP.c1, superDuperClass),
                          oc_(TEMP.c2, superDuperClass),
                          oc_(TEMP.c3, superDuperClass),

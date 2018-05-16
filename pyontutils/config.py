@@ -9,23 +9,45 @@ def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
     except KeyError: return None
 
+
+class dproperty(property):
+    default = None
+
+
+class dstr(str):
+    default = None
+
+    @property
+    def isDefault(self):
+        return self == self.default
+
+
 def default(value):
     def decorator(function, default_value=value):
         @wraps(function)
         def inner(*args, **kwargs):
             try:
-                return function(*args, **kwargs)
+                out = dstr(function(*args, **kwargs))
+                out.default = default_value
+                return out
             except (TypeError, KeyError, FileNotFoundError) as e:
                 return default_value
-        return property(inner)
+
+        pinner = dproperty(inner)
+        pinner.default = default_value
+        return pinner
+
     return decorator
 
 tempdir = gettempdir()
+
 
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
         self.config_file = config_file
+        olrd = Path(self.git_local_base, self.ontology_repo).as_posix()
+        self.__class__.ontology_local_repo.default = olrd
 
     @property
     def config(self):
@@ -81,6 +103,11 @@ class DevConfig:
     def git_local_base(self):
         return os.path.expanduser(self.config['git_local_base'])
 
+    @git_local_base.setter
+    def git_local_base(self, value):
+        self._config['git_local_base'] = value
+        self.write(self.config_file)
+
     @default('SciCrunch')
     def ontology_org(self):
         return self.config['ontology_org']
@@ -93,21 +120,28 @@ class DevConfig:
     def ontology_remote_repo(self):
         return os.path.join(self.git_remote_base, self.ontology_org, self.ontology_repo)
 
-    @property
+    @dproperty
     def ontology_local_repo(self):
+        def add_default(thing=self.__class__.ontology_local_repo.default):
+            default = self.__class__.ontology_local_repo.default
+            out = dstr(default)
+            out.default = default
+            return out
+
         try:
             olr = self.config['ontology_local_repo']
             if olr:
-                return olr
+                return add_default(olr)
             else:
                 raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, FileNotFoundError) as e:
             maybe_repo = Path(__file__).parent.parent.parent / self.ontology_repo
             if maybe_repo.exists():
-                return str(maybe_repo)
+                return add_default(maybe_repo)
             else:
                 print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
-                return tempdir
+
+                return add_default()
 
     @default('localhost')
     def _scigraph_host(self):

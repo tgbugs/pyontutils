@@ -26,8 +26,8 @@ from pyontutils.utils import readFromStdIn
 import pyontutils.ttlfmt
 from pyontutils.ttlfmt import parse, prepare
 
-PREFIXES.pop('NIFTTL')
 PREFIXES = {k:v for k, v in PREFIXES.items()}
+PREFIXES.pop('NIFTTL')
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
@@ -112,7 +112,7 @@ def main():
         for k in list(PREFIXES):
             PREFIXES.pop(k)
     else:
-        for x in args['--exclude']:
+        for x in args['--exclude'] and x in PREFIXES:
             PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)

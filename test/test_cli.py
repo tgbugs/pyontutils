@@ -1,6 +1,8 @@
 """ Tests for the various cli programs """
 
+from IPython import embed
 import os
+import sys
 import unittest
 import subprocess
 from pathlib import Path
@@ -13,13 +15,56 @@ orig_basepath = 'https://scicrunch.org/api/1/scigraph'
 
 from pyontutils import scigraph
 from pyontutils import core
+from pyontutils.config import devconfig
 
 if 'SCICRUNCH_API_KEY' in os.environ:
     scigraph.scigraph_client.BASEPATH = orig_basepath
 else:
     scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
 
-class TestCli(unittest.TestCase):
+p1 = Path(__file__).resolve().absolute().parent.parent.parent
+p2 = Path(devconfig.git_local_base).resolve().absolute()
+print(p1, p2)
+if p1 != p2:
+    devconfig.git_local_base = p1
+
+class Folders(unittest.TestCase):
+    _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
+    def setUp(self):
+        #print('SET UP')
+        #print(devconfig.ontology_local_repo)
+        if devconfig.ontology_local_repo.isDefault:
+            self.fake_local_repo = Path(devconfig.git_local_base, devconfig.ontology_repo)
+            if not self.fake_local_repo.exists():  # do not klobber existing
+                self.folders = [(self.fake_local_repo / folder)
+                                for folder in self._folders]
+                self.addCleanup(self._tearDown)
+                #print(f'CREATING FOLDERS {self.folders}')
+                for folder in self.folders:
+                    folder.mkdir(parents=True)
+                    # if the parent doesn't exist then there should never
+                    # be a case where there is a collision (yes?)
+
+        else:
+            self.folders = []
+
+    def recursive_clean(self, d):
+        for thing in d.iterdir():
+            if thing.is_dir():
+                self.recursive_clean(thing)
+            else:
+                thing.unlink()  # will rm the file
+
+        d.rmdir()
+
+    def _tearDown(self):
+        #print('TEAR DOWN')
+        if self.folders:
+            #print(f'DELETING FOLDERS {self.folders}')
+            self.recursive_clean(self.fake_local_repo)
+
+
+class TestCli(Folders):
     commands = (
         ['graphml-to-ttl', '--help'],
         ['ilxcli', '--help'],
@@ -36,6 +81,7 @@ class TestCli(unittest.TestCase):
     )
     
     def test_cli(self):
+        # we still run these tests to make sure that the install process works as expected
         failed = []
         for command in self.commands:
             try:
@@ -46,52 +92,102 @@ class TestCli(unittest.TestCase):
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
-class TestScripts(unittest.TestCase):
+
+class TestScripts(Folders):
     """ Import everything and run main() on a subset of those """
 
-    skip = ('neurons',
-            'neuron_lang',
-            'neuron_example',
-            'neuron_ma2015',
-            'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
-            'old_neuron_example',
-            'cocomac_uberon'
-           )
+    def setUp(self):
+        super().setUp()
+        skip = ('neurons',
+                'neuron_lang',
+                'neuron_example',
+                'neuron_ma2015',
+                'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
+                'old_neuron_example',
+                'cocomac_uberon',
+               )
 
-    mains = ('nif_cell',
-    )
-    tests = ('ontree',
-    )
+        ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
+        zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
+        mains = {'nif_cell': None,
+                 'methods': None,
+                 'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
+        #['ilxcli', '--help'],
+        'ttlfmt':[['ttlfmt', ban],
+                  #[zap]
+                 ],
+        'qnamefix':[['qnamefix', ban],
+                    #[zap]
+                   ],
+        'necromancy':['necromancy', ban],
+        'ontload':[['ontload', '--help'],
+                   ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
+                   ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
+        'ontree':['ontree', '--test'],
+        'overlaps':['overlaps', '--help'],
+        'scr_sync':['registry-sync', '--test'],
+        'scigraph_codegen':['scigraph-codegen'],
+        'scigraph_deploy':[
+            ['scigraph-deploy', '--help'],
+            ['scigraph-deploy', 'all', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'graph', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'config', 'localhost', 'localhost', '-L'],
+            ['scigraph-deploy', 'config', 'localhost', 'localhost'],
+            ['scigraph-deploy', 'services', 'localhost', 'localhost'],
+            ['scigraph-deploy', '--view-defaults']],
+        'scig':['scig', 't', '-v', 'brain'],
 
-    _do_mains = []
-    _do_tests = []
-    parent = Path(core.__file__).absolute().parent.parent
-    repo = Repo(parent.as_posix())
-    for path in sorted(repo.git.ls_files('pyontutils/*.py').split('\n')):
-        stem = Path(path).stem
-        if stem not in skip:
-            print('TESTING:', stem)
-            module = __import__('pyontutils.' + stem)
-            if stem in mains:
-                print('    will main', stem, module)
-                _do_mains.append(getattr(module, stem))
-                #_modules.append(module)  # TODO doens't quite work
-            elif stem in tests:
-                print('    will test', stem, module)
-                _do_tests.append(getattr(module, stem))
+        }
+        tests = tuple()  # moved to mains --test
 
-    print(_do_mains, _do_tests)
+        _do_mains = []
+        _do_tests = []
+        parent = Path(core.__file__).absolute().parent.parent
+        repo = Repo(parent.as_posix())
+        for path in sorted(repo.git.ls_files('pyontutils/*.py').split('\n')):
+            stem = Path(path).stem
+            if stem not in skip:
+                print('TESTING:', stem)
+                module = __import__('pyontutils.' + stem)
+                if stem in mains:
+                    print('    will main', stem, module)
+                    argv = mains[stem]
+                    if argv and type(argv[0]) == list:
+                        argvs = argv
+                    else:
+                        argvs = argv,
+
+                    for argv in argvs:
+                        _do_mains.append((getattr(module, stem), argv))
+                    #_modules.append(module)  # TODO doens't quite work
+                elif stem in tests:
+                    print('    will test', stem, module)
+                    _do_tests.append(getattr(module, stem))
+
+        print(_do_mains, _do_tests)
+        self._do_mains = _do_mains
+        self._do_tests = _do_tests
+        self.argv_orig = sys.argv
 
     def test_mains(self):
         failed = []
-        for script in self._do_mains:
+        for script, argv in self._do_mains:
+            if argv and argv[0] != script:
+                os.system(' '.join(argv))
+
             try:
+                if argv is not None:
+                    sys.argv = argv
+                else:
+                    sys.argv = self.argv_orig
+
                 script.main()
             except BaseException as e:
-                failed.append((script, e))
+                if isinstance(e, SystemExit):
+                    continue  # --help
+                failed.append((script, e, argv))
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
-
 
     def test_tests(self):
         failed = []
