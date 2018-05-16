@@ -33,3 +33,5 @@ install:
 script:
   - PYTHONWARNINGS=default pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
 
+after_success:
+  - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
