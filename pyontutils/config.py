@@ -117,7 +117,7 @@ class DevConfig:
 
     @dproperty
     def ontology_local_repo(self):
-        def add_default(thing):
+        def add_default(thing=self.__class__.ontology_local_repo.default):
             default = self.__class__.ontology_local_repo.default
             out = dstr(default)
             out.default = default
@@ -136,7 +136,7 @@ class DevConfig:
             else:
                 print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
 
-                return add_default(out)
+                return add_default()
 
     @default('localhost')
     def _scigraph_host(self):
