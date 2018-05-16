@@ -112,7 +112,7 @@ def main():
         for k in list(PREFIXES):
             PREFIXES.pop(k)
     else:
-        for x in args['--exclude']:
+        for x in args['--exclude'] and x in PREFIXES:
             PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)

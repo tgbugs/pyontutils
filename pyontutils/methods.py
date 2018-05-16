@@ -87,6 +87,8 @@ i = I()
 triples = (
     # biccn
 
+    (ilxtr.hasSomething, owl.inverseOf, ilxtr.isSomething),
+
     _t(i.d, 'atlas registration technique',
        # ilxtr.hasPrimaryParticipant, restriction(partOf, some animalia)
        # TODO this falls into an extrinsic classification technique...
@@ -432,10 +434,12 @@ triples = (
     ),
 
     _t(i.d, 'delivery technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
        (ilxtr.hasSomething, i.d),
        def_='A technique for moving something from point a to point b.',),
 
     _t(i.d, 'physical delivery technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'diffusion based delivery technique',
        (ilxtr.hasSomething, i.d)),

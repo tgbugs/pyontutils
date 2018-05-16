@@ -100,20 +100,26 @@ class TestScripts(Folders):
                 'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
                 'old_neuron_example',
                 'cocomac_uberon',
-                'rdflib_profile',  # I think this is what was causing the occasional determinism fails
                )
 
+        ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
+        zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
         mains = {'nif_cell': None,
                  'methods': None,
                  'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
         #['ilxcli', '--help'],
-        'necromancy':['necromancy', 'test/nasty.ttl'],
+        'ttlfmt':[['ttlfmt', ban],
+                  #[zap]
+                 ],
+        'qnamefix':[['qnamefix', ban],
+                    #[zap]
+                   ],
+        'necromancy':['necromancy', ban],
         'ontload':[['ontload', '--help'],
-                   ['ontload', 'imports', 'NIF-Ontology', 'NIF',
-                    Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()]],
+                   ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
+                   ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
         'ontree':['ontree', '--test'],
         'overlaps':['overlaps', '--help'],
-        'qnamefix':['qnamefix', 'test/nasty.ttl'],
         'scr_sync':['registry-sync', '--test'],
         'scigraph_codegen':['scigraph-codegen'],
         'scigraph_deploy':[
@@ -125,7 +131,6 @@ class TestScripts(Folders):
             ['scigraph-deploy', 'services', 'localhost', 'localhost'],
             ['scigraph-deploy', '--view-defaults']],
         'scig':['scig', 't', '-v', 'brain'],
-        'ttlfmt':['ttlfmt', 'test/nasty.ttl'],
 
         }
         tests = tuple()  # moved to mains --test
@@ -162,6 +167,9 @@ class TestScripts(Folders):
     def test_mains(self):
         failed = []
         for script, argv in self._do_mains:
+            if argv and argv[0] != script:
+                os.system(' '.join(argv))
+
             try:
                 if argv is not None:
                     sys.argv = argv

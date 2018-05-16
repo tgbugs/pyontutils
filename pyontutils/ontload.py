@@ -446,11 +446,13 @@ def normalize_prefixes(graph, curies):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph):
+def import_tree(graph, ontologies):
+    thisfile = Path(ontologies[0]).name
+    print(thisfile)
     mg = makeGraph('', graph=graph)
     mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
     j = mg.make_scigraph_json('owl:imports', direct=True)
-    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+    t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
     #print(t)
     return t, te
 
@@ -641,7 +643,7 @@ def run(args):
     if itrips:
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
-        tree, extra = import_tree(import_graph)
+        tree, extra = import_tree(import_graph, ontologies)
         with open(jpth(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
