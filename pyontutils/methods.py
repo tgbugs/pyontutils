@@ -813,7 +813,8 @@ triples = (
 
     _t(i.d, 'bacterial culture technique',
        tech.maintaining,
-       (hasParticipant, OntTerm('NCBITaxon:2', label='Bacteria <prokaryote>')),
+       #(hasParticipant, OntTerm('NCBITaxon:2', label='Bacteria <prokaryote>')),
+       (hasParticipant, OntId('NCBITaxon:2')),  # FIXME > 1 label
        synonyms=('bacterial culture',),),
 
     _t(i.d, 'cell culture technique',
