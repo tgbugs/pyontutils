@@ -117,23 +117,26 @@ class DevConfig:
 
     @dproperty
     def ontology_local_repo(self):
+        def add_default(thing):
+            default = self.__class__.ontology_local_repo.default
+            out = dstr(default)
+            out.default = default
+            return out
+
         try:
             olr = self.config['ontology_local_repo']
             if olr:
-                return olr
+                return add_default(olr)
             else:
                 raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, FileNotFoundError) as e:
             maybe_repo = Path(__file__).parent.parent.parent / self.ontology_repo
             if maybe_repo.exists():
-                return str(maybe_repo)
+                return add_default(maybe_repo)
             else:
                 print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
 
-                default = self.__class__.ontology_local_repo.default
-                out = dstr(default)
-                out.default = default
-                return out
+                return add_default(out)
 
     @default('localhost')
     def _scigraph_host(self):
