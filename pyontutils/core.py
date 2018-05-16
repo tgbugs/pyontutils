@@ -467,6 +467,7 @@ class Restriction(Triple):
             [graph.add(t) for t in triples]
 
         self.triples = []
+        failed_triples = []
         for r_s in graph.subjects(rdf.type, owl.Restriction):
             local_trips = [(r_s, rdf.type, owl.Restriction)]
             try:
@@ -480,10 +481,12 @@ class Restriction(Triple):
                 t = r_s, self.scope, o
                 local_trips.append(t)
             except StopIteration:
-                print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
-                continue
+                #print(f'failed to parse {r_s} {self.predicate} {self.scope} {local_trips}')
+                failed_triples.extend(local_trips)
             self.triples.extend(local_trips)
-            yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
+            #yield self.RestrictionTriple((s, p, o))  # , self.__class__.__name__
+        print('total', len(self.triples))
+        return failed_triples
 
 restriction = Restriction(rdfs.subClassOf)
 
