@@ -418,8 +418,9 @@ class _TermColors:
     OFF_BLINK = '\033[25m',
     POSITIVE = '\033[27m',
     OFF_HIDE = '\033[28m',
+    GREEN = '\033[32m',
     RED = '\033[91m',
-    GREEN = '\033[92m',
+    LTGREEN = '\033[92m',
     YELLOW = '\033[93m',
     BLUE = '\033[94m',
     )
