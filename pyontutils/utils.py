@@ -418,11 +418,17 @@ class _TermColors:
     OFF_BLINK = '\033[25m',
     POSITIVE = '\033[27m',
     OFF_HIDE = '\033[28m',
+    RED = '\033[31m',
     GREEN = '\033[32m',
-    RED = '\033[91m',
+    YELLOW = '\033[33m',
+    BLUE = '\033[34m',
+    PURPLE = '\033[35m',
+    CYANE = '\033[36m',
+    WHITE = '\033[37m',
+    LTRED = '\033[91m',
     LTGREEN = '\033[92m',
-    YELLOW = '\033[93m',
-    BLUE = '\033[94m',
+    LTYELLOW = '\033[93m',
+    LTBLUE = '\033[94m',
     )
 
     def __init__(self):

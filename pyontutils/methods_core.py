@@ -1,10 +1,15 @@
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
+from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
 from pyontutils.core import owl, rdf, rdfs
+
+restG = POCombinator(rdf.type, owl.Restriction)
+axiom = POCombinator(rdf.type, owl.Axiom)
+POC = POCombinator
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
@@ -166,6 +171,9 @@ triples = (
          ('This property is very useful for classifying techniques. '
           'For example a flattening technique is intended to effect the flatness '
           'aspect of any primary participant, though it may effect other aspects as well.')),
+    # TODO property chain or general axiom? implies that primary participant of has aspect
+    # axiom(None, POC(ilxtr.hasPrimarAspec))
+
 
     oop(ilxtr.hasPrimaryAspect_dAdS, ilxtr.hasIntention),
     olit(ilxtr.hasPrimaryAspect_dAdS, rdfs.label,
@@ -225,7 +233,7 @@ triples = (
     #oop(ilxtr.),
 
     # classes
-    oc(ilxtr.executor),
+    oc(ilxtr.executor, ilxtr.materialEntity),  # probably equivalent to agent in ero
     olit(ilxtr.executor, rdfs.label, 'executor'),
     olit(ilxtr.executor, NIFRID.synonym, 'executing agent'),
     olit(ilxtr.executor, definition,
@@ -293,6 +301,8 @@ triples = (
           'the amount of total salt (solid) in the universe since that salt '
           'is now ionized in solution.')),
 
+    oc(asp.proportion, asp.allocation),
+
     oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
     olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
     olit(asp.isClassifiedAs, NIFRID.synonym,
@@ -349,7 +359,39 @@ triples = (
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
 
+
 )
+r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryParticipant),
+                POC(owl.maxQualifiedCardinality,
+                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                POC(owl.onClass,
+                    # FIXME maybe more specific?
+                    BFO['0000004'])))
+
+ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+
+triples += r
+triples += ecr,  # FIXME
+
+r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect),
+                POC(owl.maxQualifiedCardinality,
+                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                POC(owl.onClass, ilxtr.aspect)))
+
+ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+
+triples += r
+triples += ecr,  # FIXME
+
+r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+                POC(owl.maxQualifiedCardinality,
+                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                POC(owl.onClass, ilxtr.changeType)))
+
+ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+
+triples += r
+triples += ecr,  # FIXME
 
 # TODO aspects.ttl?
 methods_core = simpleOnt(filename=filename,

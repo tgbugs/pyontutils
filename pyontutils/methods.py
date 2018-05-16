@@ -662,6 +662,7 @@ triples = (
        synonyms=('dissection',),),
 
     _t(i.d, 'atlas guided microdissection technique',
+       (ilxtr.isConstrainedBy, ilxtr.parcellationAtlas),
        (ilxtr.hasOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
        synonyms=('atlas guided microdissection',),),
 
@@ -801,7 +802,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
        # ie that if one were to measure rather than specify
        # the mouse should be in in the same phase during the activity
-       (ilxtr.hasConstrainingAspect, ilxtr.circadianPhase),  # TODO? 'NBO:0000169'
+       (ilxtr.hasConstrainingAspect, asp.circadianPhase),  # TODO? 'NBO:0000169'
        (ilxtr.hasPrimaryAspect, asp.weight),
        (hasInput, ilxtr.highFatDiet),
        ),
@@ -882,7 +883,7 @@ triples = (
     ),
 
     _t(tech.contrastEnhancement, 'contrast enhancement technique',
-       (ilxtr.hasPrimaryAspect, ilxtr.contrast),  # some contrast
+       (ilxtr.hasPrimaryAspect, asp.contrast),  # some contrast
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        synonyms=('contrast enhancement',),),
     _t(i.d, 'tagging technique',
@@ -969,7 +970,7 @@ triples = (
        synonyms=('activity measurement technique', 'bioassay')),
 
     _t(i.d, 'observational technique',
-       tech.measure,
+       tech.measuring,
        (ilxtr.hasSomething, i.d),
        synonyms=('observation', 'observation technique'),),
 
@@ -1065,7 +1066,7 @@ triples = (
        # if these were not qualified by the primary participant
        # then this would be both a creating and a destroying technique
        (ilxtr.hasPrimaryAspect, asp['is']),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero),  # FIXME value?
        synonyms=('maintenance technique',),
     ),
 
@@ -1092,7 +1093,7 @@ triples = (
        # FIXME aspects of information entities...
        # lots of stuff going on here...
        tech.sigproc,
-       (ilxtr.hasInformationPrimaryAspect, ilxtr.spectru),
+       (ilxtr.hasInformationPrimaryAspect, asp.spectrum),
        (ilxtr.hasInformationPrimaryAspect_dAdT, ilxtr.negative),
        (ilxtr.hasInformationPrimaryParticipant, ilxtr.timeSeries),  # FIXME
        synonyms=('signal filtering',),
@@ -1108,7 +1109,7 @@ triples = (
     _t(tech.contrastDetection, 'contrast detection technique',
        # a subclass could be differential contrast to electron scattering or something...
        #(ilxtr.hasPrimaryAspect_dAdPartOfPrimaryParticipant, ilxtr.nonZero),  # TODO FIXME this is MUCH better
-       (ilxtr.hasPrimaryAspect, ilxtr.contrast),  # contrast to something? FIXME this seems a bit off...
+       (ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to something? FIXME this seems a bit off...
        (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
        synonyms=('contrast detection',),
     ),
@@ -1188,7 +1189,7 @@ triples = (
 
     _t(tech.MRI, 'magnetic resonance imaging',
        #tech.imaging,
-       (ilxtr.hasPrimaryAspect, ilxtr.contrast),  # contrast to something? FIXME this seems a bit off...
+       (ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to something? FIXME this seems a bit off...
        (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
 
        # FIXME the output image for MRI should be subClassOf image, and not done this way
@@ -1250,11 +1251,15 @@ triples = (
     ),
 
     _t(i.d, 'activation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'deactivation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # FIXME this is more state?
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
     _t(tech.killing, 'killing technique',
@@ -1273,11 +1278,15 @@ triples = (
     ),
 
     _t(i.d, 'photoactivation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasProbe, ilxtr.photon),
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
     _t(i.d, 'photoinactivation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasProbe, ilxtr.photon),
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
     _t(i.d, 'photobleaching technique',
@@ -1410,6 +1419,7 @@ triples = (
     _t(i.d, 'stereotaxic technique',
        tech.surgery,  # FIXME
        (hasParticipant, ilxtr.stereotax),
+       (ilxtr.isConstrainedBy, ilxtr.stereotaxiCoordinateSystem),
     ),
 
     _t(i.d, 'behavioral technique',  # FIXME this is almost always actually some environmental manipulation
@@ -1649,6 +1659,7 @@ triples = (
     ),
 )
 triples += (  # aspects
+
             oc(asp.behavioral, ilxtr.aspect),
 
             oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
@@ -1659,6 +1670,7 @@ triples += (  # aspects
             oc(asp.sensory, ilxtr.aspect),
             oc(asp.vision, asp.sensory),
 
+            oc(asp.anySpatioTemporalMeasure, ilxtr.aspect),  # FIXME
             oc(asp.electromagnetic, ilxtr.aspect),
             oc(asp.electrical, asp.electromagnetic),
             oc(asp.voltage, asp.electrical),
@@ -1666,13 +1678,36 @@ triples += (  # aspects
             oc(asp.charge, asp.electrical),
             oc(asp.magnetic, asp.electromagnetic),
 
+            oc(asp.informationEntropy, ilxtr.aspect),
+            oc(asp.mechanicalRigidity, ilxtr.aspect),
+            oc(asp.spectrum, ilxtr.aspect),
+            oc(asp.spontaneousChangeInStructure, ilxtr.aspect),
+
             oc(asp.physicalOrderedness, ilxtr.aspect),
             oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
 
             oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
+            #oc(asp.circadianPhase, asp.biologicalActivity),
+            oc(asp.circadianPhase, ilxtr.aspect),  # FIXME hrm... time as a proxy for biological state?
+
+            oc(asp.sensitvity, ilxtr.aspect),
+            # FIXME issue with sensitivity and the 'towards' relation
 
             oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
             oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
+)
+
+triples += ( # protocols
+            oc(prot.CLARITY, ilxtr.protocol),
+            oc(prot.deepSequencing, ilxtr.protocol),
+            oc(prot.sangerSequencing, ilxtr.protocol),
+            oc(prot.shotgunSequencing, ilxtr.protocol),
+           )
+
+triples += ( # information entity
+            oc(ilxtr.superResolutionAlgorithem, ilxtr.informationEntity),
+            oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
+            oc(ilxtr.radonTransform, ilxtr.informationEntity),
 )
 
 triples += (  # other
@@ -1680,6 +1715,7 @@ triples += (  # other
             oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
 
             oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
+            oc(ilxtr.brainSlice, ilxtr.materialEntity),
 
             oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
             oc(ilxtr.image, ilxtr.informationArtifact),
@@ -1693,7 +1729,8 @@ triples += (  # other
                  )),
             oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
 
-            oc(ilxtr.food),  # TODO edible organic matter with variable nutritional value depending on the organism
+            oc(ilxtr.food_and_water, ilxtr.materialEntity),
+            oc(ilxtr.food, ilxtr.food_and_water),  # TODO edible organic matter with variable nutritional value depending on the organism
             oc(ilxtr.highFatDiet, ilxtr.food),
             oc(ilxtr.DIODiet, ilxtr.highFatDiet),
             oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
@@ -1705,10 +1742,45 @@ triples += (  # other
             oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
             olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
             olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
+            oc(ilxtr.microPipette, ilxtr.materialEntity),
+            oc(ilxtr.microscope, ilxtr.materialEntity),
+            oc(ilxtr.lightMicroscope, ilxtr.materialEntity),
+            oc(ilxtr.microtome, ilxtr.materialEntity),
+            oc(ilxtr.stereotax, ilxtr.materialEntity),
 
+            oc(ilxtr.photons, ilxtr.materialEntity),
+            oc(ilxtr.visibleLight, ilxtr.photons),
+            oc(ilxtr.xrays, ilxtr.photons),
+
+            oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
+
+            oc(ilxtr.positive, ilxtr.changeType),
+            oc(ilxtr.negative, ilxtr.changeType),
             (ilxtr.negative, owl.disjointWith, ilxtr.positive),
+            oc(ilxtr.nonZero, ilxtr.changeType),
+            oc(ilxtr.zero, ilxtr.changeType),
+            (ilxtr.zero, owl.disjointWith, ilxtr.nonZero),
 
 )
+
+def ect():  # FIXME not used supposed to make dAdT zero equi to value hasValue 0
+    b = rdflib.BNode()
+
+    r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+                    POC(owl.someValuesFrom,
+                        rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                    POC(owl.onClass, ilxtr.changeType)),
+              restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+                    POC(owl.maxQualifiedCardinality,
+                        rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                    POC(owl.onClass, ilxtr.changeType)))
+
+    ax = (b, rdf.type, owl.Axiom)
+    ecr = (b, owl.equivalentClass, r[0][0])
+
+    return r1 + r2 + ax + ecr
+
+#triples += ect()
 
 methods = simpleOnt(filename=filename,
                     prefixes=prefixes,
@@ -1780,4 +1852,5 @@ def main():
     expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
 if __name__ == '__main__':
-    main()
+    pass
+    #main()
