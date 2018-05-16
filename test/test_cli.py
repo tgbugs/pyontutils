@@ -22,6 +22,11 @@ if 'SCICRUNCH_API_KEY' in os.environ:
 else:
     scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
 
+p1 = Path(__file__).resolve().absolute().parent.parent.parent
+p2 = Path(devconfig.git_local_base).resolve().absolute()
+print(p1, p2)
+if p1 != p2:
+    devconfig.git_local_base = p1
 
 class Folders(unittest.TestCase):
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')

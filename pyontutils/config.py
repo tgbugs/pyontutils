@@ -103,6 +103,11 @@ class DevConfig:
     def git_local_base(self):
         return os.path.expanduser(self.config['git_local_base'])
 
+    @git_local_base.setter
+    def git_local_base(self, value):
+        self._config['git_local_base'] = value
+        self.write(self.config_file)
+
     @default('SciCrunch')
     def ontology_org(self):
         return self.config['ontology_org']

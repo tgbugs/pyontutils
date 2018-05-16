@@ -1704,6 +1704,13 @@ methods = simpleOnt(filename=filename,
                     comment=comment,
                     _repo=_repo)
 
+[methods.graph.add((o2, rdfs.subClassOf, TEMP.urg))
+ for s1, p1, o1 in methods.graph if
+ p1 == owl.onProperty and
+ o1 == ilxtr.hasSomething
+ for p2, o2 in methods.graph[s1:] if
+ p2 == owl.someValuesFrom]
+
 methods._graph.add_namespace('asp', str(asp))
 methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
 methods._graph.add_namespace('tech', str(tech))
