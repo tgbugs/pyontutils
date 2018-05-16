@@ -46,6 +46,8 @@ class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
         self.config_file = config_file
+        olrd = Path(self.git_local_base, self.ontology_repo).as_posix()
+        self.__class__.ontology_local_repo.default = olrd
 
     @property
     def config(self):
@@ -113,7 +115,7 @@ class DevConfig:
     def ontology_remote_repo(self):
         return os.path.join(self.git_remote_base, self.ontology_org, self.ontology_repo)
 
-    @property
+    @dproperty
     def ontology_local_repo(self):
         try:
             olr = self.config['ontology_local_repo']
@@ -127,7 +129,11 @@ class DevConfig:
                 return str(maybe_repo)
             else:
                 print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
-                return None  # force explicit handling downstream
+
+                default = self.__class__.ontology_local_repo.default
+                out = dstr(default)
+                out.default = default
+                return out
 
     @default('localhost')
     def _scigraph_host(self):
