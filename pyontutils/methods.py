@@ -747,6 +747,8 @@ triples = (
        synonyms=('mixing',),),
     _t(i.d, 'agitating technique',
        #tech.mixing,
+       # allocation on failure?
+       # classification depends exactly on the goal
        (ilxtr.hasSomething, i.d),
        synonyms=('agitating',),),
     _t(i.d, 'stirring technique',
@@ -1663,11 +1665,22 @@ triples += (  # aspects
             oc(asp.current, asp.electrical),
             oc(asp.charge, asp.electrical),
             oc(asp.magnetic, asp.electromagnetic),
+
+            oc(asp.physicalOrderedness, ilxtr.aspect),
+            oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
+
+            oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
+
+            oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
+            oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
 )
 
 triples += (  # other
             oc(ilxtr.thingWithSequence),
             oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+
+            oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
+
             oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
             oc(ilxtr.image, ilxtr.informationArtifact),
             olit(ilxtr.image,

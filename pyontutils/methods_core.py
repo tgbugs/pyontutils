@@ -347,6 +347,7 @@ triples = (
     olit(ilxtr.technique, definition,
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
+    # NOTE: not all techniques have primary participants, especially in the case of composite techniques
 
 )
 
