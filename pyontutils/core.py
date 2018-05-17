@@ -292,6 +292,21 @@ class CombinatorIt(Combinator):
 
     def __call__(self, *args, **kwargs):
         # FIXME might get two subjects by accident...
+        if (isinstance(self.outer_self, Combinator) and args and not isinstance(args[0], str) or
+            self.args and self.args[0] is None):
+            args = (rdflib.BNode(),) + args
+            if self.args[0] is None:
+                self.args = self.args[1:]
+        elif not args and not self.args:
+            args = rdflib.BNode(),
+
+        print(args, self.args, kwargs)
+
+        #if isinstance(self.outer_self, CombinatorIt):
+            #s = rdflib.BNode()
+            #for combinator in self.args:
+                #yield from combinator(s)
+
         yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
     def __repr__(self):
@@ -307,6 +322,9 @@ class CombinatorIt(Combinator):
 class ObjectCombinator(Combinator):
     def __init__(self, object):
         self.object = object
+
+    def full_combinator(self, *combinators):  # FIXME this is not right...?
+        return CombinatorIt(self, *combinators)
 
     def __call__(self, subject, predicate):
         if isinstance(self.object, Combinator):
@@ -340,12 +358,16 @@ class _POCombinator(Combinator):
         # seems unlikely that same object multiple predicates would occur, will impl if needed
         if subject is None:
             subject = rdflib.BNode()
+
         yield subject, self.predicate, self.object
         for combinator in pocombinators:
             #if isinstance(combinator, types.GeneratorType):
                 #combinator = next(combinator)  # return the trapped combinator ;_;
             #else:
-            yield from combinator(subject)
+            if isinstance(combinator, str):
+                yield combinator
+            else:
+                yield from combinator(subject)
 
     def __repr__(self):
         p = qname(self.predicate)
