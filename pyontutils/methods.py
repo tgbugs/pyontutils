@@ -6,7 +6,7 @@ from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
 from pyontutils.core import partOf, hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core
+from pyontutils.methods_core import asp, tech, prot, methods_core, _t
 
 filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
@@ -23,6 +23,7 @@ debug = False
 
 restHasValue = Restriction(None, owl.hasValue)
 restrictionS = Restriction(owl.someValuesFrom)
+oECU = EquivalentClass(owl.unionOf)
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -32,37 +33,6 @@ def t(subject, label, def_, *synonyms):
 
     if synonyms:
         yield from olit(subject, NIFRID.synonyms, *synonyms)
-
-def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec):
-    members = tuple()
-    _rests = tuple()
-    for rest in rests:
-        if isinstance(rest, tuple):
-            if len(rest) == 2:
-                _rests += rest,
-            else:
-                raise ValueError(f'length of {rest} is not 2!')
-        else:
-            members += rest,
-
-    rests = _rests
-    if not members:
-        members = ilxtr.technique,
-
-
-    yield from oc(subject)
-    yield from equivalentClass.serialize(subject, *members, *restrictions(*rests))
-    yield from olit(subject, rdfs.label, label)
-    if def_:
-        yield from olit(subject, definition, def_)
-
-    if synonyms:
-        if not isinstance(synonyms, tuple):
-            # this is why python sucks and racket is awesome if this was racket
-            # the error would show up on the line where the problem was :/
-            raise TypeError(f'Type of {synonyms!r} should not be {type(synonyms)}!')
-        yield from olit(subject, NIFRID.synonyms, *synonyms)
-
 
 class I:
     counter = iter(range(999999))
@@ -706,7 +676,6 @@ triples = (
        ilxtr.technique,
        unionOf(hasAspectChangeCombinator(asp.mechanicalRigidity, ilxtr.positive),
                hasAspectChangeCombinator(asp.spontaneousChangeInStructure, ilxtr.negative)),
-       #equivalentClass=EquivalentClass(owl.unionOf),
        synonyms=('fixation',)),
 
     #oc_(tech.fixation,
@@ -1008,7 +977,7 @@ triples = (
        # if I probe someone by speaking latin but they do not respond
        # vs if they do it is not the physical content of the sounds
        # it is how they interact with the state of the other person's brain
-       def_=('Probing techniques attempt to change the state of a thing without changing '
+       def_=('Probing techniques attempt (intende) to change the state of a thing without changing '
             'how it is named. Hitting something with just enough light to excite but not to '
             'bleach would be one example, as would poking something with a non-pointy stick.'
            ),
@@ -1116,22 +1085,26 @@ triples = (
 
     _t(i.d, 'microscopy technique',
        (hasParticipant, ilxtr.microscope),  # electrophysiology microscopy techinque?
+       (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('microscopy',),
     ),
 
     _t(i.d, 'light microscopy technique',
        (hasParticipant, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
+
        #(ilxtr.detects, OntTerm(search='visible light', prefix='obo')),
        #(ilxtr.detects, OntTerm(search='photon', prefix='NIFSTD')),
        (ilxtr.detects, ilxtr.visibleLight),  # TODO photos?
        #(hasParticipant, OntTerm(term='visible light')),  # FIXME !!! detects vs participant ???
        synonyms=('light microscopy',)),
+    (ilxtr.lightMicroscope, owl.equivalentClass, OntTerm('BIRNLEX:2112', label='Optical microscope')),
 
     _t(i.d, 'confocal microscopy technique',
        (hasParticipant, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
-
        (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
+       (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('confocal microscopy',)),
+    (OntTerm('BIRNLEX:2029', label='Confocal microscope'), rdfs.subClassOf, ilxtr.microscope),
 
     _t(tech.imaging, 'imaging technique',
        (ilxtr.hasInformationOutput, ilxtr.image),
@@ -1187,51 +1160,78 @@ triples = (
        (ilxtr.detects, ilxtr.xrays),
     ),  # owl:Class photon and hasWavelenght range ...
 
-    _t(tech.MRI, 'magnetic resonance imaging',
-       #tech.imaging,
+    _t(tech.MRI_ImageProcessing, 'magnetic resonance image processing',
+       # the stuff that goes on inside the scanner
+       # or afterward to produce the 'classic' output data
+       # this way we can create as many subclasses of contrast as we need
        (ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to something? FIXME this seems a bit off...
        (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
+      ),
 
+    _t(tech.MRI, 'magnetic resonance imaging',
+       #tech.imaging,
+       (hasParticipant, ilxtr.MRIScanner),
+       (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),  # FIXME hasPrimaryAspect appears twice
        # FIXME the output image for MRI should be subClassOf image, and not done this way
        # NRM is an aspect not one of the mediators
+       (hasPart, tech.MRI_ImageProcessing),
+       (hasPart, tech.MRI),
        (ilxtr.hasInformationOutput, ilxtr.spatialFrequencyImageStack),  # TODO FIXME
-       (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),  # FIXME hasPrimaryAspect appears twice
        # as long as the primaryAspect is subClassOf ilxtr.nuclearMagneticResonance then we are ok
        # and we won't get duplication of primary aspects
        synonyms=('MRI', 'nuclear magnetic resonance imaging'),
     ),
 
     _t(tech.fMRI, 'functional magnetic resonance imaging',
-       # AAAAAAA how to deal with
-       # "change in nuclear magnetic resonance of iron molecules as a function of time and their bound oxygen"
-       # "BOLD" blood oxygenation level dependent contrast is something different...
-       #ilxtr.NMR_of_iron_in_the_blood  # ICK
-       #(hasPrimaryParticipant, ilxtr.???)
-       #(hasPart, tech.MRI),  # FIXME how to deal with this...
-       #(hasPart, tech.bloodOxygenLevel),
-       #(ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
-       tech.MRI,  # FIXME vs respeccing everything?
-       #(ilxtr.hasPrimaryParticipantSubeset, ilxtr.haemoglobin)
-       #(ilxtr.hasPrimaryParticipantPart, ilxtr.haemoglobin)
-       (ilxtr.hasPrimaryParticipant, ilxtr.haemoglobin),
-       (ilxtr.hasPrimaryParticipantSubsetRule, ilxtr.hasBoundOxygen),  # FIXME not quite right still?
-       synonyms=('fMRI', 'functional nuclear magnetic resonance imaging'),),
+       (ilxtr.isConstrainedBy, prot.fMRI),
+       (hasPart, tech.MRI),
+       (hasPart, tech.fMRI_ImageProcessing),
+      ),
+
     olit(tech.fMRI, rdfs.comment,
-         ('Note that this deals explicitly only with the image acquistion portion of fMRI. '
-          'Other parts of the full process and techniques in an fMRI study should be modelled separately. '
-          'They can be tied to fMRI using hasPart: or hasPriorTechnique something similar.')),  # TODO
-    (tech.fMRI, ilxtr.hasTempId, OntId("HBP_MEM:0000008")),
+         ('In contrast to previous definitions of fMRI technqiues, here we try to '
+          'remain agnostic as possible about the actual phenomena that is being detected '
+          'since it is still a matter of scientific exploration. The key is that the process '
+          'follows a protocol that sets the proper parameters on the scanner (and uses the '
+          'proper scanner).')),
 
     _t(tech.dwMRI, 'diffusion weighted magnetic resonance imaging',
-       tech.MRI,
        # FIXME the primary participant isn't really water so much as it is
        #  the water that is part of the primary participant...
-       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
-       synonyms=('dwMRI', 'diffusion weighted nuclear magnetic resonance imaging'),),
+
+       intersectionOf(
+       restrictionN(ilxtr.hasPart, tech.MRI),
+       # TODO 'knownProbedPhenomena' or something similar
+       # TODO 
+       #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
+       restrictionN(ilxtr.hasPart, tech.dwMRI_ImageProcessing)),
+       (ilxtr.isConstrainedBy, prot.dwMRI),
+       synonyms=('dwMRI', 'diffusion weighted nuclear magnetic resonance imaging'),
+       equivalentClass=oECU),
+
+    _t(tech.dwMRI_ImageProcessing, 'diffusion weighted MRI image processing',
+       (ilxtr.hasSomething, i.d),
+      ),
 
     _t(tech.DTI, 'diffusion tensor imaging',
-       tech.dwMRI,
-       synonyms=('DTI',),),
+       ilxtr.technique,
+       intersectionOf(restrictionN(hasPart, tech.dwMRI),
+                      restrictionN(hasPart, tech.DTI_ImageProcessing)),
+       (ilxtr.isConstrainedBy, prot.DTI),
+       # FIXME not clear that this should be in the intersection...
+       # it seems like it may make more sense to do these as unions?
+       # TODO kpp kdp
+       intersectionOf(
+       restrictionN(ilxtr.hasParticipant, ilxtr.MRIScanner),
+       restrictionN(ilxtr.knownProbedPhenomena, OntTerm('CHEBI:15377', label='water')),
+       restrictionN(ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:15377', label='water'))),
+       synonyms=('DTI',),
+       equivalentClass=oECU),
+
+    _t(tech.DTI_ImageProcessing, 'diffusion tensor image processing',
+       (ilxtr.hasSomething, i.d),
+      ),
+
 
     _t(i.d, 'electroencephalography',
        (ilxtr.hasSomething, i.b),
@@ -1278,22 +1278,24 @@ triples = (
     ),
 
     _t(i.d, 'photoactivation technique',
-       (ilxtr.hasProbe, ilxtr.photon),
+       (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'photoinactivation technique',
-       (ilxtr.hasProbe, ilxtr.photon),
+       (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
     _t(i.d, 'photobleaching technique',
+       (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(i.d, 'photoconversion technique',
+       (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -1318,10 +1320,12 @@ triples = (
     ),
 
     _t(i.d, 'crushing technique',
+       # tissue destruction technique
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(i.d, 'deafferenting technique',
+       # tissue destruction technique
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -1337,14 +1341,22 @@ triples = (
     ),
 
     _t(i.d, 'illumination technique',
-       (ilxtr.hasSomething, i.d),
+       # as distinct from a technique for illuminating a page in a medieval text
+       #tech.agnostic,  # TODO agnostic techniques try to do nothing scientific usually
+       # they are purely goal driven
+       #(ilxtr.phenomena, ilxtr.photons),
+       (ilxtr.hasPrimaryAspect, asp.lumenance),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'lesioning technique',
+       #(hasPart, tech.surgical),  # is this tru
+       # has intention to destory some subset of the nervous system
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(i.d, 'sensory deprivation technique',
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -1353,25 +1365,38 @@ triples = (
     ),
 
     _t(i.d, 'stimulation technique',
-       (ilxtr.hasPrimaryAspect, ilxtr.physiologicalActivity),  # TODO
+       #(ilxtr.hasPrimaryAspect, ilxtr.physiologicalActivity),  # TODO
+       (ilxtr.hasProbe, ilxtr.materialEntity),
+       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'physical stimulation technique',  # FIXME another use of physical
        (ilxtr.hasSomething, i.d),
+       (ilxtr.hasProbe, ilxtr.mechanicalForce),  # but is this physical?
+       def_='A technique using mechanical force to enduce a state change on a system.',
+       synonyms=('mechanical stimulation technique',)
     ),
 
     _t(i.d, 'electrical stimulation technique',
-       (ilxtr.hasProbe, asp.electrical),
+       #(ilxtr.hasProbe, asp.electrical),  # FIXME the probe should be the physical mediator
+       #(ilxtr.hasProbe, ilxtr.electricalPhenomena),  # electircal field?
+       (ilxtr.hasProbe, ilxtr.electricalField),  # electircal field?
+       (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(tech.stim_Magnetic, 'magnetic stimulation technique',
-       (ilxtr.hasProbe, asp.magnetic),  # FIXME this doesn't seem right...
-       (ilxtr.hasSomething, i.d),
+       # TODO need a way to accomodate the stimulation of biological activity
+       # with the stimulating phenomena
+       # has intention to stimulate???
+       (ilxtr.hasProbe, ilxtr.magneticField),  # FIXME TODO duality between stimulus and response...
+       (ilxtr.hasPrimaryAspect, asp.magnetic),
     ),
 
     _t(i.d, 'transcranial magnetic stimulation technique',
-       tech.stim_Magnetic,
+       (ilxtr.hasProbe, ilxtr.magneticField),
+       (ilxtr.hasPrimaryAspect, asp.magnetic),
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -1385,6 +1410,9 @@ triples = (
 
     _t(tech.surgery, 'surgical technique',
        (ilxtr.hasSomething, i.d),
+       # any technique that involves the destruction of some anatomical structure
+       # which requires healing (if possible)
+       (hasPart, tech.cutting),  # FIXME obviously too broad
        synonyms=('surgery',),),
 
     _t(i.d, 'biopsy technique',
@@ -1532,41 +1560,50 @@ triples = (
 
     _t(i.d, 'microtomy technique',
        (ilxtr.hasParticipant, ilxtr.microtome),
+       (ilxtr.hasOutput, ilxtr.thinSections),  # this prevents issues with microtome based warfare techniques
        synonyms=('microtomy',)
     ),
 
     _t(i.d, 'ultramicrotomy technique',
        (ilxtr.hasParticipant, ilxtr.ultramicrotome),
+       (ilxtr.hasOutput, ilxtr.veryThinSections),  # FIXME has intended output?
        synonyms=('ultramicrotomy',)
     ),
 
     _t(i.d, 'array tomographic technique',
-       (hasParticipant, ilxtr.microscope),  # FIXME more precisely?
+       (hasPart, tech.microscopy),
+       #(hasParticipant, ilxtr.microscope),  # FIXME more precisely?
        (ilxtr.isConstrainedBy, ilxtr.radonTransform),
        synonyms=('array tomography', 'array tomography technique')
     ),
 
-    _t(tech.em, 'electron microscopy technique',
+    _t(tech.electronMicroscopy, 'electron microscopy technique',
        (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
        (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
+       (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('electron microscopy',)),
-    (tech.em, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
-
+    (tech.electronMicroscopy, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
 
     _t(i.d, 'correlative light-electron microscopy technique',
        (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
-       (hasParticipant, ilxtr.lightMicroscope),
+       # this works extremely well because the information outputs propagate nicely
+       (hasPart, tech.lightMicroscopy),
+       (hasPart, tech.electronMicroscopy),
+       (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('correlative light-electron microscopy',)
     ),
 
     _t(i.d, 'serial blockface electron microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
-       (hasParticipant, ilxtr.ultramicrotome),
+       (hasPart, tech.electronMicroscopy),
+       (hasPart, tech.ultramicrotomy),
+       #(hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
+       #(hasParticipant, ilxtr.ultramicrotome),
        synonyms=('serial blockface electron microscopy',)
     ),
 
     _t(i.d, 'super resolution microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2106', label='Microscope', synonyms=[])),  # TODO more
+       #(hasParticipant, OntTerm('BIRNLEX:2106', label='Microscope', synonyms=[])),  # TODO more
+       (hasPart, tech.microscopy),  # FIXME special restriction on the properties of the scope?
        (ilxtr.isConstrainedBy, ilxtr.superResolutionAlgorithem),
        synonyms=('super resolution microscopy',)
     ),
@@ -1715,7 +1752,6 @@ triples += (  # other
             oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
 
             # FIXME owl:sameAs is NOT for generic iris >_<
-            (ilxtr.materialEntity, owl.equivalentClass, OntTerm('BFO:0000040', label='material entity')),
             oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
             oc(ilxtr.brainSlice, ilxtr.materialEntity),
 
@@ -1746,8 +1782,10 @@ triples += (  # other
             olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
             oc(ilxtr.microPipette, ilxtr.materialEntity),
             oc(ilxtr.microscope, ilxtr.materialEntity),
-            oc(ilxtr.lightMicroscope, ilxtr.materialEntity),
+            oc(ilxtr.lightMicroscope, ilxtr.microscope),
+            oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
             oc(ilxtr.microtome, ilxtr.materialEntity),
+            oc(ilxtr.ultramicrotome, ilxtr.microtome),
             oc(ilxtr.stereotax, ilxtr.materialEntity),
 
             oc(ilxtr.photons, ilxtr.materialEntity),
@@ -1783,6 +1821,29 @@ def ect():  # FIXME not used supposed to make dAdT zero equi to value hasValue 0
     return r1 + r2 + ax + ecr
 
 #triples += ect()
+"""
+_t(tech.fMRI, 'functional magnetic resonance imaging',
+   # AAAAAAA how to deal with
+   # "change in nuclear magnetic resonance of iron molecules as a function of time and their bound oxygen"
+   # "BOLD" blood oxygenation level dependent contrast is something different...
+   #ilxtr.NMR_of_iron_in_the_blood  # ICK
+   #(hasPrimaryParticipant, ilxtr.???)
+   #(hasPart, tech.MRI),  # FIXME how to deal with this...
+   #(hasPart, tech.bloodOxygenLevel),
+   #(ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
+   tech.MRI,  # FIXME vs respeccing everything?
+   #(ilxtr.hasPrimaryParticipantSubeset, ilxtr.haemoglobin)
+   #(ilxtr.hasPrimaryParticipantPart, ilxtr.haemoglobin)
+   (ilxtr.hasPrimaryParticipant, ilxtr.haemoglobin),
+   (ilxtr.hasPrimaryParticipantSubsetRule, ilxtr.hasBoundOxygen),  # FIXME not quite right still?
+   synonyms=('fMRI', 'functional nuclear magnetic resonance imaging'),),
+olit(tech.fMRI, rdfs.comment,
+     ('Note that this deals explicitly only with the image acquistion portion of fMRI. '
+      'Other parts of the full process and techniques in an fMRI study should be modelled separately. '
+      'They can be tied to fMRI using hasPart: or hasPriorTechnique something similar.')),  # TODO
+(tech.fMRI, ilxtr.hasTempId, OntId("HBP_MEM:0000008")),
+"""
+
 
 methods = simpleOnt(filename=filename,
                     prefixes=prefixes,

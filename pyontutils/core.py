@@ -744,6 +744,10 @@ class UnionOf(PredicateList):
 
 unionOf = UnionOf()
 
+class PropertyChainAxiom(PredicateList):
+    predicate = owl.propertyChainAxiom
+
+propertyChainAxiom = PropertyChainAxiom()
 
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of

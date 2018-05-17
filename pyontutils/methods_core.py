@@ -2,7 +2,7 @@ from IPython import embed
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator
+from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom
 from pyontutils.core import restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
@@ -15,12 +15,43 @@ equivalentClassC = POCombinator(owl.equivalentClass, ObjectCombinator).full_comb
 owlClass = oc_
 owlClassC = oc_.full_combinator
 subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator).full_combinator
+oop_ = POCombinator(rdf.type, owl.ObjectProperty)
+
+def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec):
+    members = tuple()
+    _rests = tuple()
+    for rest in rests:
+        if isinstance(rest, tuple):
+            if len(rest) == 2:
+                _rests += rest,
+            else:
+                raise ValueError(f'length of {rest} is not 2!')
+        else:
+            members += rest,
+
+    rests = _rests
+    if not members:
+        members = ilxtr.technique,
+
+
+    yield from oc(subject)
+    yield from equivalentClass.serialize(subject, *members, *restrictions(*rests))
+    yield from olit(subject, rdfs.label, label)
+    if def_:
+        yield from olit(subject, definition, def_)
+
+    if synonyms:
+        if not isinstance(synonyms, tuple):
+            # this is why python sucks and racket is awesome if this was racket
+            # the error would show up on the line where the problem was :/
+            raise TypeError(f'Type of {synonyms!r} should not be {type(synonyms)}!')
+        yield from olit(subject, NIFRID.synonyms, *synonyms)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
-obo, *_ = makeNamespaces('obo')
+obo, RO, *_ = makeNamespaces('obo', 'RO')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
@@ -150,6 +181,13 @@ triples = (
     # oop(ilxtr.hasPrimaryParticipantIntentionAspect, ilxtr.hasParticipantIntentionAspect),
     # oop(ilxtr.hasPrimaryParticipantIntentionPrimaryAspect, ilxtr.hasPrimaryParticipantIntentionAspect),
 
+    oop(ilxtr.techniqueHasAspect),
+    oop_(ilxtr.techniqueHasAspect,
+         propertyChainAxiom(hasPart, ilxtr.techniqueHasAspect),
+         propertyChainAxiom(ilxtr.hasConstrainingAspect),
+         propertyChainAxiom(ilxtr.hasPrimaryAspect),
+        ),
+
     oop(ilxtr.hasConstrainingAspect, ilxtr.TODO),  # TODO
     olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
     olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
@@ -231,6 +269,13 @@ triples = (
           'Note that this implies that these are not just qualities, they must have an '
           'explicit value outcome defined.'
          )
+        ),
+
+    oop(ilxtr.hasAspect, RO['0000086']),
+    # FIXME make it clear that this is between material entities (it is subclassof quality)
+    oop_(ilxtr.hasAspect,
+         propertyChainAxiom(ilxtr.hasAspect),
+         propertyChainAxiom(hasPart, ilxtr.hasAspect),
         ),
 
     #oop(ilxtr.),
@@ -363,6 +408,16 @@ triples = (
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
+
+    (ilxtr.materialEntity, owl.equivalentClass, BFO['0000040']),
+
+    #_t(tech.test, 'test test test',
+       #(ilxtr.hasPrimaryParticipant, ilxtr.thingA),
+       #(ilxtr.hasPrimaryParticipant, ilxtr.thingB)),
+
+    #(ilxtr.thingA, rdfs.subClassOf, ilxtr.materialEntity),
+    #(ilxtr.thingB, rdfs.subClassOf, ilxtr.materialEntity),
+    #(ilxtr.thingA, owl.disjointWith, ilxtr.thingB),
 
 ) 
 
