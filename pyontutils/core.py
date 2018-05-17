@@ -300,13 +300,6 @@ class CombinatorIt(Combinator):
         elif not args and not self.args:
             args = rdflib.BNode(),
 
-        print(args, self.args, kwargs)
-
-        #if isinstance(self.outer_self, CombinatorIt):
-            #s = rdflib.BNode()
-            #for combinator in self.args:
-                #yield from combinator(s)
-
         yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
     def __repr__(self):

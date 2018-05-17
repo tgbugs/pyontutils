@@ -1,3 +1,4 @@
+from IPython import embed
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
@@ -7,9 +8,13 @@ from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
 from pyontutils.core import owl, rdf, rdfs
 
-restG = POCombinator(rdf.type, owl.Restriction)
+restG = POCombinator(rdf.type, owl.Restriction).full_combinator
 axiom = POCombinator(rdf.type, owl.Axiom)
-POC = POCombinator
+blankc = POCombinator
+equivalentClassC = POCombinator(owl.equivalentClass, ObjectCombinator).full_combinator
+owlClass = oc_
+owlClassC = oc_.full_combinator
+subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator).full_combinator
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
@@ -20,7 +25,7 @@ filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 #imports = NIFTTL['nif_backend.ttl'],
-imports = obo['bfo.owl'],
+imports = obo['bfo.owl'], obo['ro.owl']
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
 debug = True
@@ -359,39 +364,69 @@ triples = (
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
 
+) 
 
-)
-r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryParticipant),
-                POC(owl.maxQualifiedCardinality,
-                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-                POC(owl.onClass,
-                    # FIXME maybe more specific?
-                    BFO['0000004'])))
+def derp():
+    b0 = rdflib.BNode()
+    yield ilxtr.technique, owl.equivalentClass, b0
 
-ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+    yield b0, rdf.type, owl.Class
+    a, b, c = (rdflib.BNode() for _ in range(3))
+    yield b0, owl.intersectionOf, a
+    b1 = rdflib.BNode()
+    yield a, rdf.first, b1
+    r1 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, BFO['0000004']))(b1)
+    yield from r1
 
-triples += r
-triples += ecr,  # FIXME
+    b2 = rdflib.BNode()
+    yield b, rdf.first, b2
+    r2 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, ilxtr.aspect))(b2)
+    yield from r2
 
-r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect),
-                POC(owl.maxQualifiedCardinality,
-                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-                POC(owl.onClass, ilxtr.aspect)))
+    b3 = rdflib.BNode()
+    yield c, rdf.first, b3
+    r3 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, ilxtr.changeType))(b3)
+    yield from r3
 
-ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+    for _1, _2 in ((a, b), (b, c), (c, rdf.nil)):
+        yield _1, rdf.rest, _2
 
-triples += r
-triples += ecr,  # FIXME
+triples += tuple(derp())
 
-r = tuple(restG(None, POC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
-                POC(owl.maxQualifiedCardinality,
-                    rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-                POC(owl.onClass, ilxtr.changeType)))
 
-ecr = (ilxtr.technique, owl.equivalentClass, r[0][0])
+"""
+asdf = tuple(
+    owlClass(ilxtr.technique,
+             equivalentClassC(None,
+                 owlClassC(
+                     subClassOf(
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryParticipant),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass,
+                                      # FIXME maybe more specific?
+                                      BFO['0000004'])),
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryAspect),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass, ilxtr.aspect)),
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass, ilxtr.changeType))))))
+         )
 
-triples += r
-triples += ecr,  # FIXME
+embed()
+"""
 
 # TODO aspects.ttl?
 methods_core = simpleOnt(filename=filename,

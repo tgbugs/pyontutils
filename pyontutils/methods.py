@@ -1714,6 +1714,8 @@ triples += (  # other
             oc(ilxtr.thingWithSequence),
             oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
 
+            # FIXME owl:sameAs is NOT for generic iris >_<
+            (ilxtr.materialEntity, owl.equivalentClass, OntTerm('BFO:0000040', label='material entity')),
             oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
             oc(ilxtr.brainSlice, ilxtr.materialEntity),
 
