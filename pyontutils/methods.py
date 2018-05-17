@@ -15,8 +15,8 @@ prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
             'NLX',
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-#imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
-imports = methods_core.iri,
+imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
+#imports = methods_core.iri,
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
@@ -901,8 +901,10 @@ triples = (
     _t(i.d, 'extraction technique',
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'pull-down technique',
+       # allocation enrichement
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'isolation technique',
+       # enrichment
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'purification technique',
        (ilxtr.hasSomething, i.d),),
@@ -936,6 +938,7 @@ triples = (
 
     _t(i.d, 'biological activity measurement technique',
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # TODO
+       (ilxtr.hasInformationOutput, ilxtr.informationArtifact),
        synonyms=('activity measurement technique', 'bioassay')),
 
     _t(i.d, 'observational technique',
@@ -1166,6 +1169,7 @@ triples = (
        # this way we can create as many subclasses of contrast as we need
        (ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to something? FIXME this seems a bit off...
        (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
+       (ilxtr.hasSomething, i.d),
       ),
 
     _t(tech.MRI, 'magnetic resonance imaging',
@@ -1199,15 +1203,18 @@ triples = (
        # FIXME the primary participant isn't really water so much as it is
        #  the water that is part of the primary participant...
 
-       intersectionOf(
-       restrictionN(ilxtr.hasPart, tech.MRI),
-       # TODO 'knownProbedPhenomena' or something similar
-       # TODO 
-       #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
-       restrictionN(ilxtr.hasPart, tech.dwMRI_ImageProcessing)),
-       (ilxtr.isConstrainedBy, prot.dwMRI),
+       ilxtr.technique,
+       unionOf(
+           intersectionOf(
+               restrictionN(ilxtr.hasPart, tech.MRI),
+               # TODO 'knownProbedPhenomena' or something similar
+               # TODO 
+               #restrictionN(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
+               restrictionN(ilxtr.hasPart, tech.dwMRI_ImageProcessing)),
+           restrictionN(ilxtr.isConstrainedBy, prot.dwMRI),
+       ),
        synonyms=('dwMRI', 'diffusion weighted nuclear magnetic resonance imaging'),
-       equivalentClass=oECU),
+       ),
 
     _t(tech.dwMRI_ImageProcessing, 'diffusion weighted MRI image processing',
        (ilxtr.hasSomething, i.d),
@@ -1215,23 +1222,23 @@ triples = (
 
     _t(tech.DTI, 'diffusion tensor imaging',
        ilxtr.technique,
-       intersectionOf(restrictionN(hasPart, tech.dwMRI),
-                      restrictionN(hasPart, tech.DTI_ImageProcessing)),
-       (ilxtr.isConstrainedBy, prot.DTI),
-       # FIXME not clear that this should be in the intersection...
-       # it seems like it may make more sense to do these as unions?
-       # TODO kpp kdp
-       intersectionOf(
-       restrictionN(ilxtr.hasParticipant, ilxtr.MRIScanner),
-       restrictionN(ilxtr.knownProbedPhenomena, OntTerm('CHEBI:15377', label='water')),
-       restrictionN(ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:15377', label='water'))),
+       unionOf(
+           intersectionOf(restrictionN(hasPart, tech.dwMRI),
+                          restrictionN(hasPart, tech.DTI_ImageProcessing)),
+           restrictionN(ilxtr.isConstrainedBy, prot.DTI),
+           # FIXME not clear that this should be in the intersection...
+           # it seems like it may make more sense to do these as unions?
+           # TODO kpp kdp
+           intersectionOf(
+               restrictionN(ilxtr.hasParticipant, ilxtr.MRIScanner),
+               restrictionN(ilxtr.knownProbedPhenomena, OntTerm('CHEBI:15377', label='water')),
+               restrictionN(ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:15377', label='water')))),
        synonyms=('DTI',),
-       equivalentClass=oECU),
+      ),
 
     _t(tech.DTI_ImageProcessing, 'diffusion tensor image processing',
        (ilxtr.hasSomething, i.d),
       ),
-
 
     _t(i.d, 'electroencephalography',
        (ilxtr.hasSomething, i.b),
@@ -1792,6 +1799,8 @@ triples += (  # other
             oc(ilxtr.visibleLight, ilxtr.photons),
             oc(ilxtr.xrays, ilxtr.photons),
 
+            # FIXME
+            oc(OntTerm('CHEBI:33697', label='RNA'), OntTerm('CHEBI:33696', label='nucleic acid')),
             oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
 
             oc(ilxtr.positive, ilxtr.changeType),

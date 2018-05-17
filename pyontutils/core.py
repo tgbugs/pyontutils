@@ -357,10 +357,13 @@ class _POCombinator(Combinator):
             #if isinstance(combinator, types.GeneratorType):
                 #combinator = next(combinator)  # return the trapped combinator ;_;
             #else:
-            if isinstance(combinator, str):
+            if False and isinstance(combinator, str):  # catch issues early
                 yield combinator
             else:
-                yield from combinator(subject)
+                try:
+                    yield from combinator(subject)
+                except TypeError as e:
+                    raise TypeError(f'{combinator} not a combinator!') from e
 
     def __repr__(self):
         p = qname(self.predicate)
@@ -1688,8 +1691,12 @@ class Ont:
                         yield self.iri, predicate, check_value(value)
 
     def triple_check(self, triple):
-        s, p, o = triple
-        error = TypeError(f'bad triple in {self} {triple}')
+        error = ValueError(f'bad triple in {self} {triple!r}')
+        try:
+            s, p, o = triple
+        except ValueError as e:
+            raise error from e
+
         if not isinstance(s, rdflib.URIRef) and not isinstance(s, rdflib.BNode):
             raise error
         elif not isinstance(p, rdflib.URIRef):
