@@ -4,12 +4,13 @@ from pyontutils.core import oc, oc_, oop, odp, olit, oec
 from pyontutils.core import restrictions, annotation, restriction, restrictionN
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
+from pyontutils.core import partOf, hasRole
+from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, prot, methods_core, _t
 
 filename = 'methods'
-prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes',
+prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
             'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
             'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
             'NLX',
@@ -628,12 +629,12 @@ triples = (
                  'specimine preparation',),),
 
     _t(i.d, 'dissection technique',
-       (ilxtr.hasOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
+       (hasOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
        synonyms=('dissection',),),
 
     _t(i.d, 'atlas guided microdissection technique',
        (ilxtr.isConstrainedBy, ilxtr.parcellationAtlas),
-       (ilxtr.hasOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
+       (hasOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
        synonyms=('atlas guided microdissection',),),
 
     _t(i.d, 'crystallization technique',
@@ -706,7 +707,7 @@ triples = (
     _t(i.d, 'chemical synthesis technique',
        # involves some chemical reaction ...
        # is ioniziation a chemical reaction? e.g. NaCl -> Na+ Cl-??
-       (ilxtr.hasOutput,  OntTerm('CHEBI:24431', label='chemical entity')),
+       (hasOutput,  OntTerm('CHEBI:24431', label='chemical entity')),
        tech.creating,),
     _t(i.d, 'physical synthesis technique',
        tech.creating,),
@@ -741,6 +742,8 @@ triples = (
         OntTerm('NCBITaxon:1', label='ncbitaxon')
        ),
        synonyms=('culture technique', 'husbandry', 'culture'),),
+
+    oc_(OntTerm('NCBITaxon:1', label='ncbitaxon'), restriction(ilxtr.hasAspect, asp.livingness)),
 
     _t(i.d, 'feeding technique',
        # metabolism required so no viruses
@@ -888,19 +891,27 @@ triples = (
                  'indirect immunohistochemistry')),
 
     _t(tech.stateBasedContrastEnhancement, 'state based contrast enhancement technique',
-       tech.contrastEnhancement,  # FIXME compare this to how we modelled fMRI below? is BOLD and _enhancement_?
+       #tech.contrastEnhancement,  # FIXME compare this to how we modelled fMRI below? is BOLD and _enhancement_?
+       (ilxtr.hasSomething, i.d),
+
     ),
 
     _t(i.d, 'separation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasPrimarAspec, asp.location),  # TODO
+       #(ilxtr.hasSomething, i.d),
     ),
     _t(i.d, 'sorting technique',
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'sampling technique',
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'extraction technique',
-       (ilxtr.hasSomething, i.d),),
+       (hasParticipant, ilxtr.extract),  # FIXME circular
+       ),
+    _t(i.d, 'precipitation technique',
+       (hasParticipant, ilxtr.precipitate),  # FIXME circular
+      ),
     _t(i.d, 'pull-down technique',
+       (hasPart, tech.precipitation),
        # allocation enrichement
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'isolation technique',
@@ -924,13 +935,16 @@ triples = (
        (ilxtr.hasSomething, i.d),
        synonyms=('chromatography',),),
     _t(i.d, 'distillation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.knownDifferentiatingPhenomena, asp.boilingPoint),
+       (ilxtr.knownDifferentiatingPhenomena, asp.condensationPoint),
        synonyms=('distillation',),),
     _t(i.d, 'electrophoresis technique',
        (ilxtr.hasSomething, i.d),
        synonyms=('electrophoresis',),),
     _t(i.d, 'centrifugation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.knownDifferentiatingPhenomena, asp.size),  # TODO hasImplicitMeasurement
+       (ilxtr.knownDifferentiatingPhenomena, asp.shape),
+       (ilxtr.knownDifferentiatingPhenomena, asp.density),
        synonyms=('centrifugation',),),
     _t(i.d, 'ultracentrifugation technique',
        (ilxtr.hasSomething, i.d),
@@ -951,7 +965,7 @@ triples = (
         OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
        ),
-       (ilxtr.hasOutput,
+       (hasOutput,
         OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
        ),
@@ -1072,6 +1086,8 @@ triples = (
     ),
 
     _t(i.d, 'electrophysiology technique',
+       # TODO is this one of the cases where partonomy implies techniqueness?
+       # technique and (hasPart some i.p)
        (ilxtr.hasPrimaryAspect, asp.electrical),  # FIXME...
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        synonyms=('electrophysiology', 'electrophysiological technique'),
@@ -1131,26 +1147,31 @@ triples = (
     ),
 
     _t(i.d, 'positron emission imaging',
-       tech.imaging,
+       (ilxtr.detects, ilxtr.positron),
+       (hasOutput, ilxtr.image),
        (ilxtr.detects, ilxtr.positron)),
 
     _t(tech.opticalImaging, 'optical imaging',
-       tech.imaging,
        # FIXME TODO what is the difference between optical imaging and light microscopy?
        (ilxtr.detects, ilxtr.visibleLight),  # owl:Class photon and hasWavelenght range ...
+       (hasOutput, ilxtr.image),
        synonyms=('light imaging', 'visible light imaging'),
     ),
     (tech.opticalImaging, ilxtr.hasTempId, OntId("HBP_MEM:0000013")),
 
     _t(i.d, 'intrinsic optical imaging',
-       tech.opticalImaging,
-       tech.contrastDetection,
+       #tech.opticalImaging,
+       #tech.contrastDetection,
        # this is a good counter example to x-ray imaging concernts
        # because it shows clearly how
        # "the reflectance to infared light by the brain"
        # that is not a thing that is a derived thing I think...
        # it is an aspect of the black box, it is not a _part_ of the back box
-       (ilxtr.hasPrimaryAspect, ilxtr.intrinsicSignal),
+       (ilxtr.hasProbe, ilxtr.visibleLight),  # FIXME
+       (ilxtr.detects, ilxtr.visibleLight),  # FIXME
+       #(ilxtr.hasPrimaryAspect, ilxtr.intrinsicSignal),  # this is a 'known phenomena'
+       (ilxtr.knownDetectedPhenomena, ilxtr.intrinsicSignal),
+       (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('intrinsic signal optical imaging',),
     ),
 
@@ -1160,6 +1181,10 @@ triples = (
        # VS contrast in the primary aspect being the signal created by the xrays...
        # can probably expand detects in cases where there are non-aspects...
        # still not entirely sure these shouldn't all be aspects too...
+
+       # TODO need a way to deal with the fact that what we really care about here
+       # is the connection to the fact that there is some pheonmena that has
+       # differential contrast to the pheonmena
        (ilxtr.detects, ilxtr.xrays),
     ),  # owl:Class photon and hasWavelenght range ...
 
@@ -1259,13 +1284,16 @@ triples = (
 
     _t(i.d, 'activation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
-       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+       # hasPrimaryAspect some aspect of the primary participant which FOR THAT PARTICIPANT
+       # has been defined as functional
+       #(hasPart, ilxtr.),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'deactivation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
-       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # FIXME this is more state?
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),  # FIXME this is more state?
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
@@ -1281,18 +1309,19 @@ triples = (
 
     _t(i.d, 'pharmacological technique',
        (ilxtr.hasSomething, i.d),
+       (hasParticipant, oc_.full_combinator(restriction(hasRole, OntId('CHEBI:23888')))),
        synonyms=('pharmacology',)
     ),
 
     _t(i.d, 'photoactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
-       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     _t(i.d, 'photoinactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
-       (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
     ),
 
@@ -1425,7 +1454,7 @@ triples = (
     _t(i.d, 'biopsy technique',
        tech.surgery,  # FIXME
        tech.maintaining,  # things that have output tissue that don't unis something
-       (ilxtr.hasOutput, ilxtr.tissue),  # TODO
+       (hasOutput, ilxtr.tissue),  # TODO
     ),
 
     _t(i.d, 'craniotomy technique',
@@ -1567,13 +1596,13 @@ triples = (
 
     _t(i.d, 'microtomy technique',
        (ilxtr.hasParticipant, ilxtr.microtome),
-       (ilxtr.hasOutput, ilxtr.thinSections),  # this prevents issues with microtome based warfare techniques
+       (hasOutput, ilxtr.thinSections),  # this prevents issues with microtome based warfare techniques
        synonyms=('microtomy',)
     ),
 
     _t(i.d, 'ultramicrotomy technique',
        (ilxtr.hasParticipant, ilxtr.ultramicrotome),
-       (ilxtr.hasOutput, ilxtr.veryThinSections),  # FIXME has intended output?
+       (hasOutput, ilxtr.veryThinSections),  # FIXME has intended output?
        synonyms=('ultramicrotomy',)
     ),
 
@@ -1640,16 +1669,25 @@ triples = (
 
     _t(tech.singleElectrodeEphys, 'single electrode extracellular electrophysiology technique',
        # FIXME extracellular space that is part of some other participant... how to convey this...
+       (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
+       (ilxtr.hasParticipant, ilxtr.singleElectrode),  # cardinality 1?
        synonyms=('single extracellular electrode technique',)),
        (tech.singleElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000019')),
 
+    # FIXME should probably be to a higher level go?
+    (OntTerm('GO:0005615', label='extracellular space'), rdfs.subClassOf, ilxtr.physiologicalSystem),
+
     _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasPrimaryAspect, asp.electrical),
+       (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
+       (ilxtr.hasParticipant, ilxtr.sharpElectrode),
        synonyms=('sharp electrode technique',)),
        (tech.sharpElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000023')),
 
     _t(tech.patchClamp, 'patch clamp technique',
+       (ilxtr.hasPrimaryAspect, asp.electrical),
+       (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (ilxtr.hasSomething, i.d),
     ),
        (tech.patchClamp, ilxtr.hasTempId, OntId('HBP_MEM:0000017')),
@@ -1730,6 +1768,9 @@ triples += (  # aspects
             oc(asp.physicalOrderedness, ilxtr.aspect),
             oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
 
+            #oc(asp.functional, ilxtr.aspect),  # asp.functional is not the right way to model this
+            #olit(ilxtr.functionalAspectRole, definition,
+                 #('A functional aspect is any aspect that can be used to define ')),
             oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
             #oc(asp.circadianPhase, asp.biologicalActivity),
             oc(asp.circadianPhase, ilxtr.aspect),  # FIXME hrm... time as a proxy for biological state?

@@ -3,7 +3,7 @@ import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
 from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom
-from pyontutils.core import restrictions
+from pyontutils.core import restriction, restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
 from pyontutils.core import owl, rdf, rdfs
@@ -99,7 +99,7 @@ triples = (
           'but it is not the scratches on the paper that constrain a process, it is their implication.')),
 
     oop(ilxtr.hasInformationInput, ilxtr.hasInformationParticipant),
-    (ilxtr.hasInformationInput, owl.disjointWith, ilxtr.isConstrainedBy),
+    (ilxtr.hasInformationInput, owl.propertyDisjointWith, ilxtr.isConstrainedBy),
     olit(ilxtr.hasInformationInput, rdfs.label, 'has information input'),
     olit(ilxtr.hasInformationInput, NIFRID.synonym,
          'has non-constraining information input',
@@ -157,12 +157,16 @@ triples = (
     olit(ilxtr.hasProbe, definition,
          ('The relationship between a technique and the phenomena that it uses to probe other participants. '
           'Useful for cases where the probing phenomena is different than the detected phenomena.')),
+    (ilxtr.hasProbe, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasProbe, rdfs.range, ilxtr.materialEntity),
 
     oop(ilxtr.hasPrimaryParticipant, hasParticipant),
     olit(ilxtr.hasPrimaryParticipant, rdfs.label, 'has primary participant'),
     olit(ilxtr.hasPrimaryParticipant, definition, 'The relationship between a process and its primary participant.'),
     olit(ilxtr.hasPrimaryParticipant, rdfs.comment,
          'This property should be used to mark the key input and/or output of a process if its type is not generic.'),
+    (ilxtr.hasPrimaryParticipant, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasPrimaryParticipant, rdfs.range, ilxtr.materialEntity),
 
     oop(ilxtr.primaryParticipantIn),
     olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
@@ -174,6 +178,7 @@ triples = (
     olit(ilxtr.hasIntention, rdfs.label, 'has intention'),
     olit(ilxtr.hasIntention, definition, 'The relationship between a process and an intended outcome.'),
     olit(ilxtr.hasIntention, rdfs.comment, 'Should rarely be used directly.'),
+    # TODO implies has expected outcome?
 
     # while these exist in principle there is no meaningful way to bind them to a specific
     #  participant without a qualifier, therefore we are leaving them out
@@ -187,8 +192,10 @@ triples = (
          propertyChainAxiom(ilxtr.hasConstrainingAspect),
          propertyChainAxiom(ilxtr.hasPrimaryAspect),
         ),
+    (ilxtr.techniqueHasAspect, rdfs.domain, ilxtr.technique),
+    (ilxtr.techniqueHasAspect, rdfs.range, ilxtr.aspect),
 
-    oop(ilxtr.hasConstrainingAspect, ilxtr.TODO),  # TODO
+    oop(ilxtr.hasConstrainingAspect, ilxtr.techniqueHasAspect),  # TODO
     olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
     olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
          'has constraining primary participant aspect',
@@ -201,6 +208,7 @@ triples = (
           'participant that is constrained as part of a technique.')),
 
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
+    (ilxtr.hasPrimaryAspect, rdfs.subClassOf, ilxtr.techniqueHasAspect),
     olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has intended primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
          'has intention primary aspect',
@@ -255,7 +263,9 @@ triples = (
     olit(ilxtr.hasPrimaryAspect_dAdT, definition,
          'The intended change in primary aspect of primary participant before and after technique'),
 
+    odp(ilxtr.hasAspectValue),
     odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
+    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
     olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
          'has constraining aspect value'),
     olit(ilxtr.hasConstrainingAspect_value, definition,
@@ -273,10 +283,13 @@ triples = (
 
     oop(ilxtr.hasAspect, RO['0000086']),
     # FIXME make it clear that this is between material entities (it is subclassof quality)
-    oop_(ilxtr.hasAspect,
-         propertyChainAxiom(ilxtr.hasAspect),
-         propertyChainAxiom(hasPart, ilxtr.hasAspect),
-        ),
+    # for hasAspect
+    #oop_(ilxtr.hasAspect,
+         #propertyChainAxiom(ilxtr.hasAspect),
+         #propertyChainAxiom(hasPart, ilxtr.hasAspect),
+        #),
+    oop(ilxtr.aspectOf, RO['0000080']),
+    (ilxtr.aspectOf, owl.inverseOf, ilxtr.hasAspect),
 
     #oop(ilxtr.),
     #oop(ilxtr.),
@@ -315,6 +328,8 @@ triples = (
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
     olit(ilxtr.aspect, rdfs.comment,
          'PATO has good coverage of many of these aspects though their naming is not alway consistent.'),
+    #ilxtr.aspect hasOutputValue 
+    #ilxtr.aspect hasMeasurementProtocol
 
     oc(asp['is'], ilxtr.aspect),
     olit(asp['is'], rdfs.label, 'is'),
@@ -336,6 +351,7 @@ triples = (
           'of certain operational definitions, such as livingness, which imply that our '
           'operational definition for isness is invariant to dead.'
          )),
+    oc_(ilxtr.materialEntity, restriction(ilxtr.hasAspect, asp['is'])),
 
     oc(asp.amount, asp['is']),
     oc(asp['count'], asp.amount),
@@ -373,7 +389,20 @@ triples = (
     oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
     oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
     (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
+    #((hasAspect some livingness) and (hasAspectValue value true)) DisjointWith: ((hasAspect some livingness) and (hasAspectValue value false))
 
+    oc(asp.boundFunctionalAspect, ilxtr.aspect),
+    olit(asp.boundFunctionalAspect, rdfs.label, 'bound functional aspect'),
+    # TODO
+    # the 'functionality' of the aspect is going to be qualified by the
+    # subject to which it is bound...
+    # this is equivalentClass intersectionOf material entity 
+    # restriction
+    # onProperty isFunctional
+    # has qualified role?
+    # 
+
+    # information entities
     oc(ilxtr.informationEntity),
     olit(ilxtr.informationEntity, rdfs.label, 'information entity'),
     olit(ilxtr.informationEntity, definition, 'Any physically encoded information.'),
@@ -408,6 +437,8 @@ triples = (
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
+
+    oc_(ilxtr.technique, restriction(ilxtr.hasExecutor, ilxtr.executor)),
 
     (ilxtr.materialEntity, owl.equivalentClass, BFO['0000040']),
 
