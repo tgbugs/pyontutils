@@ -79,7 +79,7 @@ class DevConfig:
         if file is None:
             file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
 
-        config = self._config
+        config = {k:str(v) for k, v in self._config.items()}
         if config:
             with open(file, 'wt') as f:
                 yaml.dump(config, f, default_flow_style=False)
