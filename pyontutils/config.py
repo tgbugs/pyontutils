@@ -1,3 +1,4 @@
+from IPython import embed
 import os
 import yaml
 from pathlib import Path
@@ -45,6 +46,7 @@ tempdir = gettempdir()
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
+        self._override = {}
         self.config_file = config_file
         olrd = Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
@@ -60,12 +62,16 @@ class DevConfig:
 
     @property
     def _config(self):
+        # FIXME make it clear that this is read only...
         out = {}  # do it this way to read first
         for name in dir(self):
             if not name.startswith('_') and name not in self.skip:
                 thing = getattr(self.__class__, name, None)
                 if isinstance(thing, property):
-                    out[name] = getattr(self, name)
+                    if name in self._override:
+                        out[name] = self._override.pop(name)
+                    else:
+                        out[name] = getattr(self, name)
 
         return out
 
@@ -105,7 +111,7 @@ class DevConfig:
 
     @git_local_base.setter
     def git_local_base(self, value):
-        self._config['git_local_base'] = value
+        self._override['git_local_base'] = value
         self.write(self.config_file)
 
     @default('SciCrunch')
