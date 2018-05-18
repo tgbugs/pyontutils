@@ -189,7 +189,18 @@ class DevConfig:
     def zip_location(self):
         return self.config['zip_location']
 
+    def __repr__(self):
+        return f'DevConfig {self.config_file}\n' + '\n'.join(f'{k:<20} {v}' for k, v in {k:getattr(self, k) for k in dir(self) if
+                    not k.startswith('_') and
+                    k not in ('config', 'write', 'config_file') and
+                    isinstance(getattr(self.__class__, k), property)}.items())
+
 
 devconfig = DevConfig()
 
+def main():
+    from IPython import embed
+    print(repr(devconfig))
 
+if __name__ == '__main__':
+    main()

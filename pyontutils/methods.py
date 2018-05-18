@@ -1289,6 +1289,8 @@ triples = (
     (tech.allocating, owl.disjointWith, tech.measuring),  # i am an idiot
     # FIXME this causes issues
     # we may need to split hasPrimaryAspect into hasPrimaryAspectMeasure hasPrimaryAspectActualized
+    # better to just add hasPrimaryAspectActualized for allocation and friends since pretty much all
+    # aspects end up being measured one way or another, they have to be
     #oc_(tech.allocating,
         #blankc(owl.disjointWith,  # overkill using oec but it works
                #oc_.full_combinator(oec(
