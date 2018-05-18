@@ -2,7 +2,7 @@ from IPython import embed
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom
+from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator
 from pyontutils.core import restriction, restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
@@ -26,6 +26,8 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec)
                 _rests += rest,
             else:
                 raise ValueError(f'length of {rest} is not 2!')
+        elif isinstance(rest, Combinator):
+            members += rest,
         else:
             members += rest,
 
@@ -233,7 +235,7 @@ triples = (
          #'has intended change in primary aspect with respect to subset of the primary participant.'
          #'has intended change in primary aspect as a function of the subset of the primary participant.'
          'has expected difference in the primary aspect with respect to the subset of the primary participant'
-),
+    ),
     olit(ilxtr.hasPrimaryAspect_dAdS, NIFRID.synonym,
          'has intended dA/dS',
          'has intended dAspect/dSubset'
@@ -296,6 +298,20 @@ triples = (
     #oop(ilxtr.),
 
     # classes
+
+    ## material entity
+    (ilxtr.materialEntity, owl.equivalentClass, BFO['0000040']),
+    oc_(ilxtr.materialEntity,
+        restriction(ilxtr.hasAspect, asp.livingness),
+        restriction(ilxtr.hasAspect, asp['is'])),
+
+    #oc_(OntTerm('NCBITaxon:1', label='ncbitaxon'), restriction(ilxtr.hasAspect, asp.livingness)),
+    # this is technically correct, but misleading, because rocks also have asp.livingness
+    # which evaluates to false, aspects are qualities, but they are not in and of themselves meaningful
+    # because I can measure the livingness of a star, or define it, basically all material entities
+    # have all aspects
+
+    ## executor
     oc(ilxtr.executor, ilxtr.materialEntity),  # probably equivalent to agent in ero
     olit(ilxtr.executor, rdfs.label, 'executor'),
     olit(ilxtr.executor, NIFRID.synonym, 'executing agent'),
@@ -306,127 +322,32 @@ triples = (
          'computers and robots can be considered to be executors when the prior '
          'information has been encoded directly into them and their behavior.'),
 
+    ## aspect
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
-
-    oc(ilxtr.naming),
-    olit(ilxtr.naming, rdfs.label, 'naming'),
-    olit(ilxtr.naming, definition ,
-         ('Naming is an assertional process that is orthogonal to measuring.'
-          'Names may be assigned as a product of measurements, but the assignemtn '
-          'of a name can only be based on aspects of the thing, the name can never be '
-          'an aspect of the thing. Names may also be assigned based on aspects of the '
-          'process that produced the thing, or the prvious state of the thing. '
-          'For example a protein dissociated from its original cell/tissue no longer '
-          'contains sufficient information to reconsturct where it came from based on '
-          'any measurements that can be made on it beyond the species that it came from '
-          'and maybe where the individual lived if there are enough atoms to do an isotope test.'
-          'A cell on the other hand may very well have enough information in its RNA and DNA to '
-          'allow for a bottom up assignment of a name based on its gene expression pattern.')),
 
     oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
     olit(ilxtr.aspect, rdfs.comment,
          'PATO has good coverage of many of these aspects though their naming is not alway consistent.'),
+    olit(ilxtr.aspect, NIFRID.synonym,
+         'measureable',
+         'measureable aspect'),
+    # hasValue, hasRealizedValue
+    # hasActualizedValue
+    # hasMeasuredValue
     #ilxtr.aspect hasOutputValue 
     #ilxtr.aspect hasMeasurementProtocol
+    # should aspects not be bound to symbolic entities?
+    # for example a word count for a document?
+    # I guess all implementations of symbolic systems are physical
+    # and ultimately the distinction between symbolic and physical
+    # isn't actually useful for aspects
+    # we do however need a notation of bottom for aspects which
+    # says that for certain inputs the aspect cannot return a
+    # meaningful (correctly typed non null) value
 
-    oc(asp['is'], ilxtr.aspect),
-    olit(asp['is'], rdfs.label, 'is'),
-    olit(asp['is'], NIFRID.synonym,
-         'isness',
-         'being aspect',
-         'beingness',),
-    olit(asp['is'], definition,
-         ('The aspect of beingness. Should be true or false, value in {0,1}.'
-          "Not to be confused with the 'is a' reltionship which deals with categories/types/classes."
-          "For now should not be used for 'partial' beingness, so a partially completed building is not"
-          'a building for the purposes of this aspect. This is open to discussion, and if there are'
-          'good examples where partial beingness is a useful concept, use as a [0,1] aspect would be encouraged.')),
-    olit(asp['is'], rdfs.comment,
-         ('There are cases where the value could be ? depending on how one '
-          'operationalizes certain concepts from quantum physics. Note also that '
-          'isness will be directly affected by the choice of the operational defintion. '
-          'Because of the scope of this ontology, there are implicit decisions about the nature '
-          'of certain operational definitions, such as livingness, which imply that our '
-          'operational definition for isness is invariant to dead.'
-         )),
-    oc_(ilxtr.materialEntity, restriction(ilxtr.hasAspect, asp['is'])),
-
-    oc(asp.amount, asp['is']),
-    oc(asp['count'], asp.amount),
-
-    oc(asp.location, ilxtr.aspect),
-    oc(asp.allocation, asp.location),
-    olit(asp.allocation, definition,
-         ('Allocation is the amount of something in a given place '
-          'rather than the total universal amount of a thing. '
-          'For example if I move 100 grains of salt from a container '
-          'to a scale, I have changed the allocation of the salt (solid). '
-          'If I dissolve the salt in water then I have negatively impacted '
-          'the amount of total salt (solid) in the universe since that salt '
-          'is now ionized in solution.')),
-
-    oc(asp.proportion, asp.allocation),
-
-    oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
-    olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
-    olit(asp.isClassifiedAs, NIFRID.synonym,
-         'is named as', 'has operational definition with inclusion criteria that names thing as'),
-
-    oc(asp.flatness, ilxtr.aspect),
-    olit(asp.flatness, rdfs.label, 'flatness'),
-    olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
-    olit(asp.flatness, definition,
-         ('How flat a thing is. There are a huge variety of operational '
-          'definitions depending on the type of thing in question.')),
-
-    oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
-    olit(asp.weight, rdfs.label, 'weight'),
-    olit(asp.weight, NIFRID.synonym, 'weight aspect'),
-
-    oc(asp.livingness, ilxtr.aspect),
-    oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
-    oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
-    (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
-    #((hasAspect some livingness) and (hasAspectValue value true)) DisjointWith: ((hasAspect some livingness) and (hasAspectValue value false))
-
-    oc(asp.boundFunctionalAspect, ilxtr.aspect),
-    olit(asp.boundFunctionalAspect, rdfs.label, 'bound functional aspect'),
-    # TODO
-    # the 'functionality' of the aspect is going to be qualified by the
-    # subject to which it is bound...
-    # this is equivalentClass intersectionOf material entity 
-    # restriction
-    # onProperty isFunctional
-    # has qualified role?
-    # 
-
-    # information entities
-    oc(ilxtr.informationEntity),
-    olit(ilxtr.informationEntity, rdfs.label, 'information entity'),
-    olit(ilxtr.informationEntity, definition, 'Any physically encoded information.'),
-
-    oc(ilxtr.informationArtifact, ilxtr.informationEntity),
-    olit(ilxtr.informationArtifact, rdfs.label, 'information artifact'),
-    olit(ilxtr.informationArtifact, definition,
-         ('An information entity that has an explicit symbolic encoding '
-          'which is distinct from the existence or being that it encodes.')),
-
-    oc(ilxtr.protocol, ilxtr.informationEntity),
-    olit(ilxtr.protocol, rdfs.label, 'protocol'),
-    olit(ilxtr.protocol, NIFRID.synonym, 'technique specification'),
-
-    oc(ilxtr.protocolArtifact, ilxtr.informationArtifact),
-    (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
-    olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
-
-    oc_(ilxtr.protocolExecution,
-       oec(ilxtr.technique,
-           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
-    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
-
-    ## techniques
+    ## technique
     oc(BFO['0000015']),
     olit(BFO['0000015'], rdfs.label, 'process'),
 
@@ -439,9 +360,6 @@ triples = (
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
 
     oc_(ilxtr.technique, restriction(ilxtr.hasExecutor, ilxtr.executor)),
-
-    (ilxtr.materialEntity, owl.equivalentClass, BFO['0000040']),
-
     #_t(tech.test, 'test test test',
        #(ilxtr.hasPrimaryParticipant, ilxtr.thingA),
        #(ilxtr.hasPrimaryParticipant, ilxtr.thingB)),
@@ -449,7 +367,6 @@ triples = (
     #(ilxtr.thingA, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingB, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingA, owl.disjointWith, ilxtr.thingB),
-
 ) 
 
 def derp():

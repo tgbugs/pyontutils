@@ -6,23 +6,13 @@ from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
 from pyontutils.core import partOf, hasRole
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
+from pyontutils.core import Restriction2, POCombinator
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
 from pyontutils.methods_core import asp, tech, prot, methods_core, _t
 
-filename = 'methods'
-prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
-            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
-            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX',
-)
-OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-imports = methods_core.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
-#imports = methods_core.iri,
-comment = 'The ontology of techniques and methods.'
-_repo = True
-debug = False
-
+blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
+restMinCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.minCardinality)
 restrictionS = Restriction(owl.someValuesFrom)
 oECU = EquivalentClass(owl.unionOf)
 
@@ -54,6 +44,248 @@ class I:
         return self.current
 
 i = I()
+
+
+###
+#   methods helper (subset of the larger ontology to speed up development)
+###
+
+filename = 'methods-helper'
+prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
+#OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
+#imports = NIFTTL['nif_backend.ttl'],
+imports = methods_core.iri,
+comment = 'helper for methods development'
+_repo = True
+debug = True
+
+triples = (
+    # FIXME should probably be to a higher level go?
+    (OntTerm('GO:0005575', label='cellular_component'), rdfs.subClassOf, ilxtr.physiologicalSystem),
+    # FIXME redundant when we import all of go
+    (OntId('GO:0005615'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
+    (OntId('GO:0005622'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
+)
+
+triples += ( # protocols
+            oc(prot.CLARITY, ilxtr.protocol),
+            oc(prot.deepSequencing, ilxtr.protocol),
+            oc(prot.sangerSequencing, ilxtr.protocol),
+            oc(prot.shotgunSequencing, ilxtr.protocol),
+           )
+
+triples += ( # information entity
+
+    # information entities
+    oc(ilxtr.informationEntity),
+    olit(ilxtr.informationEntity, rdfs.label, 'information entity'),
+    olit(ilxtr.informationEntity, definition, 'Any physically encoded information.'),
+
+    oc(ilxtr.informationArtifact, ilxtr.informationEntity),
+    olit(ilxtr.informationArtifact, rdfs.label, 'information artifact'),
+    olit(ilxtr.informationArtifact, definition,
+         ('An information entity that has an explicit symbolic encoding '
+          'which is distinct from the existence or being that it encodes.')),
+
+    oc(ilxtr.protocol, ilxtr.informationEntity),
+    olit(ilxtr.protocol, rdfs.label, 'protocol'),
+    olit(ilxtr.protocol, NIFRID.synonym, 'technique specification'),
+
+    oc(ilxtr.protocolArtifact, ilxtr.informationArtifact),
+    (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
+    olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
+
+    oc_(ilxtr.protocolExecution,
+       oec(ilxtr.technique,
+           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
+    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
+
+    oc(ilxtr.superResolutionAlgorithem, ilxtr.informationEntity),
+    oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
+    oc(ilxtr.radonTransform, ilxtr.informationEntity),
+
+    # information artifacts
+    oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
+    oc(ilxtr.image, ilxtr.informationArtifact),
+    olit(ilxtr.image,
+         definition,
+         ('A symbolic representation of some spatial or spatial-temporal '
+          'aspect of a participant. Often takes the form of a 2d or 3d matrix '
+          'that has some mapping to sensor space and may also be collected at '
+          'multiple timepoints. Regardless of the ultimate format has some '
+          'part that can be reduced to a two dimensional matrix.'  # TODO
+         )),
+
+    oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
+
+    # TODO have parcellation-artifacts import methods-core?
+    oc(ilxtr.parcellationArtifact, ilxtr.informationArtifact),
+    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+    oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
+    oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
+    olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
+    olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
+
+)
+
+triples += (  # material entities
+    oc(ilxtr.thingWithSequence, ilxtr.materialEntity),
+    oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+
+    # FIXME owl:sameAs is NOT for generic iris >_<
+    #oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
+    # FIXME what about things that were synthesized entirely?
+    # how about... constrainedBy _information_ derived from some organism?
+    # a protein is indeed constrained by that information regardless of
+    # whether it was synthesized or not...
+    oc_(ilxtr.physiologicalSystem,
+        oec(ilxtr.materialEntity,  # FIXME in vitro...
+            restrictionN(partOf, OntId('NCBITaxon:1'))
+           )),
+
+    oc_(ilxtr.physiologicalSystemDisjointWithOrganism,
+        oec(ilxtr.physiologicalSystem)
+       ),
+    (ilxtr.physiologicalSystemDisjointWithOrganism, owl.disjointWith, OntId('NCBITaxon:1')),
+
+    oc(ilxtr.brainSlice, ilxtr.materialEntity),
+    oc(ilxtr.acuteBrainSlice, ilxtr.physiologicalSystem),
+    oc(ilxtr.food_and_water, ilxtr.materialEntity),
+    oc(ilxtr.food, ilxtr.food_and_water),  # TODO edible organic matter with variable nutritional value depending on the organism
+    oc(ilxtr.highFatDiet, ilxtr.food),
+    oc(ilxtr.DIODiet, ilxtr.highFatDiet),
+    oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
+    oc(ilxtr.microPipette, ilxtr.materialEntity),
+    oc(ilxtr.microscope, ilxtr.materialEntity),
+    oc(ilxtr.lightMicroscope, ilxtr.microscope),
+    oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
+    oc(ilxtr.microtome, ilxtr.materialEntity),
+    oc(ilxtr.ultramicrotome, ilxtr.microtome),
+    oc(ilxtr.stereotax, ilxtr.materialEntity),
+
+    oc(ilxtr.photons, ilxtr.materialEntity),
+    oc(ilxtr.visibleLight, ilxtr.photons),
+    oc(ilxtr.xrays, ilxtr.photons),
+
+    # FIXME
+    oc(OntTerm('CHEBI:33697', label='RNA'), OntTerm('CHEBI:33696', label='nucleic acid')),
+    oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
+
+    oc(ilxtr.positive, ilxtr.changeType),
+    oc(ilxtr.negative, ilxtr.changeType),
+    (ilxtr.negative, owl.disjointWith, ilxtr.positive),
+    oc(ilxtr.nonZero, ilxtr.changeType),
+    oc(ilxtr.zero, ilxtr.changeType),
+    (ilxtr.zero, owl.disjointWith, ilxtr.nonZero),
+
+)
+
+triples += (  # aspects
+
+    # isness
+    oc(asp['is'], ilxtr.aspect),
+    olit(asp['is'], rdfs.label, 'is'),
+    olit(asp['is'], NIFRID.synonym,
+         'isness',
+         'being aspect',
+         'beingness',),
+    olit(asp['is'], definition,
+         ('The aspect of beingness. Should be true or false, value in {0,1}.'
+          "Not to be confused with the 'is a' reltionship which deals with categories/types/classes."
+          "For now should not be used for 'partial' beingness, so a partially completed building is not"
+          'a building for the purposes of this aspect. This is open to discussion, and if there are'
+          'good examples where partial beingness is a useful concept, use as a [0,1] aspect would be '
+          'encouraged.')),
+    olit(asp['is'], rdfs.comment,
+         ('There are cases where the value could be ? depending on how one '
+          'operationalizes certain concepts from quantum physics. Note also that '
+          'isness will be directly affected by the choice of the operational defintion. '
+          'Because of the scope of this ontology, there are implicit decisions about the nature '
+          'of certain operational definitions, such as livingness, which imply that our '
+          'operational definition for isness is invariant to dead.'
+         )),
+
+    oc(asp.amount, asp['is']),
+    oc(asp['count'], asp.amount),
+    # instantaneous vs over a time interval
+    # interestingly if you ignore time then the idea of
+    # 'counting' similar events is entirely consistent
+    # so hasPrimaryAspect_dAdT xsd.NonNegativeInteger
+    # is valid
+
+    # location/allocation
+    oc(asp.location, ilxtr.aspect),
+    oc(asp.allocation, asp.location),
+    olit(asp.allocation, definition,
+         ('Allocation is the amount of something in a given place '
+          'rather than the total universal amount of a thing. '
+          'For example if I move 100 grains of salt from a container '
+          'to a scale, I have changed the allocation of the salt (solid). '
+          'If I dissolve the salt in water then I have negatively impacted '
+          'the amount of total salt (solid) in the universe since that salt '
+          'is now ionized in solution.')),
+
+    oc(asp.proportion, asp.allocation),
+
+    oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
+    olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
+    olit(asp.isClassifiedAs, NIFRID.synonym,
+         'is named as', 'has operational definition with inclusion criteria that names thing as'),
+
+    oc(asp.flatness, ilxtr.aspect),
+    olit(asp.flatness, rdfs.label, 'flatness'),
+    olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
+    olit(asp.flatness, definition,
+         ('How flat a thing is. There are a huge variety of operational '
+          'definitions depending on the type of thing in question.')),
+
+    oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
+    olit(asp.weight, rdfs.label, 'weight'),
+    olit(asp.weight, NIFRID.synonym, 'weight aspect'),
+
+    oc(asp.livingness, ilxtr.aspect),
+    oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
+    oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
+    (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
+    #((hasAspect some livingness) and (hasAspectValue value true)) DisjointWith: ((hasAspect some livingness) and (hasAspectValue value false))
+
+    # functional/stateful (the conflation here is amusing)
+    oc(asp.boundFunctionalAspect, ilxtr.aspect),
+    olit(asp.boundFunctionalAspect, rdfs.label, 'bound functional aspect'),
+    # TODO
+    # the 'functionality' of the aspect is going to be qualified by the
+    # subject to which it is bound...
+    # this is equivalentClass intersectionOf material entity 
+    # restriction
+    # onProperty isFunctional
+    # has qualified role?
+    # 
+
+)
+
+methods_helper = simpleOnt(filename=filename,
+                         prefixes=prefixes,
+                         imports=imports,
+                         triples=triples,
+                         comment=comment,
+                         _repo=_repo)
+
+###
+#   Methods
+###
+
+filename = 'methods'
+prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
+            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
+            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
+            'NLX',
+)
+OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
+imports = methods_core.iri, methods_helper.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
+#imports = methods_core.iri, methods_helper.iri
+comment = 'The ontology of techniques and methods.'
+_repo = True
+debug = False
 
 triples = (
     # biccn
@@ -443,6 +675,7 @@ triples = (
        synonyms=('intracellular injection',)),
 
     _t(i.d, 'electrical delivery technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'electroporation technique',
        (ilxtr.hasSomething, i.d)),
@@ -511,18 +744,41 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'storage technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasPrimaryAspect, asp.location),
+       # to put away for future use?
+       # not for immediate use
+       # sir no longer appearing in this protocol
+       # leaves the scope of the technique's black box
+       # put something in a consistent and known location
+       # so that it can be retrieved again later when needed
+       #(ilxtr.hasFutureTechique, tech.unstorage)
+       # changing the primary aspect to a _known_ location
+       #ilxtr.hasPrimaryAspect_dAdT
+       (ilxtr.hasIntention, ilxtr.saveForTheFuture),
+       ),
 
     _t(i.d, 'preservation technique',
-       (ilxtr.hasSomething, i.d)
-
+       (ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
+       # FIXME change in change in some aspect
+       # expected change in black box if this is not done?
+       # asp.unbecoming
+       # FIXME InContents? in anything inside the black box?
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
       ),
 
     _t(i.d, 'tissue preservation technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
+       (ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
+      ),
 
     _t(i.d, 'colocalization technique',
-       (ilxtr.hasSomething, i.d)),
+       # FIXME measurement vs putting them together?
+        restMinCardValue(hasPart, tech.localization, Literal(2)),
+       (ilxtr.hasPrimaryAspect, asp.location),
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
+       # the localtion of the primary participants of eac
+      ),
+
     _t(i.d, 'image reconstruction technique',
        (ilxtr.hasSomething, i.d)),
 
@@ -606,10 +862,15 @@ triples = (
     _t(i.d, 'in utero technique',
        # has something in 
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
-       synonyms=('in vitro',),),
+       synonyms=('in utero',),),
 
     _t(i.d, 'in vitro technique',
+       (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystemDisjointWithLivingOrganism),
+       #(ilxtr.hasPrimaryParticipant, thing that was derived from living organsim? no? pure synthesis...),
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAGlassContainer),
+       # this is more complicated than it seems,
+       # the idea that you can have a physiological system
+       # that is not either derived from some organism ...
        synonyms=('in vitro',),),
 
     _t(i.d, 'high throughput technique',
@@ -653,10 +914,12 @@ triples = (
       ),
 
     _t(i.d, 'tissue clearing technique',
+       (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
       ),
 
     _t(i.d, 'CLARITY technique',
+       (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.isConstrainedBy, prot.CLARITY),
        (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
        def_='A tissue clearing technique',
@@ -742,8 +1005,6 @@ triples = (
         OntTerm('NCBITaxon:1', label='ncbitaxon')
        ),
        synonyms=('culture technique', 'husbandry', 'culture'),),
-
-    oc_(OntTerm('NCBITaxon:1', label='ncbitaxon'), restriction(ilxtr.hasAspect, asp.livingness)),
 
     _t(i.d, 'feeding technique',
        # metabolism required so no viruses
@@ -897,7 +1158,7 @@ triples = (
     ),
 
     _t(i.d, 'separation technique',
-       (ilxtr.hasPrimarAspec, asp.location),  # TODO
+       (ilxtr.hasPrimaryAspect, asp.location),  # TODO
        #(ilxtr.hasSomething, i.d),
     ),
     _t(i.d, 'sorting technique',
@@ -956,11 +1217,13 @@ triples = (
        synonyms=('activity measurement technique', 'bioassay')),
 
     _t(i.d, 'observational technique',
-       tech.measuring,
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
+       # non numerical? interpretational?
        (ilxtr.hasSomething, i.d),
        synonyms=('observation', 'observation technique'),),
 
     _t(i.d, 'procurement technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
        (ilxtr.hasPrimaryParticipant,
         OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
@@ -973,39 +1236,28 @@ triples = (
        synonyms=('acquisition technique', 'procurement', 'acquistion', 'get')
     ),
 
-    _t(i.d, 'technique defined by constraint',
+    _t(i.d, 'has constraining aspect',
        (ilxtr.hasConstrainingAspect, ilxtr.aspect),
+       synonyms=('technique defined by constraint',)
       ),
 
-    _t(tech.measuring, 'measuring technique',
-       # TODO is detection distinct from measurement if there is no explicit symbolization?
-       (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
-       (hasParticipant,
-        # FIXME vs material entity (alignment to what I mean by 'being')
-        OntTerm('BFO:0000001', label='entity')
-       ),
-       synonyms=('measure', 'measurment technique'),
-    ),
+    # naming
+    oc(tech.naming, ilxtr.technique),
+    olit(tech.naming, rdfs.label, 'naming'),
+    olit(tech.naming, definition ,
+         ('Naming is an assertional process that is orthogonal to measuring.'
+          'Names may be assigned as a product of measurements, but the assignment '
+          'of a name can only be based on aspects of the thing, the name can never be '
+          'an aspect of the thing. Names may also be assigned based on aspects of the '
+          'process that produced the thing, or the prvious state of the thing. '
+          'For example a protein dissociated from its original cell/tissue no longer '
+          'contains sufficient information to reconsturct where it came from based on '
+          'any measurements that can be made on it beyond the species that it came from '
+          'and maybe where the individual lived if there are enough atoms to do an isotope test.'
+          'A cell on the other hand may very well have enough information in its RNA and DNA to '
+          'allow for a bottom up assignment of a name based on its gene expression pattern.')),
 
-    _t(tech.probing, 'probing technique',
-       (ilxtr.hasProbe, owl.Thing),
-       #(ilxtr.hasProbe, OntTerm('BFO:0000040', label='material entity')),
-       # FIXME technically could be an informational entity?
-       # if I probe someone by speaking latin but they do not respond
-       # vs if they do it is not the physical content of the sounds
-       # it is how they interact with the state of the other person's brain
-       def_=('Probing techniques attempt (intende) to change the state of a thing without changing '
-            'how it is named. Hitting something with just enough light to excite but not to '
-            'bleach would be one example, as would poking something with a non-pointy stick.'
-           ),
-     ),
-
-    _t(tech.allocating, 'allocating technique',
-       (ilxtr.hasPrimaryAspect, asp.location),
-       def_=('Allocating techniques move things around without changing how their participants '
-             'are named. More accurately they move them around without changing any part of their '
-             'functional defintions which are invariant as a function of their location.'),
-      ),
+    # ising
     _t(tech.ising, 'ising technique',
        (ilxtr.hasPrimaryAspect, asp['is']),
        def_=('Ising techniques are techniques that affect whether a thing \'is\' or not. '
@@ -1025,6 +1277,49 @@ triples = (
           'so that it can be assigned a name. The objective here is to demistify the process of '
           'assigning a name to a thing so that it will be possible to provide exact provenance '
           'for how the assignment of the name was determined.')),
+
+    # allocating
+    _t(tech.allocating, 'allocating technique',
+       (ilxtr.hasPrimaryAspect, asp.location),
+       # FIXME no information output
+       def_=('Allocating techniques move things around without changing how their participants '
+             'are named. More accurately they move them around without changing any part of their '
+             'functional defintions which are invariant as a function of their location.'),
+      ),
+    (tech.allocating, owl.disjointWith, tech.measuring),  # i am an idiot
+    # FIXME this causes issues
+    # we may need to split hasPrimaryAspect into hasPrimaryAspectMeasure hasPrimaryAspectActualized
+    #oc_(tech.allocating,
+        #blankc(owl.disjointWith,  # overkill using oec but it works
+               #oc_.full_combinator(oec(
+                   #ilxtr.technique,
+                   #restrictionN(ilxtr.hasInformationOutput,
+                                #ilxtr.informationEntity))))),
+
+    # measuring
+    _t(tech.measuring, 'measuring technique',
+       # TODO is detection distinct from measurement if there is no explicit symbolization?
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
+       (hasParticipant,
+        # FIXME vs material entity (alignment to what I mean by 'being')
+        OntTerm('BFO:0000001', label='entity')
+       ),
+       synonyms=('measure', 'measurment technique'),
+    ),
+
+    # probing
+    _t(tech.probing, 'probing technique',  # manipulating, poking, purturbing, changing state
+       (ilxtr.hasProbe, owl.Thing),
+       #(ilxtr.hasProbe, OntTerm('BFO:0000040', label='material entity')),
+       # FIXME technically could be an informational entity?
+       # if I probe someone by speaking latin but they do not respond
+       # vs if they do it is not the physical content of the sounds
+       # it is how they interact with the state of the other person's brain
+       def_=('Probing techniques attempt (intende) to change the state of a thing without changing '
+            'how it is named. Hitting something with just enough light to excite but not to '
+            'bleach would be one example, as would poking something with a non-pointy stick.'
+           ),
+     ),
 
     _t(tech.creating, 'creating technique',   # FIXME mightent we want to subclass off of these directly?
        (ilxtr.hasPrimaryAspect, asp['is']),
@@ -1659,11 +1954,14 @@ triples = (
     (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000112")),
 
     _t(i.d, 'intracellular electrophysiology technique',
-       (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
+       #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
     ),
 
     _t(tech.extracellularEphys, 'extracellular electrophysiology technique',
+       # or is it hasPrimaryParticipant hasPart some extracellularSpace? (no)
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
+       (ilxtr.hasPrimaryAspect, asp.electrical),
     ),
     (tech.extracellularEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000015')),
 
@@ -1675,12 +1973,10 @@ triples = (
        synonyms=('single extracellular electrode technique',)),
        (tech.singleElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000019')),
 
-    # FIXME should probably be to a higher level go?
-    (OntTerm('GO:0005615', label='extracellular space'), rdfs.subClassOf, ilxtr.physiologicalSystem),
 
     _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
        (ilxtr.hasPrimaryAspect, asp.electrical),
-       (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
        (ilxtr.hasParticipant, ilxtr.sharpElectrode),
        synonyms=('sharp electrode technique',)),
        (tech.sharpElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000023')),
@@ -1781,78 +2077,6 @@ triples += (  # aspects
             oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
             oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
 )
-
-triples += ( # protocols
-            oc(prot.CLARITY, ilxtr.protocol),
-            oc(prot.deepSequencing, ilxtr.protocol),
-            oc(prot.sangerSequencing, ilxtr.protocol),
-            oc(prot.shotgunSequencing, ilxtr.protocol),
-           )
-
-triples += ( # information entity
-            oc(ilxtr.superResolutionAlgorithem, ilxtr.informationEntity),
-            oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
-            oc(ilxtr.radonTransform, ilxtr.informationEntity),
-)
-
-triples += (  # other
-            oc(ilxtr.thingWithSequence),
-            oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
-
-            # FIXME owl:sameAs is NOT for generic iris >_<
-            oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
-            oc(ilxtr.brainSlice, ilxtr.materialEntity),
-
-            oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
-            oc(ilxtr.image, ilxtr.informationArtifact),
-            olit(ilxtr.image,
-                 definition,
-                 ('A symbolic representation of some spatial or spatial-temporal '
-                  'aspect of a participant. Often takes the form of a 2d or 3d matrix '
-                  'that has some mapping to sensor space and may also be collected at '
-                  'multiple timepoints. Regardless of the ultimate format has some '
-                  'part that can be reduced to a two dimensional matrix.'  # TODO
-                 )),
-            oc(ilxtr.spatialFrequencyImageStack, ilxtr.image),
-
-            oc(ilxtr.food_and_water, ilxtr.materialEntity),
-            oc(ilxtr.food, ilxtr.food_and_water),  # TODO edible organic matter with variable nutritional value depending on the organism
-            oc(ilxtr.highFatDiet, ilxtr.food),
-            oc(ilxtr.DIODiet, ilxtr.highFatDiet),
-            oc(ilx['researchdiets/uris/productnumber/D12492'], ilxtr.DIODiet),
-
-            # TODO have parcellation-artifacts import methods-core?
-            oc(ilxtr.parcellationArtifact, ilxtr.informationArtifact),
-            oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
-            oc(ilxtr.parcellationCoordinateSystem, ilxtr.parcellationArtifact),
-            oc(ilxtr.commonCoordinateFramework, ilxtr.parcellationCoordinateSystem),
-            olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
-            olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
-            oc(ilxtr.microPipette, ilxtr.materialEntity),
-            oc(ilxtr.microscope, ilxtr.materialEntity),
-            oc(ilxtr.lightMicroscope, ilxtr.microscope),
-            oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
-            oc(ilxtr.microtome, ilxtr.materialEntity),
-            oc(ilxtr.ultramicrotome, ilxtr.microtome),
-            oc(ilxtr.stereotax, ilxtr.materialEntity),
-
-            oc(ilxtr.photons, ilxtr.materialEntity),
-            oc(ilxtr.visibleLight, ilxtr.photons),
-            oc(ilxtr.xrays, ilxtr.photons),
-
-            # FIXME
-            oc(OntTerm('CHEBI:33697', label='RNA'), OntTerm('CHEBI:33696', label='nucleic acid')),
-            oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
-
-            oc(ilxtr.positive, ilxtr.changeType),
-            oc(ilxtr.negative, ilxtr.changeType),
-            (ilxtr.negative, owl.disjointWith, ilxtr.positive),
-            oc(ilxtr.nonZero, ilxtr.changeType),
-            oc(ilxtr.zero, ilxtr.changeType),
-            (ilxtr.zero, owl.disjointWith, ilxtr.nonZero),
-
-)
-
 def ect():  # FIXME not used supposed to make dAdT zero equi to value hasValue 0
     b = rdflib.BNode()
 

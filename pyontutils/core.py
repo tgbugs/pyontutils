@@ -283,6 +283,15 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
     def __call__(self, subject, predicate, object):
         yield subject, predicate, object
 
+    def debug(self, *args, l=None):
+        graph = rdflib.Graph()
+        graph.bind('owl', str(owl))
+        if l is None:
+            l = self.__call__(*args)
+        [graph.add(t) for t in l]
+        print(graph.serialize(format='nifttl').decode())
+
+
 
 class CombinatorIt(Combinator):
     def __init__(self, outer_self, *args, **kwargs):
@@ -349,21 +358,21 @@ class _POCombinator(Combinator):
     def __call__(self, subject, *pocombinators):
         """ Overwrite this function for more complex expansions. """
         # seems unlikely that same object multiple predicates would occur, will impl if needed
+        tech = rdflib.Namespace(ilxtr[''] + 'technique/')
         if subject is None:
             subject = rdflib.BNode()
 
-        yield subject, self.predicate, self.object
+        if isinstance(self.object, Combinator):
+            o = rdflib.BNode()
+            yield subject, self.predicate, o
+            yield from self.object(o)
+        else:
+            yield subject, self.predicate, self.object
         for combinator in pocombinators:
-            #if isinstance(combinator, types.GeneratorType):
-                #combinator = next(combinator)  # return the trapped combinator ;_;
-            #else:
-            if False and isinstance(combinator, str):  # catch issues early
-                yield combinator
-            else:
-                try:
-                    yield from combinator(subject)
-                except TypeError as e:
-                    raise TypeError(f'{combinator} not a combinator!') from e
+            try:
+                yield from combinator(subject)
+            except TypeError as e:
+                raise TypeError(f'{combinator} not a combinator!') from e
 
     def __repr__(self):
         p = qname(self.predicate)
@@ -398,7 +407,7 @@ class RestrictionCombinator(_POCombinator):
     def __call__(self, subject, linking_predicate=None):
         if self.outer_self.predicate is not None and linking_predicate is not None:
             if self.outer_self.predicate != linking_predicate:
-                raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
+                raise TypeError(f'Predicates {self.outer_self.predicate} {linking_predicate} do not match on {self!r}')
 
         yield from self.outer_self.serialize(subject, self.predicate, self.object, linking_predicate)
 
@@ -446,6 +455,54 @@ class Triple:
 
     def _test_roundtrip(self, s, p, o):
         assert self.parse(self.serialize(s, p, o)) == (s, p, o, self.__class__.__name__)
+
+
+class Restriction2(Triple):
+    def __init__(self, linking_predicate, *internal_predicates):
+        self.linking_predicate = linking_predicate
+        if not internal_predicates:
+            self.internal_predicates = owl.someValuesFrom,
+        else:
+            self.internal_predicates = internal_predicates
+
+    def __call__(self, *internal_objects):
+        if len(internal_objects) != len(self.internal_predicates):
+            raise ValueError('not enough objects for predicates\n'
+                             '{internal_objects} {self.internal_predicates}')
+
+        class Awaiting(Combinator):
+            def __init__(self, outer_self, predicates, objects):
+                self.outer_self = outer_self
+                self.predicates = predicates
+                self.objects = objects
+
+            def __call__(self, subject, predicate=self.linking_predicate):
+                yield from self.outer_self.serialize(subject, predicate, None,
+                                                     self.predicates, self.objects)
+
+        return Awaiting(self, self.internal_predicates, internal_objects)
+
+    def serialize(self, subject, predicate, inner_subject, inner_predicates, inner_objects):
+        if subject is None:
+            raise TypeError(f'None subject {self}')
+
+        if predicate is None and inner_subject is None:
+            inner_subject = subject
+        elif predicate is None:
+            raise TypeError(f'None predicate {self}')
+        elif inner_subject is None:
+            inner_subject = rdflib.BNode()
+            yield subject, predicate, inner_subject
+        else:
+            raise ValueError(f'wat')
+
+        yield inner_subject, rdf.type, owl.Restriction
+        for p, o in zip(inner_predicates, inner_objects):
+            if isinstance(o, Combinator):  # as noted before has to be a poc
+                combinator = o
+                o = rdflib.BNode()
+                yield from combinator(o)
+            yield inner_subject, p, o
 
 
 class Restriction(Triple):
