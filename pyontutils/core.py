@@ -1288,10 +1288,12 @@ def createOntology(filename=    'temp-graph',
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY,
                    path=        'ttl/generated/',
-                   local_base=  devconfig.ontology_local_repo,
+                   local_base=  None,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
+    if local_base is None:  # get location at runtime
+        local_base = devconfig.ontology_local_repo
     writeloc = Path(local_base) / path
     ontid = os.path.join(remote_base, path, filename + '.ttl')
     prefixes.update(makePrefixes('', 'owl'))
