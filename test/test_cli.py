@@ -23,9 +23,12 @@ from pyontutils import scigraph_client
 orig_basepath = 'https://scicrunch.org/api/1/scigraph'
 
 if 'SCICRUNCH_API_KEY' in os.environ:
+    devconfig.scigraph_api = orig_basepath
     scigraph.scigraph_client.BASEPATH = orig_basepath
 else:
-    scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
+    local_basepath = 'http://localhost:9000/scigraph'
+    devconfig.scigraph_api = local_basepath
+    scigraph.scigraph_client.BASEPATH = local_basepath
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 
@@ -122,9 +125,10 @@ class TestScripts(Folders):
 
         ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
         zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
-        mains = {'nif_cell': None,
-                 'methods': None,
-                 'core': None,
+        mains = {'nif_cell':None,
+                 'methods':None,
+                 'core':None,
+                 'scigraph':None,
                  'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
         #['ilxcli', '--help'],
         'ttlfmt':[['ttlfmt', ban],

@@ -181,6 +181,11 @@ class DevConfig:
     def scigraph_api(self):
         return self.config['scigraph_api']
 
+    @scigraph_api.setter
+    def scigraph_api(self, value):
+        self._override['scigraph_api'] = value
+        self.write(self.config_file)
+
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
         return self.config['scigraph_graphload']
