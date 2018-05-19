@@ -79,6 +79,7 @@ class TestCli(Folders):
         ['scigraph-deploy', '--help'],
         ['scig', '--help'],
         ['ttlfmt', '--help'],
+        ['python', 'resolver/make_config.py'],
     )
     
     def test_cli(self):
@@ -96,10 +97,15 @@ class TestCli(Folders):
 
 class TestScripts(Folders):
     """ Import everything and run main() on a subset of those """
+    # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
     def setUp(self, checkout_ok=checkout_ok):
         super().setUp()
+        if not hasattr(self, '_do_mains'):
+            self.__class__._do_mains = []
+            self.__class__._do_tests = []
 
+    def test_import(self):
         skip = ('cocomac_uberon',  # known broken
                 'neuron_ma2015',  # still needs work
                 'old_neuron_example',  # known broken
@@ -118,6 +124,7 @@ class TestScripts(Folders):
         zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
         mains = {'nif_cell': None,
                  'methods': None,
+                 'core': None,
                  'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
         #['ilxcli', '--help'],
         'ttlfmt':[['ttlfmt', ban],
@@ -184,12 +191,15 @@ class TestScripts(Folders):
                     _do_tests.append(getattr(module, stem))
 
         print(_do_mains, _do_tests)
-        self._do_mains = _do_mains
-        self._do_tests = _do_tests
-        self.argv_orig = sys.argv
+        self._do_mains.extend(_do_mains)
+        self._do_tests.extend(_do_tests)
+        if not hasattr(self.__class__, 'argv_orig'):
+            self.__class__.argv_orig = sys.argv
 
     def test_mains(self):
         failed = []
+        if not self._do_mains:
+            raise ValueError('test_imports did not complete successfully')
         for script, argv in self._do_mains:
             if argv and argv[0] != script:
                 os.system(' '.join(argv))

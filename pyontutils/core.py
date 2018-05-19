@@ -1987,8 +1987,9 @@ def main():
         ecgraph.add(t)
     ecng = makeGraph('thing2', graph=ecgraph, prefixes=makePrefixes('owl', 'TEMP'))
     ecng.write()
-    embed()
-    return
+    if __name__ == '__main__':
+        embed()
+        return
     r = Restriction(rdfs.subClassOf)#, scope=owl.allValuesFrom)#NIFRID.has_proper_part)
     l = tuple(r.parse(graph=graph))
     for t in r.triples:
@@ -2021,7 +2022,8 @@ def main():
     [egraph.add(t) for t in ft]
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 if __name__ == '__main__':
     main()

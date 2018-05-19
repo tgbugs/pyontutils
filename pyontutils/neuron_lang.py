@@ -38,7 +38,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            out_graph=         None,
            force_remote=      False,
            checkout_ok=       _CHECKOUT_OK,
-           scigraph=          'localhost:9000'):
+           scigraph=          None):  # defaults to devconfig.scigraph_api
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
     graphBase.configGraphIO(remote_base, local_base, branch,

@@ -2191,5 +2191,4 @@ def main():
     expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
 if __name__ == '__main__':
-    pass
-    #main()
+    main()

@@ -152,7 +152,7 @@ class graphBase:
                        out_graph=         None,
                        force_remote=      False,
                        checkout_ok=       False,
-                       scigraph=          'scigraph.mydomain.org:9000'):
+                       scigraph=          'http://scigraph.mydomain.org:9000/scigraph'):
             graphBase.configGraphIO(remote_base, local_base, branch,
                                     core_graph_paths, core_graph,
                                     in_graph_paths,
@@ -254,7 +254,7 @@ class graphBase:
 
         # scigraph setup
         if scigraph is not None:
-            graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
+            graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
         else:
             graphBase._sgv = Vocabulary(cache=True)
 
