@@ -16,6 +16,7 @@ from pyontutils.qnamefix import cull_prefixes
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
+_CHECKOUT_OK = False
 
 __all__ = [
     'AND',
@@ -34,6 +35,7 @@ __all__ = [
     'Neuron',
     #'NeuronArranger',
     '_NEURON_CLASS',
+    '_CHECKOUT_OK',
 ]
 
 # language constructes
@@ -127,7 +129,7 @@ class graphBase:
                       out_imports=       tuple(),
                       out_graph=         None,
                       force_remote=      False,
-                      checkout_ok=       False,
+                      checkout_ok=       _CHECKOUT_OK,
                       scigraph=          None):
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs

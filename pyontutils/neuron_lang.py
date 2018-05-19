@@ -22,6 +22,7 @@ __all__ = [
     'NegPhenotype',
     'LogicalPhenotype',
     'Neuron',
+    '_CHECKOUT_OK',
 ]
 
 def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
@@ -36,7 +37,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            out_imports=      ['ttl/phenotype-core.ttl'],
            out_graph=         None,
            force_remote=      False,
-           checkout_ok=       False,
+           checkout_ok=       _CHECKOUT_OK,
            scigraph=          'localhost:9000'):
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
