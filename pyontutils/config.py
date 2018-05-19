@@ -56,7 +56,9 @@ class DevConfig:
         """ Allows changing the config on the fly """
         # TODO more efficient to read once and put watch on the file
         with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
-            config = yaml.load(f)
+            config = {k:self._override[k] if
+                      k in self._override else
+                      v for k, v in yaml.load(f).items()}
 
         return config if config else None
 
@@ -73,7 +75,7 @@ class DevConfig:
                     else:
                         out[name] = getattr(self, name)
 
-        if self._overide:
+        if self._override:
             self._override = {}
 
         return out
@@ -138,6 +140,7 @@ class DevConfig:
             return out
 
         try:
+            raise NotImplemented('correctly')  # TODO need single key updates
             olr = self.config['ontology_local_repo']
             if olr:
                 return add_default(olr)
