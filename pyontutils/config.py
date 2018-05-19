@@ -48,7 +48,7 @@ class DevConfig:
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
         self._override = {}
         self.config_file = config_file
-        olrd = Path(self.git_local_base, self.ontology_repo).as_posix()
+        olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
 
     @property
@@ -75,9 +75,6 @@ class DevConfig:
                     else:
                         out[name] = getattr(self, name)
 
-        if self._override:
-            self._override = {}
-
         return out
 
     def write(self, file=None):
@@ -85,9 +82,12 @@ class DevConfig:
             file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
 
         config = {k:str(v) for k, v in self._config.items()}
+
         if config:
             with open(file, 'wt') as f:
                 yaml.dump(config, f, default_flow_style=False)
+            if self._override:
+                self._override = {}
         else:
             raise ValueError('devconfig is empty?!')
 
@@ -133,27 +133,35 @@ class DevConfig:
 
     @dproperty
     def ontology_local_repo(self):
-        def add_default(thing=self.__class__.ontology_local_repo.default):
-            default = self.__class__.ontology_local_repo.default
+        def add_default(thing=self.__class__.ontology_local_repo.default()):
+            default = self.__class__.ontology_local_repo.default()
             out = dstr(default)
             out.default = default
             return out
 
         try:
-            raise NotImplemented('correctly')  # TODO need single key updates
-            olr = self.config['ontology_local_repo']
+            olr = Path(self.config['ontology_local_repo']).resolve()
             if olr:
-                return add_default(olr)
+                if olr == self._ontology_local_repo:
+                    return add_default(olr)
+                else:
+                    return add_default(self._ontology_local_repo.as_posix())
             else:
                 raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, FileNotFoundError) as e:
-            maybe_repo = Path(__file__).parent.parent.parent / self.ontology_repo
-            if maybe_repo.exists():
-                return add_default(maybe_repo)
-            else:
-                print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
+            return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
 
-                return add_default()
+    @property
+    def _ontology_local_repo(self):
+        maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
+        if maybe_repo.exists():
+            return maybe_repo
+        else:
+            maybe_repo = Path(__file__).parent.parent.parent.absolute() / self.ontology_repo
+            if maybe_repo.exists():
+                return maybe_repo
+
+        print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
 
     @default('localhost')
     def _scigraph_host(self):
