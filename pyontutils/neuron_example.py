@@ -4,6 +4,7 @@ import inspect
 from pyontutils.utils import TermColors as tc
 from pyontutils.neurons import *  # always import via pyontutils or you will get errors
 from pyontutils.neuron_lang import *
+#pred = config(checkout_ok=True)
 from pyontutils import phenotype_namespaces as phns
 from IPython import embed
 

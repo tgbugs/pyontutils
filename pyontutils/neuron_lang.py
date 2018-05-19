@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import inspect
+from pathlib import Path
 from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
@@ -35,6 +36,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            out_imports=      ['ttl/phenotype-core.ttl'],
            out_graph=         None,
            force_remote=      False,
+           checkout_ok=       False,
            scigraph=          'localhost:9000'):
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
@@ -42,7 +44,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
                             core_graph_paths, core_graph,
                             in_graph_paths,
                             out_graph_path, out_imports, out_graph,
-                            force_remote, scigraph)
+                            force_remote, checkout_ok, scigraph)
     pred = graphBase._predicates
     return pred  # because the python module system is opinionated :/
 
