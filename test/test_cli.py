@@ -8,14 +8,19 @@ import subprocess
 from pathlib import Path
 from git import Repo
 
+from pyontutils.config import devconfig
+p1 = Path(__file__).resolve().absolute().parent.parent.parent
+p2 = Path(devconfig.git_local_base).resolve().absolute()
+print(p1, p2)
+if p1 != p2:
+    devconfig.git_local_base = p1
+
+from pyontutils import scigraph
+from pyontutils import core
 from pyontutils import scigraph_client
 
 # orig_basepath = scigraph_client.BASEPATH
 orig_basepath = 'https://scicrunch.org/api/1/scigraph'
-
-from pyontutils import scigraph
-from pyontutils import core
-from pyontutils.config import devconfig
 
 if 'SCICRUNCH_API_KEY' in os.environ:
     scigraph.scigraph_client.BASEPATH = orig_basepath
@@ -23,12 +28,6 @@ else:
     scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-
-p1 = Path(__file__).resolve().absolute().parent.parent.parent
-p2 = Path(devconfig.git_local_base).resolve().absolute()
-print(p1, p2)
-if p1 != p2:
-    devconfig.git_local_base = p1
 
 class Folders(unittest.TestCase):
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')

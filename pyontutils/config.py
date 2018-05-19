@@ -69,9 +69,12 @@ class DevConfig:
                 thing = getattr(self.__class__, name, None)
                 if isinstance(thing, property):
                     if name in self._override:
-                        out[name] = self._override.pop(name)
+                        out[name] = self._override[name]
                     else:
                         out[name] = getattr(self, name)
+
+        if self._overide:
+            self._override = {}
 
         return out
 
