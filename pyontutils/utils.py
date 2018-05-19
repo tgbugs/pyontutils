@@ -27,19 +27,33 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 
-def test_notebook():
+def test_notebook():  # also tests ipython
     try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        return False
-    except (NameError, KeyError) as e:
+        config = get_ipython().config
+        return 'IPKernelApp' in config
+    except NameError as e:
         return False
 
+def test_ipython():
+    try:
+        config = get_ipython().config
+        return 'TerminalInteractiveShell' in config
+    except NameError as e:
+        return None, False
+
+def test_test():
+    import __main__
+    import sys
+    return hasattr(__main__, '__unittest') and __main__.__unittest or 'nose' in sys.modules
+
 in_notebook = test_notebook()
+in_ipython = test_ipython()
+in_test = test_test()
 
 def stack_magic(stack):
     # note: we cannot use globals() because it will be globals of the defining file not the calling file
-    if in_notebook:
+    # note: in ipython with thing: print(name) will not work if on the same line
+    if in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     else:
         index = -1
