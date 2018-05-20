@@ -26,8 +26,7 @@ __all__ = [
 ]
 
 def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
-           local_base=        (current_file.parent.parent.parent /
-                               'NIF-Ontology').as_posix(),
+           local_base=        None,  # devconfig.ontology_local_repo by default
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],

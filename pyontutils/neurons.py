@@ -12,6 +12,7 @@ from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
+from pyontutils.config import devconfig
 from pyontutils.qnamefix import cull_prefixes
 
 current_file = Path(__file__).absolute()
@@ -120,8 +121,8 @@ class graphBase:
 
     @staticmethod
     def configGraphIO(remote_base,
-                      local_base,
-                      branch,
+                      local_base=        None,
+                      branch=            'master',
                       core_graph_paths=  tuple(),
                       core_graph=        None,
                       in_graph_paths=    tuple(),
@@ -161,6 +162,8 @@ class graphBase:
 
         """
 
+        if local_base is None:
+            local_base = devconfig.ontology_local_repo
         graphBase.local_base = Path(local_base).expanduser()
         graphBase.remote_base = remote_base
 
