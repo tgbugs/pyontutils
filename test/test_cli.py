@@ -82,7 +82,8 @@ class TestCli(Folders):
         ['scigraph-deploy', '--help'],
         ['scig', '--help'],
         ['ttlfmt', '--help'],
-        ['python', 'resolver/make_config.py'],
+        [sys.executable, 'resolver/make_config.py'],
+        # strange that make_config failed in travis in a pipenv as couldn't find pyontutils?
     )
     
     def test_cli(self):
