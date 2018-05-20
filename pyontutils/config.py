@@ -117,7 +117,7 @@ class DevConfig:
     @git_local_base.setter
     def git_local_base(self, value):
         self._override['git_local_base'] = value
-        self.write(self.config_file)
+        self.write(self.config_file.as_posix())
 
     @default('SciCrunch')
     def ontology_org(self):
@@ -184,7 +184,7 @@ class DevConfig:
     @scigraph_api.setter
     def scigraph_api(self, value):
         self._override['scigraph_api'] = value
-        self.write(self.config_file)
+        self.write(self.config_file.as_posix())
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
