@@ -13,8 +13,10 @@ from pyontutils.methods_core import asp, tech, prot, methods_core, _t
 blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
 restMinCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.minCardinality)
+restMaxCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.maxCardinality)
 restrictionS = Restriction(owl.someValuesFrom)
 oECU = EquivalentClass(owl.unionOf)
+oECN = EquivalentClass(None)
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -51,7 +53,13 @@ i = I()
 ###
 
 filename = 'methods-helper'
-prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
+prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant', 'TEMP')
+prefixes += ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
+            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
+            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
+            'NLX',
+)
+OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 #OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 #imports = NIFTTL['nif_backend.ttl'],
 imports = methods_core.iri,
@@ -65,6 +73,8 @@ triples = (
     # FIXME redundant when we import all of go
     (OntId('GO:0005615'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
     (OntId('GO:0005622'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
+    oc_(OntTerm('SAO:1813327414', label='Cell'),
+        restriction(hasPart, OntTerm('GO:0005575', label='cellular_component'))),  # inputs also need to input all their parts
 )
 
 triples += ( # protocols
@@ -260,6 +270,44 @@ triples += (  # aspects
     # onProperty isFunctional
     # has qualified role?
     # 
+    oc(asp.behavioral, ilxtr.aspect),
+
+    oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
+
+    oc(asp.sequence, ilxtr.aspect),
+    #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
+
+    oc(asp.sensory, ilxtr.aspect),
+    oc(asp.vision, asp.sensory),
+
+    oc(asp.anySpatioTemporalMeasure, ilxtr.aspect),  # FIXME
+    oc(asp.electromagnetic, ilxtr.aspect),
+    oc(asp.electrical, asp.electromagnetic),
+    oc(asp.voltage, asp.electrical),
+    oc(asp.current, asp.electrical),
+    oc(asp.charge, asp.electrical),
+    oc(asp.magnetic, asp.electromagnetic),
+
+    oc(asp.informationEntropy, ilxtr.aspect),
+    oc(asp.mechanicalRigidity, ilxtr.aspect),
+    oc(asp.spectrum, ilxtr.aspect),
+    oc(asp.spontaneousChangeInStructure, ilxtr.aspect),
+
+    oc(asp.physicalOrderedness, ilxtr.aspect),
+    oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
+
+    #oc(asp.functional, ilxtr.aspect),  # asp.functional is not the right way to model this
+    #olit(ilxtr.functionalAspectRole, definition,
+         #('A functional aspect is any aspect that can be used to define ')),
+    oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
+    #oc(asp.circadianPhase, asp.biologicalActivity),
+    oc(asp.circadianPhase, ilxtr.aspect),  # FIXME hrm... time as a proxy for biological state?
+
+    oc(asp.sensitvity, ilxtr.aspect),
+    # FIXME issue with sensitivity and the 'towards' relation
+
+    oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
+    oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
 
 )
 
@@ -334,23 +382,23 @@ triples = (
        # TODO FIXME I think it is clear that there are certain techniques which are
        # named in a way that is assertional, not definitional
        # it seems appropriate for those arbitrarily named techniques to use subClassOf?
-       (hasParticipant,
+       (hasInput,
         OntTerm('CHEBI:25367', label='molecule')
        ),),
 
     _t(i.d, 'cellular technique',
-       (hasParticipant,
+       (hasInput,
         OntTerm('SAO:1813327414', label='Cell')
        ),),
 
     _t(i.d, 'cell type induction technique',
-       (ilxtr.hasPrimaryParticipant, OntTerm('SAO:1813327414', label='Cell')),
-       (hasParticipant, ilxtr.inducationFactor),
+       (ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell')),
+       (hasInput, ilxtr.inducationFactor),
     ),
 
     _t(i.d, 'molecular cloning technique',
 
-       (ilxtr.hasPrimaryParticipant,
+       (ilxtr.hasPrimaryInput,
         OntTerm('CHEBI:33696', label='nucleic acid')
         #OntTerm('CHEBI:16991', label='deoxyribonucleic acid')
         # FIXME other options are OntTerm('SAO:454034570') or OntTerm('SO:0000352')
@@ -369,24 +417,36 @@ triples = (
         ),
     ),
 
+    # sequencing TODO
+
     _t(tech.sequencing, 'sequencing technique',
-       # hasParticipant molecule or chemical?
-       (hasParticipant, ilxtr.thingWithSequence),  # peptide nucleotie sacharide
-       (ilxtr.hasPrimaryAspect, asp.sequence),  # nucleic and peptidergic, and chemical etc.
-        ),
+       intersectionOf(
+       ilxtr.technique,
+       restrictionN(ilxtr.hasPrimaryInput, ilxtr.thingWithSequence),
+       restrictionN(ilxtr.hasPrimaryAspect, asp.sequence,),
+       restrictionN(ilxtr.hasInformationOutput, ilxtr.informationArtifact)),
+       intersectionOf(ilxtr.technique,
+                      restrictionN(hasPart, tech.sequencing)),
+       equivalentClass=oECN),
+
 
     _t(tech._naSeq, 'nucleic acid sequencing technique',
-       (ilxtr.hasPrimaryParticipant,
-        # hasParticipant molecule or chemical?
-        #OntTerm(term='nucleic acid')
-         OntTerm('CHEBI:33696', label='nucleic acid')
-        ),
-       (ilxtr.hasPrimaryAspect,
-        #OntTerm(term='sequence')
-        #OntTerm('SO:0000001', label='region', synonyms=['sequence'])  # label='region'
-        asp.sequence,  # pretty sure that SO:0000001 is not really an aspect...
+       intersectionOf(ilxtr.technique,
+                      restrictionN(ilxtr.hasPrimaryInput,
+                        # hasParticipant molecule or chemical?
+                        #OntTerm(term='nucleic acid')
+                                   OntTerm('CHEBI:33696', label='nucleic acid')),
+                      restrictionN(ilxtr.hasPrimaryAspect,
+                                   #OntTerm(term='sequence')
+                                   #OntTerm('SO:0000001', label='region', synonyms=['sequence'])  # label='region'
+                                   asp.sequence,  # pretty sure that SO:0000001 is not really an aspect...
        ),
-        ),
+                      restrictionN(ilxtr.hasInformationOutput,
+                                   ilxtr.informationArtifact),  # note use of artifact
+       ),
+       intersectionOf(ilxtr.technique,
+                      restrictionN(hasPart, tech._naSeq)),
+       equivalentClass=oECN),
 
     _t(i.d, 'deep sequencing technique',
        tech._naSeq,
@@ -409,20 +469,28 @@ triples = (
 
     _t(i.d, 'single cell sequencing technique',
        # FIXME vs pp -> *NA from a single cell
-       (hasParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in a single cell
-       (hasParticipant, OntTerm('SAO:1813327414', label='Cell')),
+       ilxtr.technique,
+       (hasPart, tech._naSeq),
+       #(hasInput, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in a single cell
+       # hasInput o hasPart some owl:Thing TODO
+       #(hasInput, OntTerm('SAO:1813327414', label='Cell')),  # inputs also need to input all their parts
+       # this will continue to work if we use hasPart NucleicAcidExtractionIsolationTechnique
        # (ilxtr.hasPrimaryParticipantCardinality, 1)  # FIXME need this...
+       #restMaxCardValue(),
+        restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1)),
+       (ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
        synonyms=('single cell sequencing',)
     ),
 
     _t(i.d, 'single nucleus sequencing technique',
-       (hasParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in the nucleus...
-       (hasParticipant, OntTerm('GO:0005634', label='nucleus')),
+       (hasPart, tech._naSeq),
+       #(hasInput, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in the nucleus...
+       (ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus')),
+       # or rather does NOT have input some CytoPlasm
        # (ilxtr.hasPrimaryParticipantCardinality, 1)  # FIXME need this...
        synonyms=('single nucleus sequencing',)
     ),
-
-    # sequencing TODO
+    blankc(owl.disjointWith, restrictionN(hasInput, OntTerm('GO:0005737', label='cytoplasm')))(i.p),
 
     _t(i.d, 'RNAseq',
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
@@ -1400,13 +1468,14 @@ triples = (
     ),
 
     _t(i.d, 'microscopy technique',
-       (hasParticipant, ilxtr.microscope),  # electrophysiology microscopy techinque?
+       (hasInput, ilxtr.microscope),  # electrophysiology microscopy techinque?
+       # can't use hasParticipant because we need it to be distinct from 'microscope production technique'
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('microscopy',),
     ),
 
     _t(i.d, 'light microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
+       (hasInput, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
 
        #(ilxtr.detects, OntTerm(search='visible light', prefix='obo')),
        #(ilxtr.detects, OntTerm(search='photon', prefix='NIFSTD')),
@@ -1416,7 +1485,7 @@ triples = (
     (ilxtr.lightMicroscope, owl.equivalentClass, OntTerm('BIRNLEX:2112', label='Optical microscope')),
 
     _t(i.d, 'confocal microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
+       (hasInput, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
        (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('confocal microscopy',)),
@@ -1496,7 +1565,7 @@ triples = (
 
     _t(tech.MRI, 'magnetic resonance imaging',
        #tech.imaging,
-       (hasParticipant, ilxtr.MRIScanner),
+       (hasInput, ilxtr.MRIScanner),
        (ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),  # FIXME hasPrimaryAspect appears twice
        # FIXME the output image for MRI should be subClassOf image, and not done this way
        # NRM is an aspect not one of the mediators
@@ -1552,7 +1621,7 @@ triples = (
            # it seems like it may make more sense to do these as unions?
            # TODO kpp kdp
            intersectionOf(
-               restrictionN(ilxtr.hasParticipant, ilxtr.MRIScanner),
+               restrictionN(hasInput, ilxtr.MRIScanner),
                restrictionN(ilxtr.knownProbedPhenomena, OntTerm('CHEBI:15377', label='water')),
                restrictionN(ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:15377', label='water')))),
        synonyms=('DTI',),
@@ -1606,9 +1675,13 @@ triples = (
 
     _t(i.d, 'pharmacological technique',
        (ilxtr.hasSomething, i.d),
-       (hasParticipant, oc_.full_combinator(restriction(hasRole, OntId('CHEBI:23888')))),
+       (hasInput, restrictionN(hasRole, OntId('CHEBI:23888'))),
        synonyms=('pharmacology',)
     ),
+
+    _t(i.d, 'ttx bath application technique',
+        (hasInput, OntId('CHEBI:9506')),
+      ),
 
     _t(i.d, 'photoactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
@@ -1779,7 +1852,7 @@ triples = (
 
     _t(i.d, 'stereotaxic technique',
        tech.surgery,  # FIXME
-       (hasParticipant, ilxtr.stereotax),
+       (hasInput, ilxtr.stereotax),
        (ilxtr.isConstrainedBy, ilxtr.stereotaxiCoordinateSystem),
     ),
 
@@ -1817,7 +1890,7 @@ triples = (
 
     _t(i.d, 'dietary restriction technique',
        (ilxtr.hasSomething, i.d),
-       (hasParticipant, ilxtr.food_and_water),  # metabolic input
+       (hasInput, ilxtr.food_and_water),  # metabolic input
        # reduction in some metabolic input
     ),
 
@@ -1892,13 +1965,13 @@ triples = (
     ),
 
     _t(i.d, 'microtomy technique',
-       (ilxtr.hasParticipant, ilxtr.microtome),
+       (hasInput, ilxtr.microtome),
        (hasOutput, ilxtr.thinSections),  # this prevents issues with microtome based warfare techniques
        synonyms=('microtomy',)
     ),
 
     _t(i.d, 'ultramicrotomy technique',
-       (ilxtr.hasParticipant, ilxtr.ultramicrotome),
+       (hasInput, ilxtr.ultramicrotome),
        (hasOutput, ilxtr.veryThinSections),  # FIXME has intended output?
        synonyms=('ultramicrotomy',)
     ),
@@ -1911,14 +1984,14 @@ triples = (
     ),
 
     _t(tech.electronMicroscopy, 'electron microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
+       (hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
        (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('electron microscopy',)),
     (tech.electronMicroscopy, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
 
     _t(i.d, 'correlative light-electron microscopy technique',
-       (hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
+       #(hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope')),
        # this works extremely well because the information outputs propagate nicely
        (hasPart, tech.lightMicroscopy),
        (hasPart, tech.electronMicroscopy),
@@ -1951,7 +2024,7 @@ triples = (
     ),
     _t(i.d, 'western blotting technique',
        (ilxtr.hasPrimaryParticipant, OntTerm('PR:000000001', label='protein')),  # at least one
-       (hasParticipant, OntTerm('BIRNLEX:2110', label='Antibody')),
+       (hasInput, OntTerm('BIRNLEX:2110', label='Antibody')),
        synonyms=('wester blot',)),
     (i.p, ilxtr.hasTempId, OntId("HBP_MEM:0000112")),
 
@@ -1971,7 +2044,7 @@ triples = (
        # FIXME extracellular space that is part of some other participant... how to convey this...
        (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
-       (ilxtr.hasParticipant, ilxtr.singleElectrode),  # cardinality 1?
+       (hasInput, ilxtr.singleElectrode),  # cardinality 1?
        synonyms=('single extracellular electrode technique',)),
        (tech.singleElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000019')),
 
@@ -1979,7 +2052,7 @@ triples = (
     _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
        (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
-       (ilxtr.hasParticipant, ilxtr.sharpElectrode),
+       (hasInput, ilxtr.sharpElectrode),
        synonyms=('sharp electrode technique',)),
        (tech.sharpElectrodeEphys, ilxtr.hasTempId, OntId('HBP_MEM:0000023')),
 
@@ -2038,47 +2111,7 @@ triples = (
        (ilxtr.hasSomething, i.d),
     ),
 )
-triples += (  # aspects
 
-            oc(asp.behavioral, ilxtr.aspect),
-
-            oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
-
-            oc(asp.sequence, ilxtr.aspect),
-            #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
-
-            oc(asp.sensory, ilxtr.aspect),
-            oc(asp.vision, asp.sensory),
-
-            oc(asp.anySpatioTemporalMeasure, ilxtr.aspect),  # FIXME
-            oc(asp.electromagnetic, ilxtr.aspect),
-            oc(asp.electrical, asp.electromagnetic),
-            oc(asp.voltage, asp.electrical),
-            oc(asp.current, asp.electrical),
-            oc(asp.charge, asp.electrical),
-            oc(asp.magnetic, asp.electromagnetic),
-
-            oc(asp.informationEntropy, ilxtr.aspect),
-            oc(asp.mechanicalRigidity, ilxtr.aspect),
-            oc(asp.spectrum, ilxtr.aspect),
-            oc(asp.spontaneousChangeInStructure, ilxtr.aspect),
-
-            oc(asp.physicalOrderedness, ilxtr.aspect),
-            oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
-
-            #oc(asp.functional, ilxtr.aspect),  # asp.functional is not the right way to model this
-            #olit(ilxtr.functionalAspectRole, definition,
-                 #('A functional aspect is any aspect that can be used to define ')),
-            oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
-            #oc(asp.circadianPhase, asp.biologicalActivity),
-            oc(asp.circadianPhase, ilxtr.aspect),  # FIXME hrm... time as a proxy for biological state?
-
-            oc(asp.sensitvity, ilxtr.aspect),
-            # FIXME issue with sensitivity and the 'towards' relation
-
-            oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
-            oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
-)
 def ect():  # FIXME not used supposed to make dAdT zero equi to value hasValue 0
     b = rdflib.BNode()
 
@@ -2119,6 +2152,16 @@ olit(tech.fMRI, rdfs.comment,
       'They can be tied to fMRI using hasPart: or hasPriorTechnique something similar.')),  # TODO
 (tech.fMRI, ilxtr.hasTempId, OntId("HBP_MEM:0000008")),
 """
+"""
+_t(tech.sequencing, 'sequencing technique',
+   # hasParticipant molecule or chemical?
+   (ilxtr.hasPrimaryParticipant, ilxtr.thingWithSequence),  # peptide nucleotie sacharide
+   # can't use hasParticipant because then it would caputre peptide synthesis or oligo synthesis
+   (ilxtr.hasPrimaryAspect, asp.sequence),  # nucleic and peptidergic, and chemical etc.
+   (ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
+    ),
+"""
+
 
 
 methods = simpleOnt(filename=filename,

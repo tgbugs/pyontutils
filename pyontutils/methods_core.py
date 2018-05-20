@@ -35,7 +35,6 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec)
     if not members:
         members = ilxtr.technique,
 
-
     yield from oc(subject)
     yield from equivalentClass.serialize(subject, *members, *restrictions(*rests))
     yield from olit(subject, rdfs.label, label)
@@ -173,6 +172,11 @@ triples = (
     oop(ilxtr.primaryParticipantIn),
     olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
     (ilxtr.primaryParticipantIn, owl.inverseOf, ilxtr.hasPrimaryParticipant),
+
+    oop(ilxtr.hasPrimaryInput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryInput, hasInput),
+    oop(ilxtr.hasPrimaryOutput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryOutput, hasOutput),
 
 
     ## intentions
