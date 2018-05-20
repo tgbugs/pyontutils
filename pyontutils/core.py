@@ -102,6 +102,11 @@ def _loadPrefixes():
         'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
         'prov':'http://www.w3.org/ns/prov#',
+        # defined by chebi.owl, confusingly chebi#2 -> chebi1 maybe an error?
+        # better to keep it consistent in case someone tries to copy and paste
+        'chebi1':'http://purl.obolibrary.org/obo/chebi#2',
+        'chebi2':'http://purl.obolibrary.org/obo/chebi#',
+        'chebi3':'http://purl.obolibrary.org/obo/chebi#3',
     }
     #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
     extras = {**full, **normal}
@@ -836,13 +841,24 @@ class EquivalentClass(Triple):
     def serialize(self, subject, *objects_or_combinators):
         """ object_combinators may also be URIRefs or Literals """
         ec_s = rdflib.BNode()
-        if subject is not None:
-            yield subject, self.predicate, ec_s
-        yield from oc(ec_s)
         if self.operator is not None:
+            if subject is not None:
+                yield subject, self.predicate, ec_s
+            yield from oc(ec_s)
             yield from self._list.serialize(ec_s, self.operator, *objects_or_combinators)
         else:
-            raise NotImplemented('TODO a normal list')
+            for thing in objects_or_combinators:
+                if isinstance(thing, Combinator):
+                    object = rdflib.BNode()
+                    #anything = list(thing(object))
+                    #if anything:
+                        #[print(_) for _ in anything]
+                    yield object, rdf.type, owl.Class
+                    yield from thing(object)
+                else:
+                    object = thing
+
+                yield subject, self.predicate, object
 
     def parse(self, *triples, graph=None):
         if graph is None:  # TODO decorator for this
@@ -1783,8 +1799,6 @@ class Ont:
 
         if hasattr(self, '_triples'):
             yield from self._triple_check(self._triples())
-        else:
-            return
 
         for t in self._extra_triples:  # last so _triples can populate
             yield t
