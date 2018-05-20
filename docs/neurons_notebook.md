@@ -17,18 +17,19 @@ git checkout neurons
 This assumes that you are using python3.6.
 0. Make sure you have the pre-python [requirements](../README.md#requirements) installed.
 Otherwise you will get cryptic errors from pipenv.
-1. Install pipenv as descrited in [installation](../README.md#installtion).
-2. `pipenv install --skip-lock` in the folder where this README is located (pyontutils/docs).
-3. `pipenv shell`
+1. Install pyontutils using pipenv as descrited in [installation](../README.md#installtion).
 
 ## SciGraph
 Neuron Lang makes use of SciGraph for searching the ontologies that
 provide identifiers for phenotypes. Neuron Lang currently defaults to
 a local scigraph instance. If you want to use the SciCrunch SciGraph
 instance instead [register for an account](https://scicrunch.org/register)
-and [get an api key](https://scicrunch.org/account/developer). You can
-then include `scigraph='scicrunch.org/api/v1'` in your call to config and
-can set your api key with the following.
+and [get an api key](https://scicrunch.org/account/developer).
+To set the scigraph endpoint for all pyontutils run
+`ontutils devconfig` and then edit the `scigraph_api` key in
+[devconfig.yaml](../pyontutils/devconfig.yaml) (file doesn't exist by default)
+to `https://scicrunch.org/api/v1/scigraph`. You can they set your api key by
+running `export SCICRUNCH_API_KEY=$(cat path/to/my/apikey)` or by running
 ``` python
 with open('path/to/file/containing/only/my-api-key', 'rt') as f:
 	api_key = f.read.strip().rstrip()
@@ -73,10 +74,12 @@ mvn exec:java -Dexec.mainClass="io.scigraph.services.MainApplication" -Dexec.arg
 ```
 
 # Running the notebook
-From the folder of this README run the following commands.
+From the root of this repository (../ from the folder of this README) run the following commands.
 ```
+export SCICRUNCH_API_KEY=$(cat path/to/my/apikey)
 unset PYTHONPATH  # make sure our env is really clean
 pipenv shell
+cd docs/
 jupyter-notebook
 ```
 At this point your browser should open up with a view of this folder
