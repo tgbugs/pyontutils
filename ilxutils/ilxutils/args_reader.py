@@ -37,9 +37,9 @@ import pandas as pd
 import sys
 
 VERSION = '0.3'
-#BETA = 'https://test2.scicrunch.org'
+BETA = 'https://test2.scicrunch.org'
 #BETA = 'https://beta.scicrunch.org'
-BETA = 'https://test.scicrunch.org'
+#BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
 

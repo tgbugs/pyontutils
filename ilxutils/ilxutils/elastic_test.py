@@ -18,9 +18,9 @@ with open('/home/troy/elastic_migration/auth.ini', 'r') as uk:
     password = vars[1].split('=')[-1].strip()
 
 args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
-#args = read_args(api_key='../production_api_scicrunch_key.txt', engine_key='../production_engine_scicrunch_key.txt', production=True)
-sql = interlex_sql(engine_key=args.db_url)
-sci = scicrunch(api_key=args.api_key, base_path=args.base_path, engine_key=args.db_url)
+#args = read_args(api_key='../production_api_scicrunch_key.txt', db_url='../production_engine_scicrunch_key.txt', production=True)
+sql = interlex_sql(db_url=args.db_url)
+sci = scicrunch(api_key=args.api_key, base_path=args.base_path, db_url=args.db_url)
 
 def plink(ilxid):
     return "http://interlex.scicrunch.io/scicrunch/term/%s" % ilxid
@@ -58,7 +58,7 @@ for d in update_data:
     if d['definition'] != 'update_test':
         sys.exit(blink[d['ilx']])
 """
-sci.updateTerms([{'id':15065, 'definition':'troy_test_may_7_2018'}])
+sci.updateTerms([{'id':15065, 'definition':'troy_test_may_17_2018'}])
 def ela_search(ilx):
     return r.get(blink(ilx), auth=(username, password))
 

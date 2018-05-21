@@ -12,6 +12,7 @@ from ilxutils.args_reader import read_args
 from collections import defaultdict, namedtuple
 import ilxutils.dictlib as dictlib
 from ilxutils.interlex_sql import interlex_sql
+from pathlib import Path as p
 
 '''
 Get functions need a list of term ids
@@ -21,10 +22,11 @@ identifierSearches          (identifierSearches(self, ids=None, HELP=False, LIMI
 updateTerms                 (self, data, HELP=False, LIMIT=50, sql=False)
 addTerms                    (self, data, HELP=False, LIMIT=50, sql=False)
 addAnnotations              (self, data, HELP=False, LIMIT=50, sql=False)
-getAnnotations              (self, tids, HELP=False, LIMIT=50)
+getAnnotations_via_tid      (self, tids, HELP=False, LIMIT=50)
+getAnnotations_via_id       (self, annotation_ids, HELP=False, LIMIT=50)
 updateAnntationValues       (self, data, HELP=False, LIMIT=50)
 updateAnntationType         (self, data, HELP=False, LIMIT=50)
-deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
+deleteAnnotations           (self, annotation_ids, HELP=False, LIMIT=50)
 addRelationship             (self, data, HELP=False, LIMIT=50)
 '''
 class scicrunch():
@@ -39,7 +41,55 @@ class scicrunch():
         return progressbar.ProgressBar(maxval=maxval, \
             widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
 
-    def get(self, urls, LIMIT=50, action='Getting Info', _print=True):
+    def crawl_get(self, urls):
+        outputs = {}
+        for url in urls:
+            auth = ('scicrunch', 'perl22(query)') # needed for test2.scicrunch.org
+            headers = {'Content-type': 'application/json'}
+            req = r.get(url, headers=headers, auth=auth)
+
+            if req.raise_for_status():
+                print(url.split('?key=')[0]); sys.exit(req)
+            try: #sometimes will return an odd error not from the servers list
+                output = req.json()['data']
+            except:
+                print(req.text); sys.exit('Failed to convert to json')
+            if output.get('errormsg'): #error from the servers list
+                print(url.split('?key=')[0]); sys.exit(output['errormsg'])
+            try:
+                output={int(output['id']):output} #terms
+            except:
+                output={int(output[0]['tid']):output} #annotations
+
+            outputs.update(output)
+        return outputs
+
+    def crawl_post(self, total_data):
+        for i, tupdata in enumerate(total_data):
+            url, data = tupdata
+            params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
+            auth = ('scicrunch', 'perl22(query)') # needed for test2.scicrunch.org
+            headers = {'Content-type': 'application/json'}
+            print(params)
+            req = r.post(url, data=json.dumps(params), headers=headers, auth=auth)
+
+            if req.raise_for_status():
+                print(data); sys.exit(req.text)
+            try:
+                output = req.json()['data']
+            except:
+                print(req.text); sys.exit('Could not convert to json')
+            if output.get('errormsg'):
+                print(data); sys.exit(output['errormsg'])
+            try:
+                print(i, output['label'])
+            except:
+                print(i, output['id'])
+
+    def get(self, urls, LIMIT=50, action='Getting Info', _print=True, crawl=False):
+        if crawl:
+            return self.crawl_get(urls)
+
         async def get_single(url, session, auth):
             async with session.get(url) as response:
                 if response.status not in [200, 201]:
@@ -78,7 +128,9 @@ class scicrunch():
         outputs = loop.run_until_complete(future) # loop until done
         return {k:v for keyval in outputs for k, v in keyval.items()}
 
-    def post(self, data, LIMIT=50, action='Pushing Info', _print=True):
+    def post(self, data, LIMIT=50, action='Pushing Info', _print=True, crawl=False):
+        if crawl:
+            return self.crawl_post(data)
 
         async def post_single(url, data, session, i):
             params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
@@ -86,6 +138,7 @@ class scicrunch():
             async with session.post(url, data=json.dumps(params), headers=headers) as response:
 
                 """ While using post for ilx/add """
+
                 post_ilx = await response.json()
                 limit = 0 #BUG; server needs to breath sometimes while generating ilx ids
                 while post_ilx.get('errormsg') == 'could not generate ILX identifier' and limit < 100:
@@ -138,20 +191,18 @@ class scicrunch():
         term_data = self.get(urls=urls, LIMIT=LIMIT, action='Searching For Terms', _print=_print)
         return term_data
 
-    '''
-        need:
-                id              <int> or <str>
-        options:
-                label           <str>
-                definition      <str> #bug with qutations
-                superclasses    [{'id':<int>}]
-                type            term, cde, anntation, or relationship <str>
-                synonym         {'literal':<str>}
-                existing_ids    {'iri<str>','curie:<str>','change':<bool>, delete:<bool>}
-    '''
     def updateTerms(self, data, HELP=False, LIMIT=50, sql=False, _print=True):
         if HELP:
-            sys.exit('data = "list of term dicts"')
+            sys.exit('''
+            need:
+                    term           <str>
+            options:
+                    definition      <str> #bug with qutations
+                    superclasses    [{'id':<int>}]
+                    type            term, cde, anntation, or relationship <str>
+                    synonym         {'literal':<str>}
+                    existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
+            ''')
 
         #label_to_id = self.sql.get_labels_to_ids_dict()
         #for d in data:
@@ -173,17 +224,18 @@ class scicrunch():
             merged_data.append((url, merged))
         return self.post(merged_data, LIMIT=LIMIT, action='Updating Terms', _print=_print)
 
-    '''
-        need:
-                term           <str>
-        options:
-                definition      <str> #bug with qutations
-                superclasses    [{'id':<int>}]
-                type            term, cde, anntation, or relationship <str>
-                synonym         {'literal':<str>}
-                existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
-    '''
     def addTerms(self, data, HELP=False, LIMIT=50, sql=False, _print=True):
+        if HELP:
+            sys.exit('''
+            need:
+                    term           <str>
+            options:
+                    definition      <str> #bug with qutations
+                    superclasses    [{'id':<int>}]
+                    type            term, cde, anntation, or relationship <str>
+                    synonym         {'literal':<str>}
+                    existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
+            ''')
 
         url_base = self.base_path + '/api/1/ilx/add'
         terms = []
@@ -206,10 +258,9 @@ class scicrunch():
 
         return self.post(terms, LIMIT=LIMIT, action='Adding Terms', _print=_print)
 
-    """ {'tid':'', 'annotation_tid':'', 'value':''} """
     def addAnnotations(self, data, HELP=False, LIMIT=50, sql=False):
         if HELP:
-            sys.exit('data = list of dict {"tid","annotation_tid","value"}')
+            sys.exit("{'tid':'', 'annotation_tid':'', 'value':''}")
 
         url_base = self.base_path + '/api/1/term/add-annotation'
         annotations = []
@@ -222,13 +273,27 @@ class scicrunch():
             annotations.append((url_base, annotation))
         self.post(annotations, LIMIT=LIMIT, action='Adding Annotations')
 
-    def getAnnotations(self, tids, HELP=False, LIMIT=50):
+    def getAnnotations_via_tid(self, tids, HELP=False, LIMIT=50, crawl=False):
         if HELP:
-            sys.exit('data = list of tids')
+            sys.exit('tids = list of strings or ints that are the ids of the terms that possess the annoations')
 
-        url_base = self.base_path + '/api/1/term/get-annotations/{0}' + '?key=' + self.key
-        urls = [url_base.format(str(tid)) for tid in tids]
-        return self.get(urls, LIMIT=LIMIT)
+        url_base = self.base_path + '/api/1/term/get-annotations/{tid}?key=' + self.key
+        urls = [url_base.format(tid=str(tid)) for tid in tids]
+        if crawl:
+            return self.crawl_get(urls)
+        else:
+            return self.get(urls, LIMIT=LIMIT)
+
+    def getAnnotations_via_id(self, annotation_ids, HELP=False, LIMIT=50, crawl=False):
+        if HELP:
+            sys.exit('tids = list of strings or ints that are the ids of the annotations themselves')
+
+        url_base = self.base_path + '/api/1/term/get-annotation/{id}?key=' + self.key
+        urls = [url_base.format(id=str(annotation_id)) for annotation_id in annotation_ids]
+        if crawl:
+            return self.crawl_get(urls)
+        else:
+            return self.get(urls)
 
     def updateAnntationValues(self, data, HELP=False, LIMIT=50):
         if HELP:
@@ -263,35 +328,32 @@ class scicrunch():
 
         self.post(annotations_to_update, LIMIT=LIMIT)
 
-    def deleteAnnotations(self, tids, HELP=False, LIMIT=50):
+    def deleteAnnotations(self, annotation_ids, HELP=False, LIMIT=50, crawl=False):
         if HELP:
             sys.exit('data = list of tids')
 
-        url_base = self.base_path + '/api/1/term/edit-annotation/{0}' # id of annotation not term id
-        term_annotations = getAnnotations(tids)
+        url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id; thx past troy!
+        annotations = self.getAnnotations_via_id(annotation_ids, crawl=crawl)
+        #annotations = {list(anno)[0]:anno[list(anno)[0]] for anno in annotations} #reason for madness is to keep format of ouput from self.get
         annotations_to_delete = []
-        for tid in tids:
-            for annotation in term_annotations[tid]:
-                params = {
-                    'value':' ', #for delete
-                    'annotation_tid':' ', #for delete
-                    'tid':' ', #for delete
-                    'term_version':'1',
-                    'key':self.key,
-                    'annotation_term_version':'1',
-                }
-                url = url_base.format(annotation['id'])
-                annotations_to_update.append((url, params))
+        for annotation_id in annotation_ids:
+            anno_dict = annotations[int(annotation_id)]
+            params = {
+                    'value':'here i am', #for delete
+                    #'annotation_tid':' ', #for delete
+                    #'tid':' ', #for delete
+                    #'term_version':' ',
+                    #'annotation_term_version':' ',
+            }
+            url = url_base.format(id=annotation_id)
+            anno_dict.update({**params})
+            #print(anno_dict)
+            annotations_to_delete.append((url, anno_dict))
+        self.post(annotations_to_delete, LIMIT=LIMIT, crawl=True)
 
-        self.post(annotations_to_delete, LIMIT=LIMIT)
-
-    """
-        Adds relationships by connection 2 term ids with the relationship ids
-        use -> [{"term_1_id", "term_2_id", "relationship_tid"},]
-    """
     def addRelationship(self, data, HELP=False, LIMIT=50):
         if HELP:
-            sys.exit('data = {"term_1_id", "term_2_id", "relationship_tid"}')
+            sys.exit('data = [{"term_1_id", "term_2_id", "relationship_tid"}]')
 
         url_base = self.base_path + '/api/1/term/add-relationship'
         relationships = []
@@ -317,16 +379,18 @@ class scicrunch():
             else:
                 sys.exit(url + ' -> ' + str(req.status_code))
 
-
-
 def main():
-    #args = read_args(api_key='../beta_api_scicrunch_key.txt', db_url='../beta_engine_scicrunch_key.txt', beta=True)
-    args = read_args(api_key='../production_api_scicrunch_key.txt', db_url='../production_engine_scicrunch_key.txt', production=True)
+    #args = read_args(api_key= p.home() / 'keys/beta_api_scicrunch_key.txt', db_url= p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
+    args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
     sql = interlex_sql(db_url=args.db_url)
     sci = scicrunch(api_key=args.api_key, base_path=args.base_path, db_url=args.db_url)
     #example term is troysincomb 38918 tmp_0138415
     #https://test2.scicrunch.org/scicrunch/interlex/view/tmp_0138415?searchTerm=troysincomb
     #https://test2.scicrunch.org/api/1/ilx/search/identifier/tmp_0138415?key=
+
+    annotations_to_delete = [2109347, 2109346, 2109348, 2109349,   48685,   48689,   48690,
+         48693,   48695,   48697,   48698,   48688,   48687,   48691,
+         48686,   48694,   48692,   48696,   48699]
 
     terms = [{
         #'term':'troysincomb',
@@ -356,7 +420,10 @@ def main():
     #sci.updateAnntationValues(annotations)
     #print(terms)
     #json.dump(terms, open('../elastic_testing.json', 'w'), indent=4)
-    sci.deleteTerms(['ilx_0381349'])
+    #sci.deleteAnnotations([annotations_to_delete[0]], crawl=True)
+    sci.deleteAnnotations([2109347], crawl=True)
+    output = sci.getAnnotations_via_id([2109347], crawl=True)
+    print(output)
 
 if __name__ == '__main__':
     main()

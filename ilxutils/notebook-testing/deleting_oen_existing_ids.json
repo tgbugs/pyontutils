@@ -1,0 +1,1986 @@
+[
+    {
+        "id": 22,
+        "existing_ids": {
+            "curie": "OEN:0001237",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001237",
+            "delete": true
+        }
+    },
+    {
+        "id": 189,
+        "existing_ids": {
+            "curie": "OEN:0001203",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001203",
+            "delete": true
+        }
+    },
+    {
+        "id": 193,
+        "existing_ids": {
+            "curie": "OEN:0001212",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001212",
+            "delete": true
+        }
+    },
+    {
+        "id": 205,
+        "existing_ids": {
+            "curie": "OEN:0001016",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001016",
+            "delete": true
+        }
+    },
+    {
+        "id": 285,
+        "existing_ids": {
+            "curie": "OEN:0001094",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001094",
+            "delete": true
+        }
+    },
+    {
+        "id": 288,
+        "existing_ids": {
+            "curie": "OEN:0001092",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001092",
+            "delete": true
+        }
+    },
+    {
+        "id": 295,
+        "existing_ids": {
+            "curie": "OEN:0001091",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001091",
+            "delete": true
+        }
+    },
+    {
+        "id": 309,
+        "existing_ids": {
+            "curie": "OEN:0001000",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001000",
+            "delete": true
+        }
+    },
+    {
+        "id": 329,
+        "existing_ids": {
+            "curie": "OEN:0001099",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001099",
+            "delete": true
+        }
+    },
+    {
+        "id": 345,
+        "existing_ids": {
+            "curie": "OEN:0001004",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001004",
+            "delete": true
+        }
+    },
+    {
+        "id": 346,
+        "existing_ids": {
+            "curie": "OEN:0001003",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001003",
+            "delete": true
+        }
+    },
+    {
+        "id": 398,
+        "existing_ids": {
+            "curie": "OEN:0001258",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001258",
+            "delete": true
+        }
+    },
+    {
+        "id": 409,
+        "existing_ids": {
+            "curie": "OEN:0001101",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001101",
+            "delete": true
+        }
+    },
+    {
+        "id": 433,
+        "existing_ids": {
+            "curie": "OEN:0001009",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001009",
+            "delete": true
+        }
+    },
+    {
+        "id": 434,
+        "existing_ids": {
+            "curie": "OEN:0001021",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001021",
+            "delete": true
+        }
+    },
+    {
+        "id": 986,
+        "existing_ids": {
+            "curie": "OEN:0001236",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001236",
+            "delete": true
+        }
+    },
+    {
+        "id": 988,
+        "existing_ids": {
+            "curie": "OEN:0001088",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001088",
+            "delete": true
+        }
+    },
+    {
+        "id": 997,
+        "existing_ids": {
+            "curie": "OEN:0001105",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001105",
+            "delete": true
+        }
+    },
+    {
+        "id": 1000,
+        "existing_ids": {
+            "curie": "OEN:0001170",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001170",
+            "delete": true
+        }
+    },
+    {
+        "id": 1007,
+        "existing_ids": {
+            "curie": "OEN:0001279",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001279",
+            "delete": true
+        }
+    },
+    {
+        "id": 1040,
+        "existing_ids": {
+            "curie": "OEN:0001117",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001117",
+            "delete": true
+        }
+    },
+    {
+        "id": 1042,
+        "existing_ids": {
+            "curie": "OEN:0001118",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001118",
+            "delete": true
+        }
+    },
+    {
+        "id": 1047,
+        "existing_ids": {
+            "curie": "OEN:0001187",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001187",
+            "delete": true
+        }
+    },
+    {
+        "id": 1051,
+        "existing_ids": {
+            "curie": "OEN:0001114",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001114",
+            "delete": true
+        }
+    },
+    {
+        "id": 1054,
+        "existing_ids": {
+            "curie": "OEN:0001119",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001119",
+            "delete": true
+        }
+    },
+    {
+        "id": 1135,
+        "existing_ids": {
+            "curie": "OEN:0001247",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001247",
+            "delete": true
+        }
+    },
+    {
+        "id": 1289,
+        "existing_ids": {
+            "curie": "OEN:0001086",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001086",
+            "delete": true
+        }
+    },
+    {
+        "id": 1486,
+        "existing_ids": {
+            "curie": "OEN:0001085",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001085",
+            "delete": true
+        }
+    },
+    {
+        "id": 1502,
+        "existing_ids": {
+            "curie": "OEN:0001084",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001084",
+            "delete": true
+        }
+    },
+    {
+        "id": 1545,
+        "existing_ids": {
+            "curie": "OEN:0001215",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001215",
+            "delete": true
+        }
+    },
+    {
+        "id": 1569,
+        "existing_ids": {
+            "curie": "OEN:0001083",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001083",
+            "delete": true
+        }
+    },
+    {
+        "id": 1635,
+        "existing_ids": {
+            "curie": "OEN:0001248",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001248",
+            "delete": true
+        }
+    },
+    {
+        "id": 1636,
+        "existing_ids": {
+            "curie": "OEN:0001249",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001249",
+            "delete": true
+        }
+    },
+    {
+        "id": 1844,
+        "existing_ids": {
+            "curie": "OEN:0001024",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001024",
+            "delete": true
+        }
+    },
+    {
+        "id": 1847,
+        "existing_ids": {
+            "curie": "OEN:0001017",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001017",
+            "delete": true
+        }
+    },
+    {
+        "id": 1859,
+        "existing_ids": {
+            "curie": "OEN:0001013",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001013",
+            "delete": true
+        }
+    },
+    {
+        "id": 1863,
+        "existing_ids": {
+            "curie": "OEN:0001316",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001316",
+            "delete": true
+        }
+    },
+    {
+        "id": 1868,
+        "existing_ids": {
+            "curie": "OEN:0001146",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001146",
+            "delete": true
+        }
+    },
+    {
+        "id": 1914,
+        "existing_ids": {
+            "curie": "OEN:0001121",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001121",
+            "delete": true
+        }
+    },
+    {
+        "id": 2085,
+        "existing_ids": {
+            "curie": "OEN:0001122",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001122",
+            "delete": true
+        }
+    },
+    {
+        "id": 2347,
+        "existing_ids": {
+            "curie": "OEN:0001082",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001082",
+            "delete": true
+        }
+    },
+    {
+        "id": 2464,
+        "existing_ids": {
+            "curie": "OEN:0001224",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001224",
+            "delete": true
+        }
+    },
+    {
+        "id": 2466,
+        "existing_ids": {
+            "curie": "OEN:0001080",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001080",
+            "delete": true
+        }
+    },
+    {
+        "id": 2467,
+        "existing_ids": {
+            "curie": "OEN:0001223",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001223",
+            "delete": true
+        }
+    },
+    {
+        "id": 2485,
+        "existing_ids": {
+            "curie": "OEN:0001129",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001129",
+            "delete": true
+        }
+    },
+    {
+        "id": 2486,
+        "existing_ids": {
+            "curie": "OEN:0001130",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001130",
+            "delete": true
+        }
+    },
+    {
+        "id": 2487,
+        "existing_ids": {
+            "curie": "OEN:0001079",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001079",
+            "delete": true
+        }
+    },
+    {
+        "id": 2546,
+        "existing_ids": {
+            "curie": "OEN:0001132",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001132",
+            "delete": true
+        }
+    },
+    {
+        "id": 2697,
+        "existing_ids": {
+            "curie": "OEN:0001314",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001314",
+            "delete": true
+        }
+    },
+    {
+        "id": 2865,
+        "existing_ids": {
+            "curie": "OEN:0001230",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001230",
+            "delete": true
+        }
+    },
+    {
+        "id": 2873,
+        "existing_ids": {
+            "curie": "OEN:0001134",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001134",
+            "delete": true
+        }
+    },
+    {
+        "id": 2874,
+        "existing_ids": {
+            "curie": "OEN:0001229",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001229",
+            "delete": true
+        }
+    },
+    {
+        "id": 2971,
+        "existing_ids": {
+            "curie": "OEN:0001078",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001078",
+            "delete": true
+        }
+    },
+    {
+        "id": 3025,
+        "existing_ids": {
+            "curie": "OEN:0001077",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001077",
+            "delete": true
+        }
+    },
+    {
+        "id": 3033,
+        "existing_ids": {
+            "curie": "OEN:0001116",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001116",
+            "delete": true
+        }
+    },
+    {
+        "id": 3093,
+        "existing_ids": {
+            "curie": "OEN:0001137",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001137",
+            "delete": true
+        }
+    },
+    {
+        "id": 3094,
+        "existing_ids": {
+            "curie": "OEN:0001076",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001076",
+            "delete": true
+        }
+    },
+    {
+        "id": 3118,
+        "existing_ids": {
+            "curie": "OEN:0001138",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001138",
+            "delete": true
+        }
+    },
+    {
+        "id": 3133,
+        "existing_ids": {
+            "curie": "OEN:0001074",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001074",
+            "delete": true
+        }
+    },
+    {
+        "id": 3235,
+        "existing_ids": {
+            "curie": "OEN:0001217",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001217",
+            "delete": true
+        }
+    },
+    {
+        "id": 3255,
+        "existing_ids": {
+            "curie": "OEN:0001242",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001242",
+            "delete": true
+        }
+    },
+    {
+        "id": 3297,
+        "existing_ids": {
+            "curie": "OEN:0001073",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001073",
+            "delete": true
+        }
+    },
+    {
+        "id": 3308,
+        "existing_ids": {
+            "curie": "OEN:0001178",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001178",
+            "delete": true
+        }
+    },
+    {
+        "id": 3345,
+        "existing_ids": {
+            "curie": "OEN:0001139",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001139",
+            "delete": true
+        }
+    },
+    {
+        "id": 3353,
+        "existing_ids": {
+            "curie": "OEN:0001131",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001131",
+            "delete": true
+        }
+    },
+    {
+        "id": 3623,
+        "existing_ids": {
+            "curie": "OEN:0001141",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001141",
+            "delete": true
+        }
+    },
+    {
+        "id": 3630,
+        "existing_ids": {
+            "curie": "OEN:0001140",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001140",
+            "delete": true
+        }
+    },
+    {
+        "id": 3693,
+        "existing_ids": {
+            "curie": "OEN:0001232",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001232",
+            "delete": true
+        }
+    },
+    {
+        "id": 3696,
+        "existing_ids": {
+            "curie": "OEN:0001213",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001213",
+            "delete": true
+        }
+    },
+    {
+        "id": 3697,
+        "existing_ids": {
+            "curie": "OEN:0001211",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001211",
+            "delete": true
+        }
+    },
+    {
+        "id": 3700,
+        "existing_ids": {
+            "curie": "OEN:0001210",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001210",
+            "delete": true
+        }
+    },
+    {
+        "id": 3708,
+        "existing_ids": {
+            "curie": "OEN:0001218",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001218",
+            "delete": true
+        }
+    },
+    {
+        "id": 3721,
+        "existing_ids": {
+            "curie": "OEN:0001312",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001312",
+            "delete": true
+        }
+    },
+    {
+        "id": 3722,
+        "existing_ids": {
+            "curie": "OEN:0001313",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001313",
+            "delete": true
+        }
+    },
+    {
+        "id": 3725,
+        "existing_ids": {
+            "curie": "OEN:0001128",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001128",
+            "delete": true
+        }
+    },
+    {
+        "id": 3726,
+        "existing_ids": {
+            "curie": "OEN:0001276",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001276",
+            "delete": true
+        }
+    },
+    {
+        "id": 3728,
+        "existing_ids": {
+            "curie": "OEN:0001072",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001072",
+            "delete": true
+        }
+    },
+    {
+        "id": 3777,
+        "existing_ids": {
+            "curie": "OEN:0001275",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001275",
+            "delete": true
+        }
+    },
+    {
+        "id": 3911,
+        "existing_ids": {
+            "curie": "OEN:0001274",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001274",
+            "delete": true
+        }
+    },
+    {
+        "id": 3912,
+        "existing_ids": {
+            "curie": "OEN:0001219",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001219",
+            "delete": true
+        }
+    },
+    {
+        "id": 4001,
+        "existing_ids": {
+            "curie": "OEN:0001273",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001273",
+            "delete": true
+        }
+    },
+    {
+        "id": 4004,
+        "existing_ids": {
+            "curie": "OEN:0001145",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001145",
+            "delete": true
+        }
+    },
+    {
+        "id": 4007,
+        "existing_ids": {
+            "curie": "OEN:0001262",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001262",
+            "delete": true
+        }
+    },
+    {
+        "id": 4048,
+        "existing_ids": {
+            "curie": "OEN:0001070",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001070",
+            "delete": true
+        }
+    },
+    {
+        "id": 4056,
+        "existing_ids": {
+            "curie": "OEN:0001160",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001160",
+            "delete": true
+        }
+    },
+    {
+        "id": 4080,
+        "existing_ids": {
+            "curie": "OEN:0001069",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001069",
+            "delete": true
+        }
+    },
+    {
+        "id": 4116,
+        "existing_ids": {
+            "curie": "OEN:0001010",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001010",
+            "delete": true
+        }
+    },
+    {
+        "id": 4117,
+        "existing_ids": {
+            "curie": "OEN:0001008",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001008",
+            "delete": true
+        }
+    },
+    {
+        "id": 4119,
+        "existing_ids": {
+            "curie": "OEN:0001226",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001226",
+            "delete": true
+        }
+    },
+    {
+        "id": 4120,
+        "existing_ids": {
+            "curie": "OEN:0001263",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001263",
+            "delete": true
+        }
+    },
+    {
+        "id": 4143,
+        "existing_ids": {
+            "curie": "OEN:0001154",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001154",
+            "delete": true
+        }
+    },
+    {
+        "id": 4180,
+        "existing_ids": {
+            "curie": "OEN:0001012",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001012",
+            "delete": true
+        }
+    },
+    {
+        "id": 4233,
+        "existing_ids": {
+            "curie": "OEN:0001246",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001246",
+            "delete": true
+        }
+    },
+    {
+        "id": 4237,
+        "existing_ids": {
+            "curie": "OEN:0001227",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001227",
+            "delete": true
+        }
+    },
+    {
+        "id": 4251,
+        "existing_ids": {
+            "curie": "OEN:0001022",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001022",
+            "delete": true
+        }
+    },
+    {
+        "id": 4261,
+        "existing_ids": {
+            "curie": "OEN:0001001",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001001",
+            "delete": true
+        }
+    },
+    {
+        "id": 4444,
+        "existing_ids": {
+            "curie": "OEN:0001124",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001124",
+            "delete": true
+        }
+    },
+    {
+        "id": 4499,
+        "existing_ids": {
+            "curie": "OEN:0001147",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001147",
+            "delete": true
+        }
+    },
+    {
+        "id": 4571,
+        "existing_ids": {
+            "curie": "OEN:0001152",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001152",
+            "delete": true
+        }
+    },
+    {
+        "id": 4595,
+        "existing_ids": {
+            "curie": "OEN:0001272",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001272",
+            "delete": true
+        }
+    },
+    {
+        "id": 4710,
+        "existing_ids": {
+            "curie": "OEN:0001220",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001220",
+            "delete": true
+        }
+    },
+    {
+        "id": 4716,
+        "existing_ids": {
+            "curie": "OEN:0001153",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001153",
+            "delete": true
+        }
+    },
+    {
+        "id": 4922,
+        "existing_ids": {
+            "curie": "OEN:0001206",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001206",
+            "delete": true
+        }
+    },
+    {
+        "id": 4996,
+        "existing_ids": {
+            "curie": "OEN:0001244",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001244",
+            "delete": true
+        }
+    },
+    {
+        "id": 5129,
+        "existing_ids": {
+            "curie": "OEN:0001216",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001216",
+            "delete": true
+        }
+    },
+    {
+        "id": 5160,
+        "existing_ids": {
+            "curie": "OEN:0001136",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001136",
+            "delete": true
+        }
+    },
+    {
+        "id": 5189,
+        "existing_ids": {
+            "curie": "OEN:0001302",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001302",
+            "delete": true
+        }
+    },
+    {
+        "id": 5190,
+        "existing_ids": {
+            "curie": "OEN:0001306",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001306",
+            "delete": true
+        }
+    },
+    {
+        "id": 5191,
+        "existing_ids": {
+            "curie": "OEN:0001303",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001303",
+            "delete": true
+        }
+    },
+    {
+        "id": 5192,
+        "existing_ids": {
+            "curie": "OEN:0001301",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001301",
+            "delete": true
+        }
+    },
+    {
+        "id": 5193,
+        "existing_ids": {
+            "curie": "OEN:0001304",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001304",
+            "delete": true
+        }
+    },
+    {
+        "id": 5194,
+        "existing_ids": {
+            "curie": "OEN:0001310",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001310",
+            "delete": true
+        }
+    },
+    {
+        "id": 5195,
+        "existing_ids": {
+            "curie": "OEN:0001311",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001311",
+            "delete": true
+        }
+    },
+    {
+        "id": 5196,
+        "existing_ids": {
+            "curie": "OEN:0001305",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001305",
+            "delete": true
+        }
+    },
+    {
+        "id": 5197,
+        "existing_ids": {
+            "curie": "OEN:0001309",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001309",
+            "delete": true
+        }
+    },
+    {
+        "id": 5198,
+        "existing_ids": {
+            "curie": "OEN:0001307",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001307",
+            "delete": true
+        }
+    },
+    {
+        "id": 5199,
+        "existing_ids": {
+            "curie": "OEN:0001308",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001308",
+            "delete": true
+        }
+    },
+    {
+        "id": 5471,
+        "existing_ids": {
+            "curie": "OEN:0001067",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001067",
+            "delete": true
+        }
+    },
+    {
+        "id": 5487,
+        "existing_ids": {
+            "curie": "OEN:0001143",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001143",
+            "delete": true
+        }
+    },
+    {
+        "id": 5489,
+        "existing_ids": {
+            "curie": "OEN:0001286",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001286",
+            "delete": true
+        }
+    },
+    {
+        "id": 5490,
+        "existing_ids": {
+            "curie": "OEN:0001261",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001261",
+            "delete": true
+        }
+    },
+    {
+        "id": 5499,
+        "existing_ids": {
+            "curie": "OEN:0001023",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001023",
+            "delete": true
+        }
+    },
+    {
+        "id": 5533,
+        "existing_ids": {
+            "curie": "OEN:0001159",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001159",
+            "delete": true
+        }
+    },
+    {
+        "id": 5651,
+        "existing_ids": {
+            "curie": "OEN:0001161",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001161",
+            "delete": true
+        }
+    },
+    {
+        "id": 5663,
+        "existing_ids": {
+            "curie": "OEN:0001289",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001289",
+            "delete": true
+        }
+    },
+    {
+        "id": 5701,
+        "existing_ids": {
+            "curie": "OEN:0001065",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001065",
+            "delete": true
+        }
+    },
+    {
+        "id": 5792,
+        "existing_ids": {
+            "curie": "OEN:0001156",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001156",
+            "delete": true
+        }
+    },
+    {
+        "id": 5963,
+        "existing_ids": {
+            "curie": "OEN:0001123",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001123",
+            "delete": true
+        }
+    },
+    {
+        "id": 6151,
+        "existing_ids": {
+            "curie": "OEN:0001126",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001126",
+            "delete": true
+        }
+    },
+    {
+        "id": 6329,
+        "existing_ids": {
+            "curie": "OEN:0001175",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001175",
+            "delete": true
+        }
+    },
+    {
+        "id": 6332,
+        "existing_ids": {
+            "curie": "OEN:0001100",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001100",
+            "delete": true
+        }
+    },
+    {
+        "id": 6350,
+        "existing_ids": {
+            "curie": "OEN:0001063",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001063",
+            "delete": true
+        }
+    },
+    {
+        "id": 6352,
+        "existing_ids": {
+            "curie": "OEN:0001062",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001062",
+            "delete": true
+        }
+    },
+    {
+        "id": 6377,
+        "existing_ids": {
+            "curie": "OEN:0001243",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001243",
+            "delete": true
+        }
+    },
+    {
+        "id": 6442,
+        "existing_ids": {
+            "curie": "OEN:0001315",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001315",
+            "delete": true
+        }
+    },
+    {
+        "id": 6469,
+        "existing_ids": {
+            "curie": "OEN:0001061",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001061",
+            "delete": true
+        }
+    },
+    {
+        "id": 6519,
+        "existing_ids": {
+            "curie": "OEN:0001166",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001166",
+            "delete": true
+        }
+    },
+    {
+        "id": 6583,
+        "existing_ids": {
+            "curie": "OEN:0001059",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001059",
+            "delete": true
+        }
+    },
+    {
+        "id": 6608,
+        "existing_ids": {
+            "curie": "OEN:0001149",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001149",
+            "delete": true
+        }
+    },
+    {
+        "id": 6988,
+        "existing_ids": {
+            "curie": "OEN:0001270",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001270",
+            "delete": true
+        }
+    },
+    {
+        "id": 7120,
+        "existing_ids": {
+            "curie": "OEN:0001104",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001104",
+            "delete": true
+        }
+    },
+    {
+        "id": 7121,
+        "existing_ids": {
+            "curie": "OEN:0001142",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001142",
+            "delete": true
+        }
+    },
+    {
+        "id": 7122,
+        "existing_ids": {
+            "curie": "OEN:0001172",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001172",
+            "delete": true
+        }
+    },
+    {
+        "id": 7133,
+        "existing_ids": {
+            "curie": "OEN:0001163",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001163",
+            "delete": true
+        }
+    },
+    {
+        "id": 7220,
+        "existing_ids": {
+            "curie": "OEN:0001164",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001164",
+            "delete": true
+        }
+    },
+    {
+        "id": 7413,
+        "existing_ids": {
+            "curie": "OEN:0001254",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001254",
+            "delete": true
+        }
+    },
+    {
+        "id": 7443,
+        "existing_ids": {
+            "curie": "OEN:0001182",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001182",
+            "delete": true
+        }
+    },
+    {
+        "id": 7444,
+        "existing_ids": {
+            "curie": "OEN:0001174",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001174",
+            "delete": true
+        }
+    },
+    {
+        "id": 7514,
+        "existing_ids": {
+            "curie": "OEN:0001120",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001120",
+            "delete": true
+        }
+    },
+    {
+        "id": 7632,
+        "existing_ids": {
+            "curie": "OEN:0001176",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001176",
+            "delete": true
+        }
+    },
+    {
+        "id": 7644,
+        "existing_ids": {
+            "curie": "OEN:0001055",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001055",
+            "delete": true
+        }
+    },
+    {
+        "id": 7658,
+        "existing_ids": {
+            "curie": "OEN:0001148",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001148",
+            "delete": true
+        }
+    },
+    {
+        "id": 7675,
+        "existing_ids": {
+            "curie": "OEN:0001241",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001241",
+            "delete": true
+        }
+    },
+    {
+        "id": 7676,
+        "existing_ids": {
+            "curie": "OEN:0001127",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001127",
+            "delete": true
+        }
+    },
+    {
+        "id": 7694,
+        "existing_ids": {
+            "curie": "OEN:0001239",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001239",
+            "delete": true
+        }
+    },
+    {
+        "id": 7893,
+        "existing_ids": {
+            "curie": "OEN:0001231",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001231",
+            "delete": true
+        }
+    },
+    {
+        "id": 7916,
+        "existing_ids": {
+            "curie": "OEN:0001222",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001222",
+            "delete": true
+        }
+    },
+    {
+        "id": 8448,
+        "existing_ids": {
+            "curie": "OEN:0001180",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001180",
+            "delete": true
+        }
+    },
+    {
+        "id": 8459,
+        "existing_ids": {
+            "curie": "OEN:0001054",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001054",
+            "delete": true
+        }
+    },
+    {
+        "id": 8460,
+        "existing_ids": {
+            "curie": "OEN:0001053",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001053",
+            "delete": true
+        }
+    },
+    {
+        "id": 8566,
+        "existing_ids": {
+            "curie": "OEN:0001235",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001235",
+            "delete": true
+        }
+    },
+    {
+        "id": 8572,
+        "existing_ids": {
+            "curie": "OEN:0001288",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001288",
+            "delete": true
+        }
+    },
+    {
+        "id": 8575,
+        "existing_ids": {
+            "curie": "OEN:0001179",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001179",
+            "delete": true
+        }
+    },
+    {
+        "id": 8582,
+        "existing_ids": {
+            "curie": "OEN:0001051",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001051",
+            "delete": true
+        }
+    },
+    {
+        "id": 8623,
+        "existing_ids": {
+            "curie": "OEN:0001050",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001050",
+            "delete": true
+        }
+    },
+    {
+        "id": 8682,
+        "existing_ids": {
+            "curie": "OEN:0001049",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001049",
+            "delete": true
+        }
+    },
+    {
+        "id": 8792,
+        "existing_ids": {
+            "curie": "OEN:0001233",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001233",
+            "delete": true
+        }
+    },
+    {
+        "id": 9038,
+        "existing_ids": {
+            "curie": "OEN:0001125",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001125",
+            "delete": true
+        }
+    },
+    {
+        "id": 9040,
+        "existing_ids": {
+            "curie": "OEN:0001095",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001095",
+            "delete": true
+        }
+    },
+    {
+        "id": 9067,
+        "existing_ids": {
+            "curie": "OEN:0001047",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001047",
+            "delete": true
+        }
+    },
+    {
+        "id": 9168,
+        "existing_ids": {
+            "curie": "OEN:0001157",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001157",
+            "delete": true
+        }
+    },
+    {
+        "id": 9223,
+        "existing_ids": {
+            "curie": "OEN:0001102",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001102",
+            "delete": true
+        }
+    },
+    {
+        "id": 9256,
+        "existing_ids": {
+            "curie": "OEN:0001259",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001259",
+            "delete": true
+        }
+    },
+    {
+        "id": 9257,
+        "existing_ids": {
+            "curie": "OEN:0001158",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001158",
+            "delete": true
+        }
+    },
+    {
+        "id": 9661,
+        "existing_ids": {
+            "curie": "OEN:0001046",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001046",
+            "delete": true
+        }
+    },
+    {
+        "id": 9685,
+        "existing_ids": {
+            "curie": "OEN:0001165",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001165",
+            "delete": true
+        }
+    },
+    {
+        "id": 9690,
+        "existing_ids": {
+            "curie": "OEN:0001184",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001184",
+            "delete": true
+        }
+    },
+    {
+        "id": 9692,
+        "existing_ids": {
+            "curie": "OEN:0001269",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001269",
+            "delete": true
+        }
+    },
+    {
+        "id": 9719,
+        "existing_ids": {
+            "curie": "OEN:0001240",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001240",
+            "delete": true
+        }
+    },
+    {
+        "id": 9820,
+        "existing_ids": {
+            "curie": "OEN:0001205",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001205",
+            "delete": true
+        }
+    },
+    {
+        "id": 9886,
+        "existing_ids": {
+            "curie": "OEN:0001045",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001045",
+            "delete": true
+        }
+    },
+    {
+        "id": 9904,
+        "existing_ids": {
+            "curie": "OEN:0001204",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001204",
+            "delete": true
+        }
+    },
+    {
+        "id": 9960,
+        "existing_ids": {
+            "curie": "OEN:0001251",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001251",
+            "delete": true
+        }
+    },
+    {
+        "id": 9977,
+        "existing_ids": {
+            "curie": "OEN:0001268",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001268",
+            "delete": true
+        }
+    },
+    {
+        "id": 10092,
+        "existing_ids": {
+            "curie": "OEN:0001044",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001044",
+            "delete": true
+        }
+    },
+    {
+        "id": 10118,
+        "existing_ids": {
+            "curie": "OEN:0001018",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001018",
+            "delete": true
+        }
+    },
+    {
+        "id": 10291,
+        "existing_ids": {
+            "curie": "OEN:0001096",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001096",
+            "delete": true
+        }
+    },
+    {
+        "id": 10312,
+        "existing_ids": {
+            "curie": "OEN:0001015",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001015",
+            "delete": true
+        }
+    },
+    {
+        "id": 10325,
+        "existing_ids": {
+            "curie": "OEN:0001183",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001183",
+            "delete": true
+        }
+    },
+    {
+        "id": 10335,
+        "existing_ids": {
+            "curie": "OEN:0001214",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001214",
+            "delete": true
+        }
+    },
+    {
+        "id": 10465,
+        "existing_ids": {
+            "curie": "OEN:0001238",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001238",
+            "delete": true
+        }
+    },
+    {
+        "id": 10505,
+        "existing_ids": {
+            "curie": "OEN:0001193",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001193",
+            "delete": true
+        }
+    },
+    {
+        "id": 10612,
+        "existing_ids": {
+            "curie": "OEN:0001042",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001042",
+            "delete": true
+        }
+    },
+    {
+        "id": 10625,
+        "existing_ids": {
+            "curie": "OEN:0001041",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001041",
+            "delete": true
+        }
+    },
+    {
+        "id": 10637,
+        "existing_ids": {
+            "curie": "OEN:0001040",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001040",
+            "delete": true
+        }
+    },
+    {
+        "id": 10657,
+        "existing_ids": {
+            "curie": "OEN:0001202",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001202",
+            "delete": true
+        }
+    },
+    {
+        "id": 10681,
+        "existing_ids": {
+            "curie": "OEN:0001007",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001007",
+            "delete": true
+        }
+    },
+    {
+        "id": 10682,
+        "existing_ids": {
+            "curie": "OEN:0001006",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001006",
+            "delete": true
+        }
+    },
+    {
+        "id": 10683,
+        "existing_ids": {
+            "curie": "OEN:0001264",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001264",
+            "delete": true
+        }
+    },
+    {
+        "id": 10684,
+        "existing_ids": {
+            "curie": "OEN:0001266",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001266",
+            "delete": true
+        }
+    },
+    {
+        "id": 10685,
+        "existing_ids": {
+            "curie": "OEN:0001267",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001267",
+            "delete": true
+        }
+    },
+    {
+        "id": 10712,
+        "existing_ids": {
+            "curie": "OEN:0001038",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001038",
+            "delete": true
+        }
+    },
+    {
+        "id": 10750,
+        "existing_ids": {
+            "curie": "OEN:0001167",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001167",
+            "delete": true
+        }
+    },
+    {
+        "id": 10753,
+        "existing_ids": {
+            "curie": "OEN:0001106",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001106",
+            "delete": true
+        }
+    },
+    {
+        "id": 10754,
+        "existing_ids": {
+            "curie": "OEN:0001171",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001171",
+            "delete": true
+        }
+    },
+    {
+        "id": 10816,
+        "existing_ids": {
+            "curie": "OEN:0001252",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001252",
+            "delete": true
+        }
+    },
+    {
+        "id": 10834,
+        "existing_ids": {
+            "curie": "OEN:0001196",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001196",
+            "delete": true
+        }
+    },
+    {
+        "id": 10839,
+        "existing_ids": {
+            "curie": "OEN:0001037",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001037",
+            "delete": true
+        }
+    },
+    {
+        "id": 10901,
+        "existing_ids": {
+            "curie": "OEN:0001020",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001020",
+            "delete": true
+        }
+    },
+    {
+        "id": 10902,
+        "existing_ids": {
+            "curie": "OEN:0001036",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001036",
+            "delete": true
+        }
+    },
+    {
+        "id": 10903,
+        "existing_ids": {
+            "curie": "OEN:0001019",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001019",
+            "delete": true
+        }
+    },
+    {
+        "id": 10904,
+        "existing_ids": {
+            "curie": "OEN:0001014",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001014",
+            "delete": true
+        }
+    },
+    {
+        "id": 10905,
+        "existing_ids": {
+            "curie": "OEN:0001002",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001002",
+            "delete": true
+        }
+    },
+    {
+        "id": 10907,
+        "existing_ids": {
+            "curie": "OEN:0001500",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001500",
+            "delete": true
+        }
+    },
+    {
+        "id": 10909,
+        "existing_ids": {
+            "curie": "OEN:0001005",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001005",
+            "delete": true
+        }
+    },
+    {
+        "id": 10994,
+        "existing_ids": {
+            "curie": "OEN:0001011",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001011",
+            "delete": true
+        }
+    },
+    {
+        "id": 11033,
+        "existing_ids": {
+            "curie": "OEN:0001035",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001035",
+            "delete": true
+        }
+    },
+    {
+        "id": 11061,
+        "existing_ids": {
+            "curie": "OEN:0001200",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001200",
+            "delete": true
+        }
+    },
+    {
+        "id": 11069,
+        "existing_ids": {
+            "curie": "OEN:0001234",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001234",
+            "delete": true
+        }
+    },
+    {
+        "id": 11150,
+        "existing_ids": {
+            "curie": "OEN:0001034",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001034",
+            "delete": true
+        }
+    },
+    {
+        "id": 11263,
+        "existing_ids": {
+            "curie": "OEN:0001197",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001197",
+            "delete": true
+        }
+    },
+    {
+        "id": 11405,
+        "existing_ids": {
+            "curie": "OEN:0001290",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001290",
+            "delete": true
+        }
+    },
+    {
+        "id": 11406,
+        "existing_ids": {
+            "curie": "OEN:0001280",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001280",
+            "delete": true
+        }
+    },
+    {
+        "id": 11407,
+        "existing_ids": {
+            "curie": "OEN:0001033",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001033",
+            "delete": true
+        }
+    },
+    {
+        "id": 11408,
+        "existing_ids": {
+            "curie": "OEN:0001032",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001032",
+            "delete": true
+        }
+    },
+    {
+        "id": 11409,
+        "existing_ids": {
+            "curie": "OEN:0001031",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001031",
+            "delete": true
+        }
+    },
+    {
+        "id": 11411,
+        "existing_ids": {
+            "curie": "OEN:0001265",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001265",
+            "delete": true
+        }
+    },
+    {
+        "id": 11417,
+        "existing_ids": {
+            "curie": "OEN:0001030",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001030",
+            "delete": true
+        }
+    },
+    {
+        "id": 11438,
+        "existing_ids": {
+            "curie": "OEN:0001228",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001228",
+            "delete": true
+        }
+    },
+    {
+        "id": 11595,
+        "existing_ids": {
+            "curie": "OEN:0001029",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001029",
+            "delete": true
+        }
+    },
+    {
+        "id": 11602,
+        "existing_ids": {
+            "curie": "OEN:0001195",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001195",
+            "delete": true
+        }
+    },
+    {
+        "id": 11629,
+        "existing_ids": {
+            "curie": "OEN:0001189",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001189",
+            "delete": true
+        }
+    },
+    {
+        "id": 11678,
+        "existing_ids": {
+            "curie": "OEN:0001028",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001028",
+            "delete": true
+        }
+    },
+    {
+        "id": 11726,
+        "existing_ids": {
+            "curie": "OEN:0001097",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001097",
+            "delete": true
+        }
+    },
+    {
+        "id": 11747,
+        "existing_ids": {
+            "curie": "OEN:0001253",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001253",
+            "delete": true
+        }
+    },
+    {
+        "id": 11765,
+        "existing_ids": {
+            "curie": "OEN:0001027",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001027",
+            "delete": true
+        }
+    },
+    {
+        "id": 11820,
+        "existing_ids": {
+            "curie": "OEN:0001173",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001173",
+            "delete": true
+        }
+    },
+    {
+        "id": 11896,
+        "existing_ids": {
+            "curie": "OEN:0001151",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001151",
+            "delete": true
+        }
+    },
+    {
+        "id": 12069,
+        "existing_ids": {
+            "curie": "OEN:0001221",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001221",
+            "delete": true
+        }
+    },
+    {
+        "id": 12081,
+        "existing_ids": {
+            "curie": "OEN:0001177",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001177",
+            "delete": true
+        }
+    },
+    {
+        "id": 12193,
+        "existing_ids": {
+            "curie": "OEN:0001026",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001026",
+            "delete": true
+        }
+    },
+    {
+        "id": 12524,
+        "existing_ids": {
+            "curie": "OEN:0001169",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001169",
+            "delete": true
+        }
+    },
+    {
+        "id": 12540,
+        "existing_ids": {
+            "curie": "OEN:0001150",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001150",
+            "delete": true
+        }
+    },
+    {
+        "id": 12636,
+        "existing_ids": {
+            "curie": "OEN:0001291",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001291",
+            "delete": true
+        }
+    },
+    {
+        "id": 12637,
+        "existing_ids": {
+            "curie": "OEN:0001283",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001283",
+            "delete": true
+        }
+    },
+    {
+        "id": 12650,
+        "existing_ids": {
+            "curie": "OEN:0001025",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001025",
+            "delete": true
+        }
+    },
+    {
+        "id": 4008,
+        "existing_ids": {
+            "curie": "OEN:0001287",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001287",
+            "delete": true
+        }
+    },
+    {
+        "id": 941,
+        "existing_ids": {
+            "curie": "OEN:0001107",
+            "iri": "http://uri.neuinfo.org/nif/nifstd/oen_0001107",
+            "delete": true
+        }
+    }
+]

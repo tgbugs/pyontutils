@@ -1,0 +1,28 @@
+Interlex Rabbit-hole
+
+1.
+ilxAdd
+IlxIdentifier::checkExisting,
+IlxIdentifier::createNewObj,
+IlxIdentifier::loadBy, #using dbobject
+APIReturnData::build #makes new obj including status data
+
+2.
+ilxUpdate
+IlxIdentifier::loadBy, #using dbobject::_loadBy using connection::select
+updateDB() #using connection::update
+APIReturnData::build #makes new obj including status data
+
+3.
+IlxIdentifier
+self::getNewFragment #makes ilx id using connection::insert
+self::insertObj #from dbobject
+dbobject::_loadBy #gets values create using connection::select
+
+T: insert, search, and update from connection class
+
+
+
+Term Rabbit-hole
+
+1.
