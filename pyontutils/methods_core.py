@@ -100,6 +100,8 @@ triples = (
           'but it is not the scratches on the paper that constrain a process, it is their implication.')),
 
     oop(ilxtr.hasInformationInput, ilxtr.hasInformationParticipant),
+    oop_(ilxtr.hasInformationInput,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationInput)),
     (ilxtr.hasInformationInput, owl.propertyDisjointWith, ilxtr.isConstrainedBy),
     olit(ilxtr.hasInformationInput, rdfs.label, 'has information input'),
     olit(ilxtr.hasInformationInput, NIFRID.synonym,
@@ -111,8 +113,12 @@ triples = (
     olit(ilxtr.hasInformationInput, rdfs.comment,
          ('This can be though of as the known variables of a process, or the runtime information '
           'that cannot be known prior to process execution.')),
+    (ilxtr.hasInformationInput, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasInformationInput, rdfs.range, ilxtr.informationEntity),
 
     oop(ilxtr.isConstrainedBy, ilxtr.hasInformationParticipant),
+    oop_(ilxtr.isConstrainedBy,
+         propertyChainAxiom(hasPart, ilxtr.isConstrainedBy)),
     olit(ilxtr.isConstrainedBy, rdfs.label, 'is constrained by'),
     olit(ilxtr.isConstrainedBy, NIFRID.synonym,
          'has information constraint',
@@ -130,8 +136,13 @@ triples = (
     #oop(ilxtr.usedInField),  # FIXME molecular techniques...
 
     oop(ilxtr.hasInformationOutput, ilxtr.hasInformationParticipant),
+    oop(ilxtr.hasInformationOutput, ilxtr.hasIntention),
+    oop_(ilxtr.hasInformationOutput,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationOutput)),
     olit(ilxtr.hasInformationOutput, rdfs.label, 'has information output'),
     olit(ilxtr.hasInformationOutput, NIFRID.synonym, 'has symbolic output'),
+    (ilxtr.hasInformationOutput, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasInformationOutput, rdfs.range, ilxtr.informationEntity),
 
     ## participants
     oop(hasParticipant),
@@ -176,8 +187,30 @@ triples = (
     oop(ilxtr.hasPrimaryInput, ilxtr.hasPrimaryParticipant),
     oop(ilxtr.hasPrimaryInput, hasInput),
     oop(ilxtr.hasPrimaryOutput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryOutput, ilxtr.hasIntention),
     oop(ilxtr.hasPrimaryOutput, hasOutput),
 
+    # posterior or knowledge based participants that define techniques
+    # often they would be part of the actual primary input
+    # FIXME aspect vs participant ...
+    # FIXME vs constrainedByAspect
+    oop(ilxtr.knownDetectedPhenomena, hasParticipant),
+    oop(ilxtr.knownProbedPhenomena, hasParticipant),
+    oop(ilxtr.knownDifferentiatingPhenomena, ilxtr.hasAspect),
+
+    ## naming (naming is distinct from intentions because it always succeeds)
+    oop(ilxtr.names),
+    oop(ilxtr.assigns, ilxtr.names),
+    oop(ilxtr.asserts, ilxtr.names),
+    # this operate on aspects in cases where the aspect is 'extrinsic'
+    # i.e. where if given only the named thing in question the binding
+    # of the aspect to the thing cannot be determined making measurements
+    # on only the thing itself (or that it was not determined in that way)
+    # these are cases where information from the surrounding environment is
+    # needed. for example the part of a brain a cell was collected from cannot
+    # (currently) be determined with 100% certainty by making measurements on
+    # the cell alone, additional information is required, therefore the 'measurement'
+    # of the aspect is not a measurement, it is an assertion
 
     ## intentions
     oop(ilxtr.hasIntention),  # not really sco realizes:? it also includes intended changes in qualities?
@@ -214,9 +247,10 @@ triples = (
           'participant that is constrained as part of a technique.')),
 
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
-    (ilxtr.hasPrimaryAspect, rdfs.subClassOf, ilxtr.techniqueHasAspect),
-    olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has intended primary aspect'),
+    (ilxtr.hasPrimaryAspect, rdfs.subPropertyOf, ilxtr.techniqueHasAspect),
+    olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
+         'has intended primary aspect',
          'has intention primary aspect',
          'has primary aspect',
          'has intention to effect the primary aspect of the primary participant',
@@ -230,6 +264,15 @@ triples = (
           'aspect of any primary participant, though it may effect other aspects as well.')),
     # TODO property chain or general axiom? implies that primary participant of has aspect
     # axiom(None, POC(ilxtr.hasPrimarAspec))
+
+    oop(ilxtr.hasPrimaryAspectActualized, ilxtr.hasPrimaryAspect),
+    olit(ilxtr.hasPrimaryAspectActualized, rdfs.label, 'has primary aspect actualized'),
+    olit(ilxtr.hasPrimaryAspectActualized, NIFRID.synonym,
+         'has intended primary aspect actualized',),
+
+    #oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
+    # redundant with hasPrimaryAspect, cannot be disjoint with actualized
+    # because all actualization techniques are also measurement techniques
 
 
     oop(ilxtr.hasPrimaryAspect_dAdS, ilxtr.hasIntention),
@@ -302,18 +345,6 @@ triples = (
     #oop(ilxtr.),
 
     # classes
-
-    ## material entity
-    (ilxtr.materialEntity, owl.equivalentClass, BFO['0000040']),
-    oc_(ilxtr.materialEntity,
-        restriction(ilxtr.hasAspect, asp.livingness),
-        restriction(ilxtr.hasAspect, asp['is'])),
-
-    #oc_(OntTerm('NCBITaxon:1', label='ncbitaxon'), restriction(ilxtr.hasAspect, asp.livingness)),
-    # this is technically correct, but misleading, because rocks also have asp.livingness
-    # which evaluates to false, aspects are qualities, but they are not in and of themselves meaningful
-    # because I can measure the livingness of a star, or define it, basically all material entities
-    # have all aspects
 
     ## executor
     oc(ilxtr.executor, ilxtr.materialEntity),  # probably equivalent to agent in ero
