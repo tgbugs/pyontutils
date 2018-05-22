@@ -1,14 +1,14 @@
 from rdflib import URIRef, Literal, BNode
-from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm
+from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm, makeNamespaces
 from pyontutils.core import oc, oc_, oop, odp, olit, oec
 from pyontutils.core import restrictions, annotation, restriction, restrictionN
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx, BFO
 from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasRole
+from pyontutils.core import partOf, hasRole, locatedIn
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
-from pyontutils.core import Restriction2, POCombinator
+from pyontutils.core import Restriction2, POCombinator, disjointUnionOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t
+from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN
 
 blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
@@ -18,7 +18,6 @@ restMaxCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesF
 restN = Restriction2(None, owl.onProperty, owl.someValuesFrom)
 restrictionS = Restriction(owl.someValuesFrom)
 oECU = EquivalentClass(owl.unionOf)
-oECN = EquivalentClass(None)
 
 def t(subject, label, def_, *synonyms):
     yield from oc(subject, ilxtr.technique)
@@ -91,10 +90,12 @@ triples += ( # information entity
     olit(ilxtr.informationEntity, definition, 'Any physically encoded information.'),
 
     oc(ilxtr.informationArtifact, ilxtr.informationEntity),
+    oc(ilxtr.informationArtifact, BFO['0000031']),
     olit(ilxtr.informationArtifact, rdfs.label, 'information artifact'),
     olit(ilxtr.informationArtifact, definition,
          ('An information entity that has an explicit symbolic encoding '
           'which is distinct from the existence or being that it encodes.')),
+    (ilxtr.informationArtifact, owl.equivalentClass, OntTerm('IAO:0000030', label='information content entity')),
 
     oc(ilxtr.protocol, ilxtr.informationEntity),
     olit(ilxtr.protocol, rdfs.label, 'protocol'),
@@ -109,9 +110,7 @@ triples += ( # information entity
            *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
     olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
 
-    oc(ilxtr.superResolutionAlgorithem, ilxtr.informationEntity),
     oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
-    oc(ilxtr.radonTransform, ilxtr.informationEntity),
 
     # information artifacts
     oc(ilxtr.informationArtifact),  # FIXME entity vs artifact, i think clearly artifact by my def
@@ -139,6 +138,12 @@ triples += ( # information entity
     olit(ilxtr.commonCoordinateFramework, rdfs.label, 'common coordinate framework'),
     olit(ilxtr.commonCoordinateFramework, NIFRID.synonym, 'CCF', 'atlas coordinate framework'),
 
+    oc(ilxtr.axiom, ilxtr.informationEntity),
+    oc(ilxtr.algorithem, ilxtr.informationEntity),
+    oc(ilxtr.spikeSortingAlgorithem, ilxtr.informationEntity),
+    oc(ilxtr.superResolutionAlgorithem, ilxtr.algorithem),
+    oc(ilxtr.radonTransform, ilxtr.algorithem),
+
 )
 
 triples += (  # material entities
@@ -148,6 +153,8 @@ triples += (  # material entities
     oc_(ilxtr.materialEntity,
         restriction(ilxtr.hasAspect, asp.livingness),
         restriction(ilxtr.hasAspect, asp['is'])),
+
+    oc(ilxtr.compositeMaterialEntity, ilxtr.materialEntity),
 
     # more real than real
     oc(ilxtr.electricalField, ilxtr.materialEntity),
@@ -162,19 +169,27 @@ triples += (  # material entities
     oc(ilxtr.thingWithSequence, OntTerm('CHEBI:25367', term='molecule')),
     olit(ilxtr.thingWithSequence, rdfs.label, 'thing with molecular sequence'),
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
+    oc(ilxtr.nucleicAcid, ilxtr.materialEntity),
+    (ilxtr.nucleicAcid, owl.equivalentClass, OntTerm('CHEBI:33696', label='nucleic acid')),
     oc(ilxtr.methylatedDNA, OntTerm('CHEBI:16991', term='DNA')),
+    (ilxtr.DNA, owl.equivalentClass, OntTerm('CHEBI:16991', term='DNA')),
+    (ilxtr.DNA, rdfs.subClassOf, ilxtr.nucleicAcid),
 
     # FIXME should probably be to a higher level go?
     # FIXME redundant when we import all of go
     (OntTerm('GO:0005615'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
     (OntTerm('GO:0005622'), rdfs.subClassOf, OntTerm('GO:0005575', label='cellular_component')),
     oc(OntTerm('SAO:1813327414', label='Cell'), ilxtr.materialEntity),
+    (ilxtr.cell, owl.equivalentClass, OntTerm('SAO:1813327414', label='Cell')),
     oc_(OntTerm('SAO:1813327414', label='Cell'),
         restriction(hasPart, OntTerm('GO:0005575', label='cellular_component'))),  # inputs also need to input all their parts
     oc(OntTerm('GO:0044464'), OntTerm('GO:0005575')),
     oc(OntTerm('CHEBI:33697', label='RNA'), OntTerm('CHEBI:33696', label='nucleic acid')),
+    (ilxtr.RNA, owl.equivalentClass, OntTerm('CHEBI:33697', term='RNA')),
+    (ilxtr.RNA, rdfs.subClassOf, ilxtr.nucleicAcid),
     #oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
     oc(OntTerm('SO:0000234', label='mRNA'), OntTerm('CHEBI:33697', label='RNA')),
+    (ilxtr.mRNA, owl.equivalentClass, OntTerm('SO:0000234', label='mRNA')),  # FIXME role?
 
     (OntTerm('GO:0005575', label='cellular_component'), rdfs.subClassOf, ilxtr.physiologicalSystem),
     # FIXME owl:sameAs is NOT for generic iris >_<
@@ -197,7 +212,7 @@ triples += (  # material entities
     oc_(ilxtr.section,
         intersectionOf(ilxtr.partOfSomePrimaryInput,
                        restN(partOf, ilxtr.primaryInputOfThisInstanceOfTechnique), # FIXME
-                       restN(ilxtr.constrainedByAspect, asp.flatness),
+                       restN(ilxtr.hasAspect, asp.flatness),  # FIXME has aspect needs more love
                       )),
     oc(ilxtr.thinSection, ilxtr.section),
     oc_(ilxtr.thinSection,
@@ -225,21 +240,44 @@ triples += (  # material entities
     oc(ilxtr.microPipette, ilxtr.materialEntity),
     oc(ilxtr.microscope, ilxtr.materialEntity),
     oc(ilxtr.lightMicroscope, ilxtr.microscope),
+    (ilxtr.lightMicroscope, owl.equivalentClass, OntTerm('BIRNLEX:2112', label='Optical microscope')),
     oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
+    (OntTerm('BIRNLEX:2029', label='Confocal microscope'), rdfs.subClassOf, ilxtr.lightMicroscope),
+    oc(ilxtr.DICmicroscope, ilxtr.lightMicroscope),
     oc(ilxtr.microtome, ilxtr.materialEntity),
+    oc(ilxtr.serialBlockfaceMicrotome, ilxtr.microtome),
     oc(ilxtr.ultramicrotome, ilxtr.microtome),
+    oc(ilxtr.serialBlockfaceUltraMicrotome, ilxtr.ultramicrotome),
     oc(ilxtr.stereotax, ilxtr.materialEntity),
     oc(ilxtr.centrifuge, ilxtr.materialEntity),
     oc(ilxtr.ultracentrifuge, ilxtr.centrifuge),
     oc(ilxtr.cuttingTool, ilxtr.materialEntity),
+    oc(ilxtr.IRCamera, ilxtr.materialEntity),
 
     oc(ilxtr.inductionFactor, ilxtr.materialEntity),
 
     oc(ilxtr.bathSolution, ilxtr.materialEntity),
 
     oc(ilxtr.photons, ilxtr.materialEntity),
-    oc(ilxtr.visibleLight, ilxtr.photons),
-    oc(ilxtr.xrays, ilxtr.photons),
+    oc_(ilxtr.photons,
+        disjointUnionOf(ilxtr.radiowaves,
+                        ilxtr.microwaves,
+                        ilxtr.infaredLight,
+                        ilxtr.visibleLight,
+                        ilxtr.ultravioletLight,
+                        ilxtr.xrays,
+                        ilxtr.gammarays)
+       ),
+    #oc(ilxtr.infaredLight, ilxtr.photons),
+    #oc(ilxtr.visibleLight, ilxtr.photons),
+    #oc(ilxtr.xrays, ilxtr.photons),
+
+
+    oc(ilxtr.tissue, ilxtr.materialEntity),
+    oc(ilxtr.axon, ilxtr.materialEntity),
+    oc(ilxtr.cellMembrane, ilxtr.materialEntity),
+    oc(ilxtr.building, ilxtr.materialEntity),
+    oc(ilxtr.electrolytes, ilxtr.materialEntity),
 
 )
 
@@ -269,7 +307,7 @@ triples += (  # aspects
           'non-being much less actually attempt to make such a measurement.')),
 
     # isness
-    oc(asp['is'], ilxtr.aspect),
+    oc(asp['is'], asp.Local),
     olit(asp['is'], rdfs.label, 'is'),
     olit(asp['is'], NIFRID.synonym,
          'isness',
@@ -300,8 +338,28 @@ triples += (  # aspects
     # is valid
 
     # location/allocation
-    oc(asp.location, ilxtr.aspect),
-    oc(asp.allocation, asp.location),
+    # NOTE allocation is an aspect, location is NOT an aspect
+    # allocation is an aspect of a composite being where the
+    # location of each of its parts can be considered to be
+    # something directly measurable about the composite being
+    # for example a pile of sand or a set of grains of sand
+    # can have an allocation based only by counting the members
+    oc(asp.spatial, asp.nonLocal),
+    oc(asp.location, asp.spatial),
+    # you cannot measure the location of something
+    # you can only measure the location of something relative to something else
+    # our model assumes that there is no privilidged reference frame in this universe
+    oc(asp.direction, asp.spatial),
+
+    oc(asp.name, asp.nonLocal),
+    oc(asp.identity, asp.Local),
+    (asp.name, ilxtr.hasLocalEquivalent, asp.identity),
+
+    oc(asp.category, asp.Local),
+    oc(asp.categoryAssigned, asp.nonLocal),
+    (asp.categoryAssigned, ilxtr.hasLocalEquivalent, asp.category),
+
+    oc(asp.allocation, asp.location),  # FIXME not clear whether this is local or nonlocal
     olit(asp.allocation, definition,
          ('Allocation is the amount of something in a given place '
           'rather than the total universal amount of a thing. '
@@ -313,30 +371,31 @@ triples += (  # aspects
 
     oc(asp.proportion, asp.allocation),
 
-    oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
-    olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
-    olit(asp.isClassifiedAs, NIFRID.synonym,
-         'is named as', 'has operational definition with inclusion criteria that names thing as'),
+    #oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right, renaming is different then identity
+    # this is only an isness in the case where there are a finite and fixed number of types
+    #olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
+    #olit(asp.isClassifiedAs, NIFRID.synonym,
+         #'is named as', 'has operational definition with inclusion criteria that names thing as'),
 
-    oc(asp.flatness, ilxtr.aspect),
+    oc(asp.flatness, asp.Local),
     olit(asp.flatness, rdfs.label, 'flatness'),
     olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
     olit(asp.flatness, definition,
          ('How flat a thing is. There are a huge variety of operational '
           'definitions depending on the type of thing in question.')),
 
-    oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
+    oc(asp.weight, asp.nonLocal),  # TODO 'PATO:0000128'
     olit(asp.weight, rdfs.label, 'weight'),
     olit(asp.weight, NIFRID.synonym, 'weight aspect'),
 
-    oc(asp.livingness, ilxtr.aspect),
-    oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
-    oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
+    oc(asp.livingness, asp.Local),
+    oc(asp.aliveness, asp.Local),  # PATO:0001421
+    oc(asp.deadness, asp.Local),  # PATO:0001422
     (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
     #((hasAspect some livingness) and (hasAspectValue value true)) DisjointWith: ((hasAspect some livingness) and (hasAspectValue value false))
 
     # functional/stateful (the conflation here is amusing)
-    oc(asp.boundFunctionalAspect, ilxtr.aspect),
+    oc(asp.boundFunctionalAspect, asp.nonLocal),
     olit(asp.boundFunctionalAspect, rdfs.label, 'bound functional aspect'),
     # TODO
     # the 'functionality' of the aspect is going to be qualified by the
@@ -346,18 +405,18 @@ triples += (  # aspects
     # onProperty isFunctional
     # has qualified role?
     # 
-    oc(asp.behavioral, ilxtr.aspect),
+    oc(asp.behavioral, asp.Local),
 
-    oc(asp.physiological, ilxtr.aspect),  # FIXME vs ilxtr.physiologicalSystem?
+    oc(asp.physiological, asp.Local),  # FIXME vs ilxtr.physiologicalSystem?
 
-    oc(asp.sequence, ilxtr.aspect),
+    oc(asp.sequence, asp.Local),
     #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
 
-    oc(asp.sensory, ilxtr.aspect),
-    oc(asp.vision, asp.sensory),
+    oc(asp.sensory, asp.Local),
+    oc(asp.vision, asp.sensory),  # FIXME asp.canSee
 
     oc(asp.anySpatioTemporalMeasure, ilxtr.aspect),  # FIXME
-    oc(asp.electromagnetic, ilxtr.aspect),
+    oc(asp.electromagnetic, asp.Local),
     oc(asp.electrical, asp.electromagnetic),
     oc(asp.voltage, asp.electrical),
     oc(asp.current, asp.electrical),
@@ -365,32 +424,34 @@ triples += (  # aspects
     oc(asp.resistance, asp.electrical),
     oc(asp.magnetic, asp.electromagnetic),
 
-    oc(asp.informationEntropy, ilxtr.aspect),
-    oc(asp.mechanicalRigidity, ilxtr.aspect),
-    oc(asp.spectrum, ilxtr.aspect),
-    oc(asp.spontaneousChangeInStructure, ilxtr.aspect),
-
-    oc(asp.physicalOrderedness, ilxtr.aspect),
+    oc(asp.informationEntropy, asp.Local),
+    oc(asp.mechanicalRigidity, asp.Local),
+    oc(asp.spectrum, asp.Local),
+    oc(asp.spontaneousChangeInStructure, asp.Local),
+    oc(asp.connectivity, asp.Local),
+    oc(asp.physicalOrderedness, asp.Local),
     oc(asp.latticePeriodicity, asp.physicalOrderedness),  # physical order
 
     #oc(asp.functional, ilxtr.aspect),  # asp.functional is not the right way to model this
     #olit(ilxtr.functionalAspectRole, definition,
          #('A functional aspect is any aspect that can be used to define ')),
-    oc(asp.biologicalActivity, ilxtr.aspect),  # TODO very broad from enyme activity to calories burned
+    oc(asp.biologicalActivity, asp.Local),  # TODO very broad from enyme activity to calories burned
     #oc(asp.circadianPhase, asp.biologicalActivity),
-    oc(asp.circadianPhase, ilxtr.aspect),  # FIXME hrm... time as a proxy for biological state?
+    oc(asp.circadianPhase, asp.Local),  # FIXME hrm... time as a proxy for biological state?
 
-    oc(asp.sensitvity, ilxtr.aspect),
+    oc(asp.sensitvity, asp.nonLocal),
     # FIXME issue with sensitivity and the 'towards' relation
 
-    oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
+    #oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
+    oc(asp.functionalDefinition, asp.nonLocal),
     oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
 
-    oc(asp.contrast, ilxtr.aspect),  # TODO what is this more specifically? this is derived ...
+    oc(asp.contrast, asp.nonLocal),  # TODO what is this more specifically? this is derived ...
+    # contrast is always qualified by some detecting phenomena
 
-    oc(asp.density, ilxtr.aspect),  # not directly measurable
+    oc(asp.density, asp.Local),  # not directly measurable
 
-    oc(asp.direct, ilxtr.aspect),
+    oc(asp.direct, asp.Local),
     olit(asp.direct, definition,
          'An aspect that can be measured directly in a single instant in time. '
          'Note that these are in principle direct, the operational definition '
@@ -414,6 +475,10 @@ triples += (  # aspects
     oc(asp.voltage, asp.direct),
     oc(asp.resistance, asp.direct),
     oc(asp.charge, asp.direct),
+
+    oc(asp.boilingPoint, asp.nonLocal),  # tripple point!
+
+    oc(asp.epitopePresent, asp.Local),  # true predicate
 
     # TODO also need the constants...
 
@@ -684,6 +749,7 @@ triples = (
        #(ilxtr.hasPrimaryInput, ilxtr.openChromatin),  # nucleus has part?
        #(ilxtr.hasPrimaryInput, ilxtr.methylatedDNA),
        (ilxtr.hasPrimaryAspect, asp.sequence),
+       (ilxtr.knownDetectedPhenomena, ilxtr.DNA),
        (ilxtr.knownDetectedPhenomena, OntTerm('GO:0010424', label='DNA methylation on cytosine within a CG sequence')),
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
        def_='non CG methylation',
@@ -728,14 +794,20 @@ triples = (
 
     _t(i.d, 'Drop-seq',
        (ilxtr.hasSomething, i.d),
-       (hasPart, tech.sequencing),  # TODO
+       (hasPart, tech.rnaSeq),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
-       synonyms=('DroNc-seq',)  #???? is this the same
+       synonyms=('droplet sequencing',
+                 'Droplet-Sequencing')
     ),
+
+    _t(i.d, 'DroNc-seq',
+       (ilxtr.hasSomething, i.d),
+       (hasPart, tech.rnaSeq),  # TODO
+      ),
 
     _t(i.d, '10x Genomics sequencing',
        (ilxtr.hasSomething, i.d),
-       (hasPart, tech.sequencing),  # TODO
+       (hasPart, tech.rnaSeq),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
        def_='commercialized drop seq',
        # snRNA-seq 10x Genomics Chromium v2
@@ -750,23 +822,23 @@ triples = (
        synonyms=('MAPseq',
                  'Multiplexed Analysis of Projections by Sequencing',)),
 
-    _t(i.d, 'Smart-seq',
-       (ilxtr.hasSomething, i.d),
-       # Clontech
-       synonyms=('Smart-seq2',
+    _t(i.d, 'SMART-seq',
+       (hasPart, tech.rnaSeq),
+       (hasInput, ilxtr.SMARTSeqKit),
+       (ilxtr.isConstrainedBy, prot.SMARTSeq),
+       # Clontech / Takara
+       synonyms=('Switching Mechanism at 5\' End of RNA Template sequencing',
+                 'Smart-seq2',
                  'SMART-seq',
                  'SMART-Seq v4',
                  'SMART-seq v4',)),
 
     # 'deep smart seq',
 
-    _t(i.d, ' technique',
-       (ilxtr.hasSomething, i.d),
-    ),
-
-    _t(i.d, ' technique',
-       (ilxtr.hasSomething, i.d),
-    ),
+    _t(tech.anestheticAdministration, 'anesthetic adminstration technique',
+       # TODO delivered to partOf primaryparticipant
+       # parent partof primary participant deliver or something
+      (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:38867', label='anaesthetic')),),
 
     _t(i.d, 'anaesthesia technique',
        # anaesthesia is an excellent example of a case where
@@ -774,25 +846,35 @@ triples = (
        # and should not be part of the definition
        #(ilxtr.hasPrimaryParticipant,
         #oc_(restriction(partOf, OntTerm('UBERON:0001016', label='nervous system')))),
-       (ilxtr.hasPrimaryAspect, ilxtr.nervousResponsiveness),
+       #(hasParticipant, ilxtr.anesthetic),  # FIXME has role?
+       (ilxtr.hasPrimaryAspect, asp.nervousResponsiveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
-       #(hasInput, OntTerm('CHEBI:38867', label='anaesthetic')),
+       (hasPart, tech.anestheticAdministration),
        (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
     ),
     # local anaesthesia technique
     # global anaesthesia technique
 
     _t(OntTerm('NLXINV:20090610'), 'in situ hybridization technique',  # TODO
-       (ilxtr.hasSomething, i.d),
-       synonyms=('in situ hybridization', 'ISH'),),
+       intersectionOf(tech.inSitu,  # FIXME
+                      restN(hasInput, ilxtr.hybridizationProbe),
+                      restN(ilxtr.knownDetectedPhenomena, ilxtr.RNA)),
+       restN(hasPart, ilxtr.ISH),
+       synonyms=('in situ hybridization', 'ISH'),
+       equivalentClass=oECN),
+    (ilxtr.ISH, owl.equivalentClass, OntTerm('NLXINV:20090610')),
 
     _t(tech.FISH, 'fluorescence in situ hybridization technique',
        (ilxtr.hasSomething, i.d),
+       (hasPart, ilxtr.ISH),
+       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
        synonyms=('fluorescence in situ hybridization', 'FISH'),
     ),
 
     _t(tech.smFISH, 'single-molecule fluorescence in situ hybridization technique',
        (ilxtr.hasSomething, i.d),
+       (hasPart, ilxtr.ISH),
+       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
        synonyms=('single-molecule fluorescence in situ hybridization',
                  'single molecule fluorescence in situ hybridization',
                  'single-molecule FISH',
@@ -802,6 +884,8 @@ triples = (
 
     _t(tech.MERFISH, 'multiplexed error-robust fluorescence in situ hybridization technique',
        (ilxtr.hasSomething, i.d),
+       (hasPart, ilxtr.ISH),
+       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
        synonyms=('multiplexed error-robust fluorescence in situ hybridization',
                  'multiplexed error robust fluorescence in situ hybridization',
                  'multiplexed error-robust FISH',
@@ -872,7 +956,7 @@ triples = (
        (ilxtr.hasSomething, i.d)
     ),
 
-    _t(i.d, 'delivery technique',
+    _t(tech.delivery, 'delivery technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # email delivery? fun...
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        #(ilxtr.hasSomething, i.d),
@@ -944,16 +1028,25 @@ triples = (
        synonyms=('intracellular injection',)),
 
     _t(i.d, 'electrical delivery technique',
+       # FIXME electroporation doesn't actually work this way
        (ilxtr.hasPrimaryAspectActualized, asp.location),
+       (ilxtr.hasConstrainingAspect, asp.electrical),
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'electroporation technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(tech.electroporation, 'electroporation technique',
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspectActualized, asp.permeability),
+                      restN(hasParticipant, ilxtr.electricalField)),  # FIXME ?
+       intersectionOf(ilxtr.technique,
+                      restN(hasPart, tech.electroporation)),
+       equivalentClass=oECN),
     _t(i.d, 'in utero electroporation technique',
-       (ilxtr.hasSomething, i.d)),
+       (hasPart, tech.electroporation),
+       (ilxtr.hasPrimaryParticipant, restN(locatedIn, ilxtr.uterus))),
     _t(i.d, 'single cell electroporation technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'chemical delivery technique',
-       (ilxtr.hasSomething, i.d)),
+       (hasPart, tech.electroporation),
+       restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1))),
+    #_t(i.d, 'chemical delivery technique',  # not obvious how to define this or if it is used
+       #(ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'DNA delivery technique',
        (ilxtr.hasPrimaryInput, OntTerm('CHEBI:16991', term='DNA')),
@@ -987,28 +1080,46 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'tracing technique',
-       (ilxtr.hasSomething, i.d),
+       (hasParticipant, ilxtr.axon),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
        synonyms=('axon tracing technique',
                  'axonal tracing technique',
                  'axon tracing',
                  'axonal tracing',)),
     _t(i.d, 'anterograde tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
+       (ilxtr.hasConstrainingAspect, asp.direction),  # need a value... also hasParticipantPartConstrainingAspect?
        (ilxtr.hasSomething, i.d),
        synonyms=( 'anterograde tracing',)
     ),
     _t(i.d, 'retrograde tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
+       (ilxtr.hasConstrainingAspect, asp.direction),  # need a value... also hasParticipantPartConstrainingAspect?
        (ilxtr.hasSomething, i.d),
        synonyms=('retrograde tracing',)
     ),
     _t(i.d, 'diffusion tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
        (ilxtr.hasSomething, i.d),
        synonyms=('diffusion tracing',)
     ),
     _t(i.d, 'transsynaptic tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),  # agentous delivery mechanism...
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
        (ilxtr.hasSomething, i.d),
        synonyms=( 'transsynaptic tracing',)
     ),
     _t(i.d, 'multisynapse transsynaptic tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
        (ilxtr.hasSomething, i.d),
        synonyms=('multisynaptic transsynaptic tracing technique',
                  'multisynaptic transsynaptic tracing')),
@@ -1016,16 +1127,27 @@ triples = (
     # 'TRIO'
     # 'tracing the relationship between input and output'
 
+    _t(i.d, 'computational technique',  # these seem inherantly circulat... they use computation...
+       ilxtr.technique,
+       restMinCardValue(ilxtr.isConstrainedBy, ilxtr.algorithem, Literal(1)),  # axioms??
+       (ilxtr.hasInformationInput, ilxtr.informationEntity),
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
+       # different from?
+      ),
+
+    #_t(i.d, 'mathematical technique',
+       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.isConstrainedBy, ilxtr.algorithem),
+      #),
+
     _t(i.d, 'statistical technique',
-       (ilxtr.hasSomething, i.d)
+       (ilxtr.hasSomething, i.d),
+       (ilxtr.isConstrainedBy, ilxtr.algorithem),
        #(hasPart, tech.statistics)
       ),
 
-    _t(i.d, 'computational technique',  # these seem inherantly circulat... they use computation...
-       (ilxtr.hasSomething, i.d)
-      ),
-
     _t(i.d, 'simulation technique',
+       (ilxtr.isConstrainedBy, ilxtr.algorithem),
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'storage technique',
@@ -1058,6 +1180,7 @@ triples = (
 
     _t(i.d, 'colocalization technique',
        # FIXME measurement vs putting them together?
+       (hasInput, ilxtr.materialEntity),
         restMinCardValue(hasPart, tech.localization, Literal(2)),
        (ilxtr.hasPrimaryAspect, asp.location),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
@@ -1067,12 +1190,15 @@ triples = (
     _t(i.d, 'image reconstruction technique',
        (ilxtr.hasSomething, i.d)),
 
-    _t(i.d, 'tomographic technique',
-       (ilxtr.hasSomething, i.d),
+    _t(tech.tomography, 'tomographic technique',
+       (ilxtr.hasInformationInput, ilxtr.image),  # more than one...
+       (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.isConstrainedBy, ilxtr.radonTransform),
        synonyms=('tomography',)),
+
     _t(i.d, 'positron emission tomography',
-       (ilxtr.hasSomething, i.b),
+       (hasPart, tech.positronEmissionImaging),
+       (hasPart, tech.tomography),
        synonyms=('PET', 'PET scan')),
     (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000009')),
 
@@ -1088,11 +1214,16 @@ triples = (
        synonyms=('design based stereology',)),
 
     _t(i.d, 'spike sorting technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasInformationInput, ilxtr.timeSeries),  # TODO more specific
+       #(ilxtr.detects, ilxtr['informationPattern/spikes'])  # TODO?
+       #(ilxtr.hasSomething, i.d),
+       (ilxtr.isConstrainedBy, ilxtr.spikeSortingAlgorithem),
        synonyms=('spike sorting',)),
 
     _t(i.d, 'detection technique',
-       (ilxtr.hasSomething, i.d)),
+       (hasInput, ilxtr.materialEntity),
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
+       (ilxtr.detects, ilxtr.materialEntity)),
     _t(i.d, 'identification technique',
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'characterization technique',
@@ -1103,7 +1234,8 @@ triples = (
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'angiographic technique',
-       (ilxtr.hasSomething, i.d),
+       (hasPart, ilxtr.xrayImaging),
+       (ilxtr.knownDetectedPhenomena, restN(partOf, OntTerm('UBERON:0007798'))),
        synonyms=('angiography',)),
 
     _t(i.d, 'ex vivo technique',
@@ -1125,12 +1257,19 @@ triples = (
        # (ilxtr.hasConstrainingAspect, ilxtr['is']),
        synonyms=('ex vivo',),),
 
-    _t(i.d, 'in situ technique',  # TODO FIXME
+    _t(tech.inSitu, 'in situ technique',  # TODO FIXME
        # detecting something in the location that it was originally in
        # not in the dissociated remains thereof...
        # hasPrimaryParticipantLocatedIn
+       # and the primary participant is located in / still part of its original part of
+       # part of the thing that it was part of before the start of _any_ technique
+       #(ilxtr.hasConstrainingAspect, asp.location),
+
+       # the pimary participant is still part of the part of the primary participant of the
+       # preceeding technique where the input was living
        (ilxtr.hasSomething, i.d),
        synonyms=('in situ',),),
+    (tech.inSitu, owl.disjointWith, tech.inVitro),
 
     _t(i.d, 'in vivo technique',
        # (hasParticipant, ilxtr.somethingThatIsAlive),
@@ -1146,10 +1285,11 @@ triples = (
 
     _t(i.d, 'in utero technique',
        # has something in 
-       (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
+       #(hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
+       (ilxtr.hasPrimaryParticipant, restN(locatedIn, ilxtr.uterus)),
        synonyms=('in utero',),),
 
-    _t(i.d, 'in vitro technique',
+    _t(tech.inVitro, 'in vitro technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystemDisjointWithLivingOrganism),
        #(ilxtr.hasPrimaryParticipant, thing that was derived from living organsim? no? pure synthesis...),
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAGlassContainer),
@@ -1393,7 +1533,7 @@ triples = (
 
     _t(i.d, 'open book preparation technique',
        tech.maintaining,
-       (ilxtr.hasInput,
+       (hasInput,
         OntTerm('UBERON:0001049', label='neural tube')
         #OntTerm(term='neural tube', prefix='UBERON')  # FIXME dissected out neural tube...
        ),
@@ -1422,21 +1562,46 @@ triples = (
        synonyms=('housing',),
     ),
     _t(i.d, 'mating technique',
-       (ilxtr.hasSomething, i.d),
+       ilxtr.technique,
+       restMinCardValue(hasParticipant, ilxtr.sexuallyReproducingOrgansim, Literal(2)),
        synonyms=('mating',),
     ),
     _t(i.d, 'watering technique',
-       (ilxtr.hasSomething, i.d),
+       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (ilxtr.hasPrimaryInput, ilxtr.water),
        synonyms=('watering',),
     ),
 
     _t(tech.contrastEnhancement, 'contrast enhancement technique',
-       (ilxtr.hasPrimaryAspect, asp.contrast),  # some contrast
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
-       synonyms=('contrast enhancement',),),
+       #restMinCardValue(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.aspect, Literal(1)),
+       #restMinCardValue(ilxtr.hasConstrainingAspect, ilxtr.aspect, Literal(1)),
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasParticipantPartPrimaryAspect, ilxtr.aspect),
+                      restN(ilxtr.hasPartNotPart,
+                            intersectionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+                                           # FIXME need to be able to say that pp part primary aspect and
+                                           # part pp constraining aspect are the same
+                                           restMinCardValue(ilxtr.hasConstrainingAspect,
+                                                            ilxtr.aspect,
+                                                            Literal(1))))),
+       #intersectionOf(ilxtr.technique,
+                      #restN(ilxtr.hasPrimaryAspect, asp.contrast),
+                      #restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive)),
+       #intersectionOf(ilxtr.technique,
+                      # FIXME vs contrast detection
+                      #restN(ilxtr.hasProbe, ilxtr.materialEntity)),
+       synonyms=('contrast enhancement',
+                 'material contrast enhancement technique',),
+       equivalentClass=oECN),
 
     _t(i.d, 'tagging technique',
        (ilxtr.hasSomething, i.d)),
+
+    _t(tech.histology, 'histological technique',
+       # is this the assertional/definitional part where we include everything?
+       (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
+       #(ilxtr.hasSomething, i.d),
+       synonyms=('hisology',)),
 
     _t(OntTerm('BIRNLEX:2107'), 'staining technique',  # TODO integration
        (ilxtr.hasSomething, i.d)),
@@ -1446,11 +1611,13 @@ triples = (
 
     _t(i.d,'immunocytochemical technique',
        (ilxtr.hasSomething, i.d),
+       (hasInput, ilxtr.cell),
        synonyms=('immunocytochemistry technique',
                  'immunocytochemistry')),
 
     _t(OntTerm('NLXINV:20090609'), 'immunohistochemical technique',  # TODO
        (ilxtr.hasSomething, i.d),
+       (hasInput, ilxtr.tissue),
        synonyms=('immunohistochemistry technique',
                  'immunohistochemistry')),
     (OntTerm('NLXINV:20090609'), ilxtr.hasTempId, OntTerm("HBP_MEM:0000115")),
@@ -1479,21 +1646,40 @@ triples = (
        # the rule for transforming an aspect of the _parts_ into
        # the location aspect is the key differentiator
        #(ilxtr.knownDifferentiatingPhenomena, ),
-       ilxtr.technique,
        #restN(hasPart, )
-       (ilxtr.hasPrimaryAspectActualized, asp.location),  # TODO we need a clearer subclass for this
+       #(ilxtr.hasPrimaryAspectActualized, asp.location),  # TODO we need a clearer subclass for this
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPartPart,
+                            intersectionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+                                           #ilxtr.primaryParticipantPartOfPrimaryParticipantOfParent,
+                                           # intentionally not requiring this to be a technique
+                                           restMinCardValue(ilxtr.hasConstrainingAspect,
+                                                            ilxtr.aspect,
+                                                            Literal(1))))),
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
+                      restMinCardValue(ilxtr.hasParticipantPartConstrainingAspect,
+                                       ilxtr.aspect,
+                                       Literal(1))),
+       #restMinCardValue(ilxtr.hasParentPrimaryAspect, ilxtr.aspect, Literal(1)),
        # primary input has parts that can all actualize on the same set of aspects
-       # constrainedByAspect maybe??
-       #(ilxtr.constrainedByAspect, ilxtr.aspect),
+       # hasConstrainingAspect maybe??
+       #(ilxtr.hasConstrainingAspect, ilxtr.aspect),
        # VS FIXME TODO does the cardinality restriction work for auto subclassing?
-       # FIXME constrainedByAspect is implicitly on the primary participant, these are on its parts...
-       restMinCardValue(ilxtr.constrainedByAspect, ilxtr.aspect, Literal(1)),
-       (ilxtr.hasSomething, i.d),
-    ),
+       # FIXME hasConstrainingAspect is implicitly on the primary participant, these are on its parts...
+       #restMinCardValue(ilxtr.hasConstrainingAspect, ilxtr.aspect, Literal(1)),
+       #(ilxtr.hasSomething, i.d),
+       equivalentClass=oECN),
     _t(i.d, 'sorting technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'sampling technique',
-       (ilxtr.hasSomething, i.d),),
+       ilxtr.technique,
+       # FIXME named => there is a larger black box where the name _can_ be measured
+       # hasPrimaryParticipant partOf (hasAspect ilxtr.aspect)
+       # or is it partOf (hasPrimaryAspect ilxtr.aspect)?
+       # note that for this approach axioms appear automatically as
+       # the unresolved names
+       (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.category),
+       (ilxtr.hasParticipantPartConstrainingAspect, ilxtr.aspect)),
+
     _t(i.d, 'extraction technique',
        (hasParticipant, ilxtr.extract),  # FIXME circular
        ),
@@ -1511,39 +1697,33 @@ triples = (
        # enrichment
        (ilxtr.hasSomething, i.d),),
 
-    _t(i.d, 'selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'blind selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'random selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'targeted selection technique',
-       (ilxtr.hasSomething, i.d),),
-
     _t(i.d, 'fractionation technique',
        (ilxtr.hasSomething, i.d),),
     _t(i.d, 'chromatography technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.partitionCoefficient),
        synonyms=('chromatography',),),
     _t(i.d, 'distillation technique',
-       (ilxtr.constrainedByAspect, asp.boilingPoint),
-       (ilxtr.constrainedByAspect, asp.condensationPoint),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.boilingPoint),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.condensationPoint),
        #(ilxtr.knownDifferentiatingPhenomena, asp.boilingPoint),
        #(ilxtr.knownDifferentiatingPhenomena, asp.condensationPoint),
        synonyms=('distillation',),),
-    _t(i.d, 'electrophoresis technique',
+    _t(tech.electrophoresis, 'electrophoresis technique',
        #(ilxtr.hasSomething, i.d),
-       (ilxtr.constrainedByAspect, asp.size),
-       (ilxtr.constrainedByAspect, asp.charge),
-       (ilxtr.constrainedByAspect, asp.bindingAffinity),  # FIXME ... this is qualified...
+       (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.size),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.charge),
+       (ilxtr.hasParticipantPartConstrainingAspect, asp.bindingAffinity),  # FIXME ... this is qualified...
        synonyms=('electrophoresis',),),
     _t(i.d, 'centrifugation technique',
        intersectionOf(ilxtr.technique,
                       restN(hasInput, ilxtr.centrifuge)),
        intersectionOf(ilxtr.technique,
-                      restN(ilxtr.constrainedByAspect, asp.size),  # TODO hasImplicitMeasurement
-                      restN(ilxtr.constrainedByAspect, asp.shape),
-                      restN(ilxtr.constrainedByAspect, asp.density)),
+                      restN(ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
+                      restN(ilxtr.hasParticipantPartConstrainingAspect, asp.size),  # TODO hasImplicitMeasurement
+                      restN(ilxtr.hasParticipantPartConstrainingAspect, asp.shape),
+                      restN(ilxtr.hasParticipantPartConstrainingAspect, asp.density)),
        #(ilxtr.knownDifferentiatingPhenomena, asp.size),  # TODO hasImplicitMeasurement
        #(ilxtr.knownDifferentiatingPhenomena, asp.shape),
        #(ilxtr.knownDifferentiatingPhenomena, asp.density),
@@ -1553,12 +1733,27 @@ triples = (
        (hasInput, ilxtr.ultracentrifuge),
        synonyms=('ultracentrifugation',),),
 
+    _t(i.d, 'sampling technique',
+       # selection technqiue, not a separation technique
+       # it has to do with picking
+       (ilxtr.hasSomething, i.d),),
+    _t(i.d, 'selection technique',
+       (ilxtr.hasSomething, i.d),),
+    _t(i.d, 'blind selection technique',
+       (ilxtr.hasSomething, i.d),),
+    _t(i.d, 'random selection technique',
+       (ilxtr.hasSomething, i.d),),
+    _t(i.d, 'targeted selection technique',
+       (ilxtr.hasSomething, i.d),),
+
     _t(i.d, 'biological activity measurement technique',
+       (hasInput, ilxtr.physiologicalSystem),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # TODO
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),
        synonyms=('activity measurement technique', 'bioassay')),
 
     _t(i.d, 'observational technique',
+       (hasInput, ilxtr.materialEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        # non numerical? interpretational?
        (ilxtr.hasSomething, i.d),
@@ -1614,13 +1809,6 @@ triples = (
           'assigning a name to a thing so that it will be possible to provide exact provenance '
           'for how the assignment of the name was determined.')),
 
-    # actualizing  (changing the what or the where?) NO
-    _t(tech.actualizing, 'actualizing technique',
-       (ilxtr.hasPrimaryAspectActualized, ilxtr.aspect),
-       # taking action to make the value 
-       #unionOf(tech.ising, tech.allocating),
-      ),
-
     # allocating
     _t(tech.allocating, 'allocating technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),  # FIXME intrinsic extrinsic issue :/
@@ -1647,11 +1835,22 @@ triples = (
     _t(tech.measuring, 'measuring technique',
        # TODO is detection distinct from measurement if there is no explicit symbolization?
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
-       (hasParticipant, ilxtr.materialEntity #OntTerm('BFO:0000001', label='entity')
+       (hasInput, ilxtr.materialEntity #OntTerm('BFO:0000001', label='entity')
         # go with material entity since seeing data processing under measurement seems off
        ),
        synonyms=('measure', 'measurment technique'),
     ),
+
+    # actualizing
+    _t(tech.actualizing, 'actualizing technique',
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspectActualized, ilxtr.aspect)),
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.aspect)),
+       # taking action to make the value 
+       #unionOf(tech.ising, tech.allocating),
+       def_='a technique that realizes a value of some aspect',
+       equivalentClass=oECN),
 
     # probing
     _t(tech.probing, 'probing technique',  # manipulating, poking, purturbing, changing state
@@ -1739,7 +1938,23 @@ triples = (
     ),
     (tech.ephys, ilxtr.hasTempId, OntTerm('HBP_MEM:0000014')),
 
+    _t(tech.IRDIC, 'IR DIC video microscopy',
+       (hasInput, ilxtr.IRCamera),
+       (ilxtr.detects, ilxtr.infaredLight),
+       (hasInput, ilxtr.DICmicroscope),
+       (ilxtr.hasInformationOutput, ilxtr.image),
+       # TODO
+      ),
+
+    _t(i.d, 'modern in vitro slice electrophysiology',
+       (ilxtr.hasPrimaryInput, ilxtr.acuteBrainSlice),
+       (hasPart, tech.IRDIC),
+       (ilxtr.hasPrimaryAspect, asp.electrical),
+       (ilxtr.hasInformationOutput, ilxtr.timeSeries),
+      ), 
+
     _t(i.d, 'electrophysiology recording technique',
+       (hasInput, ilxtr.physiologicalSystem),
        (ilxtr.hasPrimaryAspect, asp.electrical),  # FIXME...
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        #(hasPart, tech.ephys),
@@ -1763,20 +1978,18 @@ triples = (
 
     _t(i.d, 'light microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
-
+       (ilxtr.detects, ilxtr.visibleLight),  # TODO photos?
+       (ilxtr.hasInformationOutput, ilxtr.image),
        #(ilxtr.detects, OntTerm(search='visible light', prefix='obo')),
        #(ilxtr.detects, OntTerm(search='photon', prefix='NIFSTD')),
-       (ilxtr.detects, ilxtr.visibleLight),  # TODO photos?
        #(hasParticipant, OntTerm(term='visible light')),  # FIXME !!! detects vs participant ???
        synonyms=('light microscopy',)),
-    (ilxtr.lightMicroscope, owl.equivalentClass, OntTerm('BIRNLEX:2112', label='Optical microscope')),
 
     _t(i.d, 'confocal microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
        (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('confocal microscopy',)),
-    (OntTerm('BIRNLEX:2029', label='Confocal microscope'), rdfs.subClassOf, ilxtr.microscope),
 
     _t(tech.imaging, 'imaging technique',
        (ilxtr.hasInformationOutput, ilxtr.image),
@@ -1799,7 +2012,7 @@ triples = (
        synonyms=('photography',),
     ),
 
-    _t(i.d, 'positron emission imaging',
+    _t(tech.positronEmissionImaging, 'positron emission imaging',
        (ilxtr.detects, ilxtr.positron),
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.detects, ilxtr.positron)),
@@ -1828,7 +2041,7 @@ triples = (
        synonyms=('intrinsic signal optical imaging',),
     ),
 
-    _t(i.d, 'x-ray imaging',
+    _t(ilxtr.xrayImaging, 'x-ray imaging',
        #tech.imaging,
        (ilxtr.hasInformationOutput, ilxtr.image),
        # VS contrast in the primary aspect being the signal created by the xrays...
@@ -1922,16 +2135,23 @@ triples = (
 
     _t(i.d, 'electroencephalography',
        (ilxtr.hasSomething, i.b),
+       (ilxtr.hasPrimaryAspect, asp.electrical),
+       (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),  # FIXME uberon part of should work for this?
+       (ilxtr.hasInformationOutput, ilxtr.timeSeries),
        synonyms=('EEG',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000011")),
 
     _t(i.d, 'magnetoencephalography',
        (ilxtr.hasSomething, i.b),
+       (hasInput, ilxtr.materialEntity),
+       (ilxtr.hasPrimaryAspect, asp.magnetic),
+       (ilxtr.hasInformationOutput, ilxtr.timeSeries),
        synonyms=('MEG',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000012")),
        
     # modification techniques
     _t(i.d, 'modification technique',
+       # FIXME TODO
        (ilxtr.hasPrimaryAspect, asp.isClassifiedAs),
        # is classified as
        synonyms=('state creation technique', 'state induction technique')
@@ -1970,7 +2190,9 @@ triples = (
     ),
 
     _t(i.d, 'ttx bath application technique',
-        (hasInput, OntTerm('CHEBI:9506')),
+       (hasParticipant, ilxtr.bathSolution),
+       (ilxtr.hasPrimaryAspectActualized, asp.location),  # in bath?
+       (ilxtr.hasPrimaryInput, OntTerm('CHEBI:9506')),
       ),
 
     _t(i.d, 'photoactivation technique',
@@ -2049,17 +2271,19 @@ triples = (
     ),
 
     _t(i.d, 'lesioning technique',
-       #(hasPart, tech.surgical),  # is this tru
+       (hasPart, tech.surgical),  # is this true
        # has intention to destory some subset of the nervous system
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(i.d, 'sensory deprivation technique',
+       (ilxtr.hasPrimaryAspect, asp.sensory),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (ilxtr.hasSomething, i.d),
     ),
 
     _t(i.d, 'transection technique',
+       (hasPart, tech.surgical),
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -2115,7 +2339,7 @@ triples = (
     ),
 
     _t(tech.cutting, 'cutting technique',
-       (ilxtr.hasInput, ilxtr.cuttingTool),
+       (hasInput, ilxtr.cuttingTool),
        # TODO
       ),
 
@@ -2259,7 +2483,7 @@ triples = (
                   #restrictionN(ilxtr.primaryParticipantIn,
                                #tech.sectioning)),
             #restrictionN(ilxtr.hasAssessedAspect,
-            #restN(ilxtr.constrainedByAspect, asp.flatness)))),
+            #restN(ilxtr.hasConstrainingAspect, asp.flatness)))),
                         #intersectionOf(
                         # hasAssessedAspect better than hasAspect?
                         # implies there is another technique...
@@ -2300,7 +2524,10 @@ triples = (
     _t(i.d, 'array tomographic technique',
        (hasPart, tech.microscopy),
        #(hasParticipant, ilxtr.microscope),  # FIXME more precisely?
-       (ilxtr.isConstrainedBy, ilxtr.radonTransform),
+       (hasPart, tech.tomography),
+       #(ilxtr.hasInformationInput, ilxtr.image),
+       #(ilxtr.hasInformationOutput, ilxtr.image),
+       #(ilxtr.isConstrainedBy, ilxtr.radonTransform),
        synonyms=('array tomography', 'array tomography technique')
     ),
 
@@ -2308,8 +2535,14 @@ triples = (
        (hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
        (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
        (ilxtr.hasInformationOutput, ilxtr.image),
+       # hasProbe ilxtr.electron and some focusing elements and detects ilxtr.electron
        synonyms=('electron microscopy',)),
     (tech.electronMicroscopy, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
+
+    _t(i.d, 'electron tomography technique',
+       (hasPart, tech.electronMicroscopy),
+       (hasPart, tech.tomography),
+      ),
 
     _t(i.d, 'correlative light-electron microscopy technique',
        #(hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope')),
@@ -2323,6 +2556,7 @@ triples = (
     _t(i.d, 'serial blockface electron microscopy technique',
        (hasPart, tech.electronMicroscopy),
        (hasPart, tech.ultramicrotomy),
+       (hasInput, ilxtr.serialBlockfaceUltraMicrotome),
        #(hasParticipant, OntTerm('BIRNLEX:2041', label='Electron microscope')),
        #(hasParticipant, ilxtr.ultramicrotome),
        synonyms=('serial blockface electron microscopy',)
@@ -2336,17 +2570,37 @@ triples = (
     ),
 
     _t(i.d, 'northern blotting technique',
-       (ilxtr.hasSomething, i.d),
+       (hasPart, tech.electrophoresis),
+       # fixme knownDetectedPhenomena?
+       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
+       (ilxtr.hasProbe, ilxtr.hybridizationProbe),  # has part some probe addition?
+       (ilxtr.hasPrimaryAspect, asp.sequence),
        synonyms=('northern blot',)
     ),
-    _t(i.d, 'southern blotting technique',
-       (ilxtr.hasSomething, i.d),
-       synonyms=('southern blot',)
+    _t(i.d, 'Southern blotting technique',
+       (hasPart, tech.electrophoresis),
+       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:16991', term='DNA')),
+       (ilxtr.hasProbe, ilxtr.hybridizationProbe),
+       (ilxtr.hasPrimaryAspect, asp.sequence),
+       synonyms=('Southern blot',)
     ),
     _t(i.d, 'western blotting technique',
+       # FIXME dissociated
+       (hasPart, tech.electrophoresis),
        (ilxtr.hasPrimaryParticipant, OntTerm('PR:000000001', label='protein')),  # at least one
-       (hasInput, OntTerm('BIRNLEX:2110', label='Antibody')),
-       synonyms=('wester blot',)),
+       (ilxtr.hasProbe, OntTerm('BIRNLEX:2110', label='Antibody')),
+       # FIXME is this really a probes in the way that say, an xray is a probe? I think yes
+       # they create the contrast that will later be detected
+       (ilxtr.hasPrimaryAspect, asp.epitopePresent),  # in sufficient quantity?
+       # epitope is in theory more physical, but since we don't understand the mechanism
+       # we don't really know what the antibody is 'measuring' about the epitope
+       # to deal with this we make it a binary aspect and use the intentional nature of
+       # has primary aspect to deal with false negatives
+       # false negative is a failure with respect to a binary aspect intention caused by
+       # a report of false when the omega measure implementation of the aspect on the
+       # black box evaluates to true
+       synonyms=('wester blot',
+                 'protein immunoblot',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000112")),
 
     _t(i.d, 'intracellular electrophysiology technique',
@@ -2436,11 +2690,7 @@ triples = (
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000203')),
 
-    _t(i.d, ' technique',
-       (ilxtr.hasSomething, i.d),
-    ),
-
-    _t(i.d, ' technique',
+    _t(i.d, ' blank technique',
        (ilxtr.hasSomething, i.d),
     ),
 )
@@ -2541,6 +2791,7 @@ for ki, vi in data.items():
 
         intersection[ki,kj].update(vi & vj)
 
+#assert not any(intersection.values()), f'duplicate namespace issue {intersection!r}'
 #from IPython import embed
 #embed()
 
@@ -2589,7 +2840,26 @@ def expand(_makeGraph, *graphs, debug=False):
     #g.write()
     displayGraph(graph, debug=debug)
 
+def forComparison():
+
+    obo, *_ = makeNamespaces('obo')
+    filename = 'methods-external-test-bridge'
+    imports = obo['obi.owl'], obo['ero.owl'], URIRef('http://www.ebi.ac.uk/efo/efo.owl')  # OEN, CNO
+    comment = 'Bridge for querying against established methods related ontologies.'
+    _repo = True
+    debug = False
+
+    triples = tuple()
+
+    methods_helper = simpleOnt(filename=filename,
+                               #prefixes=prefixes,
+                               imports=imports,
+                               triples=triples,
+                               comment=comment,
+                               _repo=_repo)
+
 def main():
+    forComparison()
     displayGraph(methods.graph, debug=debug)
     mc = methods.graph.__class__()
     #mc.add(t) for t in methods_core.graph if t[0] not in

@@ -161,9 +161,10 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes, partOf,
+ realizes, partOf, participatesIn, locatedIn,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
-             'hasInput', 'hasOutput', 'realizes', 'partOf',
+             'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
+             'locatedIn',
             )
 
 # common funcs
@@ -809,10 +810,24 @@ class UnionOf(PredicateList):
 
 unionOf = UnionOf()
 
+
 class PropertyChainAxiom(PredicateList):
     predicate = owl.propertyChainAxiom
 
 propertyChainAxiom = PropertyChainAxiom()
+
+
+class OneOf(PredicateList):
+    predicate = owl.oneOf
+
+oneOf = OneOf()
+
+
+class DisjointUnionOf(PredicateList):
+    predicate = owl.disjointUnionOf
+
+disjointUnionOf = OneOf()
+
 
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of

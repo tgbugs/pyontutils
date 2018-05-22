@@ -2,16 +2,18 @@ from IPython import embed
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator
+from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator, Restriction2, EquivalentClass
 from pyontutils.core import restriction, restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
+from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces, participatesIn, partOf, intersectionOf
 from pyontutils.core import owl, rdf, rdfs
 
+restN = Restriction2(None, owl.onProperty, owl.someValuesFrom)
 restG = POCombinator(rdf.type, owl.Restriction).full_combinator
 axiom = POCombinator(rdf.type, owl.Axiom)
 blankc = POCombinator
 equivalentClassC = POCombinator(owl.equivalentClass, ObjectCombinator).full_combinator
+oECN = EquivalentClass(None)
 owlClass = oc_
 owlClassC = oc_.full_combinator
 subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator).full_combinator
@@ -172,6 +174,15 @@ triples = (
     (ilxtr.hasProbe, rdfs.domain, ilxtr.technique),
     (ilxtr.hasProbe, rdfs.range, ilxtr.materialEntity),
 
+    #oop(ilxtr.hasEnergyProbe, ilxtr.hasProbe),
+    # photon
+    # electron
+    # neutron
+    # atomic nucleus
+    # usually they leave
+    # non addative probe, may modify, but unlikely to add
+    #oop(ilxtr.hasMaterialProbe, ilxtr.hasProbe),
+
     oop(ilxtr.hasPrimaryParticipant, hasParticipant),
     olit(ilxtr.hasPrimaryParticipant, rdfs.label, 'has primary participant'),
     olit(ilxtr.hasPrimaryParticipant, definition, 'The relationship between a process and its primary participant.'),
@@ -193,7 +204,7 @@ triples = (
     # posterior or knowledge based participants that define techniques
     # often they would be part of the actual primary input
     # FIXME aspect vs participant ...
-    # FIXME vs constrainedByAspect
+    # FIXME vs hasConstrainingAspect
     oop(ilxtr.knownDetectedPhenomena, hasParticipant),
     oop(ilxtr.knownProbedPhenomena, hasParticipant),
     oop(ilxtr.knownDifferentiatingPhenomena, ilxtr.hasAspect),
@@ -235,18 +246,29 @@ triples = (
     (ilxtr.techniqueHasAspect, rdfs.range, ilxtr.aspect),
 
     oop(ilxtr.hasConstrainingAspect, ilxtr.techniqueHasAspect),  # TODO
+    oop_(ilxtr.hasConstrainingAspect,
+         # TODO isConstrainedBy some value on that particular aspect
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasAspect)),
     olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
     olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
          'has constraining primary participant aspect',
          'constrained by aspect'),
-    olit(ilxtr.constrainedByAspect, definition,
+    olit(ilxtr.hasConstrainingAspect, definition,
          # these are definitional to the technique so they are not intentions
          # they must be achieved prior in time to the execution of the technique
          # FIXME is this true? what if you mess up the measurement?
          ('The relationship between a technique and an aspect of the primary '
           'participant that is constrained as part of a technique.')),
 
+    oop(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.techniqueHasAspect),
+    oop_(ilxtr.hasParticipantPartConstrainingAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect),
+         # subprocesses have no executor
+         propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasConstrainingAspect)),
+
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
+    oop_(ilxtr.hasPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasMainAspect)),
     (ilxtr.hasPrimaryAspect, rdfs.subPropertyOf, ilxtr.techniqueHasAspect),
     olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
@@ -274,6 +296,46 @@ triples = (
     # redundant with hasPrimaryAspect, cannot be disjoint with actualized
     # because all actualization techniques are also measurement techniques
 
+    oop(ilxtr.hasParentPrimaryAspect, ilxtr.techniqueHasAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParentPrimaryAspect,
+         propertyChainAxiom(partOf, ilxtr.hasPrimaryParticipant, ilxtr.hasAspect)),
+
+    oop(ilxtr.hasParticipantPartPrimaryAspect, ilxtr.techniqueHasAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParticipantPartPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect)),
+
+    oop(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.hasParticipantPartPrimaryAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParticipantPartPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect),
+         # subprocesses have no executor
+         propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasPrimaryAspect)),
+
+    oop(ilxtr.hasSubProcess, hasPart),  # TODO see if we really need this
+    oop(ilxtr.hasPartPart, hasPart),
+    oop_(ilxtr.hasPartPart,
+         # invariance to whether the primary participant or
+         # the technique itself is the first down the partonomy
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart,
+                            ilxtr.primaryParticipantIn),#, partOf),  # self
+         propertyChainAxiom(hasPart, ilxtr.hasPrimaryParticipant,
+                            ilxtr.primaryParticipantIn),
+                            #partOf, ilxtr.primaryParticipantIn)  # self
+        ),
+    oop(ilxtr.hasPartNotPart, hasPart),
+    oop_(ilxtr.hasPartNotPart,
+         propertyChainAxiom(hasPart, ilxtr.hasPrimaryParticipant, ilxtr.primaryParticipantIn)),
+    (ilxtr.hasPartPart, owl.propertyDisjointWith, ilxtr.hasPartNotPart),
+
+    oop(ilxtr.hasPartAspectInvariant, ilxtr.techniqueHasAspect),
+    oop_(ilxtr.hasPartAspectInvariant,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasAspect),
+         # FIXME need a notion of union of the aspects of the parts...
+         # so that the output value when measuring the aspect includes
+         # that aspect as bound to all the parts
+         propertyChainAxiom(hasPart, ilxtr.hasConstrainingAspect)),
 
     oop(ilxtr.hasPrimaryAspect_dAdS, ilxtr.hasIntention),
     olit(ilxtr.hasPrimaryAspect_dAdS, rdfs.label,
@@ -340,7 +402,8 @@ triples = (
     oop(ilxtr.aspectOf, RO['0000080']),
     (ilxtr.aspectOf, owl.inverseOf, ilxtr.hasAspect),
 
-    #oop(ilxtr.),
+    oop(ilxtr.hasMainAspect, ilxtr.hasAspect),
+
     #oop(ilxtr.),
     #oop(ilxtr.),
 
@@ -363,8 +426,33 @@ triples = (
 
     oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
+    olit(ilxtr.aspect, definition,
+         'An aspect is a measurable quantity or quality of a thing. '
+         'Aspects must be able to act as a function that is dependent '
+         'only on a measurement device and the thing to which the aspect '
+         'is bound. This is to say that aspects require a notion of locality. '),
     olit(ilxtr.aspect, rdfs.comment,
-         'PATO has good coverage of many of these aspects though their naming is not alway consistent.'),
+         'To illustrate with an example. The location of a thing cannot be an '
+         'aspect of that thing because location requires knowing the spatial '
+         'realtionship between that thing any measurement device. Said in yet '
+         'another way, (measure thing location) -> here for all values of thing. '
+         'Aspects all assume an inertial reference frame centered on their named inputs. '
+         'Location thus can only ever be computed on some part of a larger named system.'
+         'Therefore, in order to accomodate measurements on composite beings such as '
+         'the number of geese in a flock or the location of a missing set of keys possibly '
+         'in the house, we split aspects into signular and composite. The composite are '
+         'indeed aspects of a single nameable thing, but they make measurements on or '
+         'between parts of that thing. The simplest version is nearly always named thing '
+         'plus implied complement of that thing. Note also that the number of geese in a '
+         'flock is different from the number of things in existence that are geese by the '
+         'isness aspect. The asp/isness/count can be determined entirely locally because '
+         'the definition of what a goose is is independent of time and place (where and when). '
+         'Time dependent or place dependent definitions of geese (such as in the game of '
+         'duck duck goose) require additional information and thus are not what/singular aspects.'
+        ),
+    olit(ilxtr.aspect, rdfs.comment,
+         'PATO has good coverage of many of these aspects though their naming is '
+         'not alway consistent. And their definition is perhaps overly broad.'),
     olit(ilxtr.aspect, NIFRID.synonym,
          'measureable',
          'measureable aspect'),
@@ -382,6 +470,15 @@ triples = (
     # says that for certain inputs the aspect cannot return a
     # meaningful (correctly typed non null) value
 
+    oc(asp.Local, ilxtr.aspect),  # aka unqualified or does not need qualification
+    olit(asp.Local, definition,
+         'aspect of thing that is invariant to context'),
+    oc(asp.nonLocal, ilxtr.aspect),  # qualified
+    # binding a nonLocal aspect to a single entity will
+    # lead to construction of a context
+    olit(asp.nonLocal, definition,
+       'aspect of thing that varies depending on context'),
+
     ## technique
     oc(BFO['0000015']),
     olit(BFO['0000015'], rdfs.label, 'process'),
@@ -393,8 +490,26 @@ triples = (
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
+    oc_(ilxtr.technique,
+        restriction(ilxtr.hasExecutor, ilxtr.executor)),
 
-    oc_(ilxtr.technique, restriction(ilxtr.hasExecutor, ilxtr.executor)),
+    oc_(rdflib.BNode(),
+        oECN(intersectionOf(ilxtr.technique,
+                            restN(hasParticipant,
+                                  restN(ilxtr.hasAspect, asp.nonLocal)))),
+        intersectionOf(ilxtr.technique,
+                       restN(ilxtr.hasAspectContext, ilxtr.context)),
+       ),
+
+    oc_(rdflib.BNode(),
+        oECN(intersectionOf(ilxtr.materialEntity,
+                            restN(ilxtr.hasAspect, asp.nonLocal))),
+        #restN(ilxtr.hasContext, ),
+        # this works because immaterial entities have to be anchored to some
+        # internal frame which requires something with inertia which requires
+        # a meterial entity...
+        restriction(partOf, ilxtr.compositeMaterialEntity),
+       ),
     #_t(tech.test, 'test test test',
        #(ilxtr.hasPrimaryParticipant, ilxtr.thingA),
        #(ilxtr.hasPrimaryParticipant, ilxtr.thingB)),
