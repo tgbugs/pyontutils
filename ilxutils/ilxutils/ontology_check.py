@@ -1,8 +1,10 @@
 import json
+
 from sqlalchemy import create_engine, inspect, Table, Column
 import pandas as pd
 from ilxutils.args_reader import read_args
-from ilxutils.scicrunch_client import scicrunch
+from ilxutils.scicrunch_client import scicrunch'
+from ilxutils.mydifflib import diffcolor, diff, ratio
 import sys
 import time
 from ilxutils.interlex_sql import interlex_sql
@@ -139,13 +141,13 @@ class ontology_check():
     def __init__(self, ontology, column_to_hash, sql):
         self.ontoname = p(ontology).stem
         self.onto = local_ttl2pd(ontology)
-        self.ontohash = df2hash(self.onto[self.onto[column_to_hash].notnull()], column_to_hash)
+        self.ontohash = df2hash(self.onto[self.onto[column_to_hash].notnull()], column_to_hash) # hashes index to column
         self.ex = sql.get_existing_ids()
         self.ilxdiffdata = self.ilxdiff()
 
     def ilxdiff(self):
         data = []
-        if not onto_prefix.get(self.ontoname):
+        if not onto_prefix.get(self.ontoname): #dont have iri prefix
             ex = self.ex
         else:
             ex = self.ex[self.ex.iri.str.contains(onto_prefix[self.ontoname])] #sign cuts time if you have iri prefix of the onto
@@ -159,8 +161,7 @@ class ontology_check():
                     if self.ontohash.get(label):
                         if row.iri != self.ontohash.get(label):
                             local_data.update({'onto_uri_from_ilx_label':self.ontohash.get(label)})
-                    if row.iri in toms_repeats:
-                        local_data.update({'repeating_in_ilx':True}) #FIXME
+                    if row.iri in toms_repeats: local_data.update({'repeating_in_ilx':True}) #FIXME
             if local_data:
                 data.append(local_data)
         cj(data, '../Ontology_Checks/'+self.ontoname+'-fix')

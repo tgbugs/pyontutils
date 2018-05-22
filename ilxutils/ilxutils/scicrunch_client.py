@@ -55,11 +55,11 @@ class scicrunch():
                 output={int(output['id']):output} #terms
             except:
                 output={int(output[0]['tid']):output} #annotations
-
             outputs.update(output)
         return outputs
 
-    def crawl_post(self, total_data, _print):
+    def crawl_post(self, total_data, _print, debug):
+        outputs = []
         for i, tupdata in enumerate(total_data):
             url, data = tupdata
             params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
@@ -70,16 +70,21 @@ class scicrunch():
             if req.raise_for_status():
                 print(data); sys.exit(req.text)
             try:
-                output = req.json()['data']
+                output = req.json()
             except:
                 print(req.text); sys.exit('Could not convert to json')
-            if output.get('errormsg'):
-                print(data); sys.exit(output['errormsg'])
+            if output['data'].get('errormsg'):
+                print(data); sys.exit(output['data']['errormsg'])
+            if debug:
+                return [output]
+            output = output['data']
             if _print:
                 try:
                     print(i, output['label'])
                 except:
                     print(i, output['id'])
+            outputs.append(output)
+        return outputs
 
     def get(self, urls, LIMIT=50, action='Getting Info', _print=True, crawl=False, debug=False):
         if crawl:
@@ -124,7 +129,7 @@ class scicrunch():
 
     def post(self, data, LIMIT=50, action='Pushing Info', _print=True, crawl=False, debug=False):
         if crawl:
-            return self.crawl_post(data, _print=_print)
+            return self.crawl_post(data, _print=_print, debug=debug)
 
         async def post_single(url, data, session, i):
             params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
@@ -272,7 +277,7 @@ class scicrunch():
 
     def deleteAnnotations(self, annotation_ids, LIMIT=50,  _print=True, crawl=False, debug=False):
         """data = list of tids"""
-        url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id; thx past troy!
+        url_base = self.base_path + '/api/1/term/edit-annotation/{annotation_id}' # id of annotation not term id; thx past troy!
         annotations = self.getAnnotations_via_id(annotation_ids,  _print=_print, crawl=crawl)
         annotations_to_delete = []
         for annotation_id in annotation_ids:
@@ -284,15 +289,13 @@ class scicrunch():
                 'term_version':'1',
                 'annotation_term_version':'1',
             }
-            url = url_base.format(id=annotation_id)
+            url = url_base.format(annotation_id=annotation_id)
             annotation.update({**params})
             annotations_to_delete.append((url, annotation))
         self.post(annotations_to_delete, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
-    def addRelationship(self, data, HELP=False, LIMIT=50):
-        if HELP:
-            sys.exit('data = [{"term_1_id", "term_2_id", "relationship_tid"}]')
-
+    def addRelationship(self, data, HELP=False, LIMIT=50,  _print=True, crawl=False, debug=False):
+        """data = [{"term_1_id", "term_2_id", "relationship_tid"}]"""
         url_base = self.base_path + '/api/1/term/add-relationship'
         relationships = []
         for relationship in data:
@@ -302,20 +305,13 @@ class scicrunch():
                 'relationship_term_version':'1'
             })
             relationships.append((url_base, relationship))
-        self.post(relationships, LIMIT=LIMIT, action='Adding Relationships')
+        return self.post(relationships, LIMIT=LIMIT, action='Adding Relationships', _print=True, crawl=False, debug=False)
 
-    def deleteTerms(self, ilx_ids, HELP=False, LIMIT=50):
-        if HELP:
-            sys.exit('ilx_ids = list of interlex ids.')
-
+    def deleteTerms(self, ilx_ids, LIMIT=50, _print=True, crawl=True):
+        """ilx_ids = list of interlex ids."""
         url = self.base_path + '/api/1/term/elastic/delete/{ilx_id}?key=' + self.key
-        urls = [url.format(ilx_id=ilx_id) for ilx_id in ilx_ids]
-        for url in urls:
-            req = r.post(url)
-            if not req.raise_for_status():
-                print(req.json())
-            else:
-                sys.exit(url + ' -> ' + str(req.status_code))
+        data = [(url.format(ilx_id=str(ilx_id)), {}) for ilx_id in ilx_ids]
+        return self.post(data, LIMIT=LIMIT,  _print=_print, crawl=crawl)
 
 def main():
     #args = read_args(api_key= p.home() / 'keys/beta_api_scicrunch_key.txt', db_url= p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
@@ -359,9 +355,9 @@ def main():
     #print(terms)
     #json.dump(terms, open('../elastic_testing.json', 'w'), indent=4)
     #sci.deleteAnnotations([annotations_to_delete[0]], crawl=True)
-    sci.updateAnnotations([{'id':2109347, 'tid':265034, 'annotation_tid':15074, 'value':'my_test'}], crawl=True)
-    output = sci.getAnnotations_via_id([2109347], crawl=True)
-    print(output)
+    sci.deleteAnnotations(annotations_to_delete)
+    #output = sci.getAnnotations_via_id([2109347], crawl=True)
+    #print(output)
 
 if __name__ == '__main__':
     main()
