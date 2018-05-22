@@ -37,16 +37,19 @@ import pandas as pd
 import sys
 
 VERSION = '0.3'
-BETA = 'https://test2.scicrunch.org'
-#BETA = 'https://beta.scicrunch.org'
+#BETA = 'https://test2.scicrunch.org'
+BETA = 'https://beta.scicrunch.org'
 #BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
 
 
 def myopen(path):
-    return open(path, 'r').read().strip()
-
+    with open(path, 'r') as infile:
+        file = infile.read().strip()
+    infile.close()
+    return file
+    
 def test(args):
     if args.api_key:
         url = args.base_path + '/api/1/term/view/10?key=' + args.api_key

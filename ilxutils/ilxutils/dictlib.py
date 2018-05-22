@@ -68,7 +68,6 @@ def merge(new, old):
                         old['synonyms'].append(vals)
             else:
                 old['synonyms'].append(new['synonyms'])
-            print(old['synonyms'])
 
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
@@ -102,7 +101,6 @@ def merge(new, old):
                     pass #for sanity readability
                 else:
                     sys.exit('Something broke while merging in existing_ids')
-            #print(old['existing_ids'])
             '''
             take out repeats
             '''
@@ -118,9 +116,10 @@ def merge(new, old):
         elif k in ['definition', 'superclasses', 'id', 'type', 'comment']:
             old[k] = vals
 
-        else:
-            print(old)
-            sys.exit('Value: ' + str(k) + " doesn't exist in ilx keys")
+        #may be overkill
+        #else:
+        #    print('OLD -> ', old)
+        #    sys.exit('Value: ' + str(k) + " doesn't exist in ilx keys")
 
     return old
 

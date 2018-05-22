@@ -6,7 +6,6 @@ import numpy as np
 import asyncio
 import sys
 import math as m
-import progressbar
 from aiohttp import ClientSession, TCPConnector, BasicAuth
 from ilxutils.args_reader import read_args
 from collections import defaultdict, namedtuple
@@ -37,10 +36,6 @@ class scicrunch():
         self.auth = BasicAuth(auth)
         self.sql = interlex_sql(db_url=db_url)
 
-    def createBar(self, maxval):
-        return progressbar.ProgressBar(maxval=maxval, \
-            widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-
     def crawl_get(self, urls):
         outputs = {}
         for url in urls:
@@ -64,13 +59,12 @@ class scicrunch():
             outputs.update(output)
         return outputs
 
-    def crawl_post(self, total_data):
+    def crawl_post(self, total_data, _print):
         for i, tupdata in enumerate(total_data):
             url, data = tupdata
             params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
             auth = ('scicrunch', 'perl22(query)') # needed for test2.scicrunch.org
             headers = {'Content-type': 'application/json'}
-            print(params)
             req = r.post(url, data=json.dumps(params), headers=headers, auth=auth)
 
             if req.raise_for_status():
@@ -81,12 +75,13 @@ class scicrunch():
                 print(req.text); sys.exit('Could not convert to json')
             if output.get('errormsg'):
                 print(data); sys.exit(output['errormsg'])
-            try:
-                print(i, output['label'])
-            except:
-                print(i, output['id'])
+            if _print:
+                try:
+                    print(i, output['label'])
+                except:
+                    print(i, output['id'])
 
-    def get(self, urls, LIMIT=50, action='Getting Info', _print=True, crawl=False):
+    def get(self, urls, LIMIT=50, action='Getting Info', _print=True, crawl=False, debug=False):
         if crawl:
             return self.crawl_get(urls)
 
@@ -100,6 +95,8 @@ class scicrunch():
                     problem = str(output)
                     sys.exit(str(problem)+' with status code ['+str(response.status)+']')
                 output = await response.json()
+                if debug:
+                    return output
                 try:
                     try:
                         output={int(output['data']['id']):output['data']} #terms
@@ -114,12 +111,9 @@ class scicrunch():
             tasks = []
             auth = BasicAuth('scicrunch', 'perl22(query)')
             async with ClientSession(connector=connector, loop=loop, auth=auth) as session:
-                bar = self.createBar(len(urls)); bar.start()
                 for i, url in enumerate(urls):
                     task = asyncio.ensure_future(get_single(url, session, auth))
                     tasks.append(task)
-                    bar.update(i)
-                bar.finish()
                 return (await asyncio.gather(*tasks))
 
         connector = TCPConnector(limit=LIMIT) # rate limiter; should be between 20 and 80; 100 maxed out server
@@ -128,9 +122,9 @@ class scicrunch():
         outputs = loop.run_until_complete(future) # loop until done
         return {k:v for keyval in outputs for k, v in keyval.items()}
 
-    def post(self, data, LIMIT=50, action='Pushing Info', _print=True, crawl=False):
+    def post(self, data, LIMIT=50, action='Pushing Info', _print=True, crawl=False, debug=False):
         if crawl:
-            return self.crawl_post(data)
+            return self.crawl_post(data, _print=_print)
 
         async def post_single(url, data, session, i):
             params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
@@ -154,6 +148,8 @@ class scicrunch():
                     problem = str(output)
                     sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
                 output = await response.json()
+                if debug:
+                    return output
                 if _print:
                     try:
                         print(i, output['data']['label'])
@@ -167,13 +163,10 @@ class scicrunch():
             async with ClientSession(connector=connector, loop=loop, auth=auth) as session:
                 if _print:
                     print('=== {0} ==='.format(action))
-                    bar = self.createBar(len(total_data)); bar.start()
                 for i, tupdata in enumerate(total_data):
                     url, data = tupdata
                     task = asyncio.ensure_future(post_single(url, data, session, i)) #FIXME had to copy to give new address
                     tasks.append(task)
-                    if _print: bar.update(i)
-                if _print: bar.finish()
                 return (await asyncio.gather(*tasks))
 
         connector = TCPConnector(limit=LIMIT) # rate limiter; should be between 20 and 80; 100 maxed out server
@@ -182,18 +175,14 @@ class scicrunch():
         outputs = loop.run_until_complete(future) # loop until done
         return outputs
 
-    def identifierSearches(self, ids=None, HELP=False, LIMIT=50, _print=True):
-        if HELP:
-            sys.exit('parameters( data = "list of term_ids" )')
+    def identifierSearches(self, ids=None, LIMIT=50, _print=True, crawl=False, debug=False):
+        """parameters( data = "list of term_ids" )"""
+        url_base = self.base_path + '/api/1/term/view/{id}' + '?key=' + self.key
+        urls = [url_base.format(id=str(_id)) for _id in ids]
+        return self.get(urls=urls, LIMIT=LIMIT, action='Searching For Terms', _print=_print, debug=debug)
 
-        url_base = self.base_path + '/api/1/term/view/{0}' + '?key=' + self.key
-        urls = [url_base.format(str(tid)) for tid in ids]
-        term_data = self.get(urls=urls, LIMIT=LIMIT, action='Searching For Terms', _print=_print)
-        return term_data
-
-    def updateTerms(self, data, HELP=False, LIMIT=50, sql=False, _print=True):
-        if HELP:
-            sys.exit('''
+    def updateTerms(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
+        """
             need:
                     term           <str>
             options:
@@ -202,31 +191,19 @@ class scicrunch():
                     type            term, cde, anntation, or relationship <str>
                     synonym         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
-            ''')
-
-        #label_to_id = self.sql.get_labels_to_ids_dict()
-        #for d in data:
-        #    if not d.get('id'):
-        #        d['id'] = label_to_id[d['label'].lower().strip()]
-
-        if sql:
-            old_data = dictlib.fill_data(data, self.sql)
-        else:
-            old_data = self.identifierSearches([d['id'] for d in data])
-        #print('old', old_data, '\n', 'end')
-
-        url_base = self.base_path + '/api/1/term/edit/{0}'
+        """
+        old_data = self.identifierSearches([d['id'] for d in data], _print=_print, crawl=crawl)
+        url_base = self.base_path + '/api/1/term/edit/{id}'
         merged_data = []
         for d in data:
-            url = url_base.format(str(d['id']))
+            url = url_base.format(id=str(d['id']))
             merged = dictlib.merge(new=d, old=old_data[int(d['id'])])
             merged = dictlib.superclasses_bug_fix(merged) #BUG
             merged_data.append((url, merged))
-        return self.post(merged_data, LIMIT=LIMIT, action='Updating Terms', _print=_print)
+        return self.post(merged_data, LIMIT=LIMIT, action='Updating Terms', _print=_print, crawl=crawl, debug=debug)
 
-    def addTerms(self, data, HELP=False, LIMIT=50, sql=False, _print=True):
-        if HELP:
-            sys.exit('''
+    def addTerms(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
+        """
             need:
                     term           <str>
             options:
@@ -235,18 +212,16 @@ class scicrunch():
                     type            term, cde, anntation, or relationship <str>
                     synonym         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
-            ''')
-
+        """
         url_base = self.base_path + '/api/1/ilx/add'
         terms = []
         for d in data:
             terms.append((url_base, d))
-        ilx = self.post(terms, LIMIT=LIMIT, _print=_print)
+        ilx = self.post(terms, action='Priming Terms', LIMIT=LIMIT, _print=_print, crawl=crawl)
         ilx = {d['term']:d for d in ilx}
 
         url_base = self.base_path + '/api/1/term/add'
         terms = []
-
         for d in data:
             d['label'] = d.pop('term')
             d = dictlib.superclasses_bug_fix(d)
@@ -256,12 +231,10 @@ class scicrunch():
                 d.update({'ilx':ilx[d['label']]['fragment']})
             terms.append((url_base, d))
 
-        return self.post(terms, LIMIT=LIMIT, action='Adding Terms', _print=_print)
+        return self.post(terms, action='Adding Terms', LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
-    def addAnnotations(self, data, HELP=False, LIMIT=50, sql=False):
-        if HELP:
-            sys.exit("{'tid':'', 'annotation_tid':'', 'value':''}")
-
+    def addAnnotations(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
+        """{'tid':'', 'annotation_tid':'', 'value':''}"""
         url_base = self.base_path + '/api/1/term/add-annotation'
         annotations = []
         for annotation in data:
@@ -271,85 +244,50 @@ class scicrunch():
                 'batch-elastic':'True',
             })
             annotations.append((url_base, annotation))
-        self.post(annotations, LIMIT=LIMIT, action='Adding Annotations')
+        return self.post(annotations, LIMIT=LIMIT, action='Adding Annotations', _print=_print, crawl=crawl, debug=debug)
 
-    def getAnnotations_via_tid(self, tids, HELP=False, LIMIT=50, crawl=False):
-        if HELP:
-            sys.exit('tids = list of strings or ints that are the ids of the terms that possess the annoations')
-
+    def getAnnotations_via_tid(self, tids, LIMIT=50, _print=True, crawl=False, debug=False):
+        """tids = list of strings or ints that are the ids of the terms that possess the annoations"""
         url_base = self.base_path + '/api/1/term/get-annotations/{tid}?key=' + self.key
         urls = [url_base.format(tid=str(tid)) for tid in tids]
-        if crawl:
-            return self.crawl_get(urls)
-        else:
-            return self.get(urls, LIMIT=LIMIT)
+        return self.get(urls, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
-    def getAnnotations_via_id(self, annotation_ids, HELP=False, LIMIT=50, crawl=False):
-        if HELP:
-            sys.exit('tids = list of strings or ints that are the ids of the annotations themselves')
-
+    def getAnnotations_via_id(self, annotation_ids, LIMIT=50, _print=True, crawl=False, debug=False):
+        """tids = list of strings or ints that are the ids of the annotations themselves"""
         url_base = self.base_path + '/api/1/term/get-annotation/{id}?key=' + self.key
         urls = [url_base.format(id=str(annotation_id)) for annotation_id in annotation_ids]
-        if crawl:
-            return self.crawl_get(urls)
-        else:
-            return self.get(urls)
+        return self.get(urls, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
-    def updateAnntationValues(self, data, HELP=False, LIMIT=50):
-        if HELP:
-            sys.exit('data = list of dict {"tid","annotation_tid","value"}')
-
-        url_base = self.base_path + '/api/1/term/edit-annotation/{0}' # id of annotation not term id
-        term_annotations = self.getAnnotations([d['tid'] for d in data])
-
+    def updateAnnotations(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
+        """data = list of dict {"tid","annotation_tid","value"}"""
+        url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id
+        annotations = self.getAnnotations_via_id([d['id'] for d in data], _print=_print, crawl=crawl)
         annotations_to_update = []
         for d in data:
-            for annotation in term_annotations[d['tid']]:
-                if str(annotation['annotation_tid']) == str(d['annotation_tid']):
-                    annotation['value'] = d['value']
-                    url = url_base.format(annotation['id'])
-                    annotations_to_update.append((url, annotation))
-        print(annotations_to_update)
-        self.post(annotations_to_update, LIMIT=LIMIT)
+            annotation = annotations[int(d['id'])]
+            annotation.update({**d})
+            url = url_base.format(id=annotation['id'])
+            annotations_to_update.append((url, annotation))
+        self.post(annotations_to_update, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
-    def updateAnntationType(self, data, HELP=False, LIMIT=50):
-        if HELP:
-            sys.exit('data = list of dict {"tid","annotation_tid","value"}')
-
-        url_base = self.base_path + '/api/1/term/edit-annotation/{0}' # id of annotation not term id
-        term_annotations = getAnnotations([d['tid'] for d in data])
-        annotations_to_update = []
-        for d in data:
-            for annotation in term_annotations[d['tid']]:
-                if annotation['value'] == d['value']:
-                    annotation['annotation_tid'] = d['annotation_tid']
-                    url = url_base.format(annotation['id'])
-                    annotations_to_update.append((url, annotation))
-
-        self.post(annotations_to_update, LIMIT=LIMIT)
-
-    def deleteAnnotations(self, annotation_ids, HELP=False, LIMIT=50, crawl=False):
-        if HELP:
-            sys.exit('data = list of tids')
-
+    def deleteAnnotations(self, annotation_ids, LIMIT=50,  _print=True, crawl=False, debug=False):
+        """data = list of tids"""
         url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id; thx past troy!
-        annotations = self.getAnnotations_via_id(annotation_ids, crawl=crawl)
-        #annotations = {list(anno)[0]:anno[list(anno)[0]] for anno in annotations} #reason for madness is to keep format of ouput from self.get
+        annotations = self.getAnnotations_via_id(annotation_ids,  _print=_print, crawl=crawl)
         annotations_to_delete = []
         for annotation_id in annotation_ids:
-            anno_dict = annotations[int(annotation_id)]
+            annotation = annotations[int(annotation_id)]
             params = {
-                    'value':'here i am', #for delete
-                    #'annotation_tid':' ', #for delete
-                    #'tid':' ', #for delete
-                    #'term_version':' ',
-                    #'annotation_term_version':' ',
+                'value':' ', #for delete
+                'annotation_tid':' ', #for delete
+                'tid':' ', #for delete
+                'term_version':'1',
+                'annotation_term_version':'1',
             }
             url = url_base.format(id=annotation_id)
-            anno_dict.update({**params})
-            #print(anno_dict)
-            annotations_to_delete.append((url, anno_dict))
-        self.post(annotations_to_delete, LIMIT=LIMIT, crawl=True)
+            annotation.update({**params})
+            annotations_to_delete.append((url, annotation))
+        self.post(annotations_to_delete, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
     def addRelationship(self, data, HELP=False, LIMIT=50):
         if HELP:
@@ -370,8 +308,8 @@ class scicrunch():
         if HELP:
             sys.exit('ilx_ids = list of interlex ids.')
 
-        url = self.base_path + '/api/1/term/elastic/delete/%s?key=' + self.key
-        urls = [url % ilx_id for ilx_id in ilx_ids]
+        url = self.base_path + '/api/1/term/elastic/delete/{ilx_id}?key=' + self.key
+        urls = [url.format(ilx_id=ilx_id) for ilx_id in ilx_ids]
         for url in urls:
             req = r.post(url)
             if not req.raise_for_status():
@@ -421,7 +359,7 @@ def main():
     #print(terms)
     #json.dump(terms, open('../elastic_testing.json', 'w'), indent=4)
     #sci.deleteAnnotations([annotations_to_delete[0]], crawl=True)
-    sci.deleteAnnotations([2109347], crawl=True)
+    sci.updateAnnotations([{'id':2109347, 'tid':265034, 'annotation_tid':15074, 'value':'my_test'}], crawl=True)
     output = sci.getAnnotations_via_id([2109347], crawl=True)
     print(output)
 
