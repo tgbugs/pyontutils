@@ -710,6 +710,8 @@ triples = (
 
     _t(tech.sequencing, 'sequencing technique',
        intersectionOf(ilxtr.technique,
+                      # FIXME for this to classify property as a molecular technique
+                      # we need a variant of kdp that is an input not just participant...
                       restrictionN(ilxtr.knownDetectedPhenomena, ilxtr.thingWithSequence),
                       restrictionN(ilxtr.hasPrimaryAspect, asp.sequence,),
                       restrictionN(ilxtr.hasInformationOutput, ilxtr.informationArtifact)),
@@ -2692,7 +2694,7 @@ triples = (
        # if viewed from the persective of the sections
        # we should be able to infer that the outputs
        # from a sectioning technique were 'created'
-       (hasPart, ilxtr.destroying),  # this is the proper way to make duals I think
+       (hasPart, tech.destroying),  # this is the proper way to make duals I think
        (ilxtr.hasPrimaryOutput, ilxtr.section),
        #(hasOutput, ilxtr.sectionsOfPrimaryInput),  # FIXME circular
        #(hasOutput,
@@ -2716,13 +2718,13 @@ triples = (
        (ilxtr.hasPrimaryOutput, ilxtr.section),
        # FIXME primary participant to be destroyed? seems like there is a comflict here...
        # the cardinality rules are not catching it?
-       (hasPart, ilxtr.destroying),  # TODO put tissue in here?
+       (hasPart, tech.destroying),  # TODO put tissue in here?
        (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000479', label='tissue')),
        synonyms=('tissue sectioning',)),
 
     _t(i.d, 'brain sectioning technique',
        (ilxtr.hasPrimaryOutput, ilxtr.section),
-       (hasPart, ilxtr.destroying),
+       (hasPart, tech.destroying),
        (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000955', label='brain')),
        synonyms=('brain sectioning',)),
 
@@ -2756,7 +2758,7 @@ triples = (
 
     _t(tech.electronMicroscopy, 'electron microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
-       (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
+       (tech.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        # hasProbe ilxtr.electron and some focusing elements and detects ilxtr.electron
