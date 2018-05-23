@@ -253,6 +253,22 @@ triples += (  # material entities
     oc(ilxtr.ultracentrifuge, ilxtr.centrifuge),
     oc(ilxtr.cuttingTool, ilxtr.materialEntity),
     oc(ilxtr.IRCamera, ilxtr.materialEntity),
+    oc(ilxtr.recordingElectrode, ilxtr.materialEntity),
+    oc(ilxtr.singleElectrode, ilxtr.recordingElectrode),
+    oc(ilxtr.multiElectrode, ilxtr.recordingElectrode),
+    oc(ilxtr.laminarProbe, ilxtr.multiElectrode),
+    oc(ilxtr.multiElectrodeArray, ilxtr.multiElectrode),
+
+    oc(ilxtr.patchPipette, ilxtr.recordingPipette),
+
+    oc(ilxtr.patchElectrode, ilxtr.recordingElectrode),
+    (ilxtr.patchElectrode, hasPart, ilxtr.singleElectrode),
+    (ilxtr.patchElectrode, hasPart, ilxtr.patchPipette),
+
+    oc(ilxtr.sharpRecordingPipette, ilxtr.recordingPipette),
+    oc(ilxtr.sharpElectrode, ilxtr.recordingElectrode),
+    (ilxtr.sharpElectrode, hasPart, ilxtr.singleElectrode),
+    (ilxtr.sharpElectrode, hasPart, ilxtr.sharpRecordingPipette),
 
     oc(ilxtr.inductionFactor, ilxtr.materialEntity),
 
@@ -1268,6 +1284,7 @@ triples = (
        # the pimary participant is still part of the part of the primary participant of the
        # preceeding technique where the input was living
        (ilxtr.hasSomething, i.d),
+       # primary participant partOf theSameContainingEntity
        synonyms=('in situ',),),
     (tech.inSitu, owl.disjointWith, tech.inVitro),
 
@@ -1975,6 +1992,17 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('microscopy',),
     ),
+
+    _t(i.d, 'microscope production technique',
+       (ilxtr.hasPrimaryOutput, ilxtr.microscope),
+      ),
+
+    _t(i.d, 'recording electrode production technique',
+       (ilxtr.hasPrimaryOutput, ilxtr.recordingElectrode),
+      ),
+
+    _t(i.d, 'recording pipette production technique',
+       (ilxtr.hasPrimaryOutput, ilxtr.recordingPipette)),
 
     _t(i.d, 'light microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
@@ -2844,7 +2872,13 @@ def forComparison():
 
     obo, *_ = makeNamespaces('obo')
     filename = 'methods-external-test-bridge'
-    imports = obo['obi.owl'], obo['ero.owl'], URIRef('http://www.ebi.ac.uk/efo/efo.owl')  # OEN, CNO
+    imports = (obo['ero.owl'],
+               #URIRef('https://www.eagle-i.net/ero/latest/ero.owl'),
+               obo['obi.owl'],
+               obo['ro.owl'],
+               URIRef('http://www.ebi.ac.uk/efo/efo.owl'),
+               URIRef('http://purl.org/incf/ontology/ExperimentalNeurophysiology/oen_term.owl'),
+              )  # CNO still uses bfo1.1
     comment = 'Bridge for querying against established methods related ontologies.'
     _repo = True
     debug = False
