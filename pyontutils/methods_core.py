@@ -89,6 +89,9 @@ triples = (
          'The relationship between a process and the person who discovered it.'),
 
     oop(ilxtr.hasInformationParticipant),
+    oop_(ilxtr.hasInformationParticipant,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationParticipant),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationParticipant)),
     olit(ilxtr.hasInformationParticipant, rdfs.label, 'has information participant'),
     olit(ilxtr.hasInformationParticipant, NIFRID.synonym,
          'has symbolic participant'),
@@ -103,7 +106,8 @@ triples = (
 
     oop(ilxtr.hasInformationInput, ilxtr.hasInformationParticipant),
     oop_(ilxtr.hasInformationInput,
-         propertyChainAxiom(hasPart, ilxtr.hasInformationInput)),
+         propertyChainAxiom(hasPart, ilxtr.hasInformationInput),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationInput)),
     (ilxtr.hasInformationInput, owl.propertyDisjointWith, ilxtr.isConstrainedBy),
     olit(ilxtr.hasInformationInput, rdfs.label, 'has information input'),
     olit(ilxtr.hasInformationInput, NIFRID.synonym,
@@ -140,19 +144,31 @@ triples = (
     oop(ilxtr.hasInformationOutput, ilxtr.hasInformationParticipant),
     oop(ilxtr.hasInformationOutput, ilxtr.hasIntention),
     oop_(ilxtr.hasInformationOutput,
-         propertyChainAxiom(hasPart, ilxtr.hasInformationOutput)),
+         propertyChainAxiom(hasPart, ilxtr.hasInformationOutput),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationOutput)),
     olit(ilxtr.hasInformationOutput, rdfs.label, 'has information output'),
     olit(ilxtr.hasInformationOutput, NIFRID.synonym, 'has symbolic output'),
     (ilxtr.hasInformationOutput, rdfs.domain, ilxtr.technique),
     (ilxtr.hasInformationOutput, rdfs.range, ilxtr.informationEntity),
+
+    oop(ilxtr.hasDirectInformationParticipant, ilxtr.hasInformationParticipant),
+    # implies that there is a time in the full technique prior to which
+    # the information input did not exist
+    # FIXME also parent to hasInformationInput/Output??
+    oop(ilxtr.hasDirectInformationInput, ilxtr.hasDirectInformationParticipant),
+    olit(ilxtr.hasDirectInformationInput, rdfs.label, 'has direct information input'),
+    oop(ilxtr.hasDirectInformationOutput, ilxtr.hasDirectInformationParticipant),
+    olit(ilxtr.hasDirectInformationOutput, rdfs.label, 'has direct information output'),
 
     ## participants
     oop(hasParticipant),
     olit(hasParticipant, rdfs.label, 'has participant'),
     olit(hasParticipant, NIFRID.synonym, 'has physical participant'),
     oop(hasInput),  # XXX
+    oop_(hasInput, propertyChainAxiom(hasPart, hasInput)),
     olit(hasInput, rdfs.label, 'has input'),  # XXX
     oop(hasOutput),  # XXX
+    oop_(hasOutput, propertyChainAxiom(hasPart, hasOutput)),
     olit(hasOutput, rdfs.label, 'has output'),  # XXX
 
     # FIXME need a domain restriction to prevent accidental use with aspects!
@@ -205,14 +221,16 @@ triples = (
     # often they would be part of the actual primary input
     # FIXME aspect vs participant ...
     # FIXME vs hasConstrainingAspect
-    oop(ilxtr.knownDetectedPhenomena, hasParticipant),
-    oop(ilxtr.knownProbedPhenomena, hasParticipant),
+    oop(ilxtr.knownDetectedPhenomena, ilxtr.hasPrimaryParticipant),  # FIXME confusing naming...
+    oop(ilxtr.knownProbedPhenomena, ilxtr.hasPrimaryParticipant),
     oop(ilxtr.knownDifferentiatingPhenomena, ilxtr.hasAspect),
 
     ## naming (naming is distinct from intentions because it always succeeds)
     oop(ilxtr.names),
     oop(ilxtr.assigns, ilxtr.names),
     oop(ilxtr.asserts, ilxtr.names),
+    #oop_(ilxtr.asserts, propertyChainAxiom(ilxtr.hasPrimaryAspect (asp.nonLocal)))
+    # assertion occurs when the accompanying information is not present
     # this operate on aspects in cases where the aspect is 'extrinsic'
     # i.e. where if given only the named thing in question the binding
     # of the aspect to the thing cannot be determined making measurements
@@ -222,6 +240,25 @@ triples = (
     # (currently) be determined with 100% certainty by making measurements on
     # the cell alone, additional information is required, therefore the 'measurement'
     # of the aspect is not a measurement, it is an assertion
+
+    ## list
+    # on primary participant
+    # hasPrimaryAspect (hasPrimaryParticipant, hasAspect)
+    # hasPrimaryAspectActualized
+    # hasPrimaryQualifiedAspect (hasPrimaryParticipant, hasQualifiedAspect)
+    # hasPrimaryQualifiedAspectActualized
+    # 
+    # hasConstrainingAspect
+    # hasConstrainingQualifiedAspect
+    # cannot actualize constraining aspects? but they are defact actualized by thier constraint
+    #
+    # but then there are parts of the pp
+    # hasPrimaryParticipantPartConstrainingAspect
+    # 
+    # hasInput
+    # hasPrimaryInput
+    #
+
 
     ## intentions
     oop(ilxtr.hasIntention),  # not really sco realizes:? it also includes intended changes in qualities?
@@ -236,19 +273,49 @@ triples = (
     # oop(ilxtr.hasPrimaryParticipantIntentionAspect, ilxtr.hasParticipantIntentionAspect),
     # oop(ilxtr.hasPrimaryParticipantIntentionPrimaryAspect, ilxtr.hasPrimaryParticipantIntentionAspect),
 
-    oop(ilxtr.techniqueHasAspect),
-    oop_(ilxtr.techniqueHasAspect,
-         propertyChainAxiom(hasPart, ilxtr.techniqueHasAspect),
+    oop(ilxtr.processHasAspect),
+    olit(ilxtr.processHasAspect, rdfs.label, 'process has aspect'),
+    (ilxtr.processHasAspect, rdfs.domain, BFO['0000015']),
+    (ilxtr.processHasAspect, rdfs.range, ilxtr.aspect),
+    oop(ilxtr.processMeasuresAspect, ilxtr.processHasAspect),
+    olit(ilxtr.processMeasuresAspect, rdfs.label, 'measures aspect'),
+    oop(ilxtr.processActualizesAspect, ilxtr.processHasAspect), # there is a tau...
+    olit(ilxtr.processActualizesAspect, rdfs.label, 'actualizes aspect'),
+    oop(ilxtr.processIncludesOnAspect, ilxtr.processHasAspect),
+    oop(ilxtr.processExcludesOnAspect, ilxtr.processHasAspect),
+    oop(ilxtr.processHasPrimaryAspect, ilxtr.processHasAspect),
+
+    #oop(ilxtr.techniqueHasAspect, ilxtr.processHasAspect),
+    oop_(ilxtr.processHasAspect,
+         propertyChainAxiom(hasPart, ilxtr.processHasAspect),
          propertyChainAxiom(ilxtr.hasConstrainingAspect),
          propertyChainAxiom(ilxtr.hasPrimaryAspect),
         ),
-    (ilxtr.techniqueHasAspect, rdfs.domain, ilxtr.technique),
-    (ilxtr.techniqueHasAspect, rdfs.range, ilxtr.aspect),
+    #(ilxtr.techniqueHasAspect, rdfs.domain, ilxtr.technique),
+    #(ilxtr.techniqueHasAspect, rdfs.range, ilxtr.aspect),
 
-    oop(ilxtr.hasConstrainingAspect, ilxtr.techniqueHasAspect),  # TODO
+    oop(ilxtr.hasConstrainingAspect, ilxtr.processHasAspect),  # TODO
     oop_(ilxtr.hasConstrainingAspect,
          # TODO isConstrainedBy some value on that particular aspect
-         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasAspect)),
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect),
+         propertyChainAxiom(hasPart, ilxtr.processHasAspect),
+         # IF the primary participant is the same
+         #propertyChainAxiom(hasPart, ilxtr.hasPrimaryAspectActualized),
+         # sanity check says that if you havePart dnaDeliveryTechnique
+         # then any parent process will be constrained by some location
+         # on its primary participant, which is incorrect... at least for
+         # nonLocal aspects
+        ),
+    #oc_(None,
+        # sigh
+        #intersectionOf(
+            #restN(ilxtr.hasConstrainingAspect, ilxtr.aspect)),
+        #intersectionOf(restN(ilxtr.hasPrimaryParticipant,
+                             #ilxtr.theSameThing),
+                       #restN(hasPart,
+                             #restN(ilxtr.hasPrimaryParticipant,
+                                   #ilxtr.theSameThing))),
+        #oECN())
     olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
     olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
          'has constraining primary participant aspect',
@@ -260,16 +327,17 @@ triples = (
          ('The relationship between a technique and an aspect of the primary '
           'participant that is constrained as part of a technique.')),
 
-    oop(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.techniqueHasAspect),
+    oop(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.processHasAspect),
     oop_(ilxtr.hasParticipantPartConstrainingAspect,
-         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect),
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect),
          # subprocesses have no executor
          propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasConstrainingAspect)),
 
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
+    oop(ilxtr.hasPrimaryAspect, ilxtr.processHasPrimaryAspect),
     oop_(ilxtr.hasPrimaryAspect,
          propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasMainAspect)),
-    (ilxtr.hasPrimaryAspect, rdfs.subPropertyOf, ilxtr.techniqueHasAspect),
+    (ilxtr.hasPrimaryAspect, rdfs.subPropertyOf, ilxtr.processHasAspect),
     olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
          'has intended primary aspect',
@@ -288,6 +356,7 @@ triples = (
     # axiom(None, POC(ilxtr.hasPrimarAspec))
 
     oop(ilxtr.hasPrimaryAspectActualized, ilxtr.hasPrimaryAspect),
+    oop(ilxtr.hasPrimaryAspectActualized, ilxtr.processActualizesAspect),
     olit(ilxtr.hasPrimaryAspectActualized, rdfs.label, 'has primary aspect actualized'),
     olit(ilxtr.hasPrimaryAspectActualized, NIFRID.synonym,
          'has intended primary aspect actualized',),
@@ -296,20 +365,21 @@ triples = (
     # redundant with hasPrimaryAspect, cannot be disjoint with actualized
     # because all actualization techniques are also measurement techniques
 
-    oop(ilxtr.hasParentPrimaryAspect, ilxtr.techniqueHasAspect),
+    oop(ilxtr.hasParentPrimaryAspect, ilxtr.processHasAspect),
     # note that this is distinctly not spo hasPrimaryAspect
     oop_(ilxtr.hasParentPrimaryAspect,
-         propertyChainAxiom(partOf, ilxtr.hasPrimaryParticipant, ilxtr.hasAspect)),
+         propertyChainAxiom(partOf, ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect)),
 
-    oop(ilxtr.hasParticipantPartPrimaryAspect, ilxtr.techniqueHasAspect),
+    oop(ilxtr.hasParticipantPartPrimaryAspect, ilxtr.processHasAspect),
     # note that this is distinctly not spo hasPrimaryAspect
     oop_(ilxtr.hasParticipantPartPrimaryAspect,
-         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect)),
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect)),
 
     oop(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.hasParticipantPartPrimaryAspect),
+    oop(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.processActualizesAspect),
     # note that this is distinctly not spo hasPrimaryAspect
     oop_(ilxtr.hasParticipantPartPrimaryAspect,
-         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasAspect),
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect),
          # subprocesses have no executor
          propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasPrimaryAspect)),
 
@@ -329,9 +399,9 @@ triples = (
          propertyChainAxiom(hasPart, ilxtr.hasPrimaryParticipant, ilxtr.primaryParticipantIn)),
     (ilxtr.hasPartPart, owl.propertyDisjointWith, ilxtr.hasPartNotPart),
 
-    oop(ilxtr.hasPartAspectInvariant, ilxtr.techniqueHasAspect),
+    oop(ilxtr.hasPartAspectInvariant, ilxtr.processHasAspect),
     oop_(ilxtr.hasPartAspectInvariant,
-         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasAspect),
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect),
          # FIXME need a notion of union of the aspects of the parts...
          # so that the output value when measuring the aspect includes
          # that aspect as bound to all the parts
@@ -402,7 +472,9 @@ triples = (
     oop(ilxtr.aspectOf, RO['0000080']),
     (ilxtr.aspectOf, owl.inverseOf, ilxtr.hasAspect),
 
-    oop(ilxtr.hasMainAspect, ilxtr.hasAspect),
+    oop(ilxtr.hasExpAspect, ilxtr.hasAspect),  # has experimental aspect or has operational aspect
+    oop(ilxtr.hasMainAspect, ilxtr.hasExpAspect),
+    # FIXME ilxtr.hasMainAspectInSomeTechnique
 
     #oop(ilxtr.),
     #oop(ilxtr.),
@@ -470,14 +542,26 @@ triples = (
     # says that for certain inputs the aspect cannot return a
     # meaningful (correctly typed non null) value
 
+    (asp.Local, owl.disjointWith, asp.nonLocal),
     oc(asp.Local, ilxtr.aspect),  # aka unqualified or does not need qualification
+    olit(asp.Local, rdfs.label, 'aspect unqualified'),
     olit(asp.Local, definition,
          'aspect of thing that is invariant to context'),
     oc(asp.nonLocal, ilxtr.aspect),  # qualified
+    olit(asp.nonLocal, rdfs.label, 'aspect qualified'),
+    oc_(asp.nonLocal, restriction(ilxtr.hasContext, ilxtr.materialEntity)),
+    # FIXME context isn't just the material entity it is the aspects thereof
+    # the context probably also needs to be a technique that binds all
+    # intersectionOf for multiple aspects? hrm
+    # the additional aspects?
+    # context dealt with below
     # binding a nonLocal aspect to a single entity will
     # lead to construction of a context
     olit(asp.nonLocal, definition,
-       'aspect of thing that varies depending on context'),
+         'aspect of thing that varies depending on context'),
+
+    oop_(hasParticipant,
+         propertyChainAxiom(ilxtr.processHasAspect, ilxtr.hasContext)),
 
     ## technique
     oc(BFO['0000015']),
@@ -494,12 +578,21 @@ triples = (
         restriction(ilxtr.hasExecutor, ilxtr.executor)),
 
     oc_(rdflib.BNode(),
-        oECN(intersectionOf(ilxtr.technique,
+        oECN(intersectionOf(BFO['0000015'],
                             restN(hasParticipant,
                                   restN(ilxtr.hasAspect, asp.nonLocal)))),
-        intersectionOf(ilxtr.technique,
-                       restN(ilxtr.hasAspectContext, ilxtr.context)),
+        # FIXME still doesn't get the binding right
+        intersectionOf(BFO['0000015'],
+                       # FIXME nonLocal in time requires some time keeping device
+                       # id some periodic phenomenon
+                       restN(ilxtr.hasAspectContext, ilxtr.materialEntity)),
        ),
+
+    #oc_(rdflib.BNode(),
+        #restN(ilxtr.hasAspect, asp.nonLocal),
+        #restN(ilxtr.hasContext, ilxtr.materialEntity),
+        # TODO that nonLocal's context should be the same...
+       #),
 
     oc_(rdflib.BNode(),
         oECN(intersectionOf(ilxtr.materialEntity,

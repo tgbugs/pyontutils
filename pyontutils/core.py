@@ -826,7 +826,7 @@ oneOf = OneOf()
 class DisjointUnionOf(PredicateList):
     predicate = owl.disjointUnionOf
 
-disjointUnionOf = OneOf()
+disjointUnionOf = DisjointUnionOf()
 
 
 class EquivalentClass(Triple):
