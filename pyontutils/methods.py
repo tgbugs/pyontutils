@@ -217,13 +217,14 @@ triples += (  # material entities
     # a protein is indeed constrained by that information regardless of
     # whether it was synthesized or not...
     #oc(OntTerm('NCBITaxon:1'), ilxtr.materialEntity),  # needed to accomodate deadness?
-    oc(OntTerm('NCBITaxon:1'), ilxtr.physiologicalSystem),  # needed to accomodate deadness?
+    oc(ilxtr.physiologicalSystem, ilxtr.materialEntity),
     oc_(ilxtr.physiologicalSystem,
-        oneOf(OntTerm('NCBITaxon:1'),
-              restN(partOf, OntTerm('NCBITaxon:1')))),
+        unionOf(OntTerm('NCBITaxon:1'),
+                restN(partOf, OntTerm('NCBITaxon:1')))),
         #oec(ilxtr.materialEntity,  # FIXME in vitro...
             #restN(partOf, OntTerm('NCBITaxon:1'))
            #)),
+    oc(OntTerm('NCBITaxon:1'), ilxtr.physiologicalSystem),  # needed to accomodate deadness?
 
     #oc_(ilxtr.physiologicalSystemDisjointWithOrganism,
         #oec(ilxtr.physiologicalSystem)
@@ -1269,14 +1270,14 @@ triples = (
       #),
 
     _t(tech.statistics, 'statistical technique',
-       (ilxtr.hasInformationInput, ilxtr.informationEntity),
+       (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        (ilxtr.isConstrainedBy, ilxtr.statisticalAlgorithem),
       ),
 
     _t(i.d, 'simulation technique',
        (ilxtr.isConstrainedBy, ilxtr.algorithem),
-       (ilxtr.hasInformationInput, ilxtr.informationEntity),
+       (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        (ilxtr.hasSomething, i.d)),
 
@@ -2106,7 +2107,7 @@ triples = (
 
     _t(tech.IRDIC, 'IR DIC video microscopy',
        (hasInput, ilxtr.IRCamera),
-       (ilxtr.detects, ilxtr.infaredLight),
+       (ilxtr.detects, ilxtr.infaredLight),  # FIXME should be bound to the camera and propagate
        (hasInput, ilxtr.DICmicroscope),
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # how to deal with the parts of a primary input?
@@ -2114,7 +2115,9 @@ triples = (
       ),
 
     _t(i.d, 'modern in vitro slice electrophysiology',
-       (hasPart, tech.IRDIC),
+       #(hasPart, tech.IRDIC),
+       (hasInput, ilxtr.IRCamera),
+       (hasInput, ilxtr.DICmicroscope),
        (ilxtr.hasPrimaryInput, ilxtr.acuteBrainSlice),  # how to deal with the parts of a primary input?
        (ilxtr.hasPrimaryAspect, asp.electrical),
        (hasPart, ilxtr.cellPatching),
