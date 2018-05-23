@@ -1256,7 +1256,7 @@ triples = (
     _t(i.d, 'computational technique',  # these seem inherantly circulat... they use computation...
        ilxtr.technique,
        restMinCardValue(ilxtr.isConstrainedBy, ilxtr.algorithem, Literal(1)),  # axioms??
-       (ilxtr.hasInformationInput, ilxtr.informationEntity),
+       (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        # different from?
       ),
@@ -1369,6 +1369,9 @@ triples = (
        ),
     _t(i.d, 'curation technique',
        # ilxtr.isConstrainedBy, curation workflow specification... not helful and not correct
+       (hasParticipant, OntTerm('NCBITaxon:9606')),
+       (ilxtr.hasDirectInformationInput, ilxtr.informationArtifact),
+       (ilxtr.hasInformationOutput, ilxtr.informationArtifact),
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'angiographic technique',
