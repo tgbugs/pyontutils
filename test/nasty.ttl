@@ -284,7 +284,7 @@ BLX:18 a owl:ObjectProperty .
 BLX:19 a owl:ObjectProperty .
 
 BLX:21 a owl:ObjectProperty ;
-    owl:propertyChainAxiom (
+    owl:oneOf (
             BLX:18
             BLX:19
             [ owl:inverseOf BLX:20 ]
@@ -297,7 +297,7 @@ BLX:21 a owl:ObjectProperty ;
             BLX:18 ) .
 
 BLX:20 a owl:ObjectProperty ;
-    owl:propertyChainAxiom (
+    owl:oneOf (
             BLX:21
             BLX:20 ),
         (
@@ -458,4 +458,8 @@ prefixa: a owl:Class .
 
 prefixz:0 a owl:Class .
 prefixz: a owl:Class .
+
+# preserve ordering of certain predicate lists
+
+l:plistTest owl:propertyChainAxiom (blx:predicate3 blx:predicate1 blx:predicate2) .
 
