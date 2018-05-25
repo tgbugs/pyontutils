@@ -68,6 +68,7 @@ try:
         ],
         extras_require={'dev':[
             'hunspell',
+            'jupyter',
             'mysql-connector',
             'protobuf',
             'psycopg2',

@@ -40,7 +40,7 @@ BLX:18 a owl:ObjectProperty .
 BLX:19 a owl:ObjectProperty .
 
 BLX:20 a owl:ObjectProperty ;
-    owl:propertyChainAxiom (
+    owl:oneOf (
             BLX:18
             BLX:19
             BLX:20 ),
@@ -55,7 +55,7 @@ BLX:20 a owl:ObjectProperty ;
             BLX:21 ) .
 
 BLX:21 a owl:ObjectProperty ;
-    owl:propertyChainAxiom (
+    owl:oneOf (
             BLX:18
             BLX:19
             [ owl:inverseOf BLX:19 ]
@@ -609,3 +609,8 @@ l:5 rdfs:label (
             (
                 3
                 4 ) ) .
+
+l:plistTest owl:propertyChainAxiom (
+            blx:predicate3
+            blx:predicate1
+            blx:predicate2 ) .

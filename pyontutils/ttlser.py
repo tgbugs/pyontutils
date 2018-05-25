@@ -88,6 +88,7 @@ def makeSymbolPrefixes(n):
 
 class ListRanker:
     def __init__(self, node, serializer):
+        self.reorder = self.test_reorder(node, serializer)
         self.node = node
         self.serializer = serializer
         self.vals = []
@@ -100,6 +101,15 @@ class ListRanker:
         self.vis_vals = [v for v in self.vals if not isinstance(v, BNode)]
         self.bvals = [v for v in self.vals if isinstance(v, BNode)]
 
+    @staticmethod
+    def test_reorder(node, serializer):
+        try:
+            _, linking_predicate = next(serializer.store[::node])
+            reorder = linking_predicate not in serializer.no_reorder_list
+            return reorder
+        except StopIteration:
+            return True
+
     def add(self, item, node):
         if item is not None:
             self.vals.append(item)
@@ -108,7 +118,10 @@ class ListRanker:
 
     @property
     def rank_vec(self):
-        out = tuple(sorted(self._vis_val_key(v) for v in self.vis_vals))
+        out = tuple(self._vis_val_key(v) for v in self.vis_vals)
+        if self.reorder:
+            out = tuple(sorted(out))
+
         if not out:
             return self.serializer.max_or + self.serializer.max_lr + 1,
         else:
@@ -138,6 +151,7 @@ class CustomTurtleSerializer(TurtleSerializer):
     _newline = True
     sortkey = staticmethod(natsort)
     make_litsortkey = staticmethod(make_litsort)
+    no_reorder_list = OWL.propertyChainAxiom,
 
     topClasses = [OWL.Ontology,
                   RDF.Property,
@@ -539,6 +553,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         return True
 
     def doList(self, l):  # modified to put rdf list items on new lines and to sort by global rank
+        reorder = ListRanker.test_reorder(l, self)
         to_sort = []
         while l:
             item = self.store.value(l, RDF.first)
@@ -548,7 +563,13 @@ class CustomTurtleSerializer(TurtleSerializer):
             l = self.store.value(l, RDF.rest)
 
         whitespace = '\n' + self.indent(1) if self._newline else ''
-        for item in sorted(to_sort, key=self._globalSortKey):
+        
+        if reorder:
+            ordered = sorted(to_sort, key=self._globalSortKey)
+        else:
+            ordered = to_sort
+
+        for item in ordered:
             self.write(whitespace)
             self.path(item, OBJECT, newline=self._newline)
 

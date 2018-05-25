@@ -1,21 +1,66 @@
+from IPython import embed
 import rdflib
 from pyontutils.core import OntId, OntCuries
 from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import restrictions
+from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator, Restriction2, EquivalentClass
+from pyontutils.core import restriction, restrictions
 from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces
+from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces, participatesIn, partOf, intersectionOf
 from pyontutils.core import owl, rdf, rdfs
+
+restN = Restriction2(None, owl.onProperty, owl.someValuesFrom)
+restG = POCombinator(rdf.type, owl.Restriction).full_combinator
+axiom = POCombinator(rdf.type, owl.Axiom)
+blankc = POCombinator
+equivalentClassC = POCombinator(owl.equivalentClass, ObjectCombinator).full_combinator
+oECN = EquivalentClass(None)
+owlClass = oc_
+owlClassC = oc_.full_combinator
+subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator).full_combinator
+oop_ = POCombinator(rdf.type, owl.ObjectProperty)
+
+def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec):
+    members = tuple()
+    _rests = tuple()
+    for rest in rests:
+        if isinstance(rest, tuple):
+            if len(rest) == 2:
+                _rests += rest,
+            else:
+                raise ValueError(f'length of {rest} is not 2!')
+        elif isinstance(rest, Combinator):
+            members += rest,
+        else:
+            members += rest,
+
+    rests = _rests
+    if not members:
+        members = ilxtr.technique,
+
+    yield from oc(subject)
+    yield from equivalentClass.serialize(subject, *members, *restrictions(*rests))
+    yield from olit(subject, rdfs.label, label)
+    if def_:
+        yield from olit(subject, definition, def_)
+
+    if synonyms:
+        if not isinstance(synonyms, tuple):
+            # this is why python sucks and racket is awesome if this was racket
+            # the error would show up on the line where the problem was :/
+            raise TypeError(f'Type of {synonyms!r} should not be {type(synonyms)}!')
+        yield from olit(subject, NIFRID.synonyms, *synonyms)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
-obo, *_ = makeNamespaces('obo')
+obo, RO, *_ = makeNamespaces('obo', 'RO')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
-#imports = NIFTTL['nif_backend.ttl'],
-imports = obo['bfo.owl'],
+imports = NIFTTL['nif_backend.ttl'],
+#imports = obo['bfo.owl'], obo['ro.owl']
+#imports = tuple()
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
 debug = True
@@ -45,6 +90,9 @@ triples = (
          'The relationship between a process and the person who discovered it.'),
 
     oop(ilxtr.hasInformationParticipant),
+    oop_(ilxtr.hasInformationParticipant,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationParticipant),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationParticipant)),
     olit(ilxtr.hasInformationParticipant, rdfs.label, 'has information participant'),
     olit(ilxtr.hasInformationParticipant, NIFRID.synonym,
          'has symbolic participant'),
@@ -58,7 +106,10 @@ triples = (
           'but it is not the scratches on the paper that constrain a process, it is their implication.')),
 
     oop(ilxtr.hasInformationInput, ilxtr.hasInformationParticipant),
-    (ilxtr.hasInformationInput, owl.disjointWith, ilxtr.isConstrainedBy),
+    oop_(ilxtr.hasInformationInput,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationInput),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationInput)),
+    (ilxtr.hasInformationInput, owl.propertyDisjointWith, ilxtr.isConstrainedBy),
     olit(ilxtr.hasInformationInput, rdfs.label, 'has information input'),
     olit(ilxtr.hasInformationInput, NIFRID.synonym,
          'has non-constraining information input',
@@ -69,8 +120,12 @@ triples = (
     olit(ilxtr.hasInformationInput, rdfs.comment,
          ('This can be though of as the known variables of a process, or the runtime information '
           'that cannot be known prior to process execution.')),
+    (ilxtr.hasInformationInput, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasInformationInput, rdfs.range, ilxtr.informationEntity),
 
     oop(ilxtr.isConstrainedBy, ilxtr.hasInformationParticipant),
+    oop_(ilxtr.isConstrainedBy,
+         propertyChainAxiom(hasPart, ilxtr.isConstrainedBy)),
     olit(ilxtr.isConstrainedBy, rdfs.label, 'is constrained by'),
     olit(ilxtr.isConstrainedBy, NIFRID.synonym,
          'has information constraint',
@@ -88,16 +143,33 @@ triples = (
     #oop(ilxtr.usedInField),  # FIXME molecular techniques...
 
     oop(ilxtr.hasInformationOutput, ilxtr.hasInformationParticipant),
+    oop(ilxtr.hasInformationOutput, ilxtr.hasIntention),
+    oop_(ilxtr.hasInformationOutput,
+         propertyChainAxiom(hasPart, ilxtr.hasInformationOutput),
+         propertyChainAxiom(hasPart, ilxtr.hasDirectInformationOutput)),
     olit(ilxtr.hasInformationOutput, rdfs.label, 'has information output'),
     olit(ilxtr.hasInformationOutput, NIFRID.synonym, 'has symbolic output'),
+    (ilxtr.hasInformationOutput, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasInformationOutput, rdfs.range, ilxtr.informationEntity),
+
+    oop(ilxtr.hasDirectInformationParticipant, ilxtr.hasInformationParticipant),
+    # implies that there is a time in the full technique prior to which
+    # the information input did not exist
+    # FIXME also parent to hasInformationInput/Output??
+    oop(ilxtr.hasDirectInformationInput, ilxtr.hasDirectInformationParticipant),
+    olit(ilxtr.hasDirectInformationInput, rdfs.label, 'has direct information input'),
+    oop(ilxtr.hasDirectInformationOutput, ilxtr.hasDirectInformationParticipant),
+    olit(ilxtr.hasDirectInformationOutput, rdfs.label, 'has direct information output'),
 
     ## participants
     oop(hasParticipant),
     olit(hasParticipant, rdfs.label, 'has participant'),
     olit(hasParticipant, NIFRID.synonym, 'has physical participant'),
     oop(hasInput),  # XXX
+    oop_(hasInput, propertyChainAxiom(hasPart, hasInput)),
     olit(hasInput, rdfs.label, 'has input'),  # XXX
     oop(hasOutput),  # XXX
+    oop_(hasOutput, propertyChainAxiom(hasPart, hasOutput)),
     olit(hasOutput, rdfs.label, 'has output'),  # XXX
 
     # FIXME need a domain restriction to prevent accidental use with aspects!
@@ -116,16 +188,77 @@ triples = (
     olit(ilxtr.hasProbe, definition,
          ('The relationship between a technique and the phenomena that it uses to probe other participants. '
           'Useful for cases where the probing phenomena is different than the detected phenomena.')),
+    (ilxtr.hasProbe, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasProbe, rdfs.range, ilxtr.materialEntity),
+
+    #oop(ilxtr.hasEnergyProbe, ilxtr.hasProbe),
+    # photon
+    # electron
+    # neutron
+    # atomic nucleus
+    # usually they leave
+    # non addative probe, may modify, but unlikely to add
+    #oop(ilxtr.hasMaterialProbe, ilxtr.hasProbe),
 
     oop(ilxtr.hasPrimaryParticipant, hasParticipant),
     olit(ilxtr.hasPrimaryParticipant, rdfs.label, 'has primary participant'),
     olit(ilxtr.hasPrimaryParticipant, definition, 'The relationship between a process and its primary participant.'),
     olit(ilxtr.hasPrimaryParticipant, rdfs.comment,
          'This property should be used to mark the key input and/or output of a process if its type is not generic.'),
+    (ilxtr.hasPrimaryParticipant, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasPrimaryParticipant, rdfs.range, ilxtr.materialEntity),
 
     oop(ilxtr.primaryParticipantIn),
     olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
     (ilxtr.primaryParticipantIn, owl.inverseOf, ilxtr.hasPrimaryParticipant),
+
+    oop(ilxtr.hasPrimaryInput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryInput, hasInput),
+    oop(ilxtr.hasPrimaryOutput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryOutput, ilxtr.hasIntention),
+    oop(ilxtr.hasPrimaryOutput, hasOutput),
+
+    # posterior or knowledge based participants that define techniques
+    # often they would be part of the actual primary input
+    # FIXME aspect vs participant ...
+    # FIXME vs hasConstrainingAspect
+    oop(ilxtr.knownDetectedPhenomena, ilxtr.hasPrimaryParticipant),  # FIXME confusing naming...
+    oop(ilxtr.knownProbedPhenomena, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.knownDifferentiatingPhenomena, ilxtr.hasAspect),
+
+    ## naming (naming is distinct from intentions because it always succeeds)
+    oop(ilxtr.names),
+    oop(ilxtr.assigns, ilxtr.names),
+    oop(ilxtr.asserts, ilxtr.names),
+    #oop_(ilxtr.asserts, propertyChainAxiom(ilxtr.hasPrimaryAspect (asp.nonLocal)))
+    # assertion occurs when the accompanying information is not present
+    # this operate on aspects in cases where the aspect is 'extrinsic'
+    # i.e. where if given only the named thing in question the binding
+    # of the aspect to the thing cannot be determined making measurements
+    # on only the thing itself (or that it was not determined in that way)
+    # these are cases where information from the surrounding environment is
+    # needed. for example the part of a brain a cell was collected from cannot
+    # (currently) be determined with 100% certainty by making measurements on
+    # the cell alone, additional information is required, therefore the 'measurement'
+    # of the aspect is not a measurement, it is an assertion
+
+    ## list
+    # on primary participant
+    # hasPrimaryAspect (hasPrimaryParticipant, hasAspect)
+    # hasPrimaryAspectActualized
+    # hasPrimaryQualifiedAspect (hasPrimaryParticipant, hasQualifiedAspect)
+    # hasPrimaryQualifiedAspectActualized
+    # 
+    # hasConstrainingAspect
+    # hasConstrainingQualifiedAspect
+    # cannot actualize constraining aspects? but they are defact actualized by thier constraint
+    #
+    # but then there are parts of the pp
+    # hasPrimaryParticipantPartConstrainingAspect
+    # 
+    # hasInput
+    # hasPrimaryInput
+    #
 
 
     ## intentions
@@ -133,6 +266,7 @@ triples = (
     olit(ilxtr.hasIntention, rdfs.label, 'has intention'),
     olit(ilxtr.hasIntention, definition, 'The relationship between a process and an intended outcome.'),
     olit(ilxtr.hasIntention, rdfs.comment, 'Should rarely be used directly.'),
+    # TODO implies has expected outcome?
 
     # while these exist in principle there is no meaningful way to bind them to a specific
     #  participant without a qualifier, therefore we are leaving them out
@@ -140,21 +274,74 @@ triples = (
     # oop(ilxtr.hasPrimaryParticipantIntentionAspect, ilxtr.hasParticipantIntentionAspect),
     # oop(ilxtr.hasPrimaryParticipantIntentionPrimaryAspect, ilxtr.hasPrimaryParticipantIntentionAspect),
 
-    oop(ilxtr.hasConstrainingAspect, ilxtr.TODO),  # TODO
+    oop(ilxtr.processHasAspect),
+    olit(ilxtr.processHasAspect, rdfs.label, 'process has aspect'),
+    (ilxtr.processHasAspect, rdfs.domain, BFO['0000015']),
+    (ilxtr.processHasAspect, rdfs.range, ilxtr.aspect),
+    oop(ilxtr.processMeasuresAspect, ilxtr.processHasAspect),
+    olit(ilxtr.processMeasuresAspect, rdfs.label, 'measures aspect'),
+    oop(ilxtr.processActualizesAspect, ilxtr.processHasAspect), # there is a tau...
+    olit(ilxtr.processActualizesAspect, rdfs.label, 'actualizes aspect'),
+    oop(ilxtr.processIncludesOnAspect, ilxtr.processHasAspect),
+    oop(ilxtr.processExcludesOnAspect, ilxtr.processHasAspect),
+    oop(ilxtr.processHasPrimaryAspect, ilxtr.processHasAspect),
+
+    #oop(ilxtr.techniqueHasAspect, ilxtr.processHasAspect),
+    oop_(ilxtr.processHasAspect,
+         propertyChainAxiom(hasPart, ilxtr.processHasAspect),
+         propertyChainAxiom(ilxtr.hasConstrainingAspect),
+         propertyChainAxiom(ilxtr.hasPrimaryAspect),
+        ),
+    #(ilxtr.techniqueHasAspect, rdfs.domain, ilxtr.technique),
+    #(ilxtr.techniqueHasAspect, rdfs.range, ilxtr.aspect),
+
+    oop(ilxtr.hasConstrainingAspect, ilxtr.processHasAspect),  # TODO
+    oop_(ilxtr.hasConstrainingAspect,
+         # TODO isConstrainedBy some value on that particular aspect
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect),
+         propertyChainAxiom(hasPart, ilxtr.processHasAspect),
+         # IF the primary participant is the same
+         #propertyChainAxiom(hasPart, ilxtr.hasPrimaryAspectActualized),
+         # sanity check says that if you havePart dnaDeliveryTechnique
+         # then any parent process will be constrained by some location
+         # on its primary participant, which is incorrect... at least for
+         # nonLocal aspects
+        ),
+    #oc_(None,
+        # sigh
+        #intersectionOf(
+            #restN(ilxtr.hasConstrainingAspect, ilxtr.aspect)),
+        #intersectionOf(restN(ilxtr.hasPrimaryParticipant,
+                             #ilxtr.theSameThing),
+                       #restN(hasPart,
+                             #restN(ilxtr.hasPrimaryParticipant,
+                                   #ilxtr.theSameThing))),
+        #oECN())
     olit(ilxtr.hasConstrainingAspect, rdfs.label, 'has constraining aspect'),
     olit(ilxtr.hasConstrainingAspect, NIFRID.synonym,
          'has constraining primary participant aspect',
          'constrained by aspect'),
-    olit(ilxtr.constrainedByAspect, definition,
+    olit(ilxtr.hasConstrainingAspect, definition,
          # these are definitional to the technique so they are not intentions
          # they must be achieved prior in time to the execution of the technique
          # FIXME is this true? what if you mess up the measurement?
          ('The relationship between a technique and an aspect of the primary '
           'participant that is constrained as part of a technique.')),
 
+    oop(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.processHasAspect),
+    oop_(ilxtr.hasParticipantPartConstrainingAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect),
+         # subprocesses have no executor
+         propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasConstrainingAspect)),
+
     oop(ilxtr.hasPrimaryAspect, ilxtr.hasIntention),
-    olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has intended primary aspect'),
+    oop(ilxtr.hasPrimaryAspect, ilxtr.processHasPrimaryAspect),
+    oop_(ilxtr.hasPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasMainAspect)),
+    (ilxtr.hasPrimaryAspect, rdfs.subPropertyOf, ilxtr.processHasAspect),
+    olit(ilxtr.hasPrimaryAspect, rdfs.label, 'has primary aspect'),
     olit(ilxtr.hasPrimaryAspect, NIFRID.synonym,
+         'has intended primary aspect',
          'has intention primary aspect',
          'has primary aspect',
          'has intention to effect the primary aspect of the primary participant',
@@ -166,6 +353,60 @@ triples = (
          ('This property is very useful for classifying techniques. '
           'For example a flattening technique is intended to effect the flatness '
           'aspect of any primary participant, though it may effect other aspects as well.')),
+    # TODO property chain or general axiom? implies that primary participant of has aspect
+    # axiom(None, POC(ilxtr.hasPrimarAspec))
+
+    oop(ilxtr.hasPrimaryAspectActualized, ilxtr.hasPrimaryAspect),
+    oop(ilxtr.hasPrimaryAspectActualized, ilxtr.processActualizesAspect),
+    olit(ilxtr.hasPrimaryAspectActualized, rdfs.label, 'has primary aspect actualized'),
+    olit(ilxtr.hasPrimaryAspectActualized, NIFRID.synonym,
+         'has intended primary aspect actualized',),
+
+    #oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
+    # redundant with hasPrimaryAspect, cannot be disjoint with actualized
+    # because all actualization techniques are also measurement techniques
+
+    oop(ilxtr.hasParentPrimaryAspect, ilxtr.processHasAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParentPrimaryAspect,
+         propertyChainAxiom(partOf, ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect)),
+
+    oop(ilxtr.hasParticipantPartPrimaryAspect, ilxtr.processHasAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParticipantPartPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect)),
+
+    oop(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.hasParticipantPartPrimaryAspect),
+    oop(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.processActualizesAspect),
+    # note that this is distinctly not spo hasPrimaryAspect
+    oop_(ilxtr.hasParticipantPartPrimaryAspect,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect),
+         # subprocesses have no executor
+         propertyChainAxiom(ilxtr.hasSubProcess, ilxtr.hasPrimaryAspect)),
+
+    oop(ilxtr.hasSubProcess, hasPart),  # TODO see if we really need this
+    oop(ilxtr.hasPartPart, hasPart),
+    oop_(ilxtr.hasPartPart,
+         # invariance to whether the primary participant or
+         # the technique itself is the first down the partonomy
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart,
+                            ilxtr.primaryParticipantIn),#, partOf),  # self
+         propertyChainAxiom(hasPart, ilxtr.hasPrimaryParticipant,
+                            ilxtr.primaryParticipantIn),
+                            #partOf, ilxtr.primaryParticipantIn)  # self
+        ),
+    oop(ilxtr.hasPartNotPart, hasPart),
+    oop_(ilxtr.hasPartNotPart,
+         propertyChainAxiom(hasPart, ilxtr.hasPrimaryParticipant, ilxtr.primaryParticipantIn)),
+    (ilxtr.hasPartPart, owl.propertyDisjointWith, ilxtr.hasPartNotPart),
+
+    oop(ilxtr.hasPartAspectInvariant, ilxtr.processHasAspect),
+    oop_(ilxtr.hasPartAspectInvariant,
+         propertyChainAxiom(ilxtr.hasPrimaryParticipant, ilxtr.hasExpAspect),
+         # FIXME need a notion of union of the aspects of the parts...
+         # so that the output value when measuring the aspect includes
+         # that aspect as bound to all the parts
+         propertyChainAxiom(hasPart, ilxtr.hasConstrainingAspect)),
 
     oop(ilxtr.hasPrimaryAspect_dAdS, ilxtr.hasIntention),
     olit(ilxtr.hasPrimaryAspect_dAdS, rdfs.label,
@@ -174,7 +415,7 @@ triples = (
          #'has intended change in primary aspect with respect to subset of the primary participant.'
          #'has intended change in primary aspect as a function of the subset of the primary participant.'
          'has expected difference in the primary aspect with respect to the subset of the primary participant'
-),
+    ),
     olit(ilxtr.hasPrimaryAspect_dAdS, NIFRID.synonym,
          'has intended dA/dS',
          'has intended dAspect/dSubset'
@@ -204,7 +445,9 @@ triples = (
     olit(ilxtr.hasPrimaryAspect_dAdT, definition,
          'The intended change in primary aspect of primary participant before and after technique'),
 
+    odp(ilxtr.hasAspectValue),
     odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
+    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
     olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
          'has constraining aspect value'),
     olit(ilxtr.hasConstrainingAspect_value, definition,
@@ -220,12 +463,27 @@ triples = (
          )
         ),
 
-    #oop(ilxtr.),
+    oop(ilxtr.hasAspect, RO['0000086']),
+    # FIXME make it clear that this is between material entities (it is subclassof quality)
+    # for hasAspect
+    #oop_(ilxtr.hasAspect,
+         #propertyChainAxiom(ilxtr.hasAspect),
+         #propertyChainAxiom(hasPart, ilxtr.hasAspect),
+        #),
+    oop(ilxtr.aspectOf, RO['0000080']),
+    (ilxtr.aspectOf, owl.inverseOf, ilxtr.hasAspect),
+
+    oop(ilxtr.hasExpAspect, ilxtr.hasAspect),  # has experimental aspect or has operational aspect
+    oop(ilxtr.hasMainAspect, ilxtr.hasExpAspect),
+    # FIXME ilxtr.hasMainAspectInSomeTechnique
+
     #oop(ilxtr.),
     #oop(ilxtr.),
 
     # classes
-    oc(ilxtr.executor),
+
+    ## executor
+    oc(ilxtr.executor, ilxtr.materialEntity),  # probably equivalent to agent in ero
     olit(ilxtr.executor, rdfs.label, 'executor'),
     olit(ilxtr.executor, NIFRID.synonym, 'executing agent'),
     olit(ilxtr.executor, definition,
@@ -235,109 +493,78 @@ triples = (
          'computers and robots can be considered to be executors when the prior '
          'information has been encoded directly into them and their behavior.'),
 
+    ## aspect
     oc(BFO['0000019']),  # XXX  # vs PATO:0000001 quality:
     olit(BFO['0000019'], rdfs.label, 'quality'),  # XXX
 
-    oc(ilxtr.naming),
-    olit(ilxtr.naming, rdfs.label, 'naming'),
-    olit(ilxtr.naming, definition ,
-         ('Naming is an assertional process that is orthogonal to measuring.'
-          'Names may be assigned as a product of measurements, but the assignemtn '
-          'of a name can only be based on aspects of the thing, the name can never be '
-          'an aspect of the thing. Names may also be assigned based on aspects of the '
-          'process that produced the thing, or the prvious state of the thing. '
-          'For example a protein dissociated from its original cell/tissue no longer '
-          'contains sufficient information to reconsturct where it came from based on '
-          'any measurements that can be made on it beyond the species that it came from '
-          'and maybe where the individual lived if there are enough atoms to do an isotope test.'
-          'A cell on the other hand may very well have enough information in its RNA and DNA to '
-          'allow for a bottom up assignment of a name based on its gene expression pattern.')),
-
     oc(ilxtr.aspect, BFO['0000019']),  # FIXME aspect/
     olit(ilxtr.aspect, rdfs.label, 'aspect'),
+    olit(ilxtr.aspect, definition,
+         'An aspect is a measurable quantity or quality of a thing. '
+         'Aspects must be able to act as a function that is dependent '
+         'only on a measurement device and the thing to which the aspect '
+         'is bound. This is to say that aspects require a notion of locality. '),
     olit(ilxtr.aspect, rdfs.comment,
-         'PATO has good coverage of many of these aspects though their naming is not alway consistent.'),
+         'To illustrate with an example. The location of a thing cannot be an '
+         'aspect of that thing because location requires knowing the spatial '
+         'realtionship between that thing any measurement device. Said in yet '
+         'another way, (measure thing location) -> here for all values of thing. '
+         'Aspects all assume an inertial reference frame centered on their named inputs. '
+         'Location thus can only ever be computed on some part of a larger named system.'
+         'Therefore, in order to accomodate measurements on composite beings such as '
+         'the number of geese in a flock or the location of a missing set of keys possibly '
+         'in the house, we split aspects into signular and composite. The composite are '
+         'indeed aspects of a single nameable thing, but they make measurements on or '
+         'between parts of that thing. The simplest version is nearly always named thing '
+         'plus implied complement of that thing. Note also that the number of geese in a '
+         'flock is different from the number of things in existence that are geese by the '
+         'isness aspect. The asp/isness/count can be determined entirely locally because '
+         'the definition of what a goose is is independent of time and place (where and when). '
+         'Time dependent or place dependent definitions of geese (such as in the game of '
+         'duck duck goose) require additional information and thus are not what/singular aspects.'
+        ),
+    olit(ilxtr.aspect, rdfs.comment,
+         'PATO has good coverage of many of these aspects though their naming is '
+         'not alway consistent. And their definition is perhaps overly broad.'),
+    olit(ilxtr.aspect, NIFRID.synonym,
+         'measureable',
+         'measureable aspect'),
+    # hasValue, hasRealizedValue
+    # hasActualizedValue
+    # hasMeasuredValue
+    #ilxtr.aspect hasOutputValue 
+    #ilxtr.aspect hasMeasurementProtocol
+    # should aspects not be bound to symbolic entities?
+    # for example a word count for a document?
+    # I guess all implementations of symbolic systems are physical
+    # and ultimately the distinction between symbolic and physical
+    # isn't actually useful for aspects
+    # we do however need a notation of bottom for aspects which
+    # says that for certain inputs the aspect cannot return a
+    # meaningful (correctly typed non null) value
 
-    oc(asp['is'], ilxtr.aspect),
-    olit(asp['is'], rdfs.label, 'is'),
-    olit(asp['is'], NIFRID.synonym,
-         'isness',
-         'being aspect',
-         'beingness',),
-    olit(asp['is'], definition,
-         ('The aspect of beingness. Should be true or false, value in {0,1}.'
-          "Not to be confused with the 'is a' reltionship which deals with categories/types/classes."
-          "For now should not be used for 'partial' beingness, so a partially completed building is not"
-          'a building for the purposes of this aspect. This is open to discussion, and if there are'
-          'good examples where partial beingness is a useful concept, use as a [0,1] aspect would be encouraged.')),
-    olit(asp['is'], rdfs.comment,
-         ('There are cases where the value could be ? depending on how one '
-          'operationalizes certain concepts from quantum physics. Note also that '
-          'isness will be directly affected by the choice of the operational defintion. '
-          'Because of the scope of this ontology, there are implicit decisions about the nature '
-          'of certain operational definitions, such as livingness, which imply that our '
-          'operational definition for isness is invariant to dead.'
-         )),
+    (asp.Local, owl.disjointWith, asp.nonLocal),
+    oc(asp.Local, ilxtr.aspect),  # aka unqualified or does not need qualification
+    olit(asp.Local, rdfs.label, 'aspect unqualified'),
+    olit(asp.Local, definition,
+         'aspect of thing that is invariant to context'),
+    oc(asp.nonLocal, ilxtr.aspect),  # qualified
+    olit(asp.nonLocal, rdfs.label, 'aspect qualified'),
+    oc_(asp.nonLocal, restriction(ilxtr.hasContext, ilxtr.materialEntity)),
+    # FIXME context isn't just the material entity it is the aspects thereof
+    # the context probably also needs to be a technique that binds all
+    # intersectionOf for multiple aspects? hrm
+    # the additional aspects?
+    # context dealt with below
+    # binding a nonLocal aspect to a single entity will
+    # lead to construction of a context
+    olit(asp.nonLocal, definition,
+         'aspect of thing that varies depending on context'),
 
-    oc(asp.amount, asp['is']),
-    oc(asp['count'], asp.amount),
+    oop_(hasParticipant,
+         propertyChainAxiom(ilxtr.processHasAspect, ilxtr.hasContext)),
 
-    oc(asp.location, ilxtr.aspect),
-    oc(asp.allocation, asp.location),
-    olit(asp.allocation, definition,
-         ('Allocation is the amount of something in a given place '
-          'rather than the total universal amount of a thing. '
-          'For example if I move 100 grains of salt from a container '
-          'to a scale, I have changed the allocation of the salt (solid). '
-          'If I dissolve the salt in water then I have negatively impacted '
-          'the amount of total salt (solid) in the universe since that salt '
-          'is now ionized in solution.')),
-
-    oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right
-    olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
-    olit(asp.isClassifiedAs, NIFRID.synonym,
-         'is named as', 'has operational definition with inclusion criteria that names thing as'),
-
-    oc(asp.flatness, ilxtr.aspect),
-    olit(asp.flatness, rdfs.label, 'flatness'),
-    olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
-    olit(asp.flatness, definition,
-         ('How flat a thing is. There are a huge variety of operational '
-          'definitions depending on the type of thing in question.')),
-
-    oc(asp.weight, ilxtr.aspect),  # TODO 'PATO:0000128'
-    olit(asp.weight, rdfs.label, 'weight'),
-    olit(asp.weight, NIFRID.synonym, 'weight aspect'),
-
-    oc(asp.livingness, ilxtr.aspect),
-    oc(asp.aliveness, ilxtr.aspect),  # PATO:0001421
-    oc(asp.deadness, ilxtr.aspect),  # PATO:0001422
-    (asp.aliveness, owl.disjointWith, asp.deadness),  # this holds for any single operational definition
-
-    oc(ilxtr.informationEntity),
-    olit(ilxtr.informationEntity, rdfs.label, 'information entity'),
-    olit(ilxtr.informationEntity, definition, 'Any physically encoded information.'),
-
-    oc(ilxtr.informationArtifact, ilxtr.informationEntity),
-    olit(ilxtr.informationArtifact, rdfs.label, 'information artifact'),
-    olit(ilxtr.informationArtifact, definition,
-         ('An information entity that has an explicit symbolic encoding '
-          'which is distinct from the existence or being that it encodes.')),
-
-    oc(ilxtr.protocol, ilxtr.informationEntity),
-    olit(ilxtr.protocol, rdfs.label, 'protocol'),
-    olit(ilxtr.protocol, NIFRID.synonym, 'technique specification'),
-
-    oc(ilxtr.protocolArtifact, ilxtr.informationArtifact),
-    (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
-    olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
-
-    oc_(ilxtr.protocolExecution,
-       oec(ilxtr.technique,
-           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
-    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
-
-    ## techniques
+    ## technique
     oc(BFO['0000015']),
     olit(BFO['0000015'], rdfs.label, 'process'),
 
@@ -348,8 +575,105 @@ triples = (
          'A repeatable process that is constrained by some prior information.'),
     (ilxtr.technique, ilxtr.hasTempId, OntId('HBP_MEM:0000000')),
     # NOTE: not all techniques have primary participants, especially in the case of composite techniques
+    oc_(ilxtr.technique,
+        restriction(ilxtr.hasExecutor, ilxtr.executor)),
 
-)
+    oc_(rdflib.BNode(),
+        oECN(intersectionOf(BFO['0000015'],
+                            restN(hasParticipant,
+                                  restN(ilxtr.hasAspect, asp.nonLocal)))),
+        # FIXME still doesn't get the binding right
+        intersectionOf(BFO['0000015'],
+                       # FIXME nonLocal in time requires some time keeping device
+                       # id some periodic phenomenon
+                       restN(ilxtr.hasAspectContext, ilxtr.materialEntity)),
+       ),
+
+    #oc_(rdflib.BNode(),
+        #restN(ilxtr.hasAspect, asp.nonLocal),
+        #restN(ilxtr.hasContext, ilxtr.materialEntity),
+        # TODO that nonLocal's context should be the same...
+       #),
+
+    oc_(rdflib.BNode(),
+        oECN(intersectionOf(ilxtr.materialEntity,
+                            restN(ilxtr.hasAspect, asp.nonLocal))),
+        #restN(ilxtr.hasContext, ),
+        # this works because immaterial entities have to be anchored to some
+        # internal frame which requires something with inertia which requires
+        # a meterial entity...
+        restriction(partOf, ilxtr.compositeMaterialEntity),
+       ),
+    #_t(tech.test, 'test test test',
+       #(ilxtr.hasPrimaryParticipant, ilxtr.thingA),
+       #(ilxtr.hasPrimaryParticipant, ilxtr.thingB)),
+
+    #(ilxtr.thingA, rdfs.subClassOf, ilxtr.materialEntity),
+    #(ilxtr.thingB, rdfs.subClassOf, ilxtr.materialEntity),
+    #(ilxtr.thingA, owl.disjointWith, ilxtr.thingB),
+) 
+
+def derp():
+    b0 = rdflib.BNode()
+    yield ilxtr.technique, owl.equivalentClass, b0
+
+    yield b0, rdf.type, owl.Class
+    a, b, c = (rdflib.BNode() for _ in range(3))
+    yield b0, owl.intersectionOf, a
+    b1 = rdflib.BNode()
+    yield a, rdf.first, b1
+    r1 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, BFO['0000004']))(b1)
+    yield from r1
+
+    b2 = rdflib.BNode()
+    yield b, rdf.first, b2
+    r2 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, ilxtr.aspect))(b2)
+    yield from r2
+
+    b3 = rdflib.BNode()
+    yield c, rdf.first, b3
+    r3 = restG(
+    blankc(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+    blankc(owl.onClass, ilxtr.changeType))(b3)
+    yield from r3
+
+    for _1, _2 in ((a, b), (b, c), (c, rdf.nil)):
+        yield _1, rdf.rest, _2
+
+triples += tuple(derp())
+
+
+"""
+asdf = tuple(
+    owlClass(ilxtr.technique,
+             equivalentClassC(None,
+                 owlClassC(
+                     subClassOf(
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryParticipant),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass,
+                                      # FIXME maybe more specific?
+                                      BFO['0000004'])),
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryAspect),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass, ilxtr.aspect)),
+                         restG(blankC(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+                               blankC(owl.maxQualifiedCardinality,
+                                      rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+                               blankC(owl.onClass, ilxtr.changeType))))))
+         )
+
+embed()
+"""
 
 # TODO aspects.ttl?
 methods_core = simpleOnt(filename=filename,

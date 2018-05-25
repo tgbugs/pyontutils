@@ -3,6 +3,7 @@ sudo: false
 language: python
 env:
   global:
+    - NIFSTD_CHECKOUT_OK=1
     - PIPENV_VENV_IN_PROJECT=1
     - PIPENV_IGNORE_VIRTUALENVS=1
 branches:

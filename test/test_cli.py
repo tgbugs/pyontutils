@@ -8,25 +8,29 @@ import subprocess
 from pathlib import Path
 from git import Repo
 
-from pyontutils import scigraph_client
-
-# orig_basepath = scigraph_client.BASEPATH
-orig_basepath = 'https://scicrunch.org/api/1/scigraph'
-
-from pyontutils import scigraph
-from pyontutils import core
 from pyontutils.config import devconfig
-
-if 'SCICRUNCH_API_KEY' in os.environ:
-    scigraph.scigraph_client.BASEPATH = orig_basepath
-else:
-    scigraph.scigraph_client.BASEPATH = 'http://localhost:9000/scigraph'
-
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
 p2 = Path(devconfig.git_local_base).resolve().absolute()
 print(p1, p2)
 if p1 != p2:
     devconfig.git_local_base = p1
+
+from pyontutils import scigraph
+from pyontutils import core
+from pyontutils import scigraph_client
+
+# orig_basepath = scigraph_client.BASEPATH
+orig_basepath = 'https://scicrunch.org/api/1/scigraph'
+
+if 'SCICRUNCH_API_KEY' in os.environ:
+    devconfig.scigraph_api = orig_basepath
+    scigraph.scigraph_client.BASEPATH = orig_basepath
+else:
+    local_basepath = 'http://localhost:9000/scigraph'
+    devconfig.scigraph_api = local_basepath
+    scigraph.scigraph_client.BASEPATH = local_basepath
+
+checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 
 class Folders(unittest.TestCase):
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
@@ -78,6 +82,8 @@ class TestCli(Folders):
         ['scigraph-deploy', '--help'],
         ['scig', '--help'],
         ['ttlfmt', '--help'],
+        [sys.executable, 'resolver/make_config.py'],
+        # strange that make_config failed in travis in a pipenv as couldn't find pyontutils?
     )
     
     def test_cli(self):
@@ -95,22 +101,35 @@ class TestCli(Folders):
 
 class TestScripts(Folders):
     """ Import everything and run main() on a subset of those """
+    # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
-    def setUp(self):
+    def setUp(self, checkout_ok=checkout_ok):
         super().setUp()
-        skip = ('neurons',
-                'neuron_lang',
-                'neuron_example',
-                'neuron_ma2015',
-                'phenotype_namespaces',  # FIXME clearly we know what the problem project is :/
-                'old_neuron_example',
-                'cocomac_uberon',
+        if not hasattr(self, '_do_mains'):
+            self.__class__._do_mains = []
+            self.__class__._do_tests = []
+
+    def test_import(self):
+        skip = ('cocomac_uberon',  # known broken
+                'neuron_ma2015',  # still needs work
+                'old_neuron_example',  # known broken
                )
+        lasts = tuple()
+        neurons = ('neurons',
+                   'neuron_lang',
+                   'neuron_example',
+                   'phenotype_namespaces',)
+        if not checkout_ok:
+            skip += neurons
+        else:
+            lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
 
         ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
         zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
-        mains = {'nif_cell': None,
-                 'methods': None,
+        mains = {'nif_cell':None,
+                 'methods':None,
+                 'core':None,
+                 'scigraph':None,
                  'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
         #['ilxcli', '--help'],
         'ttlfmt':[['ttlfmt', ban],
@@ -144,11 +163,23 @@ class TestScripts(Folders):
         _do_tests = []
         parent = Path(core.__file__).absolute().parent.parent
         repo = Repo(parent.as_posix())
-        for path in sorted(repo.git.ls_files('pyontutils/*.py').split('\n')):
+        paths = sorted(repo.git.ls_files('pyontutils/*.py').split('\n'))
+        for last in lasts:
+            # FIXME hack to go last
+            if last in paths:
+                paths.remove(last)
+                paths.append(last)
+
+        for path in paths:
             stem = Path(path).stem
             if stem not in skip:
                 print('TESTING:', stem)
                 module = __import__('pyontutils.' + stem)
+                submod = getattr(module, stem)
+                if hasattr(submod, '_CHECKOUT_OK'):
+                    print(submod, submod._CHECKOUT_OK)
+                    setattr(submod, '_CHECKOUT_OK', True)
+
                 if stem in mains:
                     print('    will main', stem, module)
                     argv = mains[stem]
@@ -165,12 +196,15 @@ class TestScripts(Folders):
                     _do_tests.append(getattr(module, stem))
 
         print(_do_mains, _do_tests)
-        self._do_mains = _do_mains
-        self._do_tests = _do_tests
-        self.argv_orig = sys.argv
+        self._do_mains.extend(_do_mains)
+        self._do_tests.extend(_do_tests)
+        if not hasattr(self.__class__, 'argv_orig'):
+            self.__class__.argv_orig = sys.argv
 
     def test_mains(self):
         failed = []
+        if not self._do_mains:
+            raise ValueError('test_imports did not complete successfully')
         for script, argv in self._do_mains:
             if argv and argv[0] != script:
                 os.system(' '.join(argv))

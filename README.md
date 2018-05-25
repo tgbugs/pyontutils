@@ -18,7 +18,7 @@ development packages for `postgresql`, and `protobuf` installed on your system.
 The easiest way to install pyontutils is to use pipenv. It makes it easy to manage
 specific version of packages needed by pyontutils. For example in order to get good
 (deterministic) ttl serialization from these tools you need to use my modified version
-of rdflib (see https://github.com/RDFLib/rdflib/pull/649 and https://github.com/RDFLib/rdflib/pull/793).
+of rdflib (see https://github.com/RDFLib/rdflib/pull/649).
 [Pipenv](https://pipenv.readthedocs.io/en/latest/#install-pipenv-today) makes it easier
 to accomplish this.
 
@@ -37,7 +37,7 @@ often cannot find the files it needs to build.  When installing pass them in as 
 (you may need to adjust exact paths for your system).
 `MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --skip-lock`.
 There are some systems on which even this is not sufficient.
-If you encounter this situation modify to mysql-connector entry in Pipfile from `"*"` => `"==2.1.6"`.
+If you encounter this situation add `mysql-connector = "==2.1.6"` to `[dev-packages]` in the Pipfile.
 And then run the command without environment variables.
 
 Alternately, if you manage your packages via another system you can create a

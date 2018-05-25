@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
 import os
+import atexit
 import inspect
 from pathlib import Path, PurePath as PPath
 from collections import MutableMapping
@@ -11,10 +12,12 @@ from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc
 from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
+from pyontutils.config import devconfig
 from pyontutils.qnamefix import cull_prefixes
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
+_CHECKOUT_OK = False
 
 __all__ = [
     'AND',
@@ -33,6 +36,7 @@ __all__ = [
     'Neuron',
     #'NeuronArranger',
     '_NEURON_CLASS',
+    '_CHECKOUT_OK',
 ]
 
 # language constructes
@@ -69,6 +73,8 @@ class graphBase:
 
     LocalNames = {}
 
+    _registered = False
+
     __import_name__ = __name__
 
     #_sgv = Vocabulary(cache=True)
@@ -100,9 +106,23 @@ class graphBase:
             return putativeURI
 
     @staticmethod
+    def set_repo_state():
+        if not hasattr(graphBase, 'original_branch'):
+            graphBase.original_branch = repo.active_branch
+        if not graphBase._registered:
+            atexit.register(graphBase.repo.git.checkout, graphBase.original_branch)
+            graphBase._registered = True
+
+        graphBase.repo.git.checkout(graphBase.working_branch)
+
+    @staticmethod
+    def reset_repo_state():
+        graphBase.repo.git.checkout(graphBase.original_branch)
+
+    @staticmethod
     def configGraphIO(remote_base,
-                      local_base,
-                      branch,
+                      local_base=        None,
+                      branch=            'master',
                       core_graph_paths=  tuple(),
                       core_graph=        None,
                       in_graph_paths=    tuple(),
@@ -110,6 +130,7 @@ class graphBase:
                       out_imports=       tuple(),
                       out_graph=         None,
                       force_remote=      False,
+                      checkout_ok=       _CHECKOUT_OK,
                       scigraph=          None):
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -131,15 +152,18 @@ class graphBase:
                        out_imports=      ['local/path/localCore.ttl'],
                        out_graph=         None,
                        force_remote=      False,
-                       scigraph=          'scigraph.mydomain.org:9000'):
+                       checkout_ok=       False,
+                       scigraph=          'http://scigraph.mydomain.org:9000/scigraph'):
             graphBase.configGraphIO(remote_base, local_base, branch,
                                     core_graph_paths, core_graph,
                                     in_graph_paths,
                                     out_graph_path, out_imports, out_graph,
-                                    force_remote, scigraph)
+                                    force_remote, checkout_ok, scigraph)
 
         """
 
+        if local_base is None:
+            local_base = devconfig.ontology_local_repo
         graphBase.local_base = Path(local_base).expanduser()
         graphBase.remote_base = remote_base
 
@@ -162,8 +186,16 @@ class graphBase:
 
         if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
-            if repo.active_branch.name != branch:
-                raise FileNotFoundError('Local git repo not on %s branch! Please run `git checkout %s` in %s' % (branch, branch, local_base))
+            if repo.active_branch.name != branch and not checkout_ok:
+                raise FileNotFoundError('Local git repo not on %s branch!\n'
+                                        'Please run `git checkout %s` in %s '
+                                        'or set checkout_ok=True.'
+                                        % (branch, branch, local_base))
+            elif checkout_ok:
+                graphBase.repo = repo
+                graphBase.working_branch = 'neurons'
+                graphBase.original_branch = repo.active_branch
+                graphBase.set_repo_state()
             use_core_paths = local_core_paths
             use_in_paths = local_in_paths
         else:
@@ -225,7 +257,7 @@ class graphBase:
 
         # scigraph setup
         if scigraph is not None:
-            graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
+            graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
         else:
             graphBase._sgv = Vocabulary(cache=True)
 

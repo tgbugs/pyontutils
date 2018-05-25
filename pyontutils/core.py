@@ -102,6 +102,11 @@ def _loadPrefixes():
         'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
         'prov':'http://www.w3.org/ns/prov#',
+        # defined by chebi.owl, confusingly chebi#2 -> chebi1 maybe an error?
+        # better to keep it consistent in case someone tries to copy and paste
+        'chebi1':'http://purl.obolibrary.org/obo/chebi#2',
+        'chebi2':'http://purl.obolibrary.org/obo/chebi#',
+        'chebi3':'http://purl.obolibrary.org/obo/chebi#3',
     }
     #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
     extras = {**full, **normal}
@@ -156,9 +161,10 @@ rdf = rdflib.RDF
 rdfs = rdflib.RDFS
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes, partOf,
+ realizes, partOf, participatesIn, locatedIn,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
-             'hasInput', 'hasOutput', 'realizes', 'partOf',
+             'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
+             'locatedIn',
             )
 
 # common funcs
@@ -283,6 +289,15 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
     def __call__(self, subject, predicate, object):
         yield subject, predicate, object
 
+    def debug(self, *args, l=None):
+        graph = rdflib.Graph()
+        graph.bind('owl', str(owl))
+        if l is None:
+            l = self.__call__(*args)
+        [graph.add(t) for t in l]
+        print(graph.serialize(format='nifttl').decode())
+
+
 
 class CombinatorIt(Combinator):
     def __init__(self, outer_self, *args, **kwargs):
@@ -292,6 +307,14 @@ class CombinatorIt(Combinator):
 
     def __call__(self, *args, **kwargs):
         # FIXME might get two subjects by accident...
+        if (isinstance(self.outer_self, Combinator) and args and not isinstance(args[0], str) or
+            self.args and self.args[0] is None):
+            args = (rdflib.BNode(),) + args
+            if self.args[0] is None:
+                self.args = self.args[1:]
+        elif not args and not self.args:
+            args = rdflib.BNode(),
+
         yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
     def __repr__(self):
@@ -307,6 +330,9 @@ class CombinatorIt(Combinator):
 class ObjectCombinator(Combinator):
     def __init__(self, object):
         self.object = object
+
+    def full_combinator(self, *combinators):  # FIXME this is not right...?
+        return CombinatorIt(self, *combinators)
 
     def __call__(self, subject, predicate):
         if isinstance(self.object, Combinator):
@@ -338,14 +364,21 @@ class _POCombinator(Combinator):
     def __call__(self, subject, *pocombinators):
         """ Overwrite this function for more complex expansions. """
         # seems unlikely that same object multiple predicates would occur, will impl if needed
+        tech = rdflib.Namespace(ilxtr[''] + 'technique/')
         if subject is None:
             subject = rdflib.BNode()
-        yield subject, self.predicate, self.object
+
+        if isinstance(self.object, Combinator):
+            o = rdflib.BNode()
+            yield subject, self.predicate, o
+            yield from self.object(o)
+        else:
+            yield subject, self.predicate, self.object
         for combinator in pocombinators:
-            #if isinstance(combinator, types.GeneratorType):
-                #combinator = next(combinator)  # return the trapped combinator ;_;
-            #else:
-            yield from combinator(subject)
+            try:
+                yield from combinator(subject)
+            except TypeError as e:
+                raise TypeError(f'{combinator} not a combinator!') from e
 
     def __repr__(self):
         p = qname(self.predicate)
@@ -380,7 +413,7 @@ class RestrictionCombinator(_POCombinator):
     def __call__(self, subject, linking_predicate=None):
         if self.outer_self.predicate is not None and linking_predicate is not None:
             if self.outer_self.predicate != linking_predicate:
-                raise TypeError(f'Predicates {self.outer_self.predicate} {predicate} do not match on {self!r}')
+                raise TypeError(f'Predicates {self.outer_self.predicate} {linking_predicate} do not match on {self!r}')
 
         yield from self.outer_self.serialize(subject, self.predicate, self.object, linking_predicate)
 
@@ -428,6 +461,54 @@ class Triple:
 
     def _test_roundtrip(self, s, p, o):
         assert self.parse(self.serialize(s, p, o)) == (s, p, o, self.__class__.__name__)
+
+
+class Restriction2(Triple):
+    def __init__(self, linking_predicate, *internal_predicates):
+        self.linking_predicate = linking_predicate
+        if not internal_predicates:
+            self.internal_predicates = owl.someValuesFrom,
+        else:
+            self.internal_predicates = internal_predicates
+
+    def __call__(self, *internal_objects):
+        if len(internal_objects) != len(self.internal_predicates):
+            raise ValueError('not enough objects for predicates\n'
+                             '{internal_objects} {self.internal_predicates}')
+
+        class Awaiting(Combinator):
+            def __init__(self, outer_self, predicates, objects):
+                self.outer_self = outer_self
+                self.predicates = predicates
+                self.objects = objects
+
+            def __call__(self, subject, predicate=self.linking_predicate):
+                yield from self.outer_self.serialize(subject, predicate, None,
+                                                     self.predicates, self.objects)
+
+        return Awaiting(self, self.internal_predicates, internal_objects)
+
+    def serialize(self, subject, predicate, inner_subject, inner_predicates, inner_objects):
+        if subject is None:
+            raise TypeError(f'None subject {self}')
+
+        if predicate is None and inner_subject is None:
+            inner_subject = subject
+        elif predicate is None:
+            raise TypeError(f'None predicate {self}')
+        elif inner_subject is None:
+            inner_subject = rdflib.BNode()
+            yield subject, predicate, inner_subject
+        else:
+            raise ValueError(f'wat')
+
+        yield inner_subject, rdf.type, owl.Restriction
+        for p, o in zip(inner_predicates, inner_objects):
+            if isinstance(o, Combinator):  # as noted before has to be a poc
+                combinator = o
+                o = rdflib.BNode()
+                yield from combinator(o)
+            yield inner_subject, p, o
 
 
 class Restriction(Triple):
@@ -733,6 +814,24 @@ class UnionOf(PredicateList):
 unionOf = UnionOf()
 
 
+class PropertyChainAxiom(PredicateList):
+    predicate = owl.propertyChainAxiom
+
+propertyChainAxiom = PropertyChainAxiom()
+
+
+class OneOf(PredicateList):
+    predicate = owl.oneOf
+
+oneOf = OneOf()
+
+
+class DisjointUnionOf(PredicateList):
+    predicate = owl.disjointUnionOf
+
+disjointUnionOf = DisjointUnionOf()
+
+
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of
         owl functional syntax in python. """
@@ -760,13 +859,24 @@ class EquivalentClass(Triple):
     def serialize(self, subject, *objects_or_combinators):
         """ object_combinators may also be URIRefs or Literals """
         ec_s = rdflib.BNode()
-        if subject is not None:
-            yield subject, self.predicate, ec_s
-        yield from oc(ec_s)
         if self.operator is not None:
+            if subject is not None:
+                yield subject, self.predicate, ec_s
+            yield from oc(ec_s)
             yield from self._list.serialize(ec_s, self.operator, *objects_or_combinators)
         else:
-            raise NotImplemented('TODO a normal list')
+            for thing in objects_or_combinators:
+                if isinstance(thing, Combinator):
+                    object = rdflib.BNode()
+                    #anything = list(thing(object))
+                    #if anything:
+                        #[print(_) for _ in anything]
+                    yield object, rdf.type, owl.Class
+                    yield from thing(object)
+                else:
+                    object = thing
+
+                yield subject, self.predicate, object
 
     def parse(self, *triples, graph=None):
         if graph is None:  # TODO decorator for this
@@ -1212,10 +1322,12 @@ def createOntology(filename=    'temp-graph',
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY,
                    path=        'ttl/generated/',
-                   local_base=  devconfig.ontology_local_repo,
+                   local_base=  None,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
+    if local_base is None:  # get location at runtime
+        local_base = devconfig.ontology_local_repo
     writeloc = Path(local_base) / path
     ontid = os.path.join(remote_base, path, filename + '.ttl')
     prefixes.update(makePrefixes('', 'owl'))
@@ -1672,8 +1784,12 @@ class Ont:
                         yield self.iri, predicate, check_value(value)
 
     def triple_check(self, triple):
-        s, p, o = triple
-        error = TypeError(f'bad triple in {self} {triple}')
+        error = ValueError(f'bad triple in {self} {triple!r}')
+        try:
+            s, p, o = triple
+        except ValueError as e:
+            raise error from e
+
         if not isinstance(s, rdflib.URIRef) and not isinstance(s, rdflib.BNode):
             raise error
         elif not isinstance(p, rdflib.URIRef):
@@ -1701,8 +1817,6 @@ class Ont:
 
         if hasattr(self, '_triples'):
             yield from self._triple_check(self._triples())
-        else:
-            return
 
         for t in self._extra_triples:  # last so _triples can populate
             yield t
@@ -1905,8 +2019,9 @@ def main():
         ecgraph.add(t)
     ecng = makeGraph('thing2', graph=ecgraph, prefixes=makePrefixes('owl', 'TEMP'))
     ecng.write()
-    embed()
-    return
+    if __name__ == '__main__':
+        embed()
+        return
     r = Restriction(rdfs.subClassOf)#, scope=owl.allValuesFrom)#NIFRID.has_proper_part)
     l = tuple(r.parse(graph=graph))
     for t in r.triples:
@@ -1939,7 +2054,8 @@ def main():
     [egraph.add(t) for t in ft]
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 if __name__ == '__main__':
     main()
