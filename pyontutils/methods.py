@@ -978,7 +978,7 @@ triples = (
 
     _t(tech.ISH, 'in situ hybridization technique',  # TODO
        intersectionOf(ilxtr.technique,  # FIXME
-                      restN(ilxtr.hasPartPart, ilxtr.RNA),  # FIXME non-specic open DNA binding?
+                      restN(ilxtr.hasPartPriParticipant, ilxtr.RNA),  # FIXME non-specic open DNA binding?
                       # or is it hasPrimaryAspect_dAdS?
                       restN(ilxtr.hasPrimaryAspect, asp.complementSequencePresent),
                       restN(hasInput, ilxtr.hybridizationProbe)),
@@ -1445,7 +1445,7 @@ triples = (
        # preceeding technique where the input was living
        #(ilxtr.hasConstrainingAspect, asp.location),
        #(ilxtr.hasConstrainingAspect_value, ilxtr.unchanged),  # FIXME
-       (ilxtr.hasPartPart, ilxtr.materialEntity),
+       (ilxtr.hasPartPriParticipant, ilxtr.materialEntity),
        #(ilxtr.hasSomething, i.d),
        # primary participant partOf theSameContainingEntity
        synonyms=('in situ',),),
@@ -1839,6 +1839,9 @@ triples = (
        #(ilxtr.knownDifferentiatingPhenomena, ),
        #restN(hasPart, )
        #(ilxtr.hasPrimaryAspectActualized, asp.location),  # TODO we need a clearer subclass for this
+       intersectionOf(ilxtr.tchnique,
+                      restN(ilxtr.hasPartPriAspect, restN(hasPart, ())
+                     ),
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasPartPart,
                             intersectionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.location),

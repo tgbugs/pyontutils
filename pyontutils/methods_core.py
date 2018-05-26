@@ -353,6 +353,13 @@ triples = (
          ('The relationship between a technique and an aspect of the primary '
           'participant that is constrained as part of a technique.')),
 
+    oop(ilxtr.hasPriParticipantPartAspect),
+    oop(ilxtr.hasPriParticipantPartPriAspect),
+    oop(ilxtr.hasPartPriAspect, ilxtr.processHasAspect),
+    oop_(ilxtr.hasPartPriAspect,
+         propertyChainAxiom(hasPart, ilxtr.hasPrimaryAspect)),
+    oop(ilxtr.hasPriParticipantPartAspect, ilxtr.processHasAspect),
+
     oop(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.processHasAspect),
     oop_(ilxtr.hasParticipantPartConstrainingAspect,
          propertyChainAxiom(ilxtr.hasPrimaryParticipant, hasPart, ilxtr.hasExpAspect),
