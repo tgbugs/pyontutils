@@ -8,10 +8,11 @@ from pyontutils.core import partOf, hasRole, locatedIn
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN
+from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist
 
 blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
+restSomeHasValue = Restriction2(None, owl.onProperty, owl.someValuesFrom, owl.hasValue)
 #restSomeValuesFrom = Restriction(owl.someValuesFrom)
 restMinCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.minCardinality)
 restMaxCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.maxCardinality)
@@ -336,9 +337,10 @@ triples += (  # material entities
     oc(ilxtr.building, ilxtr.materialEntity),
     oc(ilxtr.electrolytes, ilxtr.materialEntity),
 
-    oc(ilxtr.contrastAgent, ilxtr.materialEntity),
+    oc(ilxtr.contrastAgent, ilxtr.materialEntity),  # FIXME this should be a role?
     oc_(ilxtr.contrastAgent, restriction(ilxtr.hasAspect, asp.contrast)),
     oc(ilxtr.detectedPhenomena, ilxtr.materialEntity),  # ie a phenomena that we know how to detect
+    oc(ilxtr.fluorescentMolecule, ilxtr.materialEntity),
 
 )
 
@@ -447,9 +449,23 @@ triples += (  # aspects
          ('How flat a thing is. There are a huge variety of operational '
           'definitions depending on the type of thing in question.')),
 
-    oc(asp.weight, asp.nonLocal),  # TODO 'PATO:0000128'
+    oc(asp.weight, asp.Local),  # TODO 'PATO:0000128'
     olit(asp.weight, rdfs.label, 'weight'),
-    olit(asp.weight, NIFRID.synonym, 'weight aspect'),
+    olit(asp.weight, NIFRID.synonym,
+         'weight on earth',
+         'weight aspect',
+         'weight aspect on earth'),
+    # ICK this is nasty
+    oc_(asp.weight, intersectionOf(restN(ilxtr.hasQualifiedForm,
+                                         asp.weightUnqualified),
+                                   restN(ilxtr.qualifyingValue,
+                                         intersectionOf(asp.acceleration,
+                                                        restHasValue(ilxtr.measuredValue,
+                                                                     Literal('9.8 m/s^2')))))),
+
+    oc(asp.weightQualified, asp.nonLocal),
+    oc_(asp.weightQualified, restN(ilxtr.hasContext, asp.acceleration)),
+    olit(asp.weightQualified, rdfs.label, 'weight qualified'),
 
     oc(asp.livingness, asp.Local),
     oc(asp.aliveness, asp.Local),  # PATO:0001421
@@ -474,6 +490,10 @@ triples += (  # aspects
 
     oc(asp.sequence, asp.Local),
     #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
+    oc(asp.methylationSequence, asp.sequence),
+    oc_(asp.methylationSequence,
+        restN(ilxtr.knownUnderlyingProcess,  # TODO namedUnderlyingProcess??
+              OntTerm('GO:0010424', label='DNA methylation on cytosine within a CG sequence'))),
 
     oc(asp.sensory, asp.Local),
     oc(asp.vision, asp.sensory),  # FIXME asp.canSee
@@ -495,7 +515,7 @@ triples += (  # aspects
     oc(asp.mass, asp.Local),
     olit(asp.mass, rdfs.label, 'mass'),
     olit(asp.mass, NIFRID.synonym, 'rest mass'),
-    oc(asp.massRelitavisitc, asp.nonLocal),
+    oc(asp.massRelativistic, asp.nonLocal),
     oc(asp.energy, asp.nonLocal),
     oc(asp.velocity, asp.nonLocal),
     oc(asp.momentum, asp.nonLocal),
@@ -528,9 +548,9 @@ triples += (  # aspects
     # contrast is always qualified by some detecting phenomena
     oc_(asp.contrast, restN(ilxtr.hasContext, ilxtr.detectedPhenomena)),
 
-    oc(asp.density, asp.Local),  # not directly measurable
+    oc(asp.density, asp.Local),  # local but not directly measurable
 
-    oc(asp.direct, asp.Local),
+    oc(asp.direct, asp.Local),  # FIXME don't think we are going to use this...
     olit(asp.direct, definition,
          'An aspect that can be measured directly in a single instant in time. '
          'Note that these are in principle direct, the operational definition '
@@ -542,10 +562,15 @@ triples += (  # aspects
 
     # FIXME need a better way to model the 'in principle direct'
     # or more accurately 'can never be measured directly'
-    oc(asp.mass, asp.direct),
-    oc(asp['count'], asp.direct),
-    oc(asp.volume, asp.direct),  # NOTE these are all _rest_ values ignoring relativity
-    oc(asp.length, asp.direct),  # distance is the non-direct version of
+    #oc(asp.mass, asp.direct),
+    oc(asp['count'], asp.Local),  # this is the universal count on name binding
+    oc(asp.volume, asp.Local),  # NOTE these are all _rest_ values ignoring relativity
+    oc(asp.length, asp.Local),  # distance is the non-direct version because the start or end point must be known as well
+    olit(asp.length, rdfs.comment, 'This is rest-length.'),
+    # NOTE all unitifications are nonLocal because they depend on the measurement tool barring demonstration of some invariant
+    oc(asp.lengthRelativistic, asp.nonLocal),
+    oc(asp.volumeRelativistic, asp.nonLocal),
+
     oc(asp.distance, asp.nonLocal),
     oc(asp.distanceFromSoma, asp.distance),
     oc_(asp.distanceFromSoma, restriction(ilxtr.hasContext, ilxtr.cellSoma)),
@@ -559,6 +584,7 @@ triples += (  # aspects
     #oc_(asp.boilingPoint, restN(ilxtr.hasContext, asp.pressure)) FIXME
 
     oc(asp.epitopePresent, asp.Local),  # true predicates are always local by definition
+    oc(asp.complementSequencePresent, asp.Local),
     oc(asp.condensationPoint, asp.nonLocal),
 
     oc(asp.lumenance, asp.Local),
@@ -594,7 +620,7 @@ prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = methods_core.iri, methods_helper.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
-#imports = methods_core.iri, methods_helper.iri
+imports = methods_core.iri, methods_helper.iri
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
@@ -603,6 +629,10 @@ triples = (
     # biccn
 
     (ilxtr.hasSomething, owl.inverseOf, ilxtr.isSomething),
+    _t(tech.unclassified, 'Unclassified techniques',
+       (ilxtr.hasSomething, TEMP.temp),
+       synonyms=('unfinished techniques',)
+      ),
 
     _t(i.d, 'atlas registration technique',
        # ilxtr.hasPrimaryParticipant, restriction(partOf, some animalia)
@@ -713,7 +743,7 @@ triples = (
        intersectionOf(ilxtr.technique,
                       # FIXME for this to classify property as a molecular technique
                       # we need a variant of kdp that is an input not just participant...
-                      restrictionN(ilxtr.knownDetectedPhenomena, ilxtr.thingWithSequence),
+                      restrictionN(ilxtr.hasPrimaryInput, ilxtr.thingWithSequence),
                       restrictionN(ilxtr.hasPrimaryAspect, asp.sequence,),
                       restrictionN(ilxtr.hasInformationOutput, ilxtr.informationArtifact)),
        intersectionOf(ilxtr.technique,
@@ -723,7 +753,7 @@ triples = (
 
     _t(tech._naSeq, 'nucleic acid sequencing technique',
        intersectionOf(ilxtr.technique,
-                      restrictionN(ilxtr.knownDetectedPhenomena,
+                      restrictionN(ilxtr.hasPrimaryInput,
                         # hasParticipant molecule or chemical?
                         #OntTerm(term='nucleic acid')
                                    OntTerm('CHEBI:33696', label='nucleic acid')),
@@ -785,13 +815,15 @@ triples = (
     (tech.snSeq, owl.disjointWith, tech.scSeq),
 
     _t(tech.rnaSeq, 'RNAseq',
-       intersectionOf(
-       ilxtr.technique,
-       restrictionN(ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:33697', label='RNA')),
-       restrictionN(ilxtr.hasPrimaryAspect, asp.sequence,),
-       restrictionN(ilxtr.hasInformationOutput, ilxtr.informationArtifact)),
        intersectionOf(ilxtr.technique,
-                      restrictionN(hasPart, tech.rnaSeq)),
+                      restN(ilxtr.hasPrimaryInput,
+                            OntTerm('CHEBI:33697', label='RNA')),
+                      restN(ilxtr.hasPrimaryAspect,
+                            asp.sequence),
+                      restN(ilxtr.hasInformationOutput,
+                            ilxtr.informationArtifact)),
+       intersectionOf(ilxtr.technique,
+                      restN(hasPart, tech.rnaSeq)),
        synonyms=('RNA-seq',),
        equivalentClass=oECN),
 
@@ -800,7 +832,7 @@ triples = (
 
     _t(i.d, 'mRNA-seq',
        (hasPart, tech.rnaSeq),
-       (ilxtr.knownDetectedPhenomena, OntTerm('SO:0000234')
+       (ilxtr.hasPrimaryInput, OntTerm('SO:0000234')
        #(ilxtr.hasPrimaryInput, ilxtr.mRNA
         #OntTerm(term='mRNA')
         # FIXME wow... needed a rerun on this fellow OntTerm('SAO:116515730', label='MRNA', synonyms=[])
@@ -830,7 +862,7 @@ triples = (
 
     _t(i.d, 'Patch-seq',
        (hasPart, tech.rnaSeq),
-       (ilxtr.knownDetectedPhenomena, OntTerm('CHEBI:33697', label='RNA')),
+       (ilxtr.hasPrimaryInput, OntTerm('CHEBI:33697', label='RNA')),
        (hasParticipant, ilxtr.microPipette),  # FIXME TODO
        synonyms=('Patch-Seq',
                  'patch seq',)),
@@ -838,9 +870,8 @@ triples = (
     _t(tech.mcSeq, 'mC-seq',
        #(ilxtr.hasPrimaryInput, ilxtr.openChromatin),  # nucleus has part?
        #(ilxtr.hasPrimaryInput, ilxtr.methylatedDNA),
-       (ilxtr.hasPrimaryAspect, asp.sequence),
-       (ilxtr.knownDetectedPhenomena, ilxtr.DNA),
-       (ilxtr.knownDetectedPhenomena, OntTerm('GO:0010424', label='DNA methylation on cytosine within a CG sequence')),
+       (ilxtr.hasPrimaryAspect, asp.methylationSequence),
+       (ilxtr.hasPrimaryInput, ilxtr.DNA),
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
        def_='non CG methylation',
     ),
@@ -946,25 +977,26 @@ triples = (
     # global anaesthesia technique
 
     _t(tech.ISH, 'in situ hybridization technique',  # TODO
-       intersectionOf(tech.inSitu,  # FIXME
-                      restN(hasInput, ilxtr.hybridizationProbe),
-                      restN(ilxtr.knownDetectedPhenomena, ilxtr.RNA)),
+       intersectionOf(ilxtr.technique,  # FIXME
+                      restN(ilxtr.hasPartPart, ilxtr.RNA),  # FIXME non-specic open DNA binding?
+                      # or is it hasPrimaryAspect_dAdS?
+                      restN(ilxtr.hasPrimaryAspect, asp.complementSequencePresent),
+                      restN(hasInput, ilxtr.hybridizationProbe)),
        restN(hasPart, tech.ISH),
        synonyms=('in situ hybridization', 'ISH'),
        equivalentClass=oECN),
     #(tech.ISH, owl.equivalentClass, OntTerm('NLXINV:20090610')),  # TODO
 
     _t(tech.FISH, 'fluorescence in situ hybridization technique',
-       (ilxtr.hasSomething, i.d),
        (hasPart, tech.ISH),
-       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
+       (hasInput, ilxtr.fluorescentMolecule),
        synonyms=('fluorescence in situ hybridization', 'FISH'),
     ),
 
     _t(tech.smFISH, 'single-molecule fluorescence in situ hybridization technique',
-       (ilxtr.hasSomething, i.d),
        (hasPart, tech.ISH),
-       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
+       (hasInput, ilxtr.fluorescentMolecule),
+       (ilxtr.hasSomething, i.d),
        synonyms=('single-molecule fluorescence in situ hybridization',
                  'single molecule fluorescence in situ hybridization',
                  'single-molecule FISH',
@@ -973,9 +1005,9 @@ triples = (
     ),
 
     _t(tech.MERFISH, 'multiplexed error-robust fluorescence in situ hybridization technique',
-       (ilxtr.hasSomething, i.d),
        (hasPart, tech.ISH),
-       (ilxtr.knownDetectedPhenomena, ilxtr.RNA),
+       (hasInput, ilxtr.fluorescentMolecule),
+       (ilxtr.hasSomething, i.d),
        synonyms=('multiplexed error-robust fluorescence in situ hybridization',
                  'multiplexed error robust fluorescence in situ hybridization',
                  'multiplexed error-robust FISH',
@@ -1411,9 +1443,10 @@ triples = (
 
        # the pimary participant is still part of the part of the primary participant of the
        # preceeding technique where the input was living
-       (ilxtr.hasConstrainingAspect, asp.location),
+       #(ilxtr.hasConstrainingAspect, asp.location),
        #(ilxtr.hasConstrainingAspect_value, ilxtr.unchanged),  # FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasPartPart, ilxtr.materialEntity),
+       #(ilxtr.hasSomething, i.d),
        # primary participant partOf theSameContainingEntity
        synonyms=('in situ',),),
     (tech.inSitu, owl.disjointWith, tech.inVitro),
@@ -1494,7 +1527,9 @@ triples = (
        synonyms=('crystallization',)),
 
     _t(i.d, 'crystal quality evalulation technique',
+       (ilxtr.hasPrimaryInput, ilxtr.materialEntity),
        (ilxtr.hasPrimaryAspect, asp.physicalOrderedness),
+       (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        # (ilxtr.hasPrimaryAspect, asp.percentCrystallinity),
        # there are many other metrics that can be used that are subclasses
       ),
@@ -1637,7 +1672,7 @@ triples = (
 
     _t(i.d, 'high-fat diet feeding technique',
        (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
-       (ilxtr.hasPrimaryAspect, asp.weight),
+       (ilxtr.hasPrimaryAspectActualized, asp.weight),
        (hasInput, ilxtr.highFatDiet),
     ),
 
@@ -1646,7 +1681,7 @@ triples = (
        # ie that if one were to measure rather than specify
        # the mouse should be in in the same phase during the activity
        (ilxtr.hasConstrainingAspect, asp.circadianPhase),  # TODO? 'NBO:0000169'
-       (ilxtr.hasPrimaryAspect, asp.weight),
+       (ilxtr.hasPrimaryAspectActualized, asp.weight),
        (hasInput, ilxtr.highFatDiet),
        ),
 
@@ -1656,7 +1691,7 @@ triples = (
        # as opposed to the primary aspect being the current point in the cyrcadian cycle
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
        (ilxtr.hasConstrainingAspect, OntTerm('PATO:0000011', label='age')),  # FIXME not quite right
-       (ilxtr.hasPrimaryAspect, asp.weight),  # FIXME not quite right
+       (ilxtr.hasPrimaryAspectActualized, asp.weight),  # FIXME not quite right
        (hasInput, ilxtr.highFatDiet),
        # (hasInput, ilx['researchdiets/uris/productnumber/D12492']),  # too specific
        ),
@@ -1916,15 +1951,15 @@ triples = (
        synonyms=('observation', 'observation technique'),),
 
     _t(i.d, 'procurement technique',
-       (ilxtr.hasPrimaryAspect, asp.location),
+       (ilxtr.hasPrimaryAspectActualized, asp.location),
        (ilxtr.hasPrimaryParticipant,
         OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
        ),
-       (ilxtr.hasPrimaryOutput,
-        OntTerm('BFO:0000040', label='material entity')
+       #(ilxtr.hasPrimaryOutput,  # primary outputs imply creation
+        #OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
-       ),
+       #),
        def_='A technique for getting or retrieving something.',
        synonyms=('acquisition technique', 'procurement', 'acquistion', 'get')
     ),
@@ -1990,6 +2025,7 @@ triples = (
     # measuring
     _t(tech.measuring, 'measuring technique',
        # TODO is detection distinct from measurement if there is no explicit symbolization?
+       (ilxtr.hasPrimaryAspect, ilxtr.aspect),  # if you are measuring something you had bettered know what you are measuring
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
        # FIXME has primary input?
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity #OntTerm('BFO:0000001', label='entity')
@@ -3049,7 +3085,7 @@ methods = simpleOnt(filename=filename,
                     comment=comment,
                     _repo=_repo)
 
-[methods.graph.add((o2, rdfs.subClassOf, TEMP.urg))
+[methods.graph.add((o2, rdfs.subClassOf, TEMP.temp))
  for s1, p1, o1 in methods.graph if
  p1 == owl.onProperty and
  o1 == ilxtr.hasSomething
