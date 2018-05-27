@@ -159,10 +159,8 @@ def add_experiental(comparator_data):
 
 def compare_graphs():
     data = defaultdict(list)
-
     interlex_with_mods = defaultdict(set)
     nif_with_mods = defaultdict(set)
-
     iri_to_family_iris = get_iri_to_family_iris()
 
     #changed to list to have a ranking system within the data to make it more complicated with bloat data.
@@ -186,16 +184,16 @@ def compare_graphs():
 
         for pred, obj in g_ilx.g.predicate_objects(subject=subj):
 
-
             '''Needs traversal convert superclass ilx to its respected exisiting ids'''
             if qilx(pred) == 'rdfs:subClassOf':
+                '''Needs traversal convert superclass ilx to its respected exisiting ids'''
                 superclasses_iris = iri_to_family_iris[str(obj)]
                 for superclasses_iri in superclasses_iris:
                     tup = (qilx(pred), ' '.join(superclasses_iri.lower().strip().split()))
                     ilx_mod_conversion[tup] = (qilx(pred), superclasses_iri)
                     interlex_with_mods[qilx(subj)].add(tup)
+            ''' Special condition for label bc we want to know Cap diff '''
             else:
-                ''' Special condition for label bc we want to know Cap diff '''
                 if qilx(pred) == 'rdfs:label':
                     tup = (qnif(pred), ' '.join(str(obj).strip().split()))
                 else:

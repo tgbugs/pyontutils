@@ -21,12 +21,16 @@ VERSION = '0.0.1'
 
 class ttl2pd():
 
+    query = """
+        select ?subj ?pred ?obj
+        where {
+            ?subj rdf:type owl:Class .
+            ?subj ?pred ?obj .
+        } """
+
     def __init__(self, graph, query, args=None):
         self.args = args
         self.g = graph
-        self.query = query
-        print('Querying...')
-        self.result = self.g.query(self.query)
         self.df = self.get_sparql_dataframe()
 
     def qname(self, uri):
@@ -37,6 +41,9 @@ class ttl2pd():
             sys.exit('No qname for '+uri)
 
     def get_sparql_dataframe(self):
+
+        print('Querying...')
+        self.result = self.g.query(self.query)
 
         cols = set()
         indx = set()
@@ -59,9 +66,8 @@ class ttl2pd():
         print('Building DataFrame...')
         df = pd.DataFrame(columns=cols, index=indx)
         for key, value in data.items():
-            for k, v in value.items(): #It was annoying to always deal with lists
-                #v = [str(e) for e in v]
-                if len(v) == 1:
+            for k, v in value.items():
+                if len(v) == 1: #It was annoying to always deal with lists
                     value[k] = v[0]
                 else:
                     value[k] = v
@@ -99,8 +105,7 @@ def local_ttl2pd(infile):
         where {
             ?subj rdf:type owl:Class .
             ?subj ?pred ?obj .
-        }
-    """
+        } """
     return ttl2pd(graph, query).df
 
 def main():

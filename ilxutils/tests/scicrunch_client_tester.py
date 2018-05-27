@@ -47,6 +47,7 @@ class TestSC(unittest.TestCase):
             self.args = read_args(api_key = p.home() / 'keys/production_api_scicrunch_key.txt',
                                     db_url = p.home() / 'keys/production_engine_scicrunch_key.txt',
                                     production = True)
+            self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/{ilx_id}"
         else:
             self.args = read_args(api_key = p.home() / 'keys/production_api_scicrunch_key.txt',
                                     db_url = p.home() / 'keys/production_engine_scicrunch_key.txt',
@@ -56,13 +57,13 @@ class TestSC(unittest.TestCase):
             self.terms_add = [{'term':'troy_test_'+now, 'definition':'temp'}]
             self.terms_add_crawl = [{'term':'troy_test_crawl_'+now, 'definition':'temp'}]
             self.terms2update = [{'id':304383,'ilx':'tmp_0381298', 'definition':'update_'+now}]
+            self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/beta2_interlex/term/{ilx_id}"
         self.sci = scicrunch(api_key = self.args.api_key,
                                 base_path = self.args.base_path,
                                 db_url = self.args.db_url)
         self.ids = [10]
         self.tids = [182]
         self.annotation_ids = [10]
-        self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/{ilx_id}"
 
     @ignore_warnings
     def test_identifierSearches(self):
@@ -110,8 +111,7 @@ class TestSC(unittest.TestCase):
         get = self.sci.identifierSearches([post['data']['id']], _print=False, debug=True, crawl=False)
         self.assertEqual(get['data']['id'], str(post['data']['id']))
 
-        #url = self.elastic_base.format(ilx_id=get['data']['ilx']) #FIXME the elastic search as is cannot deal with beta ilx ids
-        url = self.elastic_base.format(ilx_id='ilx_0381346') # dummy just to make sure elastic is working at all
+        url = self.elastic_base.format(ilx_id=get['data']['ilx'])
         req = r.get(url, auth=(username, password)).json()
         self.assertEqual(req['found'], True)
 

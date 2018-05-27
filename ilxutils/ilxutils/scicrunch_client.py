@@ -17,16 +17,16 @@ from pathlib import Path as p
 Get functions need a list of term ids
 Post functions need a list of dictionaries with their needed/optional keys & values
 
-identifierSearches          (identifierSearches(self, ids=None, HELP=False, LIMIT=50)
-updateTerms                 (self, data, HELP=False, LIMIT=50, sql=False)
-addTerms                    (self, data, HELP=False, LIMIT=50, sql=False)
-addAnnotations              (self, data, HELP=False, LIMIT=50, sql=False)
-getAnnotations_via_tid      (self, tids, HELP=False, LIMIT=50)
-getAnnotations_via_id       (self, annotation_ids, HELP=False, LIMIT=50)
-updateAnntationValues       (self, data, HELP=False, LIMIT=50)
-updateAnntationType         (self, data, HELP=False, LIMIT=50)
-deleteAnnotations           (self, annotation_ids, HELP=False, LIMIT=50)
-addRelationship             (self, data, HELP=False, LIMIT=50)
+identifierSearches          ids, LIMIT=50, _print=True, crawl=False, debug=False
+addTerms                    data ....
+updateTerms                 data ....
+addAnnotations              data ....
+getAnnotations_via_tid      tids ....
+getAnnotations_via_id       annotation_ids ....
+updateAnntation             data ....
+deleteAnnotations           annotation_ids ....
+addRelationship             data ....
+deleteTerms                 ilx_ids .. crawl=True .
 '''
 class scicrunch():
 
@@ -307,11 +307,11 @@ class scicrunch():
             relationships.append((url_base, relationship))
         return self.post(relationships, LIMIT=LIMIT, action='Adding Relationships', _print=True, crawl=False, debug=False)
 
-    def deleteTerms(self, ilx_ids, LIMIT=50, _print=True, crawl=True):
+    def deleteTerms(self, ilx_ids, LIMIT=50, _print=True, crawl=True, debug=False):
         """ilx_ids = list of interlex ids."""
         url = self.base_path + '/api/1/term/elastic/delete/{ilx_id}?key=' + self.key
         data = [(url.format(ilx_id=str(ilx_id)), {}) for ilx_id in ilx_ids]
-        return self.post(data, LIMIT=LIMIT,  _print=_print, crawl=crawl)
+        return self.post(data, LIMIT=LIMIT,  _print=_print, crawl=crawl, debug=debug)
 
 def main():
     #args = read_args(api_key= p.home() / 'keys/beta_api_scicrunch_key.txt', db_url= p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)

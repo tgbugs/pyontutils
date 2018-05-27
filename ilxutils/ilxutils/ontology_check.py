@@ -1,9 +1,14 @@
-import json
+"""
+TODO:
+Fuctionality is only for label <--> rdfs:label comparison. Needs to be increased for the label
+side bc rfs:label can be changed to a different coloumn.
+"""
 
+import json
 from sqlalchemy import create_engine, inspect, Table, Column
 import pandas as pd
 from ilxutils.args_reader import read_args
-from ilxutils.scicrunch_client import scicrunch'
+from ilxutils.scicrunch_client import scicrunch
 from ilxutils.mydifflib import diffcolor, diff, ratio
 import sys
 import time
@@ -23,7 +28,7 @@ Reference to repeats that may be in listself
 Will delete and replace with self repeating checks
 '''
 toms_repeats = []
-repeats = json.load(open('repeating_exids.json'))
+repeats = json.load(open('../dump/repeating_exids.json'))
 for repeat in repeats:
     toms_repeats.append(repeat['uri'])
 
@@ -61,7 +66,10 @@ def df2hash(df, column):
     dfhash = defaultdict(list)
     for uri, row in df.iterrows():
         labels = degrade(row[column])
-        dfhash[uri] = labels
+        if isinstance(labels, list):
+            dfhash[uri] = labels
+        elif isinstance(labels, str):
+            dfhash[uri] = [labels]
         if type(labels) == list:
             for label in labels:
                 dfhash[label] = uri
@@ -69,7 +77,8 @@ def df2hash(df, column):
             dfhash[labels] = uri
     return dfhash
 
-#for p,iri in set([(row.curie.split(':')[0].strip().lower(), row.iri.rsplit('/', 1)[0].strip()) for i, row in ex.iterrows() if row.curie]): print(p,':',iri,',')
+# How I go this dict:
+# for p,iri in set([(row.curie.split(':')[0].strip().lower(), row.iri.rsplit('/', 1)[0].strip()) for i, row in ex.iterrows() if row.curie]): print(p,':',iri,',')
 onto_prefix = {
     'radlex' : 'http://www.radlex.org/RID' ,
     'nlxdys' : 'http://uri.neuinfo.org/nif/nifstd' ,
@@ -138,14 +147,15 @@ onto_prefix = {
 }
 
 class ontology_check():
-    def __init__(self, ontology, column_to_hash, sql):
+    def __init__(self, ontology, column_to_hash, sql, cj=False):
+        self.cj = cj
         self.ontoname = p(ontology).stem
         self.onto = local_ttl2pd(ontology)
         self.ontohash = df2hash(self.onto[self.onto[column_to_hash].notnull()], column_to_hash) # hashes index to column
         self.ex = sql.get_existing_ids()
-        self.ilxdiffdata = self.ilxdiff()
+        self.ilxdiffdata = self.ilx_label_diff()
 
-    def ilxdiff(self):
+    def ilx_label_diff(self): #FIXME should be renamed label something bc thats all it checks right now
         data = []
         if not onto_prefix.get(self.ontoname): #dont have iri prefix
             ex = self.ex
@@ -155,21 +165,35 @@ class ontology_check():
             local_data = {}
             label = degrade(row.label)
             if self.ontohash.get(row.iri):
-                if not label in self.ontohash.get(row.iri):
-                    #print(self.ontohash.get(row.iri), label)
-                    local_data.update({'ilx_uri':row.iri, 'ilx_label':label,'onto_label':self.ontohash.get(row.iri), 'ilx_id':row.ilx})
+                if not label in self.ontohash.get(row.iri): #do check here
+                    local_data.update({'ilx_uri':row.iri, 'ilx_label':label,'onto_labels':self.ontohash.get(row.iri), 'ilx_id':row.ilx})
                     if self.ontohash.get(label):
                         if row.iri != self.ontohash.get(label):
                             local_data.update({'onto_uri_from_ilx_label':self.ontohash.get(label)})
                     if row.iri in toms_repeats: local_data.update({'repeating_in_ilx':True}) #FIXME
+                    local_data.update({'label_diffs':[diff(label, onto_label) for onto_label in self.ontohash.get(row.iri)]})
+                    ratios = [ratio(label, onto_label) for onto_label in self.ontohash.get(row.iri)]
+                    notes = []
+                    for _ratio in ratios:
+                        if float(_ratio) >= .95:
+                            notes.append('Syntax difference')
+                        else:
+                            notes.append('Need futher action')
+                    local_data.update({'label_diff_notes':notes})
+                    local_data.update({'label_diff_ratios':ratios})
             if local_data:
                 data.append(local_data)
-        cj(data, '../Ontology_Checks/'+self.ontoname+'-fix')
+        if self.cj:
+            cj(data, '../dump/'+self.ontoname+'-ilx-diff')
 
 def main():
-    args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
+    args = read_args(
+                api_key= p.home() / 'keys/production_api_scicrunch_key.txt',
+                db_url= p.home() / 'keys/production_engine_scicrunch_key.txt',
+                VERSION='0.1',
+                production=True)
     sql = interlex_sql(db_url=args.db_url)
-    ontoc = ontology_check(ontology='/home/troy/Desktop/uberon.owl', column_to_hash='rdfs:label', sql=sql)
+    ontoc = ontology_check(ontology='/home/troy/Desktop/uberon.owl', column_to_hash='rdfs:label', sql=sql, cj=True)
 
 if __name__ == '__main__':
     main()

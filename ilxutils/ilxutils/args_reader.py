@@ -6,50 +6,55 @@ Usage:  foo.py [-h | --help]
         foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
-        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
-        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
+        api_wapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
+        api_wapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
+        graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Arugments:
-    addTerms                    Add terms|cdes|annotations|relationships to SciCrunch
-    updateTerms                 Update terms|cdes|annotations|relationships in SciCrunch
-    addAnnotations              Add annotations to existing elements
-    updateAnntationValues       Update annotation values only
-    updateAnntationType         Update annotation connector aka annotation_type via annoatation_tid
+    addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
+    updateTerms                     Update terms|cdes|annotations|relationships in SciCrunch
+    addAnnotations                  Add annotations to existing elements
+    updateAnntationValues           Update annotation values only
+    updateAnntationType             Update annotation connector aka annotation_type via annoatation_tid
 
 Options:
-    -h, --help                  Display this help message
-    -v, --version               Current version of file
+    -h, --help                      Display this help message
+    -v, --version                   Current version of file
 
-    -f, --file=<path>           File that holds the data you wish to upload to Scicrunch [default: None]
-    -k, --api_key=<path>        Key path [default: ../keys/production_api_scicrunch_key.txt]
-    -d, --db_url=<path>         Engine key path [default: ../keys/production_engine_scicrunch_key.txt]
-    -o, --output=<path>         Output path
-
-    -p, --production            Production SciCrunch
-    -b, --beta                  Beta SciCrunch
-    -s, --sql                   Uses mysql for updating term data than default api query
-    -i, --index=<int>           index of -f FILE that you which to start [default: 0]
+    -f, --file=<path>               File that holds the data you wish to upload to Scicrunch [default: None]
+    -k, --api_key=<path>            Key path [default: keys/production_api_scicrunch_key.txt]
+    -d, --db_url=<path>             Engine key path [default: keys/production_engine_scicrunch_key.txt]
+    -o, --output=<path>             Output path
+    -p, --production                Production SciCrunch
+    -b, --beta                      Beta SciCrunch
+    -r, --reference_graph=<path>    [default: /home/troy/Desktop/Graphs/interlex.pickle]
+    -t, --target_graph=<path>       [default: /home/troy/Desktop/Graphs/uberon.pickle]
+    -s, --sql                       Uses mysql for updating term data than default api query
+    -i, --index=<int>               index of -f FILE that you which to start [default: 0]
 """
 from docopt import docopt
+import pandas as pd
+from pathlib import Path as p
 import requests as r
 from sqlalchemy import create_engine
-import pandas as pd
 import sys
 
-VERSION = '0.3'
 #BETA = 'https://test2.scicrunch.org'
-BETA = 'https://beta.scicrunch.org'
+BETA = 'https://beta.scicrunch.org' #current beta
 #BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
 
 
 def myopen(path):
+    if isinstance(path, list):
+        path = path[0]
+    path = p.home() / path
     with open(path, 'r') as infile:
         file = infile.read().strip()
     infile.close()
     return file
-    
+
 def test(args):
     if args.api_key:
         url = args.base_path + '/api/1/term/view/10?key=' + args.api_key
@@ -73,12 +78,13 @@ def test(args):
 
 def read_args(**args):
 
-    doc = docopt(__doc__, version=VERSION)
+    if not args.get('VERSION'):
+        args['VERSION'] = '0.0.0'
+    doc = docopt(__doc__, version=args['VERSION'])
     for k, v in doc.items():
         if args.get(k.replace('--', '')):
             doc[k] = args[k.replace('--', '')]
     args = doc
-
     if args['--db_url']:
         args['--db_url'] = myopen(args['--db_url'])
     else:
@@ -104,15 +110,18 @@ def read_args(**args):
 
 
 if __name__ == '__main__':
+    VERSION = '0.3'
     inline = read_args(
        argument='updateTerms',
        engine_key='../keys/production_engine_scicrunch_key.txt',
        api_key='../keys/production_api_scicrunch_key.txt',
-       production=True,)
+       production=True,
+       VERSION=VERSION)
     print(inline)
     inline = read_args(
        engine_key='../keys/beta_engine_scicrunch_key.txt',
        api_key='../keys/beta_api_scicrunch_key.txt',
-       beta=True,)
+       beta=True,
+       VERSION=VERSION)
     print(inline)
     #print(read_args())
