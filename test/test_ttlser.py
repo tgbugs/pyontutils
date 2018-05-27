@@ -1,11 +1,12 @@
-import inspect
 import os
+import re
+import sys
+import difflib
+import inspect
+import unittest
+import subprocess
 from random import shuffle
 import rdflib
-import re
-import subprocess
-import sys
-import unittest
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
 rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
@@ -141,6 +142,9 @@ class TestTtlser(unittest.TestCase):
                     f.write(actual2)
                 with open(actualpath, 'wb') as f:
                     f.write(actual)
+                diff = '\n'.join(difflib.unified_diff(actual.decode().split('\n'),
+                                                      actual2.decode().split('\n')))
+                print(diff)
                 break
 
         return nofail

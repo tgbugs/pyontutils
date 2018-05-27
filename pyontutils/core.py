@@ -871,8 +871,14 @@ class EquivalentClass(Triple):
                     #anything = list(thing(object))
                     #if anything:
                         #[print(_) for _ in anything]
-                    yield object, rdf.type, owl.Class
-                    yield from thing(object)
+                    hasType = False
+                    for t in thing(object):
+                        if t[1] == rdf.type:
+                            hasType = True
+                        yield t
+
+                    if not hasType:
+                        yield object, rdf.type, owl.Class
                 else:
                     object = thing
 

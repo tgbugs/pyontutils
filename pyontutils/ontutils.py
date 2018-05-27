@@ -6,6 +6,7 @@ __doc__ = f"""Common commands for ontology processes. As well as
 
 Usage:
     ontutils devconfig
+    ontutils catalog-extras [options]
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
     ontutils scigraph-stress [options]
@@ -24,6 +25,7 @@ Options:
     -e --epoch=EPOCH                specify the epoch to use for versionIRI
     -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
     -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
+    -f --fetch                      fetch catalog extras from their remote location
     -d --debug                      call IPython embed when done
     -v --verbose                    verbose output
 """
@@ -107,6 +109,37 @@ class ontologySection:
 
 #
 # utils
+
+def catalog_extras(fetch=False):
+    path = Path(devconfig.ontology_local_repo, 'ttl')
+    cat = (path / 'catalog-v001.xml').as_posix()
+    with open((path / '../catalog-extras').as_posix(), 'rt') as ce, open(cat, 'rt') as c:
+        clines = c.readlines()
+        celines = ce.readlines()
+
+    if clines[-2] != celines[-1]:
+        with open(cat, 'wt') as f:
+            f.writelines(clines[:-1] + celines + clines[-1:])
+    else:
+        print(tc.blue('INFO:'), 'extras already added to catalog doing nothing')
+
+    if fetch:
+        print(tc.blue('INFO:'), 'fetching extras')
+        def fetch_and_save(url, loc):
+            resp = requests.get(url)
+            saveloc = (path / loc).as_posix()
+            if resp.ok:
+                with open(saveloc, 'wb') as f:
+                    f.write(resp.content)
+
+                print(tc.blue('INFO:'), f'{url:<60} written to {loc}')
+            else:
+                print(tc.red('WARNING:'), f'failed to fetch {url}')
+
+
+        Async()(deferred(fetch_and_save)(url, loc) for line in celines
+                    for _, _, _, url, _, loc, _ in (line.split('"'),))
+
 
 def spell(filenames, debug=False):
     if hunspell is None:
@@ -721,6 +754,8 @@ def main():
     if args['devconfig']:
         file = devconfig.write(args['--output-file'])
         print(f'config written to {file}')
+    elif args['catalog-extras']:
+        catalog_extras(args['--fetch'])
     elif args['version-iri']:
         version_iris(*filenames, epoch=epoch)
     elif args['scigraph-stress']:
