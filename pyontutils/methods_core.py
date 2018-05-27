@@ -78,7 +78,7 @@ filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = NIFTTL['nif_backend.ttl'],
-imports = obo['bfo.owl'], obo['ro.owl']
+#imports = obo['bfo.owl'], obo['ro.owl']
 #imports = tuple()
 comment = 'The core components for modelling techniques and methods.'
 _repo = True
@@ -235,6 +235,12 @@ triples = (
     olit(ilxtr.primaryParticipantIn, rdfs.label, 'primary participant in'),
     (ilxtr.primaryParticipantIn, owl.inverseOf, ilxtr.hasPrimaryParticipant),
 
+    oop(ilxtr.primaryInputIn, ilxtr.primaryParticipantIn),
+    oop(ilxtr.primaryOutputIn, ilxtr.primaryParticipantIn),
+    (ilxtr.primaryInputIn, owl.inverseOf, ilxtr.hasPrimaryInput),
+    (ilxtr.primaryOutputIn, owl.inverseOf, ilxtr.hasPrimaryOutput),
+
+    oop(ilxtr.hasPrimaryInputOutput, ilxtr.hasPrimaryParticipant),
     oop(ilxtr.hasPrimaryInput, ilxtr.hasPrimaryParticipant),
     oop(ilxtr.hasPrimaryInput, hasInput),
     oop(ilxtr.hasPrimaryOutput, ilxtr.hasPrimaryParticipant),
@@ -484,6 +490,10 @@ triples = (
     olit(ilxtr.hasPrimaryAspect_dAdT, definition,
          'The intended change in primary aspect of primary participant before and after technique'),
 
+    oop(ilxtr.hasConstrainingAspect_dAdT, ilxtr.hasIntention),
+    olit(ilxtr.hasConstrainingAspect_dAdT, rdfs.label,
+         'has intended change in constraining aspect'),
+
     odp(ilxtr.hasAspectValue),
     odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
     (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
@@ -511,13 +521,56 @@ triples = (
         #),
     oop(ilxtr.aspectOf, RO['0000080']),
     (ilxtr.aspectOf, owl.inverseOf, ilxtr.hasAspect),
+    (ilxtr.hasAspect, rdfs.domain, ilxtr.materialEntity),
+    (ilxtr.hasAspect, rdfs.range, ilxtr.aspect),
 
     oop(ilxtr.hasExpAspect, ilxtr.hasAspect),  # has experimental aspect or has operational aspect
     #oop(ilxtr.hasMainAspect, ilxtr.hasExpAspect), # this does not help us
     # FIXME ilxtr.hasMainAspectInSomeTechnique
 
-    #oop(ilxtr.),
-    #oop(ilxtr.),
+    ## aspect to aspect relationships
+    oop(ilxtr.hasQualifiedForm),
+    olit(ilxtr.hasQualifiedForm, rdfs.label, 'has qualified form'),
+    (ilxtr.hasQualifiedForm, rdfs.domain, asp.Local),
+    (ilxtr.hasQualifiedForm, rdfs.range, asp.nonLocal),
+
+    oop(ilxtr.isQualifiedFormOf),
+    olit(ilxtr.isQualifiedFormOf, rdfs.label, 'is qualified form of'),
+    (ilxtr.hasQualifiedForm, owl.inverseOf, ilxtr.isQualifiedFormOf),
+
+    oop(ilxtr.hasUnqualifiedEquivalent),
+
+    oop(ilxtr.hasComplementAspect),  # implies inverse, should be in the symbolic operational definitions
+
+    ## aspect to value relationships
+
+    # FIXME has vs yields vs yielded
+    oop(ilxtr.aspectHasValue),
+    oop(ilxtr.hasDefinedValue, ilxtr.aspectHasValue),
+    oop(ilxtr.hasMeasuredValue, ilxtr.aspectHasValue),
+    oop(ilxtr.hasActualizedValue, ilxtr.aspectHasValue), 
+    oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasActualizedValue),
+    oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasDefinedValue),
+    oop(ilxtr.hasMeasuredActualizedValue, ilxtr.hasActualizedValue),
+    oop(ilxtr.hasMeasuredActualizedValue, ilxtr.hasMeasuredValue),
+
+    ## contexts
+    oop(ilxtr.hasContext),
+    (ilxtr.hasContext, rdfs.domain, ilxtr.aspect),
+
+    oop(ilxtr.hasInformationContext, ilxtr.hasContext),
+    oop(ilxtr.hasTechniqueContext, ilxtr.hasContext),
+    oop(ilxtr.hasMaterialContext, ilxtr.hasContext),
+    oop(ilxtr.hasAspectContext, ilxtr.hasContext),
+
+    (ilxtr.hasInformationContext, rdfs.range, ilxtr.informationEntity),
+    (ilxtr.hasTechniqueContext, rdfs.range, ilxtr.technique),  # aka some other step that has some constraint
+    (ilxtr.hasMaterialContext, rdfs.range, ilxtr.materialEntity),  # TODO (hasMatCont (hasPart some matEnt))???
+    (ilxtr.hasAspectContext, rdfs.range, ilxtr.aspect),  # TODO aspectOf some thing partOf ??
+    #oop(ilxtr.hasMaterialAspectContext, ilxtr.hasContext)
+
+    oop(ilxtr.processHasContext),
+    (ilxtr.processHasContext, rdfs.domain, BFO['0000015']),
 
     # classes
 
@@ -589,7 +642,7 @@ triples = (
          'aspect of thing that is invariant to context'),
     oc(asp.nonLocal, ilxtr.aspect),  # qualified
     olit(asp.nonLocal, rdfs.label, 'aspect qualified'),
-    oc_(asp.nonLocal, restriction(ilxtr.hasContext, ilxtr.materialEntity)),
+    oc_(asp.nonLocal, restriction(ilxtr.hasContext, BFO['0000002'])),
     # FIXME context isn't just the material entity it is the aspects thereof
     # the context probably also needs to be a technique that binds all
     # intersectionOf for multiple aspects? hrm
@@ -620,12 +673,15 @@ triples = (
     oc_(rdflib.BNode(),
         oECN(intersectionOf(BFO['0000015'],
                             restN(hasParticipant,
-                                  restN(ilxtr.hasAspect, asp.nonLocal)))),
+                                  restN(ilxtr.hasAspect, asp.nonLocal))),  # vs hasExpAspect
+             intersectionOf(BFO['0000015'],
+                            restN(ilxtr.processHasAspect,
+                                  restN(ilxtr.hasContext, BFO['0000002'])))),
         # FIXME still doesn't get the binding right
         intersectionOf(BFO['0000015'],
                        # FIXME nonLocal in time requires some time keeping device
                        # id some periodic phenomenon
-                       restN(ilxtr.hasAspectContext, ilxtr.materialEntity)),
+                       restN(ilxtr.processHasContext, BFO['0000002'])),
        ),
 
     #oc_(rdflib.BNode(),
@@ -641,7 +697,8 @@ triples = (
         # this works because immaterial entities have to be anchored to some
         # internal frame which requires something with inertia which requires
         # a meterial entity...
-        restriction(partOf, ilxtr.compositeMaterialEntity),
+        intersectionOf(ilxtr.materialEntity,
+                       restN(partOf, ilxtr.compositeMaterialEntity)),
        ),
     #_t(tech.test, 'test test test',
        #(ilxtr.hasPrimaryParticipant, ilxtr.thingA),

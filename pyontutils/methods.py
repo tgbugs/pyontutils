@@ -168,8 +168,32 @@ triples += (  # material entities
     oc(ilxtr.compositeMaterialEntity, ilxtr.materialEntity),
 
     # more real than real
-    oc(ilxtr.electricalField, ilxtr.materialEntity),
-    oc(ilxtr.magneticField, ilxtr.materialEntity),
+    oc(ilxtr.theObservableUniverse, ilxtr.compositeMaterialEntity),  # or is it a process...
+    oc_(ilxtr.theObservableUniverse,
+        restriction(ilxtr.hasExpAspect, asp.speedOfLight),
+        restriction(ilxtr.hasExpAspect, asp.PlankAspect),
+        restriction(ilxtr.hasExpAspect, asp.elementaryCharge),
+        restriction(ilxtr.hasExpAspect, asp.JosephsonAspect),
+        restriction(ilxtr.hasExpAspect, asp.vonKlitzingAspect),
+        restriction(ilxtr.hasExpAspect, asp.GravitationalAspect),
+        restriction(ilxtr.hasExpAspect, asp.BoltzmannAspect),
+        restriction(ilxtr.hasExpAspect, asp.electronRestMass),
+        restriction(ilxtr.hasExpAspect, asp.gravitationalCouplingAspect),
+        restriction(ilxtr.hasExpAspect, asp.fineStructureAspect),
+        restriction(ilxtr.hasExpAspect, asp.permittivityOfFreeSpace),
+        restriction(ilxtr.hasExpAspect, asp.permeabilityOfFreeSpace),
+        restriction(ilxtr.hasExpAspect, asp.impedanceOfFreeSpace),
+        restriction(ilxtr.hasExpAspect, asp.fineStructureAspect),
+        restriction(ilxtr.hasExpAspect, asp.CoulobsAspect),
+        # more... FIXME some of these probably shouldn't count?
+        # since they are/can be derived?
+        # https://en.wikipedia.org/wiki/Physical_constant
+       ),
+
+    oc(ilxtr.physicalForce, ilxtr.materialEntity),
+    oc(ilxtr.mechanicalForce, ilxtr.physicalForce),
+    oc(ilxtr.electricalField, ilxtr.physicalForce),
+    oc(ilxtr.magneticField, ilxtr.physicalForce),
 
     #oc_(OntTerm('NCBITaxon:1', label='ncbitaxon'), restriction(ilxtr.hasAspect, asp.livingness)),
     # this is technically correct, but misleading, because rocks also have asp.livingness
@@ -177,16 +201,21 @@ triples += (  # material entities
     # because I can measure the livingness of a star, or define it, basically all material entities
     # have all aspects
 
+    # FIXME a molecule of nucleic acid vs a sequence of molecules
+
     oc(ilxtr.thingWithSequence, OntTerm('CHEBI:25367', term='molecule')),
     olit(ilxtr.thingWithSequence, rdfs.label, 'thing with molecular sequence'),
 
     oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
-    oc(ilxtr.nucleicAcid, ilxtr.materialEntity),
+    oc(ilxtr.nucleicAcid, ilxtr.molecule),
     (ilxtr.nucleicAcid, owl.equivalentClass, OntTerm('CHEBI:33696', label='nucleic acid')),
     oc(ilxtr.methylatedDNA, OntTerm('CHEBI:16991', term='DNA')),
     (ilxtr.DNA, owl.equivalentClass, OntTerm('CHEBI:16991', term='DNA')),
     oc(ilxtr.DNA, ilxtr.nucleicAcid),
 
+    oc(ilxtr.molecule, ilxtr.materialEntity),
+
+    oc(OntTerm('CHEBI:25367', label='molecule'), OntTerm('CHEBI:24431', label='chemical entity')),
     (ilxtr.molecule, owl.equivalentClass, OntTerm('CHEBI:25367', label='molecule')),
     oc(ilxtr.plasmidDNA, ilxtr.molecule),  # FIXME how do we model the physical manifestation of a sequence? 'SO:0000155'
     oc(ilxtr.primaryHeritableGeneticMaterial, ilxtr.molecule),
@@ -238,6 +267,13 @@ triples += (  # material entities
     oc(OntTerm('UBERON:0007798'), OntTerm('UBERON:0000465')),
     oc(OntTerm('UBERON:0001049', label='neural tube'), OntTerm('UBERON:0000465')),
     oc(OntTerm('UBERON:0000479', label='tissue'), OntTerm('UBERON:0000465')),
+
+    oc_(ilxtr.partOfSomePrimaryInput, 
+        oECN(intersectionOf(
+            ilxtr.materialEntity,
+            restN(partOf,
+                  restN(ilxtr.primaryInputIn,
+                        ilxtr.technique))))),  # it would be nice to say the technique in question...
 
     oc(ilxtr.section, ilxtr.materialEntity),
     oc_(ilxtr.section,
@@ -295,13 +331,15 @@ triples += (  # material entities
     oc(ilxtr.patchPipette, ilxtr.microPipette),
 
     oc(ilxtr.patchElectrode, ilxtr.recordingElectrode),
-    (ilxtr.patchElectrode, hasPart, ilxtr.singleElectrode),
-    (ilxtr.patchElectrode, hasPart, ilxtr.patchPipette),
+    oc_(ilxtr.patchElectrode,
+        intersectionOf(restN(hasPart, ilxtr.singleElectrode),
+                       restN(hasPart, ilxtr.patchPipette))),
 
     oc(ilxtr.sharpMicroPipette, ilxtr.microPipette),
     oc(ilxtr.sharpElectrode, ilxtr.recordingElectrode),
-    (ilxtr.sharpElectrode, hasPart, ilxtr.singleElectrode),
-    (ilxtr.sharpElectrode, hasPart, ilxtr.sharpMicroPipette),
+    oc_(ilxtr.sharpElectrode,
+        intersectionOf(restN(hasPart, ilxtr.singleElectrode),
+                       restN(hasPart, ilxtr.sharpMicroPipette))),
 
     oc(ilxtr.contrastAgen, ilxtr.materialEntity),
 
@@ -348,7 +386,23 @@ triples += (  # changes
     oc(ilxtr.positive, ilxtr.changeType),
     oc(ilxtr.negative, ilxtr.changeType),
     (ilxtr.negative, owl.disjointWith, ilxtr.positive),
+
+    oc(ilxtr.positiveNonZero, ilxtr.nonZero),
+    oc(ilxtr.positiveNonZero, ilxtr.positive),
+    #oc_(ilxtr.positiveNonZero,
+        #intersectionOf(ilxtr.positive,
+                       #ilxtr.nonZero),
+        #blankc(owl.disjointWith, ilxtr.zero)),
+
+    oc(ilxtr.negativeNonZero, ilxtr.nonZero),
+    oc(ilxtr.negativeNonZero, ilxtr.negative),
+    #oc_(ilxtr.negativeNonZero,
+        #intersectionOf(ilxtr.negative,
+                       #ilxtr.nonZero),
+        #blankc(owl.disjointWith, ilxtr.zero)),
+
     oc(ilxtr.nonZero, ilxtr.changeType),
+    oc_(ilxtr.nonZero, disjointUnionOf(ilxtr.negativeNonZero, ilxtr.positiveNonZero)),
     oc(ilxtr.zero, ilxtr.changeType),
     (ilxtr.zero, owl.disjointWith, ilxtr.nonZero),
 )
@@ -414,17 +468,23 @@ triples += (  # aspects
     # our model assumes that there is no privilidged reference frame in this universe
     oc(asp.direction, asp.spatial),
     oc(asp.locationInAtlas, asp.location),
-    oc_(asp.locationInAtlas, restN(ilxtr.hasContext, ilxtr.atlasLandmarks)),  # morphology matching atlas?
+    oc_(asp.locationInAtlas, restriction(ilxtr.hasContext, ilxtr.atlasLandmarks)),  # morphology matching atlas?
 
     oc(asp.name, asp.nonLocal),
     oc(asp.identity, asp.Local),
-    (asp.name, ilxtr.hasLocalEquivalent, asp.identity),
+    oc_(asp.name,
+        restriction(ilxtr.isQualifiedFormOf, asp.identity),
+        restriction(ilxtr.hasInformationContext, ilxtr.nameIdentityMapping)),
 
     oc(asp.category, asp.Local),
     oc(asp.categoryAssigned, asp.nonLocal),
-    (asp.categoryAssigned, ilxtr.hasLocalEquivalent, asp.category),
+    oc_(asp.categoryAssigned,
+        restriction(ilxtr.isQualifiedFormOf, asp.category),
+        intersectionOf(restN(ilxtr.hasInformationContext, ilxtr.categoryNames),
+                       restN(ilxtr.hasInformationContext, ilxtr.categoryAssignments))),
 
     oc(asp.allocation, asp.location),  # FIXME not clear whether this is local or nonlocal
+    # seems non-local to me...
     olit(asp.allocation, definition,
          ('Allocation is the amount of something in a given place '
           'rather than the total universal amount of a thing. '
@@ -436,6 +496,10 @@ triples += (  # aspects
 
     oc(asp.proportion, asp.allocation),
 
+    oc(asp.homogenaity, asp.allocation),
+    oc(asp.heterogenity, asp.allocation),
+    (asp.homogenaity, owl.inverseOf, asp.heterogenity),
+
     #oc(asp.isClassifiedAs, asp['is']),  # FIXME not quite right, renaming is different then identity
     # this is only an isness in the case where there are a finite and fixed number of types
     #olit(asp.isClassifiedAs, rdfs.label, 'is classified as'),
@@ -443,7 +507,7 @@ triples += (  # aspects
          #'is named as', 'has operational definition with inclusion criteria that names thing as'),
 
     oc(asp.flatness, asp.Local),
-    olit(asp.flatness, rdfs.label, 'flatness'),
+    olit(asp.flatness, rdfs.label, 'flatness'),  # bind domain is some surface? (ie nonbottom)
     olit(asp.flatness, NIFRID.synonym, 'flatness aspect'),
     olit(asp.flatness, definition,
          ('How flat a thing is. There are a huge variety of operational '
@@ -460,12 +524,19 @@ triples += (  # aspects
                                          asp.weightUnqualified),
                                    restN(ilxtr.qualifyingValue,
                                          intersectionOf(asp.acceleration,
-                                                        restHasValue(ilxtr.measuredValue,
+                                                        restHasValue(ilxtr.hasMeasuredValue,
                                                                      Literal('9.8 m/s^2')))))),
 
     oc(asp.weightQualified, asp.nonLocal),
-    oc_(asp.weightQualified, restN(ilxtr.hasContext, asp.acceleration)),
+    oc_(asp.weightQualified, restriction(ilxtr.hasAspectContext, asp.acceleration)),
     olit(asp.weightQualified, rdfs.label, 'weight qualified'),
+
+    oc_(asp.weightOnJupiter, intersectionOf(restN(ilxtr.hasQualifiedForm,
+                                                  asp.weightUnqualified),
+                                            restN(ilxtr.qualifyingValue,
+                                                  intersectionOf(asp.acceleration,
+                                                                 restHasValue(ilxtr.hasMeasuredValue,
+                                                                              Literal('24.5 m/s^2')))))),
 
     oc(asp.livingness, asp.Local),
     oc(asp.aliveness, asp.Local),  # PATO:0001421
@@ -484,16 +555,28 @@ triples += (  # aspects
     # onProperty isFunctional
     # has qualified role?
     # 
-    oc(asp.behavioral, asp.Local),
+    oc(asp.behavioral, asp.nonLocal),
+    # depends on a spatial structure over time so is nonLocal
+    # also cannot be measured directly
+    # FIXME how is behavior nonLocal while elsticity is Local?
+    #  answer: elasticity depends on space not time
+    # both depend on some measurement made over time but are in theory
+    # time invariant properties of the named thing in question?
+    # ie they are dispositions since they are literally our experimental phenotypes
+    # then again we just assume (based on lots of evidence) that the mass of a brick
+    # doesn't magically change when we are not measuring it...
+    # consider a reaction time test, it is a temporal test that is beahvioral
+    # only in so far as the timepoints that it marks signify some interaction(s)
+    # between a thing and the measurement/timing system
 
-    oc(asp.physiological, asp.Local),  # FIXME vs ilxtr.physiologicalSystem?
+    oc(asp.physiological, asp.Local),  # FIXME vs ilxtr.physiologicalSystem? pretty sure is nonLocal?
 
     oc(asp.sequence, asp.Local),
     #(OntTerm('SO:0000001', label='region', synonyms=['sequence']), rdfs.subClassOf, asp.sequence), this very much does not work...
     oc(asp.methylationSequence, asp.sequence),
     oc_(asp.methylationSequence,
-        restN(ilxtr.knownUnderlyingProcess,  # TODO namedUnderlyingProcess??
-              OntTerm('GO:0010424', label='DNA methylation on cytosine within a CG sequence'))),
+        restriction(ilxtr.knownUnderlyingProcess,  # TODO namedUnderlyingProcess??
+                    OntTerm('GO:0010424', label='DNA methylation on cytosine within a CG sequence'))),
 
     oc(asp.sensory, asp.Local),
     oc(asp.vision, asp.sensory),  # FIXME asp.canSee
@@ -503,7 +586,7 @@ triples += (  # aspects
     oc(asp.electrical, asp.electromagnetic),
     oc(asp.voltage, asp.electrical),
     oc(asp.voltage, asp.nonLocal),
-    oc_(asp.voltage, restriction(ilxtr.hasContext, ilxtr.electricalGround)),
+    oc_(asp.voltage, restriction(ilxtr.hasMaterialContext, ilxtr.electricalGround)),
     oc(asp.current, asp.electrical),
     oc(asp.current, asp.nonLocal),
     oc(asp.charge, asp.electrical),
@@ -523,7 +606,10 @@ triples += (  # aspects
     oc(asp.force, asp.nonLocal),
 
     oc(asp.informationEntropy, asp.Local),
-    oc(asp.mechanicalRigidity, asp.Local),
+    oc(asp.elasticity, asp.Local),
+    oc(asp.stiffness, asp.Local),
+    olit(asp.stiffness, rdfs.label, 'stiffness'),
+    olit(asp.stiffness, NIFRID.synonym, 'mechanical rigidity'),
     oc(asp.spectrum, asp.Local),
     oc(asp.spontaneousChangeInStructure, asp.Local),
     oc(asp.connectivity, asp.Local),
@@ -537,16 +623,25 @@ triples += (  # aspects
     #oc(asp.circadianPhase, asp.biologicalActivity),
     oc(asp.circadianPhase, asp.Local),  # FIXME hrm... time as a proxy for biological state?
 
-    oc(asp.sensitvity, asp.nonLocal),
+    oc(asp.sensitivity, asp.nonLocal),
     # FIXME issue with sensitivity and the 'towards' relation
 
     #oc(asp.functionalDefinition, asp['is']),  # TODO not quite right?
     oc(asp.functionalDefinition, asp.nonLocal),
     oc(asp.permeability, asp.functionalDefinition),  # changes some functional property so is thus an isness?
 
+    oc(asp.transparency, asp.nonLocal),  # also not direct...
+    oc_(asp.transparency,
+        restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena),
+        restriction(ilxtr.hasComplementAspect, asp.opacity)),
+    oc(asp.opacity, asp.nonLocal),
+    oc_(asp.opacity,
+        restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena),
+        restriction(ilxtr.hasComplementAspect, asp.transparency)),
+
     oc(asp.contrast, asp.nonLocal),  # TODO what is this more specifically? this is derived ...
     # contrast is always qualified by some detecting phenomena
-    oc_(asp.contrast, restN(ilxtr.hasContext, ilxtr.detectedPhenomena)),
+    oc_(asp.contrast, restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena)),
 
     oc(asp.density, asp.Local),  # local but not directly measurable
 
@@ -568,19 +663,33 @@ triples += (  # aspects
     oc(asp.length, asp.Local),  # distance is the non-direct version because the start or end point must be known as well
     olit(asp.length, rdfs.comment, 'This is rest-length.'),
     # NOTE all unitifications are nonLocal because they depend on the measurement tool barring demonstration of some invariant
+    oc(asp.size, asp.Local),
+    oc(asp.radius, asp.Local),
+    oc(asp.diametere, asp.Local),
+    oc(asp.boundingRadius, asp.Local),
+
     oc(asp.lengthRelativistic, asp.nonLocal),
     oc(asp.volumeRelativistic, asp.nonLocal),
 
+    oc(asp.orientation, asp.spatial),
+    oc_(asp.orientation,
+        restriction(ilxtr.hasMaterialContext,
+                    ilxtr.measurableReferenceFrame)),
+
+    oc(asp.thickness, asp.nonLocal),
+    oc_(asp.thickness,
+        restriction(ilxtr.hasAspectContext, asp.orientation)),
+
     oc(asp.distance, asp.nonLocal),
     oc(asp.distanceFromSoma, asp.distance),
-    oc_(asp.distanceFromSoma, restriction(ilxtr.hasContext, ilxtr.cellSoma)),
+    oc_(asp.distanceFromSoma, restriction(ilxtr.hasMaterialContext, ilxtr.cellSoma)),
 
     # all of these are questionable because they depend on some
     # measurement process which has a tau
     oc(asp.temperature, asp.Local),
 
     oc(asp.boilingPoint, asp.nonLocal),  # tripple point!
-    oc_(asp.boilingPoint, restN(ilxtr.hasContextAspect, asp.pressure)),
+    oc_(asp.boilingPoint, restriction(ilxtr.hasAspectContext, asp.pressure)),
     #oc_(asp.boilingPoint, restN(ilxtr.hasContext, asp.pressure)) FIXME
 
     oc(asp.epitopePresent, asp.Local),  # true predicates are always local by definition
@@ -592,14 +701,19 @@ triples += (  # aspects
     oc(asp.shape, asp.Local),
     # TODO also need the constants...
 
+    oc(asp.nuclearMagneticResonance, asp.nonLocal),
+    oc_(asp.nuclearMagneticResonance,
+        # TODO hasMaterialAspectContext binding the frequency and the strenght respectively
+        restriction(ilxtr.hasMaterialContext, ilxtr.magneticField),
+        restriction(ilxtr.hasMaterialContext, ilxtr.radiowaves)),
 )
 
 methods_helper = simpleOnt(filename=filename,
-                         prefixes=prefixes,
-                         imports=imports,
-                         triples=triples,
-                         comment=comment,
-                         _repo=_repo)
+                           prefixes=prefixes,
+                           imports=imports,
+                           triples=triples,
+                           comment=comment,
+                           _repo=_repo)
 
 methods_helper._graph.add_namespace('asp', str(asp))
 methods_helper._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
@@ -620,7 +734,7 @@ prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = methods_core.iri, methods_helper.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
-imports = methods_core.iri, methods_helper.iri
+#imports = methods_core.iri, methods_helper.iri
 comment = 'The ontology of techniques and methods.'
 _repo = True
 debug = False
@@ -1089,7 +1203,7 @@ triples = (
        # gravity not ATP hydrolysis?
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
-       (ilxtr.hasMotiveForce, ilxtr.physical)),
+       (ilxtr.hasMotiveForce, ilxtr.physicalForce)),
 
     _t(i.d, 'diffusion based delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
@@ -1109,7 +1223,7 @@ triples = (
     _t(i.d, 'mechanical delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
-       (ilxtr.hasMotiveForce, ilxtr.mechanical)),
+       (ilxtr.hasMotiveForce, ilxtr.mechanicalForce)),
     _t(i.d, 'rocket delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (hasInput, ilxtr.rocket)),
@@ -1144,7 +1258,7 @@ triples = (
 
     _t(OntTerm('BIRNLEX:2136'), 'intracellular injection technique',
        ilxtr.technique,
-       (hasPart, ilxtr.injection),
+       (hasPart, tech.injection),
        unionOf(restN(hasPart, tech.cellPatching),  # vs oneOf? which fails to load?
                restN(hasPart, tech.sharpElectrodeTechnique)),
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
@@ -1341,11 +1455,12 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
       ),
 
-    _t(i.d, 'localization technique',
+    _t(tech.localization, 'localization technique',
        (ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'colocalization technique',
        # FIXME measurement vs putting them together?
+       ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        restMinCardValue(hasPart, tech.localization, Literal(2)),
        (ilxtr.hasPrimaryAspect, asp.location),
@@ -1446,6 +1561,17 @@ triples = (
        #(ilxtr.hasConstrainingAspect, asp.location),
        #(ilxtr.hasConstrainingAspect_value, ilxtr.unchanged),  # FIXME
        (ilxtr.hasPartPriParticipant, ilxtr.materialEntity),
+       (ilxtr.hasSomething, i.d),
+
+       # process has part that has primary aspect actualized location
+       # process has part that has constraining aspect some aspect matches
+       # primary participant has part that has aspect matches # TODO not quite
+       # intersectionOf(
+           #ilxtr.technique,
+           #restN(ilxtr.hasPrimaryParticipant,
+                 #restN(hasPart, restN(ilxtr.primaryParticipantIn,
+                                      #ilxtr.separationProcessPart)))),
+
        #(ilxtr.hasSomething, i.d),
        # primary participant partOf theSameContainingEntity
        synonyms=('in situ',),),
@@ -1558,20 +1684,35 @@ triples = (
        #(ilxtr.hasPrimaryAspect, asp.likelinessToDecompose),
        #(ilxtr.hasPrimaryAspect, asp.mechanicalRigidity),
        #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
-       ilxtr.technique,
-       unionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.mechanicalRigidity),
-               restN(ilxtr.hasPrimaryAspectActualized, asp.spontaneousChangeInStructure)),
+       # TODO I think spontaneous change in structure has to be a requirement
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspectActualized,
+                            asp.spontaneousChangeInStructure),
+                      restN(ilxtr.hasPrimaryAspect_dAdT,
+                            ilxtr.negativeNonZero),
+                      unionOf(restN(ilxtr.hasPrimaryAspectActualized,
+                                    asp.stiffness),  # mechanical rigidity
+                              restN(ilxtr.hasPrimaryAspectActualized,
+                                    asp.elasticity),
+                              restN(ilxtr.hasPrimaryAspectActualized,
+                                    asp.spontaneousChangeInStructure))),
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasConstrainingAspect, asp.fixedness),
+                      restN(ilxtr.hasConstrainingAspect_dAdT, ilxtr.positiveNonZero),
+                     ),
        #unionOf(hasAspectChangeCombinator(asp.mechanicalRigidity, ilxtr.positive),
                # this approach was simply too verbose and didn't help with classification at all
                #hasAspectChangeCombinator(asp.spontaneousChangeInStructure, ilxtr.negative)),
-       synonyms=('fixation',)),
+       synonyms=('fixation',),
+       equivalentClass=oECN),
 
     #oc_(tech.fixation,
        #),
 
     _t(i.d, 'tissue fixation technique',
-       tech.fixation,
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
+       (ilxtr.hasConstrainingAspect, asp.fixedness),
+       (ilxtr.hasConstrainingAspect_dAdT, ilxtr.positiveNonZero),
        synonyms=('tissue fixation',)),
 
     _t(i.d, 'sensitization technique',
@@ -1612,7 +1753,7 @@ triples = (
     _t(i.d, 'assembly technique',
        # put something together
        # suggests that disassembly is possible
-       (ilxtr.hasPrimaryOutput, ilxtr.thing),  # TODO
+       (ilxtr.hasPrimaryOutput, ilxtr.materialEntity),  # TODO
        (ilxtr.hasSomething, i.d),
       ),
 
@@ -1645,11 +1786,11 @@ triples = (
        # alternately we can change it to hasParticipant ilxtr.livingOrganism
        # to allow them to include techniques where locally the
        # primary participant is something like food, instead of the organism HRM
-       tech.maintaining,
-       (hasParticipant,  # vs primary participant
+       (ilxtr.hasPrimaryInputOutput,  # vs primary participant
         OntTerm('NCBITaxon:1', label='ncbitaxon')
        ),
-       synonyms=('culture technique', 'husbandry', 'culture'),),
+       synonyms=('culture technique', 'husbandry', 'culture'),
+      ),
 
     _t(i.d, 'feeding technique',
        # metabolism required so no viruses
@@ -1657,11 +1798,10 @@ triples = (
        #  without having to include the entailment explicitly
        #  i.e. how do we deal side effects of processes
 
-       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
-       (hasInput, ilxtr.food),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (hasInput, ilxtr.food),  # this works because hasPart food allocation technique will lift to this
        synonyms=('feeding',)),
 
-       (i.p, rdfs.subClassOf, tech.maintaining),
        # this is a legitimate case where there is no easy
        # way to communicate a side effect of feeding
        # I will thing a bit more on this but I think it is the easiest way
@@ -1671,13 +1811,13 @@ triples = (
        #  ilxtr.hasSideEffectTechnique or ilxtr.hasSideEffect?
 
     _t(i.d, 'high-fat diet feeding technique',
-       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        (ilxtr.hasPrimaryAspectActualized, asp.weight),
        (hasInput, ilxtr.highFatDiet),
     ),
 
     _t(i.d, 'mouse circadian based high-fat diet feeding technique',
-       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:10090', label='Mus musculus')),
        # ie that if one were to measure rather than specify
        # the mouse should be in in the same phase during the activity
        (ilxtr.hasConstrainingAspect, asp.circadianPhase),  # TODO? 'NBO:0000169'
@@ -1689,7 +1829,7 @@ triples = (
        # TODO there are a whole bunch of other high fat diet feeding techniques
        # 'MmusDv:0000050'
        # as opposed to the primary aspect being the current point in the cyrcadian cycle
-       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:10090', label='Mus musculus')),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:10090', label='Mus musculus')),
        (ilxtr.hasConstrainingAspect, OntTerm('PATO:0000011', label='age')),  # FIXME not quite right
        (ilxtr.hasPrimaryAspectActualized, asp.weight),  # FIXME not quite right
        (hasInput, ilxtr.highFatDiet),
@@ -1697,29 +1837,25 @@ triples = (
        ),
 
     _t(i.d, 'bacterial culture technique',
-       tech.maintaining,
        #(hasParticipant, OntTerm('NCBITaxon:2', label='Bacteria <prokaryote>')),
-       (hasParticipant, OntTerm('NCBITaxon:2')),  # FIXME > 1 label
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:2')),  # FIXME > 1 label
        synonyms=('bacterial culture',),),
 
     _t(i.d, 'cell culture technique',
-       tech.maintaining,
-       (hasParticipant, OntTerm('SAO:1813327414', label='Cell')),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('SAO:1813327414', label='Cell')),
        synonyms=('cell culture',),),
 
     _t(i.d, 'yeast culture technique',
-       tech.maintaining,
-       (hasParticipant, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
        synonyms=('yeast culture',),),
 
     _t(i.d, 'tissue culture technique',
-       tech.maintaining,
-       (hasParticipant, ilxtr.tissue),
+       (ilxtr.hasPrimaryInputOutput, ilxtr.tissue),
        synonyms=('tissue culture',),),
 
     _t(i.d, 'slice culture technique',
-       tech.maintaining,
-       (hasParticipant, ilxtr.brainSlice),  # FIXME
+       (ilxtr.hasPrimaryInputOutput, intersectionOf(ilxtr.brainSlice,
+                                                    ilxtr.physiologicalSystem)),
        synonyms=('slice culture',),),
 
     _t(i.d, 'open book preparation technique',
@@ -1728,19 +1864,18 @@ triples = (
         OntTerm('UBERON:0001049', label='neural tube')
         #OntTerm(term='neural tube', prefix='UBERON')  # FIXME dissected out neural tube...
        ),
+       (ilxtr.hasSomething, i.d),
        synonyms=('open book culture', 'open book preparation'),),
 
     _t(i.d, 'fly culture technique',
-       tech.maintaining,
-       (hasParticipant,
+       (ilxtr.hasPrimaryInputOutput,
         OntTerm('NCBITaxon:7215', label='Drosophila <fruit fly, genus>')
         #OntTerm(term='drosophila')
        ),
        synonyms=('fly culture',),),
 
     _t(i.d, 'rodent husbandry technique',
-       tech.maintaining,
-       (ilxtr.hasPrimaryParticipant,
+       (ilxtr.hasPrimaryInputOutput,
         OntTerm('NCBITaxon:9989', label='Rodentia')  # FIXME population vs individual?
        ),
        synonyms=('rodent husbandry', 'rodent culture technique'),),
@@ -1758,8 +1893,8 @@ triples = (
        synonyms=('mating',),
     ),
     _t(i.d, 'watering technique',
-       (hasParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
-       (ilxtr.hasPrimaryInput, ilxtr.water),
+       (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:131567', label='cellular organisms')),
+       (hasInput, ilxtr.water),  # no output
        synonyms=('watering',),
     ),
 
@@ -1831,7 +1966,33 @@ triples = (
 
     ),
 
-    _t(i.d, 'separation technique',
+    _t(ilxtr.separationProcessPart, 'separation process',
+       # FIXME this definition would also work for homogenization/mixing
+       # each part has a different location based on the aspect vs
+       # each part has the 'same' location based on the aspect (e.g. density of fat vs protein in milk)
+       intersectionOf(BFO['0000015'],  # infers correctly but include for clarity
+           restN(partOf, tech.separation),
+           restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+           #restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.nonZero),  # TODO
+           restN(ilxtr.hasConstrainingAspect, ilxtr.aspect),
+       ),
+       def_='this is probably too detailed a model, better to have a measure of separateness',
+       equivalentClass=oECN),
+
+    _t(tech.separating, 'separating technique',
+       intersectionOf(
+           ilxtr.technique,
+           restN(ilxtr.hasPrimaryAspectActualized, asp.homogenaity),  # TODO vs Constraining
+           restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero)),
+       intersectionOf(
+           ilxtr.technique,
+           restN(ilxtr.hasPrimaryParticipant,
+                 restN(hasPart, restN(ilxtr.primaryParticipantIn,
+                                      ilxtr.separationProcessPart)))),
+       equivalentClass=oECN),
+
+    _t(tech.separation, 'separation technique (old)',
+       # TODO owl.inverseOf homogenization
        # the aspect of each part is to separate it by class
        # the location of each of its parts
        # the rule for transforming an aspect of the _parts_ into
@@ -1839,22 +2000,32 @@ triples = (
        #(ilxtr.knownDifferentiatingPhenomena, ),
        #restN(hasPart, )
        #(ilxtr.hasPrimaryAspectActualized, asp.location),  # TODO we need a clearer subclass for this
-       intersectionOf(ilxtr.tchnique,
-                      restN(ilxtr.hasPartPriAspect, restN(hasPart, ())
-                     ),
-       intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasPartPart,
-                            intersectionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+       intersectionOf(
+           ilxtr.technique,
+           restN(ilxtr.hasPrimaryParticipant,
+                 restN(hasPart, restN(ilxtr.primaryParticipantIn,
+                                      ilxtr.separationProcessPart)))),
+                           #intersectionOf(
+                               #restN(partOf, i.p),
+                               #restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+                               #restN(ilxtr.hasConstrainingAspect, ilxtr.aspect))))))),
+
+       #intersectionOf(ilxtr.tchnique,
+                      #restN(ilxtr.hasPartPriAspect, restN(hasPart, ()))
+                     #),
+       #intersectionOf(ilxtr.technique,
+                      #restN(ilxtr.hasPartPart,
+                            #intersectionOf(restN(ilxtr.hasPrimaryAspectActualized, asp.location),
                                            #ilxtr.primaryParticipantPartOfPrimaryParticipantOfParent,
                                            # intentionally not requiring this to be a technique
-                                           restMinCardValue(ilxtr.hasConstrainingAspect,
-                                                            ilxtr.aspect,
-                                                            Literal(1))))),
-       intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
-                      restMinCardValue(ilxtr.hasParticipantPartConstrainingAspect,
-                                       ilxtr.aspect,
-                                       Literal(1))),
+                                           #restMinCardValue(ilxtr.hasConstrainingAspect,
+                                                            #ilxtr.aspect,
+                                                            #Literal(1))))),
+       #intersectionOf(ilxtr.technique,
+                      #restN(ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
+                      #restMinCardValue(ilxtr.hasParticipantPartConstrainingAspect,
+                                       #ilxtr.aspect,
+                                       #Literal(1))),
        #restMinCardValue(ilxtr.hasParentPrimaryAspect, ilxtr.aspect, Literal(1)),
        # primary input has parts that can all actualize on the same set of aspects
        # hasConstrainingAspect maybe??
@@ -1864,15 +2035,33 @@ triples = (
        #restMinCardValue(ilxtr.hasConstrainingAspect, ilxtr.aspect, Literal(1)),
        #(ilxtr.hasSomething, i.d),
        equivalentClass=oECN),
+
+    _t(i.d, 'filtering technique',
+       (hasPart, intersectionOf(
+           ilxtr.allocatingProcessPart,
+           restN(ilxtr.hasConstrainingAspect, asp.size)))),
+
     _t(i.d, 'sorting technique',
        ilxtr.technique,
+       # FIXME has part vs has member?
+       (ilxtr.hasPrimaryParticipant,
+        restN(hasPart,
+             restN(ilxtr.primaryParticipantIn,
+                   intersectionOf(ilxtr.separationProcessPart,
+                                  restN(ilxtr.hasPrimaryAspect,
+                                        asp.category),
+                                  restN(ilxtr.hasConstrainingAspect,
+                                        # another true predicate
+                                        asp.categoryMember))))),
+
        # FIXME named => there is a larger black box where the name _can_ be measured
        # hasPrimaryParticipant partOf (hasAspect ilxtr.aspect)
        # or is it partOf (hasPrimaryAspect ilxtr.aspect)?
        # note that for this approach axioms appear automatically as
        # the unresolved names
-       (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.category),
-       (ilxtr.hasParticipantPartConstrainingAspect, ilxtr.aspect)),
+       #(ilxtr.hasParticipantPartPrimaryAspectActualized, asp.category),
+       #(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.aspect)
+      ),
 
     _t(i.d, 'extraction technique',
        (hasParticipant, ilxtr.extract),  # FIXME circular
@@ -2004,14 +2193,45 @@ triples = (
           'for how the assignment of the name was determined.')),
 
     # allocating
+
+    _t(ilxtr.allocatingProcessPart, 'allocating process',
+       intersectionOf(BFO['0000015'],  # infers correctly but include for clarity
+           restN(partOf, tech.allocating),  # FIXME would be nice to have a generator on this...
+           restN(ilxtr.hasPrimaryAspectActualized, asp.location)),
+       equivalentClass=oECN),
+
     _t(tech.allocating, 'allocating technique',
-       (ilxtr.hasPrimaryAspectActualized, asp.location),  # FIXME intrinsic extrinsic issue :/
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspectActualized,
+                            # FIXME intrinsic extrinsic issue :/
+                            asp.location)),
+       # FIXME allocation of a part of the primary participant
+       intersectionOf(
+           restN(ilxtr.hasPrimaryParticipant,
+                 restN(hasPart, restN(ilxtr.primaryParticipantIn,
+                                      ilxtr.allocatingProcessPart)))),
+
        # FIXME no information output
        def_=('Allocating techniques move things around without changing how their participants '
              'are named. More accurately they move them around without changing any part of their '
              'functional defintions which are invariant as a function of their location.'),
+      equivalentClass=oECN),
+
+    _t(tech.aliquoting, 'aliquoting technique',
+       # TODO should be subClassOf allocating
+       (ilxtr.hasSomething, i.d),
       ),
+
+    # disjointness
     (tech.allocating, owl.disjointWith, tech.measuring),  # i am an idiot
+    (tech.allocating, owl.disjointWith, tech.probing),
+    (tech.allocating, owl.disjointWith, tech.ising),
+    (tech.measuring, owl.disjointWith, tech.probing),
+    (tech.measuring, owl.disjointWith, tech.ising),
+    (tech.probing, owl.disjointWith, tech.ising),
+
+    #oc_(None, disjointUnionOf(tech.allocating, tech.measuring, tech.ising, tech.probing)),
+    # why doesn't this work?
     # measured does not imply actualized
     # FIXME what about tech.actualizing? i think it is ising or allocating
     # FIXME this causes issues
@@ -2068,7 +2288,7 @@ triples = (
                       restN(ilxtr.hasPrimaryOutput, ilxtr.materialEntity)),
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasPrimaryAspect, asp['is']),
-                      restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive)),
+                      restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero)),
        synonyms=('synthesis technique',),
        equivalentClass=oECN),
     (tech.creating, owl.disjointWith, tech.destroying),
@@ -2091,15 +2311,18 @@ triples = (
     _t(tech.destroying, 'destroying technique',
        # owl.unionOf with not ilxtr.disjointWithOutput of? not this will not work
        (ilxtr.hasPrimaryAspect, asp['is']),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),),
 
     _t(tech.maintaining, 'maintaining technique',
        # if these were not qualified by the primary participant
        # then this would be both a creating and a destroying technique
-       (ilxtr.hasPrimaryAspect, asp['is']),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero),  # FIXME value?
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspect, asp['is']),
+                      restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.zero)),  # FIXME value?
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryInputOutput, ilxtr.materialEntity)),
        synonyms=('maintenance technique',),
-    ),
+       equivalentClass=oECN),
 
     _t(i.d, 'analysis technique',
        (realizes, ilxtr.analysisRole),
@@ -2126,7 +2349,7 @@ triples = (
        # lots of stuff going on here...
        tech.sigproc,
        (ilxtr.hasInformationPrimaryAspect, asp.spectrum),
-       (ilxtr.hasInformationPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasInformationPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        (ilxtr.hasInformationPrimaryParticipant, ilxtr.timeSeries),  # FIXME
        synonyms=('signal filtering',),
     ),
@@ -2214,6 +2437,7 @@ triples = (
 
     _t(i.d, 'confocal microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
+       (ilxtr.detects, ilxtr.visibleLight),
        (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
@@ -2280,10 +2504,11 @@ triples = (
        # that is not a thing that is a derived thing I think...
        # it is an aspect of the black box, it is not a _part_ of the back box
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
-       (ilxtr.hasProbe, ilxtr.visibleLight),  # FIXME
+       #(ilxtr.hasProbe, ilxtr.visibleLight),  # FIXME
        (ilxtr.detects, ilxtr.visibleLight),  # FIXME
        #(ilxtr.hasPrimaryAspect, ilxtr.intrinsicSignal),  # this is a 'known phenomena'
-       (ilxtr.knownDetectedPhenomena, ilxtr.intrinsicSignal),
+       #(ilxtr.knownProbedPhenomena, ilxtr.intrinsicSignal),
+       (ilxtr.hasSomething, ilxtr.intrinsicSignal),
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('intrinsic signal optical imaging',),
     ),
@@ -2319,11 +2544,11 @@ triples = (
                       restN(ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
                       restN(hasInput, ilxtr.MRIScanner),
                       # NRM is an aspect not one of the mediators FIXME
-                      restN(ilxtr.hasPrimaryAspect, ilxtr.nuclearMagneticResonance),
+                      restN(ilxtr.hasPrimaryAspect, asp.nuclearMagneticResonance),
                       restN(hasPart, tech.MRI_ImageProcessing)),
        intersectionOf(ilxtr.technique,
                       restN(hasPart, tech.MRI)),
-       # as long as the primaryAspect is subClassOf ilxtr.nuclearMagneticResonance then we are ok
+       # as long as the primaryAspect is subClassOf asp.nuclearMagneticResonance then we are ok
        # and we won't get duplication of primary aspects
        synonyms=('MRI', 'nuclear magnetic resonance imaging'),
        equivalentClass=oECN),
@@ -2422,23 +2647,23 @@ triples = (
        # has been defined as functional owl.hasSelf?
        # hasSelf asp.functional !??! no, not really what we want
        #(hasPart, ilxtr.),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
     _t(i.d, 'deactivation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),  # FIXME this is more state?
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
     _t(tech.killing, 'killing technique',
        (ilxtr.hasPrimaryAspect, asp.aliveness),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
       ),
 
     _t(i.d, 'euthanasia technique',
        (ilxtr.hasPrimaryAspect, asp.aliveness),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
     _t(i.d, 'pharmacological technique',
@@ -2460,13 +2685,13 @@ triples = (
     _t(i.d, 'photoactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
     _t(i.d, 'photoinactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
     _t(i.d, 'photobleaching technique',
@@ -2483,7 +2708,7 @@ triples = (
        # FIXME caged molecule?
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:25367', label='molecule')),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
        synonyms=('uncaging', 'uncaging technique')
     ),
 
@@ -2499,7 +2724,7 @@ triples = (
 
     _t(i.d, 'blinding technique',
        (ilxtr.hasPrimaryAspect, asp.vision),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
     _t(i.d, 'crushing technique',
@@ -2514,13 +2739,13 @@ triples = (
 
     _t(i.d, 'depolarization technique',
        (ilxtr.hasPrimaryAspect, asp.voltage),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),  # or is it neative (heh)
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),  # or is it neative (heh)
        # yes this is confusing, but cells have negative membrane potentials
     ),
 
     _t(i.d, 'hyperpolarization technique',
        (ilxtr.hasPrimaryAspect, asp.voltage),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
     _t(i.d, 'illumination technique',
@@ -2529,7 +2754,7 @@ triples = (
        # they are purely goal driven
        #(ilxtr.phenomena, ilxtr.photons),
        (ilxtr.hasPrimaryAspectActualized, asp.lumenance),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
     _t(i.d, 'lesioning technique',
@@ -2540,7 +2765,7 @@ triples = (
 
     _t(i.d, 'sensory deprivation technique',
        (ilxtr.hasPrimaryAspect, asp.sensory),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        (ilxtr.hasSomething, i.d),
     ),
 
@@ -2553,7 +2778,7 @@ triples = (
        #(ilxtr.hasPrimaryAspect, ilxtr.physiologicalActivity),  # TODO
        (ilxtr.hasProbe, ilxtr.materialEntity),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
     #oc_(None,  # FIXME this is incorrect the equivalence is asymmetric
@@ -2678,6 +2903,7 @@ triples = (
     ),
 
     _t(i.d, 'dietary technique',
+       # FIXME this doesn't capture feeding and watering as we might expect
        #ilxtr.technique,
        # unionOf hasPart dietary technique OR hasPrimaryParticipant food
        intersectionOf(ilxtr.technique,
@@ -2694,14 +2920,14 @@ triples = (
     _t(i.d, 'dietary restriction technique',
        #(ilxtr.hasSomething, i.d),
        (hasInput, ilxtr.food_and_water),  # metabolic input
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),  # FIXME may need to use has part?
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),  # FIXME may need to use has part?
        # reduction in some metabolic input
     ),
 
     _t(i.d, 'food deprivation technique',
-       (ilxtr.hasPrimaryParticipant, ilxtr.food),
-       (ilxtr.hasPrimaryAspect, asp.allocation),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryInput, ilxtr.food),
+       (ilxtr.hasPrimaryAspectActualized, asp.allocation),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        # the above is correct, use hasPart
        # where the food amount is decresed, how to bind food to negative
        # do we have to use has part?!
@@ -2721,8 +2947,8 @@ triples = (
 
     _t(i.d, 'water deprivation technique',
        (ilxtr.hasPrimaryInput, ilxtr.water),
-       (ilxtr.hasPrimaryAspect, asp.allocation),
-       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (ilxtr.hasPrimaryAspectActualized, asp.allocation),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        synonyms=('water restriction technique',
                  'water restriction',
        )
@@ -2778,7 +3004,7 @@ triples = (
 
     _t(i.d, 'microtomy technique',
        (hasInput, ilxtr.microtome),
-       (ilxtr.hasPrimaryOutput, ilxtr.thinSections),  # this prevents issues with microtome based warfare techniques
+       (ilxtr.hasPrimaryOutput, ilxtr.thinSection),  # this prevents issues with microtome based warfare techniques
        synonyms=('microtomy',)
     ),
 
@@ -3100,6 +3326,7 @@ methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showi
 methods._graph.add_namespace('prot', str(prot))
 methods._graph.add_namespace('tech', str(tech))
 methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+methods._graph.write()
 
 from collections import defaultdict
 data = defaultdict(set)
@@ -3117,12 +3344,21 @@ for ki, vi in data.items():
 
         intersection[ki,kj].update(vi & vj)
 
+def testbt(simpleont):
+    bad_types = set((s, bo) for s in simpleont.graph[:rdf.type:owl.Class]
+                    for bo in simpleont.graph[s:rdf.type] if
+                    bo != owl.Class)
+    [print(t) for t in bad_types]
+    if bad_types:
+        raise TypeError()
+
+testbt(methods_helper)
+testbt(methods_core)
+testbt(methods)
+
 #assert not any(intersection.values()), f'duplicate namespace issue {intersection!r}'
 #from IPython import embed
 #embed()
-
-methods._graph.write()
-
 
 def halp():
     import rdflib
