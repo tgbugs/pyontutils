@@ -205,8 +205,8 @@ BLX:8.5 a owl:Class ;
         "2014-04-14T00:00:00-08"^^xsd:dateTime,
         "2014-04-14T00:00:00-06"^^xsd:dateTime,
         "2014-04-14T00:00:01"^^xsd:dateTime,
-        "2014-04-14T00:00:00"^^xsd:dateTime .
-        "2014-04-14T00:00:00-00"^^xsd:dateTime .
+        "2014-04-14T00:00:00"^^xsd:dateTime,
+        "2014-04-14T00:00:00-00"^^xsd:dateTime,
         "2014-04-14T00:00:00-00:00"^^xsd:dateTime .
 
 # test for classes missing a owl:Class decleration
