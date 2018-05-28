@@ -1,3 +1,4 @@
+#lang rdf/turtle
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xml: <http://www.w3.org/XML/1998/namespace> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -183,11 +184,11 @@ BLX:6 a owl:Class ;
         owl:oneOf ( A:1 A:2 A:3 ) ] .
 
 # general axioms tests
-[ rdf:type owl:AllDifferent ;  # this should appear further down the page
-    owl:distinctMembers ( A:0 A:prefix_1 A:prefix_2 A:prefix_3 A:1 A:2 A:3 ) ] .
+[] rdf:type owl:AllDifferent ;  # this should appear further down the page
+    owl:distinctMembers ( A:0 A:prefix_1 A:prefix_2 A:prefix_3 A:1 A:2 A:3 ) .
 
-[ rdf:type owl:AllDifferent ;  # this should appear above the general axiom above
-    owl:distinctMembers ( A:prefix_4 A:prefix_5 A:prefix_6 A:4 A:5 A:6 ) ] .
+[] rdf:type owl:AllDifferent ;  # this should appear above the general axiom above
+    owl:distinctMembers ( A:prefix_4 A:prefix_5 A:prefix_6 A:4 A:5 A:6 ) .
 
 # test the effect of types on strings
 BLX:7 a owl:Class ;
@@ -224,58 +225,58 @@ ns1:12345 a owl:Class .
 
 # axiom ordering
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     BLX:hasDbXref "A"^^xsd:string,
         "D"^^xsd:string ;
     owl:annotatedProperty BLX:00 ;
     owl:annotatedSource BLX:10 ;
-    owl:annotatedTarget "A"^^xsd:string ] .
+    owl:annotatedTarget "A"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     BLX:hasDbXref "B"^^xsd:string,
         "D"^^xsd:string ;
     owl:annotatedProperty BLX:01 ;
     owl:annotatedSource BLX:11 ;
-    owl:annotatedTarget "B"^^xsd:string ] .
+    owl:annotatedTarget "B"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     BLX:hasDbXref "C"^^xsd:string,
         "D"^^xsd:string ;
     owl:annotatedProperty BLX:02 ;
     owl:annotatedSource BLX:12 ;
-    owl:annotatedTarget "C"^^xsd:string ] .
+    owl:annotatedTarget "C"^^xsd:string .
 
 # more axiom ordering
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_65 ;
-    owl:annotatedTarget "connective tissue disorder"^^xsd:string ] .
+    owl:annotatedTarget "connective tissue disorder"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_1595 ;
-    owl:annotatedTarget "clinical depression"^^xsd:string ] .
+    owl:annotatedTarget "clinical depression"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_11394 ;
-    owl:annotatedTarget "ARDS"^^xsd:string ] .
+    owl:annotatedTarget "ARDS"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_3820 ;
-    owl:annotatedTarget "chlamydiaceae infection"^^xsd:string ] .
+    owl:annotatedTarget "chlamydiaceae infection"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedSource obo:DOID_3669 ;
-    owl:annotatedTarget "Charcot's syndrome"^^xsd:string ] .
+    owl:annotatedTarget "Charcot's syndrome"^^xsd:string .
 
 # list ordering
 
@@ -313,72 +314,72 @@ BLX:20 a owl:ObjectProperty ;
 
 # axiom list ordering parent rank and list rank fight to the death
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:20 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
             BLX:21
             BLX:18 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
+    rdfs:label "lol you have got to be kidding me" .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:21 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
             BLX:21
             BLX:18 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
+    rdfs:label "lol you have got to be kidding me" .
 
 # local list ordering
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:b
             other:B
             other:aa
             other:aA
             other:Aa
-            other:AA ) ] .
+            other:AA ) .
 
 # global list ordering
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:aa
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:AA
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:bb
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:BB
-            other:cc ) ] .
+            other:cc ) .
 
-[ a (other:bb other:cc) ] .
+[] a (other:bb other:cc) .
 
-[ a (other:BB other:cc) ] .
+[] a (other:BB other:cc) .
 
 # full list ordering example
 
-[ a ( "bb" "cc" other:bb other:cc
+[] a ( "bb" "cc" other:bb other:cc
         [ a ( other:xx other:yy) ]
-        (other:bb other:cc) ) ] .
+        (other:bb other:cc) ) .
 
-[ a ( "bb" "cc" other:bb other:cc
+[] a ( "bb" "cc" other:bb other:cc
         [ a ( other:XX other:yy) ]
-        (other:bb other:cc) ) ] .
+        (other:bb other:cc) ) .
 
-[ a ("BB" "cc" other:BB other:cc
+[] a ("BB" "cc" other:BB other:cc
         [ a (other:BB other:cc) ]
-        (other:BB other:cc) ) ] .
+        (other:BB other:cc) ) .
 
 # identical list ordering
 
@@ -394,7 +395,7 @@ l:4 rdfs:label ( (1 2 3 4) (1 2) (3 4) ) .
 
 l:5 rdfs:label ( (1 2) (3 4 1 2) (3 4) ) .
 
-[ rdfs:label (1 2 3 4), (1 2 3 4) ] .
+[] rdfs:label (1 2 3 4), (1 2 3 4) .
 
 # collections as subjects
 
@@ -403,11 +404,11 @@ l:5 rdfs:label ( (1 2) (3 4 1 2) (3 4) ) .
 
 # trying to reveal issues with summing list ranks
 
-[ a owl:Class ;
-    rdfs:label ( ("1" "5") ("0" "6") ("1" "5") ) ; ] .
+[] a owl:Class ;
+    rdfs:label ( ("1" "5") ("0" "6") ("1" "5") ) .
 
-[ a owl:Class ;
-    rdfs:label ( ("2" "4") ("1" "5") ) ; ] .
+[] a owl:Class ;
+    rdfs:label ( ("2" "4") ("1" "5") ) .
 
 # sub class of ordering additional tests
 
