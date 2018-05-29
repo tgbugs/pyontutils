@@ -14,7 +14,7 @@ class interlex_sql():
 
     def remove_duplicates(self, df):
         terms = self.get_terms()
-        df = df[df['item_id'].isin(list(terms.id))]
+        df = df[df['tid'].isin(list(terms.id))]
         return df
 
     def get_terms(self, records=False):
@@ -76,7 +76,7 @@ class interlex_sql():
         #SELECT ti.curie, t.label, ti.tid, ti.iri, t.ilx
         engine = create_engine(self.db_url)
         data =  """
-                SELECT t.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
+                SELECT tei.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
                 FROM terms AS t
                 JOIN term_existing_ids AS tei ON t.id=tei.tid
                 WHERE t.type != '{0}'
@@ -91,7 +91,7 @@ class interlex_sql():
     def get_annotations(self, records=False):
         engine = create_engine(self.db_url)
         data =  """
-                SELECT ta.id, t1.id as item_id, t1.label, t1.ilx, t2.id as anno_tid, t2.label as anno_label, t2.ilx as anno_ilx, ta.tid, ta.annotation_tid, ta.value
+                SELECT ta.id, ta.tid,  ta.annotation_tid, ta.value, t1.label as term_label, t1.ilx as term_ilx, t2.label as annotation_label, t2.ilx as annotation_ilx
                 FROM term_annotations AS ta
                 JOIN terms AS t1 ON ta.tid=t1.id
                 JOIN terms AS t2 ON ta.annotation_tid=t2.id

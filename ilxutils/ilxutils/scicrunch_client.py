@@ -82,7 +82,7 @@ class scicrunch():
                 try:
                     print(i, output['label'])
                 except:
-                    print(i, output['id'])
+                    print(i, output[0]['id'], output[0]['ilx'], output[0]['label'])
             outputs.append(output)
         return outputs
 
@@ -108,7 +108,7 @@ class scicrunch():
                     except:
                         output={int(output['data'][0]['tid']):output['data']} #annotations
                 except:
-                    return {url:None}
+                    sys.exit(output)
                 return output
 
         async def get_all(urls, connector, loop):
@@ -138,11 +138,11 @@ class scicrunch():
 
                 """ While using post for ilx/add """
 
-                post_ilx = await response.json()
+                output = await response.json()
                 limit = 0 #BUG; server needs to breath sometimes while generating ilx ids
-                while post_ilx.get('errormsg') == 'could not generate ILX identifier' and limit < 100:
+                while output.get('errormsg') == 'could not generate ILX identifier' and limit < 100:
                     async with session.post(url, data=json.dumps(params), headers=headers) as response:
-                        post_ilx = await response.json()
+                        output = await response.json()
                         limit+=1
 
                 if response.status not in [200, 201]:
@@ -152,7 +152,9 @@ class scicrunch():
                         output = await response.text()
                     problem = str(output)
                     sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
-                output = await response.json()
+
+                #BUG server sometimes slow and returns html
+                #output = await response.json(content_type='text/plain')
                 if debug:
                     return output
                 if _print:
@@ -170,7 +172,8 @@ class scicrunch():
                     print('=== {0} ==='.format(action))
                 for i, tupdata in enumerate(total_data):
                     url, data = tupdata
-                    task = asyncio.ensure_future(post_single(url, data, session, i)) #FIXME had to copy to give new address
+                    #task = asyncio.ensure_future(post_single(url, data, session, i)) #FIXME had to copy to give new address
+                    task = post_single(url, data, session, i) #FIXME had to copy to give new address
                     tasks.append(task)
                 return (await asyncio.gather(*tasks))
 
@@ -197,7 +200,7 @@ class scicrunch():
                     synonym         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
         """
-        old_data = self.identifierSearches([d['id'] for d in data], _print=_print, crawl=crawl)
+        old_data = self.identifierSearches([d['id'] for d in data], LIMIT=LIMIT,_print=_print, crawl=crawl)
         url_base = self.base_path + '/api/1/term/edit/{id}'
         merged_data = []
         for d in data:
@@ -266,7 +269,7 @@ class scicrunch():
     def updateAnnotations(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
         """data = list of dict {"tid","annotation_tid","value"}"""
         url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id
-        annotations = self.getAnnotations_via_id([d['id'] for d in data], _print=_print, crawl=crawl)
+        annotations = self.getAnnotations_via_id([d['id'] for d in data], LIMIT=LIMIT, _print=_print, crawl=crawl)
         annotations_to_update = []
         for d in data:
             annotation = annotations[int(d['id'])]
@@ -278,7 +281,7 @@ class scicrunch():
     def deleteAnnotations(self, annotation_ids, LIMIT=50,  _print=True, crawl=False, debug=False):
         """data = list of tids"""
         url_base = self.base_path + '/api/1/term/edit-annotation/{annotation_id}' # id of annotation not term id; thx past troy!
-        annotations = self.getAnnotations_via_id(annotation_ids,  _print=_print, crawl=crawl)
+        annotations = self.getAnnotations_via_id(annotation_ids, LIMIT=LIMIT, _print=_print, crawl=crawl)
         annotations_to_delete = []
         for annotation_id in annotation_ids:
             annotation = annotations[int(annotation_id)]

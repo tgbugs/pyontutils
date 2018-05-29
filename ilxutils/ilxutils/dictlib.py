@@ -57,6 +57,7 @@ def preferred_change(data):
     return data
 
 def merge(new, old):
+    ''' synonyms and existing_ids are part of an object bug that can create duplicates if in the same batch '''
 
     for k, vals in new.items():
 
@@ -101,16 +102,6 @@ def merge(new, old):
                     pass #for sanity readability
                 else:
                     sys.exit('Something broke while merging in existing_ids')
-            '''
-            take out repeats
-            '''
-            visited = {}
-            new_existing_ids = []
-            for e in old['existing_ids']:
-                if not visited.get(e['iri']):
-                    new_existing_ids.append(e)
-                    visited[e['iri']] = True
-            old['existing_ids'] = new_existing_ids
             old = preferred_change(old)
 
         elif k in ['definition', 'superclasses', 'id', 'type', 'comment']:
@@ -121,6 +112,22 @@ def merge(new, old):
         #    print('OLD -> ', old)
         #    sys.exit('Value: ' + str(k) + " doesn't exist in ilx keys")
 
+    ''' remove repeats '''
+    visited = {}
+    new_synonyms = []
+    for synonym in old['synonyms']:
+        if not visited.get(synonym['literal']):
+            new_synonyms.append(synonym)
+            visited[synonym['literal']] = True
+    old['synonyms'] = new_synonyms
+    visited = {}
+    new_existing_ids = []
+    for e in old['existing_ids']:
+        if not visited.get(e['iri']):
+            new_existing_ids.append(e)
+            visited[e['iri']] = True
+    old['existing_ids'] = new_existing_ids
+    
     return old
 
 def extract_annotations(data):

@@ -6,16 +6,15 @@ Usage:  foo.py [-h | --help]
         foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
-        api_wapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
-        api_wapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
+        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
+        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
         graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
     updateTerms                     Update terms|cdes|annotations|relationships in SciCrunch
     addAnnotations                  Add annotations to existing elements
-    updateAnntationValues           Update annotation values only
-    updateAnntationType             Update annotation connector aka annotation_type via annoatation_tid
+    updateAnnotations                Update annotations
 
 Options:
     -h, --help                      Display this help message
