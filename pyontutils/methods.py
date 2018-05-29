@@ -27,7 +27,7 @@ def t(subject, label, def_, *synonyms):
         yield from olit(subject, definition, def_)
 
     if synonyms:
-        yield from olit(subject, NIFRID.synonyms, *synonyms)
+        yield from olit(subject, NIFRID.synonym, *synonyms)
 
 class I:
     counter = iter(range(999999))
@@ -154,6 +154,10 @@ triples += ( # information entity
 
     oc(ilxtr.classificationCriteria, ilxtr.informationEntity),
     oc(ilxtr.identificationCriteria, ilxtr.informationEntity),
+
+    oc(ilxtr.categoryNames, ilxtr.informationEntity),
+    oc(ilxtr.categoryAssignments, ilxtr.informationEntity),
+    oc(ilxtr.nameIdentityMapping, ilxtr.informationEntity),
 
 )
 
@@ -478,6 +482,7 @@ triples += (  # aspects
 
     oc(asp.category, asp.Local),
     oc(asp.categoryAssigned, asp.nonLocal),
+    # FIXME categories are conceptual space... how to cope...
     oc_(asp.categoryAssigned,
         restriction(ilxtr.isQualifiedFormOf, asp.category),
         intersectionOf(restN(ilxtr.hasInformationContext, ilxtr.categoryNames),
@@ -2049,10 +2054,10 @@ triples = (
              restN(ilxtr.primaryParticipantIn,
                    intersectionOf(ilxtr.separationProcessPart,
                                   restN(ilxtr.hasPrimaryAspect,
-                                        asp.category),
+                                        asp.category),  # FIXME nonLocal
                                   restN(ilxtr.hasConstrainingAspect,
                                         # another true predicate
-                                        asp.categoryMember))))),
+                                        asp.isCategoryMember))))),
 
        # FIXME named => there is a larger black box where the name _can_ be measured
        # hasPrimaryParticipant partOf (hasAspect ilxtr.aspect)
