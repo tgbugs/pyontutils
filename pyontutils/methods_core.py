@@ -108,6 +108,18 @@ triples = (
     olit(ilxtr.wasDiscoveredBy, definition,
          'The relationship between a process and the person who discovered it.'),
 
+    oop(ilxtr.hasDualInputTechnique, hasPart),
+    olit(ilxtr.hasDualInputTechnique, rdfs.label, 'has dual input technique'),
+    olit(ilxtr.hasDualInputTechnique, definition,
+         ('The relationship between a technique that has a primary output '
+          'and a dual technique that has a primary input that is destroyed.')),
+    oop(ilxtr.hasDualOutputTechnique, hasPart),
+    olit(ilxtr.hasDualOutputTechnique, rdfs.label, 'has dual output technique'),
+    olit(ilxtr.hasDualOutputTechnique, definition,
+         ('The relationship between a technique that has a primary input that is '
+          'destroyed and a dual technique that has the corresponding primary output.')),
+    (ilxtr.hasDualInputTechnique, owl.inverseOf, ilxtr.hasDualOutputTechnique),
+
     oop(ilxtr.hasInformationParticipant),
     oop_(ilxtr.hasInformationParticipant,
          propertyChainAxiom(hasPart, ilxtr.hasInformationParticipant),
@@ -188,10 +200,12 @@ triples = (
     oop(hasParticipant),
     olit(hasParticipant, rdfs.label, 'has participant'),
     olit(hasParticipant, NIFRID.synonym, 'has physical participant'),
-    oop(hasInput),  # XXX
+
+    oop(ilxtr.hasInputOutput, hasParticipant),
+    oop(hasInput, ilxtr.hasInputOutput),  # XXX
     oop_(hasInput, propertyChainAxiom(hasPart, hasInput)),
     olit(hasInput, rdfs.label, 'has input'),  # XXX
-    oop(hasOutput),  # XXX
+    oop(hasOutput, ilxtr.hasInputOutput),  # XXX
     oop_(hasOutput, propertyChainAxiom(hasPart, hasOutput)),
     olit(hasOutput, rdfs.label, 'has output'),  # XXX
 
@@ -241,6 +255,7 @@ triples = (
     (ilxtr.primaryOutputIn, owl.inverseOf, ilxtr.hasPrimaryOutput),
 
     oop(ilxtr.hasPrimaryInputOutput, ilxtr.hasPrimaryParticipant),
+    oop(ilxtr.hasPrimaryInputOutput, ilxtr.hasInputOutput),
     oop(ilxtr.hasPrimaryInput, ilxtr.hasPrimaryParticipant),
     oop(ilxtr.hasPrimaryInput, hasInput),
     oop(ilxtr.hasPrimaryOutput, ilxtr.hasPrimaryParticipant),
@@ -655,6 +670,10 @@ triples = (
 
     oop_(hasParticipant,
          propertyChainAxiom(ilxtr.processHasAspect, ilxtr.hasContext)),
+
+    oc_(None,
+        restriction(ilxtr.hasPrimaryAspectActualized, ilxtr.aspect),
+        oECN(restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.nonZero))),
 
     ## technique
     oc(BFO['0000015']),
