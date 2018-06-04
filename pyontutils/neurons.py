@@ -1339,6 +1339,7 @@ def main():
                             scigraph=          None)
     #graphBase.core_graph = EXISTING_GRAPH
     #graphBase.out_graph = rdflib.Graph()
+    graphBase.__import_name__ = 'pyontutils.neurons'
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
@@ -1347,9 +1348,9 @@ def main():
     def_neurons = g.get_equiv_inter(_NEURON_CLASS)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))
-    MeasuredNeuron.out_graph = rdflib.Graph()
-    Neuron.out_graph = rdflib.Graph()
+    og1 = MeasuredNeuron.out_graph = rdflib.Graph()  # there is only 1 out_graph at a time, load and switch
     mns = [MeasuredNeuron(id_=n) for n in nodef]
+    Neuron.out_graph = rdflib.Graph()
     dns = [Neuron(id_=n) for n in sorted(def_neurons)]
     #dns += [Neuron(*m.pes) if m.pes else m.id_ for m in mns]
     dns += [Neuron(*m.pes) for m in mns if m.pes]
@@ -1357,7 +1358,7 @@ def main():
     # reset everything for export
     Neuron.out_graph = rdflib.Graph()
     ng = makeGraph('output', prefixes=PREFIXES, graph=Neuron.out_graph)
-    Neuron.existing_pes = {}  # reset this as well because the old Class references have vanished
+    NeuronBase.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
     #from neuron_lang import WRITEPYTHON
     #WRITEPYTHON(sorted(dns))
