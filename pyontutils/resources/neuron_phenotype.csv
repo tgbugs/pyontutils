@@ -91,3 +91,7 @@ ilxtr:FastSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:RegularS
 ilxtr:RegularSpikingNonPyramidalPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ilxtr:AccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:NonAccomodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
 ilxtr:NonAccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
+,,,,,,,
+ilxtr:ExpressionPhenotype,ilxtr:CellPhenotype,,molecular phenotype,,,,hasExpressionPhenotype
+ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,,hasExpressionPhenotype
+ilxtr:SerotonergicPhenotype,ilxtr:ExpressionPhenotype,,,,,,

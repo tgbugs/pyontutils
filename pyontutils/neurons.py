@@ -575,12 +575,12 @@ class LogicalPhenotype(graphBase):
         return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
-        op = self.local_names[self.op]
+        op = self.local_names[self.out_graph.qname(self.op)]
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
     def __str__(self):
-        op = self.local_names[self.op]
+        op = self.local_names[self.out_graph.qname(self.op)]
         t =  ' ' * (len(self.__class__.__name__) + 1)
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
@@ -1324,8 +1324,21 @@ def main():
                             'ILX',
                             'SAO',
                             'BIRNLEX',)
-    graphBase.core_graph = EXISTING_GRAPH
-    graphBase.out_graph = rdflib.Graph()
+    graphBase.configGraphIO(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
+                            local_base=        None,  # devconfig.ontology_local_repo by default
+                            branch=            'neurons',
+                            core_graph_paths= ['ttl/phenotype-core.ttl',
+                                               'ttl/phenotypes.ttl'],
+                            core_graph=        EXISTING_GRAPH,
+                            in_graph_paths=    tuple(),
+                            out_graph_path=    '/tmp/_Neurons.ttl',
+                            out_imports=      ['ttl/phenotype-core.ttl'],
+                            out_graph=         rdflib.Graph(),
+                            force_remote=      False,
+                            checkout_ok=       _CHECKOUT_OK,
+                            scigraph=          None)
+    #graphBase.core_graph = EXISTING_GRAPH
+    #graphBase.out_graph = rdflib.Graph()
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
@@ -1346,12 +1359,13 @@ def main():
     ng = makeGraph('output', prefixes=PREFIXES, graph=Neuron.out_graph)
     Neuron.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
-    from neuron_lang import WRITEPYTHON
-    WRITEPYTHON(sorted(dns))
+    #from neuron_lang import WRITEPYTHON
+    #WRITEPYTHON(sorted(dns))
+    Neuron.write_python()
     ng.add_ont(TEMP['defined-neurons'], 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
-    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
-    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotype-core.ttl'))
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotypes.ttl'))
     ng.write()
     bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]
