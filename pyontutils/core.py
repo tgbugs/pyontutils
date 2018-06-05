@@ -1058,9 +1058,9 @@ class makeGraph:
             #print('yes we wrote the first version...', self.name)
 
     def expand(self, curie):
-        prefix, suffix = curie.split(':',1)
+        prefix, suffix = curie.split(':', 1)
         if prefix not in self.namespaces:
-            raise KeyError('Namespace prefix does exist:', prefix)
+            raise KeyError(f'Namespace prefix {prefix} does exist for {curie}' )
         return self.namespaces[prefix][suffix]
 
     def check_thing(self, thing):

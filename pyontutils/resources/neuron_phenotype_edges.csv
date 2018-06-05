@@ -29,6 +29,7 @@ hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,
 #projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments",,,
 hasPresynapticTerminalsIn,,,,,projectsTo?,,,"asymmetric, irreflexive"
 hasCircuitRolePhenotype,,,,needs work,,hasPhenotype,,"asymmetric, irreflexive"
+hasExperimentalPhenotype,,,Expresses a relationship between a neuron and an experimental condition. This should be used when a neuron type is described by some experimental condition or functional designation.,,This needs a better name. It is clear what it means when you see examples of the usage.,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasTaxonRank,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,isAncestralInTaxon (because convergent evolution is SOOO likely…),hasPhenotype,,"asymmetric, irreflexive"

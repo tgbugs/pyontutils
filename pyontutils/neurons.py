@@ -129,6 +129,7 @@ class graphBase:
                       out_graph_path=    None,
                       out_imports=       tuple(),
                       out_graph=         None,
+                      prefixes=          tuple(),
                       force_remote=      False,
                       checkout_ok=       _CHECKOUT_OK,
                       scigraph=          None):
@@ -151,6 +152,7 @@ class graphBase:
                        out_graph_path=    '/tmp/outputGraph.ttl',
                        out_imports=      ['local/path/localCore.ttl'],
                        out_graph=         None,
+                       prefixes=          {'hello':'http://world.org/'}
                        force_remote=      False,
                        checkout_ok=       False,
                        scigraph=          'http://scigraph.mydomain.org:9000/scigraph'):
@@ -215,10 +217,12 @@ class graphBase:
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('TEMP',  # XXX PREFIXES
+        nin_graph = attachPrefixes('owl',
+                                   'TEMP',  # XXX PREFIXES
                                    'PAXRAT',
                                    'GO',
                                    'CHEBI',
+                                   *prefixes,
                                    graph=in_graph)
         graphBase.in_graph = in_graph
 
@@ -233,6 +237,7 @@ class graphBase:
                                    'GO',
                                    'PR',
                                    'CHEBI',
+                                   'PATO',
                                    'PAXRAT',
                                    'UBERON',
                                    'NCBITaxon',
@@ -241,6 +246,7 @@ class graphBase:
                                    'ILX',
                                    'SAO',
                                    'BIRNLEX',
+                                   *prefixes,
                                    graph=out_graph)
         graphBase.out_graph = out_graph
 
@@ -381,7 +387,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if op in self._predicates.__dict__.values():
             return op
         else:
-            raise TypeError('Unknown ObjectProperty %s' % repr(op))
+            raise TypeError('WARNING: Unknown ObjectProperty %s' % repr(op))
 
     @property
     def eLabel(self):
@@ -395,11 +401,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 l = self._sgv.findById(self.p)['labels'][0]
             except ConnectionError as e:
                 print(e)
-                l = self.p
+                l = self.ng.qname(self.p)
             except TypeError:
-                l = self.p
+                l = self.ng.qname(self.p)
             except IndexError:
-                l = self.p
+                l = self.ng.qname(self.p)
         else:
             l = l[0]
         return self.labelPostRule(l)
@@ -444,7 +450,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         yield self.p
 
     def _uri_frag(self, index):
-        return self._rank + f'-p{index(self.e)}-' + self.ng.qname(self.p).replace(':','-')
+        return (self._rank +
+                f'-p{index(self.e)}-' +
+                self.ng.qname(self.p).replace(':','-'))
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
     def _graphify(self, graph=None):
@@ -575,12 +583,12 @@ class LogicalPhenotype(graphBase):
         return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
-        op = self.local_names[self.out_graph.qname(self.op)]
+        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
     def __str__(self):
-        op = self.local_names[self.out_graph.qname(self.op)]
+        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
         t =  ' ' * (len(self.__class__.__name__) + 1)
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
@@ -602,6 +610,7 @@ class NeuronBase(graphBase):
         self._predicates.hasInstanceInSpecies,
         self._predicates.hasTaxonRank,
         # TODO hasDevelopmentalStage   !!!!! FIXME
+        self._predicates.hasLocationPhenotype,  # FIXME
         self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
         self._predicates.hasDendriteMorphologicalPhenotype,
@@ -612,7 +621,10 @@ class NeuronBase(graphBase):
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
         self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
         self._predicates.hasExpressionPhenotype,
+        self._predicates.hasNeurotransmitterPhenotype,
+        self._predicates.hasCircuitRolePhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
+        self._predicates.hasExperimentalPhenotype,
         self._predicates.hasPhenotype,  # last
         ]
 
@@ -847,7 +859,7 @@ class Neuron(NeuronBase):
         disjoints = [  # FIXME there has got to be a better place to do this :/
         self._predicates.hasInstanceInSpecies,
         self._predicates.hasSomaLocatedIn,
-        self._predicates.hasLayerLocationPhenotype,
+        self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
         self._predicates.hasMorphologicalPhenotype,
         ]
 
