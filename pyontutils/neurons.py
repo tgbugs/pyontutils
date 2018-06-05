@@ -526,6 +526,10 @@ class LogicalPhenotype(graphBase):
         return tuple((pe.e for pe in self.pes))
 
     @property
+    def pLabel(self):
+        return f'({self.op} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
+
+    @property
     def pHiddenLabel(self):
         label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
@@ -632,7 +636,9 @@ class NeuronBase(graphBase):
         phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
 
         if id_ and phenotypeEdges:
-            raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
+            self.id_ = self.expand(id_)
+            print('WARNING: you may be redefining a neuron!')
+            #raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
         elif id_:
             self.id_ = self.expand(id_)
         elif phenotypeEdges:
