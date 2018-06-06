@@ -295,6 +295,12 @@ class graphBase:
     def neurons():
         return sorted(NeuronBase.existing_pes)
 
+    def disjointWith(self, other):
+        if isinstance(other, self.__class__):
+            self.out_graph.add((self.id_, rdflib.OWL.disjoint, other.id_))
+        else:
+            self.out_graph.add((self.id_, rdflib.OWL.disjoint, other))
+
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
