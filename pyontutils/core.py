@@ -513,6 +513,18 @@ class Restriction2(Triple):
 
 class Restriction(Triple):
     class RestrictionTriple(tuple):
+        @property
+        def s(self):
+            return self[0]
+
+        @property
+        def p(self):
+            return self[1]
+
+        @property
+        def o(self):
+            return self[2]
+
         def __repr__(self):
             return f"{self.__class__.__name__}{super().__repr__()}"
 
@@ -1168,7 +1180,7 @@ class makeGraph:
     def add_restriction(self, subject, predicate, object_):
         """ Lift normal triples into restrictions using someValuesFrom. """
         if type(object_) != rdflib.URIRef:
-            object = self.check_thing(object_)
+            object_ = self.check_thing(object_)
 
         if type(predicate) != rdflib.URIRef:
             predicate = self.check_thing(predicate)
