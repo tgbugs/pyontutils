@@ -199,7 +199,7 @@ def label_def_prefix(g=None, pref_dict=None, unpref_dict=None):
             else:
                 g.add_class(pref_iri, label=row.label)
 
-            g.add_trip(pref_iri, 'rdfs:isDefinedBy', row.definition)
+            g.add_trip(pref_iri, 'definition:', row.definition)
             #http://www.geneontology.org/formats/oboInOwl#DbXref
             for unpref_iri in unpref_iris:
                 if 'ilx' in unpref_iri.lower():

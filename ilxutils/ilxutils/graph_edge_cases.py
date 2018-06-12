@@ -30,7 +30,6 @@ edge_cases = {
 full = {
     #'':None,  # safety (now managed directly in the curies file)
     #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
-
     'hasRole':'http://purl.obolibrary.org/obo/RO_0000087',
     'inheresIn':'http://purl.obolibrary.org/obo/RO_0000052',
     'bearerOf':'http://purl.obolibrary.org/obo/RO_0000053',
@@ -58,7 +57,6 @@ full = {
     'obsReason':'http://purl.obolibrary.org/obo/IAO_0000231',
     'curatorNote':'http://purl.obolibrary.org/obo/IAO_0000232',
     'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
-
     'partOf':'http://purl.obolibrary.org/obo/BFO_0000050',
     'hasPart':'http://purl.obolibrary.org/obo/BFO_0000051',
 }
@@ -70,7 +68,6 @@ normal = {
     'ilxtr':'http://uri.interlex.org/tgbugs/uris/readable/',
     # for obo files with 'fake' namespaces, http://uri.interlex.org/fakeobo/uris/ eqiv to purl.obolibrary.org/
     'fobo':'http://uri.interlex.org/fakeobo/uris/obo/',
-
     'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
     'ILXREPLACE':'http://ILXREPLACE.org/',
     'TEMP': interlex_namespace('temp/uris'),

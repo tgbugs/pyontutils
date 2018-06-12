@@ -132,7 +132,7 @@ class scicrunch():
             return self.crawl_post(data, _print=_print, debug=debug)
 
         async def post_single(url, data, session, i):
-            params = {**{'key':self.key}, **data} #**{'batch-elastic':'True'}}
+            params = {**{'key':self.key, 'batch-elastic':'True'}, **data} #**{'batch-elastic':'True'}}
             headers = {'Content-type': 'application/json'}
             async with session.post(url, data=json.dumps(params), headers=headers) as response:
 
@@ -145,6 +145,10 @@ class scicrunch():
                         output = await response.json()
                         limit+=1
 
+                if output.get('data').get('errormsg'):
+                    print(data)
+                    sys.exit(output)
+
                 if response.status not in [200, 201]:
                     try:
                         output = await response.json()
@@ -153,8 +157,6 @@ class scicrunch():
                     problem = str(output)
                     sys.exit(str(problem)+' with status code ['+str(response.status)+'] with params:'+str(params))
 
-                #BUG server sometimes slow and returns html
-                #output = await response.json(content_type='text/plain')
                 if debug:
                     return output
                 if _print:
@@ -213,17 +215,19 @@ class scicrunch():
     def addTerms(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
         """
             need:
-                    term           <str>
+                    term            <str>
+                    type            term, cde, anntation, or relationship <str>
             options:
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
-                    type            term, cde, anntation, or relationship <str>
                     synonym         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
         """
         url_base = self.base_path + '/api/1/ilx/add'
         terms = []
         for d in data:
+            if not d.get('term') or not d.get('type'): #php won't catch empty type
+                sys.exit('=== Data is missing term or type! ===')
             terms.append((url_base, d))
         ilx = self.post(terms, action='Priming Terms', LIMIT=LIMIT, _print=_print, crawl=crawl)
         ilx = {d['term']:d for d in ilx}
@@ -267,7 +271,7 @@ class scicrunch():
         return self.get(urls, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
 
     def updateAnnotations(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
-        """data = list of dict {"tid","annotation_tid","value"}"""
+        """data = list of dict {"id","tid","annotation_tid","value"}"""
         url_base = self.base_path + '/api/1/term/edit-annotation/{id}' # id of annotation not term id
         annotations = self.getAnnotations_via_id([d['id'] for d in data], LIMIT=LIMIT, _print=_print, crawl=crawl)
         annotations_to_update = []
@@ -317,6 +321,7 @@ class scicrunch():
         return self.post(data, LIMIT=LIMIT,  _print=_print, crawl=crawl, debug=debug)
 
 def main():
+    sys.exit('here')
     #args = read_args(api_key= p.home() / 'keys/beta_api_scicrunch_key.txt', db_url= p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
     args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
     sql = interlex_sql(db_url=args.db_url)

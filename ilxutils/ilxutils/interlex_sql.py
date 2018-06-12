@@ -11,6 +11,7 @@ class interlex_sql():
     def __init__(self, db_url, constraint=None):
         self.db_url = db_url
         self.constraint = constraint
+        self.engine = create_engine(self.db_url)
 
     def remove_duplicates(self, df):
         terms = self.get_terms()
@@ -22,7 +23,6 @@ class interlex_sql():
         data =  """
                 SELECT t.*
                 FROM terms as t
-                WHERE t.type!='{0}'
                 """.format(self.constraint)
         df = pd.read_sql(data, engine)
         df.drop_duplicates(keep='first', subset=['ilx'], inplace=True)
@@ -115,7 +115,7 @@ class interlex_sql():
     def get_relationships(self, records=False):
         engine = create_engine(self.db_url)
         data = """
-               SELECT t1.ilx AS term1, t3.ilx AS relationship_id, t2.ilx AS term2 FROM term_relationships AS tr
+               SELECT tr.id, t1.ilx AS term1, t3.ilx AS relationship_id, t2.ilx AS term2 FROM term_relationships AS tr
                JOIN terms AS t1 ON t1.id = tr.term1_id
                JOIN terms AS t2 ON t2.id = tr.term2_id
                JOIN terms AS t3 ON t3.id = tr.relationship_tid
@@ -144,7 +144,7 @@ class interlex_sql():
     def get_synonyms(self, records=False):
         engine = create_engine(self.db_url)
         data =  """
-                SELECT ts.id, ts.tid, ts.literal, t.label, t.ilx
+                SELECT ts.id, ts.tid, ts.ilx as synonym_ilx, ts.literal, t.label, t.ilx as term_ilx
                 FROM term_synonyms AS ts
                 JOIN terms AS t
                 WHERE ts.tid=t.id
@@ -155,11 +155,25 @@ class interlex_sql():
             return df.to_dict('records')
         return df
 
+    def show_tables(self):
+        data =  """
+                show tables;
+                """
+        return pd.read_sql(data, self.engine)
+
+    def get_table(self, tablename):
+        data =  """
+                SELECT *
+                FROM {}
+                """.format(tablename)
+        return pd.read_sql(data, self.engine)
+
 def main():
     args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt',production=True)
     sql = interlex_sql(db_url=args.db_url)
     #terms_df = sql.get_terms()
-    print(sql.get_existing_ids().shape)
+    ds = sql.get_table('datasets')
+    print(ds.head(5))
 
 if __name__ == '__main__':
     main()

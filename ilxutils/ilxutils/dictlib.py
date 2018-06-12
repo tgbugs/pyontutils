@@ -104,7 +104,7 @@ def merge(new, old):
                     sys.exit('Something broke while merging in existing_ids')
             old = preferred_change(old)
 
-        elif k in ['definition', 'superclasses', 'id', 'type', 'comment']:
+        elif k in ['definition', 'superclasses', 'id', 'type', 'comment', 'label']:
             old[k] = vals
 
         #may be overkill
@@ -127,7 +127,7 @@ def merge(new, old):
             new_existing_ids.append(e)
             visited[e['iri']] = True
     old['existing_ids'] = new_existing_ids
-    
+
     return old
 
 def extract_annotations(data):

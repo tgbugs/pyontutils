@@ -14,12 +14,11 @@ Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
     updateTerms                     Update terms|cdes|annotations|relationships in SciCrunch
     addAnnotations                  Add annotations to existing elements
-    updateAnnotations                Update annotations
+    updateAnnotations               Update annotations
 
 Options:
     -h, --help                      Display this help message
     -v, --version                   Current version of file
-
     -f, --file=<path>               File that holds the data you wish to upload to Scicrunch [default: None]
     -k, --api_key=<path>            Key path [default: keys/production_api_scicrunch_key.txt]
     -d, --db_url=<path>             Engine key path [default: keys/production_engine_scicrunch_key.txt]
@@ -38,8 +37,8 @@ import requests as r
 from sqlalchemy import create_engine
 import sys
 
-#BETA = 'https://test2.scicrunch.org'
-BETA = 'https://beta.scicrunch.org' #current beta
+BETA = 'https://test2.scicrunch.org'
+#BETA = 'https://beta.scicrunch.org' #current beta
 #BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
@@ -58,7 +57,7 @@ def test(args):
     if args.api_key:
         url = args.base_path + '/api/1/term/view/10?key=' + args.api_key
         #print(url)
-        req = r.get(url, auth=('scicrunch', 'perl22(query'))
+        req = r.get(url, auth=('scicrunch', 'perl22(query)'))
         try:
             data=req.json()['data']
             #print(data)
