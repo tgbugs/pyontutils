@@ -62,8 +62,8 @@ ilxtr:MediumSpinyPhenotype,ilxtr:MorphologicalPhenotype,,,,,we really should be 
 ilxtr:SpinyStellatePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:TrilaminarPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
-ilxtr:InterneuronPhenotype,ilxtr:AxonPhenotype,,,,,local projections only? (define local),
-ilxtr:ProjectionPhenotype,ilxtr:AxonPhenotype,,,,,"we don’t always have target location information, sometimes the best we get is ‘the axon leaves the section’",
+ilxtr:InterneuronPhenotype,ilxtr:AxonPhenotype,Intrinsic Phenotype,,,,local projections only? (define local) equivalent to LocalAxonOnly,
+ilxtr:ProjectionPhenotype,ilxtr:AxonPhenotype,,,,,"we don’t always have target location information, sometimes the best we get is ‘the axon leaves the section’, equivalent to RemoteAxon",
 ilxtr:LocalAxon,ilxtr:AxonPhenotype,,,,,,
 ilxtr:RemoteAxon,ilxtr:AxonPhenotype,,,,,hasProjectionPhenotype (some (class brainRegion (not (brainRegion containing this neruon)))),
 ilxtr:LocalAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:RemoteAxon)? This really feels like we are overcomplicating things… all we should need to know is that in projects to its own brain region… or better to a specific cell population that has a known location,

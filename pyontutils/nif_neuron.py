@@ -250,6 +250,8 @@ def make_phenotypes():
         graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
         if row[3]:
             graph.add_trip(id_, rdflib.namespace.SKOS.definition, row[3])
+        if row[5]:
+            graph.add_trip(id_, 'rdfs:comment', row[5])
         if row[6]:
             graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + row[6])
         if row[7]:
@@ -288,9 +290,13 @@ def make_phenotypes():
         def label(self, value):
             if value:
                 self._label = value
-                self.Class.label = value
+                self.Class.label = rdflib.Literal(value)
             else:
                 self.Class.label = rdflib.Literal(self._label)
+
+        def notes(self, value):
+            if value:
+                graph2.add_trip(self.id_, 'rdfs:comment', value)
 
         def synonyms(self, value):
             if value:
