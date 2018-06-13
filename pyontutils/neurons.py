@@ -334,7 +334,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'UBERON:0001950':'Neocortex',
         'UBERON:0008933':'S1',
     }
-    def __init__(self, phenotype, ObjectProperty=None, label=None):
+    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False):
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         super().__init__()
@@ -351,6 +351,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
+
+        if label is not None and override:
+            self.in_graph.add((self.p, rdflib.RDFS.label, rdflib.Literal(label)))
 
         # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
