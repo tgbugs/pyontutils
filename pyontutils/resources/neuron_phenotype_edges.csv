@@ -5,9 +5,9 @@ phenotypeOf,,,,,,,,"asymmetric, irreflexive"
 ,,,,,,,,
 #hasIntrinsicPhenotype,,,,,,hasPhenotype,,"asymmetric, irreflexive"
 #hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type. This should be used for direct detection of the molecule, whether it is a small molecule or a peptide.",,,hasExpressionPhenotype,,"asymmetric, irreflexive"
-hasSmallMoleculeExpressionPhenotype,,,,,,,,
-hasProteinExpressionPhenotype,,,,,,,,
-hasNucleicAcidExpressionPhenotype,,,,,,,,
+hasSmallMoleculeExpressionPhenotype,,,,,,hasExpressionPhenotype,,
+hasProteinExpressionPhenotype,,,,,,hasExpressionPhenotype,,
+hasNucleicAcidExpressionPhenotype,,,,,,hasExpressionPhenotype,,
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type. This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need this one,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
@@ -16,7 +16,7 @@ hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron typ
 #hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
 #hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
 #hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
-hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,needs work,,,,
+hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,needs work,,hasPhenotype,,
 #intrinsic/extrinsic phenotypes,,,,,,,,
 #hasExtrinsicPhenotype,,,,,,hasPhenotype,,
 hasProjectionPhenotype,Has role,,Expresses a relationship between a neuron type and a brain region that said neuron type sends axons to.,,"this might be clearer than hasCircuitRole but might confuse with projectsTo or the like, excitatory/inhibitory shouldn't be handled here? The way that projection vs intrinsic is modelled relates whether axons leave the brain region that contains the soma or not, this is not fully modelled at the moment",hasPhenotype,,"asymmetric, irreflexive"
@@ -27,7 +27,7 @@ hasDendriteLocatedIn,DendriteLocation,,,,,hasLocationPhenotype,,"asymmetric, irr
 ,,,,,,,,
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 #projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments",,,
-hasPresynapticTerminalsIn,,,,,projectsTo?,,,"asymmetric, irreflexive"
+hasPresynapticTerminalsIn,,,,,projectsTo?,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasCircuitRolePhenotype,,,,needs work,,hasPhenotype,,"asymmetric, irreflexive"
 hasExperimentalPhenotype,,,Expresses a relationship between a neuron and an experimental condition. This should be used when a neuron type is described by some experimental condition or functional designation.,,This needs a better name. It is clear what it means when you see examples of the usage.,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
