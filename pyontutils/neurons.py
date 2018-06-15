@@ -11,7 +11,8 @@ from IPython import embed
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc
-from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
+from pyontutils.core import makeGraph, makePrefixes, PREFIXES as uPREFIXES
+from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON
 from pyontutils.config import devconfig
 from pyontutils.qnamefix import cull_prefixes
 
@@ -297,9 +298,9 @@ class graphBase:
 
     def disjointWith(self, other):
         if isinstance(other, self.__class__):
-            self.out_graph.add((self.id_, rdflib.OWL.disjoint, other.id_))
+            self.out_graph.add((self.id_, owl.disjointWith, other.id_))
         else:
-            self.out_graph.add((self.id_, rdflib.OWL.disjoint, other))
+            self.out_graph.add((self.id_, owl.disjointWith, other))
 
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
@@ -353,7 +354,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
         if label is not None and override:
-            self.in_graph.add((self.p, rdflib.RDFS.label, rdflib.Literal(label)))
+            self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
         # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
@@ -1370,7 +1371,7 @@ def main():
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(_NEURON_CLASS)))
+    reg_neurons = list(g.g.subjects(rdfs.subClassOf, g.expand(_NEURON_CLASS)))
     tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % _NEURON_CLASS)]
     def_neurons = g.get_equiv_inter(_NEURON_CLASS)
 
@@ -1395,7 +1396,7 @@ def main():
     ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotype-core.ttl'))
     ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotypes.ttl'))
     ng.write()
-    bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
+    bads = [n for n in ng.g.subjects(rdf.type, owl.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]
     embed()
 
