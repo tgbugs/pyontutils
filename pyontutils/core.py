@@ -1362,6 +1362,13 @@ OntCuries(PREFIXES)
 # ontquery.SciGraphRemote.verbose = True
 
 class OntId(ontquery.OntId, rdflib.URIRef):
+    #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
+        #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
+
+    #@property
+    #def URIRef(self):  # FIXME stopgap for comparison issues
+        #return rdflib.URIRef(self)
+
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
