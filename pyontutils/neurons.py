@@ -296,11 +296,32 @@ class graphBase:
     def neurons():
         return sorted(NeuronBase.existing_pes)
 
-    def disjointWith(self, other):
-        if isinstance(other, self.__class__):
-            self.out_graph.add((self.id_, owl.disjointWith, other.id_))
-        else:
-            self.out_graph.add((self.id_, owl.disjointWith, other))
+    def disjointWith(self, *others):
+        for other in others:
+            if isinstance(other, self.__class__):
+                self.out_graph.add((self.id_, owl.disjointWith, other.id_))
+            else:
+                self.out_graph.add((self.id_, owl.disjointWith, other))
+
+        return self
+
+    def equivalentClass(self, *others):
+        for other in others:
+            if isinstance(other, self.__class__):
+                self.out_graph.add((self.id_, owl.equivalentClass, other.id_))
+            else:
+                self.out_graph.add((self.id_, owl.equivalentClass, other))
+
+        return self
+
+    def subClassOf(self, *others):
+        for other in others:
+            if isinstance(other, self.__class__):
+                self.out_graph.add((self.id_, rdfs.subClassOf, other.id_))
+            else:
+                self.out_graph.add((self.id_, rdfs.subClassOf, other))
+
+        return self
 
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
@@ -365,9 +386,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         except StopIteration:  # is a phenotype derived from an external class
             try:
                 if not self._sgv.findById(subject):
-                    print('WARNING: Unknown phenotype ', subject)
+                    print(tc.red('WARNING:'), 'Unknown phenotype', subject)
             except ConnectionError:
-                print('WARNING: Phenotype unvalidated. No SciGraph was instance found at',
+                print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                       self._sgv._basePath)
         return subject
 
@@ -615,7 +636,7 @@ class NeuronBase(graphBase):
     ids_pes = {}
     pes_ids = {}
     __context = tuple()  # this cannot be changed after __init__, neurons are not dynamic
-    def __init__(self, *phenotypeEdges, id_=None):
+    def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
         super().__init__()
         self.ORDER = [
         # FIXME it may make more sense to manage this in the NeuronArranger
@@ -686,11 +707,16 @@ class NeuronBase(graphBase):
             else:
                 self._pesDict[pe.e] = [pe]
 
+        self._label = None
+        if override:
+            if label is not None:
+                self._label = label
+
         if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph:
             self.Class = self.existing_pes[self]
         else:
             self.Class = self._graphify()
-            self.Class.label = rdflib.Literal(self.label)
+            self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
             self.existing_pes[self] = self.Class
 
     def _tuplesToPes(self, pes):
@@ -740,6 +766,10 @@ class NeuronBase(graphBase):
 
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
+        if self._label is not None:
+            self.Class.label = (rdflib.Literal(self._label),)
+            return self._label
+
         # TODO predicate actions are the right way to implement the transforms here
         def sublab(edge):
             sublabs = []
@@ -1168,8 +1198,26 @@ class injective(type):
     def __len__(self):
         return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)])
 
+    def items(self):
+        for k in dir(self):
+            v = getattr(self, k)
+            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+                yield k, v
+
+    def __contains__(self, key):
+        try:
+            self.__getitem__(key)
+            return True
+        except:
+            return False
+
     def __getitem__(self, key):
-        return self.__dict__[key]
+        print(key)
+        v = getattr(self, key)
+        if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+            return v
+        else:
+            raise KeyError(f'{key} not in self.__class__.__name__')
 
     def __repr__(self):
         newline = '\n'
@@ -1231,8 +1279,8 @@ class LocalNameManager(metaclass=injective):
     'ilxtr:hasPhenotype',
     )
 
-    def __getitem__(self, key):  # just in case someone makes an instance by mistake
-        return self.__class__.__dict__[key]
+    #def __getitem__(self, key):  # just in case someone makes an instance by mistake
+        #return self.__class__.__dict__[key]
 
 
 def checkCalledInside(classname, stack):
