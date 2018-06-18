@@ -147,7 +147,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
-    __version = 'v1.1.3'
+    __version = 'v1.1.4'
     _newline = True
     sortkey = staticmethod(natsort)
     make_litsortkey = staticmethod(make_litsort)
@@ -626,11 +626,11 @@ class CustomTurtleSerializer(TurtleSerializer):
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         whitespace = '\n' + self.indent() if self._newline else ''
-        self.write(whitespace + '[')
+        self.write(whitespace + '[]')
         if SDEBUG:
             self.write('\n# ' + str(self._globalSortKey(subject)) + '\n')  # FIXME REMOVE
         self.predicateList(subject)
-        self.write(' ] .')
+        self.write(' .')
         return True
 
     def getQName(self, uri, gen_prefix=True): # modified to make it possible to block gen_prefix
@@ -669,6 +669,12 @@ class CustomTurtleSerializer(TurtleSerializer):
         stream.write('\n'.encode('ascii'))
         n, v = self._name, self.__version
         stream.write(u'### Serialized using the {} serializer {}\n'.format(n, v).encode('ascii'))
+
+
+class RacketTurtleSerializer(CustomTurtleSerializer):
+    def startDocument(self):
+        self.stream.write('#lang rdf/turtle\n'.encode())
+        super().startDocument()
 
 
 class CompactTurtleSerializer(CustomTurtleSerializer):

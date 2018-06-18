@@ -27,7 +27,7 @@ def t(subject, label, def_, *synonyms):
         yield from olit(subject, definition, def_)
 
     if synonyms:
-        yield from olit(subject, NIFRID.synonyms, *synonyms)
+        yield from olit(subject, NIFRID.synonym, *synonyms)
 
 class I:
     counter = iter(range(999999))
@@ -155,6 +155,10 @@ triples += ( # information entity
     oc(ilxtr.classificationCriteria, ilxtr.informationEntity),
     oc(ilxtr.identificationCriteria, ilxtr.informationEntity),
 
+    oc(ilxtr.categoryNames, ilxtr.informationEntity),
+    oc(ilxtr.categoryAssignments, ilxtr.informationEntity),
+    oc(ilxtr.nameIdentityMapping, ilxtr.informationEntity),
+
 )
 
 triples += (  # material entities
@@ -184,11 +188,28 @@ triples += (  # material entities
         restriction(ilxtr.hasExpAspect, asp.permeabilityOfFreeSpace),
         restriction(ilxtr.hasExpAspect, asp.impedanceOfFreeSpace),
         restriction(ilxtr.hasExpAspect, asp.fineStructureAspect),
-        restriction(ilxtr.hasExpAspect, asp.CoulobsAspect),
+        restriction(ilxtr.hasExpAspect, asp.CoulombsAspect),
         # more... FIXME some of these probably shouldn't count?
         # since they are/can be derived?
         # https://en.wikipedia.org/wiki/Physical_constant
        ),
+
+    # local _to this universe_
+    oc(asp.speedOfLight, asp.Local),  # in a vacuum, as far as we know this is invariant in all universes
+    oc(asp.PlankAspect, ilxtr.aspect),
+    oc(asp.elementaryCharge, ilxtr.aspect),
+    oc(asp.JosephsonAspect, ilxtr.aspect),
+    oc(asp.vonKlitzingAspect, ilxtr.aspect),
+    oc(asp.GravitationalAspect, ilxtr.aspect),
+    oc(asp.BoltzmannAspect, ilxtr.aspect),
+    oc(asp.electronRestMass, ilxtr.aspect),
+    oc(asp.gravitationalCouplingAspect, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.permittivityOfFreeSpace, ilxtr.aspect),
+    oc(asp.permeabilityOfFreeSpace, ilxtr.aspect),
+    oc(asp.impedanceOfFreeSpace, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.CoulombsAspect, ilxtr.aspect),
 
     oc(ilxtr.physicalForce, ilxtr.materialEntity),
     oc(ilxtr.mechanicalForce, ilxtr.physicalForce),
@@ -470,6 +491,29 @@ triples += (  # aspects
     oc(asp.locationInAtlas, asp.location),
     oc_(asp.locationInAtlas, restriction(ilxtr.hasContext, ilxtr.atlasLandmarks)),  # morphology matching atlas?
 
+    oc(asp.time, asp.nonLocal),  # requires some periodic phenomena to create the ordinals
+    oc_(asp.time,
+        restriction(ilxtr.hasMaterialContext, ilxtr.periodicPhenomena),
+        restriction(ilxtr.hasAspectContext, asp.startTime)),  # FIXME how to deal with this as a zero
+    oc(asp.startTime, asp.time),  # point in time aspects are all defined
+    oc(asp.endTime, asp.time),
+    oc(asp.timeInterval, asp.nonLocal),
+    oc_(asp.timeInterval,  # invervals only need on anchor
+        restriction(ilxtr.hasMaterialContext, ilxtr.periodicPhenomena),
+        restriction(ilxtr.hasAspectContext, asp.startTime),
+        restriction(ilxtr.hasAspectContext, asp.endTime)),
+
+    # no teleportation allowed unless you are a photon in its own reference frame
+    oc(asp.startLocation, asp.location),
+    oc_(asp.startLocation,
+        restriction(ilxtr.hasAspectContext,
+                    asp.startTime)),
+
+    oc(asp.endLocation, asp.location),
+    oc_(asp.endLocation,
+        restriction(ilxtr.hasAspectContext,
+                    asp.endTime)),
+
     oc(asp.name, asp.nonLocal),
     oc(asp.identity, asp.Local),
     oc_(asp.name,
@@ -478,6 +522,7 @@ triples += (  # aspects
 
     oc(asp.category, asp.Local),
     oc(asp.categoryAssigned, asp.nonLocal),
+    # FIXME categories are conceptual space... how to cope...
     oc_(asp.categoryAssigned,
         restriction(ilxtr.isQualifiedFormOf, asp.category),
         intersectionOf(restN(ilxtr.hasInformationContext, ilxtr.categoryNames),
@@ -587,6 +632,7 @@ triples += (  # aspects
     oc(asp.voltage, asp.electrical),
     oc(asp.voltage, asp.nonLocal),
     oc_(asp.voltage, restriction(ilxtr.hasMaterialContext, ilxtr.electricalGround)),
+    oc(asp.junctionPotential, asp.voltage),
     oc(asp.current, asp.electrical),
     oc(asp.current, asp.nonLocal),
     oc(asp.charge, asp.electrical),
@@ -602,7 +648,7 @@ triples += (  # aspects
     oc(asp.energy, asp.nonLocal),
     oc(asp.velocity, asp.nonLocal),
     oc(asp.momentum, asp.nonLocal),
-    oc(asp.acceleration, asp.nonLocal),
+    oc(asp.acceleration, asp.nonLocal),  # frame of reference issues
     oc(asp.force, asp.nonLocal),
 
     oc(asp.informationEntropy, asp.Local),
@@ -639,9 +685,12 @@ triples += (  # aspects
         restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena),
         restriction(ilxtr.hasComplementAspect, asp.transparency)),
 
+    oc(asp.dynamicRange, asp.nonLocal),  # dynamic range to what?
     oc(asp.contrast, asp.nonLocal),  # TODO what is this more specifically? this is derived ...
     # contrast is always qualified by some detecting phenomena
-    oc_(asp.contrast, restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena)),
+    oc_(asp.contrast,
+        restriction(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena),
+        restriction(ilxtr.hasAspectContext, asp.dynamicRange)),
 
     oc(asp.density, asp.Local),  # local but not directly measurable
 
@@ -1193,10 +1242,34 @@ triples = (
     ),
 
     _t(tech.delivery, 'delivery technique',
-       (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # email delivery? fun...
-       (ilxtr.hasPrimaryAspectActualized, asp.location),
+       intersectionOf(ilxtr.technique,
+           restN(ilxtr.hasPrimaryParticipant,
+                 ilxtr.materialEntity),  # email delivery? fun... not really delivery...
+           restN(ilxtr.hasPrimaryAspectActualized,
+                 asp.location),
+           #restN(ilxtr.hasPrimaryAspect_dAdT,
+           #ilxtr.nonZero)
+                     #),
+       #intersectionOf(ilxtr.technique,
+                      # FIXME how to use this to start in syringe end in brain?
+                      # maybe using hasTechniqueContext instead?
+                      restN(ilxtr.hasConstrainingAspect, asp.startLocation),
+                      restN(ilxtr.hasConstrainingAspect, asp.endLocation)),
+       # alternate looking only at different times doesn not work because
+       # the location at both those times could stay the same :/
+       # have to also include the value
+       #intersectionOf(
+           #restN(ilxtr.hasConstrainingAspect,
+                 #intersectionOf(asp.location,  # can't use hasActualizedValue because can't tell times apart?
+                                #restN(ilxtr.hasAspectContext,
+                                      #asp.startTime))),
+           #restN(ilxtr.hasConstrainingAspect,
+                 #intersectionOf(asp.location,
+                                #restN(ilxtr.hasAspectContext,
+                                      #asp.endTime)))),
        #(ilxtr.hasSomething, i.d),
-       def_='A technique for moving something from point a to point b.',),
+       def_='A technique for moving something from point a to point b.',
+       equivalentClass=oECN),
 
     _t(i.d, 'physical delivery technique',
        # i.e. distinct from energy released by chemical means?
@@ -1509,6 +1582,11 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        (ilxtr.detects, ilxtr.materialEntity)),
+    # detecting something means you are measuring some aspect
+    # even if it is as simple as the presence or absense of the
+    # detected phenomena
+    oc_(i.p, restriction(ilxtr.hasPrimaryAspect, ilxtr.aspect)),
+
     _t(i.d, 'identification technique',
        (ilxtr.isConstrainedBy, ilxtr.identificationCriteria),  # FIXME circular and not what actually differentiates
        ),
@@ -2049,10 +2127,10 @@ triples = (
              restN(ilxtr.primaryParticipantIn,
                    intersectionOf(ilxtr.separationProcessPart,
                                   restN(ilxtr.hasPrimaryAspect,
-                                        asp.category),
+                                        asp.category),  # FIXME nonLocal
                                   restN(ilxtr.hasConstrainingAspect,
                                         # another true predicate
-                                        asp.categoryMember))))),
+                                        asp.isCategoryMember))))),
 
        # FIXME named => there is a larger black box where the name _can_ be measured
        # hasPrimaryParticipant partOf (hasAspect ilxtr.aspect)
@@ -2143,18 +2221,23 @@ triples = (
        synonyms=('observation', 'observation technique'),),
 
     _t(i.d, 'procurement technique',
-       (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasPrimaryParticipant,
-        OntTerm('BFO:0000040', label='material entity')
-        #OntTerm(term='material entity', prefix='BFO')
-       ),
+       intersectionOf(ilxtr.technique,
+                      restN(ilxtr.hasPrimaryAspectActualized, asp.location),
+                      restN(ilxtr.hasConstrainingAspect, asp.endLocation),
+                      restN(ilxtr.hasPrimaryParticipant,  # FIXME vs hasPrimaryOutput...
+                            # could have part some delivery technique
+                            # distingushed from delivery technique in that it only
+                            # cares about the _endpoint_ not start and end
+                            OntTerm('BFO:0000040', label='material entity')
+                            #OntTerm(term='material entity', prefix='BFO')
+                      )),
        #(ilxtr.hasPrimaryOutput,  # primary outputs imply creation
         #OntTerm('BFO:0000040', label='material entity')
         #OntTerm(term='material entity', prefix='BFO')
        #),
        def_='A technique for getting or retrieving something.',
-       synonyms=('acquisition technique', 'procurement', 'acquistion', 'get')
-    ),
+       synonyms=('acquisition technique', 'procurement', 'acquistion', 'get'),
+       equivalentClass=oECN),
 
     # naming
     oc(tech.naming, ilxtr.technique),
@@ -2249,6 +2332,7 @@ triples = (
     _t(tech.measuring, 'measuring technique',
        # TODO is detection distinct from measurement if there is no explicit symbolization?
        (ilxtr.hasPrimaryAspect, ilxtr.aspect),  # if you are measuring something you had bettered know what you are measuring
+       #(ilxtr.detects, ilxtr.materialEntity),  # FIXME
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),  # observe that this not information artifact
        # FIXME has primary input?
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity #OntTerm('BFO:0000001', label='entity')
@@ -2425,6 +2509,9 @@ triples = (
     _t(i.d, 'micropipette production technique',
        (ilxtr.hasPrimaryOutput, ilxtr.microPipette)),
 
+    _t(i.d, 'microscope repair technique',
+       (ilxtr.hasPrimaryInputOutput, ilxtr.microscope)),
+
     _t(tech.lightMicroscopy, 'light microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2112', label='Optical microscope')),  # FIXME light microscope !
        (ilxtr.detects, ilxtr.visibleLight),  # TODO photos?
@@ -2444,21 +2531,33 @@ triples = (
        synonyms=('confocal microscopy',)),
 
     _t(tech.imaging, 'imaging technique',
+       (ilxtr.hasPrimaryAspect, ilxtr.aspect),
+       # FIXME... contrast isnt quite right
+       # it is more total energy flux in a spectrum to which the detection medium is opaque
+       # over some area with some resolution, though the difference is that imaging is
+       # spatial in nature where as pure particle detection is less spatial and more event based
+       #(ilxtr.hasPrimaryAspect, asp.contrast),
+       #(ilxtr.hasPrimaryAspect, asp.detectedThingPresent),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # the thing to be imaged
        (ilxtr.hasInformationOutput, ilxtr.image),
        def_='Imaging is the process of forming an image.',
        synonyms=('imaging',),
+       #equivalentClass=oECN
     ),
 
     _t(i.d, 'functional brain imaging',
        intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+                      # TODO figure out how to tie in the bFA, maybe make it 'functional' contrast
+                      # suitably nebulous to allow for many operational definitions
+                      #restN(ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),  # this is interpretational
+                      restN(ilxtr.hasPrimaryAspect, asp.contrast),  # this is what is actually measured
                       restN(ilxtr.hasInformationOutput, ilxtr.image),
                       restN(ilxtr.hasPrimaryParticipant,
                             OntTerm('UBERON:0000955', label='brain'))),
        # FIXME this is very verbose...
        intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+                      #restN(ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+                      restN(ilxtr.hasPrimaryAspect, asp.contrast),  # this is what is actually measured
                       restN(ilxtr.hasInformationOutput, ilxtr.image),
                       restN(ilxtr.hasPrimaryParticipant,
                             restN(partOf,
@@ -2475,6 +2574,8 @@ triples = (
     (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000007')),
 
     _t(i.d, 'photographic technique',
+       (ilxtr.detects, ilxtr.photons),  # FIXME acctually it detects energy in _any_ form including electrons
+       #(ilxtr.hasPrimaryAspect, asp.contrast),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # the scene
        (ilxtr.hasInformationOutput, ilxtr.photograph),
        synonyms=('photography',),
@@ -2483,13 +2584,23 @@ triples = (
     _t(tech.positronEmissionImaging, 'positron emission imaging',
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.detects, ilxtr.positron),
+       #(ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to positrons... TODO model as gca?
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.detects, ilxtr.positron)),
+
+    oc_(None,  # FIXME this doesn't work because it can't fill in the specifics...
+        intersectionOf(restN(ilxtr.detects, ilxtr.materialEntity),
+                       restN(ilxtr.hasPrimaryAspect, asp.contrast)),
+        oECN(restN(ilxtr.hasPrimaryAspect,
+                   intersectionOf(asp.contrast,
+                                  restN(ilxtr.hasMaterialContext, ilxtr.interactingPhenomena),
+                                  restN(ilxtr.hasAspectContext, asp.dynamicRange))))),
 
     _t(tech.opticalImaging, 'optical imaging',
        # FIXME TODO what is the difference between optical imaging and light microscopy?
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.detects, ilxtr.visibleLight),  # owl:Class photon and hasWavelenght range ...
+       #(ilxtr.hasPrimaryAspect, ilxtr.contrast),
        (ilxtr.hasInformationOutput, ilxtr.image),
        synonyms=('light imaging', 'visible light imaging'),
     ),
@@ -2506,6 +2617,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        #(ilxtr.hasProbe, ilxtr.visibleLight),  # FIXME
        (ilxtr.detects, ilxtr.visibleLight),  # FIXME
+       #(ilxtr.hasPrimaryAspect, asp.contrast),
        #(ilxtr.hasPrimaryAspect, ilxtr.intrinsicSignal),  # this is a 'known phenomena'
        #(ilxtr.knownProbedPhenomena, ilxtr.intrinsicSignal),
        (ilxtr.hasSomething, ilxtr.intrinsicSignal),
@@ -2517,6 +2629,8 @@ triples = (
        #tech.imaging,
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.hasInformationOutput, ilxtr.image),
+       #(ilxtr.hasPrimaryAspect, asp.contrast),
+       (ilxtr.detects, ilxtr.xrays),
        # VS contrast in the primary aspect being the signal created by the xrays...
        # can probably expand detects in cases where there are non-aspects...
        # still not entirely sure these shouldn't all be aspects too...
@@ -2524,7 +2638,6 @@ triples = (
        # TODO need a way to deal with the fact that what we really care about here
        # is the connection to the fact that there is some pheonmena that has
        # differential contrast to the pheonmena
-       (ilxtr.detects, ilxtr.xrays),
     ),  # owl:Class photon and hasWavelenght range ...
 
     _t(tech.MRI_ImageProcessing, 'magnetic resonance image processing',
@@ -2545,6 +2658,8 @@ triples = (
                       restN(hasInput, ilxtr.MRIScanner),
                       # NRM is an aspect not one of the mediators FIXME
                       restN(ilxtr.hasPrimaryAspect, asp.nuclearMagneticResonance),
+                      # FIXME nmr vs nrm contrast... detection vs measurement
+                      #restN(ilxtr.hasPrimaryAspect, asp.NMRcontrast),
                       restN(hasPart, tech.MRI_ImageProcessing)),
        intersectionOf(ilxtr.technique,
                       restN(hasPart, tech.MRI)),
@@ -2668,10 +2783,10 @@ triples = (
 
     _t(i.d, 'pharmacological technique',
        intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasProbe, ilxtr.molecule),  # FIXME
+                      #restN(ilxtr.hasProbe, ilxtr.molecule),  # FIXME on a living system?
                       restN(hasInput, restN(hasRole, OntTerm('CHEBI:23888')))),
        intersectionOf(ilxtr.technique,
-                      restN(ilxtr.hasProbe, ilxtr.molecule),  # FIXME
+                      #restN(ilxtr.hasProbe, ilxtr.molecule),  # FIXME on a living system?
                       restN(hasInput, restN(hasRole, OntTerm('CHEBI:38632')))),
        synonyms=('pharmacology',),
        equivalentClass=oECN),
@@ -3026,7 +3141,7 @@ triples = (
 
     _t(tech.electronMicroscopy, 'electron microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[])),
-       (tech.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
+       (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        # hasProbe ilxtr.electron and some focusing elements and detects ilxtr.electron

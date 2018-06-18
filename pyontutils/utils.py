@@ -39,7 +39,7 @@ def test_ipython():
         config = get_ipython().config
         return 'TerminalInteractiveShell' in config
     except NameError as e:
-        return None, False
+        return False
 
 def test_test():
     import __main__

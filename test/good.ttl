@@ -215,6 +215,7 @@ BLX:8 a owl:Class ;
 BLX:8.5 a owl:Class ;
     rdfs:label "2014-04-14T00:00:00"^^xsd:dateTime,
         "2014-04-14T00:00:01"^^xsd:dateTime,
+        "2014-04-14T00:00:00+00:00"^^xsd:dateTime,
         "2014-04-14T00:00:00-06:00"^^xsd:dateTime,
         "2014-04-14T00:00:00-08:00"^^xsd:dateTime,
         "2014-04-14T00:00:01-08:00"^^xsd:dateTime .
@@ -330,7 +331,7 @@ sco:7 a owl:Class ;
 
 sco:8 a owl:Class .
 
-[ a owl:Class ;
+[] a owl:Class ;
     rdfs:label (
             (
                 "0"
@@ -340,20 +341,20 @@ sco:8 a owl:Class .
                 "5" )
             (
                 "1"
-                "5" ) ) ] .
+                "5" ) ) .
 
-[ a owl:Class ;
+[] a owl:Class ;
     rdfs:label (
             (
                 "1"
                 "5" )
             (
                 "2"
-                "4" ) ) ] .
+                "4" ) ) .
 
 ### Axioms
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             A:0
             A:1
@@ -361,114 +362,114 @@ sco:8 a owl:Class .
             A:3
             A:prefix_1
             A:prefix_2
-            A:prefix_3 ) ] .
+            A:prefix_3 ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             A:4
             A:5
             A:6
             A:prefix_4
             A:prefix_5
-            A:prefix_6 ) ] .
+            A:prefix_6 ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:AA
             other:Aa
             other:aA
             other:aa
             other:B
-            other:b ) ] .
+            other:b ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:AA
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:aa
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:BB
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:AllDifferent ;
+[] a owl:AllDifferent ;
     owl:distinctMembers (
             other:bb
-            other:cc ) ] .
+            other:cc ) .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:10 ;
     owl:annotatedProperty BLX:00 ;
     owl:annotatedTarget "A"^^xsd:string ;
     BLX:hasDbXref "A"^^xsd:string,
-        "D"^^xsd:string ] .
+        "D"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:11 ;
     owl:annotatedProperty BLX:01 ;
     owl:annotatedTarget "B"^^xsd:string ;
     BLX:hasDbXref "B"^^xsd:string,
-        "D"^^xsd:string ] .
+        "D"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:12 ;
     owl:annotatedProperty BLX:02 ;
     owl:annotatedTarget "C"^^xsd:string ;
     BLX:hasDbXref "C"^^xsd:string,
-        "D"^^xsd:string ] .
+        "D"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:20 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
             BLX:18
             BLX:21 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
+    rdfs:label "lol you have got to be kidding me" .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource BLX:21 ;
     owl:annotatedProperty owl:propertyChainAxiom ;
     owl:annotatedTarget (
             BLX:18
             BLX:21 ) ;
-    rdfs:label "lol you have got to be kidding me" ] .
+    rdfs:label "lol you have got to be kidding me" .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource obo:DOID_65 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "connective tissue disorder"^^xsd:string ;
-    oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string ] .
+    oboInOwl:hasDbXref "CSP2005:0729-7208"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource obo:DOID_1595 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "clinical depression"^^xsd:string ;
-    oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string ] .
+    oboInOwl:hasDbXref "CSP2005:2483-6681"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource obo:DOID_3669 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "Charcot's syndrome"^^xsd:string ;
-    oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string ] .
+    oboInOwl:hasDbXref "CSP2005:4000-0117"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource obo:DOID_3820 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "chlamydiaceae infection"^^xsd:string ;
-    oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string ] .
+    oboInOwl:hasDbXref "CSP2005:0638-2797"^^xsd:string .
 
-[ a owl:Axiom ;
+[] a owl:Axiom ;
     owl:annotatedSource obo:DOID_11394 ;
     owl:annotatedProperty oboInOwl:hasExactSynonym ;
     owl:annotatedTarget "ARDS"^^xsd:string ;
-    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string ] .
+    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string .
 
-[ a (
+[] a (
             "BB"
             "cc"
             other:BB
@@ -478,9 +479,9 @@ sco:8 a owl:Class .
                         other:cc ) ]
             (
                 other:BB
-                other:cc ) ) ] .
+                other:cc ) ) .
 
-[ a (
+[] a (
             "bb"
             "cc"
             other:bb
@@ -490,9 +491,9 @@ sco:8 a owl:Class .
                         other:yy ) ]
             (
                 other:bb
-                other:cc ) ) ] .
+                other:cc ) ) .
 
-[ a (
+[] a (
             "bb"
             "cc"
             other:bb
@@ -502,17 +503,17 @@ sco:8 a owl:Class .
                         other:yy ) ]
             (
                 other:bb
-                other:cc ) ) ] .
+                other:cc ) ) .
 
-[ a (
+[] a (
             other:BB
-            other:cc ) ] .
+            other:cc ) .
 
-[ a (
+[] a (
             other:bb
-            other:cc ) ] .
+            other:cc ) .
 
-[ rdfs:label (
+[] rdfs:label (
             1
             2
             3
@@ -521,15 +522,15 @@ sco:8 a owl:Class .
             1
             2
             3
-            4 ) ] .
+            4 ) .
 
-[ other:UsedAP "huehuehuehue" ;
+[] other:UsedAP "huehuehuehue" ;
     rdf:first "this" ;
     rdf:rest (
             "a"
             "bare"
             "is"
-            "list" ) ] .
+            "list" ) .
 
 ### Annotations
 

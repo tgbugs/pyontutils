@@ -513,6 +513,18 @@ class Restriction2(Triple):
 
 class Restriction(Triple):
     class RestrictionTriple(tuple):
+        @property
+        def s(self):
+            return self[0]
+
+        @property
+        def p(self):
+            return self[1]
+
+        @property
+        def o(self):
+            return self[2]
+
         def __repr__(self):
             return f"{self.__class__.__name__}{super().__repr__()}"
 
@@ -1061,9 +1073,9 @@ class makeGraph:
             #print('yes we wrote the first version...', self.name)
 
     def expand(self, curie):
-        prefix, suffix = curie.split(':',1)
+        prefix, suffix = curie.split(':', 1)
         if prefix not in self.namespaces:
-            raise KeyError('Namespace prefix does exist:', prefix)
+            raise KeyError(f'Namespace prefix {prefix} does exist for {curie}' )
         return self.namespaces[prefix][suffix]
 
     def check_thing(self, thing):
@@ -1171,7 +1183,7 @@ class makeGraph:
     def add_restriction(self, subject, predicate, object_):
         """ Lift normal triples into restrictions using someValuesFrom. """
         if type(object_) != rdflib.URIRef:
-            object = self.check_thing(object_)
+            object_ = self.check_thing(object_)
 
         if type(predicate) != rdflib.URIRef:
             predicate = self.check_thing(predicate)
@@ -1353,6 +1365,13 @@ OntCuries(PREFIXES)
 # ontquery.SciGraphRemote.verbose = True
 
 class OntId(ontquery.OntId, rdflib.URIRef):
+    #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
+        #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
+
+    #@property
+    #def URIRef(self):  # FIXME stopgap for comparison issues
+        #return rdflib.URIRef(self)
+
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
