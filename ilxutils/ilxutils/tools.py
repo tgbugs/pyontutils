@@ -2,12 +2,12 @@ import json
 import pickle
 import re
 import tabulate
-
+from pathlib import Path as p
 
 
 def degrade(var):
     def helper(s):
-        return str(re.sub("\(|\)|'|\"|,", "", s).lower().strip())
+        return str(re.sub("\(|\)|'|\"|,|-|_|:| ", "", s).lower().strip())
 
     if not isinstance(var, list):
         if var:
@@ -55,11 +55,17 @@ def oj(filepath):
 
 def cp(data, output):
     namecheck(output)
-    with open(output+'.pickle', 'wb') as outfile:
+    filepath = str(filepath)
+    if '.pickle' not in output:
+        output += '.pickle'
+    with open(output, 'wb') as outfile:
         pickle.dump(data, outfile)
     print('Complete')
 
 def op(filepath):
     namecheck(filepath)
-    with open(filepath+'.pickle', 'rb') as infile:
+    filepath = str(filepath)
+    if '.pickle' not in filepath:
+        filepath += '.pickle'
+    with open(filepath, 'rb') as infile:
         return pickle.load(infile)

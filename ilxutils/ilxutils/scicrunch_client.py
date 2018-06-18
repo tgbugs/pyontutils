@@ -132,7 +132,8 @@ class scicrunch():
             return self.crawl_post(data, _print=_print, debug=debug)
 
         async def post_single(url, data, session, i):
-            params = {**{'key':self.key, 'batch-elastic':'True'}, **data} #**{'batch-elastic':'True'}}
+            params = {**{'key':self.key,}, **data}
+            if 'Annotation' in action: params.update({'batch-elastic':'True'}) #term endpoints cant handle this key yet
             headers = {'Content-type': 'application/json'}
             async with session.post(url, data=json.dumps(params), headers=headers) as response:
 
@@ -194,7 +195,7 @@ class scicrunch():
     def updateTerms(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
         """
             need:
-                    term           <str>
+                    id              <int/str>
             options:
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
@@ -280,7 +281,7 @@ class scicrunch():
             annotation.update({**d})
             url = url_base.format(id=annotation['id'])
             annotations_to_update.append((url, annotation))
-        self.post(annotations_to_update, LIMIT=LIMIT, _print=_print, crawl=crawl, debug=debug)
+        self.post(annotations_to_update, LIMIT=LIMIT, action='Updating Annotations', _print=_print, crawl=crawl, debug=debug)
 
     def deleteAnnotations(self, annotation_ids, LIMIT=50,  _print=True, crawl=False, debug=False):
         """data = list of tids"""

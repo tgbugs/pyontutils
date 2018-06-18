@@ -2,20 +2,20 @@
 
 Usage:  compare_graphs.py [-h | --help]
         compare_graphs.py [-v | --version]
-        compare_graphs.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
-        compare_graphs.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
-                            [--ilx] [-s SHORTEN_NAMES] [--html] [--save]
+        compare_graphs.py [-r=<path>] [-t=<path>] (-f=<path> | -p=<path>) (-i | -n) [-s] [--save-pickles] [--html=<path>]
 
 Options:
-    -h, --help                      Display this help message
-    -v, --version                   Current version of file
-    -o, --output=<path>             Output path [default: /home/troy/Dropbox/compare_graphs_example.json]
-    -r, --reference_graph=<path>    [default: /home/troy/Dropbox/interlex.pickle]
-    -t, --target_graph=<path>       [default: /home/troy/Dropbox/uberon.pickle]
-    --ilx                           treat reference like its ilx bc it has uniqueness
-    --html                          creates html output from the json diff
-    -s, --shorten_names             qnames the reference iri and target iri
-    --save                          saves both picklized graphs into seperate files next to their source
+    -h --help                          Display this help message
+    -v --version                       Current version of file
+    -r --reference=<path>              [default: /home/troy/Dropbox/interlex.pickle]
+    -t --target=<path>                 [default: /home/troy/Dropbox/uberon.pickle]
+    -f --full-diff=<path>              Output path of full comparison, even those that dont have a common diff
+    -p --partial-diff=<path>           Output of comparisons that have a similar predicate
+    -i --ilx                           Treat reference like its ilx bc it has uniqueness
+    -n --noilx                         Sanity check for ilx
+    --save-pickles                     If you converted files to pickle it's worth using to save them (will save in folder of src)
+    -s --shorten-names                 Condensed the names of iris
+    --html=<path>                      Converts the json comparison to html (default being the same path of -p | -d)
 """
 VERSION = '0.3'
 from docopt import docopt
@@ -28,6 +28,7 @@ from ilxutils.mydifflib import diffcolor, diff, ratio
 from ilxutils.tools import *
 from ilxutils.graph2pandas import graph2pandas
 from subprocess import call
+from json2html import *
 
 class PredFinder():
     '''=== LABEL ==='''
@@ -106,7 +107,8 @@ class PredFinder():
 
 class GraphComparator(PredFinder):
 
-    def __init__(self, rg_path, tg_path, rg_ilx=False, shorten_names=False): #DEBUG only None for testig
+    def __init__(self, rg_path, tg_path, rg_ilx=False, shorten_names=False, pred_diff=None,
+                    get_only_partial_diff=False):
         PredFinder.__init__(self)
         self.rg_path = rg_path
         self.tg_path = tg_path
@@ -114,7 +116,9 @@ class GraphComparator(PredFinder):
         self.tgraph = graph2pandas(tg_path)
         self.rg_ilx = rg_ilx
         self.shorten_names = shorten_names
-        self.comparison = self.compare_dataframes()
+        self.get_only_partial_diff = get_only_partial_diff
+        self.diff = self.compare_dataframes()
+        self.html = json2html.convert(json = self.diff)
 
     def find_equivalent_pred(self, tpred, column_names):
         eqnames = [cn for cn in column_names if tpred == self.pred_map.get(degrade(cn))]
@@ -196,6 +200,7 @@ class GraphComparator(PredFinder):
         else: #just comparing 2 random ontologies
             for i, rrow in self.rgraph.df.iterrows():
                 if self.rgraph.loc_check.get(rrow.name):
+                    print(rrow.name)
                     row_tuples.append((rrow, self.tgraph.df.loc[rrow.name]))
 
         return row_tuples
@@ -203,41 +208,58 @@ class GraphComparator(PredFinder):
     def compare_rows(self, rrow=None, trow=None):
         ronly, tonly, both = [], [], []
         ronly_both_filter = []
+        shared_preds = set()
         for rk, rv in rrow.items(): #reference key, reference value
 
             ref_com_pred = self.pred_map.get(degrade(rk))
-            ref_visited = False
             if not ref_com_pred:
                 continue
 
             for tk, tv in trow.items(): #target key, target value
+
                 target_com_pred = self.pred_map.get(degrade(tk))
                 partial_tar_com_pred = self.pred_map.get(degrade(tk.split(':')[1]))
-                if target_com_pred == ref_com_pred or partial_tar_com_pred == ref_com_pred:
-                    b = self.compare(rv, tv)
-                    if b:
-                        both.extend([(tk, _b) for _b in b])
-                        ref_visited = True
 
-            if not ref_visited:
-                ronly.extend([(rk, v) for v in rv])
+                if target_com_pred == ref_com_pred or partial_tar_com_pred == ref_com_pred:
+
+                    if self.get_only_partial_diff:
+                        shared_preds.add(tk)
+                        shared_preds.add(rk)
+
+                    tb, rb = self.compare(rv, tv)
+                    if rb or tb:
+                        both.extend([(tk, _b) for _b in tb])
+                        both.extend([(rk, _b) for _b in rb])
+
+        for rk, rvs in rrow.items():
+            if self.get_only_partial_diff:
+                if rk in shared_preds:
+                    ronly += [(rk, rv) for rv in rvs]
+            else:
+                ronly += [(rk, rv) for rv in rvs]
 
         for tk, tvs in trow.items():
-            tonly += [(tk, tv) for tv in tvs]
+            if self.get_only_partial_diff:
+                if tk in shared_preds:
+                    tonly += [(tk, tv) for tv in tvs]
+            else:
+                tonly += [(tk, tv) for tv in tvs]
 
+        ronly = list(set(ronly) - set(both))
         tonly = list(set(tonly) - set(both))
         return ronly, tonly, list(set(both))
 
     def compare(self, ref_values, target_values):
         if not isinstance(ref_values, list) and not isinstance(target_values, list):
             sys.exit('compare_dls :: Types need to be both lists')
-        b = []
+        rb, tb = [], []
         for ref_value in ref_values:
             ref_visited = False
             for target_value in target_values:
                 if degrade(ref_value) == degrade(target_value):
-                    b.append(target_value)
-        return b
+                    rb.append(ref_value)
+                    tb.append(target_value)
+        return list(set(rb)), tb
 
     def panel_comparison(self):
         '''
@@ -246,11 +268,20 @@ class GraphComparator(PredFinder):
         '''
         pass
 
-    def save(self):
+    def save_pickles(self):
         self.rgraph.df.to_pickle(p(self.rg_path).with_suffix('.pickle'))
         print('Saved:', p(self.rg_path).with_suffix('.pickle'))
         self.tgraph.df.to_pickle(p(self.tg_path).with_suffix('.pickle'))
         print('Saved:', p(self.tg_path).with_suffix('.pickle'))
+
+def prettify_ontodiff_json(output):
+    if '.json' not in output:
+        output += '.json'
+    shellcommand = 'ex -s +\'g/\[[\ \\n]\+"/j4\' -cwq ' + output
+    if call(shellcommand, shell=True) == 1:
+        print('Could not prettify the json file')
+    else:
+        print('Prettify Complete For:', output)
 
 def main():
     '''Create options to read 2 files and only judge but the predicates given.
@@ -259,29 +290,34 @@ def main():
     want the json file to be converted to html
     '''
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
-    #args = read_args(VERSION=VERSION, production=True)
-    sys.exit()
-    gobj = GraphComparator( rg_path=args.reference_graph,
-                            tg_path=args.target_graph,
-                            rg_ilx=args.ilx,
-                            shorten_names=args.shorten_names)
+    args = pd.Series({k.replace('--','').replace('-', '_'):v for k, v in doc.items()})
 
-    if args.save:
-        gobj.save()
+    if args.partial_diff:
+        get_only_partial_diff = True
+    else:
+        get_only_partial_diff = False
+
+    gobj = GraphComparator( rg_path=args.reference,
+                            tg_path=args.target,
+                            rg_ilx=args.ilx,
+                            shorten_names=args.shorten_names,
+                            get_only_partial_diff=get_only_partial_diff)
+
+    if args.save_pickles:
+        gobj.save_pickles()
 
     if args.html:
-        cf(json2html.convert(json = data), p(args.output).with_suffix('.html'))
+        cf(gobj.html, p(args.html).with_suffix('.html'))
 
-    cj(gobj.comparison, args.output)
+    if args.full_diff:
+        cj(gobj.diff, args.full_diff)
+        prettify_ontodiff_json(args.full_diff)
 
-    shellcommand = 'ex -s +\'g/\[[\ \\n]\+"/j4\' -cwq ' + output
-    if call(shellcommand, shell=True) == 1:
-        print('Could not prettify the json file')
-    else:
-        print('Prettify Complete')
-
-
-
+    if args.partial_diff:
+        cj(gobj.diff, args.partial_diff)
+        prettify_ontodiff_json(args.partial_diff)
+'''
+>>> python3 compare_graphs --ilx --full-diff-output ~/Dropbox/example.json
+'''
 if __name__ == '__main__':
     main()

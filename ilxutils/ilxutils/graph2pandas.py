@@ -1,3 +1,15 @@
+""" Converts owl or ttl or raw rdflib graph into a pandas DataFrame. Saved in .pickle format.
+
+Usage:  graph2pandas.py [-h | --help]
+        graph2pandas.py [-v | --version]
+        graph2pandas.py [-f=<path>] [-o=<path>]
+
+Options:
+    -h --help                      Display this help message
+    -v --version                   Current version of file
+    -o --output=<path>             Output path of picklized pandas DataFrame
+    -f --file=<path>               owl | ttl | rdflib.Graph() -> df.to_pickle
+"""
 import pandas as pd
 import pickle
 from pathlib import Path as p
@@ -5,12 +17,9 @@ import rdflib
 from rdflib import BNode
 from collections import defaultdict
 import sys
-'''
-Does not handle lists or BNodes and will just skip them if they are any of the
-types: subj, pred, obj.
+VERSION = '0.2'
 
-should fix subclassOf because it is still ilx which is useless in comparing
-'''
+
 
 class graph2pandas():
 
@@ -27,6 +36,9 @@ class graph2pandas():
         self.rqname = {}
         self.df = self.graph2pandas_converter()
         self.loc_check = self.create_loc_check()
+
+    def save(self, output):
+        self.df.to_pickle(output)
 
     def create_loc_check(self):
         return {index:True for index in self.df.index}
@@ -113,3 +125,15 @@ class graph2pandas():
             df.loc[str(key)] = pd.Series(value)
         print('Completed Pandas!!!')
         return df
+
+
+
+def main():
+    from docopt import docopt
+    doc = docopt(__doc__, version=VERSION)
+    args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+    graph = graph2pandas(args.file)
+    graph.save(args.output)
+
+if __name__ == '__main__':
+    main()

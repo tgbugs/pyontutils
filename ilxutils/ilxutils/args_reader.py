@@ -2,13 +2,8 @@
 
 Usage:  foo.py [-h | --help]
         foo.py [-v | --version]
-        foo.py [-k API_KEY] [-d DB_URL] [-p | -b]
-        foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
-        foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
-        foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
-        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
-        foo.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
-        graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
+        api_wrapper.py <argument> [-f=<path>] [-k=<path>] [-d=<path>] [-p | -b]
+        graph_comparator.py [-r=<path>] [-t=<path>] [-o=<path>]
 
 Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch

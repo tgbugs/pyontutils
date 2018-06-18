@@ -23,7 +23,7 @@ def main():
     seg_length = 25 #Server times out if given too much in a single batch
     total_data = [data[x:x+seg_length] for x in range(0,len(data),seg_length)]
     total_count = m.floor(len(data) / seg_length)
-    start = 7315 #4way update stop
+    start = 0 #4way update stop
     for i, data in enumerate(total_data[start:], start):
         print('Batch', i, 'out of', total_count)
         FUNCTION_MAP[args['<argument>']](data, LIMIT=25) #limit should be 25 > x > 10

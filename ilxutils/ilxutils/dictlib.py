@@ -22,9 +22,12 @@ ranking = [
     'NLXINV',
     'NLXORG',
     'NLXRES',
+    'NLXSUB'
     'BIRNLEX',
     'SAO',
     'NDA.CDE',
+    'PRO',
+    'NIFEXT',
     'ILX',
 ]
 
@@ -80,10 +83,11 @@ def merge(new, old):
                 if vals['iri'] in iris:
                     new_existing_ids = []
                     for e in old['existing_ids']:
-                        if e['iri'] != vals['iri'] or e['curie'] != vals['curie']:
+                        if e['iri'] != vals['iri']:
                             new_existing_ids.append(e)
                     old['existing_ids'] = new_existing_ids
                 else:
+                    print(vals)
                     sys.exit("You want to delete an iri that doesn't exist", '\n', new)
             else:
                 if vals['iri'] not in iris and vals['change'] == True:
@@ -94,6 +98,8 @@ def merge(new, old):
                     new_existing_ids = []
                     for e in old['existing_ids']:
                         if e['iri'] == vals['iri']:
+                            if not vals.get('curie'):
+                                vals['curie'] = e['curie']
                             new_existing_ids.append(vals)
                         else:
                             new_existing_ids.append(e)
@@ -106,11 +112,6 @@ def merge(new, old):
 
         elif k in ['definition', 'superclasses', 'id', 'type', 'comment', 'label']:
             old[k] = vals
-
-        #may be overkill
-        #else:
-        #    print('OLD -> ', old)
-        #    sys.exit('Value: ' + str(k) + " doesn't exist in ilx keys")
 
     ''' remove repeats '''
     visited = {}

@@ -3,14 +3,12 @@
 Usage:
     combine_ttls.py [-h | --help]
     combine_ttls.py [-v | -- version]
-    combine_ttls.py [-d DIRECTORY] [-o OUTPUT]
-    combine_ttls.py [-d DIRECTORY] [-o OUTPUT] [--pickle]
+    combine_ttls.py [--directory] [--output=<path>] [--pickle]
 
 Options:
-    -d, --directory=<path>  Path to folder that containes all the turtle files to be used
-    -o, --output=<path>     Merged file name and path [default: ../merged.ttl]
-    --pickle                If used, will make another file of the same name as --output
-                            that is a pandas dataframe of the same data.
+    -d --directory=<path>  Path to folder that containes all the turtle files to be used
+    -o --output=<path>     Merged file name and path [default: ../merged.ttl]
+    --pickle               If used, will make another file of the same name as --output that is a pandas dataframe of the same data.
 """
 from docopt import docopt
 import pandas as pd
@@ -28,7 +26,9 @@ VERSION = '0.0.1'
 
 
 class combine_turtles():
-
+    '''
+    >>> python3 combine_ttls.py -d NIF-Ontology/ -o ~/destination/ --pickle
+    '''
     def __init__(self, args):
         self.args = args
         self.dir = args.directory

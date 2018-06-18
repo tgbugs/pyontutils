@@ -1,13 +1,3 @@
-'''
-Usage:
-    json_diff (
-        json_data1,             json_data1 can be both [{..}] and {[..]} or json file path
-        json_data2,             json_data2 can be both [{..}] and {[..]} or json file path
-        key_target,             <str> of a key within a dict that holds the string data for comparison; EX: 'definition'
-        get_just_diff=True,     default=True; will return just the color diff of the 2 strings
-        porcelain=False         default=False; porcelain clone as output only as optional
-    )
-'''
 import difflib
 import json
 from pyontutils.utils import TermColors
@@ -94,6 +84,15 @@ def json_diff(json1, json2, key_target, get_just_diff=True, porcelain=False):
     ''' creates a (keyname + diff) key within the json of the same layer which key_target resides.
         Ex: json1={'definition':'data of key_target'}, json2={'definition':'data of key_target'}
         key_target = 'definition'
+
+    Usage:
+        json_diff (
+            json_data1,             json_data1 can be both [{..}] and {[..]} or json file path
+            json_data2,             json_data2 can be both [{..}] and {[..]} or json file path
+            key_target,             <str> of a key within a dict that holds the string data for comparison; EX: 'definition'
+            get_just_diff=True,     default=True; will return just the color diff of the 2 strings
+            porcelain=False         default=False; porcelain clone as output only as optional
+        )
     '''
     json1 = json_secretary(json1)
     json2 = json_secretary(json2)
