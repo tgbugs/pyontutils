@@ -455,7 +455,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             if graph is not None and local:
                 url = os.path.join(graph._basePath, 'vocabulary', 'id', k)
             else:
-                url = prefixes[prefix] + suffix
+                url = str(prefixes[prefix]) + suffix
         else:
             if graph is not None and local:
                 url = os.path.join(graph._basePath, 'vocabulary',

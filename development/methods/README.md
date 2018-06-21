@@ -1,6 +1,15 @@
 # work for methods/techniques/measures/protocols/datatypes
 Any documents related to methodology should go here.
 
+# Files
+## Python
+* [Core](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods_core.py)
+* [Full](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods.py)
+## turtle
+* [Core](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods-core.ttl)
+* [Helper](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods-helper.ttl)
+* [Full](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods.ttl)
+
 # Use cases
 1. Tagging ephys data
 2. Tagging fMRI data
