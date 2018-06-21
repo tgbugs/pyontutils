@@ -49,14 +49,15 @@ class TestSC(unittest.TestCase):
                                     production = True)
             self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/{ilx_id}"
         else:
+            '''currently just for beta.scicrunch.org'''
             self.args = read_args(api_key = p.home() / 'keys/production_api_scicrunch_key.txt',
                                     db_url = p.home() / 'keys/production_engine_scicrunch_key.txt',
                                     beta = True)
             self.annos_add = [{'tid':664,  'annotation_tid':12767, 'value':'add_'+now}]
             self.anno_update = [{'id':10, 'annotation_tid':12767, 'tid':664, 'value':now}]
-            self.terms_add = [{'term':'troy_test_'+now, 'definition':'temp'}]
-            self.terms_add_crawl = [{'term':'troy_test_crawl_'+now, 'definition':'temp'}]
-            self.terms2update = [{'id':304383,'ilx':'tmp_0381298', 'definition':'update_'+now}]
+            self.terms_add = [{'term':'troy_test_'+now, 'definition':'temp', 'type':'cde'}]
+            self.terms_add_crawl = [{'term':'troy_test_crawl_'+now, 'definition':'temp', 'type':'cde'}]
+            self.terms2update = [{'id':304383,'ilx':'tmp_0381298', 'definition':'update_'+now, 'existing_ids':{'iri':'test.org/121', 'curie':'test:121', 'old_iri': 'test.org/123', 'replace':True}}]
             self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/beta2_interlex/term/{ilx_id}"
         self.sci = scicrunch(api_key = self.args.api_key,
                                 base_path = self.args.base_path,

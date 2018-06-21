@@ -190,7 +190,7 @@ class scicrunch():
         """parameters( data = "list of term_ids" )"""
         url_base = self.base_path + '/api/1/term/view/{id}' + '?key=' + self.key
         urls = [url_base.format(id=str(_id)) for _id in ids]
-        return self.get(urls=urls, LIMIT=LIMIT, action='Searching For Terms', _print=_print, debug=debug)
+        return self.get(urls=urls, LIMIT=LIMIT, action='Searching For Terms', crawl=crawl, _print=_print, debug=debug)
 
     def updateTerms(self, data, LIMIT=50, _print=True, crawl=False, debug=False):
         """
@@ -322,51 +322,13 @@ class scicrunch():
         return self.post(data, LIMIT=LIMIT,  _print=_print, crawl=crawl, debug=debug)
 
 def main():
-    sys.exit('here')
     #args = read_args(api_key= p.home() / 'keys/beta_api_scicrunch_key.txt', db_url= p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
-    args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
+    args = read_args(api_key= p.home() / 'keys/production_api_scicrunch_key.txt', db_url= p.home() / 'keys/production_engine_scicrunch_key.txt', beta=True)
     sql = interlex_sql(db_url=args.db_url)
     sci = scicrunch(api_key=args.api_key, base_path=args.base_path, db_url=args.db_url)
-    #example term is troysincomb 38918 tmp_0138415
-    #https://test2.scicrunch.org/scicrunch/interlex/view/tmp_0138415?searchTerm=troysincomb
-    #https://test2.scicrunch.org/api/1/ilx/search/identifier/tmp_0138415?key=
-
-    annotations_to_delete = [2109347, 2109346, 2109348, 2109349,   48685,   48689,   48690,
-         48693,   48695,   48697,   48698,   48688,   48687,   48691,
-         48686,   48694,   48692,   48696,   48699]
-
-    terms = [{
-        #'term':'troysincomb',
-        'id':38918,
-        'existing_ids':[{
-            'tid':38918,
-            'curie':'ILX:0003',
-            'iri':'http://t3db.org/toxins/T3D0002',
-            'preferred':0,
-            'change':False
-        }],
-        'definition':'employee',
-        'synonyms':[{'literal':'trenton'}],
-        'superclasses': [{
-            'id': '146',
-            #'ilx': 'tmp_0100145',
-            #'label': 'A1 neuron',
-            #'definition': 'Any abdominal neuron (FBbt_00001987) that is part of some larval abdominal segment 1 (FBbt_00001748).',
-            #'status': '0'
-        }],
-    }]
-    #annotations = [{'tid':38918,'annotation_tid':15034,'value':'testvaluess'}]
-    #sci.addTerms(terms)
-    #annotations = sci.getAnnotations([38918])
-    #terms = json.load(open('../test.json', 'r'))
-    #terms = sci.addTerms(terms, sql=False, _print=False)
-    #sci.updateAnntationValues(annotations)
-    #print(terms)
-    #json.dump(terms, open('../elastic_testing.json', 'w'), indent=4)
-    #sci.deleteAnnotations([annotations_to_delete[0]], crawl=True)
-    sci.deleteAnnotations(annotations_to_delete)
-    #output = sci.getAnnotations_via_id([2109347], crawl=True)
-    #print(output)
+    data = [{'id':4511, 'existing_ids':{'old_iri':'test2.org/123', 'iri': 'test3.org/123', 'curie':'test:123', 'replace':True}}]
+    #data = [{'id':4511, 'existing_ids':{'iri': 'test2.org/456', 'curie':'test:456'}}]
+    sci.updateTerms(data=data, LIMIT=1, crawl=True, _print=False)
 
 if __name__ == '__main__':
     main()

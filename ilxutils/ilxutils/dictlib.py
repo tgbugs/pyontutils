@@ -89,6 +89,25 @@ def merge(new, old):
                 else:
                     print(vals)
                     sys.exit("You want to delete an iri that doesn't exist", '\n', new)
+
+            elif vals.get('replace') == True:
+                if not vals.get('old_iri'):
+                    sys.exit('Need to have old_iri as a key to have a ref for replace')
+                old_iri = vals.pop('old_iri')
+                if old_iri in iris:
+                    new_existing_ids = []
+                    for e in old['existing_ids']:
+                        if e['iri'] == old_iri:
+                            if vals.get('curie'):
+                                e['curie'] = vals['curie']
+                            if vals.get('iri'):
+                                e['iri'] = vals['iri']
+                        new_existing_ids.append(e)
+                    old['existing_ids'] = new_existing_ids
+                else:
+                    print(vals)
+                    sys.exit("You want to replace an iri that doesn't exist", '\n', new)
+
             else:
                 if vals['iri'] not in iris and vals['change'] == True:
                     sys.exit('You want to change iri that doesnt exist', '\n', new)

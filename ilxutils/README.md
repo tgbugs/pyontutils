@@ -26,8 +26,8 @@ Usage:
 
     api_wrapper.py [-h | --help]
     api_wrapper.py [-v | --version]
-    api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b]
-    api_wrapper.py <argument> [-f FILE] [-a API_KEY] [-e ENGINE_KEY] [-p | -b] [--index=<int>]
+    api_wrapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
+    api_wrapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
 
 Arugments:
 
@@ -55,15 +55,15 @@ Options:
 
 Functions/Parameters:
 
-    identifierSearches          (identifierSearches(self, ids=None, HELP=False, LIMIT=50)
-    updateTerms                 (self, data, HELP=False, LIMIT=50, sql=False)
-    addTerms                    (self, data, HELP=False, LIMIT=50, sql=False)
-    addAnnotations              (self, data, HELP=False, LIMIT=50, sql=False)
-    getAnnotations              (self, tids, HELP=False, LIMIT=50)
-    updateAnntationValues       (self, data, HELP=False, LIMIT=50)
-    updateAnntationType         (self, data, HELP=False, LIMIT=50)
-    deleteAnnotations           (self, tids, HELP=False, LIMIT=50)
-    addRelationship             (self, data, HELP=False, LIMIT=50)
+    identifierSearches          identifierSearches(self, ids=None, crawl=False, LIMIT=50, \_print=True, ...
+    updateTerms                 data
+    addTerms                    data
+    addAnnotations              data
+    getAnnotations              tids
+    updateAnntationValues       data
+    updateAnntationType         data
+    deleteAnnotations           tids
+    addRelationship             data
 
 ### The format of addTerms (list of dictionaries of the following)
 need:
@@ -104,7 +104,7 @@ Usage:
 
     interlex2ttl.py [-h | --help]
     interlex2ttl.py [-v | --version]
-    interlex2ttl.py [-e ENGINE_KEY] [-p | -b] [-o OUTPUT]
+    interlex2ttl.py [-d DB_URL] [-p | -b] [-o OUTPUT]
 
 Options:
 

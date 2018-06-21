@@ -4,11 +4,9 @@ import re
 import tabulate
 from pathlib import Path as p
 
-
 def degrade(var):
     def helper(s):
-        return str(re.sub("\(|\)|'|\"|,|-|_|:| ", "", s).lower().strip())
-
+        return str(re.sub("\(|\)|'|\"|,|-|_|:| |;|#|>|<|`|~|@", "", s).lower().strip())
     if not isinstance(var, list):
         if var:
             return helper(var)
@@ -30,8 +28,18 @@ def namecheck(infilename):
     if infilename == str(p.home() / 'Dropbox'):
         sys.exit('DONT OVERWRITE THE DROPBOX')
 
-def cf(data, infilename):
+def ot(infilename):
     namecheck(infilename)
+    if '.txt' not in infilename:
+        infilename += '.txt'
+    with open(infilename, 'r') as infile:
+        return infile.read()
+        infile.close()
+
+def ct(data, infilename):
+    namecheck(infilename)
+    if '.txt' not in infilename:
+        infilename += '.txt'
     with open(infilename, 'w') as infile:
         infile.write(data)
         infile.close()
@@ -69,3 +77,13 @@ def op(filepath):
         filepath += '.pickle'
     with open(filepath, 'rb') as infile:
         return pickle.load(infile)
+
+def ccsv(rows, filepath):
+    namecheck(filepath)
+    filepath = str(filepath)
+    if '.csv' not in filepath:
+        filepath += '.csv'
+    with open(filepath, 'wb') as csvfile:
+        filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for row in rows:
+            filewriter.writerow(row)

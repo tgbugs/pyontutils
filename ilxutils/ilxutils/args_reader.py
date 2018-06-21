@@ -2,8 +2,12 @@
 
 Usage:  foo.py [-h | --help]
         foo.py [-v | --version]
-        api_wrapper.py <argument> [-f=<path>] [-k=<path>] [-d=<path>] [-p | -b]
-        graph_comparator.py [-r=<path>] [-t=<path>] [-o=<path>]
+        foo.py [-k API_KEY] [-d DB_URL] [-p | -b]
+        foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
+        foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
+        foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
+        api_wrapper.py <argument> [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
+        graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
@@ -32,9 +36,9 @@ import requests as r
 from sqlalchemy import create_engine
 import sys
 
-BETA = 'https://test2.scicrunch.org'
+#BETA = 'https://test2.scicrunch.org'
 #BETA = 'https://beta.scicrunch.org' #current beta
-#BETA = 'https://test.scicrunch.org'
+BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
 

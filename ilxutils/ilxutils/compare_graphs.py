@@ -2,7 +2,8 @@
 
 Usage:  compare_graphs.py [-h | --help]
         compare_graphs.py [-v | --version]
-        compare_graphs.py [-r=<path>] [-t=<path>] (-f=<path> | -p=<path>) (-i | -n) [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>] (-f=<path> | -p=<path> | -c=<ext> -o=<path>) [-i] [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>] [-c=<ext> -o=<path> --csv -i] [-s] [--save-pickles] [--html=<path>]
 
 Options:
     -h --help                          Display this help message
@@ -12,10 +13,12 @@ Options:
     -f --full-diff=<path>              Output path of full comparison, even those that dont have a common diff
     -p --partial-diff=<path>           Output of comparisons that have a similar predicate
     -i --ilx                           Treat reference like its ilx bc it has uniqueness
-    -n --noilx                         Sanity check for ilx
+    -c --custom-diff=<ext>             Stems from partial and is ilx only; can only be one to all: 'label, def, syn, super, type'
+    -o --output=<path>                 For options that aren't paths themselves
     --save-pickles                     If you converted files to pickle it's worth using to save them (will save in folder of src)
     -s --shorten-names                 Condensed the names of iris
     --html=<path>                      Converts the json comparison to html (default being the same path of -p | -d)
+    --csv                              creats to csv but its only for ilx and custom
 """
 VERSION = '0.3'
 from docopt import docopt
@@ -29,6 +32,7 @@ from ilxutils.tools import *
 from ilxutils.graph2pandas import graph2pandas
 from subprocess import call
 from json2html import *
+from ontologies_compared_backup import visited_onto_iris_hash
 
 class PredFinder():
     '''=== LABEL ==='''
@@ -108,7 +112,7 @@ class PredFinder():
 class GraphComparator(PredFinder):
 
     def __init__(self, rg_path, tg_path, rg_ilx=False, shorten_names=False, pred_diff=None,
-                    get_only_partial_diff=False):
+                    get_only_partial_diff=False, custom_diff=None):
         PredFinder.__init__(self)
         self.rg_path = rg_path
         self.tg_path = tg_path
@@ -117,8 +121,10 @@ class GraphComparator(PredFinder):
         self.rg_ilx = rg_ilx
         self.shorten_names = shorten_names
         self.get_only_partial_diff = get_only_partial_diff
+        self.custom_diff = custom_diff
         self.diff = self.compare_dataframes()
         self.html = json2html.convert(json = self.diff)
+        self.csv_ready_df = None
 
     def find_equivalent_pred(self, tpred, column_names):
         eqnames = [cn for cn in column_names if tpred == self.pred_map.get(degrade(cn))]
@@ -169,6 +175,7 @@ class GraphComparator(PredFinder):
                     'reference_graph_only' : ronly,
                     'target_graph_only'    : tonly,
                     'both_graphs_contain'  : both,
+                    #'both_diff': diff(both[0], both[1])
                 }
             })
 
@@ -206,7 +213,7 @@ class GraphComparator(PredFinder):
         return row_tuples
 
     def compare_rows(self, rrow=None, trow=None):
-        ronly, tonly, both = [], [], []
+        ronly, tonly, both, prime_both = [], [], [], []
         ronly_both_filter = []
         shared_preds = set()
         for rk, rv in rrow.items(): #reference key, reference value
@@ -222,12 +229,16 @@ class GraphComparator(PredFinder):
 
                 if target_com_pred == ref_com_pred or partial_tar_com_pred == ref_com_pred:
 
+                    if not ref_com_pred in self.custom_diff and self.custom_diff:
+                        continue
+
                     if self.get_only_partial_diff:
                         shared_preds.add(tk)
                         shared_preds.add(rk)
 
                     tb, rb = self.compare(rv, tv)
                     if rb or tb:
+                        prime_both.extend([((rk, _rb), (tk, _tb)) for _tb, _rb in zip(tb, rb)])
                         both.extend([(tk, _b) for _b in tb])
                         both.extend([(rk, _b) for _b in rb])
 
@@ -247,7 +258,7 @@ class GraphComparator(PredFinder):
 
         ronly = list(set(ronly) - set(both))
         tonly = list(set(tonly) - set(both))
-        return ronly, tonly, list(set(both))
+        return ronly, tonly, list(set(prime_both))
 
     def compare(self, ref_values, target_values):
         if not isinstance(ref_values, list) and not isinstance(target_values, list):
@@ -274,6 +285,57 @@ class GraphComparator(PredFinder):
         self.tgraph.df.to_pickle(p(self.tg_path).with_suffix('.pickle'))
         print('Saved:', p(self.tg_path).with_suffix('.pickle'))
 
+    def csv(self, output):
+
+        base = ['ILX_', 'ONTO_']
+        objs = []
+        for pred in self.custom_diff:
+            objs.extend([pred.upper() + '_RATIO', 'ILX_' + pred.upper(), 'ONTO_' + pred.upper()])
+        header = ['T/F'] + objs + ['ILX_IRI', 'ONTO_IRI', 'SOURCE_ONTOLOGY']
+
+        raw_df = []
+        for rrow, trow in self.sync_dataframes():
+
+            rrow = rrow[~rrow.isnull()]
+            trow = trow[~trow.isnull()]
+
+            rname = rrow.pop('qname')
+            tname = trow.pop('qname')
+            if not self.shorten_names:
+                rname = rrow.name
+                tname = trow.name
+
+            if visited_onto_iris_hash.get(trow.name):
+                continue
+
+            primer_dict = {head:None for head in header}
+            primer_dict.update({'ILX_IRI':rname, 'ONTO_IRI':tname, 'SOURCE_ONTOLOGY':p(self.tg_path).stem})
+
+            for rk, rv in rrow.items(): #reference key, reference value
+
+                rcname = self.pred_map.get(degrade(rk))
+                if not rcname or rcname not in self.custom_diff: continue
+
+                for tk, tv in trow.items(): #target key, target value
+                    tcname = self.pred_map.get(degrade(tk))
+                    if rcname == tcname:
+                        cname = rcname.upper()
+                        for _rv in rv:
+                            if len(tv) > 1: print(tk, tv); sys.exit('single onto not proper format')
+                            for _tv in tv:
+                                primer_dict.update({
+                                    cname+'_RATIO':round(ratio(degrade(_rv), degrade(_tv)), 2),
+                                    'ILX_'+cname:_rv,
+                                    'ONTO_'+cname:_tv
+                                })
+
+            raw_df.append(primer_dict)
+        df = pd.DataFrame(raw_df, columns=header)
+        df.to_pickle('/home/troy/Dropbox/df_test.pickle')
+        df.to_csv(output, index=False)
+        self.csv_ready_df = df
+        #for self.diff.items():
+
 def prettify_ontodiff_json(output):
     if '.json' not in output:
         output += '.json'
@@ -292,30 +354,38 @@ def main():
     doc = docopt(__doc__, version=VERSION)
     args = pd.Series({k.replace('--','').replace('-', '_'):v for k, v in doc.items()})
 
-    if args.partial_diff:
+    if args.partial_diff or args.custom_diff:
         get_only_partial_diff = True
     else:
         get_only_partial_diff = False
+
+    if args.custom_diff:
+        args.ilx = True #Needs to be forced bc this is the only option it will work
+        args.custom_diff = args.custom_diff.split(',') if ',' in args.custom_diff else [args.custom_diff]
 
     gobj = GraphComparator( rg_path=args.reference,
                             tg_path=args.target,
                             rg_ilx=args.ilx,
                             shorten_names=args.shorten_names,
-                            get_only_partial_diff=get_only_partial_diff)
+                            get_only_partial_diff=get_only_partial_diff,
+                            custom_diff=args.custom_diff)
+
+    if args.csv:
+        gobj.csv(args.output)
+
+    elif args.full_diff:
+        cj(gobj.diff, args.full_diff)
+        prettify_ontodiff_json(args.full_diff)
+
+    elif args.partial_diff:
+        cj(gobj.diff, args.partial_diff)
+        prettify_ontodiff_json(args.partial_diff)
 
     if args.save_pickles:
         gobj.save_pickles()
 
     if args.html:
         cf(gobj.html, p(args.html).with_suffix('.html'))
-
-    if args.full_diff:
-        cj(gobj.diff, args.full_diff)
-        prettify_ontodiff_json(args.full_diff)
-
-    if args.partial_diff:
-        cj(gobj.diff, args.partial_diff)
-        prettify_ontodiff_json(args.partial_diff)
 '''
 >>> python3 compare_graphs --ilx --full-diff-output ~/Dropbox/example.json
 '''
