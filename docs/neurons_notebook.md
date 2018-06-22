@@ -49,6 +49,7 @@ you can run the commands below (adjust your paths accordingly).
 of the loaded NIF-Ontology graph.
 2. Make sure you have done the oneshots in [scigraph/README.md]('../scigraph/README.md').
 3. Try to follow the rest of the scigraph setup README
+
 ``` bash
 export GRAPH_FOLDER=/var/scigraph-services/graph
 # create config files
@@ -57,7 +58,7 @@ cd ../scigraph
 # this command will then generate all the configuration files needed (wow does this need to be reworked)
 scigraph-deploy config --zip-location $PWD --build-only --local --graph-folder $GRAPH_FOLDER --local --build-user $USER --services-user $USER $HOSTNAME $HOSTNAME
 
-# download a zip of the releaed graph
+# download a zip of the released graph
 cd $GRAPH_FOLDER/../
 curl -Lok latest.zip $(curl --silent https://api.github.com/repos/SciCrunch/NIF-Ontology/releases/latest | awk '/browser_download_url/ { print $2 }' | sed 's/"//g')
 unzip latest.zip
