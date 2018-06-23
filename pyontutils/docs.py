@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 import nbformat
 from git import Repo
-#from markdown import markdown
+from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
 from pyontutils.config import devconfig
 from protcur.core import htmldoc, atag
@@ -18,73 +18,83 @@ def suffix(ext):  # TODO multisuffix?
         return function
     return decorator
 
+compile_org_file = ['emacs', '-q', '-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix(), '--batch', '-f', 'compile-org-file']
+
+theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup')
+
 @suffix('org')
-def renderOrg(path):
-    # FIXME vs using pandoc...
+def renderOrg(path, **kwargs):
     orgfile = path.as_posix()
-    orgstrap = ['-l', Path(devconfig.git_local_base, 'orgstrap/init.el').as_posix()]
-    cmd_line = ['emacs'] + orgstrap + ['--batch', '--visit', orgfile, '-f', 'org-html-export-to-html', '--kill']
-    # TODO the easiest way to do this reproducibly is to use jkitchin/scimax
-    # to speed things up for CI, it is probably safe to create a zip that has already
-    # been bootstrapped, otherwise there will be quite a few weird errors
-    print(' '.join(cmd_line))
-    p = subprocess.Popen(cmd_line,
+    #print(' '.join(compile_org_file))
+    p = subprocess.Popen(compile_org_file,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.DEVNULL)
-    out, err = p.communicate()
-    outpath = path.with_suffix('.html')
-    with open(outpath.as_posix(), 'rt') as f:
-        return f.read()
+
+    with open(orgfile, 'rb') as f:
+        # for now we do this and don't bother with the stream implementaiton of read1 write1
+        org = f.read().replace(theme.name.encode(),
+                               theme.as_posix().encode())  # TODO just switch the #+SETUPFILE: line
+        #print(org.decode())
+        out, err = p.communicate(input=org)
+
+    return out.decode()
 
 @suffix('md')
-def renderMarkdown(path):
+def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
-    #with open(mdfile, 'rt') as f:
     # TODO fix relative links to point to github
-    #body = markdown(f.read())
 
     format = 'markdown_github'  # TODO newer version has 'gfm' but apparently I'm not on latest?
     format = 'gfm'
-    cmd_line = ['pandoc', '-f', format, '-t', 'html', mdfile]
 
-    orgstrap = ['-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix()]
     pandoc = ['pandoc', '-f', format, '-t', 'org', mdfile]
-    pandoc_command = ' '.join(pandoc)
-    # this appraoch doesn't seem to work for reasons I don't entirely understand, because
-    # pasting the joined command works
-    # REMINDER never use --eval="(print 'hello)" in python commands needs to be post bash tokenization?? not the issue
-    cmd_line = ['emacs'] + orgstrap + ['--batch',
-                                       '--eval',
-                                       f'"(eshell-command \\"{pandoc_command} > #<buffer convert>\\")"',
-                                       #'--eval="(switch-to-buffer \\"convert\\")"',
-                                       #'-f', 'org-html-export-to-html',
-                                       '--eval',
-                                       '"(with-current-buffer \\"convert\\" (org-mode))"',
-                                       '--eval',
-                                       '"(with-current-buffer \\"convert\\" (org-html-export-as-html))"',
-                                       '--eval',
-                                        '"(with-current-buffer \\"*Org HTML Export*\\" (princ (buffer-string)))"',
-                                       # as-html -> new buffer *Org HTML Export*
-                                       #'--kill'
-                                      ]
+    sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
 
-    #cmd_line = ['sh', '/home/tom/test.sh']#, '|', 'tee']
-    emacs = ['emacs'] + orgstrap + ['--batch', '-f', 'compile-org-file']
-
-    print(' '.join(cmd_line))
     p = subprocess.Popen(pandoc,
                          stdout=subprocess.PIPE)
-    e = subprocess.Popen(emacs,
+    s = subprocess.Popen(sed,
                          stdin=p.stdout,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.DEVNULL)
-    out, err = e.communicate()
-    embed()
-    return out.decode()
+                         stderr=subprocess.PIPE)
+    e = subprocess.Popen(compile_org_file,
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)  # DUH
+    authors = ', '.join(authors)
+    theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup') # TODO can source this directly now?
+    header = (f'#+TITLE: {title}\n'
+              f'#+AUTHOR: {authors}\n'
+              f'#+DATE: {date}\n'
+              f'#+SETUPFILE: {theme}\n'
+              f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
+              #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
+             )
+    print(header)
+
+    out, err = s.communicate()
+    #print(out.decode())
+    org = header.encode() + out.replace(b'\_', b'_')
+    # there is not satisfactory way to fix this issue right now
+    # but it might also be a bug in pandoc's org exporter
+    body, err = e.communicate(input=org)
+    # debug
+    #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(compile_org_file))
+    #if b'[[img:' in out or not out or 'external-sources' in path.as_posix():
+        #embed()
+    err = err.strip(b'Created img link.\n')  # FIMXE lack of distinc STDERR is very annoying
+    if e.returncode:
+        # if this happens direct stderr to stdout to get the message
+        raise subprocess.CalledProcessError(e.returncode,
+                                            ' '.join(e.args) + f'{path.as_posix()}') from ValueError(err.decode())
+    if not body:
+        raise ValueError(f'Output document for {path.as_posix()} '
+                         'has no body! the input org was:\n'
+                         f'{org.decode()}')
+    return body.decode().replace('Table of Contents', title)
 
 @suffix('ipynb')
-def renderNotebook(path):
+def renderNotebook(path, **kwargs):
     nbfile = path.as_posix()
     with open(nbfile, 'rt') as f:
         notebook = nbformat.read(f, as_version=4)
@@ -93,12 +103,27 @@ def renderNotebook(path):
     body, resources = html_exporter.from_notebook_node(notebook)
     return body
 
-def renderDoc(path):
+def renderDoc(path, **kwargs):
     # TODO add links back to github and additional prov for generation
     try:
-        return suffixFuncs[path.suffix](path)
+        return suffixFuncs[path.suffix](path, **kwargs)
     except KeyError as e:
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
+
+def makeKwargs(repo, filepath):
+    kwargs = {}
+    kwargs['title'] = filepath
+    kwargs['authors'] = sorted(name.strip()
+                             for name in set(repo.git.log(['--pretty=format:%an%x09',
+                                                           filepath]).split('\n')))
+    kwargs['date'] = repo.git.log(['-n', '1', '--pretty=format:%aI']).strip()
+    return kwargs
+
+def outFile(doc, working_dir, BUILD):
+    return BUILD / 'docs' / doc.relative_to(working_dir.parent).with_suffix('.html')
+
+def run_all(doc, wd, BUILD, **kwargs):
+    return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
 
 def main():
     working_dir = Path(__file__).absolute().resolve().parent.parent
@@ -106,18 +131,23 @@ def main():
     if not BUILD.exists():
         BUILD.mkdir()
 
-    def outFile(doc, working_dir):
-        return BUILD / 'docs' / doc.relative_to(working_dir.parent).with_suffix('.html')
-
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()))
 
-    wd_docs = [(Path(repo.working_dir).resolve(), Path(repo.working_dir, f).resolve())
-               for repo in repos
-               for f in repo.git.ls_files().split('\n')
-               if Path(f).suffix in suffixFuncs]
+    # TODO move this into run_all
+    wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
+                       Path(repo.working_dir, f).resolve(),
+                       makeKwargs(repo, f))
+                      for repo in repos
+                      for f in repo.git.ls_files().split('\n')
+                      if Path(f).suffix in suffixFuncs]
 
-    outname_rendered = [(outFile(doc, wd), renderDoc(doc)) for wd, doc in wd_docs]
+    outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
+                                          for wd, doc, kwargs in wd_docs_kwargs)
+    #outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
+                        #for wd, doc, kwargs in wd_docs_kwargs]
+
+    embed()
 
     index = ['<h1>Documentation Index</h1>']
     for outname, rendered in outname_rendered:
