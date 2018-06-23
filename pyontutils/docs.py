@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from pathlib import Path
 import nbformat
@@ -17,20 +18,16 @@ def suffix(ext):  # TODO multisuffix?
         return function
     return decorator
 
-
-def isdoc(filename):
-    return any(filename.endswith(ext) for ext in suffixFuncs)
-
 @suffix('org')
 def renderOrg(path):
     # FIXME vs using pandoc...
     orgfile = path.as_posix()
-    cmd_line = ['emacs', '--batch', '--visit', orgfile, '-f', 'org-html-export-to-html', '--kill']
-    scimax_init = ['-l', 'scimax/init.el']  # can trigger fetching many files on an unsuspecting system
+    orgstrap = ['-l', Path(devconfig.git_local_base, 'orgstrap/init.el').as_posix()]
+    cmd_line = ['emacs'] + orgstrap + ['--batch', '--visit', orgfile, '-f', 'org-html-export-to-html', '--kill']
     # TODO the easiest way to do this reproducibly is to use jkitchin/scimax
     # to speed things up for CI, it is probably safe to create a zip that has already
     # been bootstrapped, otherwise there will be quite a few weird errors
-    #print(' '.join(cmd_line))
+    print(' '.join(cmd_line))
     p = subprocess.Popen(cmd_line,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
@@ -48,20 +45,43 @@ def renderMarkdown(path):
     #body = markdown(f.read())
 
     format = 'markdown_github'  # TODO newer version has 'gfm' but apparently I'm not on latest?
+    format = 'gfm'
     cmd_line = ['pandoc', '-f', format, '-t', 'html', mdfile]
-    print(' '.join(cmd_line))
 
-    p = subprocess.Popen(cmd_line,
-                         stdin=subprocess.PIPE,
+    orgstrap = ['-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix()]
+    pandoc = ['pandoc', '-f', format, '-t', 'org', mdfile]
+    pandoc_command = ' '.join(pandoc)
+    # this appraoch doesn't seem to work for reasons I don't entirely understand, because
+    # pasting the joined command works
+    # REMINDER never use --eval="(print 'hello)" in python commands needs to be post bash tokenization?? not the issue
+    cmd_line = ['emacs'] + orgstrap + ['--batch',
+                                       '--eval',
+                                       f'"(eshell-command \\"{pandoc_command} > #<buffer convert>\\")"',
+                                       #'--eval="(switch-to-buffer \\"convert\\")"',
+                                       #'-f', 'org-html-export-to-html',
+                                       '--eval',
+                                       '"(with-current-buffer \\"convert\\" (org-mode))"',
+                                       '--eval',
+                                       '"(with-current-buffer \\"convert\\" (org-html-export-as-html))"',
+                                       '--eval',
+                                        '"(with-current-buffer \\"*Org HTML Export*\\" (princ (buffer-string)))"',
+                                       # as-html -> new buffer *Org HTML Export*
+                                       #'--kill'
+                                      ]
+
+    #cmd_line = ['sh', '/home/tom/test.sh']#, '|', 'tee']
+    emacs = ['emacs'] + orgstrap + ['--batch', '-f', 'compile-org-file']
+
+    print(' '.join(cmd_line))
+    p = subprocess.Popen(pandoc,
+                         stdout=subprocess.PIPE)
+    e = subprocess.Popen(emacs,
+                         stdin=p.stdout,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.DEVNULL)
-    out, err = p.communicate()
-
-    body = out.decode()
-
-    title = path.name
-
-    return htmldoc(body, title)
+    out, err = e.communicate()
+    embed()
+    return out.decode()
 
 @suffix('ipynb')
 def renderNotebook(path):
@@ -81,37 +101,35 @@ def renderDoc(path):
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
 
 def main():
-    working_dir = Path(__file__).absolute().parent.parent
+    working_dir = Path(__file__).absolute().resolve().parent.parent
     BUILD = working_dir / 'doc_build'
     if not BUILD.exists():
         BUILD.mkdir()
-    #os.chdir(BUILD)
-    def outFile(doc):
-        return BUILD / doc.relative_to(devconfig.git_local_base).with_suffix('.html')
-    repos = (Repo(devconfig.ontology_local_repo),
+
+    def outFile(doc, working_dir):
+        return BUILD / 'docs' / doc.relative_to(working_dir.parent).with_suffix('.html')
+
+    repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()))
 
-    docs = [Path(repo.working_dir, f)  # .relative_to(BUILD)  # it doesn't do full relative paths... wat
-            for repo in repos
-            for f in repo.git.ls_files().split('\n')
-            if isdoc(f)]
+    wd_docs = [(Path(repo.working_dir).resolve(), Path(repo.working_dir, f).resolve())
+               for repo in repos
+               for f in repo.git.ls_files().split('\n')
+               if Path(f).suffix in suffixFuncs]
 
-    outname_rendered = [(outFile(doc), renderDoc(doc)) for doc in docs]
+    outname_rendered = [(outFile(doc, wd), renderDoc(doc)) for wd, doc in wd_docs]
 
     index = ['<h1>Documentation Index</h1>']
     for outname, rendered in outname_rendered:
-        index.append(atag(outname.relative_to(BUILD)))  # TODO parse out/add titles
+        index.append(atag(outname.relative_to(BUILD / 'docs')))  # TODO parse out/add titles
         if not outname.parent.exists():
             outname.parent.mkdir(parents=True)
         with open(outname.as_posix(), 'wt') as f:
             f.write(rendered)
 
     index_body = '<br>\n'.join(index)
-    with open((BUILD / 'index.html').as_posix(), 'wt') as f:
+    with open((BUILD / 'docs/index.html').as_posix(), 'wt') as f:
         f.write(htmldoc(index_body, 'NIF Ontology documentation index'))
-
-    if __name__ == '__main__':
-        embed()
 
 if __name__ == '__main__':
     main()
