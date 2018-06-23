@@ -45,8 +45,8 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
     # TODO fix relative links to point to github
 
+    format = 'gfm'  # travis is still on 1.12, so need a test to pick which version...
     format = 'markdown_github'  # TODO newer version has 'gfm' but apparently I'm not on latest?
-    format = 'gfm'
 
     pandoc = ['pandoc', '-f', format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
@@ -146,8 +146,6 @@ def main():
                                           for wd, doc, kwargs in wd_docs_kwargs)
     #outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
                         #for wd, doc, kwargs in wd_docs_kwargs]
-
-    embed()
 
     index = ['<h1>Documentation Index</h1>']
     for outname, rendered in outname_rendered:

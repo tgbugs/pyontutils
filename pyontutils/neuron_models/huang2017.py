@@ -338,4 +338,9 @@ mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
           OntTerm(s).curie.startswith('ilxtr:')
           for r in OntTerm.query(label=l.toPython()) if
           not r.curie.startswith('ilxtr:')]
-embed()
+
+def main():
+    embed()
+
+if __name__ == '__main__':
+    main()
