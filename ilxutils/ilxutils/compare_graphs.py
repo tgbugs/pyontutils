@@ -291,7 +291,7 @@ class GraphComparator(PredFinder):
         objs = []
         for pred in self.custom_diff:
             objs.extend([pred.upper() + '_RATIO', 'ILX_' + pred.upper(), 'ONTO_' + pred.upper()])
-        header = ['T/F'] + objs + ['ILX_IRI', 'ONTO_IRI', 'SOURCE_ONTOLOGY']
+        header = ['T/F', 'FUNCTION'] + objs + ['ILX_IRI', 'ONTO_IRI', 'SOURCE_ONTOLOGY']
 
         raw_df = []
         for rrow, trow in self.sync_dataframes():
@@ -309,8 +309,12 @@ class GraphComparator(PredFinder):
                 continue
 
             primer_dict = {head:None for head in header}
-            primer_dict.update({'ILX_IRI':rname, 'ONTO_IRI':tname, 'SOURCE_ONTOLOGY':p(self.tg_path).stem})
-
+            primer_dict.update({
+                'ILX_IRI':rname,
+                'ONTO_IRI':tname,
+                'SOURCE_ONTOLOGY':p(self.tg_path).stem,
+                'FUNCTION':'add',
+            })
             for rk, rv in rrow.items(): #reference key, reference value
 
                 rcname = self.pred_map.get(degrade(rk))
@@ -321,7 +325,8 @@ class GraphComparator(PredFinder):
                     if rcname == tcname:
                         cname = rcname.upper()
                         for _rv in rv:
-                            if len(tv) > 1: print(tk, tv); sys.exit('single onto not proper format')
+                            if len(tv) > 1:
+                                print(tk, tv); sys.exit('single onto not proper format')
                             for _tv in tv:
                                 primer_dict.update({
                                     cname+'_RATIO':round(ratio(degrade(_rv), degrade(_tv)), 2),

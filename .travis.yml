@@ -17,11 +17,15 @@ python:
   - pypy3.5
 
 before_install:
+  - sudo apt-get install emacs
+  - sudo apt-get install pandoc
   - sudo apt-get install hunspell
   - sudo apt-get install libhunspell-dev
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
+  - git clone https://github.com/tgbugs/orgstrap.git
+  - orgstrap/orgstrap
   - git clone https://github.com/BlueBrain/nat.git
   - popd
 
