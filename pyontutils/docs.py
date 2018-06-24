@@ -1,5 +1,4 @@
 import os
-import sys
 import subprocess
 from pathlib import Path
 import nbformat
@@ -160,10 +159,12 @@ def main():
                                            #stdout=subprocess.PIPE,
                                            #stderr=subprocess.PIPE)
 
-    outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
-                                          for wd, doc, kwargs in wd_docs_kwargs)
-    #outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
-                        #for wd, doc, kwargs in wd_docs_kwargs]
+    if 'CI' in os.environ:
+        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
+                            for wd, doc, kwargs in wd_docs_kwargs]
+    else:
+        outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
+                                              for wd, doc, kwargs in wd_docs_kwargs)
 
     index = ['<h1>Documentation Index</h1>']
     for outname, rendered in outname_rendered:
