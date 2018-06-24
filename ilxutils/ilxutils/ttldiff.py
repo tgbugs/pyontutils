@@ -23,9 +23,7 @@ import pickle
 VERSION = '0.0.1.beta'
 
 
-
 class ttldiff():
-
     def __init__(self, reference, target, args):
         self.reference = possible_convert(refernce)
         self.target = possible_convert(target)
@@ -38,17 +36,17 @@ class ttldiff():
         elif Path(file).suffix == '.pickle':
             return pickle.load(open(file, 'wb'))
         else:
-            sys.exit(file+' is not the desired pickle dataframe or ttl.')
+            sys.exit(file + ' is not the desired pickle dataframe or ttl.')
 
     def diff():
         pass
 
 
-
 def main():
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+    args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
     print(args)
+
 
 if __name__ == '__main__':
     main()

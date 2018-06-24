@@ -34,42 +34,37 @@ from subprocess import call
 from json2html import *
 from ontologies_compared_backup import visited_onto_iris_hash
 
+
 class PredFinder():
     '''=== LABEL ==='''
-    label_scheme = ('label', [
-            'rdfs:label',
-            'skos:prefLabel'
-        ])
+    label_scheme = ('label', ['rdfs:label', 'skos:prefLabel'])
     '''=== DEFINITION ==='''
     definition_scheme = ('definition', [
-            'definition:',
-            'skos:definition',
-            'NIFRID:birnlexDefinition',
-            'NIFRID:externallySourcedDefinition',
-            'obo:IAO_0000115'
-        ])
+        'definition:', 'skos:definition', 'NIFRID:birnlexDefinition',
+        'NIFRID:externallySourcedDefinition', 'obo:IAO_0000115'
+    ])
     '''=== SYNONYM ==='''
     synonym_scheme = ('synonym', [
-            'oboInOwl:hasExactSynonym',
-            'oboInOwl:hasNarrowSynonym',
-            'oboInOwl:hasBroadSynonym',
-            'oboInOwl:hasRelatedSynonym',
-            'go:systematic_synonym',
-            'NIFRID:synonym',
-        ])
+        'oboInOwl:hasExactSynonym',
+        'oboInOwl:hasNarrowSynonym',
+        'oboInOwl:hasBroadSynonym',
+        'oboInOwl:hasRelatedSynonym',
+        'go:systematic_synonym',
+        'NIFRID:synonym',
+    ])
     '''=== SUPERCLASS ==='''
     superclass_scheme = ('superclass', [
-            'rdfs:subClassOf',
-        ])
+        'rdfs:subClassOf',
+    ])
     '''=== TYPE ==='''
     type_scheme = ('type', [
-            'rdf:type',
-        ])
+        'rdf:type',
+    ])
     '''=== EXISTING IDS ==='''
     exids_scheme = ('existing_ids', [
-            'ilxtr:existingIds',
-            'ilxtr:existingId',
-        ])
+        'ilxtr:existingIds',
+        'ilxtr:existingId',
+    ])
     total_scheme = [
         label_scheme,
         definition_scheme,
@@ -80,7 +75,8 @@ class PredFinder():
     ]
 
     def __init__(self):
-        self.pred_map = self.compress(list(map(self.unpack, self.total_scheme)))
+        self.pred_map = self.compress(
+            list(map(self.unpack, self.total_scheme)))
         self.pred_types = self.get_pred_types()
 
     def get_pred_types(self):
@@ -109,10 +105,16 @@ class PredFinder():
             sys.exit('pred_finder:compress -> cannot compress this list')
         return obj
 
-class GraphComparator(PredFinder):
 
-    def __init__(self, rg_path, tg_path, rg_ilx=False, shorten_names=False, pred_diff=None,
-                    get_only_partial_diff=False, custom_diff=None):
+class GraphComparator(PredFinder):
+    def __init__(self,
+                 rg_path,
+                 tg_path,
+                 rg_ilx=False,
+                 shorten_names=False,
+                 pred_diff=None,
+                 get_only_partial_diff=False,
+                 custom_diff=None):
         PredFinder.__init__(self)
         self.rg_path = rg_path
         self.tg_path = tg_path
@@ -123,22 +125,28 @@ class GraphComparator(PredFinder):
         self.get_only_partial_diff = get_only_partial_diff
         self.custom_diff = custom_diff
         self.diff = self.compare_dataframes()
-        self.html = json2html.convert(json = self.diff)
+        self.html = json2html.convert(json=self.diff)
         self.csv_ready_df = None
 
     def find_equivalent_pred(self, tpred, column_names):
-        eqnames = [cn for cn in column_names if tpred == self.pred_map.get(degrade(cn))]
+        eqnames = [
+            cn for cn in column_names
+            if tpred == self.pred_map.get(degrade(cn))
+        ]
         if not eqnames:
             sys.exit('# FAILED :: find_equivalent_pred :: no eqnames found')
         if len(eqnames) == 1:
             return eqnames[0]
         else:
-            print('# WARNING :: find_equivalent_pred :: wasnt meant to give back a list')
+            print(
+                '# WARNING :: find_equivalent_pred :: wasnt meant to give back a list'
+            )
             return eqnames
 
     def move_existing_ids_to_index(self, df):
         '''func not used for main but might be useful later on'''
-        ex_pred = self.find_equivalent_pred(tpred='existing_ids', column_names=df.columns)
+        ex_pred = self.find_equivalent_pred(
+            tpred='existing_ids', column_names=df.columns)
 
         indx = []
         for existing_ids in df[ex_pred]:
@@ -163,7 +171,8 @@ class GraphComparator(PredFinder):
             rname = rrow.pop('qname')
             tname = trow.pop('qname')
 
-            ronly, tonly, both = self.compare_rows(rrow, trow) #each are a tuple
+            ronly, tonly, both = self.compare_rows(rrow,
+                                                   trow)  #each are a tuple
 
             #You need the graph to be built from owl or ttl source to have qnames
             if not self.shorten_names:
@@ -171,10 +180,10 @@ class GraphComparator(PredFinder):
                 tname = trow.name
 
             data[rname].append({
-                tname : {
-                    'reference_graph_only' : ronly,
-                    'target_graph_only'    : tonly,
-                    'both_graphs_contain'  : both,
+                tname: {
+                    'reference_graph_only': ronly,
+                    'target_graph_only': tonly,
+                    'both_graphs_contain': both,
                     #'both_diff': diff(both[0], both[1])
                 }
             })
@@ -182,29 +191,35 @@ class GraphComparator(PredFinder):
         return data
 
     def replace_superclass(self, row, superclass_indx, exids_indx):
-        if not isinstance(row[superclass_indx], float) and row[superclass_indx]:
+        if not isinstance(row[superclass_indx],
+                          float) and row[superclass_indx]:
             if self.rgraph.loc_check.get(row[superclass_indx][0]):
-                existing_ids=self.rgraph.df.loc[row[superclass_indx][0]][exids_indx]
+                existing_ids = self.rgraph.df.loc[row[superclass_indx][0]][
+                    exids_indx]
                 if not isinstance(existing_ids, float) and existing_ids:
                     return [ex for ex in existing_ids if '/ilx_' not in ex]
         return row[superclass_indx]
 
     def sync_dataframes(self):
         row_tuples = []
-        if self.rg_ilx: #only if the reference graph is from interlex
-            exids_indx = self.find_equivalent_pred('existing_ids', self.rgraph.df.columns)
-            superclass_indx = self.find_equivalent_pred('superclass', self.rgraph.df.columns)
+        if self.rg_ilx:  #only if the reference graph is from interlex
+            exids_indx = self.find_equivalent_pred('existing_ids',
+                                                   self.rgraph.df.columns)
+            superclass_indx = self.find_equivalent_pred(
+                'superclass', self.rgraph.df.columns)
 
             for i, rrow in self.rgraph.df.iterrows():
-                rrow[superclass_indx] = self.replace_superclass(rrow, superclass_indx, exids_indx)
+                rrow[superclass_indx] = self.replace_superclass(
+                    rrow, superclass_indx, exids_indx)
                 existing_ids = rrow.get(exids_indx)
                 if isinstance(existing_ids, float) or not existing_ids:
                     continue
                 for existing_id in existing_ids:
                     if self.tgraph.loc_check.get(existing_id):
-                        row_tuples.append((rrow, self.tgraph.df.loc[existing_id]))
+                        row_tuples.append((rrow,
+                                           self.tgraph.df.loc[existing_id]))
 
-        else: #just comparing 2 random ontologies
+        else:  #just comparing 2 random ontologies
             for i, rrow in self.rgraph.df.iterrows():
                 if self.rgraph.loc_check.get(rrow.name):
                     print(rrow.name)
@@ -216,16 +231,17 @@ class GraphComparator(PredFinder):
         ronly, tonly, both, prime_both = [], [], [], []
         ronly_both_filter = []
         shared_preds = set()
-        for rk, rv in rrow.items(): #reference key, reference value
+        for rk, rv in rrow.items():  #reference key, reference value
 
             ref_com_pred = self.pred_map.get(degrade(rk))
             if not ref_com_pred:
                 continue
 
-            for tk, tv in trow.items(): #target key, target value
+            for tk, tv in trow.items():  #target key, target value
 
                 target_com_pred = self.pred_map.get(degrade(tk))
-                partial_tar_com_pred = self.pred_map.get(degrade(tk.split(':')[1]))
+                partial_tar_com_pred = self.pred_map.get(
+                    degrade(tk.split(':')[1]))
 
                 if target_com_pred == ref_com_pred or partial_tar_com_pred == ref_com_pred:
 
@@ -238,7 +254,8 @@ class GraphComparator(PredFinder):
 
                     tb, rb = self.compare(rv, tv)
                     if rb or tb:
-                        prime_both.extend([((rk, _rb), (tk, _tb)) for _tb, _rb in zip(tb, rb)])
+                        prime_both.extend([((rk, _rb), (tk, _tb))
+                                           for _tb, _rb in zip(tb, rb)])
                         both.extend([(tk, _b) for _b in tb])
                         both.extend([(rk, _b) for _b in rb])
 
@@ -261,7 +278,8 @@ class GraphComparator(PredFinder):
         return ronly, tonly, list(set(prime_both))
 
     def compare(self, ref_values, target_values):
-        if not isinstance(ref_values, list) and not isinstance(target_values, list):
+        if not isinstance(ref_values, list) and not isinstance(
+                target_values, list):
             sys.exit('compare_dls :: Types need to be both lists')
         rb, tb = [], []
         for ref_value in ref_values:
@@ -290,8 +308,12 @@ class GraphComparator(PredFinder):
         base = ['ILX_', 'ONTO_']
         objs = []
         for pred in self.custom_diff:
-            objs.extend([pred.upper() + '_RATIO', 'ILX_' + pred.upper(), 'ONTO_' + pred.upper()])
-        header = ['T/F', 'FUNCTION'] + objs + ['ILX_IRI', 'ONTO_IRI', 'SOURCE_ONTOLOGY']
+            objs.extend([
+                pred.upper() + '_RATIO', 'ILX_' + pred.upper(),
+                'ONTO_' + pred.upper()
+            ])
+        header = ['T/F', 'FUNCTION'
+                  ] + objs + ['ILX_IRI', 'ONTO_IRI', 'SOURCE_ONTOLOGY']
 
         raw_df = []
         for rrow, trow in self.sync_dataframes():
@@ -308,30 +330,35 @@ class GraphComparator(PredFinder):
             if visited_onto_iris_hash.get(trow.name):
                 continue
 
-            primer_dict = {head:None for head in header}
+            primer_dict = {head: None for head in header}
             primer_dict.update({
-                'ILX_IRI':rname,
-                'ONTO_IRI':tname,
-                'SOURCE_ONTOLOGY':p(self.tg_path).stem,
-                'FUNCTION':'add',
+                'ILX_IRI': rname,
+                'ONTO_IRI': tname,
+                'SOURCE_ONTOLOGY': p(self.tg_path).stem,
+                'FUNCTION': 'add',
             })
-            for rk, rv in rrow.items(): #reference key, reference value
+            for rk, rv in rrow.items():  #reference key, reference value
 
                 rcname = self.pred_map.get(degrade(rk))
                 if not rcname or rcname not in self.custom_diff: continue
 
-                for tk, tv in trow.items(): #target key, target value
+                for tk, tv in trow.items():  #target key, target value
                     tcname = self.pred_map.get(degrade(tk))
                     if rcname == tcname:
                         cname = rcname.upper()
                         for _rv in rv:
                             if len(tv) > 1:
-                                print(tk, tv); sys.exit('single onto not proper format')
+                                print(tk, tv)
+                                sys.exit('single onto not proper format')
                             for _tv in tv:
                                 primer_dict.update({
-                                    cname+'_RATIO':round(ratio(degrade(_rv), degrade(_tv)), 2),
-                                    'ILX_'+cname:_rv,
-                                    'ONTO_'+cname:_tv
+                                    cname + '_RATIO':
+                                    round(
+                                        ratio(degrade(_rv), degrade(_tv)), 2),
+                                    'ILX_' + cname:
+                                    _rv,
+                                    'ONTO_' + cname:
+                                    _tv
                                 })
 
             raw_df.append(primer_dict)
@@ -340,6 +367,7 @@ class GraphComparator(PredFinder):
         df.to_csv(output, index=False)
         self.csv_ready_df = df
         #for self.diff.items():
+
 
 def prettify_ontodiff_json(output):
     if '.json' not in output:
@@ -350,6 +378,7 @@ def prettify_ontodiff_json(output):
     else:
         print('Prettify Complete For:', output)
 
+
 def main():
     '''Create options to read 2 files and only judge but the predicates given.
     Should be a misc add-on for PredFinder. This way if its not empty, you should
@@ -357,7 +386,9 @@ def main():
     want the json file to be converted to html
     '''
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--','').replace('-', '_'):v for k, v in doc.items()})
+    args = pd.Series(
+        {k.replace('--', '').replace('-', '_'): v
+         for k, v in doc.items()})
 
     if args.partial_diff or args.custom_diff:
         get_only_partial_diff = True
@@ -365,15 +396,17 @@ def main():
         get_only_partial_diff = False
 
     if args.custom_diff:
-        args.ilx = True #Needs to be forced bc this is the only option it will work
-        args.custom_diff = args.custom_diff.split(',') if ',' in args.custom_diff else [args.custom_diff]
+        args.ilx = True  #Needs to be forced bc this is the only option it will work
+        args.custom_diff = args.custom_diff.split(
+            ',') if ',' in args.custom_diff else [args.custom_diff]
 
-    gobj = GraphComparator( rg_path=args.reference,
-                            tg_path=args.target,
-                            rg_ilx=args.ilx,
-                            shorten_names=args.shorten_names,
-                            get_only_partial_diff=get_only_partial_diff,
-                            custom_diff=args.custom_diff)
+    gobj = GraphComparator(
+        rg_path=args.reference,
+        tg_path=args.target,
+        rg_ilx=args.ilx,
+        shorten_names=args.shorten_names,
+        get_only_partial_diff=get_only_partial_diff,
+        custom_diff=args.custom_diff)
 
     if args.csv:
         gobj.csv(args.output)
@@ -391,6 +424,8 @@ def main():
 
     if args.html:
         cf(gobj.html, p(args.html).with_suffix('.html'))
+
+
 '''
 >>> python3 compare_graphs --ilx --full-diff-output ~/Dropbox/example.json
 '''

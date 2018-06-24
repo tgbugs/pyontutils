@@ -38,7 +38,7 @@ WHERE {
 }
 """
     sparql = SPARQLWrapper(sparql_service)
-    sparql.addCustomParameter("apikey",api_key)
+    sparql.addCustomParameter("apikey", api_key)
     sparql.setQuery(query_string)
     sparql.setReturnFormat(JSON)
     results = sparql.query().convert()

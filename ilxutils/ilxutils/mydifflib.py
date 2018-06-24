@@ -23,6 +23,7 @@ def diff(s1, s2):
         difflist.append(fullline[:-1])
     return [l[:] for l in '\n'.join(difflist).splitlines() if l]
 
+
 def diffcolor(s1, s2):
     ''' --word-diff=color clone '''
     string = ''
@@ -35,15 +36,18 @@ def diffcolor(s1, s2):
             string += ' ' + line
     return string[1:]
 
+
 def ratio(s1, s2):
     ''' ratio of likeness btw 2 strings '''
     return difflib.SequenceMatcher(None, s1, s2).ratio()
+
 
 def create_html(s1, s2, output='test.html'):
     ''' creates basic html based on the diff of 2 strings '''
     html = difflib.HtmlDiff().make_file(s1.split(), s2.split())
     with open(output, 'w') as f:
         f.write(html)
+
 
 def traverse_data(obj, key_target):
     ''' will traverse nested list and dicts until key_target equals the current dict key '''
@@ -73,11 +77,13 @@ def traverse_data(obj, key_target):
         sys.exit('traverse_data needs to be updated...')
     return False
 
+
 def json_secretary(_input):
     if isinstance(_input, str) and '.json' in str(_input):
         return json.load(open(_input, 'r'))
     else:
         return _input
+
 
 #reslover -> run make_confige (tell where hit repo is)
 def json_diff(json1, json2, key_target, get_just_diff=True, porcelain=False):
@@ -108,9 +114,10 @@ def json_diff(json1, json2, key_target, get_just_diff=True, porcelain=False):
     if get_just_diff:
         return output
 
-    obj1[key_target+'_diff'] = output
-    obj2[key_target+'_diff'] = output
+    obj1[key_target + '_diff'] = output
+    obj2[key_target + '_diff'] = output
     return json1, json2, output
+
 
 def test():
     """ checking output for diff and colordiff
@@ -141,12 +148,21 @@ def test():
     1mstairs.\x1b[0m \x1b[32mstairs\x1b[0m \x1b[32magain.\x1b[0m")
     """
 
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
 
     s1 = "the neuron's went up the tall stairs."
     s2 = "the neurons went up the tall stairs again."
-    dict1 = [{'meh':'whatever', 'fields':{'definition':s1}}, 'rando']
-    dict2 = [{'meh':'whatever', 'fields':{'lime':'soda', 'map':{'definition':s2}}}, 'rando']
+    dict1 = [{'meh': 'whatever', 'fields': {'definition': s1}}, 'rando']
+    dict2 = [{
+        'meh': 'whatever',
+        'fields': {
+            'lime': 'soda',
+            'map': {
+                'definition': s2
+            }
+        }
+    }, 'rando']
     print(json_diff(dict1, dict2, 'definition', get_just_diff=False))

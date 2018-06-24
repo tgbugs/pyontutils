@@ -16,33 +16,40 @@ engine = create_engine(args.db_url)
 p = pathlib.PurePath(args.output)
 
 
-
 def createBar(maxval):
     return progressbar.ProgressBar(maxval=maxval, \
         widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
 
+
 def create_graph(filename):
-    g = createOntology(filename=filename,
-                       name='Interlex Total',
-                       prefixes={**{'Testernvs':'http://whatever.com/'},
-                                    **makePrefixes('ILXREPLACE',
-                                             'ilx',
-                                             'NIFRID',
-                                             'NCBIGene',
-                                             'NCBITaxon',
-                                             'skos',
-                                             'owl',
-                                             'definition',
-                                             'ILX',
-                                             'ilxtr',
-                                             'oboInOwl',
-                                             )},
-                       shortname=str(p.stem),
-                       version='0.1',
-                       remote_base='http://uri.interlex.org/ontologies/',
-                       path='',
-                       local_base=str(p.parent))
+    g = createOntology(
+        filename=filename,
+        name='Interlex Total',
+        prefixes={
+            **{
+                'Testernvs': 'http://whatever.com/'
+            },
+            **makePrefixes(
+                'ILXREPLACE',
+                'ilx',
+                'NIFRID',
+                'NCBIGene',
+                'NCBITaxon',
+                'skos',
+                'owl',
+                'definition',
+                'ILX',
+                'ilxtr',
+                'oboInOwl',
+            )
+        },
+        shortname=str(p.stem),
+        version='0.1',
+        remote_base='http://uri.interlex.org/ontologies/',
+        path='',
+        local_base=str(p.parent))
     return g
+
 
 def helper_pref_filter(iri_list, pref_list, terms_ilx):
     '''
@@ -67,18 +74,21 @@ def helper_pref_filter(iri_list, pref_list, terms_ilx):
     if 1 in pref_list:
         pref_index = pref_list.index(1)
         if '/ilx' in iri_list[pref_index]:
-            nonpref_iris = [iri for iri in iri_list if iri != iri_list[pref_index]]
+            nonpref_iris = [
+                iri for iri in iri_list if iri != iri_list[pref_index]
+            ]
             return iri_list[pref_index], nonpref_iris
 
     for i, iri in enumerate(iri_list):
         if 'ilx' in iri:
             index = i
     try:
-        ilx_iri = iri_list[index] #ilx is auto preferred right here
+        ilx_iri = iri_list[index]  #ilx is auto preferred right here
     except:
         ilx_iri = 'http://uri.interlex.org/base/' + terms_ilx
         iri_list.append(ilx_iri)
     return ilx_iri, iri_list
+
 
 def get_pref_unpref_iris(seg_df, terms_ilx):
     '''
@@ -108,7 +118,9 @@ def get_pref_unpref_iris(seg_df, terms_ilx):
     '''
     iri_list = list(map(str, list(seg_df.iri)))
     pref_list = list(map(int, list(seg_df.preferred)))
-    return helper_pref_filter(iri_list=iri_list, pref_list=pref_list, terms_ilx=terms_ilx)
+    return helper_pref_filter(
+        iri_list=iri_list, pref_list=pref_list, terms_ilx=terms_ilx)
+
 
 def make_preferred_iris_dict(g=None, test_df=None):
     '''
@@ -139,7 +151,7 @@ def make_preferred_iris_dict(g=None, test_df=None):
     >>> make_preferred_iris_dict(test_df=seg_df)
     ({1: 'ilx:tmp_0'}, {'tmp_0': 'ilx:tmp_0'})
     '''
-    data =  '''
+    data = '''
             SELECT t.id, tei.tid, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
             FROM terms AS t
             JOIN term_existing_ids AS tei ON t.id=tei.tid
@@ -157,14 +169,17 @@ def make_preferred_iris_dict(g=None, test_df=None):
     pref_dict = {}
     ilx_to_pref = {}
     unpref_dict = {}
-    bar=createBar(len(df_ids)); bar.start()
+    bar = createBar(len(df_ids))
+    bar.start()
     for i, curr_id in enumerate(df_ids):
 
         seg_df = df.loc[df.id == (curr_id)]
-        pref_iri, unpref_iris = get_pref_unpref_iris(seg_df=seg_df, terms_ilx=list(seg_df.ilx)[0])
-        pref_dict[curr_id] = pref_iri#g.qname(pref_iri) #FIXME tom must have changed qname
+        pref_iri, unpref_iris = get_pref_unpref_iris(
+            seg_df=seg_df, terms_ilx=list(seg_df.ilx)[0])
+        pref_dict[
+            curr_id] = pref_iri  #g.qname(pref_iri) #FIXME tom must have changed qname
         unpref_dict[curr_id] = unpref_iris
-        ilx_to_pref[list(seg_df.ilx)[0]] = pref_iri#g.qname(pref_iri)
+        ilx_to_pref[list(seg_df.ilx)[0]] = pref_iri  #g.qname(pref_iri)
 
         bar.update(i)
     bar.finish()
@@ -175,6 +190,7 @@ def make_preferred_iris_dict(g=None, test_df=None):
 
     return pref_dict, ilx_to_pref, unpref_dict
 
+
 def label_def_prefix(g=None, pref_dict=None, unpref_dict=None):
     data = '''
            SELECT t.id, t.ilx, t.type, t.label, t.definition
@@ -184,7 +200,8 @@ def label_def_prefix(g=None, pref_dict=None, unpref_dict=None):
     df = pd.read_sql(data, engine)
     df_ids = list(set(df.id))
 
-    bar=createBar(len(df_ids)); bar.start()
+    bar = createBar(len(df_ids))
+    bar.start()
     for i, curr_id in enumerate(df_ids):
 
         seg_df = df.loc[df.id == (curr_id)]
@@ -219,8 +236,9 @@ def label_def_prefix(g=None, pref_dict=None, unpref_dict=None):
     print('=== PREFIXES COMPLETE ===')
     return g
 
+
 def annotation(g, pref_dict):
-    data =  '''
+    data = '''
             SELECT t1.id, t1.ilx, t2.ilx AS annotation_ilx, ta.value FROM term_annotations AS ta
             INNER JOIN terms AS t1 ON t1.id = ta.tid
             INNER JOIN terms AS t2 ON t2.id = ta.annotation_tid
@@ -230,14 +248,15 @@ def annotation(g, pref_dict):
     df = pd.read_sql(data, engine)
     df_ids = list(set(df.id))
 
-    bar=createBar(len(set(df.id))); bar.start()
+    bar = createBar(len(set(df.id)))
+    bar.start()
     for i, curr_id in enumerate(df_ids):
 
         seg_df = df.loc[df.id == (curr_id)]
         pref_iri = pref_dict[curr_id]
 
         for row in seg_df.itertuples():
-            g.add_trip(pref_iri, 'ilx:'+row.annotation_ilx, row.value)
+            g.add_trip(pref_iri, 'ilx:' + row.annotation_ilx, row.value)
 
         bar.update(i)
     bar.finish()
@@ -245,8 +264,9 @@ def annotation(g, pref_dict):
     print('=== ANNOTATION COMPLETE ===')
     return g
 
+
 def synonym(g, pref_dict):
-    data =  '''
+    data = '''
             SELECT t.id, t.ilx, t.label, t.definition, ts.type, ts.literal AS syn_abbrev
             FROM terms AS t
             INNER JOIN term_synonyms AS ts
@@ -256,7 +276,8 @@ def synonym(g, pref_dict):
     df = pd.read_sql(data, engine)
     df_ids = list(set(df.id))
 
-    bar=createBar(len(set(df.id))); bar.start()
+    bar = createBar(len(set(df.id)))
+    bar.start()
     for i, curr_id in enumerate(df_ids):
 
         seg_df = df.loc[df.id == (curr_id)]
@@ -274,6 +295,7 @@ def synonym(g, pref_dict):
     print('=== SYNONYM COMPLETE ===')
     return g
 
+
 def relationship(g, ilx_to_pref):
     data = '''
            SELECT t1.ilx AS term1, t3.ilx AS relationship_id, t2.ilx AS term2 FROM term_relationships AS tr
@@ -286,7 +308,8 @@ def relationship(g, ilx_to_pref):
     #add sys.exit test
     df_ids = df.term1
 
-    bar=createBar(len(df_ids)); bar.start()
+    bar = createBar(len(df_ids))
+    bar.start()
 
     for i, row in enumerate(df.itertuples()):
 
@@ -304,8 +327,9 @@ def relationship(g, ilx_to_pref):
     print('=== RELATIONSHIP COMPLETE ===')
     return g
 
+
 def superclasses(g, pref_dict):
-    data =  '''
+    data = '''
             SELECT ts.*, t1.id as curr_id, t2.id as superclass_id
             FROM term_superclasses as ts
             JOIN terms as t1 ON ts.tid = t1.id
@@ -316,15 +340,18 @@ def superclasses(g, pref_dict):
 
     df_ids = df.curr_id
 
-    bar=createBar(len(df_ids)); bar.start()
+    bar = createBar(len(df_ids))
+    bar.start()
     for i, row in enumerate(df.itertuples()):
-        g.add_trip(pref_dict[row.curr_id], 'rdfs:subClassOf', pref_dict[row.superclass_id])
+        g.add_trip(pref_dict[row.curr_id], 'rdfs:subClassOf',
+                   pref_dict[row.superclass_id])
 
         bar.update(i)
     bar.finish()
 
     print('=== SUPERCLASSES COMPLETE ===')
     return g
+
 
 if __name__ == '__main__':
     g = create_graph('Interlex')
@@ -334,5 +361,5 @@ if __name__ == '__main__':
     g = synonym(g, pref_dict)
     g = relationship(g, ilx_to_pref)
     g = superclasses(g, pref_dict)
-    g.g.serialize(destination=args.output, format='turtle') #g.write() broken
+    g.g.serialize(destination=args.output, format='turtle')  #g.write() broken
     print('COMPLETE')

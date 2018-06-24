@@ -18,7 +18,6 @@ from pathlib import Path as p
 VERSION = '0.0.1'
 
 
-
 class ttl2pd():
 
     query = """
@@ -38,7 +37,7 @@ class ttl2pd():
             prefix, namespace, name = self.g.compute_qname(uri)
             return prefix + ':' + name
         except:
-            sys.exit('No qname for '+uri)
+            sys.exit('No qname for ' + uri)
 
     def get_sparql_dataframe(self):
 
@@ -67,7 +66,7 @@ class ttl2pd():
         df = pd.DataFrame(columns=cols, index=indx)
         for key, value in data.items():
             for k, v in value.items():
-                if len(v) == 1: #It was annoying to always deal with lists
+                if len(v) == 1:  #It was annoying to always deal with lists
                     value[k] = v[0]
                 else:
                     value[k] = v
@@ -80,9 +79,10 @@ class ttl2pd():
 
         return df
 
+
 def get_df_from_ttl(graph, args):
     classtype = 'owl:Class'
-    query= """
+    query = """
         select ?subj ?pred ?obj
         where {
             ?subj ?rdftype %s .
@@ -91,6 +91,7 @@ def get_df_from_ttl(graph, args):
     """ % classtype
     df = ttl2pd(graph, query, args).df
     return df
+
 
 def local_ttl2pd(infile):
     graph = rdflib.Graph()
@@ -108,16 +109,17 @@ def local_ttl2pd(infile):
         } """
     return ttl2pd(graph, query).df
 
+
 def main():
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+    args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
 
     graph = rdflib.Graph()
     graph.parse(args.file, format='turtle')
 
     #FIXME if you want just classes; should add this as an option
     classtype = 'owl:Class'
-    query= """
+    query = """
         select ?subj ?pred ?obj
         where {
             ?subj ?rdftype %s .
@@ -125,7 +127,7 @@ def main():
         }
     """ % classtype
 
-    query= """
+    query = """
         select ?subj ?pred ?obj
         where {
             ?subj rdf:type ?type .
@@ -136,6 +138,7 @@ def main():
     df = ttl2pd(graph, query, args).df
     #print(list(df))
     print('=== COMPLETE ===')
+
 
 if __name__ == '__main__':
     main()

@@ -20,7 +20,6 @@ import sys
 VERSION = '0.2'
 
 
-
 class graph2pandas():
 
     query = """
@@ -31,8 +30,8 @@ class graph2pandas():
         } """
 
     def __init__(self, obj):
-        self.g = obj #could be path
-        self.path = obj #could be graph
+        self.g = obj  #could be path
+        self.path = obj  #could be graph
         self.rqname = {}
         self.df = self.graph2pandas_converter()
         self.loc_check = self.create_loc_check()
@@ -41,7 +40,7 @@ class graph2pandas():
         self.df.to_pickle(output)
 
     def create_loc_check(self):
-        return {index:True for index in self.df.index}
+        return {index: True for index in self.df.index}
 
     def qname(self, uri):
         '''Returns qname of uri in rdflib graph while also saving it'''
@@ -57,7 +56,7 @@ class graph2pandas():
                 print('name:', name)
             except:
                 print('Could not print from compute_qname')
-            sys.exit('No qname for '+uri)
+            sys.exit('No qname for ' + uri)
 
     def graph2pandas_converter(self):
         '''Updates self.g or self.path bc you could only choose 1'''
@@ -101,16 +100,20 @@ class graph2pandas():
             pred = self.qname(binding[rdflib.term.Variable('pred')])
             obj = binding[rdflib.term.Variable('obj')]
 
-            if isinstance(pred, BNode) or isinstance(binding[rdflib.term.Variable('subj')], BNode): #stops at BNodes; could be exanded here
+            if isinstance(pred, BNode) or isinstance(
+                    binding[rdflib.term.Variable('subj')],
+                    BNode):  #stops at BNodes; could be exanded here
                 continue
             else:
                 pred = str(pred)
 
             if not data.get(subj):
                 data[subj] = defaultdict(list)
-                data[subj]['qname'] = self.qname(binding[rdflib.term.Variable('subj')])
+                data[subj]['qname'] = self.qname(
+                    binding[rdflib.term.Variable('subj')])
 
-            if str(obj).lower().strip() != 'none' and not isinstance(obj, BNode): # for the convience of set comparisons
+            if str(obj).lower().strip() != 'none' and not isinstance(
+                    obj, BNode):  # for the convience of set comparisons
                 obj = str(obj)
             else:
                 continue
@@ -127,13 +130,13 @@ class graph2pandas():
         return df
 
 
-
 def main():
     from docopt import docopt
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+    args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
     graph = graph2pandas(args.file)
     graph.save(args.output)
+
 
 if __name__ == '__main__':
     main()

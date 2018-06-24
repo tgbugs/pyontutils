@@ -22,13 +22,16 @@ from docopt import docopt
 import pandas as pd
 VERSION = '0.1'
 doc = docopt(__doc__, version=VERSION)
-args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
 print(args)
+
 
 #diffcolor for terminal and html use
 #terminal -> <f> <f> <diff-pred>
 #html -> tables
 def main():
-    
+    pass
+
+
 if __name__ == '__main__':
     main()

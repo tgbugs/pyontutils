@@ -14,11 +14,17 @@ from pyontutils.closed_namespaces import *
 import rdflib
 import pickle
 
-args = read_args(api_key='../keys/production_api_scicrunch_key.txt', db_url='../keys/production_engine_scicrunch_key.txt', production=True)
+args = read_args(
+    api_key='../keys/production_api_scicrunch_key.txt',
+    db_url='../keys/production_engine_scicrunch_key.txt',
+    production=True)
 sql = interlex_sql(engine_key=args.db_url)
-sci = scicrunch(api_key=args.api_key, base_path=args.base_path, engine_key=args.db_url)
+sci = scicrunch(
+    api_key=args.api_key, base_path=args.base_path, engine_key=args.db_url)
 
-g_nif = makeGraph('', graph=pickle.load(open('../nif-ilx-versions/NIF-ALL.pickle', 'rb')))
+g_nif = makeGraph(
+    '', graph=pickle.load(open('../nif-ilx-versions/NIF-ALL.pickle', 'rb')))
+
 
 #total-sub   261096
 #total-lists 167238
@@ -26,18 +32,21 @@ g_nif = makeGraph('', graph=pickle.load(open('../nif-ilx-versions/NIF-ALL.pickle
 #lists        63154
 def check_restrictions(graph):
 
-    r=Restriction(rdfs.subClassOf)
+    r = Restriction(rdfs.subClassOf)
     sub = r.parse(graph=graph.g)
 
-    r=Restriction(rdf.first)
+    r = Restriction(rdf.first)
     lists = r.parse(graph=graph.g)
 
     return sub, lists
 
+
 sub, lists = check_restrictions(g_nif)
 
+
 def wj(data, name):
-    json.dump(data, open(name+'.json', 'w'), indent=4)
+    json.dump(data, open(name + '.json', 'w'), indent=4)
+
 
 wj(sub, 'sub')
 wj(lists, 'lists')

@@ -42,7 +42,6 @@ BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
 
-
 def myopen(path):
     if isinstance(path, list):
         path = path[0]
@@ -52,26 +51,30 @@ def myopen(path):
     infile.close()
     return file
 
+
 def test(args):
     if args.api_key:
         url = args.base_path + '/api/1/term/view/10?key=' + args.api_key
         #print(url)
         req = r.get(url, auth=('scicrunch', 'perl22(query)'))
         try:
-            data=req.json()['data']
+            data = req.json()['data']
             #print(data)
         except:
-            sys.exit('Api key is incorrect or client choice does not match api submitted.')
+            sys.exit(
+                'Api key is incorrect or client choice does not match api submitted.'
+            )
 
     if args.db_url:
         engine = create_engine(args.db_url)
-        data =  """
+        data = """
                 SELECT t.*
                 FROM terms as t
                 LIMIT 5;
                 """
         if pd.read_sql(data, engine).empty:
             sys.exit('Engine key provided does not work.')
+
 
 def read_args(**args):
 
@@ -97,28 +100,28 @@ def read_args(**args):
     elif args['--beta']:
         args['--base_path'] = BETA
     else:
-        sys.exit('Need to specify the client version (-b BETA | -p PRODUCTION)')
+        sys.exit(
+            'Need to specify the client version (-b BETA | -p PRODUCTION)')
 
-    args = pd.Series({k.replace('--',''):v for k, v in args.items()})
+    args = pd.Series({k.replace('--', ''): v for k, v in args.items()})
     test(args)
 
     return args
 
 
-
 if __name__ == '__main__':
     VERSION = '0.3'
     inline = read_args(
-       argument='updateTerms',
-       engine_key='../keys/production_engine_scicrunch_key.txt',
-       api_key='../keys/production_api_scicrunch_key.txt',
-       production=True,
-       VERSION=VERSION)
+        argument='updateTerms',
+        engine_key='../keys/production_engine_scicrunch_key.txt',
+        api_key='../keys/production_api_scicrunch_key.txt',
+        production=True,
+        VERSION=VERSION)
     print(inline)
     inline = read_args(
-       engine_key='../keys/beta_engine_scicrunch_key.txt',
-       api_key='../keys/beta_api_scicrunch_key.txt',
-       beta=True,
-       VERSION=VERSION)
+        engine_key='../keys/beta_engine_scicrunch_key.txt',
+        api_key='../keys/beta_api_scicrunch_key.txt',
+        beta=True,
+        VERSION=VERSION)
     print(inline)
     #print(read_args())

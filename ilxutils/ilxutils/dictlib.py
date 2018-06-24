@@ -31,13 +31,18 @@ ranking = [
     'ILX',
 ]
 
+
 def superclasses_bug_fix(term_data):
 
     if term_data.get('superclasses'):
         for i, value in enumerate(term_data['superclasses']):
-            try: term_data['superclasses'][i]['superclass_tid'] = term_data['superclasses'][i].pop('id')
-            except: pass
+            try:
+                term_data['superclasses'][i]['superclass_tid'] = term_data[
+                    'superclasses'][i].pop('id')
+            except:
+                pass
     return term_data
+
 
 def preferred_change(data):
 
@@ -54,10 +59,12 @@ def preferred_change(data):
             score.append(-1)
 
     preferred_index = score.index(max(score))
-    for e in data['existing_ids']: e['preferred'] = 0
+    for e in data['existing_ids']:
+        e['preferred'] = 0
     data['existing_ids'][preferred_index]['preferred'] = 1
 
     return data
+
 
 def merge(new, old):
     ''' synonyms and existing_ids are part of an object bug that can create duplicates if in the same batch '''
@@ -66,7 +73,9 @@ def merge(new, old):
 
         if k == 'synonyms':
             if old['synonyms']:
-                literals = [s['literal'].lower().strip() for s in old['synonyms']]
+                literals = [
+                    s['literal'].lower().strip() for s in old['synonyms']
+                ]
                 for v in vals:
                     if vals['literal'].lower().strip() not in literals:
                         old['synonyms'].append(vals)
@@ -76,7 +85,7 @@ def merge(new, old):
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
 
-            if 'change' not in list(vals): #notion that you want to add it
+            if 'change' not in list(vals):  #notion that you want to add it
                 vals['change'] = False
 
             if vals.get('delete') == True:
@@ -88,11 +97,14 @@ def merge(new, old):
                     old['existing_ids'] = new_existing_ids
                 else:
                     print(vals)
-                    sys.exit("You want to delete an iri that doesn't exist", '\n', new)
+                    sys.exit("You want to delete an iri that doesn't exist",
+                             '\n', new)
 
             elif vals.get('replace') == True:
                 if not vals.get('old_iri'):
-                    sys.exit('Need to have old_iri as a key to have a ref for replace')
+                    sys.exit(
+                        'Need to have old_iri as a key to have a ref for replace'
+                    )
                 old_iri = vals.pop('old_iri')
                 if old_iri in iris:
                     new_existing_ids = []
@@ -106,11 +118,13 @@ def merge(new, old):
                     old['existing_ids'] = new_existing_ids
                 else:
                     print(vals)
-                    sys.exit("You want to replace an iri that doesn't exist", '\n', new)
+                    sys.exit("You want to replace an iri that doesn't exist",
+                             '\n', new)
 
             else:
                 if vals['iri'] not in iris and vals['change'] == True:
-                    sys.exit('You want to change iri that doesnt exist', '\n', new)
+                    sys.exit('You want to change iri that doesnt exist', '\n',
+                             new)
                 elif vals['iri'] not in iris and vals['change'] == False:
                     old['existing_ids'].append(vals)
                 elif vals['iri'] in iris and vals['change'] == True:
@@ -124,14 +138,15 @@ def merge(new, old):
                             new_existing_ids.append(e)
                     old['existing_ids'] = new_existing_ids
                 elif vals['iri'] in iris and vals['change'] == False:
-                    pass #for sanity readability
+                    pass  #for sanity readability
                 else:
                     sys.exit('Something broke while merging in existing_ids')
             old = preferred_change(old)
 
-        elif k in ['definition', 'superclasses', 'id', 'type', 'comment', 'label']:
+        elif k in [
+                'definition', 'superclasses', 'id', 'type', 'comment', 'label'
+        ]:
             old[k] = vals
-
     ''' remove repeats '''
     visited = {}
     new_synonyms = []
@@ -150,18 +165,20 @@ def merge(new, old):
 
     return old
 
+
 def extract_annotations(data):
 
     annotaitons = []
     for d in data:
         if d.get('annotations'):
             annotaitons.appened({
-                'tid':d['tid'],
-                'annotation_tid':d['annotation_tid'],
-                'value':d['value'],
+                'tid': d['tid'],
+                'annotation_tid': d['annotation_tid'],
+                'value': d['value'],
             })
 
     return annotaitons
+
 
 def fill_data(data, sql):
     existing_ids = sql.get_existing_ids()
@@ -172,10 +189,15 @@ def fill_data(data, sql):
     for d in data:
         #print(d)
         old_data.update({
-            int(d['id']):{
-                'existing_ids':existing_ids.loc[existing_ids.tid == int(d['id'])].to_dict('records'),
-                'synonyms':synonyms.loc[synonyms.tid == int(d['id'])].to_dict('records'),
-                'superclasses':superclasses.loc[superclasses.tid == int(d['id'])].to_dict('records')
+            int(d['id']): {
+                'existing_ids':
+                existing_ids.loc[existing_ids.tid == int(d['id'])].to_dict(
+                    'records'),
+                'synonyms':
+                synonyms.loc[synonyms.tid == int(d['id'])].to_dict('records'),
+                'superclasses':
+                superclasses.loc[superclasses.tid == int(d['id'])].to_dict(
+                    'records')
             }
         })
         #print(old_data)
