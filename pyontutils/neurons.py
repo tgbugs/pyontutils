@@ -16,8 +16,6 @@ from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON
 from pyontutils.config import devconfig
 from pyontutils.qnamefix import cull_prefixes
 
-current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
 _CHECKOUT_OK = False
 
 __all__ = [
@@ -308,6 +306,7 @@ class graphBase:
     def equivalentClass(self, *others):
         for other in others:
             if isinstance(other, self.__class__):
+                #if isinstance(other, NegPhenotype):  # FIXME maybe this is the issue with neg equivs?
                 self.out_graph.add((self.id_, owl.equivalentClass, other.id_))
             else:
                 self.out_graph.add((self.id_, owl.equivalentClass, other))
@@ -1024,6 +1023,9 @@ class Neuron(NeuronBase):
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
+        #existing = list(self.Class.equivalentClass)
+        #if existing or str(pe.pLabel) == 'Htr3a':
+            #embed()
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
@@ -1377,7 +1379,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = (gitf / 'NIF-Ontology/ttl').expanduser()
+    local_prefix = Path(devconfig.git_local_repo, 'ttl')
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',

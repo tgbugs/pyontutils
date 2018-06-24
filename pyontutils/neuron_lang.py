@@ -6,8 +6,6 @@ from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from IPython import embed
 
-current_file = Path(__file__).absolute()
-
 __all__ = [
     'AND',
     'OR',

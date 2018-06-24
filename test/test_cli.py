@@ -13,8 +13,9 @@ from pyontutils.config import devconfig
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
 p2 = Path(devconfig.git_local_base).resolve().absolute()
 print(p1, p2)
-if p1 != p2:
-    devconfig.git_local_base = p1
+if not (p2 / devconfig.ontology_repo).exists():
+    if p1 != p2:
+        devconfig.git_local_base = p1
 
 from pyontutils import scigraph
 from pyontutils import core
