@@ -31,7 +31,10 @@ class Single_Term_Turtle_Generator():
         self.pref_dict, self.ilx_to_pref, self.unpref_dict =  self.make_preferred_iris_dict()
 
     def myopen(self, path):
-        return open(path, 'r').read().strip()
+        with open(path, 'r') as infile:
+            output = infile.read().strip()
+            infile.close()
+        return output
 
     def test(self, args):
         engine = create_engine(args.engine_key)

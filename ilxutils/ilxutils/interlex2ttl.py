@@ -1,4 +1,4 @@
-#!/usr/local/Cellar/python3/3.6.1/bin/python3.6
+#!/usr/bin/env python3.6
 import sys
 from datetime import date
 from pyontutils.utils import *

@@ -157,11 +157,19 @@ class DevConfig:
         if maybe_repo.exists():
             return maybe_repo
         else:
-            maybe_repo = Path(__file__).parent.parent.parent.absolute() / self.ontology_repo
-            if maybe_repo.exists():
-                return maybe_repo
-
-        print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
+            maybe_start = Path(__file__).parent.parent.parent.absolute()
+            maybe_base = maybe_start
+            fsroot = Path('/')
+            while maybe_base != fsroot:
+                maybe_repo = maybe_base / self.ontology_repo
+                if maybe_repo.exists():
+                    print(tc.blue('INFO:'), f'Ontology repository found at {maybe_repo}')
+                    return maybe_repo
+                else:
+                    maybe_base = maybe_base.parent
+            else:
+                print(tc.red('WARNING:'),
+                      f'No repository found in any parent directory of {maybe_start}')
 
     @default('localhost')
     def _scigraph_host(self):

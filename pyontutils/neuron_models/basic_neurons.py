@@ -6,18 +6,20 @@ from pyontutils.core import OntId, OntTerm, OntCuries, makePrefixes, makeNamespa
 from pyontutils.core import rdf, rdfs, owl
 from pyontutils.core import NIFRID, ilxtr
 from pyontutils.core import hasRole, definition, restriction
-from pyontutils.phenotype_namespaces import *
 import rdflib
 from IPython import embed
 PREFIXES.update({'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                  'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
-config(out_graph_path='basic-neurons.ttl', prefixes=('SWAN', 'SWAA'))
+pred = config(out_graph_path='basic-neurons.ttl', prefixes=('SWAN', 'SWAA')) #, checkout_ok=True)  # false default breaks ci
+
+from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
+
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
                       rdflib.URIRef('file:///tmp/output.ttl')))
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
-                      rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/generated/swanson_hierarchies.ttl')))
+                      rdflib.URIRef(f'file://{Neuron.local_base.as_posix()}ttl/generated/swanson_hierarchies.ttl')))
 
 class Basic(LocalNameManager):
     brain = OntTerm('UBERON:0000955', label='brain')
@@ -38,7 +40,7 @@ surface features, handy to have around
 http://ontology.neuinfo.org/trees/query/ilx:hasPart5/SWAN:629/ttl/generated/swanson_hierarchies.ttl?restriction=true&depth=40&direction=OUTGOING
 
 """
-sgraph = rdflib.Graph().parse('/home/tom/git/NIF-Ontology/ttl/generated/swanson_hierarchies.ttl', format='ttl')
+sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson_hierarchies.ttl').as_posix(), format='ttl')
 # restriction.parse(sgraph)  # FIXME this breaks with weird error message
 OntCuries(PREFIXES)
 rests = [r for r in restriction.parse(graph=sgraph) if r.p == ilxtr.hasPart3]
