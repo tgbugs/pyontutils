@@ -11,6 +11,7 @@ files = [
     'pyontutils/core.py',
     'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
+    'pyontutils/htmlfun.py',
     'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
     'pyontutils/necromancy.py',

@@ -7,7 +7,7 @@ from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
 from pyontutils.config import devconfig
-from protcur.core import htmldoc, atag
+from pyontutils.htmlfun import htmldoc, atag
 from IPython import embed
 
 suffixFuncs = {}
