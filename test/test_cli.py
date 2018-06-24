@@ -1,6 +1,5 @@
 """ Tests for the various cli programs """
 
-from IPython import embed
 import os
 import sys
 import unittest
@@ -120,9 +119,12 @@ class TestScripts(Folders):
         neurons = ('neurons',
                    'neuron_lang',
                    'neuron_example',
-                   'phenotype_namespaces',)
+                   'phenotype_namespaces',
+                   'neuron_models/basic_neurons',
+                   'neuron_models/huang2017',)
+        print('checkout ok:', checkout_ok)
         if not checkout_ok:
-            skip += neurons
+            skip += tuple(n.split('/')[-1] for n in neurons)  # FIXME don't use stem below
         else:
             lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
 
@@ -180,12 +182,12 @@ class TestScripts(Folders):
 
         for path in paths:
             ppath = Path(path).absolute()
-            print('PPATH:  ', ppath)
+            #print('PPATH:  ', ppath)
             stem = ppath.stem
             module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
-            print('MPATH:  ', module_path)
+            #print('MPATH:  ', module_path)
             if stem not in skip:
-                print('TESTING:', module_path)
+                #print('TESTING:', module_path)
                 module = import_module(module_path)  # this returns the submod
                 #submod = getattr(module, stem)
                 if hasattr(module, '_CHECKOUT_OK'):

@@ -18,6 +18,17 @@ def suffix(ext):  # TODO multisuffix?
         return function
     return decorator
 
+def getMdReadFormat():
+    p = subprocess.Popen(['pandoc', '--version'], stdout=subprocess.PIPE)
+    out, _ = p.communicate()
+    version = out.split(b'\n', 1)[0].split(b' ', 1)[-1].decode()
+    if version < '2.2.1':
+        return 'markdown_github'
+    else:
+        return 'gfm'
+
+md_read_format = getMdReadFormat()
+
 compile_org_file = ['emacs', '-q', '-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix(), '--batch', '-f', 'compile-org-file']
 
 theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup')
@@ -45,10 +56,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
     # TODO fix relative links to point to github
 
-    format = 'gfm'  # travis is still on 1.12, so need a test to pick which version...
-    format = 'markdown_github'  # TODO newer version has 'gfm' but apparently I'm not on latest?
-
-    pandoc = ['pandoc', '-f', format, '-t', 'org', mdfile]
+    pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
 
     p = subprocess.Popen(pandoc,
@@ -70,7 +78,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
               f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
               #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
              )
-    print(header)
+    #print(header)
 
     out, err = s.communicate()
     #print(out.decode())
@@ -86,7 +94,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     if e.returncode:
         # if this happens direct stderr to stdout to get the message
         raise subprocess.CalledProcessError(e.returncode,
-                                            ' '.join(e.args) + f'{path.as_posix()}') from ValueError(err.decode())
+                                            ' '.join(e.args) + f' {path.as_posix()}') from ValueError(err.decode())
     if not body:
         raise ValueError(f'Output document for {path.as_posix()} '
                          'has no body! the input org was:\n'
@@ -141,6 +149,16 @@ def main():
                       for repo in repos
                       for f in repo.git.ls_files().split('\n')
                       if Path(f).suffix in suffixFuncs]
+
+    # doesn't work because read-from-minibuffer cannot block
+    #compile_org_forever = ['emacs', '-q', '-l',
+                           #Path(devconfig.git_local_base,
+                                #'orgstrap/init.el').resolve().as_posix(),
+                           #'--batch', '-f', 'compile-org-forever']
+    #org_compile_process = subprocess.Popen(compile_org_forever,
+                                           #stdin=subprocess.PIPE,
+                                           #stdout=subprocess.PIPE,
+                                           #stderr=subprocess.PIPE)
 
     outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
                                           for wd, doc, kwargs in wd_docs_kwargs)
