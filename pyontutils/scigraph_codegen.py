@@ -54,8 +54,7 @@ class restService:
         if output:
             req.headers['Accept'] = output
         prep = req.prepare()
-        safe = prep.url.replace(self.api_key, '[secure]') if self.api_key else prep.url
-        if self._verbose: print(safe)
+        if self._verbose: print(prep.url)
         try:
             resp = s.send(prep)
         except requests.exceptions.ConnectionError as e:
@@ -518,13 +517,7 @@ class State2(State):
 
 def main():
     from docopt import docopt
-    from docopt import parse_defaults
-    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     args = docopt(__doc__, version='scigraph-codegen 1.0.0')
-    if args['--api'] == defaults['--basepath']:
-        print('WARNING: cannot generate against SciCrunch api, code not generated.')
-        return
-
     output_file, api, version, basepath = (
         args['--' + k]
         for k in ('output-file', 'api', 'scigraph-version', 'basepath'))

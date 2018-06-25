@@ -26,8 +26,8 @@ from pyontutils.utils import readFromStdIn
 import pyontutils.ttlfmt
 from pyontutils.ttlfmt import parse, prepare
 
-PREFIXES = {k:v for k, v in PREFIXES.items()}
 PREFIXES.pop('NIFTTL')
+PREFIXES = {k:v for k, v in PREFIXES.items()}
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
@@ -39,8 +39,8 @@ def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     asdf.update(pi)
     # determine which prefixes we need
     for uri in list(graph.subjects()) + list(graph.predicates()) + list(graph.objects()):
-        if uri.endswith('.owl') or uri.endswith('.ttl') or uri.endswith('$$ID$$'):
-            continue  # don't prefix imports or templates
+        if uri.endswith('.owl') or uri.endswith('.ttl'):
+            continue  # don't prefix imports
         for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
             lrn = len(rn)
             if type(uri) == rdflib.BNode:
@@ -112,7 +112,7 @@ def main():
         for k in list(PREFIXES):
             PREFIXES.pop(k)
     else:
-        for x in args['--exclude'] and x in PREFIXES:
+        for x in args['--exclude']:
             PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)

@@ -1,10 +1,10 @@
 """ Tests for the various cli programs """
 
-from IPython import embed
 import os
 import sys
 import unittest
 import subprocess
+from importlib import import_module
 from pathlib import Path
 from git import Repo
 
@@ -12,8 +12,9 @@ from pyontutils.config import devconfig
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
 p2 = Path(devconfig.git_local_base).resolve().absolute()
 print(p1, p2)
-if p1 != p2:
-    devconfig.git_local_base = p1
+if not (p2 / devconfig.ontology_repo).exists():
+    if p1 != p2:
+        devconfig.git_local_base = p1
 
 from pyontutils import scigraph
 from pyontutils import core
@@ -118,18 +119,23 @@ class TestScripts(Folders):
         neurons = ('neurons',
                    'neuron_lang',
                    'neuron_example',
-                   'phenotype_namespaces',)
+                   'phenotype_namespaces',
+                   'neuron_models/basic_neurons',
+                   'neuron_models/huang2017',)
+        print('checkout ok:', checkout_ok)
         if not checkout_ok:
-            skip += neurons
+            skip += tuple(n.split('/')[-1] for n in neurons)  # FIXME don't use stem below
         else:
             lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
 
         ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
+        nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
         zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
         mains = {'nif_cell':None,
                  'methods':None,
                  'core':None,
                  'scigraph':None,
+                 'docs':None,
                  'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
         #['ilxcli', '--help'],
         'ttlfmt':[['ttlfmt', ban],
@@ -141,6 +147,7 @@ class TestScripts(Folders):
         'necromancy':['necromancy', ban],
         'ontload':[['ontload', '--help'],
                    ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
+                   ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
                    ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
         'ontutils':[['ontutils', '--help'],
                     #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
@@ -166,7 +173,7 @@ class TestScripts(Folders):
         _do_tests = []
         parent = Path(core.__file__).absolute().parent.parent
         repo = Repo(parent.as_posix())
-        paths = sorted(repo.git.ls_files('pyontutils/*.py').split('\n'))
+        paths = sorted(f for f in repo.git.ls_files().split('\n') if f.endswith('.py') and f.startswith('pyontutils'))
         for last in lasts:
             # FIXME hack to go last
             if last in paths:
@@ -174,17 +181,21 @@ class TestScripts(Folders):
                 paths.append(last)
 
         for path in paths:
-            stem = Path(path).stem
+            ppath = Path(path).absolute()
+            #print('PPATH:  ', ppath)
+            stem = ppath.stem
+            module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
+            #print('MPATH:  ', module_path)
             if stem not in skip:
-                print('TESTING:', stem)
-                module = __import__('pyontutils.' + stem)
-                submod = getattr(module, stem)
-                if hasattr(submod, '_CHECKOUT_OK'):
-                    print(submod, submod._CHECKOUT_OK)
-                    setattr(submod, '_CHECKOUT_OK', True)
+                #print('TESTING:', module_path)
+                module = import_module(module_path)  # this returns the submod
+                #submod = getattr(module, stem)
+                if hasattr(module, '_CHECKOUT_OK'):
+                    print(module, module._CHECKOUT_OK)
+                    setattr(module, '_CHECKOUT_OK', True)
 
                 if stem in mains:
-                    print('    will main', stem, module)
+                    print('    will main', module)
                     argv = mains[stem]
                     if argv and type(argv[0]) == list:
                         argvs = argv
@@ -192,11 +203,11 @@ class TestScripts(Folders):
                         argvs = argv,
 
                     for argv in argvs:
-                        _do_mains.append((getattr(module, stem), argv))
+                        _do_mains.append((module, argv))
                     #_modules.append(module)  # TODO doens't quite work
                 elif stem in tests:
                     print('    will test', stem, module)
-                    _do_tests.append(getattr(module, stem))
+                    _do_tests.append(module)
 
         print(_do_mains, _do_tests)
         self._do_mains.extend(_do_mains)

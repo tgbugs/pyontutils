@@ -6,13 +6,16 @@ python utilities for working with ontologies
 ## Requirements
 This repo requires PyPy3 or >=Python3.6.
 See and setup.py and Pipfile for additional requirements.
-ontload requires Java8 and >=maven3.3 in order to build SciGraph.
+`ontload` requires Java8 and >=maven3.3 in order to build SciGraph.
 [parcellation.py](pyontutils/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
 to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
 some other way. In order to build the packages required by this repo you will need
 gcc (and toolchain) installed and will need to have the development packages for
 `libxml` installed. To build the development dependencies you will also need the
 development packages for `postgresql`, and `protobuf` installed on your system.
+Building the documentation for the ontology requires `pandoc` and `emacs` along
+with [orgstrap](https://github.com/tgbugs/orgstrap). See [.travis.yml](.travis.yml)
+for an example of how to bootstrap a working dev environment.
 
 ## Installation
 The easiest way to install pyontutils is to use pipenv. It makes it easy to manage
@@ -30,7 +33,7 @@ to accomplish this.
 ### Development Installation
 Note that the optional development packages are not actually required and if you have
 installation issues development can proceed normally without them, some database
-queries will just be slower becuase they use a pure python mysql connector.
+queries will just be slower because they use a pure python mysql connector.
 
 If you are installing a development setup note that `mysql-connector` (aka `mysql-connector-python`)
 often cannot find the files it needs to build.  When installing pass them in as environment variables
@@ -48,7 +51,7 @@ If you use a development setup you will need to create symlinks described below.
 ## Utility Scripts
 pyontutils provides a set of scripts that are useful for maintaining and managing ontologies
 using git, and making them available via SciGraph. Note that if you choose the development
-installation option you will need to `ln -sT` the scripts to your perferred bin folder.
+installation option you will need to `ln -sT` the scripts to your preferred bin folder.
 1. [ttlfmt](pyontutils/ttlfmt.py)
 	Reserialize ontology files using deterministic turtle ([spec](docs/ttlser.md)).
 2. [ontutils](pyontutils/ontutils.py)

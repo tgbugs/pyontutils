@@ -11,8 +11,6 @@ Options:
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
     -o --outgoing           if not specified defaults to incoming
     -b --both               if specified goes in both directions
-    -t --test               run tests
-    -v --verbose            print extra information
 
 """
 
@@ -45,15 +43,14 @@ inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
 
-def graphFromGithub(link, verbose=False):
+def graphFromGithub(link):
     # mmmm no validation
     # also caching probably
-    if verbose:
-        print(link)
+    print(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
-    kwargs = {'local':local, 'verbose':verbose}
+def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False):
+    kwargs = {'local':local}
     prov = [
             f'<title>Transitive closure of {root} under {pred}</title>'
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
@@ -61,15 +58,14 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
     if local_filepath is not None:
         github_link = f'https://github.com/SciCrunch/NIF-Ontology/raw/{branch}/{local_filepath}'
         prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{github_link}">')
-        g = graphFromGithub(github_link, verbose)
+        g = graphFromGithub(github_link)
         if pred == 'subClassOf':
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
         try:
             kwargs['json'] = g.make_scigraph_json(pred, direct=not restriction)
             kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}
         except KeyError as e:
-            if verbose:
-                print(e)
+            print(e)
             return abort(422, 'Unknown predicate.')
     else:
         kwargs['graph'] = sgg
@@ -96,8 +92,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         dematerialize(list(tree.keys())[0], tree)
         return extras.html
     except (KeyError, TypeError) as e:
-        if verbose:
-            print(e)
+        print(e)
         if sgg.getNode(root):
             message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
         elif 'json' in kwargs:
@@ -181,7 +176,7 @@ file_examples = (
      'ttl/bridge/uberon-bridge.ttl', '?direction=OUTGOING&restriction=true'),
 )
 
-def server(api_key=None, verbose=False):
+def server(api_key=None):
     f = os.path.realpath(__file__)
     __file__name = os.path.basename(f)
     __file__path = os.path.dirname(f)
@@ -244,24 +239,20 @@ def server(api_key=None, verbose=False):
         maybe_abort = sanitize(pred, kwargs)
         if maybe_abort is not None:
             return maybe_abort
-        if verbose:
-            print(kwargs)
-            kwargs['verbose'] = verbose
+        print(kwargs)
         return render(pred, root, **kwargs)
 
     @app.route(f'/{basename}/query/<pred>/http:/<path:iri>', methods=['GET'])  # one / due to nginx
     @app.route(f'/{basename}/query/<pred>/https:/<path:iri>', methods=['GET'])  # just in case
     def route_iriquery(pred, iri):  # TODO maybe in the future
         root = 'http://' + iri  # for now we have to normalize down can check request in future
-        if verbose:
-            print('ROOOOT', root)
+        print('ROOOOT', root)
         kwargs = getArgs(request)
         kwargs['wgb'] = wgb
         maybe_abort = sanitize(pred, kwargs)
         if maybe_abort is not None:
             return maybe_abort
-        if verbose:
-            print(kwargs)
+        print(kwargs)
         return render(pred, root, **kwargs)
 
     @app.route(f'/{basename}/query/<pred>/<root>/<path:file>', methods=['GET'])
@@ -272,8 +263,7 @@ def server(api_key=None, verbose=False):
         maybe_abort = sanitize(pred, kwargs)
         if maybe_abort is not None:
             return maybe_abort
-        if verbose:
-            print(kwargs)
+        print(kwargs)
         try:
             return render(pred, root, **kwargs)
         except HTTPError:
@@ -311,13 +301,8 @@ def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontree 0.0.0')
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
-    verbose = args['--verbose']
-    sgg._verbose = verbose
-    sgv._verbose = verbose
 
-    if args['--test']:
-        test()
-    elif args['server']:
+    if args['server']:
         api = args['--api']
         if api is not None:
             scigraph.scigraph_client.BASEPATH = api
@@ -327,7 +312,7 @@ def main():
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
-        app = server(verbose=verbose)
+        app = server()
         app.debug = False
         app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?

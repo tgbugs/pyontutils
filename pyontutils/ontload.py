@@ -10,7 +10,7 @@ Usage:
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload extra [options] <repo>
-    ontload [options]
+    ontload --view-defaults
 
 Options:
     -g --git-remote=GBASE           remote git hosting          [default: {devconfig.git_remote_base}]
@@ -20,7 +20,7 @@ Options:
     -t --graphload-config=CFG       graphload.yaml location     [default: {devconfig.scigraph_graphload}]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
-    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_org}]
+    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_repo}]
     -b --branch=BRANCH              ontology branch to load     [default: master]
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
     -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
@@ -308,7 +308,7 @@ def do_patch(patch_config, local_base):
                     print(e.stdout.decode())
                     raise e
 
-def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False, revert=False):
+def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False):
     """ Read the import closure and use the local versions of the files. """
     done = []
     triples = set()
@@ -354,8 +354,6 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                 for s in scratch.subjects(rdf.type, owl.Ontology):
                     triples.add((s, owl.sameAs, rdflib.URIRef(local_filepath)))
                 for s, o in sorted(scratch.subject_objects(p)):
-                    if revert:
-                        raise NotImplemented('TODO')
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
                     if 'http://' in local_filepath or 'external' in local_filepath:  # FIXME what to do about https used inconsistently :/
@@ -446,13 +444,11 @@ def normalize_prefixes(graph, curies):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph, ontologies):
-    thisfile = Path(ontologies[0]).name
-    print(thisfile)
+def import_tree(graph):
     mg = makeGraph('', graph=graph)
     mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
     j = mg.make_scigraph_json('owl:imports', direct=True)
-    t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+    t, te = creatTree(*Query('NIFTTL:nif.ttl', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
     #print(t)
     return t, te
 
@@ -643,7 +639,7 @@ def run(args):
     if itrips:
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
-        tree, extra = import_tree(import_graph, ontologies)
+        tree, extra = import_tree(import_graph)
         with open(jpth(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
             f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 

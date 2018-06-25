@@ -351,7 +351,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head='', local=False, verbose=False):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head='', local=False):
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
     if json is None:
         if relationshipType == 'rdfs:subClassOf':
@@ -369,8 +369,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         #if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
             #flag_dep(j)
 
-    if verbose:
-        print(len(j['nodes']))
+    print(len(j['nodes']))
 
     nodes = {n['id']:n['lbl'] for n in j['nodes']}
     nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
@@ -391,14 +390,12 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         testk = len(n)
         test = sum(len(v) for v in n.values())
         while True:
-            if verbose:
-                print(test)
+            print(test)
             n = {k:[s for s in v if s in n or s == 'ROOT'] for k, v in n.items() if v}
             ntestk = len(n)
             ntest = sum(len(v) for v in n.values())
             if ntest == test and ntestk == testk:
-                if verbose:
-                    print('done')
+                print('done')
                 return n
             else:
                 test = ntest
@@ -455,7 +452,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             if graph is not None and local:
                 url = os.path.join(graph._basePath, 'vocabulary', 'id', k)
             else:
-                url = str(prefixes[prefix]) + suffix
+                url = prefixes[prefix] + suffix
         else:
             if graph is not None and local:
                 url = os.path.join(graph._basePath, 'vocabulary',

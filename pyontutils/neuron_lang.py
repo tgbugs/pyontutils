@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import inspect
-from pathlib import Path
 from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from IPython import embed
+
+current_file = Path(__file__).absolute()
 
 __all__ = [
     'AND',
@@ -20,11 +21,11 @@ __all__ = [
     'NegPhenotype',
     'LogicalPhenotype',
     'Neuron',
-    '_CHECKOUT_OK',
 ]
 
 def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
-           local_base=        None,  # devconfig.ontology_local_repo by default
+           local_base=        (current_file.parent.parent.parent /
+                               'NIF-Ontology').as_posix(),
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],
@@ -33,17 +34,15 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            out_graph_path=    '/tmp/_Neurons.ttl',
            out_imports=      ['ttl/phenotype-core.ttl'],
            out_graph=         None,
-           prefixes=          tuple(),
            force_remote=      False,
-           checkout_ok=       _CHECKOUT_OK,
-           scigraph=          None):  # defaults to devconfig.scigraph_api
+           scigraph=          'localhost:9000'):
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
     graphBase.configGraphIO(remote_base, local_base, branch,
                             core_graph_paths, core_graph,
-                            in_graph_paths, out_graph_path,
-                            out_imports, out_graph, prefixes,
-                            force_remote, checkout_ok, scigraph)
+                            in_graph_paths,
+                            out_graph_path, out_imports, out_graph,
+                            force_remote, scigraph)
     pred = graphBase._predicates
     return pred  # because the python module system is opinionated :/
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3.6
-#!/usr/bin/env pypy3
 """Format ontology files using a uniform ttl serializer from rdflib
 
 Usage:
@@ -14,7 +13,6 @@ Options:
     -y --subclass   use the subClassOf turtle serializer
     -c --compact    use the compact turtle serializer
     -u --uncompact  use the uncompact turtle serializer
-    -r --racket     use the racket turtle serializer
     -j --jsonld     use the rdflib-jsonld serializer
     -f --format=FM  specify the input format (used for pipes)
     -t --outfmt=F   specify the output format [default: nifttl]
@@ -47,7 +45,6 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
-rdflib.plugin.register('rktttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'RacketTurtleSerializer')
 
 def prepare(filepath_or_stream, outpath=None, stream=False):
     if stream:
@@ -147,8 +144,6 @@ def main():
         outfmt = 'uncmpttl'
     elif args['--jsonld']:
         outfmt = 'json-ld'
-    elif args['--racket']:
-        outfmt = 'rktttl'
     else:
         outfmt = args['--outfmt']
 

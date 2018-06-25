@@ -2,8 +2,8 @@
 
 Usage:  compare_graphs.py [-h | --help]
         compare_graphs.py [-v | --version]
-        compare_graphs.py [-r=<path>] [-t=<path>] (-f=<path> | -p=<path> | -c=<ext> -o=<path>) [-i] [-s] [--save-pickles] [--html=<path>]
-        compare_graphs.py [-r=<path>] [-t=<path>] [-c=<ext> -o=<path> --csv -i] [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>...] (-f=<path> | -p=<path> | -c=<ext> -o=<path>) [-i] [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>...] [-c=<ext> -o=<path> --csv -i --func=<functype>] [-s] [--save-pickles] [--html=<path>]
 
 Options:
     -h --help                          Display this help message
@@ -19,6 +19,7 @@ Options:
     -s --shorten-names                 Condensed the names of iris
     --html=<path>                      Converts the json comparison to html (default being the same path of -p | -d)
     --csv                              creats to csv but its only for ilx and custom
+    --func=<functype>                  What we want to do with the info after it has been cleared to go into scicrunch
 """
 VERSION = '0.3'
 from docopt import docopt
@@ -114,7 +115,8 @@ class GraphComparator(PredFinder):
                  shorten_names=False,
                  pred_diff=None,
                  get_only_partial_diff=False,
-                 custom_diff=None):
+                 custom_diff=None
+                 function=None):
         PredFinder.__init__(self)
         self.rg_path = rg_path
         self.tg_path = tg_path
@@ -127,6 +129,7 @@ class GraphComparator(PredFinder):
         self.diff = self.compare_dataframes()
         self.html = json2html.convert(json=self.diff)
         self.csv_ready_df = None
+        self.function = function
 
     def find_equivalent_pred(self, tpred, column_names):
         eqnames = [
@@ -335,7 +338,7 @@ class GraphComparator(PredFinder):
                 'ILX_IRI': rname,
                 'ONTO_IRI': tname,
                 'SOURCE_ONTOLOGY': p(self.tg_path).stem,
-                'FUNCTION': 'add',
+                'FUNCTION': self.function,
             })
             for rk, rv in rrow.items():  #reference key, reference value
 

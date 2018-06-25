@@ -285,7 +285,7 @@ def swanson():
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', '')
+    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
     PREFIXES.update({
         #'':ontid + '/',  # looking for better options
         'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
@@ -478,7 +478,7 @@ def swanson():
     #print(sp.nodes[1].keys())
     nbase = PREFIXES['SWAN'] + '%s'
     json_ = {'nodes':[],'edges':[]}
-    parent = ilxtr.swansonBrainRegionConcept
+    parent = ILXREPLACE('swansonBrainRegionConcept')
     for node, anns in sp.nodes.items():
         nid = nbase % node
         new_graph.add_class(nid, parent, label=anns['label'])

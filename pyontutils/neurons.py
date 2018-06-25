@@ -1,6 +1,5 @@
 #!/usr/bin/env python3.6
 import os
-import atexit
 import inspect
 from pathlib import Path, PurePath as PPath
 from collections import MutableMapping
@@ -11,12 +10,11 @@ from IPython import embed
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc
-from pyontutils.core import makeGraph, makePrefixes, PREFIXES as uPREFIXES
-from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON
-from pyontutils.config import devconfig
+from pyontutils.core import makeGraph, makePrefixes, TEMP, UBERON, PREFIXES as uPREFIXES
 from pyontutils.qnamefix import cull_prefixes
 
-_CHECKOUT_OK = False
+current_file = Path(__file__).absolute()
+gitf = current_file.parent.parent.parent
 
 __all__ = [
     'AND',
@@ -35,7 +33,6 @@ __all__ = [
     'Neuron',
     #'NeuronArranger',
     '_NEURON_CLASS',
-    '_CHECKOUT_OK',
 ]
 
 # language constructes
@@ -72,8 +69,6 @@ class graphBase:
 
     LocalNames = {}
 
-    _registered = False
-
     __import_name__ = __name__
 
     #_sgv = Vocabulary(cache=True)
@@ -105,32 +100,16 @@ class graphBase:
             return putativeURI
 
     @staticmethod
-    def set_repo_state():
-        if not hasattr(graphBase, 'original_branch'):
-            graphBase.original_branch = repo.active_branch
-        if not graphBase._registered:
-            atexit.register(graphBase.repo.git.checkout, graphBase.original_branch)
-            graphBase._registered = True
-
-        graphBase.repo.git.checkout(graphBase.working_branch)
-
-    @staticmethod
-    def reset_repo_state():
-        graphBase.repo.git.checkout(graphBase.original_branch)
-
-    @staticmethod
     def configGraphIO(remote_base,
-                      local_base=        None,
-                      branch=            'master',
+                      local_base,
+                      branch,
                       core_graph_paths=  tuple(),
                       core_graph=        None,
                       in_graph_paths=    tuple(),
                       out_graph_path=    None,
                       out_imports=       tuple(),
                       out_graph=         None,
-                      prefixes=          tuple(),
                       force_remote=      False,
-                      checkout_ok=       _CHECKOUT_OK,
                       scigraph=          None):
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -151,20 +130,16 @@ class graphBase:
                        out_graph_path=    '/tmp/outputGraph.ttl',
                        out_imports=      ['local/path/localCore.ttl'],
                        out_graph=         None,
-                       prefixes=          {'hello':'http://world.org/'}
                        force_remote=      False,
-                       checkout_ok=       False,
-                       scigraph=          'http://scigraph.mydomain.org:9000/scigraph'):
+                       scigraph=          'scigraph.mydomain.org:9000'):
             graphBase.configGraphIO(remote_base, local_base, branch,
                                     core_graph_paths, core_graph,
                                     in_graph_paths,
                                     out_graph_path, out_imports, out_graph,
-                                    force_remote, checkout_ok, scigraph)
+                                    force_remote, scigraph)
 
         """
 
-        if local_base is None:
-            local_base = devconfig.ontology_local_repo
         graphBase.local_base = Path(local_base).expanduser()
         graphBase.remote_base = remote_base
 
@@ -187,16 +162,8 @@ class graphBase:
 
         if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
-            if repo.active_branch.name != branch and not checkout_ok:
-                raise FileNotFoundError('Local git repo not on %s branch!\n'
-                                        'Please run `git checkout %s` in %s '
-                                        'or set checkout_ok=True.'
-                                        % (branch, branch, local_base))
-            elif checkout_ok:
-                graphBase.repo = repo
-                graphBase.working_branch = 'neurons'
-                graphBase.original_branch = repo.active_branch
-                graphBase.set_repo_state()
+            if repo.active_branch.name != branch:
+                raise FileNotFoundError('Local git repo not on %s branch! Please run `git checkout %s` in %s' % (branch, branch, local_base))
             use_core_paths = local_core_paths
             use_in_paths = local_in_paths
         else:
@@ -216,12 +183,10 @@ class graphBase:
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('owl',
-                                   'TEMP',  # XXX PREFIXES
+        nin_graph = attachPrefixes('TEMP',  # XXX PREFIXES
                                    'PAXRAT',
                                    'GO',
                                    'CHEBI',
-                                   *prefixes,
                                    graph=in_graph)
         graphBase.in_graph = in_graph
 
@@ -236,7 +201,6 @@ class graphBase:
                                    'GO',
                                    'PR',
                                    'CHEBI',
-                                   'PATO',
                                    'PAXRAT',
                                    'UBERON',
                                    'NCBITaxon',
@@ -245,7 +209,6 @@ class graphBase:
                                    'ILX',
                                    'SAO',
                                    'BIRNLEX',
-                                   *prefixes,
                                    graph=out_graph)
         graphBase.out_graph = out_graph
 
@@ -262,7 +225,7 @@ class graphBase:
 
         # scigraph setup
         if scigraph is not None:
-            graphBase._sgv = Vocabulary(cache=True, basePath=scigraph)
+            graphBase._sgv = Vocabulary(cache=True, basePath='http://' + scigraph + '/scigraph')
         else:
             graphBase._sgv = Vocabulary(cache=True)
 
@@ -293,34 +256,6 @@ class graphBase:
     @staticmethod
     def neurons():
         return sorted(NeuronBase.existing_pes)
-
-    def disjointWith(self, *others):
-        for other in others:
-            if isinstance(other, self.__class__):
-                self.out_graph.add((self.id_, owl.disjointWith, other.id_))
-            else:
-                self.out_graph.add((self.id_, owl.disjointWith, other))
-
-        return self
-
-    def equivalentClass(self, *others):
-        for other in others:
-            if isinstance(other, self.__class__):
-                #if isinstance(other, NegPhenotype):  # FIXME maybe this is the issue with neg equivs?
-                self.out_graph.add((self.id_, owl.equivalentClass, other.id_))
-            else:
-                self.out_graph.add((self.id_, owl.equivalentClass, other))
-
-        return self
-
-    def subClassOf(self, *others):
-        for other in others:
-            if isinstance(other, self.__class__):
-                self.out_graph.add((self.id_, rdfs.subClassOf, other.id_))
-            else:
-                self.out_graph.add((self.id_, rdfs.subClassOf, other))
-
-        return self
 
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
@@ -355,7 +290,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'UBERON:0001950':'Neocortex',
         'UBERON:0008933':'S1',
     }
-    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False):
+    def __init__(self, phenotype, ObjectProperty=None, label=None):
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         super().__init__()
@@ -373,9 +308,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
-        if label is not None and override:
-            self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
-
         # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
 
@@ -385,9 +317,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         except StopIteration:  # is a phenotype derived from an external class
             try:
                 if not self._sgv.findById(subject):
-                    print(tc.red('WARNING:'), 'Unknown phenotype', subject)
+                    print('WARNING: Unknown phenotype ', subject)
             except ConnectionError:
-                print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
+                print('WARNING: Phenotype unvalidated. No SciGraph was instance found at',
                       self._sgv._basePath)
         return subject
 
@@ -417,7 +349,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if op in self._predicates.__dict__.values():
             return op
         else:
-            raise TypeError('WARNING: Unknown ObjectProperty %s' % repr(op))
+            raise TypeError('Unknown ObjectProperty %s' % repr(op))
 
     @property
     def eLabel(self):
@@ -431,11 +363,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 l = self._sgv.findById(self.p)['labels'][0]
             except ConnectionError as e:
                 print(e)
-                l = self.ng.qname(self.p)
+                l = self.p
             except TypeError:
-                l = self.ng.qname(self.p)
+                l = self.p
             except IndexError:
-                l = self.ng.qname(self.p)
+                l = self.p
         else:
             l = l[0]
         return self.labelPostRule(l)
@@ -480,9 +412,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         yield self.p
 
     def _uri_frag(self, index):
-        return (self._rank +
-                f'-p{index(self.e)}-' +
-                self.ng.qname(self.p).replace(':','-'))
+        return self._rank + f'-p{index(self.e)}-' + self.ng.qname(self.p).replace(':','-')
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
     def _graphify(self, graph=None):
@@ -556,10 +486,6 @@ class LogicalPhenotype(graphBase):
         return tuple((pe.e for pe in self.pes))
 
     @property
-    def pLabel(self):
-        return f'({self.op} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
-
-    @property
     def pHiddenLabel(self):
         label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
@@ -617,12 +543,12 @@ class LogicalPhenotype(graphBase):
         return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
-        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
+        op = self.local_names[self.op]
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
     def __str__(self):
-        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
+        op = self.local_names[self.op]
         t =  ' ' * (len(self.__class__.__name__) + 1)
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
@@ -635,7 +561,7 @@ class NeuronBase(graphBase):
     ids_pes = {}
     pes_ids = {}
     __context = tuple()  # this cannot be changed after __init__, neurons are not dynamic
-    def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
+    def __init__(self, *phenotypeEdges, id_=None):
         super().__init__()
         self.ORDER = [
         # FIXME it may make more sense to manage this in the NeuronArranger
@@ -644,7 +570,6 @@ class NeuronBase(graphBase):
         self._predicates.hasInstanceInSpecies,
         self._predicates.hasTaxonRank,
         # TODO hasDevelopmentalStage   !!!!! FIXME
-        self._predicates.hasLocationPhenotype,  # FIXME
         self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
         self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
         self._predicates.hasDendriteMorphologicalPhenotype,
@@ -655,10 +580,7 @@ class NeuronBase(graphBase):
         #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
         self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
         self._predicates.hasExpressionPhenotype,
-        self._predicates.hasNeurotransmitterPhenotype,
-        self._predicates.hasCircuitRolePhenotype,
         self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-        self._predicates.hasExperimentalPhenotype,
         self._predicates.hasPhenotype,  # last
         ]
 
@@ -666,9 +588,7 @@ class NeuronBase(graphBase):
         phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
 
         if id_ and phenotypeEdges:
-            self.id_ = self.expand(id_)
-            print('WARNING: you may be redefining a neuron!')
-            #raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
+            raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
         elif id_:
             self.id_ = self.expand(id_)
         elif phenotypeEdges:
@@ -706,16 +626,11 @@ class NeuronBase(graphBase):
             else:
                 self._pesDict[pe.e] = [pe]
 
-        self._label = None
-        if override:
-            if label is not None:
-                self._label = label
-
         if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph:
             self.Class = self.existing_pes[self]
         else:
             self.Class = self._graphify()
-            self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
+            self.Class.label = rdflib.Literal(self.label)
             self.existing_pes[self] = self.Class
 
     def _tuplesToPes(self, pes):
@@ -765,10 +680,6 @@ class NeuronBase(graphBase):
 
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
-        if self._label is not None:
-            self.Class.label = (rdflib.Literal(self._label),)
-            return self._label
-
         # TODO predicate actions are the right way to implement the transforms here
         def sublab(edge):
             sublabs = []
@@ -813,7 +724,7 @@ class NeuronBase(graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = 'interneuron' if Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'neuron'
+        nin_switch = 'Interneuron' if Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'Neuron'
         label.append(nin_switch)
 
         new_label = ' '.join(label)
@@ -904,7 +815,7 @@ class Neuron(NeuronBase):
         disjoints = [  # FIXME there has got to be a better place to do this :/
         self._predicates.hasInstanceInSpecies,
         self._predicates.hasSomaLocatedIn,
-        self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+        self._predicates.hasLayerLocationPhenotype,
         self._predicates.hasMorphologicalPhenotype,
         ]
 
@@ -1023,9 +934,6 @@ class Neuron(NeuronBase):
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
-        #existing = list(self.Class.equivalentClass)
-        #if existing or str(pe.pLabel) == 'Htr3a':
-            #embed()
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
@@ -1200,26 +1108,8 @@ class injective(type):
     def __len__(self):
         return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)])
 
-    def items(self):
-        for k in dir(self):
-            v = getattr(self, k)
-            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-                yield k, v
-
-    def __contains__(self, key):
-        try:
-            self.__getitem__(key)
-            return True
-        except:
-            return False
-
     def __getitem__(self, key):
-        print(key)
-        v = getattr(self, key)
-        if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
-            return v
-        else:
-            raise KeyError(f'{key} not in self.__class__.__name__')
+        return self.__dict__[key]
 
     def __repr__(self):
         newline = '\n'
@@ -1281,8 +1171,8 @@ class LocalNameManager(metaclass=injective):
     'ilxtr:hasPhenotype',
     )
 
-    #def __getitem__(self, key):  # just in case someone makes an instance by mistake
-        #return self.__class__.__dict__[key]
+    def __getitem__(self, key):  # just in case someone makes an instance by mistake
+        return self.__class__.__dict__[key]
 
 
 def checkCalledInside(classname, stack):
@@ -1379,7 +1269,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = Path(devconfig.git_local_repo, 'ttl')
+    local_prefix = (gitf / 'NIF-Ontology/ttl').expanduser()
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',
@@ -1402,33 +1292,19 @@ def main():
                             'ILX',
                             'SAO',
                             'BIRNLEX',)
-    graphBase.configGraphIO(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
-                            local_base=        None,  # devconfig.ontology_local_repo by default
-                            branch=            'neurons',
-                            core_graph_paths= ['ttl/phenotype-core.ttl',
-                                               'ttl/phenotypes.ttl'],
-                            core_graph=        EXISTING_GRAPH,
-                            in_graph_paths=    tuple(),
-                            out_graph_path=    '/tmp/_Neurons.ttl',
-                            out_imports=      ['ttl/phenotype-core.ttl'],
-                            out_graph=         rdflib.Graph(),
-                            force_remote=      False,
-                            checkout_ok=       _CHECKOUT_OK,
-                            scigraph=          None)
-    #graphBase.core_graph = EXISTING_GRAPH
-    #graphBase.out_graph = rdflib.Graph()
-    graphBase.__import_name__ = 'pyontutils.neurons'
+    graphBase.core_graph = EXISTING_GRAPH
+    graphBase.out_graph = rdflib.Graph()
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-    reg_neurons = list(g.g.subjects(rdfs.subClassOf, g.expand(_NEURON_CLASS)))
+    reg_neurons = list(g.g.subjects(rdflib.RDFS.subClassOf, g.expand(_NEURON_CLASS)))
     tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % _NEURON_CLASS)]
     def_neurons = g.get_equiv_inter(_NEURON_CLASS)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))
-    og1 = MeasuredNeuron.out_graph = rdflib.Graph()  # there is only 1 out_graph at a time, load and switch
-    mns = [MeasuredNeuron(id_=n) for n in nodef]
+    MeasuredNeuron.out_graph = rdflib.Graph()
     Neuron.out_graph = rdflib.Graph()
+    mns = [MeasuredNeuron(id_=n) for n in nodef]
     dns = [Neuron(id_=n) for n in sorted(def_neurons)]
     #dns += [Neuron(*m.pes) if m.pes else m.id_ for m in mns]
     dns += [Neuron(*m.pes) for m in mns if m.pes]
@@ -1436,17 +1312,16 @@ def main():
     # reset everything for export
     Neuron.out_graph = rdflib.Graph()
     ng = makeGraph('output', prefixes=PREFIXES, graph=Neuron.out_graph)
-    NeuronBase.existing_pes = {}  # reset this as well because the old Class references have vanished
+    Neuron.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
-    #from neuron_lang import WRITEPYTHON
-    #WRITEPYTHON(sorted(dns))
-    Neuron.write_python()
+    from neuron_lang import WRITEPYTHON
+    WRITEPYTHON(sorted(dns))
     ng.add_ont(TEMP['defined-neurons'], 'Defined Neurons', 'NIFDEFNEU',
                'VERY EXPERIMENTAL', '0.0.0.1a')
-    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotype-core.ttl'))
-    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotypes.ttl'))
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotype-Core.ttl')
+    ng.add_trip(TEMP['defined-neurons'], 'owl:imports', 'http://ontology.neuinfo.org/NIF/ttl/NIF-Phenotypes.ttl')
     ng.write()
-    bads = [n for n in ng.g.subjects(rdf.type, owl.Class)
+    bads = [n for n in ng.g.subjects(rdflib.RDF.type,rdflib.OWL.Class)
             if len(list(ng.g.predicate_objects(n))) == 1]
     embed()
 
