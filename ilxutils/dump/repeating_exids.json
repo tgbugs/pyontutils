@@ -1,0 +1,361 @@
+[
+    {
+        "uri": "http://neurolex.org/wiki/nifext_13",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109851",
+            "http://uri.interlex.org/base/ilx_0109850"
+        ]
+    },
+    {
+        "uri": "http://neurolex.org/wiki/nifext_14",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111536",
+            "http://uri.interlex.org/base/ilx_0111537"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/GO_0005874",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0106926",
+            "http://uri.interlex.org/base/ilx_0106927"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/GO_0005911",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0105790",
+            "http://uri.interlex.org/base/ilx_0105547"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/GO_0044464",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101877",
+            "http://uri.interlex.org/base/ilx_0109836"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/GO_0048788",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100290",
+            "http://uri.interlex.org/base/ilx_0109188",
+            "http://uri.interlex.org/base/ilx_0109186"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_29077",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0103907",
+            "http://uri.interlex.org/base/ilx_0101274"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_29964",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101620",
+            "http://uri.interlex.org/base/ilx_0101619"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_30225",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111742",
+            "http://uri.interlex.org/base/ilx_0100879"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_33317",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109469",
+            "http://uri.interlex.org/base/ilx_0109470"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_59475",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109493",
+            "http://uri.interlex.org/base/ilx_0108540"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_6420",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0105062",
+            "http://uri.interlex.org/base/ilx_0106722"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_70853",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111998",
+            "http://uri.interlex.org/base/ilx_0111997"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_7089",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101382",
+            "http://uri.interlex.org/base/ilx_0101385"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_7129",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0106510",
+            "http://uri.interlex.org/base/ilx_0106511"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_76177",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111630",
+            "http://uri.interlex.org/base/ilx_0106765"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_8342",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100800",
+            "http://uri.interlex.org/base/ilx_0109644"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_8352",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0112691",
+            "http://uri.interlex.org/base/ilx_0108907"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/NCBITaxon_9765",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101079",
+            "http://uri.interlex.org/base/ilx_0106754"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/OBI_0000447",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0105643",
+            "http://uri.interlex.org/base/ilx_0105644"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0000044",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0110945",
+            "http://uri.interlex.org/base/ilx_0103471"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0001727",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111536",
+            "http://uri.interlex.org/base/ilx_0111537"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0002434",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0112048",
+            "http://uri.interlex.org/base/ilx_0105483"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0002436",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0112514",
+            "http://uri.interlex.org/base/ilx_0101464"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0002786",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100174",
+            "http://uri.interlex.org/base/ilx_0100173"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0002819",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100811",
+            "http://uri.interlex.org/base/ilx_0100813",
+            "http://uri.interlex.org/base/ilx_0102676"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0004074",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0112394",
+            "http://uri.interlex.org/base/ilx_0106280"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0004083",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0107641",
+            "http://uri.interlex.org/base/ilx_0112405"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0004720",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0112392",
+            "http://uri.interlex.org/base/ilx_0112407"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0006095",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100749",
+            "http://uri.interlex.org/base/ilx_0100086"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0006096",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101465",
+            "http://uri.interlex.org/base/ilx_0109133"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0028426",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0108036",
+            "http://uri.interlex.org/base/ilx_0108037"
+        ]
+    },
+    {
+        "uri": "http://purl.obolibrary.org/obo/UBERON_0034894",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0106048",
+            "http://uri.interlex.org/base/ilx_0106079"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0008_1032",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0108700",
+            "http://uri.interlex.org/base/ilx_0109380"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0008_1160",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109759",
+            "http://uri.interlex.org/base/ilx_0109758"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_0029",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0110717",
+            "http://uri.interlex.org/base/ilx_0105632"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_0071",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0100264",
+            "http://uri.interlex.org/base/ilx_0100265"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_0091",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0103662",
+            "http://uri.interlex.org/base/ilx_0110106"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_1138",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111456",
+            "http://uri.interlex.org/base/ilx_0111478"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_1150",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0104031",
+            "http://uri.interlex.org/base/ilx_0104030"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_1156",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109714",
+            "http://uri.interlex.org/base/ilx_0104238"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0018_1250",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109687",
+            "http://uri.interlex.org/base/ilx_0109686"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0020_0013",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0111929",
+            "http://uri.interlex.org/base/ilx_0105509"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0020_1206",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0107830",
+            "http://uri.interlex.org/base/ilx_0107841"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/0028_0002",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0110331",
+            "http://uri.interlex.org/base/ilx_0110332"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/3006_0026",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0110186",
+            "http://uri.interlex.org/base/ilx_0110185"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/300A_0104",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0101350",
+            "http://uri.interlex.org/base/ilx_0101346"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/300C_0022",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0109755",
+            "http://uri.interlex.org/base/ilx_0109757"
+        ]
+    },
+    {
+        "uri": "http://uri.interlex.org/dicom/uris/terms/60xx_0045",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0108302",
+            "http://uri.interlex.org/base/ilx_0108304"
+        ]
+    },
+    {
+        "uri": "http://www.gbif.org/species/8097933",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0107211",
+            "http://uri.interlex.org/base/ilx_0107210"
+        ]
+    },
+    {
+        "uri": "http://www.itis.gov/servlet/SingleRpt/SingleRpt?search_topic=TSN&search_value=78156",
+        "repeats": [
+            "http://uri.interlex.org/base/ilx_0104629",
+            "http://uri.interlex.org/base/ilx_0107805"
+        ]
+    }
+]

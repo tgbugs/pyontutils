@@ -1,0 +1,6362 @@
+[
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004678",
+        "ilx_label": "apex of spinal cord dorsal horn birnlex 2670",
+        "onto_label": [
+            "apex of spinal cord dorsal horn"
+        ],
+        "ilx_id": "ilx_0100049",
+        "label_diffs": [
+            [
+                "apex of spinal cord dorsal horn",
+                "- birnlex",
+                "- 2670"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8266666666666667
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006095",
+        "ilx_label": "brodmann 1909 area 41",
+        "onto_label": [
+            "anterior transverse temporal area 41"
+        ],
+        "ilx_id": "ilx_0100086",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- brodmann",
+                "- 1909",
+                "+ anterior",
+                "+ transverse",
+                "+ temporal",
+                "area 41"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.42105263157894735
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002786",
+        "ilx_label": "abducens nerve fibers",
+        "onto_label": [
+            "root of abducens nerve"
+        ],
+        "ilx_id": "ilx_0100173",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ root",
+                "+ of",
+                "abducens nerve",
+                "- fibers"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6511627906976745
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002786",
+        "ilx_label": "abducens nerve root",
+        "onto_label": [
+            "root of abducens nerve"
+        ],
+        "ilx_id": "ilx_0100174",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ root",
+                "+ of",
+                "abducens nerve",
+                "- root"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6829268292682927
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002763",
+        "ilx_label": "accessory medullary lamina",
+        "onto_label": [
+            "accessory medullary lamina of globus pallidus"
+        ],
+        "ilx_id": "ilx_0100214",
+        "label_diffs": [
+            [
+                "accessory medullary lamina",
+                "+ of",
+                "+ globus",
+                "+ pallidus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7323943661971831
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007639",
+        "ilx_label": "alveus",
+        "onto_label": [
+            "hippocampus alveus"
+        ],
+        "ilx_id": "ilx_0100522",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "alveus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014468",
+        "ilx_label": "ansoparamedian fissure",
+        "onto_label": [
+            "ansoparamedian fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0100657",
+        "label_diffs": [
+            [
+                "ansoparamedian fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7586206896551724
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002180",
+        "ilx_label": "anterior funiculus",
+        "onto_label": [
+            "ventral funiculus of spinal cord"
+        ],
+        "ilx_id": "ilx_0100699",
+        "label_diffs": [
+            [
+                "- anterior",
+                "+ ventral",
+                "funiculus",
+                "+ of",
+                "+ spinal",
+                "+ cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.52
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002131",
+        "ilx_label": "anterior lobe of the cerebellum",
+        "onto_label": [
+            "anterior lobe of cerebellum"
+        ],
+        "ilx_id": "ilx_0100713",
+        "label_diffs": [
+            [
+                "anterior lobe of",
+                "- the",
+                "cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9310344827586207
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002679",
+        "ilx_label": "anterodorsal nucleus",
+        "onto_label": [
+            "anterodorsal nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0100755",
+        "label_diffs": [
+            [
+                "anterodorsal nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7692307692307693
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002681",
+        "ilx_label": "anteromedial nucleus",
+        "onto_label": [
+            "anteromedial nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0100768",
+        "label_diffs": [
+            [
+                "anteromedial nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7692307692307693
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002685",
+        "ilx_label": "anteroventral nucleus",
+        "onto_label": [
+            "anteroventral nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0100779",
+        "label_diffs": [
+            [
+                "anteroventral nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7777777777777778
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002819",
+        "ilx_label": "apex of the cochlear canal",
+        "onto_label": [
+            "apex of cochlea"
+        ],
+        "ilx_id": "ilx_0100813",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "apex of",
+                "- the",
+                "- cochlear",
+                "+ cochlea",
+                "- canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7317073170731707
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002362",
+        "ilx_label": "arachnoid membrane",
+        "onto_label": [
+            "arachnoid mater"
+        ],
+        "ilx_id": "ilx_0100870",
+        "label_diffs": [
+            [
+                "arachnoid",
+                "- membrane",
+                "+ mater"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7878787878787878
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002687",
+        "ilx_label": "area x",
+        "onto_label": [
+            "area x of ventral lateral nucleus"
+        ],
+        "ilx_id": "ilx_0100891",
+        "label_diffs": [
+            [
+                "area x",
+                "+ of",
+                "+ ventral",
+                "+ lateral",
+                "+ nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3076923076923077
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002827",
+        "ilx_label": "auditory ganglion",
+        "onto_label": [
+            "vestibulocochlear ganglion"
+        ],
+        "ilx_id": "ilx_0100998",
+        "label_diffs": [
+            [
+                "- auditory",
+                "+ vestibulocochlear",
+                "ganglion"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5116279069767442
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005844",
+        "ilx_label": "axial regional part of spinal cord",
+        "onto_label": [
+            "spinal cord segment"
+        ],
+        "ilx_id": "ilx_0101036",
+        "label_diffs": [
+            [
+                "- axial",
+                "- regional",
+                "- part",
+                "- of",
+                "spinal cord",
+                "+ segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.41509433962264153
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0010011",
+        "ilx_label": "basal ganglia",
+        "onto_label": [
+            "collection of basal ganglia"
+        ],
+        "ilx_id": "ilx_0101102",
+        "label_diffs": [
+            [
+                "+ collection",
+                "+ of",
+                "basal ganglia"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.65
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0010010",
+        "ilx_label": "basal nucleus",
+        "onto_label": [
+            "basal nucleus of telencephalon"
+        ],
+        "ilx_id": "ilx_0101109",
+        "label_diffs": [
+            [
+                "basal nucleus",
+                "+ of",
+                "+ telencephalon"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6046511627906976
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014626",
+        "ilx_label": "base of the cochlear canal",
+        "onto_label": [
+            "base of cochlear canal"
+        ],
+        "ilx_id": "ilx_0101115",
+        "label_diffs": [
+            [
+                "base of",
+                "- the",
+                "cochlear canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9166666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002226",
+        "ilx_label": "basilar membrane",
+        "onto_label": [
+            "basilar membrane of cochlea"
+        ],
+        "ilx_id": "ilx_0101119",
+        "label_diffs": [
+            [
+                "basilar membrane",
+                "+ of",
+                "+ cochlea"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7441860465116279
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006107",
+        "ilx_label": "basolateral nuclear complex",
+        "onto_label": [
+            "basolateral amygdaloid nuclear complex"
+        ],
+        "ilx_id": "ilx_0101128",
+        "label_diffs": [
+            [
+                "basolateral",
+                "+ amygdaloid",
+                "nuclear complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8307692307692308
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0011176",
+        "ilx_label": "bed nuclei of the stria terminalis oval nucleus",
+        "onto_label": [
+            "oval nucleus of stria terminalis"
+        ],
+        "ilx_id": "ilx_0101173",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0023958",
+        "label_diffs": [
+            [
+                "- bed",
+                "+ oval",
+                "- nuclei",
+                "+ nucleus",
+                "of",
+                "- the",
+                "stria terminalis",
+                "- oval",
+                "- nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6582278481012658
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000468",
+        "ilx_label": "body",
+        "onto_label": [
+            "multicellular organism"
+        ],
+        "ilx_id": "ilx_0101370",
+        "label_diffs": [
+            [
+                "- body",
+                "+ multicellular",
+                "+ organism"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.07692307692307693
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000467",
+        "ilx_label": "body system",
+        "onto_label": [
+            "anatomical system"
+        ],
+        "ilx_id": "ilx_0101377",
+        "label_diffs": [
+            [
+                "- body",
+                "+ anatomical",
+                "system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5714285714285714
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002436",
+        "ilx_label": "brodmann 1909 area 17",
+        "onto_label": [
+            "primary visual cortex"
+        ],
+        "ilx_id": "ilx_0101464",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ primary",
+                "+ visual",
+                "+ cortex",
+                "- brodmann",
+                "- 1909",
+                "- area",
+                "- 17"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006096",
+        "ilx_label": "brodmann area 42",
+        "onto_label": [
+            "posterior transverse temporal area 42"
+        ],
+        "ilx_id": "ilx_0101465",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- brodmann",
+                "+ posterior",
+                "+ transverse",
+                "+ temporal",
+                "area 42"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4528301886792453
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0013540",
+        "ilx_label": "brodmann area 9",
+        "onto_label": [
+            "brodmann 1909 area 9"
+        ],
+        "ilx_id": "ilx_0101466",
+        "label_diffs": [
+            [
+                "brodmann",
+                "+ 1909",
+                "area 9"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8571428571428571
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0013529",
+        "ilx_label": "brodmann partition scheme region",
+        "onto_label": [
+            "brodmann area"
+        ],
+        "ilx_id": "ilx_0101471",
+        "label_diffs": [
+            [
+                "brodmann",
+                "+ area",
+                "- partition",
+                "- scheme",
+                "- region"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003881",
+        "ilx_label": "ca1",
+        "onto_label": [
+            "ca1 field of hippocampus"
+        ],
+        "ilx_id": "ilx_0101520",
+        "label_diffs": [
+            [
+                "ca1",
+                "+ field",
+                "+ of",
+                "+ hippocampus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2222222222222222
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014548",
+        "ilx_label": "ca1 stratum pyramidale",
+        "onto_label": [
+            "pyramidal layer of ca1"
+        ],
+        "ilx_id": "ilx_0101525",
+        "label_diffs": [
+            [
+                "+ pyramidal",
+                "+ layer",
+                "+ of",
+                "ca1",
+                "- stratum",
+                "- pyramidale"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.45454545454545453
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003882",
+        "ilx_label": "ca2",
+        "onto_label": [
+            "ca2 field of hippocampus"
+        ],
+        "ilx_id": "ilx_0101527",
+        "label_diffs": [
+            [
+                "ca2",
+                "+ field",
+                "+ of",
+                "+ hippocampus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2222222222222222
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014549",
+        "ilx_label": "ca2 stratum pyramidale",
+        "onto_label": [
+            "pyramidal layer of ca2"
+        ],
+        "ilx_id": "ilx_0101532",
+        "label_diffs": [
+            [
+                "+ pyramidal",
+                "+ layer",
+                "+ of",
+                "ca2",
+                "- stratum",
+                "- pyramidale"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.45454545454545453
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003883",
+        "ilx_label": "ca3",
+        "onto_label": [
+            "ca3 field of hippocampus"
+        ],
+        "ilx_id": "ilx_0101534",
+        "label_diffs": [
+            [
+                "ca3",
+                "+ field",
+                "+ of",
+                "+ hippocampus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2222222222222222
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014550",
+        "ilx_label": "ca3 stratum pyramidale",
+        "onto_label": [
+            "pyramidal layer of ca3"
+        ],
+        "ilx_id": "ilx_0101541",
+        "label_diffs": [
+            [
+                "+ pyramidal",
+                "+ layer",
+                "+ of",
+                "ca3",
+                "- stratum",
+                "- pyramidale"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.45454545454545453
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002781",
+        "ilx_label": "caudal part of ventral posterolateral nucleus",
+        "onto_label": [
+            "caudal part of ventral posterolateral nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0101723",
+        "label_diffs": [
+            [
+                "caudal part of ventral posterolateral nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8823529411764706
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005383",
+        "ilx_label": "caudoputamen",
+        "onto_label": [
+            "caudate-putamen"
+        ],
+        "ilx_id": "ilx_0101739",
+        "label_diffs": [
+            [
+                "- caudoputamen",
+                "+ caudate-putamen"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8148148148148148
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0022303",
+        "ilx_label": "cell layer",
+        "onto_label": [
+            "nervous system cell part layer"
+        ],
+        "ilx_id": "ilx_0101849",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0000119",
+        "label_diffs": [
+            [
+                "+ nervous",
+                "+ system",
+                "cell",
+                "+ part",
+                "layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003034",
+        "ilx_label": "central dorsal nucleus",
+        "onto_label": [
+            "central dorsal nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0101891",
+        "label_diffs": [
+            [
+                "central dorsal nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7857142857142857
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002972",
+        "ilx_label": "centromedian nucleus",
+        "onto_label": [
+            "centromedian nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0101921",
+        "label_diffs": [
+            [
+                "centromedian nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7692307692307693
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004006",
+        "ilx_label": "cerebellar paravermis",
+        "onto_label": [
+            "cerebellum intermediate zone"
+        ],
+        "ilx_id": "ilx_0101956",
+        "label_diffs": [
+            [
+                "- cerebellar",
+                "+ cerebellum",
+                "- paravermis",
+                "+ intermediate",
+                "+ zone"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5306122448979592
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002474",
+        "ilx_label": "cerebellar penducular complex",
+        "onto_label": [
+            "cerebellar peduncular complex"
+        ],
+        "ilx_id": "ilx_0101957",
+        "label_diffs": [
+            [
+                "cerebellar",
+                "- penducular",
+                "+ peduncular",
+                "complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9655172413793104
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002317",
+        "ilx_label": "cerebellar white matter",
+        "onto_label": [
+            "white matter of cerebellum"
+        ],
+        "ilx_id": "ilx_0101962",
+        "label_diffs": [
+            [
+                "- cerebellar",
+                "white matter",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4897959183673469
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002289",
+        "ilx_label": "cerebral aqueduct",
+        "onto_label": [
+            "midbrain cerebral aqueduct"
+        ],
+        "ilx_id": "ilx_0101977",
+        "label_diffs": [
+            [
+                "+ midbrain",
+                "cerebral aqueduct"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7906976744186046
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001359",
+        "ilx_label": "cerebral spinal fluid",
+        "onto_label": [
+            "cerebrospinal fluid"
+        ],
+        "ilx_id": "ilx_0101997",
+        "label_diffs": [
+            [
+                "- cerebral",
+                "+ cerebrospinal",
+                "- spinal",
+                "fluid"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002437",
+        "ilx_label": "cerebral white matter",
+        "onto_label": [
+            "cerebral hemisphere white matter"
+        ],
+        "ilx_id": "ilx_0101998",
+        "label_diffs": [
+            [
+                "cerebral",
+                "+ hemisphere",
+                "white matter"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7924528301886793
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001869",
+        "ilx_label": "cerebrum",
+        "onto_label": [
+            "cerebral hemisphere"
+        ],
+        "ilx_id": "ilx_0102003",
+        "label_diffs": [
+            [
+                "- cerebrum",
+                "+ cerebral",
+                "+ hemisphere"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5185185185185185
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014542",
+        "ilx_label": "cervical spinal cord central canal",
+        "onto_label": [
+            "cervical division of cord spinal central canal"
+        ],
+        "ilx_id": "ilx_0102010",
+        "label_diffs": [
+            [
+                "cervical",
+                "+ division",
+                "+ of",
+                "+ cord",
+                "spinal",
+                "- cord",
+                "central canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.725
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024090",
+        "ilx_label": "chemoarchitectural part",
+        "onto_label": [
+            "chemoarchitectural part of brain"
+        ],
+        "ilx_id": "ilx_0102072",
+        "label_diffs": [
+            [
+                "chemoarchitectural part",
+                "+ of",
+                "+ brain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8363636363636363
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0025736",
+        "ilx_label": "chemoarchitectural part of neostriatum",
+        "onto_label": [
+            "chemoarchitectural part of striatum"
+        ],
+        "ilx_id": "ilx_0102073",
+        "label_diffs": [
+            [
+                "chemoarchitectural part of",
+                "- neostriatum",
+                "+ striatum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.958904109589041
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000396",
+        "ilx_label": "circumvallate papilla",
+        "onto_label": [
+            "vallate papilla"
+        ],
+        "ilx_id": "ilx_0102195",
+        "label_diffs": [
+            [
+                "- circumvallate",
+                "+ vallate",
+                "papilla"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8333333333333334
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002246",
+        "ilx_label": "clarkes nucleus",
+        "onto_label": [
+            "dorsal thoracic nucleus"
+        ],
+        "ilx_id": "ilx_0102213",
+        "label_diffs": [
+            [
+                "- clarkes",
+                "+ dorsal",
+                "+ thoracic",
+                "nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.47368421052631576
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002023",
+        "ilx_label": "claustrum",
+        "onto_label": [
+            "claustrum of brain"
+        ],
+        "ilx_id": "ilx_0102230",
+        "label_diffs": [
+            [
+                "claustrum",
+                "+ of",
+                "+ brain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001855",
+        "ilx_label": "cochlea duct",
+        "onto_label": [
+            "cochlear duct of membranous labyrinth"
+        ],
+        "ilx_id": "ilx_0102305",
+        "label_diffs": [
+            [
+                "- cochlea",
+                "+ cochlear",
+                "duct",
+                "+ of",
+                "+ membranous",
+                "+ labyrinth"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4897959183673469
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001020",
+        "ilx_label": "commissure",
+        "onto_label": [
+            "nervous system commissure"
+        ],
+        "ilx_id": "ilx_0102406",
+        "label_diffs": [
+            [
+                "+ nervous",
+                "+ system",
+                "commissure"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5714285714285714
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000908",
+        "ilx_label": "commissure of fornix",
+        "onto_label": [
+            "hippocampal commissure"
+        ],
+        "ilx_id": "ilx_0102407",
+        "label_diffs": [
+            [
+                "+ hippocampal",
+                "commissure",
+                "- of",
+                "- fornix"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.47619047619047616
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004682",
+        "ilx_label": "corona radiata",
+        "onto_label": [
+            "corona radiata of neuraxis"
+        ],
+        "ilx_id": "ilx_0102560",
+        "label_diffs": [
+            [
+                "corona radiata",
+                "+ of",
+                "+ neuraxis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001714",
+        "ilx_label": "cranial ganglion part of peripheral nervous system",
+        "onto_label": [
+            "cranial ganglion"
+        ],
+        "ilx_id": "ilx_0102608",
+        "label_diffs": [
+            [
+                "cranial ganglion",
+                "- part",
+                "- of",
+                "- peripheral",
+                "- nervous",
+                "- system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.48484848484848486
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007763",
+        "ilx_label": "culmen",
+        "onto_label": [
+            "cerebellum vermis culmen"
+        ],
+        "ilx_id": "ilx_0102659",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "+ vermis",
+                "culmen"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002819",
+        "ilx_label": "cupula of the cochlear canal",
+        "onto_label": [
+            "apex of cochlea"
+        ],
+        "ilx_id": "ilx_0102676",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- cupula",
+                "+ apex",
+                "of",
+                "- the",
+                "- cochlear",
+                "+ cochlea",
+                "- canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5581395348837209
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002305",
+        "ilx_label": "cytoarchitectural fields of hippocampal formation",
+        "onto_label": [
+            "layer of hippocampus"
+        ],
+        "ilx_id": "ilx_0102761",
+        "label_diffs": [
+            [
+                "+ layer",
+                "- cytoarchitectural",
+                "- fields",
+                "of",
+                "- hippocampal",
+                "+ hippocampus",
+                "- formation"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.43478260869565216
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007418",
+        "ilx_label": "decussation",
+        "onto_label": [
+            "neural decussation"
+        ],
+        "ilx_id": "ilx_0102961",
+        "label_diffs": [
+            [
+                "+ neural",
+                "decussation"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7586206896551724
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002130",
+        "ilx_label": "deep cerebellar nuclear complex",
+        "onto_label": [
+            "cerebellar nuclear complex"
+        ],
+        "ilx_id": "ilx_0102971",
+        "label_diffs": [
+            [
+                "- deep",
+                "cerebellar nuclear complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9122807017543859
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001885",
+        "ilx_label": "dentate gyrus",
+        "onto_label": [
+            "dentate gyrus of hippocampal formation"
+        ],
+        "ilx_id": "ilx_0103048",
+        "label_diffs": [
+            [
+                "dentate gyrus",
+                "+ of",
+                "+ hippocampal",
+                "+ formation"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5098039215686274
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002136",
+        "ilx_label": "dentate gyrus hilus",
+        "onto_label": [
+            "hilus of dentate gyrus"
+        ],
+        "ilx_id": "ilx_0103062",
+        "label_diffs": [
+            [
+                "+ hilus",
+                "+ of",
+                "dentate gyrus",
+                "- hilus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6341463414634146
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002741",
+        "ilx_label": "diagonal band",
+        "onto_label": [
+            "diagonal band of broca"
+        ],
+        "ilx_id": "ilx_0103188",
+        "label_diffs": [
+            [
+                "diagonal band",
+                "+ of",
+                "+ broca"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7428571428571429
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006964",
+        "ilx_label": "distal part of hypophysis",
+        "onto_label": [
+            "pars distalis of adenohypophysis"
+        ],
+        "ilx_id": "ilx_0103335",
+        "label_diffs": [
+            [
+                "+ pars",
+                "- distal",
+                "+ distalis",
+                "- part",
+                "of",
+                "- hypophysis",
+                "+ adenohypophysis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7017543859649122
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0036005",
+        "ilx_label": "dopaminergic cell group a10",
+        "onto_label": [
+            "a10 dopaminergic cell group"
+        ],
+        "ilx_id": "ilx_0103391",
+        "label_diffs": [
+            [
+                "+ a10",
+                "dopaminergic cell group",
+                "- a10"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8518518518518519
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0036007",
+        "ilx_label": "dopaminergic cell group a13",
+        "onto_label": [
+            "a13 dopaminergic cell group"
+        ],
+        "ilx_id": "ilx_0103392",
+        "label_diffs": [
+            [
+                "+ a13",
+                "dopaminergic cell group",
+                "- a13"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8518518518518519
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0036003",
+        "ilx_label": "dopaminergic cell group a9",
+        "onto_label": [
+            "a9 dopaminergic cell group"
+        ],
+        "ilx_id": "ilx_0103393",
+        "label_diffs": [
+            [
+                "+ a9",
+                "dopaminergic cell group",
+                "- a9"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8846153846153846
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007249",
+        "ilx_label": "dorsal accessory olive",
+        "onto_label": [
+            "dorsal accessory inferior olivary nucleus"
+        ],
+        "ilx_id": "ilx_0103410",
+        "label_diffs": [
+            [
+                "dorsal accessory",
+                "- olive",
+                "+ inferior",
+                "+ olivary",
+                "+ nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6984126984126984
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0011776",
+        "ilx_label": "dorsal commissural nucleus",
+        "onto_label": [
+            "dorsal commissural nucleus of spinal cord"
+        ],
+        "ilx_id": "ilx_0103430",
+        "label_diffs": [
+            [
+                "dorsal commissural nucleus",
+                "+ of",
+                "+ spinal",
+                "+ cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7761194029850746
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005340",
+        "ilx_label": "dorsal commissure",
+        "onto_label": [
+            "dorsal telencephalic commissure"
+        ],
+        "ilx_id": "ilx_0103431",
+        "label_diffs": [
+            [
+                "dorsal",
+                "+ telencephalic",
+                "commissure"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7083333333333334
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002479",
+        "ilx_label": "dorsal nucleus of lateral geniculate body",
+        "onto_label": [
+            "dorsal lateral geniculate nucleus"
+        ],
+        "ilx_id": "ilx_0103456",
+        "label_diffs": [
+            [
+                "dorsal",
+                "- nucleus",
+                "- of",
+                "lateral geniculate",
+                "- body",
+                "+ nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7027027027027027
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024952",
+        "ilx_label": "duct part of cochlear canal",
+        "onto_label": [
+            "obsolete duct part of cochlear canal"
+        ],
+        "ilx_id": "ilx_0103584",
+        "label_diffs": [
+            [
+                "+ obsolete",
+                "duct part of cochlear canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8571428571428571
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006470",
+        "ilx_label": "eighth cervical spinal cord segment",
+        "onto_label": [
+            "c8 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0103686",
+        "label_diffs": [
+            [
+                "- eighth",
+                "+ c8",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6956521739130435
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001601",
+        "ilx_label": "extraocular muscle",
+        "onto_label": [
+            "extra-ocular muscle"
+        ],
+        "ilx_id": "ilx_0104056",
+        "label_diffs": [
+            [
+                "- extraocular",
+                "+ extra-ocular",
+                "muscle"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.972972972972973
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000019",
+        "ilx_label": "eye",
+        "onto_label": [
+            "camera-type eye"
+        ],
+        "ilx_id": "ilx_0104062",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0000970",
+        "label_diffs": [
+            [
+                "+ camera-type",
+                "eye"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003011",
+        "ilx_label": "facial nucleus",
+        "onto_label": [
+            "facial motor nucleus"
+        ],
+        "ilx_id": "ilx_0104077",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0000127",
+        "label_diffs": [
+            [
+                "facial",
+                "+ motor",
+                "nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8235294117647058
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001019",
+        "ilx_label": "fasciculus",
+        "onto_label": [
+            "nerve fasciculus"
+        ],
+        "ilx_id": "ilx_0104106",
+        "label_diffs": [
+            [
+                "+ nerve",
+                "fasciculus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7692307692307693
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002138",
+        "ilx_label": "fasciculus retroflexus",
+        "onto_label": [
+            "habenulo-interpeduncular tract"
+        ],
+        "ilx_id": "ilx_0104107",
+        "label_diffs": [
+            [
+                "- fasciculus",
+                "- retroflexus",
+                "+ habenulo-interpeduncular",
+                "+ tract"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3076923076923077
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006491",
+        "ilx_label": "fifth cervical spinal cord segment",
+        "onto_label": [
+            "c5 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0104216",
+        "label_diffs": [
+            [
+                "- fifth",
+                "+ c5",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002310",
+        "ilx_label": "fimbria of hippocampus",
+        "onto_label": [
+            "hippocampus fimbria"
+        ],
+        "ilx_id": "ilx_0104243",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "fimbria",
+                "- of",
+                "- hippocampus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5365853658536586
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002389",
+        "ilx_label": "finger",
+        "onto_label": [
+            "manual digit"
+        ],
+        "ilx_id": "ilx_0104248",
+        "label_diffs": [
+            [
+                "- finger",
+                "+ manual",
+                "+ digit"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2222222222222222
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006469",
+        "ilx_label": "first cervical spinal cord segment",
+        "onto_label": [
+            "c1 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0104252",
+        "label_diffs": [
+            [
+                "- first",
+                "+ c1",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000052",
+        "ilx_label": "fornix",
+        "onto_label": [
+            "fornix of brain"
+        ],
+        "ilx_id": "ilx_0104362",
+        "label_diffs": [
+            [
+                "fornix",
+                "+ of",
+                "+ brain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5714285714285714
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006490",
+        "ilx_label": "forth cervical spinal cord segment",
+        "onto_label": [
+            "c4 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0104364",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ c4",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003943",
+        "ilx_label": "forth lumbar dorsal root ganglion",
+        "onto_label": [
+            "fourth lumbar dorsal root ganglion"
+        ],
+        "ilx_id": "ilx_0104365",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "lumbar dorsal root ganglion"
+            ]
+        ],
+        "label_diff_notes": [
+            "Syntax difference"
+        ],
+        "label_diff_ratios": [
+            0.9850746268656716
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006451",
+        "ilx_label": "forth lumbar spinal cord segment",
+        "onto_label": [
+            "fourth lumbar spinal cord segment"
+        ],
+        "ilx_id": "ilx_0104366",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "lumbar spinal cord segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Syntax difference"
+        ],
+        "label_diff_ratios": [
+            0.9846153846153847
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007713",
+        "ilx_label": "forth sacral dorsal root ganglion",
+        "onto_label": [
+            "fourth sacral spinal ganglion"
+        ],
+        "ilx_id": "ilx_0104367",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "sacral",
+                "+ spinal",
+                "- dorsal",
+                "- root",
+                "ganglion"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8064516129032258
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006463",
+        "ilx_label": "forth sacral spinal cord segment",
+        "onto_label": [
+            "fourth sacral spinal cord segment"
+        ],
+        "ilx_id": "ilx_0104368",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "sacral spinal cord segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Syntax difference"
+        ],
+        "label_diff_ratios": [
+            0.9846153846153847
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007712",
+        "ilx_label": "forth thoracic dorsal root ganglion",
+        "onto_label": [
+            "fourth thoracic spinal ganglion"
+        ],
+        "ilx_id": "ilx_0104369",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "thoracic",
+                "+ spinal",
+                "- dorsal",
+                "- root",
+                "ganglion"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8181818181818182
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006452",
+        "ilx_label": "forth thoracic spinal cord segment",
+        "onto_label": [
+            "fourth thoracic spinal cord segment"
+        ],
+        "ilx_id": "ilx_0104370",
+        "label_diffs": [
+            [
+                "- forth",
+                "+ fourth",
+                "thoracic spinal cord segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Syntax difference"
+        ],
+        "label_diff_ratios": [
+            0.9855072463768116
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001786",
+        "ilx_label": "fovea",
+        "onto_label": [
+            "fovea centralis"
+        ],
+        "ilx_id": "ilx_0104383",
+        "label_diffs": [
+            [
+                "fovea",
+                "+ centralis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003338",
+        "ilx_label": "ganglion part of peripheral nervous system",
+        "onto_label": [
+            "ganglion of peripheral nervous system"
+        ],
+        "ilx_id": "ilx_0104546",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0024940",
+        "label_diffs": [
+            [
+                "ganglion",
+                "- part",
+                "of peripheral nervous system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9367088607594937
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002613",
+        "ilx_label": "globose nucleus",
+        "onto_label": [
+            "cerebellum globose nucleus"
+        ],
+        "ilx_id": "ilx_0104655",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "globose nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7317073170731707
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002476",
+        "ilx_label": "globus pallidus external segment",
+        "onto_label": [
+            "lateral globus pallidus"
+        ],
+        "ilx_id": "ilx_0104658",
+        "label_diffs": [
+            [
+                "+ lateral",
+                "globus pallidus",
+                "- external",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5454545454545454
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002477",
+        "ilx_label": "globus pallidus internal segment",
+        "onto_label": [
+            "medial globus pallidus"
+        ],
+        "ilx_id": "ilx_0104660",
+        "label_diffs": [
+            [
+                "+ medial",
+                "globus pallidus",
+                "- internal",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5555555555555556
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002926",
+        "ilx_label": "gustatory epithelium nifext 12",
+        "onto_label": [
+            "gustatory epithelium"
+        ],
+        "ilx_id": "ilx_0104831",
+        "label_diffs": [
+            [
+                "gustatory epithelium",
+                "- nifext",
+                "- 12"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0023998",
+        "ilx_label": "hemispheric lobule ii",
+        "onto_label": [
+            "cerebellum hemispheric lobule ii"
+        ],
+        "ilx_id": "ilx_0104934",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule ii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7924528301886793
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0023999",
+        "ilx_label": "hemispheric lobule iii",
+        "onto_label": [
+            "cerebellum hemispheric lobule iii"
+        ],
+        "ilx_id": "ilx_0104935",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule iii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024000",
+        "ilx_label": "hemispheric lobule iv",
+        "onto_label": [
+            "cerebellum hemispheric lobule iv"
+        ],
+        "ilx_id": "ilx_0104936",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule iv"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7924528301886793
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005351",
+        "ilx_label": "hemispheric lobule ix",
+        "onto_label": [
+            "paraflocculus"
+        ],
+        "ilx_id": "ilx_0104937",
+        "label_diffs": [
+            [
+                "+ paraflocculus",
+                "- hemispheric",
+                "- lobule",
+                "- ix"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.35294117647058826
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024001",
+        "ilx_label": "hemispheric lobule v",
+        "onto_label": [
+            "cerebellum hemispheric lobule v"
+        ],
+        "ilx_id": "ilx_0104938",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule v"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7843137254901961
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005350",
+        "ilx_label": "hemispheric lobule vi",
+        "onto_label": [
+            "lobule simplex"
+        ],
+        "ilx_id": "ilx_0104939",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "lobule",
+                "- vi",
+                "+ simplex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.45714285714285713
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024003",
+        "ilx_label": "hemispheric lobule vii",
+        "onto_label": [
+            "cerebellum hemispheric lobule vii"
+        ],
+        "ilx_id": "ilx_0104940",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule vii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005976",
+        "ilx_label": "hemispheric lobule viia",
+        "onto_label": [
+            "ansiform lobule crus i"
+        ],
+        "ilx_id": "ilx_0104941",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "+ ansiform",
+                "lobule",
+                "- viia",
+                "+ crus",
+                "+ i"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4444444444444444
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005977",
+        "ilx_label": "hemispheric lobule viibi",
+        "onto_label": [
+            "ansiform lobule crus ii"
+        ],
+        "ilx_id": "ilx_0104942",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "+ ansiform",
+                "lobule",
+                "- viibi",
+                "+ crus",
+                "+ ii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.46808510638297873
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005349",
+        "ilx_label": "hemispheric lobule viibii",
+        "onto_label": [
+            "paramedian lobule"
+        ],
+        "ilx_id": "ilx_0104943",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "+ paramedian",
+                "lobule",
+                "- viibii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.42857142857142855
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0024009",
+        "ilx_label": "hemispheric lobule x",
+        "onto_label": [
+            "cerebellum hemispheric lobule x"
+        ],
+        "ilx_id": "ilx_0104945",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "hemispheric lobule x"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7843137254901961
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014647",
+        "ilx_label": "hemispheric part of the anterior lobe of the cerebellum",
+        "onto_label": [
+            "hemisphere part of cerebellar anterior lobe"
+        ],
+        "ilx_id": "ilx_0104946",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "+ hemisphere",
+                "part of",
+                "- the",
+                "+ cerebellar",
+                "anterior lobe",
+                "- of",
+                "- the",
+                "- cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.673469387755102
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0027331",
+        "ilx_label": "hemispheric part of the flocculonodular lobe of the cerebellum",
+        "onto_label": [
+            "flocculonodular lobe hemisphere portion"
+        ],
+        "ilx_id": "ilx_0104947",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "- part",
+                "- of",
+                "- the",
+                "flocculonodular lobe",
+                "+ hemisphere",
+                "+ portion",
+                "- of",
+                "- the",
+                "- cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5148514851485149
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014648",
+        "ilx_label": "hemispheric part of the posterior lobe of the cerebellum",
+        "onto_label": [
+            "hemisphere part of cerebellar posterior lobe"
+        ],
+        "ilx_id": "ilx_0104948",
+        "label_diffs": [
+            [
+                "- hemispheric",
+                "+ hemisphere",
+                "part of",
+                "- the",
+                "+ cerebellar",
+                "posterior lobe",
+                "- of",
+                "- the",
+                "- cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.68
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005368",
+        "ilx_label": "hippocampal molecular layer",
+        "onto_label": [
+            "hippocampus molecular layer"
+        ],
+        "ilx_id": "ilx_0105015",
+        "label_diffs": [
+            [
+                "- hippocampal",
+                "+ hippocampus",
+                "molecular layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9259259259259259
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001954",
+        "ilx_label": "hippocampus",
+        "onto_label": [
+            "ammons horn"
+        ],
+        "ilx_id": "ilx_0105021",
+        "label_diffs": [
+            [
+                "- hippocampus",
+                "+ ammons",
+                "+ horn"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2727272727272727
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002815",
+        "ilx_label": "horizontal fissure",
+        "onto_label": [
+            "horizontal fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0105107",
+        "label_diffs": [
+            [
+                "horizontal fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.72
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004675",
+        "ilx_label": "hypoglossal nerve fiber bundle",
+        "onto_label": [
+            "hypoglossal nerve root"
+        ],
+        "ilx_id": "ilx_0105166",
+        "label_diffs": [
+            [
+                "hypoglossal nerve",
+                "+ root",
+                "- fiber",
+                "- bundle"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7307692307692307
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000007",
+        "ilx_label": "hypophysis",
+        "onto_label": [
+            "pituitary gland"
+        ],
+        "ilx_id": "ilx_0105172",
+        "label_diffs": [
+            [
+                "- hypophysis",
+                "+ pituitary",
+                "+ gland"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.08
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002434",
+        "ilx_label": "infundibular stem",
+        "onto_label": [
+            "pituitary stalk"
+        ],
+        "ilx_id": "ilx_0105483",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- infundibular",
+                "- stem",
+                "+ pituitary",
+                "+ stalk"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001846",
+        "ilx_label": "inner ear",
+        "onto_label": [
+            "internal ear"
+        ],
+        "ilx_id": "ilx_0105492",
+        "label_diffs": [
+            [
+                "- inner",
+                "+ internal",
+                "ear"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7619047619047619
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0008830",
+        "ilx_label": "inner granular layer of cerebellar cortex",
+        "onto_label": [
+            "cerebellum internal granule cell layer"
+        ],
+        "ilx_id": "ilx_0105493",
+        "label_diffs": [
+            [
+                "- inner",
+                "+ cerebellum",
+                "+ internal",
+                "- granular",
+                "+ granule",
+                "+ cell",
+                "layer",
+                "- of",
+                "- cerebellar",
+                "- cortex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3291139240506329
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001887",
+        "ilx_label": "internal capsule",
+        "onto_label": [
+            "internal capsule of telencephalon"
+        ],
+        "ilx_id": "ilx_0105583",
+        "label_diffs": [
+            [
+                "internal capsule",
+                "+ of",
+                "+ telencephalon"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6530612244897959
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004073",
+        "ilx_label": "interpositus nucleus",
+        "onto_label": [
+            "cerebellum interpositus nucleus"
+        ],
+        "ilx_id": "ilx_0105602",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "interpositus nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7843137254901961
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001881",
+        "ilx_label": "islands of calleja",
+        "onto_label": [
+            "island of calleja"
+        ],
+        "ilx_id": "ilx_0105730",
+        "label_diffs": [
+            [
+                "- islands",
+                "+ island",
+                "of calleja"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9714285714285714
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002869",
+        "ilx_label": "kolliker-fuse nucleus",
+        "onto_label": [
+            "diffuse reticular nucleus"
+        ],
+        "ilx_id": "ilx_0105881",
+        "label_diffs": [
+            [
+                "- kolliker-fuse",
+                "+ diffuse",
+                "+ reticular",
+                "nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5652173913043478
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0034894",
+        "ilx_label": "lateral bed nucleus of the stria terminalis",
+        "onto_label": [
+            "lateral nucleus of stria terminalis"
+        ],
+        "ilx_id": "ilx_0106048",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "lateral",
+                "- bed",
+                "nucleus of",
+                "- the",
+                "stria terminalis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8974358974358975
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001926",
+        "ilx_label": "lateral geniculate nucleus",
+        "onto_label": [
+            "lateral geniculate body"
+        ],
+        "ilx_id": "ilx_0106064",
+        "label_diffs": [
+            [
+                "lateral geniculate",
+                "- nucleus",
+                "+ body"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7755102040816326
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002953",
+        "ilx_label": "lateral lemniscus birnlex 976",
+        "onto_label": [
+            "lateral lemniscus"
+        ],
+        "ilx_id": "ilx_0106074",
+        "label_diffs": [
+            [
+                "lateral lemniscus",
+                "- birnlex",
+                "- 976"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7391304347826086
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002765",
+        "ilx_label": "lateral medullary lamina",
+        "onto_label": [
+            "lateral medullary lamina of globus pallidus"
+        ],
+        "ilx_id": "ilx_0106077",
+        "label_diffs": [
+            [
+                "lateral medullary lamina",
+                "+ of",
+                "+ globus",
+                "+ pallidus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7164179104477612
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002736",
+        "ilx_label": "lateral nuclear group",
+        "onto_label": [
+            "lateral nuclear group of thalamus"
+        ],
+        "ilx_id": "ilx_0106078",
+        "label_diffs": [
+            [
+                "lateral nuclear group",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7777777777777778
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001888",
+        "ilx_label": "lateral olfactory tract",
+        "onto_label": [
+            "lateral olfactory stria"
+        ],
+        "ilx_id": "ilx_0106082",
+        "label_diffs": [
+            [
+                "lateral olfactory",
+                "- tract",
+                "+ stria"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9130434782608695
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002983",
+        "ilx_label": "lateral posterior nucleus",
+        "onto_label": [
+            "lateral posterior nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0106095",
+        "label_diffs": [
+            [
+                "lateral posterior nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8064516129032258
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000435",
+        "ilx_label": "lateral tuberal nuclear complex",
+        "onto_label": [
+            "lateral tuberal nucleus"
+        ],
+        "ilx_id": "ilx_0106124",
+        "label_diffs": [
+            [
+                "lateral tuberal",
+                "+ nucleus",
+                "- nuclear",
+                "- complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7777777777777778
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002285",
+        "ilx_label": "lateral ventricle",
+        "onto_label": [
+            "telencephalic ventricle"
+        ],
+        "ilx_id": "ilx_0106125",
+        "label_diffs": [
+            [
+                "- lateral",
+                "+ telencephalic",
+                "ventricle"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003001",
+        "ilx_label": "lemniscus",
+        "onto_label": [
+            "nervous system lemniscus"
+        ],
+        "ilx_id": "ilx_0106165",
+        "label_diffs": [
+            [
+                "+ nervous",
+                "+ system",
+                "lemniscus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5454545454545454
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001726",
+        "ilx_label": "lingual papilla",
+        "onto_label": [
+            "papilla of tongue"
+        ],
+        "ilx_id": "ilx_0106279",
+        "label_diffs": [
+            [
+                "- lingual",
+                "papilla",
+                "+ of",
+                "+ tongue"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4375
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004074",
+        "ilx_label": "lingula",
+        "onto_label": [
+            "cerebellum vermis lobule i"
+        ],
+        "ilx_id": "ilx_0106280",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- lingula",
+                "+ cerebellum",
+                "+ vermis",
+                "+ lobule",
+                "+ i"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.24242424242424243
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002649",
+        "ilx_label": "lissauers tract of medulla",
+        "onto_label": [
+            "dorsolateral fasciculus of medulla"
+        ],
+        "ilx_id": "ilx_0106302",
+        "label_diffs": [
+            [
+                "- lissauers",
+                "- tract",
+                "+ dorsolateral",
+                "+ fasciculus",
+                "of medulla"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5666666666666667
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0016526",
+        "ilx_label": "lobe of cerebral cortex",
+        "onto_label": [
+            "lobe of cerebral hemisphere"
+        ],
+        "ilx_id": "ilx_0106316",
+        "label_diffs": [
+            [
+                "lobe of cerebral",
+                "- cortex",
+                "+ hemisphere"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.76
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005293",
+        "ilx_label": "lobe parts of the cerebellar cortex",
+        "onto_label": [
+            "cerebellum lobe"
+        ],
+        "ilx_id": "ilx_0106317",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "lobe",
+                "- parts",
+                "- of",
+                "- the",
+                "- cerebellar",
+                "- cortex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.44
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004004",
+        "ilx_label": "lobular parts of the cerebellar cortex",
+        "onto_label": [
+            "cerebellum lobule"
+        ],
+        "ilx_id": "ilx_0106320",
+        "label_diffs": [
+            [
+                "- lobular",
+                "- parts",
+                "- of",
+                "- the",
+                "- cerebellar",
+                "+ cerebellum",
+                "- cortex",
+                "+ lobule"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0026775",
+        "ilx_label": "lop area of tootell and hadjikhani 2001",
+        "onto_label": [
+            "tootell and hadjikhani 2001 loc/lop complex"
+        ],
+        "ilx_id": "ilx_0106361",
+        "label_diffs": [
+            [
+                "- lop",
+                "- area",
+                "- of",
+                "tootell and hadjikhani 2001",
+                "+ loc/lop",
+                "+ complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6585365853658537
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014543",
+        "ilx_label": "lumbar spinal cord central canal",
+        "onto_label": [
+            "lumbar division of spinal cord central canal"
+        ],
+        "ilx_id": "ilx_0106392",
+        "label_diffs": [
+            [
+                "lumbar",
+                "+ division",
+                "+ of",
+                "spinal cord central canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8421052631578947
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000053",
+        "ilx_label": "macula of eye",
+        "onto_label": [
+            "macula lutea"
+        ],
+        "ilx_id": "ilx_0106446",
+        "label_diffs": [
+            [
+                "macula",
+                "+ lutea",
+                "- of",
+                "- eye"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.64
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006698",
+        "ilx_label": "mammillotegmental fasciculus",
+        "onto_label": [
+            "mammillotegmental axonal tract"
+        ],
+        "ilx_id": "ilx_0106505",
+        "label_diffs": [
+            [
+                "mammillotegmental",
+                "- fasciculus",
+                "+ axonal",
+                "+ tract"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6896551724137931
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0027368",
+        "ilx_label": "matrix compartment of neostriatum",
+        "onto_label": [
+            "matrix compartment"
+        ],
+        "ilx_id": "ilx_0106569",
+        "label_diffs": [
+            [
+                "matrix compartment",
+                "- of",
+                "- neostriatum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7058823529411765
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002739",
+        "ilx_label": "medial dorsal nucleus",
+        "onto_label": [
+            "medial dorsal nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0106636",
+        "label_diffs": [
+            [
+                "medial dorsal nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7777777777777778
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002727",
+        "ilx_label": "medial medullary lamina",
+        "onto_label": [
+            "medial medullary lamina of globus pallidus"
+        ],
+        "ilx_id": "ilx_0106664",
+        "label_diffs": [
+            [
+                "medial medullary lamina",
+                "+ of",
+                "+ globus",
+                "+ pallidus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7076923076923077
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002197",
+        "ilx_label": "median eminence",
+        "onto_label": [
+            "median eminence of neurohypophysis"
+        ],
+        "ilx_id": "ilx_0106712",
+        "label_diffs": [
+            [
+                "median eminence",
+                "+ of",
+                "+ neurohypophysis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6122448979591837
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014649",
+        "ilx_label": "medullary white matter",
+        "onto_label": [
+            "white matter of medulla oblongata"
+        ],
+        "ilx_id": "ilx_0106748",
+        "label_diffs": [
+            [
+                "- medullary",
+                "white matter",
+                "+ of",
+                "+ medulla",
+                "+ oblongata"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.43636363636363634
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004685",
+        "ilx_label": "middle temporal area",
+        "onto_label": [
+            "obsolete middle temporal area"
+        ],
+        "ilx_id": "ilx_0106965",
+        "label_diffs": [
+            [
+                "+ obsolete",
+                "middle temporal area"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8163265306122449
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005390",
+        "ilx_label": "neocortex layer 1",
+        "onto_label": [
+            "cortical layer i"
+        ],
+        "ilx_id": "ilx_0107367",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 1",
+                "+ i"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005391",
+        "ilx_label": "neocortex layer 2",
+        "onto_label": [
+            "cortical layer ii"
+        ],
+        "ilx_id": "ilx_0107368",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 2",
+                "+ ii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005392",
+        "ilx_label": "neocortex layer 3",
+        "onto_label": [
+            "cortical layer iii"
+        ],
+        "ilx_id": "ilx_0107369",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 3",
+                "+ iii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6285714285714286
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005393",
+        "ilx_label": "neocortex layer 4",
+        "onto_label": [
+            "cortical layer iv"
+        ],
+        "ilx_id": "ilx_0107370",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 4",
+                "+ iv"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005394",
+        "ilx_label": "neocortex layer 5",
+        "onto_label": [
+            "cortical layer v"
+        ],
+        "ilx_id": "ilx_0107371",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 5",
+                "+ v"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005395",
+        "ilx_label": "neocortex layer 6",
+        "onto_label": [
+            "cortical layer vi"
+        ],
+        "ilx_id": "ilx_0107374",
+        "label_diffs": [
+            [
+                "- neocortex",
+                "+ cortical",
+                "layer",
+                "- 6",
+                "+ vi"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0009632",
+        "ilx_label": "nerve root part of cervical spinal cord",
+        "onto_label": [
+            "root of cervical nerve"
+        ],
+        "ilx_id": "ilx_0107416",
+        "label_diffs": [
+            [
+                "- nerve",
+                "root",
+                "- part",
+                "of cervical",
+                "+ nerve",
+                "- spinal",
+                "- cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6229508196721312
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0009631",
+        "ilx_label": "nerve root part of lumbar spinal cord",
+        "onto_label": [
+            "root of lumbar spinal nerve"
+        ],
+        "ilx_id": "ilx_0107417",
+        "label_diffs": [
+            [
+                "- nerve",
+                "root",
+                "- part",
+                "of lumbar spinal",
+                "- cord",
+                "+ nerve"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.71875
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0009633",
+        "ilx_label": "nerve root part of sacral spinal cord",
+        "onto_label": [
+            "root of sacral nerve"
+        ],
+        "ilx_id": "ilx_0107418",
+        "label_diffs": [
+            [
+                "- nerve",
+                "root",
+                "- part",
+                "of sacral",
+                "+ nerve",
+                "- spinal",
+                "- cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5964912280701754
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0009630",
+        "ilx_label": "nerve root part of thoracic spinal cord",
+        "onto_label": [
+            "root of thoracic nerve"
+        ],
+        "ilx_id": "ilx_0107419",
+        "label_diffs": [
+            [
+                "- nerve",
+                "root",
+                "- part",
+                "of thoracic",
+                "+ nerve",
+                "- spinal",
+                "- cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6229508196721312
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001018",
+        "ilx_label": "nerve tract",
+        "onto_label": [
+            "axon tract"
+        ],
+        "ilx_id": "ilx_0107421",
+        "label_diffs": [
+            [
+                "- nerve",
+                "+ axon",
+                "tract"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002561",
+        "ilx_label": "neuraxis cavity",
+        "onto_label": [
+            "lumen of central nervous system"
+        ],
+        "ilx_id": "ilx_0107447",
+        "label_diffs": [
+            [
+                "- neuraxis",
+                "- cavity",
+                "+ lumen",
+                "+ of",
+                "+ central",
+                "+ nervous",
+                "+ system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.2608695652173913
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004083",
+        "ilx_label": "nodulus",
+        "onto_label": [
+            "cerebellum vermis lobule x"
+        ],
+        "ilx_id": "ilx_0107641",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- nodulus",
+                "+ cerebellum",
+                "+ vermis",
+                "+ lobule",
+                "+ x"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.18181818181818182
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006840",
+        "ilx_label": "nuclei of the lateral lemniscus",
+        "onto_label": [
+            "nucleus of lateral lemniscus"
+        ],
+        "ilx_id": "ilx_0107725",
+        "label_diffs": [
+            [
+                "- nuclei",
+                "+ nucleus",
+                "of",
+                "- the",
+                "lateral lemniscus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8813559322033898
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002155",
+        "ilx_label": "nucleus gigantocellularis",
+        "onto_label": [
+            "gigantocellular nucleus"
+        ],
+        "ilx_id": "ilx_0107745",
+        "label_diffs": [
+            [
+                "+ gigantocellular",
+                "nucleus",
+                "- gigantocellularis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000125",
+        "ilx_label": "nucleus of cns",
+        "onto_label": [
+            "neural nucleus"
+        ],
+        "ilx_id": "ilx_0107752",
+        "label_diffs": [
+            [
+                "+ neural",
+                "nucleus",
+                "- of",
+                "- cns"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002044",
+        "ilx_label": "nucleus of darkschewitsch",
+        "onto_label": [
+            "ventral nucleus of posterior commissure"
+        ],
+        "ilx_id": "ilx_0107753",
+        "label_diffs": [
+            [
+                "+ ventral",
+                "nucleus of",
+                "- darkschewitsch",
+                "+ posterior",
+                "+ commissure"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4375
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014450",
+        "ilx_label": "nucleus of pretectal area",
+        "onto_label": [
+            "pretectal nucleus"
+        ],
+        "ilx_id": "ilx_0107761",
+        "label_diffs": [
+            [
+                "+ pretectal",
+                "nucleus",
+                "- of",
+                "- pretectal",
+                "- area"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5238095238095238
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0016827",
+        "ilx_label": "nucleus paramedianus dorsalis",
+        "onto_label": [
+            "dorsal paramedian reticular nucleus"
+        ],
+        "ilx_id": "ilx_0107786",
+        "label_diffs": [
+            [
+                "+ dorsal",
+                "+ paramedian",
+                "+ reticular",
+                "nucleus",
+                "- paramedianus",
+                "- dorsalis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4375
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002668",
+        "ilx_label": "oculomotor nerve fibers",
+        "onto_label": [
+            "oculomotor nerve root"
+        ],
+        "ilx_id": "ilx_0107898",
+        "label_diffs": [
+            [
+                "oculomotor nerve",
+                "- fibers",
+                "+ root"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8181818181818182
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0015432",
+        "ilx_label": "olfactory bulb accessory mitral cell body layer",
+        "onto_label": [
+            "accessory olfactory bulb mitral cell layer"
+        ],
+        "ilx_id": "ilx_0107927",
+        "label_diffs": [
+            [
+                "+ accessory",
+                "olfactory bulb",
+                "- accessory",
+                "mitral cell",
+                "- body",
+                "layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7191011235955056
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004069",
+        "ilx_label": "olfactory bulb accessory nucleus",
+        "onto_label": [
+            "accessory olfactory bulb"
+        ],
+        "ilx_id": "ilx_0107936",
+        "label_diffs": [
+            [
+                "+ accessory",
+                "olfactory bulb",
+                "- accessory",
+                "- nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004186",
+        "ilx_label": "olfactory bulb main mitral cell body layer",
+        "onto_label": [
+            "olfactory bulb mitral cell layer"
+        ],
+        "ilx_id": "ilx_0107940",
+        "label_diffs": [
+            [
+                "olfactory bulb",
+                "- main",
+                "mitral cell",
+                "- body",
+                "layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8648648648648649
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005978",
+        "ilx_label": "olfactory bulb main olfactory nerve layer",
+        "onto_label": [
+            "olfactory bulb outer nerve layer"
+        ],
+        "ilx_id": "ilx_0107942",
+        "label_diffs": [
+            [
+                "olfactory bulb",
+                "+ outer",
+                "- main",
+                "- olfactory",
+                "nerve layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.821917808219178
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0028426",
+        "ilx_label": "ongur price and ferry 2003 area prco birnlex 4081",
+        "onto_label": [
+            "ongur price and ferry 2003 area prco"
+        ],
+        "ilx_id": "ilx_0108037",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "ongur price and ferry 2003 area prco",
+                "- birnlex",
+                "- 4081"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000959",
+        "ilx_label": "optic chiasm",
+        "onto_label": [
+            "optic chiasma"
+        ],
+        "ilx_id": "ilx_0108069",
+        "label_diffs": [
+            [
+                "optic",
+                "- chiasm",
+                "+ chiasma"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.96
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004167",
+        "ilx_label": "orbital frontal cortex",
+        "onto_label": [
+            "orbitofrontal cortex"
+        ],
+        "ilx_id": "ilx_0108110",
+        "label_diffs": [
+            [
+                "+ orbitofrontal",
+                "- orbital",
+                "- frontal",
+                "cortex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9047619047619048
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002689",
+        "ilx_label": "organum vasculosum lamina terminalis",
+        "onto_label": [
+            "supraoptic crest"
+        ],
+        "ilx_id": "ilx_0108141",
+        "label_diffs": [
+            [
+                "+ supraoptic",
+                "+ crest",
+                "- organum",
+                "- vasculosum",
+                "- lamina",
+                "- terminalis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.15384615384615385
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001691",
+        "ilx_label": "outer ear",
+        "onto_label": [
+            "external ear"
+        ],
+        "ilx_id": "ilx_0108283",
+        "label_diffs": [
+            [
+                "- outer",
+                "+ external",
+                "ear"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0008829",
+        "ilx_label": "outer granular layer of cerebellar cortex",
+        "onto_label": [
+            "cerebellum external granule cell layer"
+        ],
+        "ilx_id": "ilx_0108284",
+        "label_diffs": [
+            [
+                "- outer",
+                "+ cerebellum",
+                "+ external",
+                "- granular",
+                "+ granule",
+                "+ cell",
+                "layer",
+                "- of",
+                "- cerebellar",
+                "- cortex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3291139240506329
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0013738",
+        "ilx_label": "parabrachial pigmented nucleus",
+        "onto_label": [
+            "parabrachial pigmental nucleus"
+        ],
+        "ilx_id": "ilx_0108428",
+        "label_diffs": [
+            [
+                "parabrachial",
+                "- pigmented",
+                "+ pigmental",
+                "nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003217",
+        "ilx_label": "pars nervosa of hypophysis",
+        "onto_label": [
+            "neural lobe of neurohypophysis"
+        ],
+        "ilx_id": "ilx_0108544",
+        "label_diffs": [
+            [
+                "- pars",
+                "- nervosa",
+                "+ neural",
+                "+ lobe",
+                "of",
+                "- hypophysis",
+                "+ neurohypophysis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6428571428571429
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003040",
+        "ilx_label": "periaqueductal gray",
+        "onto_label": [
+            "central gray substance of midbrain"
+        ],
+        "ilx_id": "ilx_0108717",
+        "label_diffs": [
+            [
+                "- periaqueductal",
+                "+ central",
+                "gray",
+                "+ substance",
+                "+ of",
+                "+ midbrain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.33962264150943394
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002361",
+        "ilx_label": "pial membrane",
+        "onto_label": [
+            "pia mater"
+        ],
+        "ilx_id": "ilx_0108874",
+        "label_diffs": [
+            [
+                "- pial",
+                "+ pia",
+                "- membrane",
+                "+ mater"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6363636363636364
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002151",
+        "ilx_label": "pontine nuclear complex",
+        "onto_label": [
+            "pontine nuclear group"
+        ],
+        "ilx_id": "ilx_0109028",
+        "label_diffs": [
+            [
+                "pontine nuclear",
+                "- complex",
+                "+ group"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8181818181818182
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002915",
+        "ilx_label": "postcentral sulcus",
+        "onto_label": [
+            "postcentral sulcus of parietal lobe"
+        ],
+        "ilx_id": "ilx_0109071",
+        "label_diffs": [
+            [
+                "postcentral sulcus",
+                "+ of",
+                "+ parietal",
+                "+ lobe"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6792452830188679
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003016",
+        "ilx_label": "postcommissural fornix",
+        "onto_label": [
+            "postcommissural fornix of brain"
+        ],
+        "ilx_id": "ilx_0109072",
+        "label_diffs": [
+            [
+                "postcommissural fornix",
+                "+ of",
+                "+ brain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8301886792452831
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002258",
+        "ilx_label": "posterior funiculus",
+        "onto_label": [
+            "dorsal funiculus of spinal cord"
+        ],
+        "ilx_id": "ilx_0109095",
+        "label_diffs": [
+            [
+                "- posterior",
+                "+ dorsal",
+                "funiculus",
+                "+ of",
+                "+ spinal",
+                "+ cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.48
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004002",
+        "ilx_label": "posterior lobe of the cerebellum",
+        "onto_label": [
+            "posterior lobe of cerebellum"
+        ],
+        "ilx_id": "ilx_0109103",
+        "label_diffs": [
+            [
+                "posterior lobe of",
+                "- the",
+                "cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002709",
+        "ilx_label": "posterior nuclear complex",
+        "onto_label": [
+            "posterior nuclear complex of thalamus"
+        ],
+        "ilx_id": "ilx_0109109",
+        "label_diffs": [
+            [
+                "posterior nuclear complex",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8064516129032258
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002814",
+        "ilx_label": "posterior superior fissure",
+        "onto_label": [
+            "posterior superior fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0109127",
+        "label_diffs": [
+            [
+                "posterior superior fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7878787878787878
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002818",
+        "ilx_label": "posterolateral fissure",
+        "onto_label": [
+            "posterolateral fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0109140",
+        "label_diffs": [
+            [
+                "posterolateral fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7586206896551724
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014473",
+        "ilx_label": "precentral fissure",
+        "onto_label": [
+            "precentral fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0109192",
+        "label_diffs": [
+            [
+                "precentral fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.72
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014539",
+        "ilx_label": "precommissural fornix",
+        "onto_label": [
+            "precommissural fornix of forebrain"
+        ],
+        "ilx_id": "ilx_0109197",
+        "label_diffs": [
+            [
+                "precommissural fornix",
+                "+ of",
+                "+ forebrain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7636363636363637
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002816",
+        "ilx_label": "prepyramidal fissure",
+        "onto_label": [
+            "prepyramidal fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0109235",
+        "label_diffs": [
+            [
+                "prepyramidal fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7407407407407407
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004725",
+        "ilx_label": "prepyriform area",
+        "onto_label": [
+            "piriform cortex"
+        ],
+        "ilx_id": "ilx_0109236",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0002590",
+        "label_diffs": [
+            [
+                "- prepyriform",
+                "- area",
+                "+ piriform",
+                "+ cortex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6451612903225806
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001944",
+        "ilx_label": "pretectum",
+        "onto_label": [
+            "pretectal region"
+        ],
+        "ilx_id": "ilx_0109258",
+        "label_diffs": [
+            [
+                "- pretectum",
+                "+ pretectal",
+                "+ region"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.56
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014471",
+        "ilx_label": "primary fissure",
+        "onto_label": [
+            "primary fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0109270",
+        "label_diffs": [
+            [
+                "primary fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6818181818181818
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0023859",
+        "ilx_label": "primary somatosensory cortex lamina vi",
+        "onto_label": [
+            "primary somatosensory cortex layer 6"
+        ],
+        "ilx_id": "ilx_0109334",
+        "label_diffs": [
+            [
+                "primary somatosensory cortex",
+                "- lamina",
+                "- vi",
+                "+ layer",
+                "+ 6"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8648648648648649
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002158",
+        "ilx_label": "principal olivary nucleus",
+        "onto_label": [
+            "principal inferior olivary nucleus"
+        ],
+        "ilx_id": "ilx_0109351",
+        "label_diffs": [
+            [
+                "principal",
+                "+ inferior",
+                "olivary nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.847457627118644
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002981",
+        "ilx_label": "pulvinar",
+        "onto_label": [
+            "pulvinar nucleus"
+        ],
+        "ilx_id": "ilx_0109516",
+        "label_diffs": [
+            [
+                "pulvinar",
+                "+ nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002707",
+        "ilx_label": "pyramidal tract",
+        "onto_label": [
+            "corticospinal tract"
+        ],
+        "ilx_id": "ilx_0109556",
+        "label_diffs": [
+            [
+                "- pyramidal",
+                "+ corticospinal",
+                "tract"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5882352941176471
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000475",
+        "ilx_label": "regional part of body",
+        "onto_label": [
+            "organism subdivision"
+        ],
+        "ilx_id": "ilx_0109833",
+        "label_diffs": [
+            [
+                "+ organism",
+                "+ subdivision",
+                "- regional",
+                "- part",
+                "- of",
+                "- body"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.24390243902439024
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002946",
+        "ilx_label": "regional part of cerebellum",
+        "onto_label": [
+            "obsolete regional part of cerebellum"
+        ],
+        "ilx_id": "ilx_0109839",
+        "label_diffs": [
+            [
+                "+ obsolete",
+                "regional part of cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8571428571428571
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000064",
+        "ilx_label": "regional part of organ",
+        "onto_label": [
+            "organ part"
+        ],
+        "ilx_id": "ilx_0109860",
+        "label_diffs": [
+            [
+                "- regional",
+                "+ organ",
+                "part",
+                "- of",
+                "- organ"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004003",
+        "ilx_label": "regional parts of the hemisphere lobules",
+        "onto_label": [
+            "cerebellum hemisphere lobule"
+        ],
+        "ilx_id": "ilx_0109875",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- regional",
+                "- parts",
+                "- of",
+                "- the",
+                "hemisphere",
+                "- lobules",
+                "+ lobule"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6176470588235294
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0027285",
+        "ilx_label": "regional parts of the paravermal lobules",
+        "onto_label": [
+            "paravermis lobule area"
+        ],
+        "ilx_id": "ilx_0109876",
+        "label_diffs": [
+            [
+                "- regional",
+                "- parts",
+                "- of",
+                "- the",
+                "- paravermal",
+                "+ paravermis",
+                "- lobules",
+                "+ lobule",
+                "+ area"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4838709677419355
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004070",
+        "ilx_label": "regional parts of the vermal lobules",
+        "onto_label": [
+            "cerebellum vermis lobule"
+        ],
+        "ilx_id": "ilx_0109877",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "+ vermis",
+                "- regional",
+                "- parts",
+                "- of",
+                "- the",
+                "- vermal",
+                "- lobules",
+                "+ lobule"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001792",
+        "ilx_label": "retina ganglion cell layer",
+        "onto_label": [
+            "ganglionic layer of retina"
+        ],
+        "ilx_id": "ilx_0110008",
+        "label_diffs": [
+            [
+                "+ ganglionic",
+                "+ layer",
+                "+ of",
+                "retina",
+                "- ganglion",
+                "- cell",
+                "- layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5769230769230769
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001791",
+        "ilx_label": "retina inner nuclear layer",
+        "onto_label": [
+            "inner nuclear layer of retina"
+        ],
+        "ilx_id": "ilx_0110011",
+        "label_diffs": [
+            [
+                "- retina",
+                "inner nuclear layer",
+                "+ of",
+                "+ retina"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6909090909090909
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001795",
+        "ilx_label": "retina inner plexiform layer",
+        "onto_label": [
+            "inner plexiform layer of retina"
+        ],
+        "ilx_id": "ilx_0110012",
+        "label_diffs": [
+            [
+                "- retina",
+                "inner plexiform layer",
+                "+ of",
+                "+ retina"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.711864406779661
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002965",
+        "ilx_label": "rostral intralaminar nuclei",
+        "onto_label": [
+            "rostral intralaminar nuclear group"
+        ],
+        "ilx_id": "ilx_0110211",
+        "label_diffs": [
+            [
+                "rostral intralaminar",
+                "- nuclei",
+                "+ nuclear",
+                "+ group"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8524590163934426
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006489",
+        "ilx_label": "second cervical spinal cord segment",
+        "onto_label": [
+            "c2 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0110427",
+        "label_diffs": [
+            [
+                "- second",
+                "+ c2",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6956521739130435
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002817",
+        "ilx_label": "secondary fissure",
+        "onto_label": [
+            "secondary fissure of cerebellum"
+        ],
+        "ilx_id": "ilx_0110440",
+        "label_diffs": [
+            [
+                "secondary fissure",
+                "+ of",
+                "+ cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7083333333333334
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007714",
+        "ilx_label": "segment part of cervical spinal cord",
+        "onto_label": [
+            "cervical subsegment of spinal cord"
+        ],
+        "ilx_id": "ilx_0110451",
+        "label_diffs": [
+            [
+                "+ cervical",
+                "- segment",
+                "+ subsegment",
+                "- part",
+                "of",
+                "- cervical",
+                "spinal cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6285714285714286
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007716",
+        "ilx_label": "segment part of lumbar spinal cord",
+        "onto_label": [
+            "lumbar subsegment of spinal cord"
+        ],
+        "ilx_id": "ilx_0110452",
+        "label_diffs": [
+            [
+                "+ lumbar",
+                "- segment",
+                "+ subsegment",
+                "- part",
+                "of",
+                "- lumbar",
+                "spinal cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007717",
+        "ilx_label": "segment part of sacral spinal cord",
+        "onto_label": [
+            "sacral subsegment of spinal cord"
+        ],
+        "ilx_id": "ilx_0110453",
+        "label_diffs": [
+            [
+                "+ sacral",
+                "- segment",
+                "+ subsegment",
+                "- part",
+                "of",
+                "- sacral",
+                "spinal cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007715",
+        "ilx_label": "segment part of thoracic spinal cord",
+        "onto_label": [
+            "thoracic subsegment of spinal cord"
+        ],
+        "ilx_id": "ilx_0110454",
+        "label_diffs": [
+            [
+                "+ thoracic",
+                "- segment",
+                "+ subsegment",
+                "- part",
+                "of",
+                "- thoracic",
+                "spinal cord"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6285714285714286
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0025534",
+        "ilx_label": "sensorimotor",
+        "onto_label": [
+            "sensorimotor system"
+        ],
+        "ilx_id": "ilx_0110491",
+        "label_diffs": [
+            [
+                "sensorimotor",
+                "+ system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7741935483870968
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004714",
+        "ilx_label": "septal pellucidum",
+        "onto_label": [
+            "septum pellucidum"
+        ],
+        "ilx_id": "ilx_0110509",
+        "label_diffs": [
+            [
+                "- septal",
+                "+ septum",
+                "pellucidum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8823529411764706
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000446",
+        "ilx_label": "septum",
+        "onto_label": [
+            "septum of telencephalon"
+        ],
+        "ilx_id": "ilx_0110516",
+        "onto_uri_from_ilx_label": "http://purl.obolibrary.org/obo/UBERON_0003037",
+        "label_diffs": [
+            [
+                "septum",
+                "+ of",
+                "+ telencephalon"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.41379310344827586
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006493",
+        "ilx_label": "seventh cervical spinal cord segment",
+        "onto_label": [
+            "c7 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0110585",
+        "label_diffs": [
+            [
+                "- seventh",
+                "+ c7",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7428571428571429
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006492",
+        "ilx_label": "sixth cervical spinal cord segment",
+        "onto_label": [
+            "c6 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0110651",
+        "label_diffs": [
+            [
+                "- sixth",
+                "+ c6",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6764705882352942
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0009050",
+        "ilx_label": "solitary nucleus",
+        "onto_label": [
+            "nucleus of solitary tract"
+        ],
+        "ilx_id": "ilx_0110729",
+        "label_diffs": [
+            [
+                "+ nucleus",
+                "+ of",
+                "solitary",
+                "- nucleus",
+                "+ tract"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4878048780487805
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003942",
+        "ilx_label": "somatosensory system",
+        "onto_label": [
+            "somatic sensory system"
+        ],
+        "ilx_id": "ilx_0110754",
+        "label_diffs": [
+            [
+                "- somatosensory",
+                "+ somatic",
+                "+ sensory",
+                "system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9047619047619048
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014630",
+        "ilx_label": "spinal cord anterior gray commissure",
+        "onto_label": [
+            "ventral gray commissure of spinal cord"
+        ],
+        "ilx_id": "ilx_0110910",
+        "label_diffs": [
+            [
+                "+ ventral",
+                "+ gray",
+                "+ commissure",
+                "+ of",
+                "spinal cord",
+                "- anterior",
+                "- gray",
+                "- commissure"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5135135135135135
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002256",
+        "ilx_label": "spinal cord dorsal horn",
+        "onto_label": [
+            "dorsal horn of spinal cord"
+        ],
+        "ilx_id": "ilx_0110913",
+        "label_diffs": [
+            [
+                "+ dorsal",
+                "+ horn",
+                "+ of",
+                "spinal cord",
+                "- dorsal",
+                "- horn"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4489795918367347
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002315",
+        "ilx_label": "spinal cord grey matter",
+        "onto_label": [
+            "gray matter of spinal cord"
+        ],
+        "ilx_id": "ilx_0110920",
+        "label_diffs": [
+            [
+                "+ gray",
+                "+ matter",
+                "+ of",
+                "spinal cord",
+                "- grey",
+                "- matter"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4489795918367347
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014631",
+        "ilx_label": "spinal cord posterior gray commissure",
+        "onto_label": [
+            "dorsal gray commissure of spinal cord"
+        ],
+        "ilx_id": "ilx_0110924",
+        "label_diffs": [
+            [
+                "+ dorsal",
+                "+ gray",
+                "+ commissure",
+                "+ of",
+                "spinal cord",
+                "- posterior",
+                "- gray",
+                "- commissure"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5135135135135135
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002257",
+        "ilx_label": "spinal cord ventral horn",
+        "onto_label": [
+            "ventral horn of spinal cord"
+        ],
+        "ilx_id": "ilx_0110927",
+        "label_diffs": [
+            [
+                "+ ventral",
+                "+ horn",
+                "+ of",
+                "spinal cord",
+                "- ventral",
+                "- horn"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.47058823529411764
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002318",
+        "ilx_label": "spinal cord white matter",
+        "onto_label": [
+            "white matter of spinal cord"
+        ],
+        "ilx_id": "ilx_0110944",
+        "label_diffs": [
+            [
+                "+ white",
+                "+ matter",
+                "+ of",
+                "spinal cord",
+                "- white",
+                "- matter"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.47058823529411764
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0000044",
+        "ilx_label": "spinal ganglion part of peripheral nervous system",
+        "onto_label": [
+            "dorsal root ganglion"
+        ],
+        "ilx_id": "ilx_0110945",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- spinal",
+                "+ dorsal",
+                "+ root",
+                "ganglion",
+                "- part",
+                "- of",
+                "- peripheral",
+                "- nervous",
+                "- system"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.34782608695652173
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006725",
+        "ilx_label": "spiral ligament of cochlea",
+        "onto_label": [
+            "spiral ligament"
+        ],
+        "ilx_id": "ilx_0110983",
+        "label_diffs": [
+            [
+                "spiral ligament",
+                "- of",
+                "- cochlea"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7317073170731707
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002227",
+        "ilx_label": "spiral organ of corti",
+        "onto_label": [
+            "spiral organ of cochlea"
+        ],
+        "ilx_id": "ilx_0110984",
+        "label_diffs": [
+            [
+                "spiral organ of",
+                "- corti",
+                "+ cochlea"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8181818181818182
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0028194",
+        "ilx_label": "spiral prominence of cochlea",
+        "onto_label": [
+            "spiral prominence of cochlear duct"
+        ],
+        "ilx_id": "ilx_0110985",
+        "label_diffs": [
+            [
+                "spiral prominence of",
+                "- cochlea",
+                "+ cochlear",
+                "+ duct"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9032258064516129
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007640",
+        "ilx_label": "stratum lacunosum moleculare",
+        "onto_label": [
+            "hippocampus stratum lacunosum moleculare"
+        ],
+        "ilx_id": "ilx_0111078",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "stratum lacunosum moleculare"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8235294117647058
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007637",
+        "ilx_label": "stratum lucidum",
+        "onto_label": [
+            "hippocampus stratum lucidum"
+        ],
+        "ilx_id": "ilx_0111079",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "stratum lucidum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7142857142857143
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005371",
+        "ilx_label": "stratum oriens",
+        "onto_label": [
+            "hippocampus stratum oriens"
+        ],
+        "ilx_id": "ilx_0111080",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "stratum oriens"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002313",
+        "ilx_label": "stratum pyramidale",
+        "onto_label": [
+            "hippocampus pyramidal layer"
+        ],
+        "ilx_id": "ilx_0111081",
+        "label_diffs": [
+            [
+                "- stratum",
+                "+ hippocampus",
+                "- pyramidale",
+                "+ pyramidal",
+                "+ layer"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5333333333333333
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005372",
+        "ilx_label": "stratum radiatum",
+        "onto_label": [
+            "hippocampus stratum radiatum"
+        ],
+        "ilx_id": "ilx_0111082",
+        "label_diffs": [
+            [
+                "+ hippocampus",
+                "stratum radiatum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7272727272727273
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002282",
+        "ilx_label": "stria vascularis",
+        "onto_label": [
+            "stria vascularis of cochlear duct"
+        ],
+        "ilx_id": "ilx_0111092",
+        "label_diffs": [
+            [
+                "stria vascularis",
+                "+ of",
+                "+ cochlear",
+                "+ duct"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6530612244897959
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003031",
+        "ilx_label": "submedial nucleus",
+        "onto_label": [
+            "submedial nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0111192",
+        "label_diffs": [
+            [
+                "submedial nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7391304347826086
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001900",
+        "ilx_label": "subthalamus",
+        "onto_label": [
+            "ventral thalamus"
+        ],
+        "ilx_id": "ilx_0111230",
+        "label_diffs": [
+            [
+                "+ ventral",
+                "- subthalamus",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5925925925925926
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004922",
+        "ilx_label": "subventricular zone",
+        "onto_label": [
+            "postnatal subventricular zone"
+        ],
+        "ilx_id": "ilx_0111233",
+        "label_diffs": [
+            [
+                "+ postnatal",
+                "subventricular zone"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7916666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003004",
+        "ilx_label": "superior central nucleus",
+        "onto_label": [
+            "median raphe nucleus"
+        ],
+        "ilx_id": "ilx_0111276",
+        "label_diffs": [
+            [
+                "- superior",
+                "- central",
+                "+ median",
+                "+ raphe",
+                "nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5909090909090909
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006782",
+        "ilx_label": "superior colliculus stratum lemnisci",
+        "onto_label": [
+            "stratum lemnisci of superior colliculus"
+        ],
+        "ilx_id": "ilx_0111296",
+        "label_diffs": [
+            [
+                "+ stratum",
+                "+ lemnisci",
+                "+ of",
+                "superior colliculus",
+                "- stratum",
+                "- lemnisci"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5066666666666667
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0022434",
+        "ilx_label": "superior olive",
+        "onto_label": [
+            "primary superior olive"
+        ],
+        "ilx_id": "ilx_0111314",
+        "label_diffs": [
+            [
+                "+ primary",
+                "superior olive"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7777777777777778
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003033",
+        "ilx_label": "suprageniculate nucleus",
+        "onto_label": [
+            "suprageniculate nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0111347",
+        "label_diffs": [
+            [
+                "suprageniculate nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7931034482758621
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0015800",
+        "ilx_label": "taenia tecta",
+        "onto_label": [
+            "taenia tectum of brain"
+        ],
+        "ilx_id": "ilx_0111490",
+        "label_diffs": [
+            [
+                "taenia",
+                "- tecta",
+                "+ tectum",
+                "+ of",
+                "+ brain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7058823529411765
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001727",
+        "ilx_label": "taste bud nifext 14",
+        "onto_label": [
+            "taste bud"
+        ],
+        "ilx_id": "ilx_0111537",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "taste bud",
+                "- nifext",
+                "- 14"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6428571428571429
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002233",
+        "ilx_label": "tectorial membrane of spiral organ of cochlea",
+        "onto_label": [
+            "tectorial membrane of cochlea"
+        ],
+        "ilx_id": "ilx_0111550",
+        "label_diffs": [
+            [
+                "tectorial membrane of",
+                "- spiral",
+                "- organ",
+                "- of",
+                "cochlea"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7837837837837838
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001897",
+        "ilx_label": "thalamus",
+        "onto_label": [
+            "dorsal plus ventral thalamus"
+        ],
+        "ilx_id": "ilx_0111657",
+        "label_diffs": [
+            [
+                "+ dorsal",
+                "+ plus",
+                "+ ventral",
+                "thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4444444444444444
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0006488",
+        "ilx_label": "third cervical spinal cord segment",
+        "onto_label": [
+            "c3 segment of cervical spinal cord"
+        ],
+        "ilx_id": "ilx_0111700",
+        "label_diffs": [
+            [
+                "- third",
+                "+ c3",
+                "+ segment",
+                "+ of",
+                "cervical spinal cord",
+                "- segment"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6470588235294118
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014541",
+        "ilx_label": "thoracic spinal cord central canal",
+        "onto_label": [
+            "thoracic division of spinal cord central canal"
+        ],
+        "ilx_id": "ilx_0111711",
+        "label_diffs": [
+            [
+                "thoracic",
+                "+ division",
+                "+ of",
+                "spinal cord central canal"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.85
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003939",
+        "ilx_label": "transverse temporal cortex",
+        "onto_label": [
+            "transverse gyrus of heschl"
+        ],
+        "ilx_id": "ilx_0111910",
+        "label_diffs": [
+            [
+                "transverse",
+                "- temporal",
+                "- cortex",
+                "+ gyrus",
+                "+ of",
+                "+ heschl"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0007633",
+        "ilx_label": "trapezoid nuclear complex",
+        "onto_label": [
+            "nucleus of trapezoid body"
+        ],
+        "ilx_id": "ilx_0111919",
+        "label_diffs": [
+            [
+                "+ nucleus",
+                "+ of",
+                "trapezoid",
+                "+ body",
+                "- nuclear",
+                "- complex"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.44
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002618",
+        "ilx_label": "trochlear nerve fibers",
+        "onto_label": [
+            "root of trochlear nerve"
+        ],
+        "ilx_id": "ilx_0112003",
+        "label_diffs": [
+            [
+                "+ root",
+                "+ of",
+                "trochlear nerve",
+                "- fibers"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6666666666666666
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002434",
+        "ilx_label": "tuberal part of hypophysis",
+        "onto_label": [
+            "pituitary stalk"
+        ],
+        "ilx_id": "ilx_0112048",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ pituitary",
+                "+ stalk",
+                "- tuberal",
+                "- part",
+                "- of",
+                "- hypophysis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.24390243902439024
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0019275",
+        "ilx_label": "uncinate fasciculus of forebrain",
+        "onto_label": [
+            "uncinate fasciculus of the forebrain"
+        ],
+        "ilx_id": "ilx_0112158",
+        "label_diffs": [
+            [
+                "uncinate fasciculus of",
+                "+ the",
+                "forebrain"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.9411764705882353
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002637",
+        "ilx_label": "ventral anterior nucleus",
+        "onto_label": [
+            "ventral anterior nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0112284",
+        "label_diffs": [
+            [
+                "ventral anterior nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0001925",
+        "ilx_label": "ventral lateral nucleus",
+        "onto_label": [
+            "ventral lateral nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0112309",
+        "label_diffs": [
+            [
+                "ventral lateral nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7931034482758621
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002480",
+        "ilx_label": "ventral nucleus of lateral geniculate body",
+        "onto_label": [
+            "ventral lateral geniculate nucleus"
+        ],
+        "ilx_id": "ilx_0112321",
+        "label_diffs": [
+            [
+                "ventral",
+                "- nucleus",
+                "- of",
+                "lateral geniculate",
+                "- body",
+                "+ nucleus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7105263157894737
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002596",
+        "ilx_label": "ventral posterior nucleus",
+        "onto_label": [
+            "ventral posterior nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0112334",
+        "label_diffs": [
+            [
+                "ventral posterior nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8064516129032258
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002945",
+        "ilx_label": "ventral posteromedial nucleus",
+        "onto_label": [
+            "ventral posteromedial nucleus of thalamus"
+        ],
+        "ilx_id": "ilx_0112339",
+        "label_diffs": [
+            [
+                "ventral posteromedial nucleus",
+                "+ of",
+                "+ thalamus"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8285714285714286
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004720",
+        "ilx_label": "vermal parts of the cerebellum",
+        "onto_label": [
+            "cerebellar vermis"
+        ],
+        "ilx_id": "ilx_0112392",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "- vermal",
+                "- parts",
+                "- of",
+                "- the",
+                "- cerebellum",
+                "+ cerebellar",
+                "+ vermis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.3829787234042553
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004074",
+        "ilx_label": "vermic lobule i",
+        "onto_label": [
+            "cerebellum vermis lobule i"
+        ],
+        "ilx_id": "ilx_0112394",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule i"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6829268292682927
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004075",
+        "ilx_label": "vermic lobule ii",
+        "onto_label": [
+            "cerebellum vermis lobule ii"
+        ],
+        "ilx_id": "ilx_0112395",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule ii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6976744186046512
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004076",
+        "ilx_label": "vermic lobule iii",
+        "onto_label": [
+            "cerebellum vermis lobule iii"
+        ],
+        "ilx_id": "ilx_0112396",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule iii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7111111111111111
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004077",
+        "ilx_label": "vermic lobule iv",
+        "onto_label": [
+            "cerebellum vermis lobule iv"
+        ],
+        "ilx_id": "ilx_0112397",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule iv"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6976744186046512
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004078",
+        "ilx_label": "vermic lobule ix",
+        "onto_label": [
+            "cerebellum vermis lobule ix"
+        ],
+        "ilx_id": "ilx_0112398",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule ix"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6976744186046512
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004079",
+        "ilx_label": "vermic lobule v",
+        "onto_label": [
+            "cerebellum vermis lobule v"
+        ],
+        "ilx_id": "ilx_0112399",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule v"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6829268292682927
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004080",
+        "ilx_label": "vermic lobule vi",
+        "onto_label": [
+            "cerebellum vermis lobule vi"
+        ],
+        "ilx_id": "ilx_0112400",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule vi"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6976744186046512
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004081",
+        "ilx_label": "vermic lobule vii",
+        "onto_label": [
+            "cerebellum vermis lobule vii"
+        ],
+        "ilx_id": "ilx_0112401",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule vii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.7111111111111111
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005345",
+        "ilx_label": "vermic lobule viia",
+        "onto_label": [
+            "cerebellum vermis lobule viia"
+        ],
+        "ilx_id": "ilx_0112402",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule viia"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.723404255319149
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0005346",
+        "ilx_label": "vermic lobule viib",
+        "onto_label": [
+            "cerebellum vermis lobule viib"
+        ],
+        "ilx_id": "ilx_0112403",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule viib"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.723404255319149
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004082",
+        "ilx_label": "vermic lobule viii",
+        "onto_label": [
+            "cerebellum vermis lobule viii"
+        ],
+        "ilx_id": "ilx_0112404",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule viii"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.723404255319149
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004083",
+        "ilx_label": "vermic lobule x",
+        "onto_label": [
+            "cerebellum vermis lobule x"
+        ],
+        "ilx_id": "ilx_0112405",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "- vermic",
+                "+ vermis",
+                "lobule x"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6829268292682927
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004720",
+        "ilx_label": "vermis",
+        "onto_label": [
+            "cerebellar vermis"
+        ],
+        "ilx_id": "ilx_0112407",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ cerebellar",
+                "vermis"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.5217391304347826
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0003941",
+        "ilx_label": "vermis of the anterior lobe of the cerebellum",
+        "onto_label": [
+            "cerebellum anterior vermis"
+        ],
+        "ilx_id": "ilx_0112408",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "+ anterior",
+                "vermis",
+                "- of",
+                "- the",
+                "- anterior",
+                "- lobe",
+                "- of",
+                "- the",
+                "- cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4507042253521127
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0004009",
+        "ilx_label": "vermis of the posterior lobe of the cerebellum",
+        "onto_label": [
+            "cerebellum posterior vermis"
+        ],
+        "ilx_id": "ilx_0112410",
+        "label_diffs": [
+            [
+                "+ cerebellum",
+                "+ posterior",
+                "vermis",
+                "- of",
+                "- the",
+                "- posterior",
+                "- lobe",
+                "- of",
+                "- the",
+                "- cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.4657534246575342
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002731",
+        "ilx_label": "vestibulocochlear nerve fiber bundle",
+        "onto_label": [
+            "vestibulocochlear nerve root"
+        ],
+        "ilx_id": "ilx_0112460",
+        "label_diffs": [
+            [
+                "vestibulocochlear nerve",
+                "+ root",
+                "- fiber",
+                "- bundle"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.78125
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0002436",
+        "ilx_label": "visual cortex primary",
+        "onto_label": [
+            "primary visual cortex"
+        ],
+        "ilx_id": "ilx_0112514",
+        "repeating_in_ilx": true,
+        "label_diffs": [
+            [
+                "+ primary",
+                "visual cortex",
+                "- primary"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.6190476190476191
+        ]
+    },
+    {
+        "ilx_uri": "http://purl.obolibrary.org/obo/UBERON_0014540",
+        "ilx_label": "white laminae of cerebellum",
+        "onto_label": [
+            "white matter lamina of cerebellum"
+        ],
+        "ilx_id": "ilx_0112629",
+        "label_diffs": [
+            [
+                "white",
+                "+ matter",
+                "- laminae",
+                "+ lamina",
+                "of cerebellum"
+            ]
+        ],
+        "label_diff_notes": [
+            "Need futher action"
+        ],
+        "label_diff_ratios": [
+            0.8666666666666667
+        ]
+    }
+]

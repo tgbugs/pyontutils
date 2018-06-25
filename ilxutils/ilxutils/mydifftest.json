@@ -1,0 +1,11 @@
+{
+    "id": 1234,
+    "term": "neuron",
+    "difflib": [
+        "the",
+        "- neuron's",
+        "+ neurons",
+        "went up the tall stairs."
+    ],
+    "ratio": 0.9863013698630136
+}
