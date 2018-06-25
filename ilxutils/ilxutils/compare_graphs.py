@@ -2,8 +2,8 @@
 
 Usage:  compare_graphs.py [-h | --help]
         compare_graphs.py [-v | --version]
-        compare_graphs.py [-r=<path>] [-t=<path>...] (-f=<path> | -p=<path> | -c=<ext> -o=<path>) [-i] [-s] [--save-pickles] [--html=<path>]
-        compare_graphs.py [-r=<path>] [-t=<path>...] [-c=<ext> -o=<path> --csv -i --func=<functype>] [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>] (-f=<path> | -p=<path> | -c=<ext> -o=<path>) [-i] [-s] [--save-pickles] [--html=<path>]
+        compare_graphs.py [-r=<path>] [-t=<path>] [-c=<ext> -o=<path> --csv -i --func=<functype>] [-s] [--save-pickles] [--html=<path>]
 
 Options:
     -h --help                          Display this help message
@@ -409,7 +409,8 @@ def main():
         rg_ilx=args.ilx,
         shorten_names=args.shorten_names,
         get_only_partial_diff=get_only_partial_diff,
-        custom_diff=args.custom_diff)
+        custom_diff=args.custom_diff
+        function=args.function)
 
     if args.csv:
         gobj.csv(args.output)
