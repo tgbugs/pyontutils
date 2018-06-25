@@ -7,7 +7,7 @@ Usage:
     scigraph-deploy graph [options] <repo> <remote_base> <build_host> <services_host>
     scigraph-deploy config [options] <build_host> <services_host>
     scigraph-deploy services [options] <build_host> <services_host>
-    scigraph-deploy --view-defaults
+    scigraph-deploy [options]
 
 Options:
     -U --build-user=USER                build_user              [default: bamboo]

@@ -49,7 +49,8 @@ class restService:
         if output:
             req.headers['Accept'] = output
         prep = req.prepare()
-        if self._verbose: print(prep.url)
+        safe = prep.url.replace(self.api_key, '[secure]') if self.api_key else prep.url
+        if self._verbose: print(safe)
         try:
             resp = s.send(prep)
         except requests.exceptions.ConnectionError as e:

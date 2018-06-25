@@ -9,7 +9,9 @@ import cProfile
 import pstats
 import subprocess
 from ast import literal_eval
+from pathlib import Path
 from pyontutils.ttlser import CustomTurtleSerializer
+from pyontutils.config import devconfig
 from IPython import embed
 
 class CustomTurtleSerializer_prof(CustomTurtleSerializer):
@@ -28,7 +30,7 @@ class CustomTurtleSerializer_prof(CustomTurtleSerializer):
         _ = [print(v[:4], ',') for k, v in ps.stats.items()
              if self.filters[0] in k[0] and self.filters[1] == k[2]]
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'rdflib_profile', 'CustomTurtleSerializer_prof')
+rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.rdflib_profile', 'CustomTurtleSerializer_prof')
 
 def do_serialize(graph, reps, filename):
     sys.stdout.write('["' + filename + '",' + str(CustomTurtleSerializer_prof.filters) + ' , [')
@@ -42,10 +44,13 @@ def run(reps=2):
     sys.stdout.write('[')
     for filename in filenames:
         if not filename.startswith('/'):
-            filename = (gitf / filename).as_posix()
-        graph = rdflib.Graph()
-        graph.parse(filename, format='turtle')
-        out = do_serialize(graph, reps, os.path.basename(filename))
+            path = Path(devconfig.git_local_base, filename)
+            filename = path.as_posix()
+
+        if os.path.exists(filename):
+            graph = rdflib.Graph()
+            graph.parse(filename, format='turtle')
+            out = do_serialize(graph, reps, os.path.basename(filename))
     out = constructed(reps)
     sys.stdout.write(']')
 
@@ -86,6 +91,7 @@ def main():
             p = subprocess.Popen(['./rdflib_profile.py'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
             out, err = p.communicate()
+            print(out.decode())
             asdf = literal_eval(out.decode())
             data[os.path.basename(venv)] = asdf  # nclass, ncalls, tottime, cumtime
 

@@ -7,6 +7,7 @@ import os
 import re
 import math
 import asyncio
+import hashlib
 import inspect
 import subprocess
 from datetime import datetime, date
@@ -26,19 +27,33 @@ rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlse
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
 
-def test_notebook():
+def test_notebook():  # also tests ipython
     try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        return False
-    except (NameError, KeyError) as e:
+        config = get_ipython().config
+        return 'IPKernelApp' in config
+    except NameError as e:
         return False
 
+def test_ipython():
+    try:
+        config = get_ipython().config
+        return 'TerminalInteractiveShell' in config
+    except NameError as e:
+        return False
+
+def test_test():
+    import __main__
+    import sys
+    return hasattr(__main__, '__unittest') and __main__.__unittest or 'nose' in sys.modules
+
 in_notebook = test_notebook()
+in_ipython = test_ipython()
+in_test = test_test()
 
 def stack_magic(stack):
     # note: we cannot use globals() because it will be globals of the defining file not the calling file
-    if in_notebook:
+    # note: in ipython with thing: print(name) will not work if on the same line
+    if in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     else:
         index = -1
@@ -76,6 +91,53 @@ def memoryCheck(vms_max_kb):
     free_gigs = vm.available / 1024 ** 2
     if vm.available < buffer:
         raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
+
+
+class OrderInvariantHash:
+    def __init__(self, cypher=hashlib.sha256, encoding='utf-8'):
+        self.cypher = cypher
+        self.encoding = encoding
+
+    def convertToBytes(self, e):
+        if isinstance(e, rdflib.BNode):
+            raise TypeError('BNode detected, please convert bnodes to '
+                            'ints in a deterministic manner first.')
+        elif isinstance(e, rdflib.URIRef):
+            return e.encode(self.encoding)
+        elif isinstance(e, rdflib.Literal):
+            return self.makeByteTuple((str(e), e.datatype, e.language))
+        elif isinstance(e, int):
+            return str(e).encode(self.encoding)
+        elif isinstance(e, bytes):
+            return e
+        elif isinstance(e, str):
+            return e.encode(self.encoding)
+        else:
+            raise TypeError(f'Unhandled type on {e!r} {type(e)}')
+
+    def makeByteTuple(self, t):
+        return b'(' + b' '.join(self.convertToBytes(e)
+                                for e in t
+                                if e is not None) + b')'
+
+    def __call__(self, iterable):
+        # convert all strings bytes
+        # keep existing bytes as bytes
+        # join as follows b'(http://s http://p http://o)'
+        # join as follows b'(http://s http://p http://o)'
+        # bnodes local indexes are treated as strings and converted
+        # literals are treated as tuples of strings
+        # if lang is not present then the tuple is only 2 elements
+
+        # this is probably not the fastest way to do this but it works
+        #bytes_ = [makeByteTuple(t) for t in sorted(tuples)]
+        #embed()
+        m = self.cypher()
+        # when everything is replaced by an integer or a bytestring
+        # it is safe to sort last because identity is ensured
+        [m.update(b) for b in sorted(self.makeByteTuple(t) for t in iterable)]
+        return m.digest()
+
 
 def noneMembers(container, *args):
     for a in args:
@@ -370,10 +432,17 @@ class _TermColors:
     OFF_BLINK = '\033[25m',
     POSITIVE = '\033[27m',
     OFF_HIDE = '\033[28m',
-    RED = '\033[91m',
-    GREEN = '\033[92m',
-    YELLOW = '\033[93m',
-    BLUE = '\033[94m',
+    RED = '\033[31m',
+    GREEN = '\033[32m',
+    YELLOW = '\033[33m',
+    BLUE = '\033[34m',
+    PURPLE = '\033[35m',
+    CYANE = '\033[36m',
+    WHITE = '\033[37m',
+    LTRED = '\033[91m',
+    LTGREEN = '\033[92m',
+    LTYELLOW = '\033[93m',
+    LTBLUE = '\033[94m',
     )
 
     def __init__(self):

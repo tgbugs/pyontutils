@@ -1,9 +1,11 @@
 #!/usr/bin/env python3.6
 
 import inspect
+import pyontutils.neurons
 from pyontutils.utils import TermColors as tc
 from pyontutils.neurons import *  # always import via pyontutils or you will get errors
 from pyontutils.neuron_lang import *
+#pred = config(checkout_ok=True)
 from pyontutils import phenotype_namespaces as phns
 from IPython import embed
 
@@ -117,4 +119,6 @@ print('testing printing pv after localNames is called inside messup')
 print(repr(pv))
 
 print(graphBase.neurons())
-embed()
+
+if __name__ == '__main__':
+    embed()

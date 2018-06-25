@@ -1,3 +1,4 @@
+from IPython import embed
 import os
 import yaml
 from pathlib import Path
@@ -9,41 +10,70 @@ def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
     except KeyError: return None
 
+
+class dproperty(property):
+    default = None
+
+
+class dstr(str):
+    default = None
+
+    @property
+    def isDefault(self):
+        return self == self.default
+
+
 def default(value):
     def decorator(function, default_value=value):
         @wraps(function)
         def inner(*args, **kwargs):
             try:
-                return function(*args, **kwargs)
+                out = dstr(function(*args, **kwargs))
+                out.default = default_value
+                return out
             except (TypeError, KeyError, FileNotFoundError) as e:
                 return default_value
-        return property(inner)
+
+        pinner = dproperty(inner)
+        pinner.default = default_value
+        return pinner
+
     return decorator
 
 tempdir = gettempdir()
 
+
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
+        self._override = {}
         self.config_file = config_file
+        olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
+        self.__class__.ontology_local_repo.default = olrd
 
     @property
     def config(self):
         """ Allows changing the config on the fly """
         # TODO more efficient to read once and put watch on the file
         with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
-            config = yaml.load(f)
+            config = {k:self._override[k] if
+                      k in self._override else
+                      v for k, v in yaml.load(f).items()}
 
         return config if config else None
 
     @property
     def _config(self):
+        # FIXME make it clear that this is read only...
         out = {}  # do it this way to read first
         for name in dir(self):
             if not name.startswith('_') and name not in self.skip:
                 thing = getattr(self.__class__, name, None)
                 if isinstance(thing, property):
-                    out[name] = getattr(self, name)
+                    if name in self._override:
+                        out[name] = self._override[name]
+                    else:
+                        out[name] = getattr(self, name)
 
         return out
 
@@ -51,10 +81,13 @@ class DevConfig:
         if file is None:
             file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
 
-        config = self._config
+        config = {k:str(v) for k, v in self._config.items()}
+
         if config:
             with open(file, 'wt') as f:
                 yaml.dump(config, f, default_flow_style=False)
+            if self._override:
+                self._override = {}
         else:
             raise ValueError('devconfig is empty?!')
 
@@ -81,6 +114,11 @@ class DevConfig:
     def git_local_base(self):
         return os.path.expanduser(self.config['git_local_base'])
 
+    @git_local_base.setter
+    def git_local_base(self, value):
+        self._override['git_local_base'] = value
+        self.write(self.config_file.as_posix())
+
     @default('SciCrunch')
     def ontology_org(self):
         return self.config['ontology_org']
@@ -93,21 +131,45 @@ class DevConfig:
     def ontology_remote_repo(self):
         return os.path.join(self.git_remote_base, self.ontology_org, self.ontology_repo)
 
-    @property
+    @dproperty
     def ontology_local_repo(self):
+        def add_default(thing=self.__class__.ontology_local_repo.default()):
+            default = self.__class__.ontology_local_repo.default()
+            out = dstr(default)
+            out.default = default
+            return out
+
         try:
-            olr = self.config['ontology_local_repo']
+            olr = Path(self.config['ontology_local_repo']).resolve()
             if olr:
-                return olr
+                if olr == self._ontology_local_repo:
+                    return add_default(olr)
+                else:
+                    return add_default(self._ontology_local_repo.as_posix())
             else:
                 raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, FileNotFoundError) as e:
-            maybe_repo = Path(__file__).parent.parent.parent / self.ontology_repo
-            if maybe_repo.exists():
-                return str(maybe_repo)
+            return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
+
+    @property
+    def _ontology_local_repo(self):
+        maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
+        if maybe_repo.exists():
+            return maybe_repo
+        else:
+            maybe_start = Path(__file__).parent.parent.parent.absolute()
+            maybe_base = maybe_start
+            fsroot = Path('/')
+            while maybe_base != fsroot:
+                maybe_repo = maybe_base / self.ontology_repo
+                if maybe_repo.exists():
+                    print(tc.blue('INFO:'), f'Ontology repository found at {maybe_repo}')
+                    return maybe_repo
+                else:
+                    maybe_base = maybe_base.parent
             else:
-                print(tc.red('WARNING:'), f'No repository found at {maybe_repo}')  # TODO test for this
-                return tempdir
+                print(tc.red('WARNING:'),
+                      f'No repository found in any parent directory of {maybe_start}')
 
     @default('localhost')
     def _scigraph_host(self):
@@ -126,6 +188,11 @@ class DevConfig:
     @default('http://localhost:9000/scigraph')
     def scigraph_api(self):
         return self.config['scigraph_api']
+
+    @scigraph_api.setter
+    def scigraph_api(self, value):
+        self._override['scigraph_api'] = value
+        self.write(self.config_file.as_posix())
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
@@ -155,7 +222,18 @@ class DevConfig:
     def zip_location(self):
         return self.config['zip_location']
 
+    def __repr__(self):
+        return f'DevConfig {self.config_file}\n' + '\n'.join(f'{k:<20} {v}' for k, v in {k:getattr(self, k) for k in dir(self) if
+                    not k.startswith('_') and
+                    k not in ('config', 'write', 'config_file') and
+                    isinstance(getattr(self.__class__, k), property)}.items())
+
 
 devconfig = DevConfig()
 
+def main():
+    from IPython import embed
+    print(repr(devconfig))
 
+if __name__ == '__main__':
+    main()
