@@ -6,7 +6,10 @@ from pyontutils.neuron_lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
 
-config(out_graph_path=str(Path(graphBase.local_base) / 'ttl/hbp-special.ttl'))
+if __name__ == '__main__':
+    # FIXME proper cleanup in testing not this
+    # breaks testing by preventing return to master
+    config(out_graph_path=Path(graphBase.local_base, 'ttl/hbp-special.ttl').as_posix())
 
 with BBP:
     context = Neuron(Rat, S1, INT, GABA)
@@ -142,9 +145,11 @@ class table1(rowParse):
     def _end(self):
         graphBase.write()
 
-if __name__ == '__main__':
+def main():
     import csv
-    with open(refile(__file__, 'resources/26451489 table 1.csv'), 'rt') as f:
+    with open(refile(__file__, '../resources/26451489 table 1.csv'), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
     table1(rows)
 
+if __name__ == '__main__':
+    main()
