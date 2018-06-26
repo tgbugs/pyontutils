@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import inspect
 from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
 from pyontutils.neuron_lang import config  # annoying, but works
 
