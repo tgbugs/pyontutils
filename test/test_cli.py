@@ -113,7 +113,6 @@ class TestScripts(Folders):
 
     def test_import(self):
         skip = ('cocomac_uberon',  # known broken
-                'neuron_ma2015',  # still needs work
                 'old_neuron_example',  # known broken
                )
         lasts = tuple()
@@ -122,7 +121,9 @@ class TestScripts(Folders):
                    'neuron_example',
                    'phenotype_namespaces',
                    'neuron_models/basic_neurons',
-                   'neuron_models/huang2017',)
+                   'neuron_models/huang2017',
+                   'neuron_models/ma2015',
+                  )
         print('checkout ok:', checkout_ok)
 
         ont_branch = Repo(devconfig.ontology_local_repo).active_branch.name
