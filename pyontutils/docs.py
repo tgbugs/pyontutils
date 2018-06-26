@@ -28,6 +28,7 @@ def getMdReadFormat():
 
 md_read_format = getMdReadFormat()
 
+# NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
 compile_org_file = ['emacs', '-q', '-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix(), '--batch', '-f', 'compile-org-file']
 
 theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup')
@@ -94,7 +95,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
         # if this happens direct stderr to stdout to get the message
         raise subprocess.CalledProcessError(e.returncode,
                                             ' '.join(e.args) + f' {path.as_posix()}') from ValueError(err.decode())
-    if not body:
+    if not body or b'*temp*' in body:
         raise ValueError(f'Output document for {path.as_posix()} '
                          'has no body! the input org was:\n'
                          f'{org.decode()}')
