@@ -7,6 +7,7 @@ import subprocess
 from importlib import import_module
 from pathlib import Path
 from git import Repo
+from pyontutils.utils import TermColors as tc
 
 from pyontutils.config import devconfig
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
@@ -123,7 +124,9 @@ class TestScripts(Folders):
                    'neuron_models/basic_neurons',
                    'neuron_models/huang2017',)
         print('checkout ok:', checkout_ok)
-        if not checkout_ok:
+
+        ont_branch = Repo(devconfig.ontology_local_repo).active_branch.name
+        if not checkout_ok and ont_branch != 'neurons':
             skip += tuple(n.split('/')[-1] for n in neurons)  # FIXME don't use stem below
         else:
             lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
@@ -187,7 +190,7 @@ class TestScripts(Folders):
             module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
             #print('MPATH:  ', module_path)
             if stem not in skip:
-                #print('TESTING:', module_path)
+                print(tc.ltyellow('TESTING:'), module_path)
                 module = import_module(module_path)  # this returns the submod
                 #submod = getattr(module, stem)
                 if hasattr(module, '_CHECKOUT_OK'):
