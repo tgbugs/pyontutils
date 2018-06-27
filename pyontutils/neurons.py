@@ -132,6 +132,7 @@ class graphBase:
                       force_remote=      False,
                       checkout_ok=       _CHECKOUT_OK,
                       scigraph=          None):
+        # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
             to be configurable and it needs to do so globally.
@@ -169,12 +170,16 @@ class graphBase:
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [os.path.join(graphBase.remote_base, branch, s) for s in suffixes]
-            local = [(graphBase.local_base / s).as_posix() for s in suffixes]
+            remote = [os.path.join(graphBase.remote_base, branch, s)
+                      if '://' not in s else  # 'remote' is file:// or http[s]://
+                      s for s in suffixes]
+            # TODO the whole thing needs to be reworked to not use suffixes...
+            local = [(graphBase.local_base / s).as_posix()
+                     if '://' not in s else
+                     ((graphBase.local_base / s.replace(graphBase.remote_base, '').strip('/')).as_uri()
+                      if graphBase.remote_base in s else s)  # FIXME this breaks the semanics of local?
+                      for s in suffixes]
             return remote, local
-
-        def attachPrefixes(*prefixes, graph=None):
-            return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
 
         # file location setup
         remote_core_paths,  local_core_paths =  makeLocalRemote(core_graph_paths)
@@ -212,17 +217,20 @@ class graphBase:
             core_graph.parse(cg, format='turtle')
         graphBase.core_graph = core_graph
 
+        # store prefixes
+        if isinstance(prefixes, dict):
+            graphBase.prefixes = prefixes
+        else:
+            graphBase.prefixes = makePrefixes(*prefixes)
+
+        PREFIXES = {**graphBase.prefixes, **uPREFIXES}
+
         # input graph setup
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('owl',
-                                   'TEMP',  # XXX PREFIXES
-                                   'PAXRAT',
-                                   'GO',
-                                   'CHEBI',
-                                   *prefixes,
-                                   graph=in_graph)
+
+        nin_graph = makeGraph('', prefixes=PREFIXES, graph=in_graph)
         graphBase.in_graph = in_graph
 
         # output graph setup
@@ -232,29 +240,15 @@ class graphBase:
             # that we use to serialize so that behavior is consistent
             NeuronBase.existing_pes = {}
             NeuronBase.existing_ids = {}
-        new_graph = attachPrefixes('owl',   # XXX PREFIXES
-                                   'GO',
-                                   'PR',
-                                   'CHEBI',
-                                   'PATO',
-                                   'PAXRAT',
-                                   'UBERON',
-                                   'NCBITaxon',
-                                   'TEMP',
-                                   'ilxtr',
-                                   'ILX',
-                                   'SAO',
-                                   'BIRNLEX',
-                                   *prefixes,
-                                   graph=out_graph)
+        new_graph = makeGraph('', prefixes=PREFIXES, graph=out_graph)
         graphBase.out_graph = out_graph
 
         # makeGraph setup
         new_graph.filename = out_graph_path
         ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
         new_graph.add_ont(ontid, 'Some Neurons')
-        for remote_out_import in remote_out_imports:
-            new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
+        for local_out_import in local_out_imports:  # TODO flip switch between local and remote import behavior
+            new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(local_out_import))  # core should be in the import closure
         graphBase.ng = new_graph
 
         # set predicates
@@ -268,7 +262,7 @@ class graphBase:
 
     @staticmethod
     def write():
-        og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
 

@@ -8,9 +8,11 @@ from pyontutils.core import NIFRID, ilxtr
 from pyontutils.core import hasRole, definition, restriction
 import rdflib
 from IPython import embed
-PREFIXES.update({'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                 'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
-pred = config(out_graph_path='basic-neurons.ttl', prefixes=('SWAN', 'SWAA')) #, checkout_ok=True)  # false default breaks ci
+
+c = Config('basic-neurons',
+           prefixes={'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+pred = c.pred
 
 from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
 
@@ -22,7 +24,7 @@ Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       rdflib.URIRef(f'file://{Neuron.local_base.as_posix()}ttl/generated/swanson_hierarchies.ttl')))
 
 class Basic(LocalNameManager):
-    brain = OntTerm('UBERON:0000955', label='brain')
+    brain = OntId('UBERON:0000955')#, label='brain')
     #projection = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasProjectionPhenotype)
     #intrinsic = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasProjectionPhenotype)
 
@@ -42,7 +44,7 @@ http://ontology.neuinfo.org/trees/query/ilx:hasPart5/SWAN:629/ttl/generated/swan
 """
 sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson_hierarchies.ttl').as_posix(), format='ttl')
 # restriction.parse(sgraph)  # FIXME this breaks with weird error message
-OntCuries(PREFIXES)
+OntCuries({**graphBase.prefixes, **PREFIXES})
 rests = [r for r in restriction.parse(graph=sgraph) if r.p == ilxtr.hasPart3]
 #restriction = Restriction2(rdfs.subClassOf)
 
@@ -84,9 +86,10 @@ def main():
 
     Neuron.write()
     Neuron.write_python()
-    #embed()
     import csv
-    with open('swanson-neurons.csv', 'wt') as f:
+    from pathlib import Path
+    csvpath = Path(graphBase.ng.filename).with_suffix('.csv').as_posix()
+    with open(csvpath, 'wt') as f:
         csv.writer(f).writerows(rows)
 
 if __name__ == '__main__':

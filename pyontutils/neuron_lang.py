@@ -4,12 +4,15 @@ from pathlib import Path
 from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
+from pyontutils.core import OntId
+from pyontutils.config import devconfig
 from IPython import embed
 
 __all__ = [
     'AND',
     'OR',
     'graphBase',
+    'Config',
     'config',
     'pred',
     'setLocalContext',
@@ -22,6 +25,45 @@ __all__ = [
     'Neuron',
     '_CHECKOUT_OK',
 ]
+
+
+class Config:
+    def __init__(self,
+                 name =                 'test-neurons',
+                 prefixes =             tuple(),  # dict or list
+                 imports =              tuple(),  # iterable
+                 import_from_local =    True,  # also load from local?
+                 ):
+        imports = list(imports)
+        imports += ['NIFTTL:phenotype-core.ttl', 'NIFTTL:phenotypes.ttl']
+        remote = OntId('NIFTTL:')
+        local = Path(devconfig.ontology_local_repo, 'ttl')
+        out_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+        imports = [OntId(i) for i in imports]
+
+        remote_base = remote.iri.rsplit('/', 2)[0]
+        local_base = local.parent
+
+        if import_from_local:
+            # NOTE: we currently do the translation more ... inelegantly inside of config so we
+            # have to keep the translation layer out here (sigh)
+            core_graph_paths = [Path(local, i.iri.replace(remote.iri, '')).relative_to(local_base).as_posix()
+                                if remote.iri in i.iri else
+                                i for i in imports]
+        else:
+            core_graph_paths = imports
+
+        out_graph_path = (out_base / f'{name}.ttl')
+
+        self.pred = config(remote_base = remote_base,  # leave it as raw for now?
+                           local_base = local_base.as_posix(),
+                           core_graph_paths = core_graph_paths,
+                           out_graph_path = out_graph_path.as_posix(),
+                           out_imports = imports, #[i.iri for i in imports],
+                           prefixes = prefixes,
+                           force_remote = not import_from_local,
+                           branch = 'neurons')
+
 
 def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            local_base=        None,  # devconfig.ontology_local_repo by default
