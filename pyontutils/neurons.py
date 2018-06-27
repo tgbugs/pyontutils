@@ -214,7 +214,10 @@ class graphBase:
         if core_graph is None:
             core_graph = rdflib.Graph()
         for cg in use_core_paths:
-            core_graph.parse(cg, format='turtle')
+            try:
+                core_graph.parse(cg, format='turtle')
+            except FileNotFoundError:
+                print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
         graphBase.core_graph = core_graph
 
         # store prefixes
