@@ -8,6 +8,8 @@ phenotypeOf,,,,,,,,"asymmetric, irreflexive"
 hasSmallMoleculeExpressionPhenotype,,,,,,hasExpressionPhenotype,,
 hasProteinExpressionPhenotype,,,,,,hasExpressionPhenotype,,
 hasNucleicAcidExpressionPhenotype,,,,,,hasExpressionPhenotype,,
+hasReporterExpressionPhenotype,,,,,,hasExpressionPhenotype,,
+hasDriverExpressionPhenotype,,,,,,hasExpressionPhenotype,,
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type. This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need this one,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"

@@ -458,7 +458,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return inj[self]
 
         pn = self.in_graph.namespace_manager.qname(self.p)
-        resp = self._sgv.findById(pn)
+        try:
+            resp = self._sgv.findById(pn)
+        except ConnectionError as e:
+            print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
+            resp = None
+
         if resp:  # DERP
             abvs = resp['abbreviations']
         else:
@@ -1235,6 +1240,7 @@ class injective(type):
         stack = inspect.stack()
         g = stack_magic(stack)
         self._existing = set()
+        setLocalNameBase(f'setBy_{self.__name__}', self.__name__, g)
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
             if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
@@ -1252,9 +1258,9 @@ class injective(type):
             if k not in self._existing and (isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)):
                 try:
                     g.pop(k)
+                    graphBase.LocalNames.pop(k)  # this should only run if g pops correctly? XXX FIXME?
                 except KeyError:
                     raise KeyError('%s not in globals, are you calling resetLocalNames from a local scope?' % k)
-                graphBase.LocalNames.pop(k)
 
 
 class LocalNameManager(metaclass=injective):
