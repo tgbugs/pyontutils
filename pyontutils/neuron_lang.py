@@ -28,17 +28,21 @@ __all__ = [
 
 
 class Config:
+    _subclasses = set()
     def __init__(self,
                  name =                 'test-neurons',
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
                  import_from_local =    True,  # also load from local?
                  ):
+        import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
         imports += ['NIFTTL:phenotype-core.ttl', 'NIFTTL:phenotypes.ttl']
         remote = OntId('NIFTTL:')
         local = Path(devconfig.ontology_local_repo, 'ttl')
-        out_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+        out_local_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+        out_remote_base = os.path.join(remote.iri, 'generated/neurons')
+        out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
         imports = [OntId(i) for i in imports]
 
         remote_base = remote.iri.rsplit('/', 2)[0]
@@ -53,7 +57,12 @@ class Config:
         else:
             core_graph_paths = imports
 
-        out_graph_path = (out_base / f'{name}.ttl')
+        out_graph_path = (out_local_base / f'{name}.ttl')
+
+        class lConfig(self.__class__):
+            iri = os.path.join(out_remote_base, f'{name}.ttl')
+
+        self.__class__._subclasses.add(lConfig)
 
         self.pred = config(remote_base = remote_base,  # leave it as raw for now?
                            local_base = local_base.as_posix(),

@@ -53,7 +53,9 @@ in_test = test_test()
 def stack_magic(stack):
     # note: we cannot use globals() because it will be globals of the defining file not the calling file
     # note: in ipython with thing: print(name) will not work if on the same line
-    if in_notebook or in_ipython or in_test:
+    if len(stack) > 2 and 'exec_module' in [f.function for f in stack]:
+        index = 1
+    elif in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     else:
         index = -1
