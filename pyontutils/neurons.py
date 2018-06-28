@@ -131,7 +131,9 @@ class graphBase:
                       prefixes=          tuple(),
                       force_remote=      False,
                       checkout_ok=       _CHECKOUT_OK,
-                      scigraph=          None):
+                      scigraph=          None,
+                      iri=               None,
+                      use_local_import_paths=True):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -247,12 +249,22 @@ class graphBase:
         graphBase.out_graph = out_graph
 
         # makeGraph setup
-        new_graph.filename = out_graph_path
-        ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
-        new_graph.add_ont(ontid, 'Some Neurons')
-        for local_out_import in local_out_imports:  # TODO flip switch between local and remote import behavior
-            new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(local_out_import))  # core should be in the import closure
         graphBase.ng = new_graph
+        new_graph.filename = out_graph_path
+
+        if iri is not None:
+            ontid = rdflib.URIRef(iri)
+        else:
+            ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
+
+        if use_local_import_paths:
+            new_graph.add_ont(ontid, 'Some Neurons')
+            for local_out_import in local_out_imports:  # TODO flip switch between local and remote import behavior
+                new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(local_out_import))  # core should be in the import closure
+        else:
+            new_graph.add_ont(ontid, 'Some Neurons')
+            for remote_out_import in remote_out_imports:  # TODO flip switch between local and remote import behavior
+                new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
 
         # set predicates
         graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
