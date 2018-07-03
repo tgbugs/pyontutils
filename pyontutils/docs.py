@@ -56,7 +56,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
     # TODO fix relative links to point to github
 
-    pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
+    pandoc = ['pandoc', '--columns', '300', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
 
     p = subprocess.Popen(pandoc,
