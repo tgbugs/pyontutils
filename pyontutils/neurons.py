@@ -1394,7 +1394,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = Path(devconfig.git_local_repo, 'ttl')
+    local_prefix = Path(devconfig.ontology_local_repo, 'ttl')
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',
