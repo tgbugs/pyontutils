@@ -1035,6 +1035,9 @@ class SwansonLabels(Ont):  # FIXME not labels...
 
                 if p == rdfs.subClassOf and o == ilxtr.swansonBrainRegionConcept:
                     yield s, p, self.root.iri
+                elif p == rdfs.label:
+                    yield s, p, Label(label=o, labelRoot=self.root).rdfs_label
+                    yield s, skos.prefLabel, o
                 else:
                     yield s, p, o
 
