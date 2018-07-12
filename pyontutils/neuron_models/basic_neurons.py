@@ -9,8 +9,10 @@ from pyontutils.core import hasRole, definition, restriction
 import rdflib
 from IPython import embed
 
+swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
 c = Config('basic-neurons',
-           prefixes={'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+           prefixes={'swanr':swanr,
+                     'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
 pred = c.pred
 
@@ -21,7 +23,7 @@ Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       rdflib.URIRef('file:///tmp/output.ttl')))
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
-                      rdflib.URIRef(f'file://{Neuron.local_base.as_posix()}ttl/generated/swanson_hierarchies.ttl')))
+                      rdflib.URIRef(f'file://{Neuron.local_base.as_posix()}ttl/generated/swanson.ttl')))
 
 class Basic(LocalNameManager):
     brain = OntId('UBERON:0000955')#, label='brain')
@@ -33,19 +35,19 @@ class Basic(LocalNameManager):
     intrinsic = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
 
 """
-http://ontology.neuinfo.org/trees/query/ilx:hasPart1/SWAN:1/ttl/generated/swanson_hierarchies.ttl?restriction=true&depth=40&direction=OUTGOING
+http://ontology.neuinfo.org/trees/query/swanr:hasPart1/SWAN:1/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING
 
 human cns gray matter regions
-http://ontology.neuinfo.org/trees/query/ilx:hasPart3/SWAN:1/ttl/generated/swanson_hierarchies.ttl?restriction=true&depth=40&direction=OUTGOING
+http://ontology.neuinfo.org/trees/query/swanr:hasPart3/SWAN:1/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING
 
 surface features, handy to have around
-http://ontology.neuinfo.org/trees/query/ilx:hasPart5/SWAN:629/ttl/generated/swanson_hierarchies.ttl?restriction=true&depth=40&direction=OUTGOING
+http://ontology.neuinfo.org/trees/query/swanr:hasPart5/SWAN:629/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING
 
 """
-sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson_hierarchies.ttl').as_posix(), format='ttl')
+sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson.ttl').as_posix(), format='ttl')
 # restriction.parse(sgraph)  # FIXME this breaks with weird error message
 OntCuries({**graphBase.prefixes, **PREFIXES})
-rests = [r for r in restriction.parse(graph=sgraph) if r.p == ilxtr.hasPart3]
+rests = [r for r in restriction.parse(graph=sgraph) if r.p == swanr.hasPart3]
 #restriction = Restriction2(rdfs.subClassOf)
 
 
