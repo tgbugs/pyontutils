@@ -81,6 +81,7 @@ imports = NIFTTL['nif_backend.ttl'],
 #imports = obo['bfo.owl'], obo['ro.owl']
 #imports = tuple()
 comment = 'The core components for modelling techniques and methods.'
+branch = 'methods'
 _repo = True
 debug = True
 
@@ -796,6 +797,7 @@ methods_core = simpleOnt(filename=filename,
                          imports=imports,
                          triples=triples,
                          comment=comment,
+                         branch=branch,
                          _repo=_repo)
 
 collector.write()

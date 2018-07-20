@@ -1707,6 +1707,7 @@ class Ont:
     #rdf_type = owl.Ontology
     _debug = False
     local_base = devconfig.ontology_local_repo
+    remote_base = 'http://ontology.neuinfo.org/NIF/'
     path = 'ttl/generated/'  # sane default
     filename = None
     name = None
@@ -1769,6 +1770,7 @@ class Ont:
                                      comment=self.comment,
                                      shortname=self.shortname,
                                      local_base=self.local_base,
+                                     remote_base=self.remote_base,
                                      path=self.path,
                                      version=self.version,
                                      imports=imports)
@@ -1913,6 +1915,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               triples=tuple(),
               comment=None,
               path='ttl/',
+              branch='master',
               fail=False,
               _repo=True):
 
@@ -1931,6 +1934,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.comment = comment
     Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
+
+    if branch != 'master':
+        Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'
 
     built_ont, = build(Simple, fail=fail, n_jobs=1)
 

@@ -8,7 +8,7 @@ from pyontutils.core import partOf, hasRole, locatedIn
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist
+from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist, branch
 
 blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
@@ -762,6 +762,7 @@ methods_helper = simpleOnt(filename=filename,
                            imports=imports,
                            triples=triples,
                            comment=comment,
+                           branch=branch,
                            _repo=_repo)
 
 methods_helper._graph.add_namespace('asp', str(asp))
@@ -3427,6 +3428,7 @@ methods = simpleOnt(filename=filename,
                     imports=imports,
                     triples=triples,
                     comment=comment,
+                    branch=branch,
                     _repo=_repo)
 
 [methods.graph.add((o2, rdfs.subClassOf, TEMP.temp))
@@ -3539,6 +3541,7 @@ def forComparison():
                                imports=imports,
                                triples=triples,
                                comment=comment,
+                               branch=branch,
                                _repo=_repo)
 
 def main():
