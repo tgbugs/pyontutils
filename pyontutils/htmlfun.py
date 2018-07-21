@@ -1,4 +1,7 @@
-""" Light weight functions for generating html """
+""" Light weight functions for generating html
+    and working with the rest of the unholy trinity. """
+
+# html
 
 def tag(_tag, n=False):
     nl = '\n' if n else ''
@@ -33,3 +36,29 @@ def htmldoc(body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple())
     scripts = '\n'.join((scripts(s) for s in scripts))
     head = headtag('\n'.join((titletag(title), '<meta charset="UTF-8">', styles, scripts)))
     return header + htmltag('\n'.join((head, bodytag(body))))
+
+def render_table(rows, *headers):
+    output = []
+    output.append('<tr><th>' + '</th><th>'.join(headers) + '</th><tr>')
+    for row in rows:
+        output.append('<tr><th>' + '</th><th>'.join(row) + '</th><tr>')
+
+    out = '<table>' + '\n'.join(output) + '</table>'
+    return out
+
+# css
+
+monospace_body_style = 'body { font-family: Dejavu Sans Mono; font-size: 11pt }'
+
+table_style = ('th { text-align: left; padding-right: 20px; }'
+               'tr { vertical-align: top;  }'
+               'tr:hover { background-color: #fcfcfc;  }'
+               'table { font-family: Dejavu Sans Mono; }'
+               'a:link { color: black; }'
+               'a:visited { color: grey; }'
+               'del { color: white; }')
+
+details_style = ('details summary::-webkit-details-marker { display: none; }\n'
+                 'details > summary:first-of-type { list-style-type: none; }')
+
+
