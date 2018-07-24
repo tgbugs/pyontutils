@@ -192,7 +192,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
             zip_path = maybe_zip_path[0]  # this way we get the actual date
             print('Graph already loaded at', zip_path)
 
-    return zip_path, itrips
+    return zip_path, itrips, config
 
 def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
                    clean=False, check_built=False, cleanup_later=False):
@@ -307,6 +307,43 @@ def do_patch(patch_config, local_base):
                 if e.returncode > 1:  # 1 means already applied
                     print(e.stdout.decode())
                     raise e
+
+def load_header(filepath, remote=False):
+    oo = b'owl:Ontology'
+    path = Path(filepath)
+    if path.suffix == '.ttl':
+        infmt = 'turtle'
+    else:
+        infmt = 'xml'  # FIXME assumption
+
+    if remote:
+        resp = requests.get(filepath)  # TODO nonblocking pull these out, fetch, run inner again until done
+        raw = resp.text.encode()
+    else:
+        with open(filepath, 'rb') as f:  # do not catch FileNotFoundErrors
+            raw = f.read()
+
+    if oo in raw:  # we only care if there are imports or an ontology iri
+        scratch = rdflib.Graph()
+        if infmt == 'turtle':
+            data, rest = raw.split(b'###', 1)
+        elif infmt == None:  # assume xml
+            xml_tree = etree.parse(BytesIO(raw))
+            xml_root = xml_tree.getroot()
+            xml_ontology = xml_tree.xpath("/*[local-name()='RDF']/*[local-name()='Ontology']")
+            xml_root.clear()
+            xml_root.append(xml_ontology[0])
+            data = etree.tostring(xml_root)
+        scratch.parse(data=data, format=infmt)
+
+    return scratch
+
+def get_iri(graph):
+    gen = graph[:rdf.type:owl.Ontology]
+    return next(gen)  # XXX WARNING does not check for > 1 bound name per file
+
+def get_imports(graph):
+    yield from (p for p in graph[get_iri(graph):owl.imports:])
 
 def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), readonly=False, dobig=False, revert=False):
     """ Read the import closure and use the local versions of the files. """
@@ -447,14 +484,18 @@ def normalize_prefixes(graph, curies):
     return mg, ng_
 
 def import_tree(graph, ontologies):
-    thisfile = Path(ontologies[0]).name
-    print(thisfile)
-    mg = makeGraph('', graph=graph)
-    mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
-    j = mg.make_scigraph_json('owl:imports', direct=True)
-    t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
-    #print(t)
-    return t, te
+    for ontology in ontologies:
+        thisfile = Path(ontology).name
+        print(thisfile)
+        mg = makeGraph('', graph=graph)
+        mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
+        j = mg.make_scigraph_json('owl:imports', direct=True)
+        try:
+            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+            #print(t)
+            yield t, te
+        except KeyError:
+            print(tc.red('WARNING:'), 'could not find', ontology, 'in import chain')  # TODO zap onts w/o imports
 
 def for_burak(ng_):
     syn_predicates = (ng_.expand('OBOANN:synonym'),
@@ -604,15 +645,17 @@ def run(args):
                                                 check_built=check_built,
                                                 cleanup_later=True)
         with execute_regardless(scigraph_reset_state):
-            graph_zip, itrips = repro_loader(zip_location, git_remote, org,
-                                             git_local, repo_name, branch,
-                                             commit, remote_base, load_base,
-                                             graphload_config, patch_config,
-                                             patch, scigraph_commit,
-                                             check_built=check_built)
+            graph_zip, itrips, config = repro_loader(zip_location, git_remote, org,
+                                                     git_local, repo_name, branch,
+                                                     commit, remote_base, load_base,
+                                                     graphload_config, patch_config,
+                                                     patch, scigraph_commit,
+                                                     check_built=check_built)
         if not check_built:
             deploy_scp(services_zip, sscp)
             deploy_scp(graph_zip, scp)
+        if not ontologies:
+            ontologies = [get_iri(load_header(rec['url'])) for rec in config['ontologies']]
         print(services_zip)
         print(graph_zip)
         if '--local' in args:
@@ -643,9 +686,10 @@ def run(args):
     if itrips:
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
-        tree, extra = import_tree(import_graph, ontologies)
-        with open(jpth(zip_location, '{repo_name}-import-closure.html'.format(repo_name=repo_name)), 'wt') as f:
-            f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+        for tree, extra in import_tree(import_graph, ontologies):
+            name = Path(next(iter(tree.keys()))).name
+            with open(jpth(zip_location, f'{name}-import-closure.html'), 'wt') as f:
+                f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
     if debug:
         embed()
