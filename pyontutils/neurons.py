@@ -283,7 +283,7 @@ class graphBase:
 
     @staticmethod
     def write_python():
-        with open(PPath(graphBase.ng.filename).with_suffix('.py'), 'wt') as f:
+        with open(PPath(graphBase.ng.filename).with_suffix('.py').as_posix(), 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
@@ -652,28 +652,28 @@ class NeuronBase(graphBase):
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
         super().__init__()
         self.ORDER = [
-        # FIXME it may make more sense to manage this in the NeuronArranger
-        # so that it can interconvert the two representations
-        # this is really high overhead to load this here
-        self._predicates.hasInstanceInSpecies,
-        self._predicates.hasTaxonRank,
-        # TODO hasDevelopmentalStage   !!!!! FIXME
-        self._predicates.hasLocationPhenotype,  # FIXME
-        self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
-        self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
-        self._predicates.hasDendriteMorphologicalPhenotype,
-        self._predicates.hasDendriteLocatedIn,
-        self._predicates.hasAxonLocatedIn,
-        self._predicates.hasMorphologicalPhenotype,
-        self._predicates.hasElectrophysiologicalPhenotype,
-        #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
-        self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-        self._predicates.hasExpressionPhenotype,
-        self._predicates.hasNeurotransmitterPhenotype,
-        self._predicates.hasCircuitRolePhenotype,
-        self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-        self._predicates.hasExperimentalPhenotype,
-        self._predicates.hasPhenotype,  # last
+            # FIXME it may make more sense to manage this in the NeuronArranger
+            # so that it can interconvert the two representations
+            # this is really high overhead to load this here
+            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasTaxonRank,
+            # TODO hasDevelopmentalStage   !!!!! FIXME
+            self._predicates.hasLocationPhenotype,  # FIXME
+            self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
+            self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
+            self._predicates.hasDendriteMorphologicalPhenotype,
+            self._predicates.hasDendriteLocatedIn,
+            self._predicates.hasAxonLocatedIn,
+            self._predicates.hasMorphologicalPhenotype,
+            self._predicates.hasElectrophysiologicalPhenotype,
+            #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
+            self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
+            self._predicates.hasExpressionPhenotype,
+            self._predicates.hasNeurotransmitterPhenotype,
+            self._predicates.hasCircuitRolePhenotype,
+            self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
+            self._predicates.hasExperimentalPhenotype,
+            self._predicates.hasPhenotype,  # last
         ]
 
         self._localContext = self.__context
@@ -916,10 +916,10 @@ class Neuron(NeuronBase):
         #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
 
         disjoints = [  # FIXME there has got to be a better place to do this :/
-        self._predicates.hasInstanceInSpecies,
-        self._predicates.hasSomaLocatedIn,
-        self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
-        self._predicates.hasMorphologicalPhenotype,
+            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasSomaLocatedIn,
+            self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+            self._predicates.hasMorphologicalPhenotype,
         ]
 
         for disjoint in disjoints:
@@ -1281,19 +1281,19 @@ class LocalNameManager(metaclass=injective):
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
 
     ORDER = (
-    'ilxtr:hasInstanceInSpecies',
-    'ilxtr:hasTaxonRank',
-    'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
-    'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
-    'ilxtr:hasDendriteMorphologicalPhenotype',
-    'ilxtr:hasDendriteLocatedIn',
-    'ilxtr:hasAxonLocatedIn',
-    'ilxtr:hasMorphologicalPhenotype',
-    'ilxtr:hasElectrophysiologicalPhenotype',
-    'ilxtr:hasSpikingPhenotype',  # legacy support
-    'ilxtr:hasExpressionPhenotype',
-    'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
-    'ilxtr:hasPhenotype',
+        'ilxtr:hasInstanceInSpecies',
+        'ilxtr:hasTaxonRank',
+        'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
+        'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
+        'ilxtr:hasDendriteMorphologicalPhenotype',
+        'ilxtr:hasDendriteLocatedIn',
+        'ilxtr:hasAxonLocatedIn',
+        'ilxtr:hasMorphologicalPhenotype',
+        'ilxtr:hasElectrophysiologicalPhenotype',
+        'ilxtr:hasSpikingPhenotype',  # legacy support
+        'ilxtr:hasExpressionPhenotype',
+        'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+        'ilxtr:hasPhenotype',
     )
 
     #def __getitem__(self, key):  # just in case someone makes an instance by mistake

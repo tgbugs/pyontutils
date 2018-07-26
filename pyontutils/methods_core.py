@@ -739,17 +739,19 @@ def derp():
     b1 = rdflib.BNode()
     yield a, rdf.first, b1
     r1 = restG(
-    blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
-    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-    blankc(owl.onClass, BFO['0000004']))(b1)
+        blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
+        blankc(owl.maxQualifiedCardinality,
+               rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+        blankc(owl.onClass, BFO['0000004']))(b1)
     yield from r1
 
     b2 = rdflib.BNode()
     yield b, rdf.first, b2
     r2 = restG(
-    blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
-    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-    blankc(owl.onClass, ilxtr.aspect))(b2)
+        blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
+        blankc(owl.maxQualifiedCardinality,
+               rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+        blankc(owl.onClass, ilxtr.aspect))(b2)
     yield from r2
 
     b3 = rdflib.BNode()

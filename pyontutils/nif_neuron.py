@@ -551,15 +551,15 @@ def _rest_make_phenotypes():
         #'NIFQUAL:',
     #}
     starts = [
-    #"NIFQUAL:sao2088691397",
-    #"NIFQUAL:sao1278200674",
-    #"NIFQUAL:sao2088691397",
-    #"NIFQUAL:sao-1126011106",  # FIXME WTF IS THIS NONSENSE  (scigraph bug?)
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1959705051").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1278200674").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao-1126011106").replace('/','%2F'),
+        #"NIFQUAL:sao2088691397",
+        #"NIFQUAL:sao1278200674",
+        #"NIFQUAL:sao2088691397",
+        #"NIFQUAL:sao-1126011106",  # FIXME WTF IS THIS NONSENSE  (scigraph bug?)
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1959705051").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1278200674").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao-1126011106").replace('/','%2F'),
     ]
 
     for id_ in starts:
@@ -679,15 +679,15 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
-    'NIFEXT:55',
-    'NIFEXT:56',
-    'NIFEXT:57',
-    'NIFEXT:59',
-    'NIFEXT:81',
-    'NLXCELL:091205',
-    NIFCELL_NEURON,
-    'SAO:2128417084',
-    'SAO:862606388',  # secondary, not explicitly in the hbp import
+        'NIFEXT:55',
+        'NIFEXT:56',
+        'NIFEXT:57',
+        'NIFEXT:59',
+        'NIFEXT:81',
+        'NLXCELL:091205',
+        NIFCELL_NEURON,
+        'SAO:2128417084',
+        'SAO:862606388',  # secondary, not explicitly in the hbp import
     )
     for m in missing:
         m = ng.expand(m)

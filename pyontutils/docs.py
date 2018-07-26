@@ -5,6 +5,7 @@ import nbformat
 from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
+from pyontutils.utils import working_dir
 from pyontutils.config import devconfig
 from pyontutils.htmlfun import htmldoc, atag
 from IPython import embed
@@ -122,19 +123,20 @@ def makeKwargs(repo, filepath):
     kwargs = {}
     kwargs['title'] = filepath
     kwargs['authors'] = sorted(name.strip()
-                             for name in set(repo.git.log(['--pretty=format:%an%x09',
-                                                           filepath]).split('\n')))
+                               for name in
+                               set(repo.git.log(['--pretty=format:%an%x09',
+                                                 filepath]).split('\n')))
     kwargs['date'] = repo.git.log(['-n', '1', '--pretty=format:%aI']).strip()
     return kwargs
 
 def outFile(doc, working_dir, BUILD):
-    return BUILD / 'docs' / doc.relative_to(working_dir.parent).with_suffix('.html')
+    relative_html = doc.relative_to(working_dir.parent).with_suffix('.html')
+    return BUILD / 'docs' / relative_html
 
 def run_all(doc, wd, BUILD, **kwargs):
     return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
 
 def main():
-    working_dir = Path(__file__).absolute().resolve().parent.parent
     BUILD = working_dir / 'doc_build'
     if not BUILD.exists():
         BUILD.mkdir()
