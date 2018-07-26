@@ -34,7 +34,6 @@ styletag = tag('style', n=True)
 scripttag = tag('script', n=True)
 bodytag = tag('body', n=True)
 
-from IPython import embed
 def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()):
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
               '"http://www.w3.org/TR/html4/loose.dtd">\n')
