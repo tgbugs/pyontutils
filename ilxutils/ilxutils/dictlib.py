@@ -6,7 +6,7 @@ import sys
 import time
 import math as m
 import numpy as np
-from ilxutils.interlex_sql import interlex_sql
+from ilxutils.interlex_sql import IlxSql
 
 ranking = [
     'CHEBI',
@@ -85,7 +85,7 @@ def merge(new, old):
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
 
-            if 'change' not in list(vals):  #notion that you want to add it
+            if 'change' not in list(vals):  # notion that you want to add it
                 vals['change'] = False
 
             if vals.get('delete') == True:
@@ -138,15 +138,18 @@ def merge(new, old):
                             new_existing_ids.append(e)
                     old['existing_ids'] = new_existing_ids
                 elif vals['iri'] in iris and vals['change'] == False:
-                    pass  #for sanity readability
+                    pass  # for sanity readability
                 else:
                     sys.exit('Something broke while merging in existing_ids')
             old = preferred_change(old)
 
         elif k in [
-                'definition', 'superclasses', 'id', 'type', 'comment', 'label'
+                'definition', 'superclasses', 'id', 'type', 'comment', 'label', 'uid'
         ]:
             old[k] = vals
+
+        old['uid'] = 34142  # DEBUG: need to mark as mine manually until James fixes uid autogenerator
+
     ''' remove repeats '''
     visited = {}
     new_synonyms = []
@@ -187,7 +190,7 @@ def fill_data(data, sql):
 
     old_data = {}
     for d in data:
-        #print(d)
+        # print(d)
         old_data.update({
             int(d['id']): {
                 'existing_ids':
@@ -200,6 +203,6 @@ def fill_data(data, sql):
                     'records')
             }
         })
-        #print(old_data)
+        # print(old_data)
 
     return old_data

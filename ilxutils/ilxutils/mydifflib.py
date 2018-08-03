@@ -85,7 +85,7 @@ def json_secretary(_input):
         return _input
 
 
-#reslover -> run make_confige (tell where hit repo is)
+# reslover -> run make_confige (tell where hit repo is)
 def json_diff(json1, json2, key_target, get_just_diff=True, porcelain=False):
     ''' creates a (keyname + diff) key within the json of the same layer which key_target resides.
         Ex: json1={'definition':'data of key_target'}, json2={'definition':'data of key_target'}
@@ -150,8 +150,12 @@ def test():
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    s1 = 'I love Data'
+    s2 = 'I like Data'
+    print(diffcolor(s1, s2))
+    print(diff(s1, s2))
+    #import doctest
+    # doctest.testmod()
 
     s1 = "the neuron's went up the tall stairs."
     s2 = "the neurons went up the tall stairs again."
@@ -165,4 +169,4 @@ if __name__ == '__main__':
             }
         }
     }, 'rando']
-    print(json_diff(dict1, dict2, 'definition', get_just_diff=False))
+    #print(json_diff(dict1, dict2, 'definition', get_just_diff=False))

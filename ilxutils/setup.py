@@ -32,6 +32,7 @@ setup(
             'scicrunch_client = ilxutils.scicrunch_client : main',
             'interlex_sql = ilxutils.interlex_sql : main',
             'args_reader = ilxutils.args_reader : main',
+            'interlex = ilxutils.cli: main',
         ],
     },
 )

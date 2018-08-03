@@ -25,12 +25,13 @@ import requests as r
 now = str(time.time()).split('.')[0]
 VERSION = '0.1'
 doc = docopt(__doc__, version=VERSION)
-args = pd.Series({k.replace('--',''):v for k, v in doc.items()})
+args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
 
 with open('/home/troy/elastic_migration/auth.ini', 'r') as uk:
     vars = uk.read().split('\n')
     username = vars[0].split('=')[-1].strip()
     password = vars[1].split('=')[-1].strip()
+
 
 def ignore_warnings(test_func):
     def do_test(self, *args, **kwargs):
@@ -39,29 +40,32 @@ def ignore_warnings(test_func):
             test_func(self, *args, **kwargs)
     return do_test
 
+
 class TestSC(unittest.TestCase):
     @ignore_warnings
     def setUp(self):
         if args.production:
-            #FIXME; production doesnt have add/update values yet due to delete not really delete
-            self.args = read_args(api_key = p.home() / 'keys/production_api_scicrunch_key.txt',
-                                    db_url = p.home() / 'keys/production_engine_scicrunch_key.txt',
-                                    production = True)
+            # FIXME; production doesnt have add/update values yet due to delete not really delete
+            self.args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+                                  db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
+                                  production=True)
             self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/{ilx_id}"
         else:
             '''currently just for beta.scicrunch.org'''
-            self.args = read_args(api_key = p.home() / 'keys/production_api_scicrunch_key.txt',
-                                    db_url = p.home() / 'keys/production_engine_scicrunch_key.txt',
-                                    beta = True)
-            self.annos_add = [{'tid':664,  'annotation_tid':12767, 'value':'add_'+now}]
-            self.anno_update = [{'id':10, 'annotation_tid':12767, 'tid':664, 'value':now}]
-            self.terms_add = [{'term':'troy_test_'+now, 'definition':'temp', 'type':'cde'}]
-            self.terms_add_crawl = [{'term':'troy_test_crawl_'+now, 'definition':'temp', 'type':'cde'}]
-            self.terms2update = [{'id':304383,'ilx':'tmp_0381298', 'definition':'update_'+now, 'existing_ids':{'iri':'test.org/121', 'curie':'test:121', 'old_iri': 'test.org/123', 'replace':True}}]
+            self.args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+                                  db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
+                                  beta=True)
+            self.annos_add = [{'tid': 664,  'annotation_tid': 12767, 'value': 'add_'+now}]
+            self.anno_update = [{'id': 10, 'annotation_tid': 12767, 'tid': 664, 'value': now}]
+            self.terms_add = [{'term': 'troy_test_'+now, 'definition': 'temp', 'type': 'cde'}]
+            self.terms_add_crawl = [{'term': 'troy_test_crawl_' +
+                                     now, 'definition': 'temp', 'type': 'cde'}]
+            self.terms2update = [{'id': 304383, 'ilx': 'tmp_0381298', 'definition': 'update_'+now, 'existing_ids': {
+                'iri': 'test.org/121', 'curie': 'test:121', 'old_iri': 'test.org/123', 'replace': True}}]
             self.elastic_base = "https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/beta2_interlex/term/{ilx_id}"
-        self.sci = scicrunch(api_key = self.args.api_key,
-                                base_path = self.args.base_path,
-                                db_url = self.args.db_url)
+        self.sci = scicrunch(api_key=self.args.api_key,
+                             base_path=self.args.base_path,
+                             db_url=self.args.db_url)
         self.ids = [10]
         self.tids = [182]
         self.annotation_ids = [10]
@@ -91,25 +95,29 @@ class TestSC(unittest.TestCase):
 
     @ignore_warnings
     def test_getAnnotations_via_id(self):
-        get = self.sci.getAnnotations_via_id(annotation_ids=self.annotation_ids, _print=False, debug=True)
+        get = self.sci.getAnnotations_via_id(
+            annotation_ids=self.annotation_ids, _print=False, debug=True)
         self.assertEqual(get['success'], True)
         self.assertEqual(get['data'].get('errormsg'), None)
 
     @ignore_warnings
     def test_updateAnnotation(self):
         post = self.sci.updateAnnotations(data=self.anno_update, _print=False, debug=True)
-        get = self.sci.getAnnotations_via_id(annotation_ids=self.annotation_ids, _print=False, debug=True)
+        get = self.sci.getAnnotations_via_id(
+            annotation_ids=self.annotation_ids, _print=False, debug=True)
         self.assertEqual(get['data']['value'], now)
 
     @ignore_warnings
     def test_addTerms(self):
         '''crawl and elastic are tested here'''
         post = self.sci.addTerms(data=self.terms_add_crawl, _print=False, debug=True, crawl=True)[0]
-        get = self.sci.identifierSearches([post['data']['id']], _print=False, debug=True, crawl=True)
+        get = self.sci.identifierSearches(
+            [post['data']['id']], _print=False, debug=True, crawl=True)
         self.assertEqual(get['data']['id'], str(post['data']['id']))
 
         post = self.sci.addTerms(data=self.terms_add, _print=False, debug=True, crawl=False)[0]
-        get = self.sci.identifierSearches([post['data']['id']], _print=False, debug=True, crawl=False)
+        get = self.sci.identifierSearches(
+            [post['data']['id']], _print=False, debug=True, crawl=False)
         self.assertEqual(get['data']['id'], str(post['data']['id']))
 
         url = self.elastic_base.format(ilx_id=get['data']['ilx'])
@@ -121,7 +129,6 @@ class TestSC(unittest.TestCase):
         post = self.sci.updateTerms(data=self.terms2update, _print=False, debug=True)[0]
         get = self.sci.identifierSearches([post['data']['id']], _print=False, debug=True)
         self.assertEqual(get['data']['definition'], 'update_'+now)
-
 
 
 if __name__ == '__main__':
