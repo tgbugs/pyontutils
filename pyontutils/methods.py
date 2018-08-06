@@ -8,7 +8,10 @@ from pyontutils.core import partOf, hasRole, locatedIn
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist
+from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist, branch
+
+# NOTE if vim is slow it is probably becuase there are
+# so many nested parens `:set foldexpr=` fixes the problem
 
 blankc = POCombinator
 restHasValue = Restriction(None, owl.hasValue)
@@ -253,11 +256,11 @@ triples += (  # material entities
     oc(ilxtr.cellSoma, OntTerm('GO:0005575')),
     oc(ilxtr.synapse, OntTerm('GO:0005575')),
     oc(OntTerm('GO:0044464'), OntTerm('GO:0005575')),
-    oc(OntTerm('CHEBI:33697', label='RNA'), OntTerm('CHEBI:33696', label='nucleic acid')),
-    (ilxtr.RNA, owl.equivalentClass, OntTerm('CHEBI:33697', term='RNA')),
+    oc(OntId('CHEBI:33697'), OntTerm('CHEBI:33696', label='nucleic acid')),
+    (ilxtr.RNA, owl.equivalentClass, OntId('CHEBI:33697')),
     (ilxtr.RNA, rdfs.subClassOf, ilxtr.nucleicAcid),
     #oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
-    oc(OntTerm('SO:0000234', label='mRNA'), OntTerm('CHEBI:33697', label='RNA')),
+    oc(OntTerm('SO:0000234', label='mRNA'), OntId('CHEBI:33697')),
     (ilxtr.mRNA, owl.equivalentClass, OntTerm('SO:0000234', label='mRNA')),  # FIXME role?
 
     (OntTerm('GO:0005575', label='cellular_component'), rdfs.subClassOf, ilxtr.physiologicalSystem),
@@ -762,6 +765,7 @@ methods_helper = simpleOnt(filename=filename,
                            imports=imports,
                            triples=triples,
                            comment=comment,
+                           branch=branch,
                            _repo=_repo)
 
 methods_helper._graph.add_namespace('asp', str(asp))
@@ -980,7 +984,7 @@ triples = (
     _t(tech.rnaSeq, 'RNAseq',
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasPrimaryInput,
-                            OntTerm('CHEBI:33697', label='RNA')),
+                            OntId('CHEBI:33697')),  # RNA but labels are inconsistent
                       restN(ilxtr.hasPrimaryAspect,
                             asp.sequence),
                       restN(ilxtr.hasInformationOutput,
@@ -1025,7 +1029,7 @@ triples = (
 
     _t(i.d, 'Patch-seq',
        (hasPart, tech.rnaSeq),
-       (ilxtr.hasPrimaryInput, OntTerm('CHEBI:33697', label='RNA')),
+       (ilxtr.hasPrimaryInput, OntId('CHEBI:33697')),
        (hasParticipant, ilxtr.microPipette),  # FIXME TODO
        synonyms=('Patch-Seq',
                  'patch seq',)),
@@ -1124,7 +1128,7 @@ triples = (
        # parent partof primary participant deliver or something
       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:38867', label='anaesthetic')),),
 
-    _t(i.d, 'anaesthesia technique',
+    _t(tech.anaesthesia, 'anaesthesia technique',
        # anaesthesia is an excellent example of a case where
        # just the use of an anaesthetic is not sufficient
        # and should not be part of the definition
@@ -1135,9 +1139,28 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (hasPart, tech.anestheticAdministration),
        (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       synonyms=('anaesthesia',),
     ),
     # local anaesthesia technique
     # global anaesthesia technique
+    _t(i.d, 'survival anaesthesia technique',
+       (ilxtr.hasPrimaryAspect, asp.nervousResponsiveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (hasPart, tech.anestheticAdministration),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('anaesthesia with recovery',),
+    ),
+
+    _t(i.d, 'terminal anaesthesia technique',
+       (ilxtr.hasPrimaryAspect, asp.nervousResponsiveness),
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (hasPart, tech.anestheticAdministration),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('anaesthesia without recovery',
+                 'anaesthesia with no recovery',),
+    ),
 
     _t(tech.ISH, 'in situ hybridization technique',  # TODO
        intersectionOf(ilxtr.technique,  # FIXME
@@ -1363,6 +1386,14 @@ triples = (
        restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1))),
     #_t(i.d, 'chemical delivery technique',  # not obvious how to define this or if it is used
        #(ilxtr.hasSomething, i.d)),
+    _t(i.d, 'single neuron electroporation technique',
+       (hasPart, tech.electroporation),
+       (hasPart, tech.cellPatching),
+       # FIXME the target of permeability is not the cell but rather the cell membrane :/
+       restMaxCardValue(ilxtr.hasPrimaryInput,
+                        OntTerm('SAO:1417703748', label='Neuron'), Literal(1))),
+    #_t(i.d, 'chemical delivery technique',  # not obvious how to define this or if it is used
+       #(ilxtr.hasSomething, i.d)),
 
     _t(i.d, 'DNA delivery technique',
        (ilxtr.hasPrimaryInput, OntTerm('CHEBI:16991', term='DNA')),
@@ -1462,6 +1493,15 @@ triples = (
        # more than one cell body
        synonyms=( 'transsynaptic tracing',)
     ),
+    _t(i.d, 'monosynapse transsynaptic tracing technique',
+       (hasParticipant, ilxtr.axon),
+       (hasPart, tech.delivery),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
+       # more than cell body and more than one nerve
+       (ilxtr.hasParticipant, ilxtr.synapse),  # synapses between at least 2 pairs of cells
+       (ilxtr.hasSomething, i.d),
+       synonyms=('monosynaptic transsynaptic tracing technique',
+                 'monosynaptic transsynaptic tracing')),
     _t(i.d, 'multisynapse transsynaptic tracing technique',
        (hasParticipant, ilxtr.axon),
        (hasPart, tech.delivery),
@@ -1679,6 +1719,7 @@ triples = (
        equivalentClass=oECN),
 
     _t(tech.inVitro, 'in vitro technique',
+       (ilxtr.hasSomething, i.d),
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystemDisjointWithLivingOrganism),
        #(ilxtr.hasPrimaryParticipant, thing that was derived from living organsim? no? pure synthesis...),
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAGlassContainer),
@@ -2351,6 +2392,7 @@ triples = (
        # taking action to make the value 
        #unionOf(tech.ising, tech.allocating),
        def_='a technique that realizes a value of some aspect',
+       synonyms=('actualize',),
        equivalentClass=oECN),
 
     # probing
@@ -2471,7 +2513,7 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
       ), 
 
-    _t(i.d, 'electrophysiology recording technique',
+    _t(tech.ephysRecording, 'electrophysiology recording technique',
        ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        #oneOf((hasInput, ilxtr.physiologicalSystem),
@@ -2480,6 +2522,7 @@ triples = (
        #(ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        #(hasPart, tech.ephys),
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
+       synonyms=('electrophysiology recording',),
       ),
 
     _t(tech.contrastDetection, 'contrast detection technique',
@@ -2779,7 +2822,17 @@ triples = (
     _t(i.d, 'euthanasia technique',
        (ilxtr.hasPrimaryAspect, asp.aliveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
+       synonyms=('euthanasia',),
     ),
+
+    _t(i.d, 'perfusion technique',
+       (ilxtr.hasSomething, i.d),
+      ),
+
+    _t(i.d, 'intracardial perfusion technique',
+       (ilxtr.hasSomething, i.d),
+       synonyms=('intracardial perfusion',),
+      ),
 
     _t(i.d, 'pharmacological technique',
        intersectionOf(ilxtr.technique,
@@ -3148,9 +3201,18 @@ triples = (
        synonyms=('electron microscopy',)),
     (tech.electronMicroscopy, oboInOwl.hasDbXref, OntTerm('NLX:82779')),  # ICK from assay branch which conflates measurement :/
 
+    _t(tech.scanningElectronMicroscopy, 'scanning electron microscopy technique',
+       (hasInput, OntTerm('BIRNLEX:2044', label='Scanning electron microscope', synonyms=[])),
+       (ilxtr.detects, OntTerm('CHEBI:10545', label='electron')),  # FIXME chebi ok in this context?
+       (ilxtr.hasInformationOutput, ilxtr.image),
+       (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
+       # hasProbe ilxtr.electron and some focusing elements and detects ilxtr.electron
+       synonyms=('scanning electron microscopy', 'SEM')),
+
     _t(i.d, 'electron tomography technique',
        (hasPart, tech.electronMicroscopy),
        (hasPart, tech.tomography),
+       synonyms=('electron tomography',),
       ),
 
     _t(i.d, 'correlative light-electron microscopy technique',
@@ -3184,7 +3246,7 @@ triples = (
     _t(i.d, 'northern blotting technique',
        (hasPart, tech.electrophoresis),
        # fixme knownDetectedPhenomena?
-       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
+       (ilxtr.hasPrimaryParticipant, OntId('CHEBI:33697')),
        (ilxtr.hasProbe, ilxtr.hybridizationProbe),  # has part some probe addition?
        (ilxtr.hasPrimaryAspect, asp.sequence),
        synonyms=('northern blot',)
@@ -3234,8 +3296,37 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
        (hasInput, ilxtr.singleElectrode),  # cardinality 1?
-       synonyms=('single extracellular electrode technique',)),
+       synonyms=('extracellular single electrode technique',)),
        (tech.singleElectrodeEphys, ilxtr.hasTempId, OntTerm('HBP_MEM:0000019')),
+
+    _t(tech.multiElectrodeEphys, 'multi electrode extracellular electrophysiology technique',
+       # FIXME extracellular space that is part of some other participant... how to convey this...
+       (ilxtr.hasPrimaryAspect, asp.electrical),
+       (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005615', label='extracellular space')),
+       (hasInput, ilxtr.multiElectrode),  # cardinality n?
+       synonyms=('extracellular multi electrode technique',)),
+       (tech.singleElectrodeEphys, ilxtr.hasTempId, OntTerm('HBP_MEM:0000019')),
+
+    _t(i.d, 'multi electrode extracellular electrophysiology recording technique',
+       (hasPart, tech.multiElectrodeEphys),
+       (hasPart, tech.ephysRecording),
+       synonyms=('multi unit recording',
+                 'multi unit recording technique',
+                 'multi-unit recording',),
+      ),
+    _t(i.d, 'single electrode extracellular electrophysiology recording technique',
+       (hasPart, tech.singleElectrodeEphys),
+       (hasPart, tech.ephysRecording),
+       synonyms=('single unit recording',
+                 'single unit recording technique',
+                 'single-unit recording',),
+      ),
+
+    _t(i.d, 'extracellular electrophysiology recording technique',
+       (hasPart, tech.extracellularEphys),
+       (hasPart, tech.ephysRecording),
+       synonyms=('extracellular recording',),
+      ),
 
     _t(tech.sharpElectrodeEphys, 'sharp intracellular electrode technique',
        (ilxtr.hasPrimaryAspect, asp.electrical),
@@ -3357,6 +3448,41 @@ triples = (
        (hasInput, ilxtr.contrastAgent),  # FIXME ...
       ),
 
+    _t(i.d, 'neuron morphology reconstruction technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'autoradiographic technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'intravascaular filling technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'brightfield microscopy technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'machine learning technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'deep learning technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'delineation technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'epifluorescent microscopy technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'epifluorescent microscopy',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'fiber photometry technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'focused ion beam scanning electron microscoscopy technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'microendoscopic technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'two-photon microscopy technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'two-photon tomographic technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'wide-field microscopy technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'brain-wide technique',
+       (ilxtr.hasSomething, i.d)),
+    _t(i.d, 'gene characterization technique',
+       (ilxtr.hasSomething, i.d)),
+
     _t(i.d, ' blank technique',
        (ilxtr.hasSomething, i.d),
     ),
@@ -3427,6 +3553,7 @@ methods = simpleOnt(filename=filename,
                     imports=imports,
                     triples=triples,
                     comment=comment,
+                    branch=branch,
                     _repo=_repo)
 
 [methods.graph.add((o2, rdfs.subClassOf, TEMP.temp))
@@ -3539,6 +3666,7 @@ def forComparison():
                                imports=imports,
                                triples=triples,
                                comment=comment,
+                               branch=branch,
                                _repo=_repo)
 
 def main():

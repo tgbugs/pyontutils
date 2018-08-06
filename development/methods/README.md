@@ -2,13 +2,22 @@
 Any documents related to methodology should go here.
 
 # Files
+
 ## Python
 * [Core](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods_core.py)
 * [Full](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods.py)
+
 ## turtle
 * [Core](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods-core.ttl)
 * [Helper](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods-helper.ttl)
 * [Full](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods.ttl)
+
+# protio
+`protio` is a helper language that simplifies the object property madness for atomic techniques.
+It can be found [here](https://github.com/tgbugs/protc/tree/master/protc-tools-lib/protio)
+in the [protc](https://github.com/tgbugs/protc) repository.  
+Some examples are in [test.rkt](https://github.com/tgbugs/protc/blob/master/protc-tools-lib/protio/test.rkt)  
+A full list can be generated using [gen.rkt](https://github.com/tgbugs/protc/blob/master/protc-tools-lib/protio/gen.rkt).
 
 # Use cases
 1. Tagging ephys data
@@ -88,16 +97,19 @@ This could be expanded into the human executor 'role/skillset/responsibility' on
 https://github.com/SciCrunch/NIF-Ontology/issues/100  
 
 ## Thoughts
+
 ### Tiers for tagging
 1. High level experimental approach (sometimes may directly imply a set of techniques as well)
 2. More specific techniques that are still high level (e.g. whole cell patch clamp, calcium imaging)
 3. Free text term addition if data providers want/need more granularity
+
 ### Technique vs Method
 The common usage of technique and method are completely overlapping and it will be unproductive
 to try to force a distinction between the two. If we want a meaningful higher level above technique/method
 we should probably follow the scientific discipline approach or something similar. This higher level
 would allow for inclusion of analysis methods that tend to be used with certain types of data produced
 by common measurement techniques in a field.
+
 ### An alternative: tools + targets
 An electrophysiological method is equivalent to some process that uses some ephys amplifier and measures
 some electrical property of some part of a living organism.

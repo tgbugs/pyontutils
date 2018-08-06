@@ -551,15 +551,15 @@ def _rest_make_phenotypes():
         #'NIFQUAL:',
     #}
     starts = [
-    #"NIFQUAL:sao2088691397",
-    #"NIFQUAL:sao1278200674",
-    #"NIFQUAL:sao2088691397",
-    #"NIFQUAL:sao-1126011106",  # FIXME WTF IS THIS NONSENSE  (scigraph bug?)
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1959705051").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1278200674").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
-    quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao-1126011106").replace('/','%2F'),
+        #"NIFQUAL:sao2088691397",
+        #"NIFQUAL:sao1278200674",
+        #"NIFQUAL:sao2088691397",
+        #"NIFQUAL:sao-1126011106",  # FIXME WTF IS THIS NONSENSE  (scigraph bug?)
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1959705051").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao1278200674").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao2088691397").replace('/','%2F'),
+        quote("http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Quality.owl#sao-1126011106").replace('/','%2F'),
     ]
 
     for id_ in starts:
@@ -679,15 +679,15 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
-    'NIFEXT:55',
-    'NIFEXT:56',
-    'NIFEXT:57',
-    'NIFEXT:59',
-    'NIFEXT:81',
-    'NLXCELL:091205',
-    NIFCELL_NEURON,
-    'SAO:2128417084',
-    'SAO:862606388',  # secondary, not explicitly in the hbp import
+        'NIFEXT:55',
+        'NIFEXT:56',
+        'NIFEXT:57',
+        'NIFEXT:59',
+        'NIFEXT:81',
+        'NLXCELL:091205',
+        NIFCELL_NEURON,
+        'SAO:2128417084',
+        'SAO:862606388',  # secondary, not explicitly in the hbp import
     )
     for m in missing:
         m = ng.expand(m)
@@ -1023,10 +1023,41 @@ def predicate_disambig(graph):
     uit('ilxtr:hasLayerLocation', 'UBERON:0005394')
     uit('ilxtr:hasLayerLocation', 'UBERON:0005395')
 
+def make_bridge():
+    from importlib import import_module
+    from pyontutils.utils import subclasses
+    from pyontutils.core import Ont, build
+    from pyontutils.neuron_lang import Config
+    from pyontutils.neuron_models import __all__
+    for module in __all__:
+        import_module(f'pyontutils.neuron_models.{module}')
+
+
+    class neuronBridge(Ont):
+        """ Main bridge for importing the various files that
+            make up the neuron phenotype ontology. """
+
+        # setup
+
+        path = 'ttl/bridge/'
+        filename = 'neuron-bridge'
+        name = 'Neuron Bridge'
+        imports = (subclass.iri for subclass in subclasses(Config))
+
+        @property
+        def __imports(self):
+            for subclass in subclasses(Config):
+                if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
+                    yield subclass()
+
+
+    out = build(neuronBridge, n_jobs=1)
+
 def main():
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
+    make_bridge()
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     #t = make_table1(syn_mappings, ilx_start, phenotypes)
     embed()

@@ -16,11 +16,15 @@ python:
   - 3.6
   - pypy3.5
 
+addons:
+  apt:
+    packages:
+    - emacs
+    - pandoc
+    - hunspell
+    - libhunspell-dev
+
 before_install:
-  - sudo apt-get install emacs
-  - sudo apt-get install pandoc
-  - sudo apt-get install hunspell
-  - sudo apt-get install libhunspell-dev
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git

@@ -285,12 +285,7 @@ def swanson():
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
-    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', '')
-    PREFIXES.update({
-        #'':ontid + '/',  # looking for better options
-        'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-        'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),
-    })
+    PREFIXES = SwansonLabels.prefixes
     new_graph = makeGraph(filename, PREFIXES, writeloc=WRITELOC)
     new_graph.add_ont(ontid,
                       'Swanson brain partomies',
@@ -492,8 +487,8 @@ def swanson():
         new_graph.add_class(aid, label=data['name'].capitalize())
         new_graph.add_trip(aid, 'ilxtr:hasTaxonRank', data['taxon'])  # FIXME appendix is the data artifact...
         children = data['children']
-        ahp = HASPART + str(appendix)
-        apo = PARTOF + str(appendix)
+        ahp = 'swanr:hasPart' + str(appendix)
+        apo = 'swanr:partOf' + str(appendix)
         new_graph.add_op(ahp, transitive=True)
         new_graph.add_op(apo, inverse=ahp, transitive=True)
         for parent, childs in children.items():  # FIXME does this give complete coverage?
@@ -504,6 +499,7 @@ def swanson():
                 new_graph.add_restriction(cid, apo, pid)
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
+    return new_graph
     new_graph.write()
     if False:
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
@@ -579,6 +575,7 @@ class Artifact(Class):
                    comment=None,
                    definingCitations=tuple(),
                    hadDerivation=tuple(),
+                   identifiers=tuple(),
                   )
     propertyMapping = dict(
         version=ilxtr.artifactVersion,  # FIXME
@@ -587,6 +584,7 @@ class Artifact(Class):
         copyrighted=dcterms.dateCopyrighted,
         source=dc.source,  # use for links to
         hadDerivation=prov.hadDerivation,
+        identifiers=dc.identifier,  # FIXME TODO
         # ilxr.atlasDate
         # ilxr.atlasVersion
     )
@@ -831,6 +829,23 @@ class Artifacts(Collector):
                          devstage=UBERON['0000113'],
                         )
 
+    SwansonAppendix = Terminology(iri=ilx['swanson/uris/neuroanatomical-terminology/versions/1'],  # ilxtr.hcpmmpv1,
+                                  rdfs_label='Swanson Neuroanatomical Terminology',
+                                  shortname='swannt',  # 2014?
+                                  #date='',
+                                  #version='1.0',
+                                  synonyms=('Swanson 2014 Appendicies',),
+                                  #abbrevs=(),
+                                  citation=('Swanson, Larry W. Neuroanatomical Terminology: '
+                                            'a lexicon of classical origins and historical foundations. '
+                                            'Oxford University Press, USA, 2014.'),
+                                  identifiers=('ISBN:9780195340624',),
+                                  species=NCBITaxon['40674'],  # taxon
+                                  comment=('Each appendix probably needs its own artifact entry because '
+                                           'the taxon rank and devstage are determined by appendix not NT.'),
+                                  #devstage=UBERON['0000113'],  # FIXME multiple...
+                        )
+
 class parcArts(Ont):
     """ Ontology file for artifacts that define labels or
         geometry for parcellation schemes. """
@@ -990,6 +1005,41 @@ class LocalSource(Source):
 
 class resSource(Source):
     source = 'https://github.com/tgbugs/pyontutils.git'
+
+
+class SwansonAppendix(resSource):
+    sourceFile = 'pyontutils/resources/swanson_aligned.txt'
+    artifact = Artifacts.SwansonAppendix
+
+
+class SwansonLabels(Ont):  # FIXME not labels...
+    filename = 'swanson'
+    name = 'Swanson 2014 partonomies'
+    shortname = 'swannt'
+    imports = parcCore,
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov'),
+                'swanr':interlex_namespace('swanson/uris/readable/'),
+                'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),}
+    sources = SwansonAppendix,
+    namespace = prefixes['SWAN']
+    root = LabelRoot(iri=nsExact(namespace),  # FIXME this is not really a label in the strict sense
+                     label='Swanson label root',
+                     shortname=shortname,
+                     definingArtifacts=(s.artifact.iri for s in sources),)
+
+    def _triples(self):
+        for s, p, o in swanson().g:
+            #if p != rdf.type and o != owl.Ontology:
+            if s != URIRef('http://ontology.neuinfo.org/NIF/ttl/generated/swanson_hierarchies.ttl'):
+
+                if p == rdfs.subClassOf and o == ilxtr.swansonBrainRegionConcept:
+                    yield s, p, self.root.iri
+                elif p == rdfs.label:
+                    yield s, p, Label(label=o, labelRoot=self.root).rdfs_label
+                    yield s, skos.prefLabel, o
+                else:
+                    yield s, p, o
 
 
 class PaxSr_6(resSource):

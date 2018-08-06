@@ -4,28 +4,37 @@
 """
 
 import os
-import re
 import math
 import asyncio
 import hashlib
 import inspect
-import subprocess
 from datetime import datetime, date
 from time import time, sleep
 from pathlib import Path
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor
-from joblib import Parallel
 import psutil
 import rdflib
 
+working_dir = Path(__file__).absolute().resolve().parent.parent
+
 TODAY = date.isoformat(date.today())
+
+
 def UTCNOW(): return datetime.isoformat(datetime.utcnow())
 
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
-rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
-rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
+rdflib.plugin.register('nifttl', rdflib.serializer.Serializer,
+                       'pyontutils.ttlser', 'CustomTurtleSerializer')
+rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer,
+                       'pyontutils.ttlser', 'CompactTurtleSerializer')
+rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer,
+                       'pyontutils.ttlser', 'UncompactTurtleSerializer')
+
+rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
+                       'pyontutils.librdf', 'libRdfxmlParser')
+rdflib.plugin.register('libttl', rdflib.parser.Parser,
+                       'pyontutils.librdf', 'libTurtleParser')
 
 def test_notebook():  # also tests ipython
     try:
@@ -34,6 +43,7 @@ def test_notebook():  # also tests ipython
     except NameError as e:
         return False
 
+
 def test_ipython():
     try:
         config = get_ipython().config
@@ -41,44 +51,54 @@ def test_ipython():
     except NameError as e:
         return False
 
+
 def test_test():
     import __main__
     import sys
-    return hasattr(__main__, '__unittest') and __main__.__unittest or 'nose' in sys.modules
+    return (hasattr(__main__, '__unittest')
+            and __main__.__unittest
+            or 'nose' in sys.modules)
+
 
 in_notebook = test_notebook()
 in_ipython = test_ipython()
 in_test = test_test()
 
+
 def stack_magic(stack):
-    # note: we cannot use globals() because it will be globals of the defining file not the calling file
+    # note: calling globals() here fails because we want globals of the caller
     # note: in ipython with thing: print(name) will not work if on the same line
-    if in_notebook or in_ipython or in_test:
+    if len(stack) > 2 and 'exec_module' in [f.function for f in stack]:
+        index = 1
+    elif in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     else:
         index = -1
 
     return stack[index][0].f_locals
 
+
 def subclasses(start):
     for sc in start.__subclasses__():
         yield sc
         yield from subclasses(sc)
 
+
 def getSourceLine(cls):
+    tc = TermColors
     try:
         return inspect.getsourcelines(cls)[-1]
     except OSError:  # we are probably in a debugger
-        print(TermColors.red('WARNING:'), TermColors.yellow(f'No source found for {cls} are you in a debugger?'))
+        print(tc.red('WARNING:'),
+              tc.yellow(f'No source found for {cls} are you in a debugger?'))
         return 'NO-SOURCE-FOUND'
 
-def getCurrentCommit():
-    commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().rstrip()
-    return commit
+
 
 def currentVMSKb():
     p = psutil.Process(os.getpid())
     return p.memory_info().vms
+
 
 def memoryCheck(vms_max_kb):
     """ Lookup vms_max using getCurrentVMSKb """
@@ -90,7 +110,9 @@ def memoryCheck(vms_max_kb):
     vm = psutil.virtual_memory()
     free_gigs = vm.available / 1024 ** 2
     if vm.available < buffer:
-        raise MemoryError('Running this requires quite a bit of memory ~ {vms_gigs:.2f}, you have {free_gigs:.2f} of the {buffer_gigs:.2f} needed'.format(vms_gigs=vms_gigs, free_gigs=free_gigs, buffer_gigs=buffer_gigs))
+        raise MemoryError('Running this requires quite a bit of memory ~ '
+                          f'{vms_gigs:.2f}, you have {free_gigs:.2f} of the '
+                          f'{buffer_gigs:.2f} needed')
 
 
 class OrderInvariantHash:
@@ -145,23 +167,29 @@ def noneMembers(container, *args):
             return False
     return True
 
+
 def anyMembers(container, *args):
     return not noneMembers(container, *args)
 
+
 def allMembers(container, *args):
     return all(a in container for a in args)
+
 
 def coln(n, iterable):
     """ Return an iterator on the nth column. """
     for rec in iterable:
         yield rec[n]
 
+
 def setPS1(script__file__):
     text = 'Running ' + os.path.basename(script__file__)
     os.sys.stdout.write('\x1b]2;{}\x07'.format(text))
 
+
 def refile(script__file__, path):
     return str(Path(script__file__).parent / path)
+
 
 def readFromStdIn(stdin=None):
     from select import select
@@ -169,6 +197,7 @@ def readFromStdIn(stdin=None):
         from sys import stdin
     if select([stdin], [], [], 0.0)[0]:
         return stdin
+
 
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
@@ -187,6 +216,7 @@ def async_getter(function, listOfArgs):
     loop.run_until_complete(future_loop(future))
     return future.result()
 
+
 def deferred(function):
     def wrapper(*args, **kwargs):
         @wraps(function)
@@ -195,37 +225,46 @@ def deferred(function):
         return inner
     return wrapper
 
+
 def Async(rate=None, debug=False, collector=None):  # ah conclib
     if rate:
-        workers = math.ceil(rate) if rate < 40 else 40  # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
+        workers = math.ceil(rate) if rate < 40 else 40
+        # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
         executor = ThreadPoolExecutor(max_workers=workers)
     else:
         executor = ThreadPoolExecutor()
         workers = executor._max_workers
-    if debug: print(rate, workers)
+
+    if debug:
+        print(rate, workers)
+
     def inner(generator):
         #Async(rate=rate/2, debug)(funclist[])
         #funclist = list(generator)
         # the real effective throughput I am seeing per os thread is ~350Hz
-        # I can push it to about 400Hz setting it to run at 3000Hz with 3000 entries
-        # but this is trivial to double using multiple processes
-        # pushing the set rate higher does seem to max out around 400Hz
-        # if the min time_per_job < our trouble threshold which is ping dependent
+        # I can push it to about 400Hz setting it to run at 3000Hz with 3000
+        # entries but this is trivial to double using multiple processes
+        # pushing the set rate higher does seem to max out around 400Hz if
+        # the min time_per_job < our trouble threshold which is ping dependent
         #Parallel(generator)
         if rate:
             funclist = list(generator)
-            size = math.ceil(len(funclist) / workers) if rate >= 1 else 1  # divide by workers not rate, time_per_job will compensate
+            # divide by workers not rate, time_per_job will compensate
+            size = math.ceil(len(funclist) / workers) if rate >= 1 else 1
             time_est = len(funclist) / rate
             chunks = chunk_list(funclist, size)
             lc = len(chunks)
-            print(f'Time estimate: {time_est}    rate: {rate}Hz    func: {funclist[0]}    args: {len(funclist)}    chunks: {lc}    size: {size}')
+            print(f'Time estimate: {time_est}    rate: {rate}Hz    '
+                  f'func: {funclist[0]}    args: {len(funclist)}    '
+                  f'chunks: {lc}    size: {size}')
             generator = (lambda:list(limited_gen(chunk, smooth_offset=(i % lc)/lc, time_est=time_est, debug=debug, thread=i))  # this was the slowdown culpret
                          for i, chunk in enumerate(sorted(chunks, key=len, reverse=True)))
+
         async def future_loop(future_):
             loop = asyncio.get_event_loop()
             futures = []
-            for wrapped_function_or_limgen in generator:
-                future = loop.run_in_executor(executor, wrapped_function_or_limgen)
+            for wrapped_func_or_limgen in generator:
+                future = loop.run_in_executor(executor, wrapped_func_or_limgen)
                 futures.append(future)
             print('Futures compiled')
             responses = []
@@ -242,11 +281,14 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
         return future.result()
     return inner
 
+
 def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
     cumulative_delta = 0
     time_alloted = 0
     time_per_job = (time_est - smooth_offset) / len(chunk)
-    if debug: print(f'{thread:0>2}    offset: {smooth_offset:<.4f}    jobs: {len(chunk)}    s/job: {time_per_job:<.4f}    total: {time_est:<.4f}s')
+    if debug: print(f'{thread:0>2}    offset: {smooth_offset:<.4f}    '
+                    f'jobs: {len(chunk)}    s/job: {time_per_job:<.4f}    '
+                    f'total: {time_est:<.4f}s')
     if smooth_offset:
         sleep(smooth_offset)
     real_start = time()
@@ -255,7 +297,9 @@ def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
         real_start += time_per_job
         yield element()
         stop = time()
-        if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f}     {stop - real_stop:<10f}')
+        if debug:
+            print(f'{thread:<3} {stop:<8f} {real_stop:<10f}     '
+                  f'{stop - real_stop:<10f}')
         if stop > real_stop:
             sleep(0)  # give the thread a chance to yield
             continue
@@ -263,6 +307,7 @@ def limited_gen(chunk, smooth_offset=0, time_est=None, debug=True, thread='_'):
             sleep_time = real_stop - stop
             #if debug: print(f'{thread:<3} {stop:<8f} {real_stop:<10f} {sleep_time:<10f}')
             sleep(sleep_time)
+
 
 def mysql_conn_helper(host, db, user, port=3306):
     kwargs = {
@@ -288,9 +333,10 @@ def mysql_conn_helper(host, db, user, port=3306):
                         kwargs['password'] = e_pass  # last entry wins
     e_pass = None
     if kwargs['password'] is None:
-        raise ConnectionError('No password as found for {user}@{host}:{port}/{db}'.format(**kwargs))
+        raise ConnectionError(f'No record for {user}@{host}:{port}/{db}')
 
     return kwargs
+
 
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
@@ -308,6 +354,7 @@ def chunk_list(list_, size):
             chunks.append(list_[start:stop])
         chunks.append(list_[stop:])  # snag unaligned chunks from last stop
         return chunks
+
 
 class dictParse:
     """ Base class for building dict parsers (that can also handle lists).
@@ -343,6 +390,7 @@ class dictParse:
         print(value)
         pass
 
+
 class rowParse:
     """ Base class for parsing a list of fixed lenght lists whose
         structure is defined by a header (eg from a csv file).
@@ -354,7 +402,8 @@ class rowParse:
 
     def __init__(self, rows, header=None, order=[]):
         if header is None:
-            header = [c.split('(')[0].strip().replace(' ','_').replace('+','') for c in rows[0]]
+            header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
+                      for c in rows[0]]
             rows = rows[1:]
         eval_order = []
         self._index_order = []
@@ -410,39 +459,40 @@ class rowParse:
         """ Run this code after all rows have been parsed """
         pass
 
+
 class _TermColors:
     ENDCOLOR = '\033[0m'
     colors = dict(
-    BOLD = '\033[1m',
-    FAINT = '\033[2m',  # doesn't work on urxvt
-    IT = '\033[3m',
-    UL = '\033[4m',
-    BLINKS = '\033[5m',
-    BLINKF = '\033[6m',  # same as S?
-    REV = '\033[7m',
-    HIDE = '\033[8m',  # doesn't work on urxvt
-    XOUT = '\033[9m',  # doesn't work on urxvt
-    FONT1 = '\033[10m',  # doesn't work on urxvt use '\033]50;%s\007' % "fontspec"
-    FONT2 = '\033[11m',  # doesn't work on urxvt
-    FRAKTUR = '\033[20m',  # doesn't work on urxvt
-    OFF_BOLD = '\033[21m',
-    NORMAL = '\033[22m',
-    OFF_IT = '\033[23m',
-    OFF_UL = '\033[24m',
-    OFF_BLINK = '\033[25m',
-    POSITIVE = '\033[27m',
-    OFF_HIDE = '\033[28m',
-    RED = '\033[31m',
-    GREEN = '\033[32m',
-    YELLOW = '\033[33m',
-    BLUE = '\033[34m',
-    PURPLE = '\033[35m',
-    CYANE = '\033[36m',
-    WHITE = '\033[37m',
-    LTRED = '\033[91m',
-    LTGREEN = '\033[92m',
-    LTYELLOW = '\033[93m',
-    LTBLUE = '\033[94m',
+        BOLD      = '\033[1m',
+        FAINT     = '\033[2m',  # doesn't work on urxvt
+        IT        = '\033[3m',
+        UL        = '\033[4m',
+        BLINKS    = '\033[5m',
+        BLINKF    = '\033[6m',  # same as S?
+        REV       = '\033[7m',
+        HIDE      = '\033[8m',  # doesn't work on urxvt
+        XOUT      = '\033[9m',  # doesn't work on urxvt
+        FONT1     = '\033[10m',  # doesn't work on urxvt use '\033]50;%s\007' % "fontspec"
+        FONT2     = '\033[11m',  # doesn't work on urxvt
+        FRAKTUR   = '\033[20m',  # doesn't work on urxvt
+        OFF_BOLD  = '\033[21m',
+        NORMAL    = '\033[22m',
+        OFF_IT    = '\033[23m',
+        OFF_UL    = '\033[24m',
+        OFF_BLINK = '\033[25m',
+        POSITIVE  = '\033[27m',
+        OFF_HIDE  = '\033[28m',
+        RED       = '\033[31m',
+        GREEN     = '\033[32m',
+        YELLOW    = '\033[33m',
+        BLUE      = '\033[34m',
+        PURPLE    = '\033[35m',
+        CYANE     = '\033[36m',
+        WHITE     = '\033[37m',
+        LTRED     = '\033[91m',
+        LTGREEN   = '\033[92m',
+        LTYELLOW  = '\033[93m',
+        LTBLUE    = '\033[94m',
     )
 
     def __init__(self):
@@ -457,5 +507,5 @@ class _TermColors:
         else:
             return string + self.ENDCOLOR
 
-TermColors = _TermColors()
 
+TermColors = _TermColors()

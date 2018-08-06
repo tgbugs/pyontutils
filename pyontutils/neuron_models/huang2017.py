@@ -10,10 +10,7 @@ from pyontutils.phenotype_namespaces import *
 import rdflib
 from IPython import embed
 
-config(out_graph_path='huang-2017.ttl')
-Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
-                      owl.imports,
-                      rdflib.URIRef('file:///tmp/output.ttl')))
+Config('huang-2017', imports=['file:///tmp/output.ttl'])
 
 OntTerm.query.add(rdflibLocal(Neuron.core_graph, OntId))
 
@@ -286,8 +283,8 @@ with Huang2017:
         other = (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
         figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                             label=f'{type} all neuron (Huang2017)', override=True)
-                 for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
+                            label=f'{type} all neuron (Huang2017)', override=True)
+                for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
 
         for k, v in fig1a.items():
             # FIXME ISC currently classifies as vip cr cck which is incorrect

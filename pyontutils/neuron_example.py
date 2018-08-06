@@ -122,3 +122,7 @@ print(graphBase.neurons())
 
 if __name__ == '__main__':
     embed()
+
+# XXX these have to be called inside this module or the state persists in graphBase FIXME
+resetLocalNames()
+setLocalContext()

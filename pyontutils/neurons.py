@@ -131,7 +131,10 @@ class graphBase:
                       prefixes=          tuple(),
                       force_remote=      False,
                       checkout_ok=       _CHECKOUT_OK,
-                      scigraph=          None):
+                      scigraph=          None,
+                      iri=               None,
+                      use_local_import_paths=True):
+        # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
             to be configurable and it needs to do so globally.
@@ -169,12 +172,16 @@ class graphBase:
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
-            remote = [os.path.join(graphBase.remote_base, branch, s) for s in suffixes]
-            local = [(graphBase.local_base / s).as_posix() for s in suffixes]
+            remote = [os.path.join(graphBase.remote_base, branch, s)
+                      if '://' not in s else  # 'remote' is file:// or http[s]://
+                      s for s in suffixes]
+            # TODO the whole thing needs to be reworked to not use suffixes...
+            local = [(graphBase.local_base / s).as_posix()
+                     if '://' not in s else
+                     ((graphBase.local_base / s.replace(graphBase.remote_base, '').strip('/')).as_uri()
+                      if graphBase.remote_base in s else s)  # FIXME this breaks the semanics of local?
+                      for s in suffixes]
             return remote, local
-
-        def attachPrefixes(*prefixes, graph=None):
-            return makeGraph('', prefixes=makePrefixes(*prefixes), graph=graph)
 
         # file location setup
         remote_core_paths,  local_core_paths =  makeLocalRemote(core_graph_paths)
@@ -209,20 +216,26 @@ class graphBase:
         if core_graph is None:
             core_graph = rdflib.Graph()
         for cg in use_core_paths:
-            core_graph.parse(cg, format='turtle')
+            try:
+                core_graph.parse(cg, format='turtle')
+            except FileNotFoundError:
+                print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
         graphBase.core_graph = core_graph
+
+        # store prefixes
+        if isinstance(prefixes, dict):
+            graphBase.prefixes = prefixes
+        else:
+            graphBase.prefixes = makePrefixes(*prefixes)
+
+        PREFIXES = {**graphBase.prefixes, **uPREFIXES}
 
         # input graph setup
         in_graph = core_graph
         for ig in use_in_paths:
             in_graph.parse(ig, format='turtle')
-        nin_graph = attachPrefixes('owl',
-                                   'TEMP',  # XXX PREFIXES
-                                   'PAXRAT',
-                                   'GO',
-                                   'CHEBI',
-                                   *prefixes,
-                                   graph=in_graph)
+
+        nin_graph = makeGraph('', prefixes=PREFIXES, graph=in_graph)
         graphBase.in_graph = in_graph
 
         # output graph setup
@@ -232,30 +245,26 @@ class graphBase:
             # that we use to serialize so that behavior is consistent
             NeuronBase.existing_pes = {}
             NeuronBase.existing_ids = {}
-        new_graph = attachPrefixes('owl',   # XXX PREFIXES
-                                   'GO',
-                                   'PR',
-                                   'CHEBI',
-                                   'PATO',
-                                   'PAXRAT',
-                                   'UBERON',
-                                   'NCBITaxon',
-                                   'TEMP',
-                                   'ilxtr',
-                                   'ILX',
-                                   'SAO',
-                                   'BIRNLEX',
-                                   *prefixes,
-                                   graph=out_graph)
+        new_graph = makeGraph('', prefixes=PREFIXES, graph=out_graph)
         graphBase.out_graph = out_graph
 
         # makeGraph setup
-        new_graph.filename = out_graph_path
-        ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
-        new_graph.add_ont(ontid, 'Some Neurons')
-        for remote_out_import in remote_out_imports:
-            new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
         graphBase.ng = new_graph
+        new_graph.filename = out_graph_path
+
+        if iri is not None:
+            ontid = rdflib.URIRef(iri)
+        else:
+            ontid = rdflib.URIRef('file://' + out_graph_path)  # do not use Path().absolute() it will leak
+
+        if use_local_import_paths:
+            new_graph.add_ont(ontid, 'Some Neurons')
+            for local_out_import in local_out_imports:  # TODO flip switch between local and remote import behavior
+                new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(local_out_import))  # core should be in the import closure
+        else:
+            new_graph.add_ont(ontid, 'Some Neurons')
+            for remote_out_import in remote_out_imports:  # TODO flip switch between local and remote import behavior
+                new_graph.add_trip(ontid, 'owl:imports', rdflib.URIRef(remote_out_import))  # core should be in the import closure
 
         # set predicates
         graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
@@ -268,13 +277,13 @@ class graphBase:
 
     @staticmethod
     def write():
-        og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+        og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
 
     @staticmethod
     def write_python():
-        with open(PPath(graphBase.ng.filename).with_suffix('.py'), 'wt') as f:
+        with open(PPath(graphBase.ng.filename).with_suffix('.py').as_posix(), 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
@@ -643,28 +652,28 @@ class NeuronBase(graphBase):
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
         super().__init__()
         self.ORDER = [
-        # FIXME it may make more sense to manage this in the NeuronArranger
-        # so that it can interconvert the two representations
-        # this is really high overhead to load this here
-        self._predicates.hasInstanceInSpecies,
-        self._predicates.hasTaxonRank,
-        # TODO hasDevelopmentalStage   !!!!! FIXME
-        self._predicates.hasLocationPhenotype,  # FIXME
-        self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
-        self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
-        self._predicates.hasDendriteMorphologicalPhenotype,
-        self._predicates.hasDendriteLocatedIn,
-        self._predicates.hasAxonLocatedIn,
-        self._predicates.hasMorphologicalPhenotype,
-        self._predicates.hasElectrophysiologicalPhenotype,
-        #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
-        self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-        self._predicates.hasExpressionPhenotype,
-        self._predicates.hasNeurotransmitterPhenotype,
-        self._predicates.hasCircuitRolePhenotype,
-        self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-        self._predicates.hasExperimentalPhenotype,
-        self._predicates.hasPhenotype,  # last
+            # FIXME it may make more sense to manage this in the NeuronArranger
+            # so that it can interconvert the two representations
+            # this is really high overhead to load this here
+            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasTaxonRank,
+            # TODO hasDevelopmentalStage   !!!!! FIXME
+            self._predicates.hasLocationPhenotype,  # FIXME
+            self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
+            self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
+            self._predicates.hasDendriteMorphologicalPhenotype,
+            self._predicates.hasDendriteLocatedIn,
+            self._predicates.hasAxonLocatedIn,
+            self._predicates.hasMorphologicalPhenotype,
+            self._predicates.hasElectrophysiologicalPhenotype,
+            #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
+            self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
+            self._predicates.hasExpressionPhenotype,
+            self._predicates.hasNeurotransmitterPhenotype,
+            self._predicates.hasCircuitRolePhenotype,
+            self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
+            self._predicates.hasExperimentalPhenotype,
+            self._predicates.hasPhenotype,  # last
         ]
 
         self._localContext = self.__context
@@ -907,10 +916,10 @@ class Neuron(NeuronBase):
         #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
 
         disjoints = [  # FIXME there has got to be a better place to do this :/
-        self._predicates.hasInstanceInSpecies,
-        self._predicates.hasSomaLocatedIn,
-        self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
-        self._predicates.hasMorphologicalPhenotype,
+            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasSomaLocatedIn,
+            self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+            self._predicates.hasMorphologicalPhenotype,
         ]
 
         for disjoint in disjoints:
@@ -1272,19 +1281,19 @@ class LocalNameManager(metaclass=injective):
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
 
     ORDER = (
-    'ilxtr:hasInstanceInSpecies',
-    'ilxtr:hasTaxonRank',
-    'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
-    'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
-    'ilxtr:hasDendriteMorphologicalPhenotype',
-    'ilxtr:hasDendriteLocatedIn',
-    'ilxtr:hasAxonLocatedIn',
-    'ilxtr:hasMorphologicalPhenotype',
-    'ilxtr:hasElectrophysiologicalPhenotype',
-    'ilxtr:hasSpikingPhenotype',  # legacy support
-    'ilxtr:hasExpressionPhenotype',
-    'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
-    'ilxtr:hasPhenotype',
+        'ilxtr:hasInstanceInSpecies',
+        'ilxtr:hasTaxonRank',
+        'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
+        'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
+        'ilxtr:hasDendriteMorphologicalPhenotype',
+        'ilxtr:hasDendriteLocatedIn',
+        'ilxtr:hasAxonLocatedIn',
+        'ilxtr:hasMorphologicalPhenotype',
+        'ilxtr:hasElectrophysiologicalPhenotype',
+        'ilxtr:hasSpikingPhenotype',  # legacy support
+        'ilxtr:hasExpressionPhenotype',
+        'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+        'ilxtr:hasPhenotype',
     )
 
     #def __getitem__(self, key):  # just in case someone makes an instance by mistake
@@ -1385,7 +1394,7 @@ def main():
     # from insertion into the graph... maybe we could enable this, but it definitely seems
     # to break a number of nice features... and we would need the phenotype graph anyway
     EXISTING_GRAPH = rdflib.Graph()
-    local_prefix = Path(devconfig.git_local_repo, 'ttl')
+    local_prefix = Path(devconfig.ontology_local_repo, 'ttl')
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',

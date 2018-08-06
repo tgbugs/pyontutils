@@ -6,10 +6,7 @@ from pyontutils.neuron_lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
 
-if __name__ == '__main__':
-    # FIXME proper cleanup in testing not this
-    # breaks testing by preventing return to master
-    config(out_graph_path=Path(graphBase.local_base, 'ttl/hbp-special.ttl').as_posix())
+Config('markram-2015')
 
 with BBP:
     context = Neuron(Rat, S1, INT, GABA)

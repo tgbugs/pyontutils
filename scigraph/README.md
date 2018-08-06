@@ -1,4 +1,5 @@
 # Commands to generate config files and graph on the build host
+
 ``` bash
 export TARGET=localhost  # set this!
 export BUILD_DIR=/tmp/scigraph-build
@@ -9,6 +10,7 @@ ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l /tmp/scigraph-build -O SciGraph -B patch-issue-264 -b master -p`
 
 # oneshots for centos 7
+
 ```
 export $USER=bamboo
 sudo mkdir /opt/scigraph-services/
@@ -20,7 +22,9 @@ sudo chown ${USER}:${USER} /etc/scigraph-services.conf
 sudo mkdir -p /var/scigraph-services/
 sudo chown -R ${USER}:${USER} /var/scigraph-services
 ```
+
 # oneshots for rhel 7 on ec2
+
 ```
 sudo yum install screen vim
 sudo yum install unzip  # wat
@@ -30,6 +34,7 @@ sudo yum install nginx
 ```
 
 ## if not handled by puppet
+
 `sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel`
 must set `alternatives --config java` to 1.8
 `wget http://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz`
@@ -39,6 +44,7 @@ must set `alternatives --config java` to 1.8
 
 # etc for centos 7
 1. local services
+
 ```
 TARGET=target
 ontload scigraph # TODO ontload scigraph independent...
@@ -47,6 +53,7 @@ scp /tmp/SciGraph-*-services-*.zip ${TARGET}:~/
 ```
 
 2. remote services ssh to target
+
 ```
 export $USER=bamboo
 export SERVICES_FOLDER=/opt/scigraph-services/  # FIXME from ontload as well?
@@ -67,6 +74,7 @@ unset SERVICES_NAME
 
 3. local graph generate services config and move to this folder and scp everything in the folder
 this README is in over to your target server and ssh to target 
+
 ```
 #export TARGET=target  # YOU MUST EXPORT THIS YOURSELF
 export BUILD_DIR=/tmp/build
@@ -77,6 +85,7 @@ rm services.yaml  # prevent staleness by accident
 ```
 
 4. remote graph
+
 ```
 # deploy services config
 export SERVICES_FOLDER=/opt/scigraph-services/  # FIXME from ontload as well?

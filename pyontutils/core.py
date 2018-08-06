@@ -12,7 +12,8 @@ from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine, getCurrentCommit, Async, deferred, TermColors as tc
+from pyontutils.utils import refile, TODAY, UTCNOW, working_dir, getSourceLine
+from pyontutils.utils import Async, deferred, TermColors as tc
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.closed_namespaces import *
 from IPython import embed
@@ -26,10 +27,12 @@ def interlex_namespace(user):
 
 def _loadPrefixes():
     try:
-        with open(refile(__file__, '../scigraph/nifstd_curie_map.yaml'), 'rt') as f:
+        with open(devconfig.curies, 'rt') as f:
             curie_map = yaml.load(f)
     except FileNotFoundError:
-        curie_map = requests.get('https://github.com/tgbugs/pyontutils/blob/master/scigraph/nifstd_curie_map.yaml?raw=true')
+        master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
+        raw_path = 'scigraph/nifstd_curie_map.yaml?raw=true'
+        curie_map = requests.get(master_blob + raw_path)
         curie_map = yaml.load(curie_map.text)
 
     # holding place for values that are not in the curie map
@@ -1707,6 +1710,7 @@ class Ont:
     #rdf_type = owl.Ontology
     _debug = False
     local_base = devconfig.ontology_local_repo
+    remote_base = 'http://ontology.neuinfo.org/NIF/'
     path = 'ttl/generated/'  # sane default
     filename = None
     name = None
@@ -1732,7 +1736,9 @@ class Ont:
         if hasattr(cls, 'sources'):
             cls.sources = tuple(s() for s in cls.sources)
         if hasattr(cls, 'imports'):# and not isinstance(cls.imports, property):
-            cls.imports = tuple(i() if isinstance(i, type) and issubclass(i, Ont) else i
+            cls.imports = tuple(i()
+                                if isinstance(i, type) and issubclass(i, Ont)
+                                else i
                                 for i in cls.imports)
         if cls.namespace is not None and cls.shortname:
             iri_prefix = str(cls.namespace)
@@ -1740,7 +1746,8 @@ class Ont:
                 # need the print to keep things sane means maybe
                 # this isn't such a good idea after all?
                 prefix = cls.shortname.upper()
-                print(tc.blue(f'Adding default namespace {cls.namespace} to {cls} as {prefix}'))
+                print(tc.blue('Adding default namespace '
+                              f'{cls.namespace} to {cls} as {prefix}'))
                 cls.prefixes[prefix] = iri_prefix  # sane default
 
     def __init__(self, *args, **kwargs):
@@ -1750,7 +1757,8 @@ class Ont:
         if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
         else:
-            commit = getCurrentCommit()
+            repo = Repo(working_dir.as_posix())
+            commit = next(repo.iter_commits()).hexsha
 
         try:
             line = getSourceLine(self.__class__)
@@ -1769,6 +1777,7 @@ class Ont:
                                      comment=self.comment,
                                      shortname=self.shortname,
                                      local_base=self.local_base,
+                                     remote_base=self.remote_base,
                                      path=self.path,
                                      version=self.version,
                                      imports=imports)
@@ -1784,7 +1793,9 @@ class Ont:
                                         if _ is not None)
             self.hasSourceArtifact = tuple()
             for source in self.sources:
-                if hasattr(source, 'artifact') and source.artifact is not None and source.artifact.iri not in self.wasDerivedFrom:
+                if (hasattr(source, 'artifact')
+                    and source.artifact is not None
+                    and source.artifact.iri not in self.wasDerivedFrom):
                     self.hasSourceArtifact += source.artifact.iri,
                     source.artifact.addPair(ilxtr.hasDerivedArtifact, self.iri)
             #print(self.wasDerivedFrom)
@@ -1913,6 +1924,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               triples=tuple(),
               comment=None,
               path='ttl/',
+              branch='master',
               fail=False,
               _repo=True):
 
@@ -1931,6 +1943,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.comment = comment
     Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
+
+    if branch != 'master':
+        Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'
 
     built_ont, = build(Simple, fail=fail, n_jobs=1)
 

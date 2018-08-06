@@ -38,7 +38,7 @@ def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     asdf = {} #{v:k for k, v in ps.items()}
     asdf.update(pi)
     # determine which prefixes we need
-    for uri in list(graph.subjects()) + list(graph.predicates()) + list(graph.objects()):
+    for uri in set((e for t in graph for e in t)):
         if uri.endswith('.owl') or uri.endswith('.ttl') or uri.endswith('$$ID$$'):
             continue  # don't prefix imports or templates
         for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
@@ -49,10 +49,7 @@ def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
                 prefs.append(rp)
                 break
 
-    if prefs:
-        ps = makePrefixes(*prefs)
-    else:
-        ps = makePrefixes('rdfs')
+    ps = {p:prefixes[p] for p in prefs}
 
     cleanup(ps, graph)
 

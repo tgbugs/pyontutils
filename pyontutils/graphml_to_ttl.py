@@ -82,14 +82,14 @@ def make_ttl(node_dict):  # FIXME we need to deal with the prefixes earlier
     return ''.join(natural_sort(outputs))
 
 abv = {
-'graphml':"{http://graphml.graphdrawing.org/xmlns}graphml",
-'graph':"{http://graphml.graphdrawing.org/xmlns}graph",
-'node':"{http://graphml.graphdrawing.org/xmlns}node",
-'edge':"{http://graphml.graphdrawing.org/xmlns}edge",
-'data':"{http://graphml.graphdrawing.org/xmlns}data",
-'ShapeNode':'{http://www.yworks.com/xml/graphml}ShapeNode',
-'NodeLabel':"{http://www.yworks.com/xml/graphml}NodeLabel",
-'EdgeLabel':"{http://www.yworks.com/xml/graphml}EdgeLabel",
+    'graphml':"{http://graphml.graphdrawing.org/xmlns}graphml",
+    'graph':"{http://graphml.graphdrawing.org/xmlns}graph",
+    'node':"{http://graphml.graphdrawing.org/xmlns}node",
+    'edge':"{http://graphml.graphdrawing.org/xmlns}edge",
+    'data':"{http://graphml.graphdrawing.org/xmlns}data",
+    'ShapeNode':'{http://www.yworks.com/xml/graphml}ShapeNode',
+    'NodeLabel':"{http://www.yworks.com/xml/graphml}NodeLabel",
+    'EdgeLabel':"{http://www.yworks.com/xml/graphml}EdgeLabel",
 }
 
 # TODO identifier mapping needs to happen before here

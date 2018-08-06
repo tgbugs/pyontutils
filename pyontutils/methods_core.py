@@ -81,6 +81,7 @@ imports = NIFTTL['nif_backend.ttl'],
 #imports = obo['bfo.owl'], obo['ro.owl']
 #imports = tuple()
 comment = 'The core components for modelling techniques and methods.'
+branch = 'methods'
 _repo = True
 debug = True
 
@@ -262,6 +263,21 @@ triples = (
     oop(ilxtr.hasPrimaryOutput, ilxtr.hasIntention),
     oop(ilxtr.hasPrimaryOutput, hasOutput),
 
+    oop(ilxtr.hasPrimaryInputUnbinding, ilxtr.hasPrimaryInput),  # aka NoOutput
+    (ilxtr.hasPrimaryInputUnbinding, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+    oop(ilxtr.hasPrimaryParticipantUnbinding, ilxtr.hasPrimaryParticipant),  # aka NoOutput
+    (ilxtr.hasPrimaryParticipantUnbinding, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+    oop(ilxtr.modifiesPrimaryInputOutput, ilxtr.hasPrimaryInput),
+    oop(ilxtr.modifiesPrimaryInputOutput, ilxtr.hasPrimaryOutput),
+
+    oop(ilxtr.hasPrimaryOutputNoInput, ilxtr.hasPrimaryOutput),
+    (ilxtr.hasPrimaryOutputNoInput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    oop(ilxtr.hasPrimaryParticipantNoInput, ilxtr.hasPrimaryParticipant),
+    (ilxtr.hasPrimaryParticipantNoInput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    oop(ilxtr.hasPrimaryParticipantNoInputNoOutput, ilxtr.hasPrimaryParticipant),
+    (ilxtr.hasPrimaryParticipantNoInputNoOutput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    (ilxtr.hasPrimaryParticipantNoInputNoOutput, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+
     # posterior or knowledge based participants that define techniques
     # often they would be part of the actual primary input
     # FIXME aspect vs participant ...
@@ -415,8 +431,8 @@ triples = (
     olit(ilxtr.hasPrimaryAspectActualized, NIFRID.synonym,
          'has intended primary aspect actualized',),
 
-    #oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
-    # redundant with hasPrimaryAspect, cannot be disjoint with actualized
+    oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
+    # cannot be disjoint with actualized
     # because all actualization techniques are also measurement techniques
 
     oop(ilxtr.hasParentPrimaryAspect, ilxtr.processHasAspect),
@@ -738,17 +754,19 @@ def derp():
     b1 = rdflib.BNode()
     yield a, rdf.first, b1
     r1 = restG(
-    blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
-    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-    blankc(owl.onClass, BFO['0000004']))(b1)
+        blankc(owl.onProperty, ilxtr.hasPrimaryParticipant),
+        blankc(owl.maxQualifiedCardinality,
+               rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+        blankc(owl.onClass, BFO['0000004']))(b1)
     yield from r1
 
     b2 = rdflib.BNode()
     yield b, rdf.first, b2
     r2 = restG(
-    blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
-    blankc(owl.maxQualifiedCardinality, rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
-    blankc(owl.onClass, ilxtr.aspect))(b2)
+        blankc(owl.onProperty, ilxtr.hasPrimaryAspect),
+        blankc(owl.maxQualifiedCardinality,
+               rdflib.Literal(1, datatype=rdflib.XSD.nonNegativeInteger)),
+        blankc(owl.onClass, ilxtr.aspect))(b2)
     yield from r2
 
     b3 = rdflib.BNode()
@@ -796,6 +814,7 @@ methods_core = simpleOnt(filename=filename,
                          imports=imports,
                          triples=triples,
                          comment=comment,
+                         branch=branch,
                          _repo=_repo)
 
 collector.write()
