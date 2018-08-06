@@ -263,6 +263,21 @@ triples = (
     oop(ilxtr.hasPrimaryOutput, ilxtr.hasIntention),
     oop(ilxtr.hasPrimaryOutput, hasOutput),
 
+    oop(ilxtr.hasPrimaryInputUnbinding, ilxtr.hasPrimaryInput),  # aka NoOutput
+    (ilxtr.hasPrimaryInputUnbinding, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+    oop(ilxtr.hasPrimaryParticipantUnbinding, ilxtr.hasPrimaryParticipant),  # aka NoOutput
+    (ilxtr.hasPrimaryParticipantUnbinding, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+    oop(ilxtr.modifiesPrimaryInputOutput, ilxtr.hasPrimaryInput),
+    oop(ilxtr.modifiesPrimaryInputOutput, ilxtr.hasPrimaryOutput),
+
+    oop(ilxtr.hasPrimaryOutputNoInput, ilxtr.hasPrimaryOutput),
+    (ilxtr.hasPrimaryOutputNoInput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    oop(ilxtr.hasPrimaryParticipantNoInput, ilxtr.hasPrimaryParticipant),
+    (ilxtr.hasPrimaryParticipantNoInput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    oop(ilxtr.hasPrimaryParticipantNoInputNoOutput, ilxtr.hasPrimaryParticipant),
+    (ilxtr.hasPrimaryParticipantNoInputNoOutput, owl.propertyDisjointWith, ilxtr.hasPrimaryInput),
+    (ilxtr.hasPrimaryParticipantNoInputNoOutput, owl.propertyDisjointWith, ilxtr.hasPrimaryOutput),
+
     # posterior or knowledge based participants that define techniques
     # often they would be part of the actual primary input
     # FIXME aspect vs participant ...
@@ -416,8 +431,8 @@ triples = (
     olit(ilxtr.hasPrimaryAspectActualized, NIFRID.synonym,
          'has intended primary aspect actualized',),
 
-    #oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
-    # redundant with hasPrimaryAspect, cannot be disjoint with actualized
+    oop(ilxtr.hasPrimaryAspectMeasured, ilxtr.hasPrimaryAspect),
+    # cannot be disjoint with actualized
     # because all actualization techniques are also measurement techniques
 
     oop(ilxtr.hasParentPrimaryAspect, ilxtr.processHasAspect),
