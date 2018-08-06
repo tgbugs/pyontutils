@@ -1,27 +1,31 @@
 """ Interlex add Triple for examples. Will have the same post triple commands for real ILX.
 
 Usage:
-    interlex post entity <rdf:type> <rdfs:subClassOf> <rdfs:label>
-    interlex post triple <subject> <predicate> <object>
+    interlex post entity <rdf:type> <rdfs:subClassOf> <rdfs:label> [<definition:>]
+    interlex post triple <subject> <predicate> <object>\
+    interlex get <identifier>
 
 Examples:
-    >>> export INTERLEX_API_KEY=$(cat path/to/my/api/key)
-    >>> export INTERLEX_API_KEY=your_key_without_quotes
+    export INTERLEX_API_KEY=$(cat path/to/my/api/key)
+    export INTERLEX_API_KEY=your_key_without_quotes
 
-    >>> interlex post entity "term" ILX:0101431 "magical neuron"
+    interlex post entity "term" ILX:0101431 "magical neuron"
     output: 'Entity <rdfs:label> was created with ILX ID <ilx_id> and of type <rdfs:type>'
 
-    >>> interlex post triple ILX:1234567 definition: "entities definition"
+    interlex post triple ILX:1234567 definition: "entities definition"
 
     # annotation logic -> <term_ilx> <annotation_ilx> <str>
-    >>> interlex post triple ILX:1234567 ILX:1234568 "annotation value"
+    interlex post triple ILX:1234567 ILX:1234568 "annotation value"
 
     # relationship logic -> <term1_ilx> <relationship_ilx> <term2_ilx>
-    >>> interlex post triple ILX:1234567 ILX:1234568 ILX:1234569
+    interlex post triple ILX:1234567 ILX:1234568 ILX:1234569
+
+    interlex get ILX:0101431
 
 Commands:
     post triple     post a triple for give user
     post entity     create new entity in interlex
+    get             requests data from the ilx identifier provided
 """
 from docopt import docopt
 from IPython import embed
@@ -31,29 +35,41 @@ import requests as r
 from sys import exit
 VERSION = '0.0.1'
 
+# TODO:
+# Still have problem with if debug must return in add_entity itself
+# X expand triple in the function call,
+# return actual output in main but only print it in main,
+# pull up debug as a functino to make neater
+# use python loggin module to keep all the outputs (not the whole record)
+# X get a interlex get <identifier> (should accept iris or curies)
+
 
 def superclasses_bug_fix(data):
-    # BUG: need to make a real post about this so James can fix it
+    ''' PHP returns "id" in superclass but only accepts superclass_tid '''
     for i, value in enumerate(data['superclasses']):
         data['superclasses'][i]['superclass_tid'] = data['superclasses'][i].pop('id')
     return data
 
+
 def label_bug_fix(label):
+    ''' PHP error currently in beta.scicrunch.org '''
     return label.replace('"', '&#34;').replace("'", '&#39;')
+
 
 class Client:
 
     ttl2sci_map = {
-        'rdf:type' : 'type',
+        'rdf:type': 'type',
         'rdfs:label': 'label',
         'definition:': 'definition',
         'rdfs:subClassOf': 'superclasses',
         'comment': 'comment',
         'NIFRID:synonym': 'synonyms',
-        #'ilxtr:existingId': 'existing_ids', # too unorganized for this
+        # 'ilxtr:existingId': 'existing_ids', # too unorganized for this
     }
 
-    def __init__(self):
+    def __init__(self, test=False):
+        self.test = test # True to bypass printing specific errors and just getting raw error
         self.auth = ('scicrunch', 'perl22(query)')  # for test2.scicrunch.org
         self.headers = {'Content-type': 'application/json'}
         self.base_path = 'https://beta.scicrunch.org/api/1/'
@@ -81,15 +97,34 @@ class Client:
                 exit(error)
             return output
 
+    def is_equal(self, string1, string2):
+        return string1.lower().strip() == string2.lower().strip()
+
+    def test_check(self, error):
+        if self.test:
+            return 'failed'
+        else:
+            exit(error)
+
     def fix_ilx(self, ilx_id):
-        return ilx_id.replace('ILX:', 'ilx_')
+        return ilx_id.replace('ILX:', 'ilx_').replace('TMP:', 'tmp_')
+
+    def check_success(self, output):
+        if output['data'].get('ilx'):
+            return True
+        else:
+            return False
 
     def get_data_from_ilx(self, ilx_id):
+        ilx_id = self.fix_ilx(ilx_id)
         url_base = self.base_path + \
             "ilx/search/identifier/{identifier}?key={APIKEY}"
-        url = url_base.format(identifier=ilx_id.replace('ILX:', 'ilx_'),
+        url = url_base.format(identifier=ilx_id,
                               APIKEY=self.APIKEY)
-        return self.get(url)['data']
+        output = self.get(url)
+
+        success = self.check_success(output)
+        return output, success
 
     def search_by_label(self, label):
         url_base = self.base_path + 'term/search/{term}?key={api_key}'
@@ -100,59 +135,49 @@ class Client:
         total_data = []
         for ilx_id in ilx_ids:
             ilx_id = ilx_id.replace('http', '').replace('.', '').replace('/', '')
-            data = self.get_data_from_ilx(ilx_id)
-            if data.get('id'):
-                total_data.append(data)
+            data, success = self.get_data_from_ilx(ilx_id)
+            if success:
+                total_data.append(data['data'])
             else:
                 total_data.append({})
         return total_data
 
-    def add_triple(self, triple, debug=False):
-        subj, pred, obj = triple
+    def add_triple(self, subj, pred, obj):
         subj_data, pred_data, obj_data = self.are_ilx([subj, pred, obj])
         # RELATIONSHIP PROPERTY
         if subj_data.get('id') and pred_data.get('id') and obj_data.get('id'):
             if pred_data['type'] != 'relationship':
-                if debug:
-                    return 'failed'
-                else:
-                    exit('Adding a relationship as formate "term1_ilx relationship_ilx term2_ilx"')
-            return self.add_relationship(term1=subj_data, relationship=pred_data, term2=obj_data, debug=debug)
+                return self.test_check('Adding a relationship as formate \
+                                       "term1_ilx relationship_ilx term2_ilx"')
+            return self.add_relationship(term1=subj_data,
+                                         relationship=pred_data,
+                                         term2=obj_data)
         # ANNOTATION PROPERTY
         elif subj_data.get('id') and pred_data.get('id'):
             if pred_data['type'] != 'annotation':
-                if debug:
-                    return 'failed'
-                else:
-                    exit('Adding a relationship as formate "term_ilx annotation_ilx value"')
-            return self.add_annotation(entity=subj_data, annotation=pred_data, value=obj, debug=debug)
+                return self.test_check('Adding a relationship as formate \
+                                       "term_ilx annotation_ilx value"')
+            return self.add_annotation(entity=subj_data,
+                                       annotation=pred_data,
+                                       value=obj)
         # UPDATE ENTITY
         elif subj_data.get('id'):
             data = subj_data
-            pred = self.ttl2sci_map.get(pred)
-            if not pred:
-                if debug:
-                    return 'failed'
-                else:
-                    exit(pred + ' doesn not have correct RDF format or It is not an option')
-            data = self.custom_update(data, pred, obj, debug=debug)
+            _pred = self.ttl2sci_map.get(pred)
+            if not _pred:
+                return self.test_check(pred + ' doesn not have correct RDF format \
+                                       or It is not an option')
+            data = self.custom_update(data, _pred, obj)
             if data == 'failed':  # for debugging custom_update
                 return data
             data = superclasses_bug_fix(data)
             url_base = self.base_path + 'term/edit/{id}'
             url = url_base.format(id=data['id'])
-            output = self.post(url, data)
-            if debug:
-                return 'success'
-            else:
-                print('success')
+            return self.post(url, data)
         else:
-            if debug:
-                return 'failed'
-            else:
-                exit('The ILX ID(s) provided do not exist')
+            return self.test_check('The ILX ID(s) provided do not exist')
 
-    def add_relationship(self, term1, relationship, term2, debug=False):
+    def add_relationship(self, term1, relationship, term2):
         url = self.base_path + 'term/add-relationship'
         data = {'term1_id': term1['id'],
                 'relationship_tid': relationship['id'],
@@ -160,26 +185,18 @@ class Client:
                 'term1_version': term1['version'],
                 'relationship_term_version': relationship['version'],
                 'term2_version': term2['version']}
-        output = self.post(url, data)
-        if debug:
-            return 'success'
-        else:
-            print('success')
+        return self.post(url, data)
 
-    def add_annotation(self, entity, annotation, value, debug=False):
+    def add_annotation(self, entity, annotation, value):
         url = self.base_path + 'term/add-annotation'
-        data = {'tid':entity['id'],
-                'annotation_tid':annotation['id'],
-                'value':value,
-                'term_version':entity['version'],
-                'annotation_term_version':annotation['version']}
-        output = self.post(url, data)
-        if debug:
-            return 'success'
-        else:
-            print('success')
+        data = {'tid': entity['id'],
+                'annotation_tid': annotation['id'],
+                'value': value,
+                'term_version': entity['version'],
+                'annotation_term_version': annotation['version']}
+        return self.post(url, data)
 
-    def custom_update(self, data, pred, obj, debug=False):
+    def custom_update(self, data, pred, obj):
         if isinstance(data[pred], str):
             data[pred] = str(obj)
         else:
@@ -191,29 +208,27 @@ class Client:
                 ilx_ids = [d['ilx'] for d in data[pred]]
                 if obj not in ilx_ids:
                     _obj = obj.replace('ILX:', 'ilx_')
-                    super_data = self.get_data_from_ilx(ilx_id=_obj)
-                    if super_data.get('id'):
+                    super_data, success = self.get_data_from_ilx(ilx_id=_obj)
+                    super_data = super_data['data']
+                    if success:
                         data[pred].append({'id': super_data['id'], 'ilx': _obj})
                     else:
-                        if debug:
-                            return 'failed'
-                        else:
-                            exit('Your superclass ILX ID' + _obj + ' does not exist.')
+                        return self.test_check('Your superclass ILX ID '
+                                                + _obj + ' does not exist.')
             elif pred == 'existing_ids':  # FIXME need to autogenerate curies from a map
                 iris = [d['iri'] for d in data[pred]]
                 if obj not in iris:
                     if 'http' not in obj:
-                        if debug:
-                            return 'failed'
-                        else:
-                            exit('exisiting id value must be a uri containing "http"')
-                    data[pred].append({'curie': self.qname(obj), 'iri': obj, 'preferred': '0'})
+                        return self.test_check('exisiting id value must \
+                                               be a uri containing "http"')
+                    data[pred].append({
+                        'curie': self.qname(obj),
+                        'iri': obj,
+                        'preferred': '0'
+                    })
                 data = self.preferred_change(data)
             else:
-                if debug:
-                    return 'failed'
-                else:
-                    exit(pred + ' Has slipped through the cracks')
+                return self.test_check(pred + ' Has slipped through the cracks')
         return data
 
     # FIXME: need to sql all curie to iri mappings and put them here
@@ -269,101 +284,96 @@ class Client:
         data['existing_ids'][new_pref_index]['preferred'] = 1
         return data
 
-    def add_entity(self, triple, debug=False):
-        rdf_type, superclass, label = triple
+    def add_entity(self, rdf_type, superclass, label):
 
-        bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
-        pp = 'Entity {label} was created with ILX ID {ilx_id} and of type {rdf_type}'
+        # Checks if you inputed the right type
         accepted_types = ['term', 'cde', 'annotation', 'relationship', 'fde']
         if rdf_type not in accepted_types:
-            if debug:
-                return 'failed'
-            else:
-                exit('rdf_type must be one of the following: ' + accepted_types)
-        _super = self.fix_ilx(superclass)
-        _super_data = self.get_data_from_ilx(ilx_id=_super)
-        if not _super_data['id']:
-            if debug:
-                return 'failed'
-            else:
-                exit(superclass + ' is does not exist and cannot be used as a superclass.')
+            error = 'rdf_type must be one of the following: {accepted_types}'
+            return self.test_check(error.format(accepted_types=accepted_types))
 
-        data = self.search_by_label(label)['data']
-        # TODO: ' or " converted and then algo search says it doesnt exists if inputed again
-        ex_pre_data = [d for d in data if self.is_equal(d['label'], label_bug_fix(label))] if data else None
+        # Pulls superclass data out and checks if it exists
+        superclass_data, success = self.get_data_from_ilx(ilx_id=superclass)
+        if not success:
+            error = '{superclass} is does not exist and cannot be used as a superclass.'
+            return self.test_check(error.format(superclass=superclass))
 
-        if ex_pre_data:
-            ex_pre_data = ex_pre_data[0]
-            ex_data = self.get_data_from_ilx(ilx_id=ex_pre_data['ilx'])
-            ex_super = ex_data['superclasses']
-            ex_uid = ex_data['uid']
+        # Searchs database to see if the term exists. Will return anything similar,
+        # but we want only what is_equal
+        search_results = self.search_by_label(label)['data']
+        search_results = [sr for sr in search_results
+                          if self.is_equal(sr['label'], label_bug_fix(label))]
+
+        # If search_results is not empty, we need to see if the type and superclass are also a
+        # match. If not, you can create this entity. HOWEVER. If you are the creator of an entity,
+        # you can only have one label of any type or superclass
+        if search_results:
+            entity = search_results[0] # garunteed to only have one match if any
+            entity, success = self.get_data_from_ilx(ilx_id=entity['ilx']) # get all the metadata
+            entity = entity['data']
             user_url = 'https://scicrunch.org/api/1/user/info?key={api_key}'
-            user_data = self.get(user_url.format(api_key=self.APIKEY))['data']
-            if str(ex_data['uid']) == str(user_data['id']):
-                if debug:
-                    return 'failed'
-                else:
-                    exit(bp.format(label=label,
-                                   ilx_id=ex_data['ilx'],
-                                   rdf_type=ex_data['type']))
-            ex_super_ilx = ex_data['ilx'] if ex_super else ''
-            types_equal = self.is_equal(ex_data['type'], rdf_type)
-            supers_equal = self.is_equal(ex_super_ilx, _super_data['ilx'])
+            user_data = self.get(user_url.format(api_key=self.APIKEY))
+            user_data = user_data['data']
+            if str(entity['uid']) == str(user_data['id']): # creator check
+                bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
+                return self.test_check(bp.format(label=label,
+                                                 ilx_id=entity['ilx'],
+                                                 rdf_type=entity['type']))
+            types_equal = self.is_equal(entity['type'], rdf_type) # type check
+            entity_super_ilx = entity['superclass']['ilx'] if entity['superclass'] else ''
+            supers_equal = self.is_equal(ex_super_ilx, _super_data['ilx']) # superclass check
             if not types_equal or not supers_equal:
-                ex_data = None
-        else:
-            ex_data = None
+                search_results = None # Although true the first time, if
 
-        if ex_data:
-            if debug:
-                return 'failed'
-            else:
-                exit(bp.format(label=label,
-                               ilx_id=self.fix_ilx(ex_data['ilx']),
-                               rdf_type=ex_data['type']))
-        else:
-            url = self.base_path + 'ilx/add'
-            data = {'term': label,
-                    'superclasses': [{'ilx': self.fix_ilx(superclass)}],
-                    'type': rdf_type}
-            output = self.post(url, data)['data']
-            if output.get('ilx'):
-                ilx_id = output['ilx']
-            else:
-                ilx_id = output['fragment']  # archetype of beta
-            url = self.base_path + 'term/add'
-            data = {'label': label.replace('&#39;', "'").replace('&#34;', '"'),
-                    'ilx': ilx_id,
-                    'superclasses': [{'ilx': self.fix_ilx(superclass)}],
-                    'type': rdf_type}
-            output = self.post(url, data)
-            if debug:
-                if output['success']:
-                    return output
-                else:
-                    return 'failed'
-            else:
-                print(pp.format(label=output['data']['label'],
-                                ilx_id=output['data']['ilx'],
-                                rdf_type=output['data']['type']))
+        # Found an entity that already exists with the given input and creator
+        if search_results:
+            entity = search_results[0]
+            bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
+            return self.test_check(bp.format(label=label,
+                                             ilx_id=self.fix_ilx(entity['ilx']),
+                                             rdf_type=entity['type']))
 
-    def is_equal(self, string1, string2):
-        return string1.lower().strip() == string2.lower().strip()
+        # Generates ILX ID and does a validation check
+        url = self.base_path + 'ilx/add'
+        data = {'term': label,
+                'superclasses': [{'ilx': self.fix_ilx(superclass)}],
+                'type': rdf_type}
+        output = self.post(url, data)['data']
+        if output.get('ilx'):
+            ilx_id = output['ilx']
+        else:
+            ilx_id = output['fragment']  # archetype of beta
+
+        # Uses generated ILX ID to make a formal row in the database
+        url = self.base_path + 'term/add'
+        data = {'label': label.replace('&#39;', "'").replace('&#34;', '"'),
+                'ilx': ilx_id,
+                'superclasses': [{'ilx': self.fix_ilx(superclass)}],
+                'type': rdf_type}
+        output = self.post(url, data)
+        #pp = 'Entity {label} was created with ILX ID {ilx_id} and of type {rdf_type}'
+        # pp.format(label=output['data']['label'],
+        #           ilx_id=output['data']['ilx'],
+        #           rdf_type=output['data']['type'])) For log
+        return output
 
 
 def main():
     doc = docopt(__doc__, version=VERSION)
     client = Client()
     if doc.get('triple'):
-        triple = (doc['<subject>'],
-                  doc['<predicate>'],
-                  doc['<object>'])
-        client.add_triple(triple)
+        request = client.add_triple(subj = doc['<subject>'],
+                                    pred = doc['<predicate>'],
+                                    obj  = doc['<object>'])
     elif doc.get('entity'):
-        triple = (doc['<rdf:type>'],
-                  doc['<rdfs:subClassOf>'],
-                  doc['<rdfs:label>'])
-        client.add_entity(triple)
+        request = client.add_entity(rdf_type   = doc['<rdf:type>'],
+                                    superclass = doc['<rdfs:subClassOf>'],
+                                    label      = doc['<rdfs:label>'], )
+    elif doc.get('get'):
+        request, success = client.get_data_from_ilx(doc['<identifier>'])
+
+    #log(request['data'])
+    print(request['success'])
 
 
 if __name__ == '__main__':

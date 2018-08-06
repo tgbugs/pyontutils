@@ -56,34 +56,39 @@ class TestCli(unittest.TestCase):
     ]
 
     def setUp(self):
-        self.client = Client()
+        self.client = Client(test=True)
 
     def test(self):
-        term = self.client.add_entity(self.good_entities_to_test[0], debug=True)
-        anno = self.client.add_entity(self.good_entities_to_test[1], debug=True)
-        rela = self.client.add_entity(self.good_entities_to_test[2], debug=True)
+        term = self.client.add_entity(*self.good_entities_to_test[0])
+        anno = self.client.add_entity(*self.good_entities_to_test[1])
+        rela = self.client.add_entity(*self.good_entities_to_test[2])
         self.assertEqual(term['success'], True)
         self.assertEqual(anno['success'], True)
         self.assertEqual(rela['success'], True)
 
         for entity in self.bad_entities_to_test:
-            self.assertEqual(self.client.add_entity(entity, debug=True), 'failed')
+            self.assertEqual(self.client.add_entity(*entity), 'failed')
 
         for triple in self.good_triples_to_test:
-            self.assertEqual(self.client.add_triple(triple, debug=True), 'success')
+            self.assertEqual(self.client.add_triple(*triple)['success'], True)
 
         for triple in self.bad_triples_to_test:
-            self.assertEqual(self.client.add_triple(triple, debug=True), 'failed')
+            self.assertEqual(self.client.add_triple(*triple), 'failed')
 
-        # annotation proptery
+        # Annotation proptery
         anno_entity = ('ILX:0101431', anno['data']['ilx'], "value_" + self.term_now)
-        anno = self.client.add_triple(anno_entity, debug=True)
-        self.assertEqual(anno, 'success')
-        # relationship property
+        anno = self.client.add_triple(*anno_entity)
+        self.assertEqual(anno['success'], True)
+        # Relationship property
         rela_entity = ('ILX:0101431', rela['data']['ilx'], term['data']['ilx'])
-        rela = self.client.add_triple(rela_entity, debug=True)
-        self.assertEqual(rela, 'success')
+        rela = self.client.add_triple(*rela_entity)
+        self.assertEqual(rela['success'], True)
 
+    def test_get(self):
+        good_output, success = self.client.get_data_from_ilx('ILX:0101431')
+        self.assertEqual(success, True)
+        bad_output, success = self.client.get_data_from_ilx('FAKEID')
+        self.assertEqual(success, False)
 
 if __name__ == '__main__':
     unittest.main()
