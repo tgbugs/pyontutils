@@ -11,7 +11,7 @@ Any documents related to methodology should go here.
 * [Full](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods.ttl)
 
 # protio
-=protio= is a helper language that simplifies the object property madness for atomic techniques.
+`protio` is a helper language that simplifies the object property madness for atomic techniques.
 It can be found [here](https://github.com/tgbugs/protc/tree/master/protc-tools-lib/protio)
 in the [protc](https://github.com/tgbugs/protc) repository.  
 Some examples are in [test.rkt](https://github.com/tgbugs/protc/blob/master/protc-tools-lib/protio/test.rkt)  
