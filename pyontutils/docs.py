@@ -5,7 +5,7 @@ import nbformat
 from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import working_dir
+from pyontutils.utils import working_dir, noneMembers
 from pyontutils.config import devconfig
 from pyontutils.htmlfun import htmldoc, atag
 from IPython import embed
@@ -144,13 +144,16 @@ def main():
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()))
 
+    skip_folders = 'notebook-testing',
+
     # TODO move this into run_all
     wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
                        Path(repo.working_dir, f).resolve(),
                        makeKwargs(repo, f))
                       for repo in repos
                       for f in repo.git.ls_files().split('\n')
-                      if Path(f).suffix in suffixFuncs]
+                      if Path(f).suffix in suffixFuncs
+                      and noneMembers(f, *skip_folders)]
 
     # doesn't work because read-from-minibuffer cannot block
     #compile_org_forever = ['emacs', '-q', '-l',
@@ -169,17 +172,58 @@ def main():
         outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
                                               for wd, doc, kwargs in wd_docs_kwargs)
 
-    index = ['<h1>Documentation Index</h1>']
+    titles = {
+        'Components':'Components',
+        'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  # 
+        'pyontutils/README.html':'Introduction to pyontutils',
+        'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
+        'Developer docs':'Developer docs',
+        'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
+        'NIF-Ontology/docs/development setup.html':'Ontology development setup',  # HOWTO
+        'NIF-Ontology/docs/import chain.html':'Ontology import chain',  # Documentation
+        'pyontutils/resolver/README.html':'Ontology resolver setup',
+        'pyontutils/scigraph/README.html':'Ontology SciGraph setup',
+        'NIF-Ontology/docs/external-sources.html':'External sources for the ontology',  # Other
+        'Contributing':'Contributing',
+        'pyontutils/development/README.html':'Contributing to the ontology',
+        'pyontutils/development/community/README.html':'Contributing term lists to the ontology',
+        'pyontutils/pyontutils/neuron_models/README.html':'Contributing neuron terminology to the ontology',
+        'Ontology content':'Ontology content',
+        'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
+        'pyontutils/development/methods/README.html':'Methods and techniques',  # Ontology content
+        'pyontutils/docs/NeuronLangExample.html':'Neuron Lang examples',
+        'pyontutils/docs/neurons_notebook.html':'Neuron Lang setup',
+        'Specifications':'Specifications',
+        'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
+        'pyontutils/docs/ttlser.html':'Deterministic turtle specification',
+    }
+        
+    index = [
+        '<b class="Components">Components</b>',
+        '<b class="Developer docs">Developer docs</b>',
+        '<b class="Contributing">Contributing</b>',
+        '<b class="Ontology content">Ontology content</b>',
+        '<b class="Specifications">Specifications</b>',
+    ]
     for outname, rendered in outname_rendered:
-        index.append(atag(outname.relative_to(BUILD / 'docs')))  # TODO parse out/add titles
+        apath = outname.relative_to(BUILD / 'docs')
+        title = titles.get(apath.as_posix(), None)
+        # TODO parse out/add titles
+        value = atag(apath) if title is None else atag(apath, title)
+        index.append(value)
         if not outname.parent.exists():
             outname.parent.mkdir(parents=True)
         with open(outname.as_posix(), 'wt') as f:
             f.write(rendered)
 
-    index_body = '<br>\n'.join(index)
+    lt  = list(titles)
+    def title_key(a):
+        return lt.index(a.split('"')[1])
+
+    index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] + sorted(index, key=title_key))
     with open((BUILD / 'docs/index.html').as_posix(), 'wt') as f:
-        f.write(htmldoc(index_body, 'NIF Ontology documentation index'))
+        f.write(htmldoc(index_body,
+                        title='NIF Ontology documentation index'))
 
 if __name__ == '__main__':
     main()
