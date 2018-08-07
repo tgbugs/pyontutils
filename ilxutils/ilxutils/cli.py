@@ -1,7 +1,12 @@
 """ Interlex add Triple for examples. Will have the same post triple commands for real ILX.
 
+    Notes:
+    1. In beta some old and all new ILX IDs are TMP: prefix instead
+    2. To install go into the 1st ilxutils directory and run pip3 setup.py install
+    3. cli.log will be created in your current directory (info and errors created per line)
+
 Usage:
-    interlex post entity <rdf:type> <rdfs:subClassOf> <rdfs:label> [<definition:>]
+    interlex post entity <rdf:type> <rdfs:sub*Of> <rdfs:label> [<definition:>]
     interlex post triple <subject> <predicate> <object>
     interlex get <identifier>
 
@@ -10,8 +15,6 @@ Examples:
     export INTERLEX_API_KEY=your_key_without_quotes
 
     interlex post entity "term" ILX:0101431 "magical neuron"
-    output: 'Entity <rdfs:label> was created with ILX ID <ilx_id> and of type <rdfs:type>'
-
     interlex post triple ILX:1234567 definition: "entities definition"
 
     # annotation logic -> <term_ilx> <annotation_ilx> <str>
@@ -58,6 +61,7 @@ class Client:
         'rdfs:label': 'label',
         'definition:': 'definition',
         'rdfs:subClassOf': 'superclasses',
+        'rdfs:subProperty': 'superclass',
         'comment': 'comment',
         'NIFRID:synonym': 'synonyms',
         # 'ilxtr:existingId': 'existing_ids', # too unorganized for this
@@ -377,7 +381,7 @@ def main():
                                     obj  = doc['<object>'])
     elif doc.get('entity'):
         request = client.add_entity(rdf_type   = doc['<rdf:type>'],
-                                    superclass = doc['<rdfs:subClassOf>'],
+                                    superclass = doc['<rdfs:sub*Of>'],
                                     label      = doc['<rdfs:label>'],
                                     definition = doc['<definition:>'])
     elif doc.get('get'):
