@@ -2,7 +2,7 @@
 
 Usage:
     interlex post entity <rdf:type> <rdfs:subClassOf> <rdfs:label> [<definition:>]
-    interlex post triple <subject> <predicate> <object>\
+    interlex post triple <subject> <predicate> <object>
     interlex get <identifier>
 
 Examples:
@@ -30,18 +30,13 @@ Commands:
 from docopt import docopt
 from IPython import embed
 import json
+import logging
 import os
 import requests as r
 from sys import exit
 VERSION = '0.0.1'
-
-# TODO:
-# Still have problem with if debug must return in add_entity itself
-# X expand triple in the function call,
-# return actual output in main but only print it in main,
-# pull up debug as a functino to make neater
-# use python loggin module to keep all the outputs (not the whole record)
-# X get a interlex get <identifier> (should accept iris or curies)
+logging.basicConfig(filename='cli.log',level=logging.DEBUG)
+logging.getLogger("urllib3").setLevel(logging.WARNING) # removes noise
 
 
 def superclasses_bug_fix(data):
@@ -75,6 +70,16 @@ class Client:
         self.base_path = 'https://beta.scicrunch.org/api/1/'
         self.APIKEY = os.environ.get('INTERLEX_API_KEY')
 
+    def log_info(self, data):
+        info = 'label={label}, id={id}, ilx={ilx}, superclass_tid={super_id}'
+        logging.info(info.format(label=data['label'],
+                                 id=data['id'],
+                                 ilx=data['ilx'],
+                                 super_id=data['superclasses'][0]['superclass_tid']))
+
+    def log_error(self, error):
+        logging.error(error)
+
     def get(self, url):
         req = r.get(url, headers=self.headers, auth=self.auth)
         return self.process_request(req)
@@ -104,6 +109,7 @@ class Client:
         if self.test:
             return 'failed'
         else:
+            self.log_error(error)
             exit(error)
 
     def fix_ilx(self, ilx_id):
@@ -165,8 +171,8 @@ class Client:
             data = subj_data
             _pred = self.ttl2sci_map.get(pred)
             if not _pred:
-                return self.test_check(pred + ' doesn not have correct RDF format \
-                                       or It is not an option')
+                error = pred + " doesnt not have correct RDF format or It is not an option"
+                return self.test_check(error)
             data = self.custom_update(data, _pred, obj)
             if data == 'failed':  # for debugging custom_update
                 return data
@@ -284,7 +290,7 @@ class Client:
         data['existing_ids'][new_pref_index]['preferred'] = 1
         return data
 
-    def add_entity(self, rdf_type, superclass, label):
+    def add_entity(self, rdf_type, superclass, label, definition=None):
 
         # Checks if you inputed the right type
         accepted_types = ['term', 'cde', 'annotation', 'relationship', 'fde']
@@ -336,8 +342,11 @@ class Client:
         # Generates ILX ID and does a validation check
         url = self.base_path + 'ilx/add'
         data = {'term': label,
-                'superclasses': [{'ilx': self.fix_ilx(superclass)}],
+                'superclasses': [{
+                    'id': superclass_data['data']['id'],
+                    'ilx': superclass_data['data']['ilx']}],
                 'type': rdf_type}
+        data = superclasses_bug_fix(data)
         output = self.post(url, data)['data']
         if output.get('ilx'):
             ilx_id = output['ilx']
@@ -348,18 +357,19 @@ class Client:
         url = self.base_path + 'term/add'
         data = {'label': label.replace('&#39;', "'").replace('&#34;', '"'),
                 'ilx': ilx_id,
-                'superclasses': [{'ilx': self.fix_ilx(superclass)}],
+                'superclasses': [{
+                    'id': superclass_data['data']['id'],
+                    'ilx': superclass_data['data']['ilx']}],
                 'type': rdf_type}
-        output = self.post(url, data)
-        #pp = 'Entity {label} was created with ILX ID {ilx_id} and of type {rdf_type}'
-        # pp.format(label=output['data']['label'],
-        #           ilx_id=output['data']['ilx'],
-        #           rdf_type=output['data']['type'])) For log
-        return output
+        data = superclasses_bug_fix(data)
+        if definition:
+            data.update({'definition':definition})
+        return self.post(url, data)
 
 
 def main():
     doc = docopt(__doc__, version=VERSION)
+
     client = Client()
     if doc.get('triple'):
         request = client.add_triple(subj = doc['<subject>'],
@@ -368,12 +378,13 @@ def main():
     elif doc.get('entity'):
         request = client.add_entity(rdf_type   = doc['<rdf:type>'],
                                     superclass = doc['<rdfs:subClassOf>'],
-                                    label      = doc['<rdfs:label>'], )
+                                    label      = doc['<rdfs:label>'],
+                                    definition = doc['<definition:>'])
     elif doc.get('get'):
         request, success = client.get_data_from_ilx(doc['<identifier>'])
 
-    #log(request['data'])
-    print(request['success'])
+    client.log_info(request['data'])
+    print('success')
 
 
 if __name__ == '__main__':

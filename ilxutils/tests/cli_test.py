@@ -26,7 +26,7 @@ class TestCli(unittest.TestCase):
     Entity Examples
     """
     good_entities_to_test = [
-        ('term', 'ILX:0101431', 'test_' + term_now),  # create term
+        ('term', 'ILX:0101431', 'test_' + term_now, 'test_definition'),  # create term
         ('annotation', 'ILX:0101431', 'test_' + anno_now),  # create annotation
         ('relationship', 'ILX:0101431', 'test_' + rela_now),  # create relationship
     ]
