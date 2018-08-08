@@ -76,13 +76,16 @@ class Client:
 
     def log_info(self, data):
         info = 'label={label}, id={id}, ilx={ilx}, superclass_tid={super_id}'
-        logging.info(info.format(label=data['label'],
-                                 id=data['id'],
-                                 ilx=data['ilx'],
-                                 super_id=data['superclasses'][0]['superclass_tid']))
+        info_filled = info.format(label=data['label'],
+                                  id=data['id'],
+                                  ilx=data['ilx'],
+                                  super_id=data['superclasses'][0]['superclass_tid'])
+        logging.info(info_filled)
+        return info_filled
 
     def log_error(self, error):
         logging.error(error)
+        exit(error)
 
     def get(self, url):
         req = r.get(url, headers=self.headers, auth=self.auth)
@@ -95,8 +98,11 @@ class Client:
         return self.process_request(req)
 
     def process_request(self, req):
-        req.raise_for_status()
-        output = req.json()
+        req.raise_for_status() # cant general check. Duplicates return 400s
+        try:
+            output = req.json()
+        except:
+            exit(req.text)
         try:
             error = output['data'].get('errormsg')
         except:
@@ -114,7 +120,6 @@ class Client:
             return 'failed'
         else:
             self.log_error(error)
-            exit(error)
 
     def fix_ilx(self, ilx_id):
         return ilx_id.replace('ILX:', 'ilx_').replace('TMP:', 'tmp_')
@@ -305,6 +310,7 @@ class Client:
 
         # Pulls superclass data out and checks if it exists
         superclass_data, success = self.get_data_from_ilx(ilx_id=superclass)
+        superclass_data = superclass_data['data']
         if not success:
             error = '{superclass} is does not exist and cannot be used as a superclass.'
             return self.test_check(error.format(superclass=superclass))
@@ -319,37 +325,33 @@ class Client:
         # match. If not, you can create this entity. HOWEVER. If you are the creator of an entity,
         # you can only have one label of any type or superclass
         if search_results:
-            entity = search_results[0] # garunteed to only have one match if any
-            entity, success = self.get_data_from_ilx(ilx_id=entity['ilx']) # get all the metadata
-            entity = entity['data']
-            user_url = 'https://scicrunch.org/api/1/user/info?key={api_key}'
-            user_data = self.get(user_url.format(api_key=self.APIKEY))
-            user_data = user_data['data']
-            if str(entity['uid']) == str(user_data['id']): # creator check
-                bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
-                return self.test_check(bp.format(label=label,
-                                                 ilx_id=entity['ilx'],
-                                                 rdf_type=entity['type']))
-            types_equal = self.is_equal(entity['type'], rdf_type) # type check
-            entity_super_ilx = entity['superclass']['ilx'] if entity['superclass'] else ''
-            supers_equal = self.is_equal(entity_super_ilx, superclass_data['ilx']) # superclass check
-            if not types_equal or not supers_equal:
-                search_results = None # Although true the first time, if
-
-        # Found an entity that already exists with the given input and creator
-        if search_results:
-            entity = search_results[0]
-            bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
-            return self.test_check(bp.format(label=label,
-                                             ilx_id=self.fix_ilx(entity['ilx']),
-                                             rdf_type=entity['type']))
+            search_hits = 0
+            for entity in search_results: # garunteed to only have one match if any
+                entity, success = self.get_data_from_ilx(ilx_id=entity['ilx']) # get all the metadata
+                entity = entity['data']
+                user_url = 'https://scicrunch.org/api/1/user/info?key={api_key}'
+                user_data = self.get(user_url.format(api_key=self.APIKEY))
+                user_data = user_data['data']
+                if str(entity['uid']) == str(user_data['id']): # creator check
+                    bp = 'Entity {label} already created by you with ILX ID {ilx_id} and of type {rdf_type}'
+                    return self.test_check(bp.format(label=label,
+                                                     ilx_id=entity['ilx'],
+                                                     rdf_type=entity['type']))
+                types_equal = self.is_equal(entity['type'], rdf_type) # type check
+                entity_super_ilx = entity['superclasses'][0]['ilx'] if 'superclasses' in entity and entity['superclasses'] else ''
+                supers_equal = self.is_equal(entity_super_ilx, superclass_data['ilx'])
+                if types_equal and supers_equal:
+                    bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
+                    return self.test_check(bp.format(label=label,
+                                                     ilx_id=self.fix_ilx(entity['ilx']),
+                                                     rdf_type=entity['type']))
 
         # Generates ILX ID and does a validation check
         url = self.base_path + 'ilx/add'
         data = {'term': label,
                 'superclasses': [{
-                    'id': superclass_data['data']['id'],
-                    'ilx': superclass_data['data']['ilx']}],
+                    'id': superclass_data['id'],
+                    'ilx': superclass_data['ilx']}],
                 'type': rdf_type,}
         data = superclasses_bug_fix(data)
         output = self.post(url, data)['data']
@@ -363,8 +365,8 @@ class Client:
         data = {'label': label.replace('&#39;', "'").replace('&#34;', '"'),
                 'ilx': ilx_id,
                 'superclasses': [{
-                    'id': superclass_data['data']['id'],
-                    'ilx': superclass_data['data']['ilx']}],
+                    'id': superclass_data['id'],
+                    'ilx': superclass_data['ilx']}],
                 'type': rdf_type}
         data = superclasses_bug_fix(data)
         if definition:
@@ -377,21 +379,20 @@ def main():
 
     client = Client()
     if doc.get('triple'):
-        request = client.add_triple(subj = doc['<subject>'],
+        response = client.add_triple(subj = doc['<subject>'],
                                     pred = doc['<predicate>'],
                                     obj  = doc['<object>'])
     elif doc.get('entity'):
-        request = client.add_entity(rdf_type   = doc['<rdf:type>'],
+        response = client.add_entity(rdf_type   = doc['<rdf:type>'],
                                     superclass = doc['<rdfs:sub*Of>'],
                                     label      = doc['<rdfs:label>'],
                                     definition = doc['<definition:>'])
     elif doc.get('get'):
-        request, success = client.get_data_from_ilx(doc['<identifier>'])
+        response, success = client.get_data_from_ilx(doc['<identifier>'])
     else:
-        resqest = {'data':''}
+        response = {'data':''}
 
-    client.log_info(request['data'])
-    print('success')
+    print(client.log_info(response['data']))
 
 
 if __name__ == '__main__':
