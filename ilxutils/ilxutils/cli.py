@@ -75,6 +75,7 @@ class Client:
         self.APIKEY = os.environ.get('INTERLEX_API_KEY')
 
     def log_info(self, data):
+        ''' Logs successful responses '''
         info = 'label={label}, id={id}, ilx={ilx}, superclass_tid={super_id}'
         info_filled = info.format(label=data['label'],
                                   id=data['id'],
@@ -84,21 +85,25 @@ class Client:
         return info_filled
 
     def log_error(self, error):
+        ''' Any error is logged here and ends code '''
         logging.error(error)
         exit(error)
 
     def get(self, url):
+        ''' Requests data from database '''
         req = r.get(url, headers=self.headers, auth=self.auth)
         return self.process_request(req)
 
     def post(self, url, data):
+        ''' Gives data to database '''
         data.update({'key': self.APIKEY})
         req = r.post(url, data=json.dumps(data),
                      headers=self.headers, auth=self.auth)
         return self.process_request(req)
 
     def process_request(self, req):
-        req.raise_for_status() # cant general check. Duplicates return 400s
+        ''' Checks to see if data returned from database is useable '''
+        req.raise_for_status()
         try:
             output = req.json()
         except:
@@ -113,24 +118,29 @@ class Client:
             return output
 
     def is_equal(self, string1, string2):
+        ''' Simple string comparator '''
         return string1.lower().strip() == string2.lower().strip()
 
     def test_check(self, error):
+        ''' Want a return for tests/cli_test.py '''
         if self.test:
             return 'failed'
         else:
             self.log_error(error)
 
     def fix_ilx(self, ilx_id):
+        ''' Database only excepts lower case and underscore version of ID '''
         return ilx_id.replace('ILX:', 'ilx_').replace('TMP:', 'tmp_')
 
     def check_success(self, output):
+        ''' Server will return empty fields with success=True; needs specific test '''
         if output['data'].get('ilx'):
             return True
         else:
             return False
 
     def get_data_from_ilx(self, ilx_id):
+        ''' Gets full meta data (expect their annotations and relationships) from is ILX ID '''
         ilx_id = self.fix_ilx(ilx_id)
         url_base = self.base_path + \
             "ilx/search/identifier/{identifier}?key={APIKEY}"
@@ -142,11 +152,13 @@ class Client:
         return output, success
 
     def search_by_label(self, label):
+        ''' Server returns anything that is simlar in any catagory '''
         url_base = self.base_path + 'term/search/{term}?key={api_key}'
         url = url_base.format(term=label, api_key=self.APIKEY)
         return self.get(url)
 
     def are_ilx(self, ilx_ids):
+        ''' Checks list of objects to see if they are usable ILX IDs '''
         total_data = []
         for ilx_id in ilx_ids:
             ilx_id = ilx_id.replace('http', '').replace('.', '').replace('/', '')
@@ -158,6 +170,7 @@ class Client:
         return total_data
 
     def add_triple(self, subj, pred, obj):
+        ''' Adds an entity property to an existing entity '''
         subj_data, pred_data, obj_data = self.are_ilx([subj, pred, obj])
         # RELATIONSHIP PROPERTY
         if subj_data.get('id') and pred_data.get('id') and obj_data.get('id'):
@@ -193,6 +206,7 @@ class Client:
             return self.test_check('The ILX ID(s) provided do not exist')
 
     def add_relationship(self, term1, relationship, term2):
+        ''' Creates a relationship between 3 entities in database '''
         url = self.base_path + 'term/add-relationship'
         data = {'term1_id': term1['id'],
                 'relationship_tid': relationship['id'],
@@ -203,6 +217,7 @@ class Client:
         return self.post(url, data)
 
     def add_annotation(self, entity, annotation, value):
+        ''' Adds an annotation proprty to existing entity '''
         url = self.base_path + 'term/add-annotation'
         data = {'tid': entity['id'],
                 'annotation_tid': annotation['id'],
@@ -212,13 +227,14 @@ class Client:
         return self.post(url, data)
 
     def custom_update(self, data, pred, obj):
-        if isinstance(data[pred], str):
+        ''' Updates existing entity proprty based on the predicate input '''
+        if isinstance(data[pred], str): # for all simple properties of str value
             data[pred] = str(obj)
-        else:
+        else: # synonyms, superclasses, and existing_ids have special requirements
             if pred == 'synonyms':
                 literals = [d['literal'] for d in data[pred]]
                 if obj not in literals:
-                    data[pred].append({'literal': obj})
+                    data[pred].append({'literal': obj}) # synonyms req for post
             elif pred == 'superclasses':
                 ilx_ids = [d['ilx'] for d in data[pred]]
                 if obj not in ilx_ids:
@@ -226,6 +242,7 @@ class Client:
                     super_data, success = self.get_data_from_ilx(ilx_id=_obj)
                     super_data = super_data['data']
                     if success:
+                        # superclass req post
                         data[pred].append({'id': super_data['id'], 'ilx': _obj})
                     else:
                         return self.test_check('Your superclass ILX ID '
@@ -239,18 +256,21 @@ class Client:
                     data[pred].append({
                         'curie': self.qname(obj),
                         'iri': obj,
-                        'preferred': '0'
+                        'preferred': '0' # preferred is auto generated by preferred_change
                     })
-                data = self.preferred_change(data)
+                data = self.preferred_change(data) # One ex id is determined to be preferred
             else:
+                # Somehow broke this code
                 return self.test_check(pred + ' Has slipped through the cracks')
         return data
 
-    # FIXME: need to sql all curie to iri mappings and put them here
+    # FIXME: Not ready yet
     def qname(self, iri):
+        ''' Autogenerates curies for existing_ids '''
         return 'dummy:' + iri.rsplit('/', 1)[-1]
 
     def preferred_change(self, data):
+        ''' Determines preferred existing id based on curie prefix in the ranking list '''
         ranking = [
             'CHEBI',
             'NCBITaxon',
@@ -300,7 +320,9 @@ class Client:
         return data
 
     def add_entity(self, rdf_type, superclass, label, definition=None):
-
+        ''' Adds entity as long as it doesn't exist and has a usable
+            superclass ILX ID and rdf:type
+        '''
         # Checks if you inputed the right type
         rdf_type = rdf_type.lower().strip().replace('owl:Class', 'term')
         accepted_types = ['owl:Class', 'term', 'cde', 'annotation', 'relationship', 'fde']
@@ -390,6 +412,7 @@ def main():
     elif doc.get('get'):
         response, success = client.get_data_from_ilx(doc['<identifier>'])
     else:
+        # Somehow code broke
         response = {'data':''}
 
     print(client.log_info(response['data']))
