@@ -297,7 +297,8 @@ class Client:
     def add_entity(self, rdf_type, superclass, label, definition=None):
 
         # Checks if you inputed the right type
-        accepted_types = ['term', 'cde', 'annotation', 'relationship', 'fde']
+        rdf_type = rdf_type.lower().strip().replace('owl:Class', 'term')
+        accepted_types = ['owl:Class', 'term', 'cde', 'annotation', 'relationship', 'fde']
         if rdf_type not in accepted_types:
             error = 'rdf_type must be one of the following: {accepted_types}'
             return self.test_check(error.format(accepted_types=accepted_types))
@@ -331,7 +332,7 @@ class Client:
                                                  rdf_type=entity['type']))
             types_equal = self.is_equal(entity['type'], rdf_type) # type check
             entity_super_ilx = entity['superclass']['ilx'] if entity['superclass'] else ''
-            supers_equal = self.is_equal(ex_super_ilx, _super_data['ilx']) # superclass check
+            supers_equal = self.is_equal(entity_super_ilx, superclass_data['ilx']) # superclass check
             if not types_equal or not supers_equal:
                 search_results = None # Although true the first time, if
 
@@ -349,7 +350,7 @@ class Client:
                 'superclasses': [{
                     'id': superclass_data['data']['id'],
                     'ilx': superclass_data['data']['ilx']}],
-                'type': rdf_type}
+                'type': rdf_type,}
         data = superclasses_bug_fix(data)
         output = self.post(url, data)['data']
         if output.get('ilx'):
@@ -386,6 +387,8 @@ def main():
                                     definition = doc['<definition:>'])
     elif doc.get('get'):
         request, success = client.get_data_from_ilx(doc['<identifier>'])
+    else:
+        resqest = {'data':''}
 
     client.log_info(request['data'])
     print('success')
