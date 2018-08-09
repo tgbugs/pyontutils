@@ -7,6 +7,7 @@ import asyncio
 from sys import exit
 import math as m
 import time
+from IPython import embed
 from aiohttp import ClientSession, TCPConnector, BasicAuth
 from ilxutils.args_reader import read_args
 from collections import defaultdict, namedtuple
@@ -89,6 +90,7 @@ class scicrunch():
                 print(data)
                 exit(output['data']['errormsg'])
             output = output['data']
+            embed()
             if _print:
                 try:
                     print(i, output['label'])
@@ -509,21 +511,19 @@ class scicrunch():
 
 
 def main():
-    args = read_args(api_key=p.home() / 'keys/beta_api_scicrunch_key.txt',
-                     db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
-    # args = read_args(
-    #    api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-    #    db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
-    #    beta=True)
+    # args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+    #                  db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
+    args = read_args(
+       api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+       db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
+       production=True)
     sql = IlxSql(db_url=args.db_url)
     sci = scicrunch(api_key=args.api_key,
                     base_path=args.base_path, db_url=args.db_url)
     #data = ['ilx_0115064']
     #data = [{'id':4511, 'existing_ids':{'iri': 'test2.org/456', 'curie':'test:456'}}]
-    hit = sci.addTerms(
-        [{'term': 'troyith123', 'type': 'term'}], crawl=True, _print=False)
-    #hit = sci.addTermsToElastic(tids=[15041], crawl=True, _print=False)
-    print(hit)
+    output = sci.addTerms([{'label':'literatureReference', 'type':'annotation'}])
+    print(output)
 
 
 if __name__ == '__main__':
