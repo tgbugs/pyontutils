@@ -153,8 +153,11 @@ class DevConfig:
 
     @property
     def _ontology_local_repo(self):
+        stated_repo = Path(self.config['ontology_local_repo'])
         maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
-        if maybe_repo.exists():
+        if stated_repo.exists():
+            return stated_repo
+        elif maybe_repo.exists():
             return maybe_repo
         else:
             maybe_start = Path(__file__).parent.parent.parent.absolute()
