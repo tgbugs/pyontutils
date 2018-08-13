@@ -14,8 +14,13 @@ from IPython import embed
 Config('common-usage-types')
 
 # TODO
-# 1. serialization for parent classes for evidence based models
-# 2. convert to use simple ont
+# 1. convert to use simple ont
+# 2. inheritance for owlClass from python classes
+# 3. add ttl serialization for subclasses of EBM
+
+class NeuronSWAN(NeuronEBM):
+    owlClass = 'ilxtr:NeuronSWAN'
+
 
 def main():
     resources = Path(__file__).resolve().absolute().parent.parent / 'resources'
@@ -25,7 +30,7 @@ def main():
     bc = byCol(rows)
     labels, *_ = zip(*rows)
     ns = [n for n in ndl_neurons if n._origLabel in labels]  # FIXME empty ...
-    new = [NeuronCUT(*n.pes) for n in ns]
+    new = [NeuronSWAN(*n.pes) for n in ns]
     # TODO preserve the names from neuronlex on import ...
     embed()
 

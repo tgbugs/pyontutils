@@ -10,7 +10,7 @@ from git.repo import Repo
 from IPython import embed
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.utils import stack_magic, TermColors as tc
+from pyontutils.utils import stack_magic, TermColors as tc, subclasses
 from pyontutils.core import makeGraph, makePrefixes, PREFIXES as uPREFIXES
 from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON
 from pyontutils.config import devconfig
@@ -301,9 +301,13 @@ class graphBase:
     def python():
         out = '#!/usr/bin/env python3.6\n'
         out += f'from {graphBase.__import_name__} import *\n\n'
-        prefixes = {k:str(v) for k, v in graphBase.ng.namespaces.items()
-                    if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
-        out += f'Config({graphBase.ng.name!r}, prefixes={prefixes!r})\n\n'
+        _prefixes = {k:str(v) for k, v in graphBase.ng.namespaces.items()
+                     if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
+        prefixes = f', prefixes={_prefixes!r}' if _prefixes else ''
+        out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'
+        _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
+        subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
+        out += f'{subs}'
         #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
         out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
         return out
