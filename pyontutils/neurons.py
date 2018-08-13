@@ -33,8 +33,12 @@ __all__ = [
     'NegPhenotype',
     'LogicalPhenotype',
     'Neuron',
+    'NeuronCUT',
+    'NeuronEBM',
     #'NeuronArranger',
     '_NEURON_CLASS',
+    '_CUT_CLASS',
+    '_EBM_CLASS',
     '_CHECKOUT_OK',
 ]
 
@@ -44,6 +48,8 @@ OR = 'owl:unionOf'
 
 # utility identifiers
 _NEURON_CLASS = 'SAO:1417703748'
+_CUT_CLASS = 'ilxtr:NeuronCUT'
+_EBM_CLASS = 'ilxtr:NeuronEBM'
 PHENO_ROOT = 'ilxtr:hasPhenotype'  # needs to be qname representation
 DEF_ROOT = 'ilxtr:definedClassNeurons'
 
@@ -653,6 +659,7 @@ class LogicalPhenotype(graphBase):
 
 
 class NeuronBase(graphBase):
+    owlClass = _NEURON_CLASS
     existing_pes = {}
     existing_ids = {}
     ids_pes = {}
@@ -1005,7 +1012,7 @@ class Neuron(NeuronBase):
                         pes.append(lpe)
                         continue
                     if isinstance(pr, infixowl.Class):
-                        if id_ == self.expand(_NEURON_CLASS):
+                        if id_ == self.expand(self.owlClass):
                             #print('we got neuron root', id_)
                             continue
                         else:
@@ -1042,7 +1049,7 @@ class Neuron(NeuronBase):
         """ Lift phenotypeEdges to Restrictions """
         if graph is None:
             graph = self.out_graph
-        members = [self.expand(_NEURON_CLASS)]
+        members = [self.expand(self.owlClass)]
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
@@ -1059,6 +1066,14 @@ class Neuron(NeuronBase):
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
+
+
+class NeuronCUT(Neuron):
+    owlClass = _CUT_CLASS
+
+
+class NeuronEBM(Neuron):
+    owlClass = _EBM_CLASS
 
 
 class TypeNeuron(Neuron):  # TODO

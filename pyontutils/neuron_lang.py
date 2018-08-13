@@ -23,6 +23,8 @@ __all__ = [
     'NegPhenotype',
     'LogicalPhenotype',
     'Neuron',
+    'NeuronCUT',
+    'NeuronEBM',
     '_CHECKOUT_OK',
 ]
 
