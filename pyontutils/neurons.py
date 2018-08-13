@@ -282,14 +282,22 @@ class graphBase:
         og.write()
 
     @staticmethod
+    def filename_python():
+        p = PPath(graphBase.ng.filename)
+        return p.with_name(p.name.replace('-', '_')).with_suffix('.py').as_posix()
+
+    @staticmethod
     def write_python():
-        with open(PPath(graphBase.ng.filename).with_suffix('.py').as_posix(), 'wt') as f:
+        with open(graphBase.filename_python(), 'wt') as f:
             f.write(graphBase.python())
 
     @staticmethod
     def python():
         out = '#!/usr/bin/env python3.6\n'
         out += f'from {graphBase.__import_name__} import *\n\n'
+        prefixes = {k:str(v) for k, v in graphBase.ng.namespaces.items()
+                    if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
+        out += f'Config({graphBase.ng.name!r}, prefixes={prefixes!r})\n\n'
         #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
         out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
         return out
@@ -539,9 +547,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     def __str__(self):
         pn = self.in_graph.namespace_manager.qname(self.p)
         en = self.in_graph.namespace_manager.qname(self.e)
-        lab = self.pLabel
+        lab = str(self.pLabel)
         t = ' ' * (len(self.__class__.__name__) + 1)
-        return "%s('%s',\n%s'%s',\n%slabel='%s')" % (self.__class__.__name__, pn, t, en, t, lab)
+        return f"{self.__class__.__name__}({pn!r},\n{t}{en!r},\n{t}label={lab!r})"
+        #return "%s('%s',\n%s'%s',\n%slabel='%s')" % (self.__class__.__name__, pn, t, en, t, lab)
 
 
 class NegPhenotype(Phenotype):
@@ -724,6 +733,10 @@ class NeuronBase(graphBase):
         if override:
             if label is not None:
                 self._label = label
+        elif label is not None:
+            self._origLabel = label
+        else:
+            self._origLabel = None
 
         if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph:
             self.Class = self.existing_pes[self]
@@ -851,7 +864,8 @@ class NeuronBase(graphBase):
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
         inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + ')'
+        lab =  f", label='{self._origLabel}'" if self._origLabel else ''
+        args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
         return '%s%s' % (self.__class__.__name__, args)
 
@@ -863,6 +877,8 @@ class NeuronBase(graphBase):
                 asdf += ',\n' + t + ('%s' % pe).replace('\n', '\n' + t)
             else:
                 asdf += ('%s' % pe).replace('\n', '\n' + t)
+        lab =  ',\n' + t + f"label={str(self._origLabel)!r}" if self._origLabel else ''
+        asdf += lab
         asdf += ')'
         return asdf
 
