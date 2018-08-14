@@ -1347,14 +1347,15 @@ def createOntology(filename=    'temp-graph',
     if local_base is None:  # get location at runtime
         local_base = devconfig.ontology_local_repo
     writeloc = Path(local_base) / path
-    ontid = os.path.join(remote_base, path, filename + '.ttl')
+    ontid = os.path.join(remote_base, path, filename + '.ttl') if filename else None
     prefixes.update(makePrefixes('', 'owl'))
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
-    graph.add_ont(ontid, name, shortname, comment, version)
-    for import_ in imports:
-        graph.add_trip(ontid, owl.imports, import_)
+    if ontid is not None:
+        graph.add_ont(ontid, name, shortname, comment, version)
+        for import_ in imports:
+            graph.add_trip(ontid, owl.imports, import_)
     return graph
 
 #
@@ -1664,6 +1665,8 @@ class Source(tuple):
                 cls.iri_head = object
                 if hasattr(cls.artifact, 'hadDerivation'):
                     cls.artifact.hadDerivation.append(object)
+                elif cls.artifact is None:
+                    raise TypeError('If artifact = None and you have a source set source_original = True')
                 else:
                     cls.artifact.hadDerivation = [object]
             elif hasattr(cls, 'source_original') and cls.source_original:

@@ -36,6 +36,7 @@ class Config:
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
                  import_from_local =    True,  # also load from local?
+                 sources =              tuple(),
                  ):
         import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
@@ -75,6 +76,7 @@ class Config:
                            force_remote = not import_from_local,
                            branch = 'neurons',
                            iri = lConfig.iri,
+                           sources = sources,
                            use_local_import_paths = False)  # FIXME conflation of import from local and render with local
 
 
@@ -93,15 +95,26 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            checkout_ok=       _CHECKOUT_OK,
            scigraph=          None,
            iri=               None,
+           sources=           tuple(),
            use_local_import_paths=True):  # defaults to devconfig.scigraph_api
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
-    graphBase.configGraphIO(remote_base, local_base, branch,
-                            core_graph_paths, core_graph,
-                            in_graph_paths, out_graph_path,
-                            out_imports, out_graph, prefixes,
-                            force_remote, checkout_ok, scigraph,
-                            iri, use_local_import_paths)
+    graphBase.configGraphIO(remote_base=remote_base,
+                            local_base=local_base,
+                            branch=branch,
+                            core_graph_paths=core_graph_paths,
+                            core_graph=core_graph,
+                            in_graph_paths=in_graph_paths,
+                            out_graph_path=out_graph_path,
+                            out_imports=out_imports,
+                            out_graph=out_graph,
+                            prefixes=prefixes,
+                            force_remote=force_remote,
+                            checkout_ok=checkout_ok,
+                            scigraph=scigraph,
+                            iri=iri,
+                            sources=sources,
+                            use_local_import_paths=use_local_import_paths)
     pred = graphBase._predicates
     return pred  # because the python module system is opinionated :/
 
