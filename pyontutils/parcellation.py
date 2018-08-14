@@ -26,7 +26,8 @@ from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
 from pyontutils.core import NCBITaxon, UBERON, NIFTTL
-from pyontutils.core import Class, Source, Ont, LabelsBase, Collector, annotations, restriction, build
+from pyontutils.core import Class, Source, resSource, Ont, LabelsBase, Collector
+from pyontutils.core import annotations, restriction, build
 from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, subclasses
 from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
@@ -1002,10 +1003,6 @@ class LocalSource(Source):
 ##
 
 # Source instances  TODO put everything under one class as we do for Artifacts?
-
-class resSource(Source):
-    source = 'https://github.com/tgbugs/pyontutils.git'
-
 
 class SwansonAppendix(resSource):
     sourceFile = 'pyontutils/resources/swanson_aligned.txt'

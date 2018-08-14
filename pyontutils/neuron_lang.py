@@ -37,7 +37,7 @@ class Config:
                  imports =              tuple(),  # iterable
                  import_from_local =    True,  # also load from local?
                  sources =              tuple(),
-                 ):
+                 source_file =          None):
         import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
         imports += ['NIFTTL:phenotype-core.ttl', 'NIFTTL:phenotypes.ttl']
@@ -77,6 +77,7 @@ class Config:
                            branch = 'neurons',
                            iri = lConfig.iri,
                            sources = sources,
+                           source_file = source_file,
                            use_local_import_paths = False)  # FIXME conflation of import from local and render with local
 
 
@@ -96,6 +97,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
            scigraph=          None,
            iri=               None,
            sources=           tuple(),
+           source_file=       None,
            use_local_import_paths=True):  # defaults to devconfig.scigraph_api
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
@@ -114,6 +116,7 @@ def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
                             scigraph=scigraph,
                             iri=iri,
                             sources=sources,
+                            source_file=source_file,
                             use_local_import_paths=use_local_import_paths)
     pred = graphBase._predicates
     return pred  # because the python module system is opinionated :/

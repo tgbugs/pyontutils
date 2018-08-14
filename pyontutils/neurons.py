@@ -140,6 +140,7 @@ class graphBase:
                       scigraph=          None,
                       iri=               None,
                       sources=           tuple(),
+                      source_file=       None,
                       use_local_import_paths=True):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
@@ -248,11 +249,18 @@ class graphBase:
         # output graph setup
         if out_graph is None:
             _sources = sources
+            _source_file = source_file
             class NeurOnt(Ont):  # FIXME this is super misleading wrt the source ...
                 path = 'ttl/generated/neurons/'
                 #filename = 'to-be-set-later'
                 prefixes = PREFIXES
                 sources = _sources
+                source_file = _source_file
+                # FIXME temp fix for issue with wgb in core
+                wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
+                                  '{commit}/'
+                                  '{file}'
+                                  '{hash_L_line}')
 
             no = NeurOnt()
             out_graph = no.graph

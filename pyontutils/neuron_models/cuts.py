@@ -6,7 +6,8 @@ ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neuron_models.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol
-from pyontutils.core import Source
+from pyontutils.core import resSource
+from pyontutils.config import devconfig
 # import these last so that graphBase resets (sigh)
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
@@ -31,16 +32,20 @@ def main():
     labels, *_ = zip(*rows)
     ns = [n for n in ndl_neurons if n._origLabel in labels]  # FIXME empty ...
 
-    class SourceCUT(Source):
-        source = __file__  # FIXME
-        source_original = True
+    working_dir = Path(devconfig.git_local_base) / 'pyontutils'
+    rpath = Path(__file__).resolve().absolute().relative_to(working_dir).as_posix()  # FIXME
+    # will break outside of subfolders of working_dir neuron_models folder ...
+
+    class SourceCUT(resSource):
         sourceFile = 'pyontutils/resources/common-usage-types.csv'  # FIXME relative to git workingdir...
-        #artifact = None
-        
+        source_original = True
+
     sources = SourceCUT(),
-    Config('common-usage-types', sources=sources)
+    Config('common-usage-types', sources=sources, source_file=rpath)
     new = [NeuronSWAN(*n.pes) for n in ns]
     # TODO preserve the names from neuronlex on import ...
+    Neuron.write()
+    Neuron.write_python()
     embed()
 
 if __name__ == '__main__':

@@ -1709,6 +1709,10 @@ class Source(tuple):
             yield self.iri, dcterms.isVersionOf, self.iri_head
 
 
+class resSource(Source):
+    source = 'https://github.com/tgbugs/pyontutils.git'
+
+
 class Ont:
     #rdf_type = owl.Ontology
     _debug = False
@@ -1723,10 +1727,11 @@ class Ont:
     namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
+    source_file = None  # override for cases where __class__ is used internally
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      '{commit}/pyontutils/'
+                      '{commit}/pyontutils/'  # FIXME prefer {filepath} to assuming pyontutils...
                       '{file}'
-                      '#L{line}')
+                      '{hash_L_line}')
 
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
@@ -1764,15 +1769,21 @@ class Ont:
             commit = next(repo.iter_commits()).hexsha
 
         try:
-            line = getSourceLine(self.__class__)
-            file = getsourcefile(self.__class__)
+            if self.source_file:
+                file = self.source_file
+                line = ''
+            else:
+                line = '#L' + str(getSourceLine(self.__class__))
+                _file = getsourcefile(self.__class__)
+                file = Path(_file).name
         except TypeError:  # emacs is silly
-            line = 'noline'
-            file = 'nofile'
+            line = '#Lnoline'
+            _file = 'nofile'
+            file = Path(_file).name
 
         self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
-                                                         line=line,
-                                                         file=Path(file).name)
+                                                         hash_L_line=line,
+                                                         file=file)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
