@@ -72,8 +72,8 @@ monospace_body_style = 'body { font-family: Dejavu Sans Mono; font-size: 11pt }'
 table_style = '''
 th { text-align: left; padding-right: 20px; }
 td { text-align: left; padding-right: 20px; }
-tr { vertical-align: top;  }
-tr:hover { background-color: #fcfcfc;  }
+tr { vertical-align: top; }
+tr:hover { background-color: #fcfcfc; }
 table {
     font-family: Dejavu Sans Mono;
     font-weight: bold;
@@ -84,6 +84,8 @@ del { color: white; }
 '''
 
 cur_style = '''
+tr { vertical-align: baseline; }
+
 .col-Identifier a,
 .col-PMID a,
 .col-DOI a,
