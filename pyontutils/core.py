@@ -1347,14 +1347,15 @@ def createOntology(filename=    'temp-graph',
     if local_base is None:  # get location at runtime
         local_base = devconfig.ontology_local_repo
     writeloc = Path(local_base) / path
-    ontid = os.path.join(remote_base, path, filename + '.ttl')
+    ontid = os.path.join(remote_base, path, filename + '.ttl') if filename else None
     prefixes.update(makePrefixes('', 'owl'))
     if shortname is not None and prefixes is not None and 'skos' not in prefixes:
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
-    graph.add_ont(ontid, name, shortname, comment, version)
-    for import_ in imports:
-        graph.add_trip(ontid, owl.imports, import_)
+    if ontid is not None:
+        graph.add_ont(ontid, name, shortname, comment, version)
+        for import_ in imports:
+            graph.add_trip(ontid, owl.imports, import_)
     return graph
 
 #
@@ -1664,6 +1665,8 @@ class Source(tuple):
                 cls.iri_head = object
                 if hasattr(cls.artifact, 'hadDerivation'):
                     cls.artifact.hadDerivation.append(object)
+                elif cls.artifact is None:
+                    raise TypeError('If artifact = None and you have a source set source_original = True')
                 else:
                     cls.artifact.hadDerivation = [object]
             elif hasattr(cls, 'source_original') and cls.source_original:
@@ -1706,6 +1709,10 @@ class Source(tuple):
             yield self.iri, dcterms.isVersionOf, self.iri_head
 
 
+class resSource(Source):
+    source = 'https://github.com/tgbugs/pyontutils.git'
+
+
 class Ont:
     #rdf_type = owl.Ontology
     _debug = False
@@ -1720,10 +1727,11 @@ class Ont:
     namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
+    source_file = None  # override for cases where __class__ is used internally
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      '{commit}/pyontutils/'
+                      '{commit}/pyontutils/'  # FIXME prefer {filepath} to assuming pyontutils...
                       '{file}'
-                      '#L{line}')
+                      '{hash_L_line}')
 
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
@@ -1761,15 +1769,21 @@ class Ont:
             commit = next(repo.iter_commits()).hexsha
 
         try:
-            line = getSourceLine(self.__class__)
-            file = getsourcefile(self.__class__)
+            if self.source_file:
+                file = self.source_file
+                line = ''
+            else:
+                line = '#L' + str(getSourceLine(self.__class__))
+                _file = getsourcefile(self.__class__)
+                file = Path(_file).name
         except TypeError:  # emacs is silly
-            line = 'noline'
-            file = 'nofile'
+            line = '#Lnoline'
+            _file = 'nofile'
+            file = Path(_file).name
 
         self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
-                                                         line=line,
-                                                         file=Path(file).name)
+                                                         hash_L_line=line,
+                                                         file=file)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,

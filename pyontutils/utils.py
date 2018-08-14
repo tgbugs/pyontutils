@@ -12,6 +12,7 @@ from datetime import datetime, date
 from time import time, sleep
 from pathlib import Path
 from functools import wraps
+from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 import psutil
 import rdflib
@@ -458,6 +459,23 @@ class rowParse:
     def _end(self):
         """ Run this code after all rows have been parsed """
         pass
+
+
+class byCol:
+    def __init__(self, rows, header=None):
+        if header is None:
+            header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
+                      for c in rows[0]]
+            rows = rows[1:]
+
+        for name, col in zip(header, zip(*rows)):
+            setattr(self, name, list(col))
+
+        nt = namedtuple('row', header)
+        self.rows = [nt(*r) for r in rows]
+
+    def __iter__(self):
+        yield from self.rows
 
 
 class _TermColors:
