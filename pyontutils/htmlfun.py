@@ -56,8 +56,11 @@ def render_table(rows, *headers):
         else:
             output.append('<tr><td>' + '</td><td>'.join(row) + '</td></tr>')
 
-    if headers and len(headers) != len(row):
-        raise TypeError(f'# of headers does not match # rows! {headers} {row}')
+    try:
+        if headers and rows and len(headers) != len(row):
+            raise TypeError(f'# of headers does not match # rows! {headers} {row}')
+    except UnboundLocalError: # FIXME generators make things dumb
+        print(f'WARNING: no rows for {headers}')
 
     out = '<table>' + '\n'.join(output) + '</table>'
     return out
