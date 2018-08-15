@@ -6,30 +6,7 @@ import sys
 import time
 import math as m
 import numpy as np
-from ilxutils.interlex_sql import interlex_sql
-
-ranking = [
-    'CHEBI',
-    'NCBITaxon',
-    'COGPO',
-    'CAO',
-    'DICOM',
-    'UBERON',
-    'NLX',
-    'NLXANAT',
-    'NLXCELL',
-    'NLXFUNC',
-    'NLXINV',
-    'NLXORG',
-    'NLXRES',
-    'NLXSUB'
-    'BIRNLEX',
-    'SAO',
-    'NDA.CDE',
-    'PRO',
-    'NIFEXT',
-    'ILX',
-]
+from ilxutils.interlex_sql import IlxSql
 
 
 def superclasses_bug_fix(term_data):
@@ -45,10 +22,35 @@ def superclasses_bug_fix(term_data):
 
 
 def preferred_change(data):
-
+    ''' Determines preferred existing id based on curie prefix in the ranking list '''
+    ranking = [
+        'CHEBI',
+        'NCBITaxon',
+        'COGPO',
+        'CAO',
+        'DICOM',
+        'UBERON',
+        'NLX',
+        'NLXANAT',
+        'NLXCELL',
+        'NLXFUNC',
+        'NLXINV',
+        'NLXORG',
+        'NLXRES',
+        'NLXSUB'
+        'BIRNLEX',
+        'SAO',
+        'NDA.CDE',
+        'PRO',
+        'NIFEXT',
+        'ILX',
+    ]
     mock_rank = ranking[::-1]
     score = []
-    for d in data['existing_ids']:
+    old_pref_index = None
+    for i, d in enumerate(data['existing_ids']):
+        if int(d['preferred']) == 1:
+            old_pref_index = i
         if d.get('curie'):
             pref = d['curie'].split(':')[0]
             if pref in mock_rank:
@@ -58,11 +60,15 @@ def preferred_change(data):
         else:
             score.append(-1)
 
-    preferred_index = score.index(max(score))
+    new_pref_index = score.index(max(score))
+    new_pref_iri = data['existing_ids'][new_pref_index]['iri']
+    if new_pref_iri.rsplit('/', 1)[0] == 'http://uri.interlex.org/base':
+        if old_pref_index:
+            if old_pref_index != new_pref_index:
+                return data
     for e in data['existing_ids']:
         e['preferred'] = 0
-    data['existing_ids'][preferred_index]['preferred'] = 1
-
+    data['existing_ids'][new_pref_index]['preferred'] = 1
     return data
 
 
@@ -85,7 +91,7 @@ def merge(new, old):
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
 
-            if 'change' not in list(vals):  #notion that you want to add it
+            if 'change' not in list(vals):  # notion that you want to add it
                 vals['change'] = False
 
             if vals.get('delete') == True:
@@ -123,8 +129,7 @@ def merge(new, old):
 
             else:
                 if vals['iri'] not in iris and vals['change'] == True:
-                    sys.exit('You want to change iri that doesnt exist', '\n',
-                             new)
+                    sys.exit('You want to change iri that doesnt exist ' + str(new))
                 elif vals['iri'] not in iris and vals['change'] == False:
                     old['existing_ids'].append(vals)
                 elif vals['iri'] in iris and vals['change'] == True:
@@ -138,16 +143,19 @@ def merge(new, old):
                             new_existing_ids.append(e)
                     old['existing_ids'] = new_existing_ids
                 elif vals['iri'] in iris and vals['change'] == False:
-                    pass  #for sanity readability
+                    pass  # for sanity readability
                 else:
                     sys.exit('Something broke while merging in existing_ids')
             old = preferred_change(old)
 
         elif k in [
-                'definition', 'superclasses', 'id', 'type', 'comment', 'label'
+                'definition', 'superclasses', 'id', 'type', 'comment', 'label', 'uid'
         ]:
             old[k] = vals
-    ''' remove repeats '''
+
+        old['uid'] = 34142  # DEBUG: need to mark as mine manually until all Old terms are fixed
+
+    ''' REMOVE REPEATS; needs to exist due to server overloads '''
     visited = {}
     new_synonyms = []
     for synonym in old['synonyms']:
@@ -187,7 +195,7 @@ def fill_data(data, sql):
 
     old_data = {}
     for d in data:
-        #print(d)
+        # print(d)
         old_data.update({
             int(d['id']): {
                 'existing_ids':
@@ -200,6 +208,6 @@ def fill_data(data, sql):
                     'records')
             }
         })
-        #print(old_data)
+        # print(old_data)
 
     return old_data

@@ -17,8 +17,8 @@ p = pathlib.PurePath(args.output)
 
 
 def createBar(maxval):
-    return progressbar.ProgressBar(maxval=maxval, \
-        widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    return progressbar.ProgressBar(maxval=maxval,
+                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
 
 
 def create_graph(filename):
@@ -83,7 +83,7 @@ def helper_pref_filter(iri_list, pref_list, terms_ilx):
         if 'ilx' in iri:
             index = i
     try:
-        ilx_iri = iri_list[index]  #ilx is auto preferred right here
+        ilx_iri = iri_list[index]  # ilx is auto preferred right here
     except:
         ilx_iri = 'http://uri.interlex.org/base/' + terms_ilx
         iri_list.append(ilx_iri)
@@ -177,9 +177,9 @@ def make_preferred_iris_dict(g=None, test_df=None):
         pref_iri, unpref_iris = get_pref_unpref_iris(
             seg_df=seg_df, terms_ilx=list(seg_df.ilx)[0])
         pref_dict[
-            curr_id] = pref_iri  #g.qname(pref_iri) #FIXME tom must have changed qname
+            curr_id] = pref_iri  # g.qname(pref_iri) #FIXME tom must have changed qname
         unpref_dict[curr_id] = unpref_iris
-        ilx_to_pref[list(seg_df.ilx)[0]] = pref_iri  #g.qname(pref_iri)
+        ilx_to_pref[list(seg_df.ilx)[0]] = pref_iri  # g.qname(pref_iri)
 
         bar.update(i)
     bar.finish()
@@ -217,11 +217,11 @@ def label_def_prefix(g=None, pref_dict=None, unpref_dict=None):
                 g.add_class(pref_iri, label=row.label)
 
             g.add_trip(pref_iri, 'definition:', row.definition)
-            #http://www.geneontology.org/formats/oboInOwl#DbXref
+            # http://www.geneontology.org/formats/oboInOwl#DbXref
             for unpref_iri in unpref_iris:
                 if 'ilx' in unpref_iri.lower():
                     continue
-                #if 'neurolex.' in unpref_iri:
+                # if 'neurolex.' in unpref_iri:
                 #    g.add_trip(pref_iri, oboInOwl.DbXref, unpref_iri)
                 else:
                     g.add_trip(pref_iri, 'ilxtr:existingId', unpref_iri)
@@ -305,7 +305,7 @@ def relationship(g, ilx_to_pref):
            WHERE t1.type != 'cde' AND t2.type != 'cde' AND t3.type != 'cde'
            '''
     df = pd.read_sql(data, engine)
-    #add sys.exit test
+    # add sys.exit test
     df_ids = df.term1
 
     bar = createBar(len(df_ids))
@@ -354,12 +354,12 @@ def superclasses(g, pref_dict):
 
 
 if __name__ == '__main__':
-    g = create_graph('Interlex')
+    g = create_graph('interlex')
     pref_dict, ilx_to_pref, unpref_dict = make_preferred_iris_dict(g)
     g = label_def_prefix(g, pref_dict, unpref_dict)
     g = annotation(g, pref_dict)
     g = synonym(g, pref_dict)
     g = relationship(g, ilx_to_pref)
     g = superclasses(g, pref_dict)
-    g.g.serialize(destination=args.output, format='turtle')  #g.write() broken
+    g.g.serialize(destination=args.output, format='turtle')  # g.write() broken
     print('COMPLETE')

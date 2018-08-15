@@ -1,15 +1,15 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='interlexutils',
+    name='ilxutils',
     version='0.0.2',
     description='Uploads terms to SciCrunch',
     long_description='',
-    url='https://github.com/tmsincomb/interlexutils',
+    url='https://github.com/tmsincomb/ilxutils',
     author='Troy Sincomb',
     author_email='troysincomb@gmail.com',
     license='MIT',
-    keywords='scicrunch sci',
+    keywords='interlex',
     packages=['ilxutils'],
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -26,12 +26,11 @@ setup(
     	'aiohttp',
     	'asyncio',
     	'sqlalchemy',
+        'pathlib',
     ],
     entry_points={
         'console_scripts': [
-            'scicrunch_client = ilxutils.scicrunch_client : main',
-            'interlex_sql = ilxutils.interlex_sql : main',
-            'args_reader = ilxutils.args_reader : main',
+            'interlex = ilxutils.cli: main',
         ],
     },
 )
