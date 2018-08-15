@@ -1,4 +1,0 @@
-{
-  "tests/cli_test.py::TestCli::test": true,
-  "tests/cli_test.py::TestCli::test_get": true
-}
