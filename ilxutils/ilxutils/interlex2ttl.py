@@ -354,7 +354,7 @@ def superclasses(g, pref_dict):
 
 
 if __name__ == '__main__':
-    g = create_graph('interlex2')
+    g = create_graph('interlex')
     pref_dict, ilx_to_pref, unpref_dict = make_preferred_iris_dict(g)
     g = label_def_prefix(g, pref_dict, unpref_dict)
     g = annotation(g, pref_dict)

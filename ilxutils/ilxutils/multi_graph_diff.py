@@ -60,7 +60,10 @@ class MultiGraphDiff(IlxPredMap):
                                 rg_ilx=True,
                                 partial_diff=True,
                                 blacklist=BLACKLIST,
-                                both_graphs_contain=False,)
+                                both_graphs_contain=False,
+                                likeness_threshold=.8,
+                                dislikeness_threshold=1,)
+            #gc = GraphComparator(self.ref_file, tar_file)
             diffs.append(gc.diff)
         return diffs
 

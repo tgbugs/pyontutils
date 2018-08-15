@@ -82,7 +82,7 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
-# General MacOS 
+# General MacOS
 .DS_Store
 .AppleDouble
 .LSOverride
