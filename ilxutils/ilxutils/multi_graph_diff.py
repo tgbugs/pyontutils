@@ -23,7 +23,7 @@ from ilxutils.ilx_pred_map import IlxPredMap
 from ilxutils.mydifflib import ratio
 from ilxutils.args_reader import doc2args
 from ilxutils.graph2pandas import Graph2Pandas
-from ilxutils.graph_comparator2 import GraphComparator
+from ilxutils.graph_comparator import GraphComparator
 from ilxutils.tools import open_json, create_json, prettify_ontodiff_json, create_csv
 VERSION = '0.0.2'
 BLACKLIST = ['synonym', 'superclass']
@@ -108,7 +108,7 @@ class MultiGraphDiff(IlxPredMap):
 
 def main():
     '''
-    >>> python3 multi_graph_diff.py -r reference_graph.ttl -t target_folder -o diff.json
+    > python3 multi_graph_diff.py -r reference_graph.ttl -t target_folder -o diff.json
     '''
     args = doc2args(docopt(__doc__, version=VERSION))
     mgd = MultiGraphDiff(ref_file=args.reference, tar_card=args.target)

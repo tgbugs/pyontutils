@@ -65,7 +65,6 @@ def main():
                    start_batch=0,  # 1408, # regarding uids
                    end_batch=None,  # 1410,
                    func=FUNCTION_MAP[args['<argument>']],
-                   use_sql=False,
                    _print=True)
 
 

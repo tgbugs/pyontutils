@@ -45,24 +45,34 @@ class scicrunch():
             auth = ('scicrunch',
                     'perl22(query)')  # needed for test2.scicrunch.org
             headers = {'Content-type': 'application/json'}
-            req = r.get(url, headers=headers, auth=auth)
+            response = r.get(url, headers=headers, auth=auth)
 
-            if req.raise_for_status():
-                print(url.split('?key=')[0])
-                exit(req)
-            try:  # sometimes will return an odd error not from the servers list
-                output = req.json()['data']
-            except:
-                print(req.text)
-                exit('Failed to convert to json')
-            if output.get('errormsg'):  # error from the servers list
-                print(url.split('?key=')[0])
-                exit(output['errormsg'])
+            if response.status_code not in [200, 201]:
+                try:
+                    output = response.json()
+                except:
+                    output = response.text
+                problem = str(output)
+                exit(str(problem) + ' with status code [' +
+                     str(response.status_code) + '] with params:' + str(data))
+
+            else:
+                output = response.json()
+
+                if output.get('errormsg'):
+                    exit(output['errormsg'])
+
+                # Duplicates; don't exit
+                elif output.get('data').get('errormsg'):
+                    exit(output['data']['errormsg'])
+
             try:
-                output = {int(output['id']): output}  # terms
+                output = {int(output['data']['id']): output['data']}  # terms
             except:
-                output = {int(output[0]['tid']): output}  # annotations
+                output = {int(output['data'][0]['tid']): output['data']}  # annotations
+
             outputs.update(output)
+
         return outputs
 
     def crawl_post(self, total_data, _print):
@@ -76,28 +86,36 @@ class scicrunch():
             auth = ('scicrunch',
                     'perl22(query)')  # needed for test2.scicrunch.org
             headers = {'Content-type': 'application/json'}
-            req = r.post(
-                url, data=json.dumps(params), headers=headers, auth=auth)
-            # if req.raise_for_status():
-            #    print(data)
-            #    exit(req.text)
-            try:
-                output = req.json()
-            except:
-                print(req.text)
-                exit('Could not convert to json')
-            if output['data'].get('errormsg'):
-                print(data)
-                exit(output['data']['errormsg'])
-            output = output['data']
-            embed()
+            response = r.post(url, data=json.dumps(params), headers=headers, auth=auth)
+
+            # strict codes due to odd behavior in past
+            if response.status_code not in [200, 201]:
+                try:
+                    output = response.json()
+                except:
+                    output = response.text
+                problem = str(output)
+                exit(str(problem) + ' with status code [' +
+                     str(response.status_code) + '] with params:' + str(data))
+
+            else:
+                output = response.json()
+
+                if output.get('errormsg'):
+                    exit(output['errormsg'])
+
+                # Duplicates; don't exit
+                elif output.get('data').get('errormsg'):
+                    exit(output['data']['errormsg'])
+
             if _print:
                 try:
-                    print(i, output['label'])
+                    print(i, output['data']['label'])
                 except:
-                    print(i, output[0]['id'], output[0]['ilx'],
-                          output[0]['label'])
-            outputs.append(output)
+                    print(i, output['data'])
+
+            outputs.append(output['data'])
+
         return outputs
 
     def get(self,
@@ -190,7 +208,7 @@ class scicrunch():
                         problem = str(output)
                         exit(
                             str(problem) + ' with status code [' +
-                            str(response.status) + '] with params:' + str(params))
+                            str(response.status) + '] with params:' + str(data))
 
                     else:
                         text = await response.text()
@@ -300,7 +318,7 @@ class scicrunch():
     def addTerms(self, data, LIMIT=50, _print=True, crawl=False, use_sql=False):
         """
             need:
-                    term            <str>
+                    label           <str>
                     type            term, cde, anntation, or relationship <str>
             options:
                     definition      <str> #bug with qutations
@@ -308,19 +326,31 @@ class scicrunch():
                     synonym         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
         """
+        needed = set([
+            'label',
+            'type',
+        ])
+
         url_base = self.base_path + '/api/1/ilx/add'
+
         terms = []
         for d in data:
+            if (set(list(d)) & needed) != needed:
+                exit('You need keys: '+ str(needed - set(list(d))))
+
             if not d.get('label') or not d.get('type'): # php wont catch empty type!
                 exit('=== Data is missing label or type! ===')
+
             d['term'] = d.pop('label')
             terms.append((url_base, d))
+
         ilx = self.post(
             terms,
             action='Priming Terms',
             LIMIT=LIMIT,
             _print=_print,
             crawl=crawl)
+
         ilx = {d['term']: d for d in ilx}
 
         url_base = self.base_path + '/api/1/term/add'
@@ -347,22 +377,34 @@ class scicrunch():
                        _print=True,
                        crawl=False,
                        use_sql=False):
-        """[{'tid':'', 'annotation_tid':'', 'value':''}]"""
+
+        need = set([
+            'tid',
+            'annotation_tid',
+            'value',
+            'term_version',
+            'annotation_term_version',
+        ])
+
         url_base = self.base_path + '/api/1/term/add-annotation'
         annotations = []
         for annotation in data:
             annotation.update({
-                'term_version': '1',
-                'annotation_term_version': '1',
+                'term_version': annotation['term_version'],
+                'annotation_term_version': annotation['annotation_term_version'],
                 'batch-elastic': 'True',
             })
+
+            if (set(list(annotation)) & need) != need:
+                exit('You need keys: '+ str(need - set(list(annotation))))
+
             annotations.append((url_base, annotation))
-        return self.post(
-            annotations,
-            LIMIT=LIMIT,
-            action='Adding Annotations',
-            _print=_print,
-            crawl=crawl)
+
+        return self.post(annotations,
+                         LIMIT=LIMIT,
+                         action='Adding Annotations',
+                         _print=_print,
+                         crawl=crawl)
 
     def getAnnotations_via_tid(self,
                                tids,
@@ -392,8 +434,7 @@ class scicrunch():
             url_base.format(id=str(annotation_id))
             for annotation_id in annotation_ids
         ]
-        return self.get(
-            urls, LIMIT=LIMIT, _print=_print, crawl=crawl)
+        return self.get(urls, LIMIT=LIMIT, _print=_print, crawl=crawl)
 
     def updateAnnotations(self,
                           data,
@@ -408,8 +449,7 @@ class scicrunch():
         url_base = self.base_path + \
             '/api/1/term/edit-annotation/{id}'  # id of annotation not term id
         if use_sql:
-            annotations = self.sql.get_client_ready_annos(
-                [d['id'] for d in data])
+            annotations = self.sql.get_client_ready_annos([d['id'] for d in data])
         else:
             annotations = self.getAnnotations_via_id([d['id'] for d in data],
                                                      LIMIT=LIMIT,
@@ -431,7 +471,7 @@ class scicrunch():
                           annotation_ids,
                           LIMIT=50,
                           _print=True,
-                          crawl=False):
+                          crawl=False,):
         """data = list of tids"""
         url_base = self.base_path + \
             '/api/1/term/edit-annotation/{annotation_id}'  # id of annotation not term id; thx past troy!
@@ -452,11 +492,10 @@ class scicrunch():
             url = url_base.format(annotation_id=annotation_id)
             annotation.update({**params})
             annotations_to_delete.append((url, annotation))
-        self.post(
-            annotations_to_delete,
-            LIMIT=LIMIT,
-            _print=_print,
-            crawl=crawl)
+        return self.post(annotations_to_delete,
+                         LIMIT=LIMIT,
+                         _print=_print,
+                         crawl=crawl)
 
     def addRelationships(self,
                          data,
@@ -511,20 +550,46 @@ class scicrunch():
 
 
 def main():
+    args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+                     db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True, cafe=True)
     # args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-    #                  db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True)
-    args = read_args(
-       api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-       db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
-       production=True)
-    sql = IlxSql(db_url=args.db_url)
+    #                  db_url=p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
+    #sql = IlxSql(db_url=args.db_url)
     sci = scicrunch(api_key=args.api_key,
                     base_path=args.base_path, db_url=args.db_url)
     #data = ['ilx_0115064']
     #data = [{'id':4511, 'existing_ids':{'iri': 'test2.org/456', 'curie':'test:456'}}]
-    output = sci.addTerms([{'label':'literatureReference', 'type':'annotation'}])
+    annotation_samples = [
+    # {
+    #     'tid': '1432',
+    #     'annotation_tid': '304709',
+    #     'value': '\'\'Belliveau JW\'\', Kennedy DN Jr, McKinstry RC, Buchbinder BR, Weisskoff RM, Cohen \nMS, Vevea JM, Brady TJ, Rosen BR. Functional mapping of the human visual cortex\nby magnetic resonance imaging. Science. 1991 Nov 1;254(5032):716-9. PubMed PMID: \n1948051'
+    # },
+    {
+        'tid': '1432',
+        'annotation_tid': '304708',
+        'value': '<a href="https://www.ncbi.nlm.nih.gov/pubmed/1948051">PMID:1948051</a>',
+        'term_version': 1,
+        'annotation_term_version' : 1,
+    },
+    # {
+    #     'tid': '1432',
+    #     'annotation_tid': '304710',
+    #     'value': 'BIRNLEX:2058',
+    # }
+    ]
+    # output = sci.addTerms([
+    #     {'label':'PubMed Annotation Source', 'type':'annotation'},
+    #     {'label':'PubMed Summary', 'type':'annotation'},
+    #     {'label':'PubMed URL', 'type':'annotation'},
+    # ], LIMIT=10)
+    output = sci.addAnnotations(annotation_samples, crawl=True)
     print(output)
 
-
+'''
+Hoersch D, Otto H, Joshi CP, Borucki B, Cusanovich MA, Heyn MP. Role of a Conserved Salt
+Bridge between the PAS Core and the N-Terminal Domain in the Activation of the Photoreceptor
+Photoactive Yellow Protein. Biophysical Journal. 2007;93(5):1687-1699. doi:10.1529/biophysj.107.106633.
+'''
 if __name__ == '__main__':
     main()

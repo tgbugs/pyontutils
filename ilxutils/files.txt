@@ -1,0 +1,6 @@
+/usr/local/lib/python3.6/dist-packages/ilxutils-0.0.2-py3.6.egg
+/usr/local/bin/interlex
+/usr/local/bin/chardetect
+/usr/local/bin/conv-template
+/usr/local/bin/f2py
+/usr/local/bin/from-template

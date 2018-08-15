@@ -1,0 +1,5 @@
+[
+  "tests/test_cli.py::test_add_entity[test_input0]",
+  "tests/test_cli.py::test_add_entity[test_input1]",
+  "tests/test_cli.py::test_add_entity[test_input2]"
+]

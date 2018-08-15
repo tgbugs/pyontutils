@@ -5,7 +5,7 @@ Usage:  foo.py [-h | --help]
         foo.py [-k API_KEY] [-d DB_URL] [-p | -b]
         foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
-        foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
+        foo.py [options] [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
         graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Options:
@@ -21,6 +21,7 @@ Options:
     -t --target_graph=<path>       [default: /home/troy/Desktop/Graphs/uberon.pickle]
     -s --sql                       Uses mysql for updating term data than default api query
     -i --index=<int>               index of -f FILE that you which to start [default: 0]
+    --cafe                         tests wont work on sql so just ignore tests
 """
 from docopt import docopt
 import pandas as pd
@@ -66,7 +67,6 @@ def test(args):
 
 def ilx_doc2args(doc):
     args = doc2args(doc)
-
     if args.get('db_url'):
         args['db_url'] = open_txt(args.db_url)
 
@@ -93,6 +93,7 @@ def read_args(**args):
         if args.get(k.replace('--', '')):
             doc[k] = args[k.replace('--', '')]
     args = doc
+
     if args['--db_url']:
         args['--db_url'] = open_txt(args['--db_url'])
     else:
@@ -111,9 +112,10 @@ def read_args(**args):
         sys.exit(
             'Need to specify the client version (-b BETA | -p PRODUCTION)')
 
-    args = pd.Series({k.replace('--', ''): v for k, v in args.items()})
-    test(args)
+    if not args['--cafe']:
+        test(pd.Series({k.replace('--', ''): v for k, v in args.items()}))
 
+    args = pd.Series({k.replace('--', ''): v for k, v in args.items()})
     return args
 
 

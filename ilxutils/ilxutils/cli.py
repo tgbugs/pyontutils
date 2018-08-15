@@ -14,7 +14,9 @@ Examples:
     export INTERLEX_API_KEY=$(cat path/to/my/api/key)
     export INTERLEX_API_KEY=your_key_without_quotes
 
-    interlex post entity "term" ILX:0101431 "magical neuron"
+    interlex post entity "term" ILX:0101431 "mystical neuron"
+    interlex post entity "term" ILX:0101431 "magical neuron" "This neuron is magical"
+
     interlex post triple ILX:1234567 definition: "entities definition"
 
     # annotation logic -> <term_ilx> <annotation_ilx> <str>
@@ -38,7 +40,7 @@ import os
 import requests as r
 from sys import exit
 VERSION = '0.0.1'
-logging.basicConfig(filename='cli.log',level=logging.DEBUG)
+logging.basicConfig(filename='cli.log', level=logging.DEBUG)
 logging.getLogger("urllib3").setLevel(logging.WARNING) # removes noise
 
 
@@ -73,14 +75,15 @@ class Client:
         self.headers = {'Content-type': 'application/json'}
         self.base_path = 'https://beta.scicrunch.org/api/1/'
         self.APIKEY = os.environ.get('INTERLEX_API_KEY')
+        self.heads = True
 
     def log_info(self, data):
         ''' Logs successful responses '''
         info = 'label={label}, id={id}, ilx={ilx}, superclass_tid={super_id}'
-        info_filled = info.format(label=data['label'],
-                                  id=data['id'],
-                                  ilx=data['ilx'],
-                                  super_id=data['superclasses'][0]['superclass_tid'])
+        info_filled = info.format(label    = data['label'],
+                                  id       = data['id'],
+                                  ilx      = data['ilx'],
+                                  super_id = data['superclasses'][0]['superclass_tid'])
         logging.info(info_filled)
         return info_filled
 
@@ -91,27 +94,34 @@ class Client:
 
     def get(self, url):
         ''' Requests data from database '''
-        req = r.get(url, headers=self.headers, auth=self.auth)
+        req = r.get(url,
+                    headers = self.headers,
+                    auth    = self.auth)
         return self.process_request(req)
 
     def post(self, url, data):
         ''' Gives data to database '''
         data.update({'key': self.APIKEY})
-        req = r.post(url, data=json.dumps(data),
-                     headers=self.headers, auth=self.auth)
+        req = r.post(url,
+                     data    = json.dumps(data),
+                     headers = self.headers,
+                     auth    = self.auth)
         return self.process_request(req)
 
     def process_request(self, req):
         ''' Checks to see if data returned from database is useable '''
-        req.raise_for_status()
+        # Check status code of request
+        req.raise_for_status() # if codes not in 200s; error raise
+        # Proper status code, but check if server returned a warning
         try:
             output = req.json()
         except:
-            exit(req.text)
+            exit(req.text) # server returned html error
+        # Try to find an error msg in the server response
         try:
             error = output['data'].get('errormsg')
         except:
-            error = output.get('errormsg')
+            error = output.get('errormsg') # server has 2 variations of errormsg
         finally:
             if error:
                 exit(error)
@@ -142,12 +152,10 @@ class Client:
     def get_data_from_ilx(self, ilx_id):
         ''' Gets full meta data (expect their annotations and relationships) from is ILX ID '''
         ilx_id = self.fix_ilx(ilx_id)
-        url_base = self.base_path + \
-            "ilx/search/identifier/{identifier}?key={APIKEY}"
-        url = url_base.format(identifier=ilx_id,
-                              APIKEY=self.APIKEY)
+        url_base = self.base_path + "ilx/search/identifier/{identifier}?key={APIKEY}"
+        url = url_base.format(identifier=ilx_id, APIKEY=self.APIKEY)
         output = self.get(url)
-
+        # Can be a successful request, but not a successful response
         success = self.check_success(output)
         return output, success
 
@@ -349,24 +357,27 @@ class Client:
         if search_results:
             search_hits = 0
             for entity in search_results: # garunteed to only have one match if any
-                entity, success = self.get_data_from_ilx(ilx_id=entity['ilx']) # get all the metadata
+                entity, success = self.get_data_from_ilx(ilx_id = entity['ilx']) # all metadata
                 entity = entity['data']
                 user_url = 'https://scicrunch.org/api/1/user/info?key={api_key}'
                 user_data = self.get(user_url.format(api_key=self.APIKEY))
                 user_data = user_data['data']
                 if str(entity['uid']) == str(user_data['id']): # creator check
                     bp = 'Entity {label} already created by you with ILX ID {ilx_id} and of type {rdf_type}'
-                    return self.test_check(bp.format(label=label,
-                                                     ilx_id=entity['ilx'],
-                                                     rdf_type=entity['type']))
+                    return self.test_check(bp.format(label    = label,
+                                                     ilx_id   = entity['ilx'],
+                                                     rdf_type = entity['type']))
                 types_equal = self.is_equal(entity['type'], rdf_type) # type check
-                entity_super_ilx = entity['superclasses'][0]['ilx'] if 'superclasses' in entity and entity['superclasses'] else ''
+                if 'superclasses' in entity and entity['superclasses']:
+                    entity_super_ilx = entity['superclasses'][0]['ilx']
+                else:
+                    entity_super_ilx = ''
                 supers_equal = self.is_equal(entity_super_ilx, superclass_data['ilx'])
                 if types_equal and supers_equal:
                     bp = 'Entity {label} already exisits with ILX ID {ilx_id} and of type {rdf_type}'
-                    return self.test_check(bp.format(label=label,
-                                                     ilx_id=self.fix_ilx(entity['ilx']),
-                                                     rdf_type=entity['type']))
+                    return self.test_check(bp.format(label    = label,
+                                                     ilx_id   = self.fix_ilx(entity['ilx']),
+                                                     rdf_type = entity['type']))
 
         # Generates ILX ID and does a validation check
         url = self.base_path + 'ilx/add'
@@ -402,18 +413,18 @@ def main():
     client = Client()
     if doc.get('triple'):
         response = client.add_triple(subj = doc['<subject>'],
-                                    pred = doc['<predicate>'],
-                                    obj  = doc['<object>'])
+                                     pred = doc['<predicate>'],
+                                     obj  = doc['<object>'])
     elif doc.get('entity'):
         response = client.add_entity(rdf_type   = doc['<rdf:type>'],
-                                    superclass = doc['<rdfs:sub*Of>'],
-                                    label      = doc['<rdfs:label>'],
-                                    definition = doc['<definition:>'])
+                                     superclass = doc['<rdfs:sub*Of>'],
+                                     label      = doc['<rdfs:label>'],
+                                     definition = doc['<definition:>'])
     elif doc.get('get'):
         response, success = client.get_data_from_ilx(doc['<identifier>'])
     else:
         # Somehow code broke
-        response = {'data':''}
+        response = {'data':'Code Broke!'}
 
     print(client.log_info(response['data']))
 
