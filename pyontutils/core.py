@@ -90,6 +90,7 @@ def _loadPrefixes():
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'TEMP': interlex_namespace('temp/uris/'),
         'FIXME':'http://FIXME.org/',
+        'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',

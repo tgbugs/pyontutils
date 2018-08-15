@@ -36,12 +36,13 @@ class Config:
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
                  import_from_local =    True,  # also load from local?
+                 branch =               'neurons',
                  sources =              tuple(),
                  source_file =          None):
         import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
-        imports += ['NIFTTL:phenotype-core.ttl', 'NIFTTL:phenotypes.ttl']
-        remote = OntId('NIFTTL:')
+        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
+        imports += [remote.iri + 'phenotype-core.ttl', remote.iri + 'phenotypes.ttl']
         local = Path(devconfig.ontology_local_repo, 'ttl')
         out_local_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
         out_remote_base = os.path.join(remote.iri, 'generated/neurons')
@@ -74,14 +75,14 @@ class Config:
                            out_imports = imports, #[i.iri for i in imports],
                            prefixes = prefixes,
                            force_remote = not import_from_local,
-                           branch = 'neurons',
+                           branch = branch,
                            iri = lConfig.iri,
                            sources = sources,
                            source_file = source_file,
                            use_local_import_paths = False)  # FIXME conflation of import from local and render with local
 
 
-def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
+def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
            local_base=        None,  # devconfig.ontology_local_repo by default
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',

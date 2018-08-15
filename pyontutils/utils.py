@@ -192,6 +192,18 @@ def refile(script__file__, path):
     return str(Path(script__file__).parent / path)
 
 
+def relative_path(script__file__):
+    # FIXME will break outside of subfolders of working_dir neuron_models folder ...
+    rpath = (Path(script__file__).
+             resolve().
+             absolute().
+             relative_to(working_dir.
+                         absolute().
+                         resolve()).
+             as_posix())
+    return rpath
+
+
 def readFromStdIn(stdin=None):
     from select import select
     if stdin is None:

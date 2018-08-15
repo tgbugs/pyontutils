@@ -2,6 +2,7 @@
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
 from ontquery import rdflibLocal
+from pyontutils.utils import relative_path
 from pyontutils.core import OntId, OntTerm, makePrefixes, makeNamespaces
 from pyontutils.core import rdf, rdfs, owl
 from pyontutils.core import NIFRID, ilxtr
@@ -10,9 +11,17 @@ from pyontutils.phenotype_namespaces import *
 import rdflib
 from IPython import embed
 
-Config('huang-2017', imports=['file:///tmp/output.ttl'])
-
+Config('huang-2017',
+       imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
+       source_file=relative_path(__file__))
 OntTerm.query.add(rdflibLocal(Neuron.core_graph, OntId))
+
+class NeuronHuang2017(NeuronEBM):
+    owlClass = ilxtr.NeuronHuang2017
+    shortname = 'Huang2017'
+
+
+Neuron, Neuron_ = NeuronHuang2017, Neuron
 
 class Genes(LocalNameManager):
 
@@ -242,7 +251,7 @@ class Huang2017(Genes, Species):
 
 
 with Huang2017:
-    with Neuron(Mouse, Neocortex) as context:
+    with Neuron_(Mouse, Neocortex) as context:
         #context.subClassOf(ilxtr.huang2017)
         # TODO add the names assigned here as abbrevs somehow
 
@@ -283,7 +292,7 @@ with Huang2017:
         other = (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
         figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                            label=f'{type} all neuron (Huang2017)', override=True)
+                            label=f'{type} all neuron', override=True)
                 for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
 
         for k, v in fig1a.items():
@@ -291,9 +300,9 @@ with Huang2017:
             # some _subset_ of those have cck, but it is not clear how many
             figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
-        peps = [Neuron(*p.pes, label=f'{l} peptides neuron (Huang2017)', override=True)
+        peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
                 for l, p in zip(fig1a, f7['peptides'])]
-        sigs = [Neuron(*p.pes, label=f'{l} signaling neuron (Huang2017)', override=True)
+        sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
                 for l, p in zip(fig1a, f7['signaling'])]
         # asserted by Tom Gillespie interpreting Huang
         [p.equivalentClass(s) for p, s in zip(peps, sigs)]
