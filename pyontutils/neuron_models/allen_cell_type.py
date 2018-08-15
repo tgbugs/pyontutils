@@ -12,17 +12,16 @@ Options:
     -s --source=<path>          Get cell line data from brain-map source via requests
 """
 from docopt import docopt
-from ilxutils.tools import open_json
-from ilxutils.simple_rdflib import RDFGraph
-from rdflib.namespace import *
-from pyontutils.neuron_lang import *
-from pyontutils.core import annotation
+from IPython import embed
 import rdflib
 from rdflib import RDF, OWL
-import pandas as pd
-from sys import exit
+from rdflib.namespace import *
 import re
-from IPython import embed
+from sys import exit
+from ilxutils.simple_rdflib import RDFGraph
+from ilxutils.tools import open_json
+from pyontutils.core import annotation
+from pyontutils.neuron_lang import *
 VERSION = '0.0.3'
 doc = docopt(__doc__, version=VERSION)
 ARGS = pd.Series(

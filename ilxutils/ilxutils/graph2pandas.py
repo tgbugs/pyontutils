@@ -84,7 +84,11 @@ class Graph2Pandas():
             elif filetype == '.owl':
                 self.g = rdflib.Graph()
                 # print('Querying...')
-                self.g.parse(self.path, format='xml')
+                try:
+                    self.g.parse(self.path, format='xml')
+                except:
+                    # some owl formats are more rdf than owl
+                    self.g.parse(self.path, format='turtle')
                 return self.get_sparql_dataframe()
             else:
                 sys.exit('Format options: owl, ttl, df_pickle, rdflib.Graph()')
@@ -121,8 +125,8 @@ class Graph2Pandas():
                 data[subj]['qname'] = self.qname(
                     binding[rdflib.term.Variable('subj')])
 
-            if str(obj).lower().strip() != 'none' and not isinstance(
-                    obj, BNode):  # for the convience of set comparisons
+            # for the convience of set comparisons
+            if str(obj).lower().strip() != 'none' and not isinstance(obj, BNode): 
                 obj = str(obj)
             else:
                 continue
@@ -143,7 +147,6 @@ def main():
     from docopt import docopt
     doc = docopt(__doc__, version=VERSION)
     args = pd.Series({k.replace('--', ''): v for k, v in doc.items()})
-    print(args)
     if args.all:
         graph = Graph2Pandas(args.file, _type='all')
     elif args.type:
