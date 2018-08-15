@@ -7,26 +7,25 @@ Usage:  allen_cell_type.py [-h | --help]
 Options:
     -h --help                   Display this help message
     -v --version                Current version of file
-    -i --input=<path>           Full Allen Brain Atlas meta data [default: Dropbox/neuroinformatics/dump/cell_line_data_06_26_18.json]
+    -i --input=<path>           Full Allen Brain Atlas meta data [default: /home/troy/Dropbox/neuroinformatics/dump/cell_line_data_06_26_18.json]
     -o --output=<path>          Output path of picklized pandas DataFrame [default: neuron_cell_phenotypes]
     -s --source=<path>          Get cell line data from brain-map source via requests
 """
 from docopt import docopt
 from IPython import embed
+import json
+from pathlib import Path as p
 import rdflib
 from rdflib import RDF, OWL
 from rdflib.namespace import *
 import re
 from sys import exit
 from ilxutils.simple_rdflib import RDFGraph
-from ilxutils.tools import open_json
-from pyontutils.core import annotation
+from pyontutils.core import makeGraph, makePrefixes
 from pyontutils.neuron_lang import *
 VERSION = '0.0.3'
 doc = docopt(__doc__, version=VERSION)
-ARGS = pd.Series(
-    {k.replace('--', '').replace('-', '_'): v for k, v in doc.items()}
-)
+ARGS = doc
 
 
 class AllenCellTypes:
@@ -57,7 +56,7 @@ class AllenCellTypes:
 
     def __init__(self, input):
         self.predicates = Config(
-            name=ARGS.output,
+            name=ARGS['--output'],
             imports=['NIFTTL:transgenic_lines.ttl'],
             prefixes={
                 'JAX': 'http://jaxmice.jax.org/strain/',
@@ -65,7 +64,15 @@ class AllenCellTypes:
                 'AIBS': 'http://api.brain-map.org/api/v2/data/TransgenicLine/',
             }
         )
-        self. g = RDFGraph()
+        self.g = makeGraph('transgenic_lines',
+                            prefixes=makePrefixes(
+                                'rdf',
+                                'rdfs',
+                                'owl',
+                                'definition',
+                                'ilxtr',
+                            ),
+                            writeloc= p.home() / 'Dropbox/')
         self.neuron_data = input
         # self.sample_neuron()
 
@@ -251,6 +258,8 @@ class AllenCellTypes:
             'JAX': 'http://jaxmice.jax.org/strain/',
             'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
             'AIBS': 'http://api.brain-map.org/api/v2/data/TransgenicLine/',
+            'NIFSTD': 'http://uri.neuinfo.org/nif/nifstd/',
+            'NIFRID': 'http://uri.neuinfo.org/nif/nifstd/readable/',
         }
         for prefix, iri in allen_namespaces.items():
             self.g.add_namespace(prefix, iri)
@@ -262,27 +271,29 @@ class AllenCellTypes:
                 if prefix not in ['JAX', 'MMRRC', 'AIBS']:
                     continue
                 _class = prefix+':'+str(_id)
-                #phenotype = self.get_phenotype()
-                self.g.add_class(_class, rdflib.RDF.type, rdflib.OWL.Class)
-                self.g.add_triple(_class, 'rdfs:label', tl['name'])
-                self.g.add_triple(_class, 'definition:', tl['description'])
-                self.g.add_triple(_class, 'rdfs:subClassOf', 'ilxtr:transgenicLine')
-                self.g.add_triple(_class, 'rdfs:hasTransgenicType', 'ilxtr:'+line_type+'Line')
-        self.g.save_graph('transgenic_lines.ttl')
+                self.g.add_class(_class)
+                self.g.add_trip(_class, 'rdfs:label', tl['name'])
+                self.g.add_trip(_class, 'definition:', tl['description'])
+                self.g.add_trip(_class, 'rdfs:subClassOf', 'ilxtr:transgenicLine')
+                self.g.add_trip(_class, 'ilxtr:hasTransgenicType', 'ilxtr:'+line_type+'Line')
+        self.g.write()
 
 def main():
-    if ARGS.input:
-        input = open_json(ARGS.input)['msg']
-    if ARGS.source:
+    if ARGS['--input']:
+        with open(ARGS['--input'], 'r') as infile:
+            input = json.load(infile)['msg']
+    elif ARGS['--source']:
         responce = r.get('http://api.brain-map.org/api/v2/data/query.json?criteria='
                  +'model::Specimen,rma::criteria,[is_cell_specimen$eq%27true%27],'
                  +'products[name$eq%27Mouse%20Cell%20Types%27],'
                  +'rma::include,structure,donor(transgenic_lines),'
                  +'specimen_tags,cell_soma_locations,rma::options[num_rows$eqall]')
         intput = responce.json()['msg']
+    else:
+        exit('Please use input or source to use as reference data')
 
     act = AllenCellTypes(input=input)
-    #act.build_neurons()
+    act.build_neurons()
     act.build_transgenic_lines()
 
 
