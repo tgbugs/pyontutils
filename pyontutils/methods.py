@@ -760,6 +760,41 @@ triples += (  # aspects
         restriction(ilxtr.hasMaterialContext, ilxtr.radiowaves)),
 )
 
+triples += (
+    # tracing
+    oop(ilxtr.hasTracingDirection),
+    oop(ilxtr.hasTracingTransportType),
+    oop(ilxtr.hasTracingStartLocation),  # genetic is both since there is no 'uptake', UptakeStructure was old name
+    # cell soma, axons, boutons, dendrites
+
+    oop(ilxtr.hasDeliveryVector),  # FIXME similar terms already exist maybe? DNA delivery via ...
+    # iuep, virus, germ line
+
+    oc(ilxtr.anterograde, ilxtr.aspect),
+    oc(ilxtr.retrograde, ilxtr.aspect),
+
+    oc(ilxtr.movesViaActiveTransport, ilxtr.aspect),  # implies in vivo
+    oc(ilxtr.movesViaPassiveTransport, ilxtr.aspect),
+    # FIXME djw may not be accurate, some things passively transported could also be actively transported...
+    # the asymmetirc version which is 'requiresActiveTransport' might be an alternative
+    (ilxtr.movesViaActiveTransport, owl.disjointWith, ilxtr.movesViaPassiveTransport),
+
+    oc(ilxtr.cellLabel, ilxtr.contrastAgent),
+    oc(ilxtr.inertLabel, ilxtr.cellLabel),
+    oc(ilxtr.activeLabel, ilxtr.cellLabel),  # aka geneticLabel, but there could be other active labels
+    oc(ilxtr.functionalLabel, ilxtr.activeLabel),  # implies in vivo
+    oc(ilxtr.modifierLabel, ilxtr.activeLabel),  # aka control label
+    oc(ilxtr.expressionModifierLabel, ilxtr.modifierLabel),
+    oc(ilxtr.spreadModifierLabel, ilxtr.modifierLabel),
+
+    (ilxtr.cellLabel, ilxtr.hasTracingTransportType, ilxtr.movesVia_Transport),  # FIXME need a unionOf here probably
+    (ilxtr.cellLabel, ilxtr.hasTracingDirection, ilxtr.someDirection),  # FIXME need a unionOf here probably
+    (ilxtr.cellLabel, ilxtr.hasTracingStartLocation, ilxtr.nervousSystemRegion),  # FIXME find correct UBERON id
+    (ilxtr.activeLabel, ilxtr.hasDeliveryVector, ilxtr.someVector),
+
+    (ilxtr.interLabel, owl.disjointWith, ilxtr.activeLabel),
+)
+
 methods_helper = simpleOnt(filename=filename,
                            prefixes=prefixes,
                            imports=imports,

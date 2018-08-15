@@ -56,8 +56,11 @@ def render_table(rows, *headers):
         else:
             output.append('<tr><td>' + '</td><td>'.join(row) + '</td></tr>')
 
-    if headers and len(headers) != len(row):
-        raise TypeError(f'# of headers does not match # rows! {headers} {row}')
+    try:
+        if headers and rows and len(headers) != len(row):
+            raise TypeError(f'# of headers does not match # rows! {headers} {row}')
+    except UnboundLocalError: # FIXME generators make things dumb
+        print(f'WARNING: no rows for {headers}')
 
     out = '<table>' + '\n'.join(output) + '</table>'
     return out
@@ -69,8 +72,8 @@ monospace_body_style = 'body { font-family: Dejavu Sans Mono; font-size: 11pt }'
 table_style = '''
 th { text-align: left; padding-right: 20px; }
 td { text-align: left; padding-right: 20px; }
-tr { vertical-align: top;  }
-tr:hover { background-color: #fcfcfc;  }
+tr { vertical-align: top; }
+tr:hover { background-color: #fcfcfc; }
 table {
     font-family: Dejavu Sans Mono;
     font-weight: bold;
@@ -81,6 +84,8 @@ del { color: white; }
 '''
 
 cur_style = '''
+tr { vertical-align: baseline; }
+
 .col-Identifier a,
 .col-PMID a,
 .col-DOI a,
