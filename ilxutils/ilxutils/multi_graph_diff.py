@@ -56,14 +56,11 @@ class MultiGraphDiff(IlxPredMap):
         for i, tar_file in enumerate(self.tar_files, 1):
             print(i, 'of', len(self.tar_files), ':',
                   self.ref_file, 'VS.', tar_file)
-            # gc = GraphComparator(self.ref_file, tar_file,
-            #                     rg_ilx=True,
-            #                     partial_diff=True,
-            #                     blacklist=BLACKLIST,
-            #                     both_graphs_contain=False,
-            #                     likeness_threshold=.8,
-            #                     dislikeness_threshold=1,)
-            gc = GraphComparator(self.ref_file, tar_file)
+            gc = GraphComparator(self.ref_file, tar_file,
+                                rg_ilx=True,
+                                partial_diff=True,
+                                blacklist=BLACKLIST,
+                                both_graphs_contain=False,)
             diffs.append(gc.diff)
         return diffs
 
