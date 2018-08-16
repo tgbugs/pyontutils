@@ -205,8 +205,9 @@ class graphBase:
             repo = Repo(local_base)
             if repo.active_branch.name != branch and not checkout_ok:
                 raise FileNotFoundError('Local git repo not on %s branch!\n'
-                                        'Please run `git checkout %s` in %s '
-                                        'or set checkout_ok=True.'
+                                        'Please run `git checkout %s` in %s, '
+                                        'set NIFSTD_CHECKOUT_OK= via export or '
+                                        'at runtime, or set checkout_ok=True.'
                                         % (branch, branch, local_base))
             elif checkout_ok:
                 graphBase.repo = repo
