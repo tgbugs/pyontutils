@@ -115,8 +115,22 @@ class graphBase:
     def set_repo_state():
         if not hasattr(graphBase, 'original_branch'):
             graphBase.original_branch = repo.active_branch
+
         if not graphBase._registered:
-            atexit.register(graphBase.repo.git.checkout, graphBase.original_branch)
+            #print(tc.blue('OB:'), graphBase.original_branch)
+            def reset(ob=graphBase.original_branch):
+                # ob prevents late binding to original_branch
+                # which can be reset by successive calls to configGraphIO
+                try:
+                    # anything that will be overwritten by returning is OK to zap
+                    graphBase.repo.git.checkout('-f', ob)
+                except BaseException as e:
+                    #from IPython import embed
+                    #embed()
+                    raise e
+
+            atexit.register(reset)
+            #atexit.register(graphBase.repo.git.checkout, '-f', graphBase.original_branch)
             graphBase._registered = True
 
         graphBase.repo.git.checkout(graphBase.working_branch)

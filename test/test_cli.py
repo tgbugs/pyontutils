@@ -145,6 +145,7 @@ def populate_tests():
     neurons = ('neurons',
                'neuron_lang',
                'neuron_example',
+               'nif_neuron',
                'phenotype_namespaces',
                'neuron_models/allen_cell_types',
                'neuron_models/phenotype_direct',
@@ -218,10 +219,13 @@ def populate_tests():
     npaths = len(paths)
     for i, path in enumerate(paths):
         ppath = Path(path).absolute()
-        print('PPATH:  ', ppath)
+        #print('PPATH:  ', ppath)
         pex = ppath.as_posix().replace('/', '_').replace('.', '_')
         fname = f'test_{i:0>3}_' + pex
         stem = ppath.stem
+        #if not any(f'pyontutils/{p}.py' in path for p in neurons):
+            #print('skipping:', path)
+            #continue
         module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
         if stem not in skip:
             def test_file(self, module_path=module_path, stem=stem):
@@ -231,7 +235,7 @@ def populate_tests():
                 if hasattr(module, '_CHECKOUT_OK'):
                     print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
                     setattr(module, '_CHECKOUT_OK', True)
-                    print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
 
             setattr(TestScripts, fname, test_file)
 
@@ -246,7 +250,7 @@ def populate_tests():
 
             for j, argv in enumerate(argvs):
                 mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
-                print('MPATH:  ', module_path)
+                #print('MPATH:  ', module_path)
                 def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
                     try:
                         script = self._modules[module_path]
