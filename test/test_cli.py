@@ -140,7 +140,6 @@ def populate_tests():
     )
     if 'TRAVIS' in os.environ:
         skip += ('librdf',  # getting python3-librdf installed is too much of a pain atm
-                 'docs',  # can't seem to get this to work correctly on travis so leaving it out for now
         )
 
     lasts = tuple()
@@ -172,7 +171,8 @@ def populate_tests():
              'methods':None,
              'core':None,
              'scigraph':None,
-             'docs':None,
+             #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
+             'parcellation':['parcellation'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
     #['ilxcli', '--help'],
     'ttlfmt':[['ttlfmt', ban],
