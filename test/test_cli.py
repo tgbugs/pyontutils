@@ -172,7 +172,7 @@ def populate_tests():
              'core':None,
              'scigraph':None,
              #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
-             'parcellation':['parcellation'],
+             'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
     #['ilxcli', '--help'],
     'ttlfmt':[['ttlfmt', ban],
