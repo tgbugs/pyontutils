@@ -26,6 +26,11 @@ from docopt import docopt, parse_defaults
 from IPython import embed
 
 
+class NeuronACT(Neuron):
+    owlClass = ilxtr.NeuronACT
+    shortname = 'AllenCT'
+
+
 class AllenCellTypes:
 
     branch = 'neurons'
@@ -239,11 +244,11 @@ class AllenCellTypes:
                                  branch=self.branch)
 
         for cell_line in self.neuron_data:
-            Neuron(*self.build_phenotypes(cell_line))
+            NeuronACT(*self.build_phenotypes(cell_line))
 
         print(sorted(self.tag_names))
-        Neuron.write()
-        Neuron.write_python()
+        NeuronACT.write()
+        NeuronACT.write_python()
 
     def build_transgenic_lines(self):
         """
@@ -283,6 +288,7 @@ class AllenCellTypes:
                                      branch=self.branch)
 
         transgenic_lines._graph.write()
+
 
 def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
     print(args)

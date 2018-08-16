@@ -1063,7 +1063,8 @@ def main():
     make_bridge()
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     #t = make_table1(syn_mappings, ilx_start, phenotypes)
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 if __name__ == '__main__':
     main()

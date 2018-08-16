@@ -2,8 +2,9 @@
 import os
 import atexit
 import inspect
-from urllib.error import HTTPError
+from pprint import pformat
 from pathlib import Path, PurePath as PPath
+from urllib.error import HTTPError
 from collections import MutableMapping
 import rdflib
 from rdflib.extras import infixowl
@@ -330,7 +331,10 @@ class graphBase:
         out += f'from {graphBase.__import_name__} import *\n\n'
         _prefixes = {k:str(v) for k, v in graphBase.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
-        prefixes = f', prefixes={_prefixes!r}' if _prefixes else ''
+        len_thing = len(f'Config({graphBase.ng.name!r}, prefixes={{')
+        prefixes = (f', prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
+                    if _prefixes
+                    else '')
         out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neuron_lang
         _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
