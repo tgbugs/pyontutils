@@ -98,7 +98,8 @@ def main():
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()
-    embed()
+    if __name__ == '__main__':
+        embed()
 
-if __name__ == '__main__':
-    main()
+
+main()

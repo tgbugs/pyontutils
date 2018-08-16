@@ -1934,7 +1934,7 @@ def flattenTriples(triples):
             yield from triple_or_generator
 
 def simpleOnt(filename=f'temp-{UTCNOW()}',
-              prefixes=tuple(),
+              prefixes=tuple(),  # dict or list
               imports=tuple(),
               triples=tuple(),
               comment=None,
@@ -1956,8 +1956,11 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.path = path
     Simple.filename = filename
     Simple.comment = comment
-    Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
+    if isinstance(prefixes, dict):
+        Simple.prefixes = {k:str(v) for k, v in prefixes.items()}
+    else:
+        Simple.prefixes = makePrefixes(*prefixes)
 
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'

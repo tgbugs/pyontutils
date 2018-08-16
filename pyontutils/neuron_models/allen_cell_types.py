@@ -1,7 +1,8 @@
+#!/usr/bin/env python3.6
 """ Converts owl or ttl or raw rdflib graph into a pandas DataFrame. Saved in .pickle format.
 
 Usage:
-    allen_cell_type [options]
+    allen_cell_types [options]
 
 Options:
     -h --help                   Display this help message
@@ -17,14 +18,17 @@ import rdflib
 import requests
 from rdflib import RDF, OWL
 from rdflib.namespace import *
-from pyontutils.core import annotation, makeGraph, makePrefixes
+from pyontutils.utils import TermColors as tc
+from pyontutils.core import annotation, simpleOnt, makePrefixes
+from pyontutils.core import rdf, rdfs, owl, ilxtr, definition
 from pyontutils.neuron_lang import *
-from docopt import docopt
+from docopt import docopt, parse_defaults
 from IPython import embed
-args = docopt(__doc__, version='0.0.4')
 
 
 class AllenCellTypes:
+
+    branch = 'neurons'
 
     phenotype_preds = [
         'hasSomaLocatedIn',
@@ -50,17 +54,16 @@ class AllenCellTypes:
         'hasLocationPhenotype'
     ]
 
-    def __init__(self, input):
-        prefixes = {**{'JAX': 'http://jaxmice.jax.org/strain/',
-                    'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
-                    'AIBS': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
-                    **makePrefixes('definition', 'ilxtr', 'owl')}
-        self.predicates = Config(
-            name=args['--output'],
-            imports=['NIFTTL:transgenic_lines.ttl'],
-            prefixes=prefixes)
-        self.g = makeGraph('transgenic-lines', prefixes=prefixes)
+    prefixes = {**{'JAX': 'http://jaxmice.jax.org/strain/',
+                   'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
+                   'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
+                **makePrefixes('definition', 'ilxtr', 'owl')}
+
+    def __init__(self, input, name):
+        self.name = name
+        self.ns = {k:rdflib.Namespace(v) for k, v in self.prefixes.items()}
         self.neuron_data = input
+        self.tag_names = set()
         # self.sample_neuron()
 
     def avoid_url_conversion(self, string):
@@ -157,14 +160,10 @@ class AllenCellTypes:
             _type = tl['transgenic_line_type_name']
             line_names = []
             if prefix and suffix and prefix in ['AIBS', 'MMRRC', 'JAX']:
-                curie = prefix + ':' + suffix
-                # line_names.append(
-                phenotypes.append(
-                    Phenotype(
-                        curie,
-                        'ilxtr:hasExpressionPhenotype',
-                    )
-                )
+                if prefix == 'AIBS':
+                    prefix = 'AllenTL'
+                iri = self.ns[prefix][suffix]
+                phenotypes.append(Phenotype(iri, 'ilxtr:hasExpressionPhenotype'))
         return phenotypes
 
     # TODO: search if description exists
@@ -178,18 +177,24 @@ class AllenCellTypes:
         phenotypes = []
         for tag in cell_line['specimen_tags']:
             if 'dendrite type' in tag['name']:
-                name = tag['name'].split(' - ')[1].replace(' ','_')
+                one_two = tag['name'].split(' - ')[1]
+                if ' ' in one_two:
+                    one, two = one_two.split(' ')
+                    name = one + two.capitalize()
+                else:
+                    name = one_two
             else:
-                name = tag['name'].replace(' - ', '_')
+                one, two = tag['name'].split(' - ')
+                if two == 'NA':
+                    continue
+                name = one + two.capitalize()
+            self.tag_names.add(tag['name'])
             # if phenotype == '+':
             phenotypes.append(
-                Phenotype(
-                    'ilxtr:' + name,
-                    'ilxtr:hasDendriteMorphologicalPhenotype',
-                    #label=label,
-                )
-            )
+                Phenotype('ilxtr:' + name,
+                          'ilxtr:hasDendriteMorphologicalPhenotype'))
             # elif phenotype == '-': phenotypes.append(NegPhenotype(...))
+
         return phenotypes
 
     # TODO: check to see if specimen_id is really the priority
@@ -227,10 +232,18 @@ class AllenCellTypes:
         return phenotypes
 
     def build_neurons(self):
-        for cell_line in self.neuron_data[:]:
+        # have to call Config here because transgenic lines doesn't exist
+        self.predicates = Config(name=self.name,
+                                 imports=[f'NIFRAW:{self.branch}/ttl/generated/allen-transgenic-lines.ttl'],
+                                 prefixes=self.prefixes,
+                                 branch=self.branch)
+
+        for cell_line in self.neuron_data:
             Neuron(*self.build_phenotypes(cell_line))
-        # print(graphBase.ttl())
+
+        print(sorted(self.tag_names))
         Neuron.write()
+        Neuron.write_python()
 
     def build_transgenic_lines(self):
         """
@@ -241,30 +254,37 @@ class AllenCellTypes:
         add def        |  definition: "description"
         add transtype  |  rdfs:hasTransgenicType "transgenic_line_type_name"
         """
-        allen_namespaces = {
-            'JAX': 'http://jaxmice.jax.org/strain/',
-            'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
-            'AIBS': 'http://api.brain-map.org/api/v2/data/TransgenicLine/',
-        }
-        for prefix, iri in allen_namespaces.items():
-            self.g.add_namespace(prefix, iri)
-        for cell_line in self.neuron_data[:]:
+
+        triples = []
+        for cell_line in self.neuron_data:
             for tl in cell_line['donor']['transgenic_lines']:
                 _id = tl['stock_number'] if tl['stock_number'] else tl['id']
                 prefix = tl['transgenic_line_source_name']
                 line_type = tl['transgenic_line_type_name']
                 if prefix not in ['JAX', 'MMRRC', 'AIBS']:
+                    print(tc.red('WARNING:'), 'unknown prefix', prefix, json.dumps(tl, indent=4))
                     continue
-                _class = prefix + ':' + str(_id)
-                #phenotype = self.get_phenotype()
-                self.g.add_class(_class)
-                self.g.add_trip(_class, 'rdfs:label', tl['name'])
-                self.g.add_trip(_class, 'definition:', tl['description'])
-                self.g.add_trip(_class, 'rdfs:subClassOf', 'ilxtr:transgenicLine')
-                self.g.add_trip(_class, 'ilxtr:hasTransgenicType', 'ilxtr:' + line_type + 'Line')
-        self.g.write()
+                elif prefix == 'AIBS':
+                    prefix = 'AllenTL'
 
-def main():
+                _class = self.ns[prefix][str(_id)]
+                triples.append((_class, rdf.type, owl.Class))
+                triples.append((_class, rdfs.label, rdflib.Literal(tl['name'])))
+                triples.append((_class, definition, rdflib.Literal(tl['description'])))
+                triples.append((_class, rdfs.subClassOf, ilxtr.transgenicLine))
+                triples.append((_class, ilxtr.hasTransgenicType, ilxtr[line_type + 'Line']))
+
+        # TODO aspects.ttl?
+        transgenic_lines = simpleOnt(filename='allen-transgenic-lines',
+                                     path='ttl/generated/',
+                                     prefixes=self.prefixes,
+                                     triples=triples,
+                                     comment='Allen transgenic lines for cell types',
+                                     branch=self.branch)
+
+        transgenic_lines._graph.write()
+
+def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
     print(args)
     if not args['--refresh'] and args['--input'] and Path(args['--input']).exists():
         with open(args['--input'], 'rt') as f:
@@ -279,10 +299,13 @@ def main():
         with open(args['--input'], 'wt') as f:
             json.dump(input, f, indent=4)
 
-    act = AllenCellTypes(input=input)
-    act.build_neurons()
+    act = AllenCellTypes(input, args['--output'])
     act.build_transgenic_lines()
+    act.build_neurons()
 
 
 if __name__ == '__main__':
+    args = docopt(__doc__, version='0.0.4')
+    main(args)
+else:
     main()

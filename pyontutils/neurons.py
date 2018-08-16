@@ -2,6 +2,7 @@
 import os
 import atexit
 import inspect
+from urllib.error import HTTPError
 from pathlib import Path, PurePath as PPath
 from collections import MutableMapping
 import rdflib
@@ -225,7 +226,8 @@ class graphBase:
         for cg in use_core_paths:
             try:
                 core_graph.parse(cg, format='turtle')
-            except FileNotFoundError:
+            except (FileNotFoundError, HTTPError) as e:
+                # TODO failover to local if we were remote?
                 print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
         graphBase.core_graph = core_graph
 

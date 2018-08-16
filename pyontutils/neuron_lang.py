@@ -36,6 +36,7 @@ class Config:
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
                  import_from_local =    True,  # also load from local?
+                 load_from_local =      True,
                  branch =               'neurons',
                  sources =              tuple(),
                  source_file =          None):
@@ -79,7 +80,7 @@ class Config:
                            iri = lConfig.iri,
                            sources = sources,
                            source_file = source_file,
-                           use_local_import_paths = False)  # FIXME conflation of import from local and render with local
+                           use_local_import_paths = load_from_local)  # FIXME conflation of import from local and render with local
 
 
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',

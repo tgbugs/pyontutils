@@ -764,7 +764,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                 data = sgv.findByTerm(o)
                 if data:
-                    print('SCIGRAPH', [(d['curie'], d['labels']) for d in data])
+                    print('SCIGRAPH', [(d['curie'] if 'curie' in d else d['iri'],
+                                        d['labels'])
+                                        for d in data])
                     for d in data:
                         if 'PR:' in d['curie']:
                             sgt = ng.expand(d['curie'])
@@ -1029,6 +1031,7 @@ def make_bridge():
     from pyontutils.core import Ont, build
     from pyontutils.neuron_lang import Config
     from pyontutils.neuron_models import __all__
+    print(__all__)
     for module in __all__:
         import_module(f'pyontutils.neuron_models.{module}')
 
