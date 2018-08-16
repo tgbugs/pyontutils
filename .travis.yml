@@ -1,6 +1,5 @@
 # https://travis-ci.org/tgbugs/pyontutils
-dist: trusty
-sudo: required
+sudo: false
 language: python
 env:
   global:
@@ -17,14 +16,14 @@ python:
   - 3.6
   - pypy3.5
 
+addons:
+  apt:
+    packages:
+    - pandoc
+    - hunspell
+    - libhunspell-dev
+
 before_install:
-  - sudo add-apt-repository ppa:kelleyk/emacs -y
-  - sudo apt-get update
-  - sudo apt-get remove emacs
-  - sudo apt-get install emacs25
-  - sudo apt-get install pandoc
-  - sudo apt-get install hunspell
-  - sudo apt-get install libhunspell-dev
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
