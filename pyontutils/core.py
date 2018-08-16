@@ -111,6 +111,7 @@ def _loadPrefixes():
         'chebi1':'http://purl.obolibrary.org/obo/chebi#2',
         'chebi2':'http://purl.obolibrary.org/obo/chebi#',
         'chebi3':'http://purl.obolibrary.org/obo/chebi#3',
+        'JAX':'http://jaxmice.jax.org/strain/',
     }
     #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
     extras = {**full, **normal}

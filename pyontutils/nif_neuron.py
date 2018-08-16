@@ -9,8 +9,8 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology
-from pyontutils.core import OntMeta, TEMP
+from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
+from pyontutils.core import OntMeta, TEMP, rdf, rdfs, owl, ilxtr
 from pyontutils.utils import TODAY, rowParse, refile
 from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE
@@ -198,6 +198,33 @@ def get_transitive_closure(graph, edge, root):
         trips = trips - include
 
     return output
+
+def add_helpers(ng):
+    pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
+    ng.add_namespace('pheno', str(pheno))
+    ng.add_known_namespaces('JAX', 'NCBIGene')
+
+    class OntId(OntId_):
+        @property
+        def u(self):
+            return rdflib.URIRef(self)
+
+    triples = (
+        (pheno.parvalbumin, rdf.type, owl.Class),
+        (pheno.parvalbumin, rdfs.subClassOf, ilxtr.ExpressionPhenotype),
+        (OntId('JAX:008096').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:021189').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:021190').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:022730').u, rdfs.subClassOf, pheno.parvalbumin),
+        (ilxtr.Pvalb, rdfs.subClassOf, pheno.parvalbumin),
+        (ilxtr['PV-cre'], rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('PR:000013502').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('NCBIGene:19293').u, rdfs.subClassOf, pheno.parvalbumin),
+        #(0, rdfs.subClassOf, pheno.parvalbumin),
+    )
+    graph = ng.g
+    for t in triples:
+        graph.add(t)
 
 def make_phenotypes():
     ilx_start = 50114
@@ -430,6 +457,7 @@ def make_phenotypes():
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_trip(ontid2, 'owl:imports', ontid)
+    add_helpers(graph2)
     graph2.write()
 
     syn_mappings = {}

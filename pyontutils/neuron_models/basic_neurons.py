@@ -2,7 +2,9 @@
 import ontquery
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
-from pyontutils.core import OntId, OntTerm, OntCuries, makePrefixes, makeNamespaces, interlex_namespace, PREFIXES
+from pyontutils.utils import relative_path
+from pyontutils.core import OntId, OntTerm, OntCuries, makePrefixes
+from pyontutils.core import makeNamespaces, interlex_namespace, PREFIXES
 from pyontutils.core import rdf, rdfs, owl
 from pyontutils.core import NIFRID, ilxtr
 from pyontutils.core import hasRole, definition, restriction
@@ -14,7 +16,8 @@ NIFRAW, = makeNamespaces('NIFRAW')
 c = Config('basic-neurons',
            prefixes={'swanr':swanr,
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
+           source_file=relative_path(__file__))
 pred = c.pred
 
 from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
