@@ -18,9 +18,9 @@ python:
   - pypy3.5
 
 before_install:
-  - sudo add-apt-repository ppa:kelleyk/emacs
+  - sudo add-apt-repository ppa:kelleyk/emacs -y
   - sudo apt-get update
-  - sudo apt-get install emacs26
+  - sudo apt-get install emacs25
   - sudo apt-get install pandoc
   - sudo apt-get install hunspell
   - sudo apt-get install libhunspell-dev
