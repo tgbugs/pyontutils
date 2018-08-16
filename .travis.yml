@@ -25,7 +25,6 @@ before_install:
   - sudo apt-get install pandoc
   - sudo apt-get install hunspell
   - sudo apt-get install libhunspell-dev
-  - sudo ln -s /usr/bin/emacs25 /usr/bin/emacs
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
