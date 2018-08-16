@@ -1,12 +1,13 @@
 #!/usr/bin/env python3.6
 import csv
 from pathlib import Path
+import rdflib
 from pyontutils.neuron_models.compiled import neuron_data_lifted
 ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neuron_models.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol, relative_path
-from pyontutils.core import resSource
+from pyontutils.core import resSource, interlex_namespace
 from pyontutils.config import devconfig
 # import these last so that graphBase resets (sigh)
 from pyontutils.neuron_lang import *
@@ -48,6 +49,7 @@ def main():
         for replace, match in rename_rules.items():  # HEH
             l = l.replace(match, replace)
         if l in labels:
+            n._origLabel = l
             ns.append(n)
 
     sns = set(n._origLabel for n in ns)
@@ -93,8 +95,12 @@ def main():
         source_original = True
 
     sources = SourceCUT(),
-    Config('common-usage-types', sources=sources, source_file=relative_path(__file__))
-    new = [NeuronCUT(*n.pes) for n in ns]
+    swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
+    Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
+           prefixes={'swanr':swanr,
+                     'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+    new = [NeuronCUT(*n.pes, label=n._origLabel, override=True) for n in ns + ans]
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()

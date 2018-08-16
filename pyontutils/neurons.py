@@ -13,7 +13,7 @@ from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.utils import stack_magic, TermColors as tc, subclasses
 from pyontutils.core import Ont, makeGraph, makePrefixes, PREFIXES as uPREFIXES
-from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON
+from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON, ilxtr
 from pyontutils.config import devconfig
 from pyontutils.qnamefix import cull_prefixes
 
@@ -350,6 +350,7 @@ class graphBase:
         prefixes = (f', prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
                     if _prefixes
                     else '')
+        # FIXME prefixes should be separate so they are accessible in the namespace
         out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neuron_lang
         _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
@@ -846,12 +847,17 @@ class NeuronBase(graphBase):
     def _shortname(self):
         return f'({self.shortname})' if self.shortname else ''
 
+
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
         if self._override and self._origLabel is not None:
             self.Class.label = (rdflib.Literal(self._origLabel),)
             return self._origLabel
+        else:
+            return self.genLabel
 
+    @property
+    def genLabel(self):
         # TODO predicate actions are the right way to implement the transforms here
         def sublab(edge):
             sublabs = []
@@ -902,7 +908,8 @@ class NeuronBase(graphBase):
             label.append(self._shortname)
 
         new_label = ' '.join(label)
-        self.Class.label = (rdflib.Literal(new_label),)
+        if not self._override:
+            self.Class.label = (rdflib.Literal(new_label),)
         #try:
             #print(next(self.Class.label))  # FIXME need to set the label once we generate it and overwrite the old one...
         #except StopIteration:
@@ -1100,6 +1107,10 @@ class Neuron(NeuronBase):
         """ Lift phenotypeEdges to Restrictions """
         if graph is None:
             graph = self.out_graph
+
+        if self._origLabel and self._override:
+            graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
+
         members = [self.expand(self.owlClass)]
         for pe in self.pes:
             target = pe._graphify(graph=graph)
