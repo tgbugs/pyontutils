@@ -10,6 +10,7 @@ import rdflib
 from IPython import embed
 
 swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
+NIFRAW, = makeNamespaces('NIFRAW')
 c = Config('basic-neurons',
            prefixes={'swanr':swanr,
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
@@ -20,10 +21,11 @@ from pyontutils.phenotype_namespaces import *  # this has to come after reconfig
 
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
-                      rdflib.URIRef('file:///tmp/output.ttl')))
+                      NIFRAW['neurons/ttl/generated/neurons/phenotype-direct.ttl']))
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
-                      rdflib.URIRef(f'file://{Neuron.local_base.as_posix()}ttl/generated/swanson.ttl')))
+                      # this will cause reasoner issues due to the protege bug
+                      NIFRAW['dev/ttl/generated/swanson.ttl']))
 
 class Basic(LocalNameManager):
     brain = OntId('UBERON:0000955')#, label='brain')
@@ -76,23 +78,20 @@ class lOntTerm(OntTerm):
     __firsts = 'curie', 'iri'
     query = ontquery.OntQuery(ontquery.rdflibLocal(sgraph))
 
-def main():
-    regions_unfilt = sorted(set(lOntTerm(e) for r in rests for e in (r.s, r.o)), key=lambda t:int(t.suffix))
-    regions = [r for r in regions_unfilt if 'gyrus' not in r.label and 'Pineal' not in r.label]
-    rows = [['label', 'soma located in', 'projection type']]
-    with Basic:
-        for region in regions:
-            for type in (projection, intrinsic):
-                n = Neuron(Phenotype(region, ilxtr.hasSomaLocatedIn, label=region.label, override=True), type)
-                rows.append([n.label, region.label, type.pLabel])
 
-    Neuron.write()
-    Neuron.write_python()
-    import csv
-    from pathlib import Path
-    csvpath = Path(graphBase.ng.filename).with_suffix('.csv').as_posix()
-    with open(csvpath, 'wt') as f:
-        csv.writer(f).writerows(rows)
+regions_unfilt = sorted(set(lOntTerm(e) for r in rests for e in (r.s, r.o)), key=lambda t:int(t.suffix))
+regions = [r for r in regions_unfilt if 'gyrus' not in r.label and 'Pineal' not in r.label]
+rows = [['label', 'soma located in', 'projection type']]
+with Basic:  # FIXME if this is called inside a function stack_magic fails :/
+    for region in regions:
+        for type in (projection, intrinsic):
+            n = Neuron(Phenotype(region, ilxtr.hasSomaLocatedIn, label=region.label, override=True), type)
+            rows.append([n.label, region.label, type.pLabel])
 
-if __name__ == '__main__':
-    main()
+Neuron.write()
+Neuron.write_python()
+import csv
+from pathlib import Path
+csvpath = Path(graphBase.ng.filename).with_suffix('.csv').as_posix()
+with open(csvpath, 'wt') as f:
+    csv.writer(f).writerows(rows)
