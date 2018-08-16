@@ -1126,6 +1126,10 @@ class NeuronCUT(Neuron):
 class NeuronEBM(Neuron):
     owlClass = _EBM_CLASS
 
+    def __new__(cls, *args, **kwargs):
+        if cls.owlClass != _EBM_CLASS:
+            cls.ng.add_trip(cls.owlClass, rdfs.subClassOf, _EBM_CLASS)
+        return super().__new__(cls)
 
 class TypeNeuron(Neuron):  # TODO
     """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.

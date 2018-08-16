@@ -15,10 +15,11 @@ from pyontutils.utils import TODAY, rowParse, refile
 from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.neurons import _NEURON_CLASS
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
+gitf = current_file.parent.parent.parent  # FIXME this breaks when not run from pyontutils!??!!
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -199,16 +200,17 @@ def get_transitive_closure(graph, edge, root):
 
     return output
 
+
+class OntId(OntId_):
+    @property
+    def u(self):
+        return rdflib.URIRef(self)
+
+
 def add_helpers(ng):
     pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
     ng.add_namespace('pheno', str(pheno))
     ng.add_known_namespaces('JAX', 'NCBIGene')
-
-    class OntId(OntId_):
-        @property
-        def u(self):
-            return rdflib.URIRef(self)
-
     triples = (
         (pheno.parvalbumin, rdf.type, owl.Class),
         (pheno.parvalbumin, rdfs.subClassOf, ilxtr.ExpressionPhenotype),
@@ -225,6 +227,16 @@ def add_helpers(ng):
     graph = ng.g
     for t in triples:
         graph.add(t)
+
+def add_types(ng):
+    graph = ng.g
+    triples = (
+        (ilxtr.NeuronCUT, rdf.type, owl.Class),
+        (ilxtr.NeuronCUT, rdfs.subClassOf, OntId(_NEURON_CLASS).u),
+        (ilxtr.NeuronEBM, rdf.type, owl.Class),
+        (ilxtr.NeuronEBM, rdfs.subClassOf, OntId(_NEURON_CLASS).u),
+    )
+    [graph.add(t) for t in triples]
 
 def make_phenotypes():
     ilx_start = 50114
@@ -452,6 +464,7 @@ def make_phenotypes():
     #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
+    add_types(graph)
     graph.write()  # moved below to incorporate uwotm8
 
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
