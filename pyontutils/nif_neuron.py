@@ -222,6 +222,7 @@ def add_helpers(ng):
         (ilxtr['PV-cre'], rdfs.subClassOf, pheno.parvalbumin),
         (OntId('PR:000013502').u, rdfs.subClassOf, pheno.parvalbumin),
         (OntId('NCBIGene:19293').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('NIFEXT:6').u, rdfs.subClassOf, pheno.parvalbumin),
         #(0, rdfs.subClassOf, pheno.parvalbumin),
     )
     graph = ng.g
