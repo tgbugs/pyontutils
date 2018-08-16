@@ -1092,7 +1092,8 @@ def main():
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     #t = make_table1(syn_mappings, ilx_start, phenotypes)
     if __name__ == '__main__':
-        embed()
+        #embed()
+        pass
 
 if __name__ == '__main__':
     main()

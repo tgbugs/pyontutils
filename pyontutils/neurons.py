@@ -898,7 +898,8 @@ class NeuronBase(graphBase):
             label.append('????')
         nin_switch = 'interneuron' if Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'neuron'
         label.append(nin_switch)
-        label.append(self._shortname)
+        if self._shortname:
+            label.append(self._shortname)
 
         new_label = ' '.join(label)
         self.Class.label = (rdflib.Literal(new_label),)

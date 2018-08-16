@@ -94,7 +94,7 @@ def main():
 
     sources = SourceCUT(),
     Config('common-usage-types', sources=sources, source_file=relative_path(__file__))
-    new = [NeuronSWAN(*n.pes) for n in ns]
+    new = [NeuronCUT(*n.pes) for n in ns]
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()
