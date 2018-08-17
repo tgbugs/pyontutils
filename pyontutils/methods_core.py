@@ -71,7 +71,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
         yield from olit(subject, NIFRID.synonyms, *synonyms)
 
     if comment:
-        yield olit(subject, rdfs.comment, comment)
+        yield from olit(subject, rdfs.comment, comment)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
