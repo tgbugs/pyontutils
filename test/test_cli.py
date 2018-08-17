@@ -171,6 +171,11 @@ def populate_tests():
              'methods':None,
              'core':None,
              'scigraph':None,
+             'hbp_cells':None,
+             'chebi_bridge':None,
+             'closed_namespaces':None,
+             'gen_nat_models':None,
+             'mapnlxilx':None,
              #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
              'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
