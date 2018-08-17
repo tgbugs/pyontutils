@@ -153,7 +153,11 @@ class DevConfig:
 
     @property
     def _ontology_local_repo(self):
-        stated_repo = Path(self.config['ontology_local_repo'])
+        try:
+            stated_repo = Path(self.config['ontology_local_repo'])
+        except FileNotFoundError:
+            stated_repo = Path('/dev/null/hahaha')
+
         maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
         if stated_repo.exists():
             return stated_repo
@@ -173,6 +177,8 @@ class DevConfig:
             else:
                 print(tc.red('WARNING:'),
                       f'No repository found in any parent directory of {maybe_start}')
+
+        return Path('/dev/null')  # seems reaonsable ...
 
     @default('localhost')
     def _scigraph_host(self):

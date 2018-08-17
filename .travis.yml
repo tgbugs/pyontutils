@@ -19,7 +19,6 @@ python:
 addons:
   apt:
     packages:
-    - emacs
     - pandoc
     - hunspell
     - libhunspell-dev

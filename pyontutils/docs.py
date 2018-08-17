@@ -1,3 +1,14 @@
+#!/usr/bin/env python3.6
+"""Compile all ontology related documentation.
+
+Usage:
+    docs [options]
+
+Options:
+    -h --help    show this
+    -s --spell   run hunspell on all docs
+
+"""
 import os
 import subprocess
 from pathlib import Path
@@ -5,9 +16,15 @@ import nbformat
 from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import working_dir, noneMembers
+from pyontutils.utils import working_dir, noneMembers, TermColors as tc
+from pyontutils.ontutils import tokstrip, _bads
 from pyontutils.config import devconfig
 from pyontutils.htmlfun import htmldoc, atag
+try:
+    import hunspell
+except ImportError:
+    hunspell = None
+
 from IPython import embed
 
 suffixFuncs = {}
@@ -28,6 +45,50 @@ def getMdReadFormat():
         return 'gfm'
 
 md_read_format = getMdReadFormat()
+
+
+def spell(filenames, debug=False):
+    if hunspell is None:
+        raise ImportError('hunspell is not installed on your system. If you want '
+                          'to run `ontutils spell` please run pipenv install --dev --skip-lock. '
+                          'You will need the development libs for hunspell on your system.')
+    hobj = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
+    #nobj = hunspell.HunSpell(os.path.expanduser('~/git/domain_wordlists/neuroscience-en.dic'), '/usr/share/hunspell/en_US.aff')  # segfaults without aff :x
+    collect = set()
+    for filename in filenames:
+        missed = False
+        no = []
+        with open(filename, 'rt') as f:
+            for line_ in f.readlines():
+                line = line_.rstrip()
+                nline = []
+                #print(tc.blue(line))
+                for pattern in _bads:
+                    line = line.replace(pattern, ' ' * len(pattern))
+
+                #print(line)
+                for tok in line.split(' '):
+                    prefix, tok, suffix = tokstrip(tok)
+                    #print((prefix, tok, suffix))
+                    if not hobj.spell(tok):# and not nobj.spell(tok):
+                        missed = True
+                        collect.add(tok)
+                        nline.append(prefix + tc.red(tok) + suffix)
+                    else:
+                        nline.append(prefix + tok + suffix)
+                line = ' '.join(nline)
+                no.append(line)
+
+        o = '\n'.join(no)
+        if missed:
+            #print(filename, s, o)
+            print('>>>', o)
+            pass
+
+    if debug:
+        [print(_) for _ in sorted(collect)]
+        embed()
+
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
 compile_org_file = ['emacs', '-q', '-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix(), '--batch', '-f', 'compile-org-file']
@@ -137,6 +198,8 @@ def run_all(doc, wd, BUILD, **kwargs):
     return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
 
 def main():
+    from docopt import docopt
+    args = docopt(__doc__)
     BUILD = working_dir / 'doc_build'
     if not BUILD.exists():
         BUILD.mkdir()
@@ -164,6 +227,10 @@ def main():
                                            #stdin=subprocess.PIPE,
                                            #stdout=subprocess.PIPE,
                                            #stderr=subprocess.PIPE)
+
+    if args['--spell']:
+        spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
+        return
 
     if 'CI' in os.environ:
         outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))

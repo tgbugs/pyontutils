@@ -38,7 +38,8 @@ owlClassC = oc_.full_combinator
 subClassOf = POCombinator(rdfs.subClassOf, ObjectCombinator).full_combinator
 oop_ = POCombinator(rdf.type, owl.ObjectProperty)
 
-def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec):
+def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
+       equivalentClass=oec):
     members = tuple()
     _rests = tuple()
     for rest in rests:
@@ -68,6 +69,9 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), equivalentClass=oec)
             # the error would show up on the line where the problem was :/
             raise TypeError(f'Type of {synonyms!r} should not be {type(synonyms)}!')
         yield from olit(subject, NIFRID.synonyms, *synonyms)
+
+    if comment:
+        yield olit(subject, rdfs.comment, comment)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')

@@ -1,12 +1,17 @@
 #!/usr/bin/env python3.6
 
 from pathlib import Path
-from pyontutils.utils import rowParse, refile
+from pyontutils.utils import rowParse, refile, relative_path
+from pyontutils.core import ilxtr
 from pyontutils.neuron_lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
 
-Config('markram-2015')
+Config('markram-2015', source_file=relative_path(__file__))
+
+class NeuronMarkram2015(NeuronEBM):
+    owlClass = ilxtr.NeuronMarkram2015
+    shortname = 'Markram2015'
 
 with BBP:
     context = Neuron(Rat, S1, INT, GABA)
@@ -137,7 +142,7 @@ class table1(rowParse):
     def _row_post(self):
         with context:
             for etype in self._etypes:
-                Neuron(etype, self._mtype, *self._other_etypes, *self._moltypes)
+                NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
 
     def _end(self):
         graphBase.write()

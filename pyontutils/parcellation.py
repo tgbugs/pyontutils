@@ -2061,11 +2061,13 @@ def main():
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     if not args['--local']:
-        from parc_aba import Artifacts as abaArts
-    from parc_freesurfer import Artifacts as fsArts
-    from parc_whs import Artifacts as whsArts
+        from pyontutils.parc_aba import Artifacts as abaArts
+    from pyontutils.parc_freesurfer import Artifacts as fsArts
+    from pyontutils.parc_whs import Artifacts as whsArts
     onts = tuple(l for l in subclasses(Ont)
-                 if l.__name__ != 'parcBridge' and
+                 if 'Registry' not in l.__name__ and
+                 # FIXME quick fix for Ont being used for more than parc now...
+                 l.__name__ != 'parcBridge' and
                  l.__module__ != 'pyontutils.parcellation' and
                  not hasattr(l, f'_{l.__name__}__pythonOnly'))
     _ = *(print(ont) for ont in onts),

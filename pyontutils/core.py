@@ -90,6 +90,7 @@ def _loadPrefixes():
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'TEMP': interlex_namespace('temp/uris/'),
         'FIXME':'http://FIXME.org/',
+        'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
@@ -110,6 +111,7 @@ def _loadPrefixes():
         'chebi1':'http://purl.obolibrary.org/obo/chebi#2',
         'chebi2':'http://purl.obolibrary.org/obo/chebi#',
         'chebi3':'http://purl.obolibrary.org/obo/chebi#3',
+        'JAX':'http://jaxmice.jax.org/strain/',
     }
     #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
     extras = {**full, **normal}
@@ -1933,7 +1935,7 @@ def flattenTriples(triples):
             yield from triple_or_generator
 
 def simpleOnt(filename=f'temp-{UTCNOW()}',
-              prefixes=tuple(),
+              prefixes=tuple(),  # dict or list
               imports=tuple(),
               triples=tuple(),
               comment=None,
@@ -1955,8 +1957,11 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.path = path
     Simple.filename = filename
     Simple.comment = comment
-    Simple.prefixes = makePrefixes(*prefixes)
     Simple.imports = imports
+    if isinstance(prefixes, dict):
+        Simple.prefixes = {k:str(v) for k, v in prefixes.items()}
+    else:
+        Simple.prefixes = makePrefixes(*prefixes)
 
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'

@@ -9,16 +9,17 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology
-from pyontutils.core import OntMeta, TEMP
+from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
+from pyontutils.core import OntMeta, TEMP, rdf, rdfs, owl, ilxtr
 from pyontutils.utils import TODAY, rowParse, refile
 from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.neurons import _NEURON_CLASS
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
+gitf = current_file.parent.parent.parent  # FIXME this breaks when not run from pyontutils!??!!
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -198,6 +199,45 @@ def get_transitive_closure(graph, edge, root):
         trips = trips - include
 
     return output
+
+
+class OntId(OntId_):
+    @property
+    def u(self):
+        return rdflib.URIRef(self)
+
+
+def add_helpers(ng):
+    pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
+    ng.add_namespace('pheno', str(pheno))
+    ng.add_known_namespaces('JAX', 'NCBIGene')
+    triples = (
+        (pheno.parvalbumin, rdf.type, owl.Class),
+        (pheno.parvalbumin, rdfs.subClassOf, ilxtr.ExpressionPhenotype),
+        (OntId('JAX:008096').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:021189').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:021190').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('JAX:022730').u, rdfs.subClassOf, pheno.parvalbumin),
+        (ilxtr.Pvalb, rdfs.subClassOf, pheno.parvalbumin),
+        (ilxtr['PV-cre'], rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('PR:000013502').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('NCBIGene:19293').u, rdfs.subClassOf, pheno.parvalbumin),
+        (OntId('NIFEXT:6').u, rdfs.subClassOf, pheno.parvalbumin),
+        #(0, rdfs.subClassOf, pheno.parvalbumin),
+    )
+    graph = ng.g
+    for t in triples:
+        graph.add(t)
+
+def add_types(ng):
+    graph = ng.g
+    triples = (
+        (ilxtr.NeuronCUT, rdf.type, owl.Class),
+        (ilxtr.NeuronCUT, rdfs.subClassOf, OntId(_NEURON_CLASS).u),
+        (ilxtr.NeuronEBM, rdf.type, owl.Class),
+        (ilxtr.NeuronEBM, rdfs.subClassOf, OntId(_NEURON_CLASS).u),
+    )
+    [graph.add(t) for t in triples]
 
 def make_phenotypes():
     ilx_start = 50114
@@ -425,11 +465,13 @@ def make_phenotypes():
     #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
+    add_types(graph)
     graph.write()  # moved below to incorporate uwotm8
 
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_trip(ontid2, 'owl:imports', ontid)
+    add_helpers(graph2)
     graph2.write()
 
     syn_mappings = {}
@@ -764,7 +806,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                 data = sgv.findByTerm(o)
                 if data:
-                    print('SCIGRAPH', [(d['curie'], d['labels']) for d in data])
+                    print('SCIGRAPH', [(d['curie'] if 'curie' in d else d['iri'],
+                                        d['labels'])
+                                        for d in data])
                     for d in data:
                         if 'PR:' in d['curie']:
                             sgt = ng.expand(d['curie'])
@@ -1029,6 +1073,7 @@ def make_bridge():
     from pyontutils.core import Ont, build
     from pyontutils.neuron_lang import Config
     from pyontutils.neuron_models import __all__
+    print(__all__)
     for module in __all__:
         import_module(f'pyontutils.neuron_models.{module}')
 
@@ -1060,7 +1105,9 @@ def main():
     make_bridge()
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     #t = make_table1(syn_mappings, ilx_start, phenotypes)
-    embed()
+    if __name__ == '__main__':
+        #embed()
+        pass
 
 if __name__ == '__main__':
     main()

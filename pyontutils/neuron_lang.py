@@ -6,7 +6,6 @@ from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from pyontutils.core import OntId
 from pyontutils.config import devconfig
-from IPython import embed
 
 __all__ = [
     'AND',
@@ -35,13 +34,15 @@ class Config:
                  name =                 'test-neurons',
                  prefixes =             tuple(),  # dict or list
                  imports =              tuple(),  # iterable
-                 import_from_local =    True,  # also load from local?
+                 import_as_local =      False,  # also load from local?
+                 load_from_local =      True,
+                 branch =               'neurons',
                  sources =              tuple(),
                  source_file =          None):
         import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
-        imports += ['NIFTTL:phenotype-core.ttl', 'NIFTTL:phenotypes.ttl']
-        remote = OntId('NIFTTL:')
+        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
+        imports += [remote.iri + 'phenotype-core.ttl', remote.iri + 'phenotypes.ttl']
         local = Path(devconfig.ontology_local_repo, 'ttl')
         out_local_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
         out_remote_base = os.path.join(remote.iri, 'generated/neurons')
@@ -51,7 +52,7 @@ class Config:
         remote_base = remote.iri.rsplit('/', 2)[0]
         local_base = local.parent
 
-        if import_from_local:
+        if import_as_local:
             # NOTE: we currently do the translation more ... inelegantly inside of config so we
             # have to keep the translation layer out here (sigh)
             core_graph_paths = [Path(local, i.iri.replace(remote.iri, '')).relative_to(local_base).as_posix()
@@ -73,15 +74,15 @@ class Config:
                            out_graph_path = out_graph_path.as_posix(),
                            out_imports = imports, #[i.iri for i in imports],
                            prefixes = prefixes,
-                           force_remote = not import_from_local,
-                           branch = 'neurons',
+                           force_remote = not load_from_local,
+                           branch = branch,
                            iri = lConfig.iri,
                            sources = sources,
                            source_file = source_file,
-                           use_local_import_paths = False)  # FIXME conflation of import from local and render with local
+                           use_local_import_paths = import_as_local)  # FIXME conflation of import from local and render with local
 
 
-def config(remote_base=       'https://github.com/SciCrunch/NIF-Ontology/raw',
+def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
            local_base=        None,  # devconfig.ontology_local_repo by default
            branch=            'neurons',
            core_graph_paths= ['ttl/phenotype-core.ttl',

@@ -226,6 +226,7 @@ triples += (  # material entities
     # have all aspects
 
     # FIXME a molecule of nucleic acid vs a sequence of molecules
+    #  thingWithSequence VS thingThatCanFormPolymers
 
     oc(ilxtr.thingWithSequence, OntTerm('CHEBI:25367', term='molecule')),
     olit(ilxtr.thingWithSequence, rdfs.label, 'thing with molecular sequence'),
@@ -244,6 +245,7 @@ triples += (  # material entities
     oc(ilxtr.plasmidDNA, ilxtr.molecule),  # FIXME how do we model the physical manifestation of a sequence? 'SO:0000155'
     oc(ilxtr.primaryHeritableGeneticMaterial, ilxtr.molecule),
     oc(ilxtr.hybridizationProbe, ilxtr.molecule),
+    oc(ilxtr.nucleicAcidLibrary, ilxtr.materialEntity),  # TODO
 
     # FIXME should probably be to a higher level go?
     # FIXME redundant when we import all of go
@@ -764,12 +766,16 @@ triples += (
     # tracing
     oop(ilxtr.hasTracingDirection),
     oop(ilxtr.hasTracingTransportType),
-    oop(ilxtr.hasTracingStartLocation),  # genetic is both since there is no 'uptake', UptakeStructure was old name
+    oop(ilxtr.hasTracingUptakeStructure),
+    #oop(ilxtr.hasTracingStartLocation),  # genetic is both since there is no 'uptake', UptakeStructure was old name
+    # FIXME this isnt' StartLocation, it really is uptake structures
     # cell soma, axons, boutons, dendrites
 
     oop(ilxtr.hasDeliveryVector),  # FIXME similar terms already exist maybe? DNA delivery via ...
     # iuep, virus, germ line
 
+    # the proper model requires the use of negative axioms for maximum power
+    # we have to state that rabies in this prep _does not go_ anterograde (for example)
     oc(ilxtr.anterograde, ilxtr.aspect),
     oc(ilxtr.retrograde, ilxtr.aspect),
 
@@ -779,7 +785,10 @@ triples += (
     # the asymmetirc version which is 'requiresActiveTransport' might be an alternative
     (ilxtr.movesViaActiveTransport, owl.disjointWith, ilxtr.movesViaPassiveTransport),
 
+    # FIXME cellLabel conflates contrast with movement/uptake logic
     oc(ilxtr.cellLabel, ilxtr.contrastAgent),
+    olit(ilxtr.cellLabel, NIFRID.synonym, 'tracer'),  # FIXME why does this fail?
+    #(ilxtr.cellLabel, NIFRID.synonym, Literal('tracer')),
     oc(ilxtr.inertLabel, ilxtr.cellLabel),
     oc(ilxtr.activeLabel, ilxtr.cellLabel),  # aka geneticLabel, but there could be other active labels
     oc(ilxtr.functionalLabel, ilxtr.activeLabel),  # implies in vivo
@@ -793,6 +802,42 @@ triples += (
     (ilxtr.activeLabel, ilxtr.hasDeliveryVector, ilxtr.someVector),
 
     (ilxtr.interLabel, owl.disjointWith, ilxtr.activeLabel),
+)
+
+# FIXME cellLabel is tracer/logic + contrast/color??!
+def cellLabel(id, label, transportType, directions=tuple(), uptakeStructures=tuple(), synonyms=tuple()):
+    yield id, rdf.type, owl.Class
+    yield id, rdfs.subClassOf, ilxtr.cellLabel
+    yield id, rdfs.label, rdflib.Literal(label)
+    yield id, ilxtr.hasTracingTransportType, transportType
+    yield from ((id, ilxtr.hasTracingDirection, d) for d in directions)
+    yield from ((id, ilxtr.hasUptakeStructure, u) for u in updateStructures)
+    yield from ((id, NIFRID.synonym, s) for s in synonyms)
+
+triples += tuple()
+(
+    # cell labels
+    # 'PR:000021959' is this really ctb?
+
+    'ctb'
+    'fg' 'NLXMOL:1012018'
+
+    'AAV8-hSyn-FLEX-TVA-P2A-GFP-2A-oG'
+    'AAVretro-EF1a-Cre'
+    'EnvA G-deleted rabies RVdG-4mCherry'
+    'EnvA G-deleted rabies dsRedXpress'
+    'aav-gfp'
+    'aav-rfp'
+    'aav-tdTomato'
+    'ctb-488' 'CHEBI:52661'
+    'ctb-488+smRabies-HA'
+    'ctb-555' 'CHEBI:52673'
+    'ctb-555+smRabies'
+    'ctb-647' 'CHEBI:137394'
+    'ctb-647+smRabies-OLLAS'
+    'phal-647' 'CHEBI:137394'
+    # amusment regarding dashes... PHA-L -> PHAL
+    'https://www.ncbi.nlm.nih.gov/pubmed/2391562'
 )
 
 methods_helper = simpleOnt(filename=filename,
@@ -993,6 +1038,7 @@ triples = (
     _t(tech.scSeq, 'single cell sequencing technique',
        # FIXME vs pp -> *NA from a single cell
        #ilxtr.technique,
+       # TODO (hasPart, tech._NALibraryPreparation)
        (hasPart, tech.sequencing),
        #(hasInput, OntTerm('CHEBI:33696', label='nucleic acid')),  # not much protein in a single cell
        # hasInput o hasPart some owl:Thing TODO
@@ -1016,17 +1062,22 @@ triples = (
     ),
     (tech.snSeq, owl.disjointWith, tech.scSeq),
 
-    _t(tech.rnaSeq, 'RNAseq',
+    _t(tech.libraryPrep, 'nucleic acid library preparation technique',
+       (ilxtr.hasPrimaryOutput, ilxtr.nucleicAcidLibrary),
+       synonyms=('library prep', 'library preparation')),
+
+    _t(tech.rnaSeq, 'RNA-seq',
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasPrimaryInput,
                             OntId('CHEBI:33697')),  # RNA but labels are inconsistent
                       restN(ilxtr.hasPrimaryAspect,
                             asp.sequence),
+                      restN(hasPart, tech.libraryPrep),
                       restN(ilxtr.hasInformationOutput,
                             ilxtr.informationArtifact)),
        intersectionOf(ilxtr.technique,
                       restN(hasPart, tech.rnaSeq)),
-       synonyms=('RNA-seq',),
+       synonyms=('RNAseq',),
        equivalentClass=oECN),
 
     # Split-seq single cell single nuclei
@@ -1043,27 +1094,29 @@ triples = (
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
     ),
 
-    _t(i.d, 'snRNAseq',
+    _t(i.d, 'snRNA-seq',
        #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        (hasPart, tech.rnaSeq),
        #(hasParticipant, OntTerm('GO:0005634', label='nucleus')),
         restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus'), Literal(1)),
        synonyms=('snRNA-Seq',
-                 'single nucleus RNAseq',)),
+                 'snRNAseq',
+                 'sNuc-Seq',  # why sequencing community WHY
+                 'single nucleus RNA-seq',)),
 
-    _t(i.d, 'scRNAseq',
+    _t(i.d, 'scRNA-seq',
        #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        (hasPart, tech.rnaSeq),
        #(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell')),
         restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1)),
        synonyms=('scRNA-Seq',
-                 'scRNA-seq',
+                 'scRNAseq',
                  'single cell RNAseq',)),
         # 'deep-dive scRNA-Seq'  # deep-dive vs wide-shallow I think is what this is
 
 
     _t(i.d, 'Patch-seq',
-       (hasPart, tech.rnaSeq),
+       (hasPart, tech.rnaSeq),  # FIXME I don't think this modelling is correct/complete
        (ilxtr.hasPrimaryInput, OntId('CHEBI:33697')),
        (hasParticipant, ilxtr.microPipette),  # FIXME TODO
        synonyms=('Patch-Seq',
@@ -1072,6 +1125,7 @@ triples = (
     _t(tech.mcSeq, 'mC-seq',
        #(ilxtr.hasPrimaryInput, ilxtr.openChromatin),  # nucleus has part?
        #(ilxtr.hasPrimaryInput, ilxtr.methylatedDNA),
+       (hasPart, tech.libraryPrep),
        (ilxtr.hasPrimaryAspect, asp.methylationSequence),
        (ilxtr.hasPrimaryInput, ilxtr.DNA),
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
@@ -1088,6 +1142,7 @@ triples = (
 
     _t(tech.ATACseq, 'ATAC-seq',
        (ilxtr.hasSomething, i.d),
+       (hasPart, tech.libraryPrep),
        (hasPart, tech.sequencing),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
     ),
@@ -1107,10 +1162,10 @@ triples = (
        synonyms=('single-cell ATAC-seq',
                  'single cell ATAC-seq',)),
 
-    _t(i.d, 'Bulk-ATAC-seq',
+    _t(i.d, 'bulk ATAC-seq',
        (hasPart, tech.ATACseq),
        (ilxtr.hasSomething, i.d),
-    ),
+       synonyms=('Bulk-ATAC-seq',)),
 
     #'scranseq'  # IS THIS FOR REAL!?
     #'ssranseq'  # oh boy, this is just me being bad at spelling scrnaseq?
@@ -1126,9 +1181,10 @@ triples = (
     _t(i.d, 'DroNc-seq',
        (ilxtr.hasSomething, i.d),
        (hasPart, tech.rnaSeq),  # TODO
+       # https://www.ncbi.nlm.nih.gov/pubmed/28846088
       ),
 
-    _t(i.d, '10x Genomics sequencing',
+    _t(i.d, '10x Chromium sequencing',
        (ilxtr.hasSomething, i.d),
        (hasPart, tech.rnaSeq),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
@@ -1136,25 +1192,46 @@ triples = (
        # snRNA-seq 10x Genomics Chromium v2
        # 10x Genomics Chromium V2 scRNA-seq
        # 10X (sigh)
-       synonyms=('10x Genomics', '10x sequencing', '10x',)),
+       synonyms=('10x Genomics', '10x sequencing', '10x', 'Chromium sequencing')),
 
-    _t(i.d, 'MAP seq',
+    _t(i.d, 'MAP-seq',
        (ilxtr.hasSomething, i.d),
        (hasPart, tech.sequencing),
+       (hasPart, tech.libraryPrep),
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
        synonyms=('MAPseq',
+                 'MAP seq',
                  'Multiplexed Analysis of Projections by Sequencing',)),
 
-    _t(i.d, 'SMART-seq',
+    _t(tech.smartSeq, 'SMART-seq',
        (hasPart, tech.rnaSeq),
        (hasInput, ilxtr.SMARTSeqKit),
        (ilxtr.isConstrainedBy, prot.SMARTSeq),
-       # Clontech / Takara
+       # Clontech / Takara prep kits feeding Illumina?
+       comment=('This space is completely loony. '
+                'See https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5449089/ for a review. '
+                'This is also a great example of the conflation of protocol with technique.'),
        synonyms=('Switching Mechanism at 5\' End of RNA Template sequencing',
-                 'Smart-seq2',
-                 'SMART-seq',
-                 'SMART-Seq v4',
-                 'SMART-seq v4',)),
+                 'Smart-seq'
+                 'SMART-Seq®',
+       )),
+
+    _t(i.d, 'SMART-seq2',
+       # but illumina also has a page on it ...
+       # what is going on
+       (hasPart, tech.rnaSeq),
+       (ilxtr.isImplementationOf, tech.smartSeq),
+       (ilxtr.hasSomething, i.d),
+       def_='Improved version of the Smart-seq technique',
+       synonyms=('Smart-Seq2',
+                 'SMART-seq2')),
+
+    _t(i.d, 'SMART-seq v4',
+       (hasPart, tech.rnaSeq),
+       (ilxtr.isImplementationOf, tech.smartSeq),
+       def_='Commercial compeitor for Smart-seq2 developed later in time',
+       synonyms=('SMART-Seq v4',
+                 'SMARTer v4')),
 
     # 'deep smart seq',
 
@@ -1512,6 +1589,14 @@ triples = (
        # hasPrimaryAspect distanceFromSoma
        # hasPrimaryAspect_dAdT ilxtr.positive
        synonyms=('retrograde tracing',)
+    ),
+    _t(i.d, 'bidirectional tracing technique',
+       (hasPart, tech.delivery),
+       (hasParticipant, ilxtr.axon),
+       (hasPart, ilxtr.anterogradeMovement),
+       (hasPart, ilxtr.retrogradeMovement),
+       (ilxtr.hasPrimaryAspect, asp.connectivity),
+       synonyms=('bidirectional tracing',)
     ),
     _t(i.d, 'diffusion tracing technique',
        (hasParticipant, ilxtr.axon),
@@ -3507,10 +3592,16 @@ triples = (
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'microendoscopic technique',
        (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'two-photon microscopy technique',
+    _t(tech.twoPhoton, 'two-photon microscopy technique',
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'two-photon tomographic technique',
-       (ilxtr.hasSomething, i.d)),
+       (hasPart, tech.twoPhoton),
+       (hasPart, tech.tomography)),
+    _t(i.d, 'serial two-photon tomography',
+       (hasPart, tech.twoPhoton),
+       (hasPart, tech.tomography),
+       (ilxtr.hasSomething, i.d),
+       synonyms=('STPT',)),
     _t(i.d, 'wide-field microscopy technique',
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'brain-wide technique',
