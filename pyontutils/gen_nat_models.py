@@ -43,7 +43,8 @@ def main():
 
     asdf = nat(rows, header)
     graph.write()
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 if __name__ == '__main__':
     main()

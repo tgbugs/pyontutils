@@ -98,7 +98,8 @@ NEURON = 'SAO:1417703748'
 def clean_hbp_cell():
     #old graph
     g = rdflib.Graph()
-    embed()
+    if __name__ == '__main__':
+        embed()
     g.parse((gitf /
              'methodsOntology/ttl/hbp_cell_ontology.ttl').as_posix(), format='turtle')
     g.remove((None, rdflib.OWL.imports, None))

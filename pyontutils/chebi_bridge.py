@@ -16,7 +16,7 @@ from IPython import embed
 sgv = Vocabulary(cache=True)
 
 
-def chebi_imp():
+def main():
     PREFIXES = makePrefixes('definition',
                             'replacedBy',
                             'hasRole',
@@ -263,4 +263,4 @@ def chebi_imp():
         embed()
 
 if __name__ == '__main__':
-    chebi_imp()
+    main()
