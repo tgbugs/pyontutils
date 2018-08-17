@@ -175,7 +175,6 @@ def populate_tests():
              'chebi_bridge':None,
              'closed_namespaces':None,
              'gen_nat_models':None,
-             'mapnlxilx':None,
              #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
              'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
@@ -209,6 +208,9 @@ def populate_tests():
     'scig':['scig', 't', '-v', 'brain'],
 
     }
+    if 'CI' not in os.environ:
+        mains['mapnlxilx'] = None  # requires db connection
+        
     tests = tuple()  # moved to mains --test
 
     _do_mains = []
