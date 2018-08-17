@@ -1,7 +1,7 @@
 from docopt import docopt
 from collections import defaultdict
 from pathlib import Path as p
-import sys
+from sys import exit
 import pandas as pd
 from ilxutils.ilx_pred_map import IlxPredMap
 from ilxutils.mydifflib import ratio
@@ -74,7 +74,7 @@ class GraphComparator(IlxPredMap):
             if tpred == self.ext2ilx_map.get(degrade(cn))
         ]
         if not eqnames:
-            sys.exit('# FAILED :: find_equivalent_pred :: no eqnames found')
+            exit('# FAILED :: find_equivalent_pred :: no eqnames found')
         if len(eqnames) == 1:
             return eqnames[0]
         else:
@@ -116,27 +116,34 @@ class GraphComparator(IlxPredMap):
             trow = trow[~trow.isnull()]
             rname = rrow.pop('qname')
             tname = trow.pop('qname')
+            print(rname)
 
             ronly, tonly, both = self.compare_rows(rrow, trow)
             ronly = [v for v in ronly if self.pred_degrade(
                 v[0]) not in self.blacklist]
             tonly = [v for v in tonly if self.pred_degrade(
                 v[0]) not in self.blacklist]
+            both = [(v1,v2)  for v1,v2 in both if self.pred_degrade(v1[0]) not in self.blacklist]
 
             if not self.shorten_names:
-                rname = rrow.name
-                tname = trow.name
+                try:
+                    rname = rrow.name
+                    tname = trow.name
+                except:
+                    continue
 
             if tonly:
                 data[rname][p(self.tg_path).stem].update({
                     tname: {
                         'reference_graph_only': ronly,
                         'target_graph_only': tonly,
+                        'both_graphs_contain': both,
                     }
                 })
-                if self.both_graphs_contain:
-                    data[rname][tname]['both_graphs_contain'] = both
+                # if self.both_graphs_contain:
+                #     data[rname][tname]['both_graphs_contain'] = both
 
+        # FIXME: this is for iris that dont exist in interlex
         #ref_super_hash = defaultdict(list)
         # for i, row in self.rgraph.df.iterrows():
         #    ref_super_hash[degrade(row['rdfs:label'])].append(row.name)
@@ -145,8 +152,7 @@ class GraphComparator(IlxPredMap):
 
         # unchared but checking for hits in the data itself
         for i, trow in enumerate(unshared_rows):
-            print(i)
-            if i == 10:
+            if i == 0:
                 print('end')
                 break
             for j, rrow in self.rgraph.df.iterrows():
@@ -190,6 +196,10 @@ class GraphComparator(IlxPredMap):
                         }
                     })
 
+        for row in unshared_rows:
+            is_class = [True for _type in row['rdf:type'] if 'class' in _type.lower()]
+            if is_class:
+                data[str(p(self.tg_path).stem) + '_only'][row.name]
         return data
 
     def replace_superclass(self, row, superclass_indx, exids_indx):
@@ -282,8 +292,8 @@ class GraphComparator(IlxPredMap):
             else:
                 tonly += [(tk, tv) for tv in tvs]
 
-        tonly = list(set(tonly) - set(both))
-
+        if both:
+            tonly = list(set(tonly) - set(both))
         # DEBUG: messy and recalls a lot of functions
         for pred, obj in tonly:
             target_com_pred = self.ext2ilx_map.get(degrade(pred))
@@ -306,7 +316,7 @@ class GraphComparator(IlxPredMap):
     def compare(self, ref_values, target_values):
         if not isinstance(ref_values, list) and not isinstance(
                 target_values, list):
-            sys.exit('compare_dls :: Types need to be both lists')
+            exit('compare_dls :: Types need to be both lists')
         rb, tb = [], []
         for ref_value in ref_values:
             for target_value in target_values:

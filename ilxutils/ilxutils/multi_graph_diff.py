@@ -26,7 +26,7 @@ from ilxutils.graph2pandas import Graph2Pandas
 from ilxutils.graph_comparator import GraphComparator
 from ilxutils.tools import open_json, create_json, prettify_ontodiff_json, create_csv
 VERSION = '0.0.2'
-BLACKLIST = ['synonym', 'superclass']
+BLACKLIST = ['synonym', 'superclass', 'type']
 
 
 class MultiGraphDiff(IlxPredMap):
@@ -60,9 +60,9 @@ class MultiGraphDiff(IlxPredMap):
                                 rg_ilx=True,
                                 partial_diff=True,
                                 blacklist=BLACKLIST,
-                                both_graphs_contain=False,
-                                likeness_threshold=.8,
-                                dislikeness_threshold=1,)
+                                both_graphs_contain=True,
+                                likeness_threshold=.8, # useless for now
+                                dislikeness_threshold=1,) # useless for now
             #gc = GraphComparator(self.ref_file, tar_file)
             diffs.append(gc.diff)
         return diffs
@@ -115,7 +115,7 @@ def main():
     create_json(mgd.merged_diff, args.output)
     prettify_ontodiff_json(args.output)
     #mgd_csv_ready_df = mgd.get_csv_ready_df()
-    #mgd_csv_ready_df.to_csv('~/Dropbox/csv_test.csv', index=False)
+    #mgd_csv_ready_df.to_csv('~/Dropbox/SciCrunchDumps/DICOM/ilx_dicom_diff.csv', index=False)
 
 
 if __name__ == '__main__':

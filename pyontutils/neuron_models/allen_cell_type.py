@@ -17,11 +17,19 @@ import rdflib
 import requests
 from rdflib import RDF, OWL
 from rdflib.namespace import *
-from pyontutils.core import annotation, makeGraph, makePrefixes
+from pyontutils.core import makePrefixes, ilxtr
 from pyontutils.neuron_lang import *
 from docopt import docopt
 from IPython import embed
 args = docopt(__doc__, version='0.0.4')
+
+
+class NeuronAllenCellTypes(NeuronEBM):
+    owlClass = ilxtr.AllenCellTypes
+    shortname = 'AllenCellTypes'
+
+
+Neuron = NeuronAllenCellTypes
 
 
 class AllenCellTypes:
@@ -59,8 +67,13 @@ class AllenCellTypes:
             name=args['--output'],
             imports=['NIFTTL:transgenic_lines.ttl'],
             prefixes=prefixes)
-        self.g = makeGraph('transgenic-lines', prefixes=prefixes)
         self.neuron_data = input
+
+        class NeuronAllenCellTypes(NeuronEBM):
+            owlClass = ilxtr.AllenCellTypes
+            shortname = 'AllenCellTypes'
+
+        self.Neuron = NeuronAllenCellTypes
         # self.sample_neuron()
 
     def avoid_url_conversion(self, string):
@@ -213,12 +226,12 @@ class AllenCellTypes:
 
     def build_phenotypes(self, cell_line):
         phenotype_functions = [
+            self.add_mouse_lineage,
             self.cell_phenotypes,
             self.structure_phenotypes,
             self.donor_phenotypes,
             self.transgenic_lines_phenotypes,
             self.specimen_tags_phenotypes,
-            self.add_mouse_lineage,
             # self.cell_soma_locations_phenotypes, # deprecated
         ]
         phenotypes = []
@@ -231,44 +244,13 @@ class AllenCellTypes:
             Neuron(*self.build_phenotypes(cell_line))
         # print(graphBase.ttl())
         Neuron.write()
-
-    def build_transgenic_lines(self):
-        """
-        init class     |  "transgenic_line_source_name":"stock_number" a Class
-        add superClass |  rdfs:subClassOf ilxtr:transgenicLine
-        add *order*    |  ilxtr:useObjectProperty ilxtr:<order>
-        add name       |  rdfs:label "name"
-        add def        |  definition: "description"
-        add transtype  |  rdfs:hasTransgenicType "transgenic_line_type_name"
-        """
-        allen_namespaces = {
-            'JAX': 'http://jaxmice.jax.org/strain/',
-            'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
-            'AIBS': 'http://api.brain-map.org/api/v2/data/TransgenicLine/',
-        }
-        for prefix, iri in allen_namespaces.items():
-            self.g.add_namespace(prefix, iri)
-        for cell_line in self.neuron_data[:]:
-            for tl in cell_line['donor']['transgenic_lines']:
-                _id = tl['stock_number'] if tl['stock_number'] else tl['id']
-                prefix = tl['transgenic_line_source_name']
-                line_type = tl['transgenic_line_type_name']
-                if prefix not in ['JAX', 'MMRRC', 'AIBS']:
-                    continue
-                _class = prefix + ':' + str(_id)
-                #phenotype = self.get_phenotype()
-                self.g.add_class(_class)
-                self.g.add_trip(_class, 'rdfs:label', tl['name'])
-                self.g.add_trip(_class, 'definition:', tl['description'])
-                self.g.add_trip(_class, 'rdfs:subClassOf', 'ilxtr:transgenicLine')
-                self.g.add_trip(_class, 'ilxtr:hasTransgenicType', 'ilxtr:' + line_type + 'Line')
-        self.g.write()
+        Neuron.write_python()
 
 def main():
     print(args)
     if not args['--refresh'] and args['--input'] and Path(args['--input']).exists():
         with open(args['--input'], 'rt') as f:
-            input = json.load(f)
+            input = json.load(f)['msg']
     else:
         response = requests.get('http://api.brain-map.org/api/v2/data/query.json?criteria='
                                 'model::Specimen,rma::criteria,[is_cell_specimen$eq%27true%27],'
@@ -281,8 +263,6 @@ def main():
 
     act = AllenCellTypes(input=input)
     act.build_neurons()
-    act.build_transgenic_lines()
-
 
 if __name__ == '__main__':
     main()
