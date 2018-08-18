@@ -26,11 +26,11 @@ from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
 from pyontutils.core import NCBITaxon, UBERON, NIFTTL
-from pyontutils.core import Class, Source, resSource, Ont, LabelsBase, Collector
+from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector
 from pyontutils.core import annotations, restriction, build
 from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
 from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, subclasses
-from pyontutils.utils import TermColors as tc #TERMCOLORFUNC
+from pyontutils.utils import working_dir, TermColors as tc #TERMCOLORFUNC
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
 from pyontutils.ilx_utils import ILXREPLACE
@@ -282,7 +282,7 @@ class CoCoMac(genericPScheme):
 
 def swanson():
     """ not really a parcellation scheme """
-    source = 'resources/swanson_aligned.txt'
+    source = (working_dir / 'pyontutils/resources/swanson_aligned.txt').as_posix()
     ONT_PATH = GENERATED
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
@@ -716,6 +716,9 @@ class RegionRoot(Class):
     iri = ilxtr.parcellationRegion
     class_label = 'Parcellation Region'
     _kwargs = dict(iri=None,
+                   label=None,
+                   comment=None,
+                   shortname=None,  # used to construct the rdfs:label
                    atlas=None,  # : Atlas
                    labelRoot=None)  # : LabelRoot
 
@@ -847,7 +850,7 @@ class Artifacts(Collector):
                                   #devstage=UBERON['0000113'],  # FIXME multiple...
                         )
 
-class parcArts(Ont):
+class parcArts(ParcOnt):
     """ Ontology file for artifacts that define labels or
         geometry for parcellation schemes. """
 
@@ -857,7 +860,7 @@ class parcArts(Ont):
     filename = 'parcellation-artifacts'
     name = 'Parcellation Artifacts'
     #shortname = 'parcarts'
-    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **Ont.prefixes,
+    prefixes = {**makePrefixes('NCBITaxon', 'UBERON', 'skos'), **ParcOnt.prefixes,
                 'FSLATS':str(FSLATS),
                 'paxmusver':str(paxmusver),
                 'paxratver':str(paxratver),
@@ -882,7 +885,7 @@ class parcArts(Ont):
             yield from artifact
 
 
-class parcCore(Ont):
+class parcCore(ParcOnt):
     """ Core OWL2 entities needed for parcellations """
 
     # setup
@@ -891,7 +894,7 @@ class parcCore(Ont):
     filename = 'parcellation-core'
     name = 'Parcellation Core'
     #shortname = 'parcore'  # huehuehue
-    prefixes = {**makePrefixes('skos'), **Ont.prefixes}
+    prefixes = {**makePrefixes('skos'), **ParcOnt.prefixes}
     imports = NIFTTL['nif_backend.ttl'], parcArts
 
     # stuff
@@ -903,7 +906,7 @@ class parcCore(Ont):
             yield from parent.class_triples()
 
 
-class RegionsBase(Ont):
+class RegionsBase(ParcOnt):
     """ An ontology file containing parcellation regions from the
         intersection of an atlas artifact and a set of labels. """
     # TODO find a way to allow these to serialize into one file
@@ -916,7 +919,7 @@ class RegionsBase(Ont):
                                      labelRoot=self.labelRoot)
 
 
-class parcBridge(Ont):
+class parcBridge(ParcOnt):
     """ Main bridge for importing the various files that
         make up the parcellation ontology. """
 
@@ -1009,7 +1012,7 @@ class SwansonAppendix(resSource):
     artifact = Artifacts.SwansonAppendix
 
 
-class SwansonLabels(Ont):  # FIXME not labels...
+class SwansonLabels(ParcOnt):  # FIXME not labels...
     filename = 'swanson'
     name = 'Swanson 2014 partonomies'
     shortname = 'swannt'
@@ -1949,7 +1952,7 @@ class FSL(LabelsBase):
     name = 'Terminologies from FSL atlases'
     shortname = 'fsl'
     imports = parcCore,
-    prefixes = {**makePrefixes('ilxtr'), **Ont.prefixes,
+    prefixes = {**makePrefixes('ilxtr'), **ParcOnt.prefixes,
                 'FSLATS':str(FSLATS),
     }
     sources = tuple()  # set by prepare()
@@ -2064,19 +2067,20 @@ def main():
         from pyontutils.parc_aba import Artifacts as abaArts
     from pyontutils.parc_freesurfer import Artifacts as fsArts
     from pyontutils.parc_whs import Artifacts as whsArts
-    onts = tuple(l for l in subclasses(Ont)
-                 if 'Registry' not in l.__name__ and
-                 # FIXME quick fix for Ont being used for more than parc now...
-                 l.__name__ != 'parcBridge' and
-                 l.__module__ != 'pyontutils.parcellation' and
-                 not hasattr(l, f'_{l.__name__}__pythonOnly'))
+    onts = tuple(l for l in subclasses(ParcOnt)
+                 if l.__name__ != 'parcBridge'
+                 and not hasattr(l, f'_{l.__name__}__pythonOnly')
+                 and (__name__ != '__main__'
+                      # when this is run as an import
+                      # the __main__ versions do not exist
+                      or __name__ == '__main__ '
+                      and l.__module__ != 'pyontutils.parcellation')
+    )
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
                 fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
-    embed()
 
 if __name__ == '__main__':
     main()
-

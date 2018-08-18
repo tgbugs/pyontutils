@@ -1896,7 +1896,12 @@ class Ont:
         self._graph.write()
 
 
-class LabelsBase(Ont):  # this replaces genericPScheme
+class ParcOnt(Ont):
+    """ Parent class for parcellation related ontologies.
+        Used to isolate parcellation related subclasses at build time."""
+
+
+class LabelsBase(ParcOnt):  # this replaces genericPScheme
     """ An ontology file containing parcellation labels from a common source. """
 
     __pythonOnly = True
