@@ -33,9 +33,9 @@
 
 """
     Usage:
-        obo_io.py <obofile>
-        obo_io.py --ttl <obofile> [<ttlfile>]
-        obo_io.py --help
+        obo-io <obofile>
+        obo-io --ttl <obofile> [<ttlfile>]
+        obo-io --help
     Options:
         -h --help       show this
         -t --ttl        convert obo file to ttl and exit
@@ -60,8 +60,15 @@ import inspect
 from datetime import datetime
 from getpass import getuser
 from collections import OrderedDict
+import rdflib
 from docopt import docopt
+import pyontutils.utils
+from pyontutils.core import makeNamespaces, PREFIXES as uPREFIXES
+from pyontutils.core import rdf, owl, NIFRID, definition
+from pyontutils.qnamefix import cull_prefixes
 from IPython import embed
+
+fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')
 
 N = -1  # use to define 'many ' for tag counts
 TW = 4  # tab width
@@ -75,9 +82,9 @@ od.__repr__ = dict.__repr__
 obo_tag_to_ttl = {
     'id':'%s rdf:type owl:Class ;\n',
     'name':' ' * TW + 'rdfs:label "%s"@en ;\n',
-    'def':' ' * TW + 'nsu:definition "%s"@en ;\n',
-    'acronym':' ' * TW + 'nsu:acronym "%s"@en ;\n',
-    'synonym':' ' * TW + 'nsu:synonym "%s"@en ;\n',
+    'def':' ' * TW + 'definition: "%s"@en ;\n',
+    'acronym':' ' * TW + 'NIFRID:acronym "%s"@en ;\n',
+    'synonym':' ' * TW + 'NIFRID:synonym "%s"@en ;\n',
     'is_a':' ' * TW + 'rdfs:subClassOf %s ;\n',
     #'xref':
 
@@ -91,7 +98,7 @@ def id_fix(value):
         if value.startswith('ERO') or value.startswith('OBI') or value.startswith('GO') or value.startswith('UBERON') or value.startswith('IAO'):
             value = 'obo:' + value
         elif value.startswith('birnlex') or value.startswith('nlx'):
-            value = 'nifstd:' + value
+            value = 'NIFSTD:' + value
         elif value.startswith('MESH'):
             value = ':'.join(value.split('_'))
         else:
@@ -143,6 +150,10 @@ class OboFile:
                 t = type_(block, self)  # FIXME :/
                 self.add_tvpair_store(t)
 
+            missing = {k:v for k, v in self.Terms.items() if isinstance(v, list)}
+            if missing:
+                raise ValueError('ERROR: The following identifiers were referenced but have no definition ' + ' '.join(missing))
+
         elif header is not None:
             self.header = header
             self.Terms = terms  # TODO this should take iters not ods
@@ -173,7 +184,7 @@ class OboFile:
             except ValueError:
                 filename = name + '_1.' + ext
             print('file exists, renaming to %s' % filename)
-            self.write(filename)
+            self.write(filename, type_)
 
         else:
             with open(filename, 'wt', encoding='utf-8') as f:
@@ -188,10 +199,33 @@ class OboFile:
     def __ttl__(self):
         #stores = [self.header.__ttl__()]
         stores = []
-        stores += [s.__ttl__() for s in self.Terms.values()]
+        stores += [s.__ttl__() for s in self.Terms.values()]# if not print(s)]
         stores += [s.__ttl__() for s in self.Typedefs.values()]
         stores += [s.__ttl__() for s in self.Instances.values()]
-        return '\n'.join(stores)
+        DNS = self.header.default_namespace.value.upper()
+        ontid = fobo[self.header.ontology.value + '.ttl']
+        iri_prefix = fobo[DNS + '_']
+        g = rdflib.Graph()
+        prefixes = [f'@prefix {DNS}: <{iri_prefix}> .']
+        argh = (('owl', owl),
+                ('definition', definition),
+                ('NIFSTD', NIFSTD),
+                ('NIFRID', NIFRID),
+                ('obo', obo),
+                ('', NOPE),)
+        for prefix, iri in (*g.namespaces(), *argh):
+            prefixes.append(f'@prefix {prefix}: <{iri}> .')
+        for tvp in self.header.idspace:
+            prefix, iri, *comment = tvp.value.split(' ')
+            prefixes.append(f'@prefix {prefix}: <{iri}_> .')
+
+        g.parse(data='\n'.join(prefixes + stores), format='turtle')
+        g.add((ontid, rdf.type, owl.Ontology))
+
+        og = cull_prefixes(g, prefixes={DNS:iri_prefix, **uPREFIXES})
+        out = og.g.serialize(format='nifttl')
+        return out.decode()
+
 
     def __str__(self):
         stores = [str(self.header)]
@@ -1094,6 +1128,7 @@ def main():
                     # TODO TEST ME!
                     raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
                 ttlfilename = fname + '.ttl'
+            of.__ttl__()
             of.write(ttlfilename, type_='ttl')
         else:
             raise FileNotFoundError('No file named %s exists at that path!' % filename)
