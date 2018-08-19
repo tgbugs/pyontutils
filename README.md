@@ -1,6 +1,7 @@
 # pyontutils
 [![PyPI version](https://badge.fury.io/py/pyontutils.svg)](https://pypi.org/project/pyontutils/)
 [![Build Status](https://travis-ci.org/tgbugs/pyontutils.svg?branch=master)](https://travis-ci.org/tgbugs/pyontutils)
+[![Coverage Status](https://coveralls.io/repos/github/tgbugs/pyontutils/badge.svg?branch=master)](https://coveralls.io/github/tgbugs/pyontutils?branch=master)
 
 python utilities for working with ontologies
 
