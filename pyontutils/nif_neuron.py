@@ -1075,6 +1075,8 @@ def make_bridge():
     from pyontutils.neuron_models import __all__
     print(__all__)
     for module in __all__:
+        if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
+            continue
         import_module(f'pyontutils.neuron_models.{module}')
 
 
