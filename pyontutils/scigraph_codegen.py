@@ -454,6 +454,7 @@ class State:
         self._code = out
 
 class State2(State):
+    path_prefix = ''
     def dotopdict(self, dict_):
         """ Rewrite the 2.0 json to match what we feed the code for 1.2 """
         mlookup = {'get':'GET', 'post':'POST'}
@@ -465,14 +466,20 @@ class State2(State):
 
         paths = dict_['paths']
         for path, path_dict in paths.items():
+            if self.path_prefix and self.path_prefix not in path:
+                continue
             path_dict['operations'] = []
-            for method, method_dict in path_dict.items():
+            for method, method_dict in sorted(path_dict.items()):
                 if method == 'operations':
                     continue
                 rearrange(path, method_dict, method)
                 #print(self.operation(method_dict))
                 path_dict['operations'].append(method_dict)
             path_dict['path'] = path
+
+        def setp(v, lenp=len(self.path_prefix)):
+            v['path'] = v['path'][lenp:]
+            return v
 
         dict_['apis'] = []
         for tag_dict in dict_['tags']:
@@ -482,8 +489,9 @@ class State2(State):
                  'class_json':{
                      'docstring':tag_dict['description'],
                      'resourcePath':path,
-                     'apis':[v for k, v in paths.items() if k.startswith(path)]},
-                }
+                     'apis':[setp(v) for k, v in paths.items()
+                             if k.startswith(self.path_prefix + path)]},
+            }
             dict_['apis'].append(d)
 
         # make sure this is run first so we don't get key errors
@@ -522,8 +530,10 @@ def main():
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     args = docopt(__doc__, version='scigraph-codegen 1.0.0')
     if args['--api'] == defaults['--basepath']:
-        print('WARNING: cannot generate against SciCrunch api, code not generated.')
-        return
+        args['--api'] = 'https://scicrunch.org/swagger-docs'
+
+    if args['--api'] == 'https://scicrunch.org/swagger-docs':
+        State2.path_prefix = '/scigraph'
 
     output_file, api, version, basepath = (
         args['--' + k]
