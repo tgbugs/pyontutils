@@ -43,11 +43,6 @@ if __name__ == '__main__':
     if args['--profile']:
         from desc.prof import profile_me
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
-rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CompactTurtleSerializer')
-rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'UncompactTurtleSerializer')
-rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
-rdflib.plugin.register('rktttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'RacketTurtleSerializer')
 
 def prepare(filepath_or_stream, outpath=None, stream=False):
     if stream:

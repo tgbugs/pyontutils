@@ -155,6 +155,13 @@ class TestTtlser(unittest.TestCase):
     def _test_scoser(self):  # TODO not clear how scogood should actually work, there are many edge cases
         assert self.scoactual == self.scogood
 
+    def test_others(self):
+        formats = ('cmpttl',
+                   'uncmpttl',
+                   'rktttl',)
+        for fmt in formats:
+            self.serialize(fmt)
+
     def test_deterministic(self):
         assert self.deterministic()
 

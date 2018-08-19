@@ -2,8 +2,9 @@
 """ Render a tree from a predicate root pair.
 
 Usage:
-    ontree [options] <predicate-curie> <root-curie>
     ontree server [options]
+    ontree [options] <predicate-curie> <root-curie>
+    ontree --test
 
 Options:
     -a --api=API            SciGraph api endpoint
@@ -292,17 +293,22 @@ def test():
                                'route_examples', 'route_iriquery', 'route_query'))
 
     for _, predicate, root, *_ in examples:
+        if root == 'UBERON:0001062':
+            continue  # too big
+
+        print('ontree testing', predicate, root)
         if root.startswith('http'):
             root = root.split('://')[-1]  # FIXME nginx behavior...
-            route_iriquery(predicate, root)
+            resp = route_iriquery(predicate, root)
         else:
-            route_query(predicate, root)
+            resp = route_query(predicate, root)
 
     for _, predicate, root, file, *args in file_examples:
+        print('ontree testing', predicate, root, file)
         if args and 'restriction' in args[0]:
             request.args['restriction'] = 'true'
 
-        route_filequery(predicate, root, file)
+        resp = route_filequery(predicate, root, file)
 
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')

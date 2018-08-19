@@ -191,12 +191,13 @@ def populate_tests():
                ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
                ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
     'ontutils':[['ontutils', '--help'],
+                ['ontutils', 'deadlinks', nifttl],
                 #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
                ],
     'ontree':['ontree', '--test'],
     'overlaps':['overlaps', '--help'],
     'scr_sync':['registry-sync', '--test'],
-    'scigraph_codegen':['scigraph-codegen'],
+    'scigraph_codegen':['scigraph-codegen', '--api', 'https://scicrunch.org/api/1/scigraph'],
     'scigraph_deploy':[
         ['scigraph-deploy', '--help'],
         ['scigraph-deploy', 'all', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
