@@ -146,7 +146,6 @@ def populate_tests():
     neurons = ('neurons',
                'neuron_lang',
                'neuron_example',
-               'nif_neuron',
                'phenotype_namespaces',
                'neuron_models/allen_cell_types',
                'neuron_models/phenotype_direct',
@@ -154,7 +153,7 @@ def populate_tests():
                'neuron_models/huang2017',
                'neuron_models/ma2015',
                'neuron_models/cuts',
-               # TODO neuron_models.__all__ ...
+               'nif_neuron',
               )
     print('checkout ok:', checkout_ok)
 
@@ -175,6 +174,8 @@ def populate_tests():
              'chebi_bridge':None,
              'closed_namespaces':None,
              'gen_nat_models':None,
+             'hierarchies':None,
+             'nif_neuron':None,
              #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
              'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
@@ -206,7 +207,14 @@ def populate_tests():
         ['scigraph-deploy', 'config', 'localhost', 'localhost'],
         ['scigraph-deploy', 'services', 'localhost', 'localhost'],
         ['scigraph-deploy', '--view-defaults']],
-    'scig':['scig', 't', '-v', 'brain'],
+    'scig':[['scig', 'c', '-v'],
+            ['scig', 'v', '-v', 'BIRNLEX:796'],
+            ['scig', 't', '-v', 'brain'],
+            ['scig', 's', '-v', 'fat'],
+            ['scig', 'g', '-v', 'BIRNLEX:796'],
+            ['scig', 'g', '-v', 'BIRNLEX:796', '--rt', 'subClassOf'],
+            ['scig', 'cy', '"MATCH (n) RETURN n"'],
+    ],
 
     }
     if 'CI' not in os.environ:

@@ -534,18 +534,6 @@ def main():
     sgg = Graph(cache=True)
     sgg_local = Graph(cache=True)
 
-    cell = Query("GO:0044464", 'subClassOf', 'INCOMING', 9)
-    nifga = Query('NIFGA:birnlex_796', 'http://www.obofoundry.org/ro/ro.owl#has_proper_part', 'OUTGOING', 9)
-    uberon = Query('UBERON:0000955', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
-    uberon_ae = Query('UBERON:0001062', 'subClassOf', 'INCOMING', 9)  # anatomical entity
-    uberon_cc = Query('UBERON:0002749', 'http://purl.obolibrary.org/obo/BFO_0000050', 'INCOMING', 9)
-    ncbi_ins =  Query('NCBITaxon:50557', 'subClassOf', 'INCOMING', 10)
-    ncbi_rod =  Query('NCBITaxon:9989', 'subClassOf', 'INCOMING', 10)
-
-    queries = cell, nifga, uberon, uberon_cc
-    queries = ncbi_ins, ncbi_rod, uberon, nifga
-    queries = uberon_ae,
-
     fma3_r = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#regional_part_of', 'INCOMING', 9)
     fma3_c = Query('FMA3:Brain', 'http://sig.biostr.washington.edu/fma3.0#constitutional_part_of', 'INCOMING', 9)
     #fma3_tree, fma3_extra = creatTree(*fma3_r, graph=sgg_local)
@@ -563,16 +551,8 @@ def main():
     fma_mfg = Query('FMA:273103', 'http://purl.org/sig/ont/fma/regional_part_of', 'BOTH', 20)
     #fma_tree, fma_extra = creatTree(*fma_mfg, graph=sgg_local)
 
-
-
-    ncbi_metazoa = Query('NCBITaxon:33208', 'subClassOf', 'INCOMING', 20)
-    ncbi_vertebrata = Query('NCBITaxon:7742', 'subClassOf', 'INCOMING', 40)
-    #ncbi_tree, ncbi_extra = creatTree(*ncbi_vertebrata, graph=sgg_local)
-
-
     fma_tel = Query('FMA:62000', 'http://purl.org/sig/ont/fma/regional_part_of', 'INCOMING', 20)
-    DOFMA = False
-    if DOFMA:
+    if False:
         fma_gsc_tree, fma_gsc_extra = creatTree(*fma_tel, graph=sgg_local)
 
         childs = list(fma_gsc_extra[2])  # get the curies for the left/right so we can get parents for all
@@ -589,14 +569,11 @@ def main():
         embed()
         return
 
-    uberon_tree, uberon_extra = creatTree(*uberon, graph=sgg)  # ,url_base='localhost:9000')  # FIXME why does this crash?
+    uberon = Query('UBERON:0000955', 'BFO:0000050', 'INCOMING', 40)
+    uberon_tree, uberon_extra = creatTree(*uberon, graph=sgg)
+    queries = uberon,
 
-    print(uberon_tree)
-    print(uberon_extra[0])
-    embed()
-    return
-
-    uberon_flat = [n.replace(':','_') for n in flatten(uberon_extra[0])]
+    uberon_flat = sorted(set(n for n in flatten(uberon_extra[0])))
     with open('/tmp/uberon_partonomy_terms', 'wt') as f:
         f.writelines('\n'.join(uberon_flat))
 
@@ -613,6 +590,8 @@ def main():
         parent_counts = sorted(set(len(v) for v in extra[-4].values()))
         print('unique parent counts', parent_counts)
         print('num terms', len(extra[2]))
+
+    return
 
     embed()
 
