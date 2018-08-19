@@ -1301,20 +1301,25 @@ class injective_dict(MutableMapping):
 
 
 class injective(type):
+    render_types = tuple()
+
     @classmethod
     def __prepare__(cls, name, bases, **kwargs):
         return injective_dict()
 
     def __new__(cls, name, bases, inj_dict):
-        return super().__new__(cls, name, bases, dict(inj_dict))
+        self = super().__new__(cls, name, bases, dict(inj_dict))
+        self.debug = False
+        return self
 
     def __len__(self):
-        return len([v for k in dir(self) for v in (getattr(self, k),) if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)])
+        return len([v for k in dir(self) for v in (getattr(self, k),)
+                    if any(isinstance(v, t) for t in self.render_types)])
 
     def items(self):
         for k in dir(self):
             v = getattr(self, k)
-            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+            if any(isinstance(v, t) for t in self.render_types):
                 yield k, v
 
     def __contains__(self, key):
@@ -1327,7 +1332,7 @@ class injective(type):
     def __getitem__(self, key):
         print(key)
         v = getattr(self, key)
-        if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+        if any(isinstance(v, t) for t in self.render_types):
             return v
         else:
             raise KeyError(f'{key} not in self.__class__.__name__')
@@ -1340,28 +1345,34 @@ class injective(type):
         return  cname + '\n'.join(f'{t}{k:<8} = {repr(v).replace(newline, " ")}'
                                   for k in dir(self)
                                   for v in (getattr(self, k),)
-                                  if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype))
+                                  if any(isinstance(v, t) for t in self.render_types))
 
     def __enter__(self):
-        stack = inspect.stack()
+        stack = inspect.stack(0)
+        if self.debug:
+            s0 = stack[0]
+            print(s0.function, Path(s0.filename).name, s0.lineno)
         g = stack_magic(stack)
         self._existing = set()
         setLocalNameBase(f'setBy_{self.__name__}', self.__name__, g)
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
-            if isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype):
+            if any(isinstance(v, t) for t in self.render_types):
                 if k in graphBase.LocalNames:  # name was in enclosing scope
                     self._existing.add(k)
                 setLocalNameBase(k, v, g)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        stack = inspect.stack()
+        stack = inspect.stack(0)
+        if self.debug:
+            s0 = stack[0]
+            print(s0.function, Path(s0.filename).name, s0.lineno)
         g = stack_magic(stack)
-        #g = inspect.stack()[-1][0].f_locals  #  get globals of calling scope
+        #g = inspect.stack(0)[-1][0].f_locals  #  get globals of calling scope
         for k in dir(self):
             v = getattr(self, k)  # use this instead of __dict__ to get parents
-            if k not in self._existing and (isinstance(v, Phenotype) or isinstance(v, LogicalPhenotype)):
+            if k not in self._existing and any(isinstance(v, t) for t in self.render_types):
                 try:
                     g.pop(k)
                     graphBase.LocalNames.pop(k)  # this should only run if g pops correctly? XXX FIXME?
@@ -1376,6 +1387,8 @@ class LocalNameManager(metaclass=injective):
         It is possible to subclass to add your custom names to a core. """
 
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
+
+    render_types = Phenotype, LogicalPhenotype
 
     ORDER = (
         'ilxtr:hasInstanceInSpecies',
@@ -1436,7 +1449,7 @@ def addLNBase(LocalName, phenotype, g=None):
 
 def addLN(LocalName, phenotype, g=None):  # XXX deprecated
     if g is None:
-        s = inspect.stack()  # horribly inefficient
+        s = inspect.stack(0)  # horribly inefficient
         checkCalledInside('LocalNameManager', s)
         g = s[1][0].f_locals  # get globals of calling scope
     addLNBase(LocalName, phenotype, g)
@@ -1444,7 +1457,7 @@ def addLN(LocalName, phenotype, g=None):  # XXX deprecated
 def addLNT(LocalName, phenoId, predicate, g=None):  # XXX deprecated
     """ Add a local name for a phenotype from a pair of identifiers """
     if g is None:
-        s = inspect.stack()  # horribly inefficient
+        s = inspect.stack(0)  # horribly inefficient
         checkCalledInside('LocalNameManager', s)
         g = s[1][0].f_locals  # get globals of calling scope
     addLN(LocalName, Phenotype(phenoId, predicate), g)
@@ -1455,7 +1468,7 @@ def setLocalNameBase(LocalName, phenotype, g=None):
 
 def setLocalNames(*LNMClass, g=None):
     if g is None:
-        g = inspect.stack()[1][0].f_globals  # get globals of calling scope
+        g = inspect.stack(0)[1][0].f_globals  # get globals of calling scope
     if not LNMClass:
         resetLocalNames(g)
     for names in LNMClass:
@@ -1468,7 +1481,7 @@ def resetLocalNames(g=None):
     """ WARNING: Only call from top level! THIS DOES NOT RESET NAMES in an embeded IPython!!!
         Remove any local names that have already been defined. """
     if g is None:
-        g = inspect.stack()[1][0].f_locals  #  get globals of calling scope
+        g = inspect.stack(0)[1][0].f_locals  #  get globals of calling scope
     for k in list(graphBase.LocalNames.keys()):
         try:
             g.pop(k)

@@ -193,6 +193,7 @@ def populate_tests():
                ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
     'ontutils':[['ontutils', '--help'],
                 ['ontutils', 'deadlinks', nifttl],
+                ['ontutils', 'spell', ban],
                 #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
                ],
     'ontree':['ontree', '--test'],
@@ -213,6 +214,7 @@ def populate_tests():
             ['scig', 's', '-v', 'fat'],
             ['scig', 'g', '-v', 'BIRNLEX:796'],
             ['scig', 'g', '-v', 'BIRNLEX:796', '--rt', 'subClassOf'],
+            ['scig', 'e', '-v', 'IAO:0100001' 'BIRNLEX:796' 'UBERON:0000955'],
             ['scig', 'cy', '"MATCH (n) RETURN n"'],
     ],
 
