@@ -8,8 +8,8 @@ import subprocess
 from random import shuffle
 import rdflib
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')
-rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
+# trigger registration of rdflib extensions
+import pyontutils.utils
 
 
 def randomize_prefix_order(graph):
