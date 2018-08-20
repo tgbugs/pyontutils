@@ -155,7 +155,11 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
 
     out, err = s.communicate()
     #print(out.decode())
-    org = header.encode() + out.replace(b'\_', b'_')
+    org = header.encode() + out.replace(b'\_', b'_').replace(b'[[file:', b'[[./')
+    #print(org.decode())
+    # debug debug
+    #with open(path.with_suffix('.org').as_posix(), 'wb') as f:
+        #f.write(org)
     # there is not satisfactory way to fix this issue right now
     # but it might also be a bug in pandoc's org exporter
     body, err = e.communicate(input=org)
