@@ -14,7 +14,7 @@ branches:
 
 python:
   - 3.6
-  - pypy3.5
+  # - pypy3.5  # issues with joblib and _pickle
 
 addons:
   apt:
