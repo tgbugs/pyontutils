@@ -7,7 +7,8 @@ class IlxPredMap:
     ilx2ext_map = {
         'label':
             ['rdfs:label',
-             'skos:prefLabel', ],
+             'skos:prefLabel',
+             'preferred_name'],
         'definition':
             ['definition:',
              'skos:definition',

@@ -41,7 +41,7 @@ class MultiGraphDiff(IlxPredMap):
 
     def __find_tar_files(self):
         tar_files = []
-        accepted_file_types = ['.ttl', '.owl', '.pickle']
+        accepted_file_types = ['.ttl', '.owl', '.pickle', '.rdf', '.xrdf']
         for tar_card in self.tar_card:
             if p(tar_card).is_dir():
                 for _type in accepted_file_types:
@@ -49,10 +49,13 @@ class MultiGraphDiff(IlxPredMap):
                         glob(tar_card + '/**/*' + _type, recursive=True))
             elif p(tar_card).is_file() and p(tar_card).suffix in accepted_file_types:
                 tar_files.append(tar_card)
+        if not tar_files:
+            exit(accepted_file_types+' are the only file types accepted')
         return tar_files
 
     def __create_diffs(self):
         diffs = []
+        print(self.tar_files)
         for i, tar_file in enumerate(self.tar_files, 1):
             print(i, 'of', len(self.tar_files), ':',
                   self.ref_file, 'VS.', tar_file)

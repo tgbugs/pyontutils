@@ -197,9 +197,10 @@ class GraphComparator(IlxPredMap):
                     })
 
         for row in unshared_rows:
-            is_class = [True for _type in row['rdf:type'] if 'class' in _type.lower()]
-            if is_class:
-                data[str(p(self.tg_path).stem) + '_only'][row.name]
+            #is_class = [True for _type in row['rdf:type'] if 'class' in _type.lower()]
+            #if is_class:
+            # FIXME: I am only interested in class, but some classes are implicit
+            data[str(p(self.tg_path).stem) + '_only'][row.name]
         return data
 
     def replace_superclass(self, row, superclass_indx, exids_indx):

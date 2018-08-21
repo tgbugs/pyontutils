@@ -1,16 +1,17 @@
 """ Converts owl or ttl or raw rdflib graph into a pandas DataFrame. Saved in .pickle format.
 
-Usage:  Graph2Pandas.py [-h | --help]
+    Usage:
+        Graph2Pandas.py [-h | --help]
         Graph2Pandas.py [-v | --version]
         Graph2Pandas.py [-f=<path>] [-a | -t=<str>] [-o=<path>]
 
-Options:
-    -h --help                      Display this help message
-    -v --version                   Current version of file
-    -o --output=<path>             Output path of picklized pandas DataFrame
-    -f --file=<path>               owl | ttl | rdflib.Graph() -> df.to_pickle
-    -t --type=<str>                type of class you want in the ttl file
-    -a --all                       If seleted you get all types of classes
+    Options:
+        -h --help           Display this help message
+        -v --version        Current version of file
+        -o --output=<path>  Output path of picklized pandas DataFrame
+        -f --file=<path>    owl | ttl | rdflib.Graph() -> df.to_pickle
+        -t --type=<str>     type of class you want in the ttl file
+        -a --all            If seleted you get all types of classes
 """
 import pandas as pd
 import pickle
@@ -70,20 +71,21 @@ class Graph2Pandas():
     def Graph2Pandas_converter(self):
         '''Updates self.g or self.path bc you could only choose 1'''
         if isinstance(self.path, str) or isinstance(self.path, p):
-            # print(self.path)
             self.path = str(self.path)
             filetype = p(self.path).suffix
             if filetype == '.pickle':
                 self.g = None
                 return pickle.load(open(self.path, 'rb'))
-            elif filetype == '.ttl':
+            elif filetype == '.ttl' or filetype == '.rdf':
                 self.g = rdflib.Graph()
-                # print('Querying...')
                 self.g.parse(self.path, format='turtle')
                 return self.get_sparql_dataframe()
-            elif filetype == '.owl':
+            elif filetype == '.nt':
                 self.g = rdflib.Graph()
-                # print('Querying...')
+                self.g.parse(self.path, format='nt')
+                return self.get_sparql_dataframe()
+            elif filetype == '.owl' or filetype == '.xrdf':
+                self.g = rdflib.Graph()
                 try:
                     self.g.parse(self.path, format='xml')
                 except:
@@ -92,7 +94,6 @@ class Graph2Pandas():
                 return self.get_sparql_dataframe()
             else:
                 sys.exit('Format options: owl, ttl, df_pickle, rdflib.Graph()')
-        else:
             try:
                 return self.get_sparql_dataframe()
                 self.path = None
@@ -126,7 +127,7 @@ class Graph2Pandas():
                     binding[rdflib.term.Variable('subj')])
 
             # for the convience of set comparisons
-            if str(obj).lower().strip() != 'none' and not isinstance(obj, BNode): 
+            if str(obj).lower().strip() != 'none' and not isinstance(obj, BNode):
                 obj = str(obj)
             else:
                 continue
@@ -139,6 +140,8 @@ class Graph2Pandas():
         df = pd.DataFrame(columns=cols, index=indx)
         for key, value in data.items():
             df.loc[str(key)] = pd.Series(value)
+
+        del data 
         #print('Completed Pandas!!!')
         return df
 
