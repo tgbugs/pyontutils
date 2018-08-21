@@ -31,6 +31,10 @@ rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer,
                        'pyontutils.ttlser', 'CompactTurtleSerializer')
 rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer,
                        'pyontutils.ttlser', 'UncompactTurtleSerializer')
+rdflib.plugin.register('scottl', rdflib.serializer.Serializer,
+                       'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
+rdflib.plugin.register('rktttl', rdflib.serializer.Serializer,
+                       'pyontutils.ttlser', 'RacketTurtleSerializer')
 
 rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libRdfxmlParser')
@@ -69,8 +73,14 @@ in_test = test_test()
 def stack_magic(stack):
     # note: calling globals() here fails because we want globals of the caller
     # note: in ipython with thing: print(name) will not work if on the same line
+    # REMEMBER KIDS ALWAYS CALL inspect.stack(0) if you don't want
+    # to acess the file system for every frame! (still slow, but better)
     if len(stack) > 2 and 'exec_module' in [f.function for f in stack]:
-        index = 1
+        for i, frame in enumerate(stack):
+            fl = frame[0].f_locals
+            if '__builtins__' in fl:
+                #print('globals found at', i)
+                return fl
     elif in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     else:

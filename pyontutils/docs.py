@@ -35,16 +35,21 @@ def suffix(ext):  # TODO multisuffix?
         return function
     return decorator
 
-def getMdReadFormat():
+def pandocVersion():
     p = subprocess.Popen(['pandoc', '--version'], stdout=subprocess.PIPE)
     out, _ = p.communicate()
     version = out.split(b'\n', 1)[0].split(b' ', 1)[-1].decode()
+    return version
+
+def getMdReadFormat(version):
     if version < '2.2.1':
         return 'markdown_github'
     else:
         return 'gfm'
 
-md_read_format = getMdReadFormat()
+pdv = pandocVersion()
+md_read_format = getMdReadFormat(pdv)
+pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
 
 
 def spell(filenames, debug=False):
@@ -91,7 +96,10 @@ def spell(filenames, debug=False):
 
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
-compile_org_file = ['emacs', '-q', '-l', Path(devconfig.git_local_base, 'orgstrap/init.el').resolve().as_posix(), '--batch', '-f', 'compile-org-file']
+compile_org_file = ['emacs', '-q', '-l',
+                    Path(devconfig.git_local_base,
+                         'orgstrap/init.el').resolve().as_posix(),
+                    '--batch', '-f', 'compile-org-file']
 
 theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup')
 
@@ -118,7 +126,10 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
     # TODO fix relative links to point to github
 
-    pandoc = ['pandoc', '--columns', '300', '-f', md_read_format, '-t', 'org', mdfile]
+    if pandoc_columns:
+        pandoc = ['pandoc', '--columns', '300', '-f', md_read_format, '-t', 'org', mdfile]
+    else:
+        pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
 
     p = subprocess.Popen(pandoc,
@@ -144,7 +155,11 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
 
     out, err = s.communicate()
     #print(out.decode())
-    org = header.encode() + out.replace(b'\_', b'_')
+    org = header.encode() + out.replace(b'\_', b'_').replace(b'[[file:', b'[[./')
+    #print(org.decode())
+    # debug debug
+    #with open(path.with_suffix('.org').as_posix(), 'wb') as f:
+        #f.write(org)
     # there is not satisfactory way to fix this issue right now
     # but it might also be a bug in pandoc's org exporter
     body, err = e.communicate(input=org)

@@ -26,7 +26,7 @@ def main():
     args = docopt(__doc__, version='ont-catalog 0.0.1')
     dobig = args['--big']
     remote_base = 'http://ontology.neuinfo.org/NIF/ttl/'
-    local_base = Path(devconfig.git_local_base, 'NIF-Ontology/ttl/').as_posix() + '/'
+    local_base = Path(devconfig.ontology_local_repo, 'ttl').as_posix() + '/'
 
     #list of all nif ontologies
     #onts = [f for f in fs if f.endswith('.ttl') or f.endswith('.owl') and 'NEMO_' not in f]
@@ -72,7 +72,8 @@ def main():
     xml = '\n'.join(xmllines)
     with open('/tmp/nif-catalog-v001.xml','wt') as f:
         f.write(xml)
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 if __name__ == '__main__':
     main()

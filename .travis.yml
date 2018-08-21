@@ -14,7 +14,7 @@ branches:
 
 python:
   - 3.6
-  - pypy3.5
+  # - pypy3.5  # issues with joblib and _pickle
 
 addons:
   apt:
@@ -26,6 +26,7 @@ addons:
 before_install:
   - pushd "${TRAVIS_BUILD_DIR}/../"
   - git clone https://github.com/SciCrunch/NIF-Ontology.git
+  - git clone https://github.com/tgbugs/methodsOntology.git
   - git clone https://github.com/tgbugs/entity_mapping.git
   - git clone https://github.com/tgbugs/orgstrap.git
   - orgstrap/orgstrap

@@ -63,6 +63,7 @@ class table1(rowParse):
                 'VIP':VIP,
                 'SOM':SOM,
             }
+
         NEGATIVE = False
         POSITIVE = True  # FIXME this requires more processing prior to dispatch...
         e_edge = ''
@@ -153,5 +154,4 @@ def main():
         rows = [list(r) for r in zip(*csv.reader(f))]
     table1(rows)
 
-if __name__ == '__main__':
-    main()
+main()

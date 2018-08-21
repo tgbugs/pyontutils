@@ -146,7 +146,6 @@ def populate_tests():
     neurons = ('neurons',
                'neuron_lang',
                'neuron_example',
-               'nif_neuron',
                'phenotype_namespaces',
                'neuron_models/allen_cell_types',
                'neuron_models/phenotype_direct',
@@ -154,7 +153,7 @@ def populate_tests():
                'neuron_models/huang2017',
                'neuron_models/ma2015',
                'neuron_models/cuts',
-               # TODO neuron_models.__all__ ...
+               'nif_neuron',
               )
     print('checkout ok:', checkout_ok)
 
@@ -165,7 +164,9 @@ def populate_tests():
         lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
 
     ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
+    mba = Path(devconfig.ontology_local_repo, 'ttl/generated/parcellation/mbaslim.ttl').as_posix()
     nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
+    nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
     mains = {'nif_cell':None,
              'methods':None,
@@ -175,15 +176,19 @@ def populate_tests():
              'chebi_bridge':None,
              'closed_namespaces':None,
              'gen_nat_models':None,
-             'mapnlxilx':None,
+             'hierarchies':None,
+             'nif_neuron':None,
              #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
+             'make_catalog':['ont-catalog', '--jobs', '1'],
              'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
     #['ilxcli', '--help'],
+             'obo_io':['obo-io', '--ttl', nsmethodsobo],
     'ttlfmt':[['ttlfmt', ban],
               #[zap]
              ],
     'qnamefix':[['qnamefix', ban],
+                ['qnamefix', mba],
                 #[zap]
                ],
     'necromancy':['necromancy', ban],
@@ -192,12 +197,15 @@ def populate_tests():
                ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
                ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
     'ontutils':[['ontutils', '--help'],
+                ['ontutils', 'deadlinks', nifttl],
+                ['ontutils', 'version-iri', nifttl],
+                ['ontutils', 'spell', ban],
                 #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
                ],
     'ontree':['ontree', '--test'],
     'overlaps':['overlaps', '--help'],
     'scr_sync':['registry-sync', '--test'],
-    'scigraph_codegen':['scigraph-codegen'],
+    'scigraph_codegen':['scigraph-codegen', '--api', 'https://scicrunch.org/api/1/scigraph'],
     'scigraph_deploy':[
         ['scigraph-deploy', '--help'],
         ['scigraph-deploy', 'all', 'NIF-Ontology', 'NIF', 'localhost', 'localhost'],
@@ -206,9 +214,20 @@ def populate_tests():
         ['scigraph-deploy', 'config', 'localhost', 'localhost'],
         ['scigraph-deploy', 'services', 'localhost', 'localhost'],
         ['scigraph-deploy', '--view-defaults']],
-    'scig':['scig', 't', '-v', 'brain'],
+    'scig':[['scig', 'c', '-v'],
+            ['scig', 'v', '-v', 'BIRNLEX:796'],
+            ['scig', 't', '-v', 'brain'],
+            ['scig', 's', '-v', 'fat'],
+            ['scig', 'g', '-v', 'BIRNLEX:796'],
+            ['scig', 'g', '-v', 'BIRNLEX:796', '--rt', 'subClassOf'],
+            ['scig', 'e', '-v', 'IAO:0100001' 'BIRNLEX:796' 'UBERON:0000955'],
+            ['scig', 'cy', '"MATCH (n) RETURN n"'],
+    ],
 
     }
+    if 'CI' not in os.environ:
+        mains['mapnlxilx'] = None  # requires db connection
+        
     tests = tuple()  # moved to mains --test
 
     _do_mains = []
@@ -265,7 +284,7 @@ def populate_tests():
                         return print('Import failed for', module_path, 'cannot test main, skipping.')
 
                     if argv and argv[0] != script:
-                        os.system(' '.join(argv))
+                        os.system(' '.join(argv))  # FIXME error on this?
 
                     try:
                         if argv is not None:

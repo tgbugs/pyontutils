@@ -2,8 +2,9 @@
 """ Render a tree from a predicate root pair.
 
 Usage:
-    ontree [options] <predicate-curie> <root-curie>
     ontree server [options]
+    ontree [options] <predicate-curie> <root-curie>
+    ontree --test
 
 Options:
     -a --api=API            SciGraph api endpoint
@@ -25,6 +26,7 @@ import rdflib
 from docopt import docopt, parse_defaults
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort
 from pyontutils import scigraph
+from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize
 from pyontutils.core import makeGraph
 from IPython import embed
@@ -54,8 +56,7 @@ def graphFromGithub(link, verbose=False):
 
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
     kwargs = {'local':local, 'verbose':verbose}
-    prov = [
-            f'<title>Transitive closure of {root} under {pred}</title>'
+    prov = [titletag(f'Transitive closure of {root} under {pred}'),
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
     if local_filepath is not None:
@@ -166,11 +167,17 @@ examples = (
     ('Vertebrata', a, 'NCBITaxon:7742', '?depth=40'),
     ('Metazoa', a, 'NCBITaxon:33208', '?depth=40'),
     ('Rodentia', a, 'NCBITaxon:9989'),
+    ('Insecta', a, 'NCBITaxon:50557', '?depth=40'),
     ('Neurotransmitters', hr, 'CHEBI:25512'),
     ('Neurotransmitters', a, 'NLXMOL:100306'),
     ('IRIs ok for roots', a, 'http://uri.neuinfo.org/nif/nifstd/nlx_mol_100306'),
     ('Provenance', 'isDefinedBy',
      'http://ontology.neuinfo.org/NIF/ttl/generated/chebislim.ttl', '?depth=1'),
+)
+
+extra_examples = (
+    ('Old NIFGA part of', hpp, 'BIRNLEX:796'),
+    ('Cereberal cortex parts', po, 'UBERON:0002749'),
 )
 
 file_examples = (
@@ -198,21 +205,15 @@ def server(api_key=None, verbose=False):
     app = Flask('ontology tree service')
     basename = 'trees'
 
-    def link(href, value=None):
-        if value is None:
-            value = href
-        return f'<a href="{href}">{value}</a>'
-
     @app.route(f'/{basename}', methods=['GET'])
     @app.route(f'/{basename}/', methods=['GET'])
     def route_():
         d = url_for('route_docs')
         e = url_for('route_examples')
-        return ('<html><body>'
-                f'{link(d, "Docs")}'
-                '<br>'
-                f'{link(e, "Examples")}'
-                '</body><html>')
+        return htmldoc(atag(d, 'Docs'),
+                       '<br>',
+                       atag(e, 'Examples'),
+                       title='NIF ontology hierarchies')
 
     @app.route(f'/{basename}/docs', methods=['GET'])
     def route_docs():
@@ -226,16 +227,14 @@ def server(api_key=None, verbose=False):
         flinks = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_filequery", pred=pred, root=root, file=file)}{args[0] if args else ""}">'
                             f'../query/{pred}/{root}/{file}{args[0] if args else ""}</a></td></tr>')
                            for name, pred, root, file, *args in file_examples)
-        return ('<html>'
-                '<body>'
-                '<table><tr><th align="left">Root class</th><th align="left">'
-                '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false</th></tr>'
-                f'{links}</table>'
-                '<table><tr><th align="left">Root class</th><th align="left">'
-                '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false</th></tr>'
-                f'{flinks}</table>'
-                '</body>'
-                '</html>')
+        return htmldoc(('<table><tr><th align="left">Root class</th><th align="left">'
+                        '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false</th></tr>'
+                        f'{links}</table>'
+                        '<table><tr><th align="left">Root class</th><th align="left">'
+                        '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false</th></tr>'
+                        f'{flinks}</table>'),
+                       title='Example hierarchy queries'
+        )
 
     @app.route(f'/{basename}/query/<pred>/<root>', methods=['GET'])
     def route_query(pred, root):
@@ -291,18 +290,23 @@ def test():
                      for k in ('route_', 'route_docs', 'route_filequery',
                                'route_examples', 'route_iriquery', 'route_query'))
 
-    for _, predicate, root, *_ in examples:
+    for _, predicate, root, *_ in examples + extra_examples:
+        if root == 'UBERON:0001062':
+            continue  # too big
+
+        print('ontree testing', predicate, root)
         if root.startswith('http'):
             root = root.split('://')[-1]  # FIXME nginx behavior...
-            route_iriquery(predicate, root)
+            resp = route_iriquery(predicate, root)
         else:
-            route_query(predicate, root)
+            resp = route_query(predicate, root)
 
     for _, predicate, root, file, *args in file_examples:
+        print('ontree testing', predicate, root, file)
         if args and 'restriction' in args[0]:
             request.args['restriction'] = 'true'
 
-        route_filequery(predicate, root, file)
+        resp = route_filequery(predicate, root, file)
 
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')

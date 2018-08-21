@@ -375,7 +375,8 @@ def main():
     def datan(head):
         return ndata[nheader.index(head)]
 
-    embed()
+    if __name__ == '__main__':
+        embed()
 
 ###
 #   ============================ crazy curation below seek no reason here
