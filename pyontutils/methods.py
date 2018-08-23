@@ -287,6 +287,7 @@ triples += (  # material entities
        #),
     #(ilxtr.physiologicalSystemDisjointWithOrganism, owl.disjointWith, OntTerm('NCBITaxon:1')),
     oc(ilxtr.viralParticle, ilxtr.physiologicalSystem),
+    oc(ilxtr.AAVretro, ilxtr.viralParticle),
 
     oc(OntTerm('UBERON:0000465'), ilxtr.materialEntity),
     oc(OntTerm('UBERON:0000955'), OntTerm('UBERON:0000465')),
@@ -1473,6 +1474,18 @@ triples = (
        #(ilxtr.hasPrimaryParticipant, OntTerm()),
        #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
        synonyms=('intracellular injection',)),
+
+    _t(i.d, 'viral injection technique',
+       (hasPart, tech.injection),
+       (hasParticipant, ilxtr.viralParticle),
+       def_='a technique for injecting viral particles',
+    ),
+
+    _t(i.d, 'AAVretro injection technique',
+       (hasPart, tech.injection),
+       (hasParticipant, ilxtr.AAVretro),
+       synonyms=('AAVretro injection',)
+    ),
 
     _t(i.d, 'electrical delivery technique',
        # FIXME electroporation doesn't actually work this way
