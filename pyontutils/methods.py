@@ -172,6 +172,12 @@ triples += (
     oop(ilxtr.hasResult),  # or hadResult ... 
     (ilxtr.hasResult, rdfs.subClassOf, prov.generated),
     (ilxtr.hasResult, rdfs.domain, ilxtr.protocolExecution),
+    # FIXME this domain restriction may not work quite like we want it to
+    # ideally we would like to take an instance of a material entity + an aspect
+    # and bind the result to that pair, with some additional sematics outside owl
+    # you could use [ a protc:Result; protc:onAspect asp:myAspect; protc:resultValue 100; protc:impl <some impl id>; protc:prov <id>]
+    # we could then and lift that to [ a owl:Restriction; owl:onProperty asp:myAspect; owl:hasValue 100]
+    # or we could create a new iri from the intersection of the aspect and the implementation or better yet the execution prov id ...
     (ilxtr.hasResult, rdfs.range, ilxtr.result),
 
     oc_(ilxtr.protocolExecution,
@@ -407,6 +413,8 @@ triples += (  # material entities
     oc(ilxtr.detectedPhenomena, ilxtr.materialEntity),  # ie a phenomena that we know how to detect
     oc(ilxtr.fluorescentMolecule, ilxtr.materialEntity),
 
+    oc(ilxtr.cultureMedia, ilxtr.materialEntity),
+
 )
 
 triples += (  # changes
@@ -525,6 +533,7 @@ triples += (  # aspects
         restriction(ilxtr.hasMaterialContext, ilxtr.periodicPhenomena),
         restriction(ilxtr.hasAspectContext, asp.startTime),
         restriction(ilxtr.hasAspectContext, asp.endTime)),
+    olit(asp.timeInterval, NIFRID.symomym, 'duration'),
 
     # no teleportation allowed unless you are a photon in its own reference frame
     oc(asp.startLocation, asp.location),
@@ -1262,6 +1271,14 @@ triples = (
        # parent partof primary participant deliver or something
       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:38867', label='anaesthetic')),),
 
+    _t(tech.sedation, 'sedation technique',
+       # FIXME sedative administration? reading a boring book? physical cooling? bonking on the head?
+       (ilxtr.hasPrimaryAspect, asp.behavioralActivity),  # FIXME asp.activeMovement? doesn't block pain?
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       comment='QUESTION: what is the difference between sedation and anaesthesia?',
+       synonyms=('sedation',)),
+
     _t(tech.anaesthesia, 'anaesthesia technique',
        # anaesthesia is an excellent example of a case where
        # just the use of an anaesthetic is not sufficient
@@ -1861,6 +1878,15 @@ triples = (
        restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)), #  FIXME data property  Literal(True)),
        synonyms=('in vivo',),),
 
+    _t(tech.animal, 'in vivo animal technique',
+       # FIXME vs animal experiment ...
+       # TODO we probably need a compose operator in addition to hasPart:
+       # which is to say that this technique is the union of these other techniques ...
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       (ilxtr.hasConstrainingAspect, asp.livingness),
+       restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)),
+    ),
+
     _t(i.d, 'in utero technique',
        # has something in 
        #(hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
@@ -2122,7 +2148,9 @@ triples = (
        # maybe useing subClassOf instead of equivalentClass?
        synonyms=('cell culture',),),
     # I think this is the right way to add 'non-definitional' restrictions to a technique
-    oc_(tech.cellCulture, restriction(ilxtr.hasConstrainingAspect, asp.temperature)),
+    oc_(tech.cellCulture,
+        restriction(ilxtr.hasConstrainingAspect, asp.temperature),
+        restriction(hasInput, ilxtr.cultureMedia)),
 
     _t(i.d, 'yeast culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
@@ -2610,7 +2638,7 @@ triples = (
        synonyms=('maintenance technique',),
        equivalentClass=oECN),
 
-    _t(i.d, 'analysis technique',
+    _t(tech.analysis, 'analysis technique',
        (realizes, ilxtr.analysisRole),
        synonyms=('analysis',),),
 
@@ -2662,7 +2690,7 @@ triples = (
        # TODO
       ),
 
-    _t(i.d, 'modern in vitro slice electrophysiology',
+    _t(i.d, 'in vitro IR DIC slice electrophysiology',
        #(hasPart, tech.IRDIC),
        (hasInput, ilxtr.IRCamera),
        (hasInput, ilxtr.DICmicroscope),
@@ -2958,6 +2986,11 @@ triples = (
        synonyms=('state creation technique', 'state induction technique')
     ),
 
+    _t(tech.activityModulation, 'activity modulation technique',
+       (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+       synonyms=('modulation technique', 'modulation', 'activity modulation')),
+
     _t(i.d, 'activation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
@@ -2985,7 +3018,7 @@ triples = (
        synonyms=('euthanasia',),
     ),
 
-    _t(i.d, 'perfusion technique',
+    _t(tech.perfusion, 'perfusion technique',
        (ilxtr.hasSomething, i.d),
       ),
 
