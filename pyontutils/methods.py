@@ -8,7 +8,7 @@ from pyontutils.core import partOf, hasRole, locatedIn
 from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
 from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
 from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist, branch
+from pyontutils.methods_core import asp, tech, prot, prov, methods_core, _t, restN, oECN, olist, branch
 
 # NOTE if vim is slow it is probably becuase there are
 # so many nested parens `:set foldexpr=` fixes the problem
@@ -111,11 +111,6 @@ triples += ( # information entity
     (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
     olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
 
-    oc_(ilxtr.protocolExecution,
-       oec(ilxtr.technique,
-           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
-    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
-
     oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
 
     # information artifacts
@@ -164,6 +159,28 @@ triples += ( # information entity
 
 )
 
+triples += (
+    # results
+    oc(ilxtr.result),
+    olit(ilxtr.result, definition,
+         ('The result of a measurement.')),
+    oop(ilxtr.resultAspect),
+    (ilxtr.resultAspect, rdfs.domain, ilxtr.result),
+    (ilxtr.resultAspect, rdfs.range, ilxtr.aspect),  # these are preferably units?
+    odp(ilxtr.resultValue),
+
+    oop(ilxtr.hasResult),  # or hadResult ... 
+    (ilxtr.hasResult, rdfs.subClassOf, prov.generated),
+    (ilxtr.hasResult, rdfs.domain, ilxtr.protocolExecution),
+    (ilxtr.hasResult, rdfs.range, ilxtr.result),
+
+    oc_(ilxtr.protocolExecution,
+       oec(ilxtr.technique,
+           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
+    (ilxtr.protocolExecution, rdfs.subClassOf, prov.Activity),
+    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
+)
+
 triples += (  # material entities
 
     ## material entity
@@ -196,23 +213,6 @@ triples += (  # material entities
         # since they are/can be derived?
         # https://en.wikipedia.org/wiki/Physical_constant
        ),
-
-    # local _to this universe_
-    oc(asp.speedOfLight, asp.Local),  # in a vacuum, as far as we know this is invariant in all universes
-    oc(asp.PlankAspect, ilxtr.aspect),
-    oc(asp.elementaryCharge, ilxtr.aspect),
-    oc(asp.JosephsonAspect, ilxtr.aspect),
-    oc(asp.vonKlitzingAspect, ilxtr.aspect),
-    oc(asp.GravitationalAspect, ilxtr.aspect),
-    oc(asp.BoltzmannAspect, ilxtr.aspect),
-    oc(asp.electronRestMass, ilxtr.aspect),
-    oc(asp.gravitationalCouplingAspect, ilxtr.aspect),
-    oc(asp.fineStructureAspect, ilxtr.aspect),
-    oc(asp.permittivityOfFreeSpace, ilxtr.aspect),
-    oc(asp.permeabilityOfFreeSpace, ilxtr.aspect),
-    oc(asp.impedanceOfFreeSpace, ilxtr.aspect),
-    oc(asp.fineStructureAspect, ilxtr.aspect),
-    oc(asp.CoulombsAspect, ilxtr.aspect),
 
     oc(ilxtr.physicalForce, ilxtr.materialEntity),
     oc(ilxtr.mechanicalForce, ilxtr.physicalForce),
@@ -435,6 +435,23 @@ triples += (  # changes
 )
 
 triples += (  # aspects
+
+    # local _to this universe_
+    oc(asp.speedOfLight, asp.Local),  # in a vacuum, as far as we know this is invariant in all universes
+    oc(asp.PlankAspect, ilxtr.aspect),
+    oc(asp.elementaryCharge, ilxtr.aspect),
+    oc(asp.JosephsonAspect, ilxtr.aspect),
+    oc(asp.vonKlitzingAspect, ilxtr.aspect),
+    oc(asp.GravitationalAspect, ilxtr.aspect),
+    oc(asp.BoltzmannAspect, ilxtr.aspect),
+    oc(asp.electronRestMass, ilxtr.aspect),
+    oc(asp.gravitationalCouplingAspect, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.permittivityOfFreeSpace, ilxtr.aspect),
+    oc(asp.permeabilityOfFreeSpace, ilxtr.aspect),
+    oc(asp.impedanceOfFreeSpace, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.CoulombsAspect, ilxtr.aspect),
 
     # aspect value
 
@@ -761,6 +778,10 @@ triples += (  # aspects
         # TODO hasMaterialAspectContext binding the frequency and the strenght respectively
         restriction(ilxtr.hasMaterialContext, ilxtr.magneticField),
         restriction(ilxtr.hasMaterialContext, ilxtr.radiowaves)),
+
+    oc(asp.concentration, asp.nonLocal),
+    oc_(asp.concentration,
+        restriction(ilxtr.hasMaterialContext, ilxtr.solvent)),
 )
 
 triples += (
@@ -864,7 +885,7 @@ filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
             'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
             'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX',
+            'NLX', 'oboInOwl'
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = methods_core.iri, methods_helper.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
@@ -1886,8 +1907,11 @@ triples = (
                  'sample preparation',
                  'specimine preparation',),),
 
-    _t(i.d, 'dissection technique',
+    _t(tech.dissection, 'dissection technique',
        (ilxtr.hasPrimaryOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
+       # FIXME need to implement the dual for this
+       # hasDualTechnique -> hasPrimaryInput -> hasPart <-> removal invariant aka wasPartOf
+       # vs extraction technique ...
        synonyms=('dissection',),),
 
     _t(i.d, 'atlas guided microdissection technique',
@@ -2093,9 +2117,12 @@ triples = (
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:2')),  # FIXME > 1 label
        synonyms=('bacterial culture',),),
 
-    _t(i.d, 'cell culture technique',
+    _t(tech.cellCulture, 'cell culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('SAO:1813327414', label='Cell')),
+       # maybe useing subClassOf instead of equivalentClass?
        synonyms=('cell culture',),),
+    # I think this is the right way to add 'non-definitional' restrictions to a technique
+    oc_(tech.cellCulture, restriction(ilxtr.hasConstrainingAspect, asp.temperature)),
 
     _t(i.d, 'yeast culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
@@ -2952,7 +2979,7 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
       ),
 
-    _t(i.d, 'euthanasia technique',
+    _t(tech.euthanasia, 'euthanasia technique',
        (ilxtr.hasPrimaryAspect, asp.aliveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        synonyms=('euthanasia',),

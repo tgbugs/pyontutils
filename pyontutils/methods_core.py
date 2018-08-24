@@ -77,7 +77,7 @@ prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
-obo, RO, *_ = makeNamespaces('obo', 'RO')
+obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
@@ -90,6 +90,26 @@ _repo = True
 debug = True
 
 triples = (
+    # data properties
+
+    odp(ilxtr.hasAspectValue),
+    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
+    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
+         'has constraining aspect value'),
+    olit(ilxtr.hasConstrainingAspect_value, definition,
+         ('In some cases a protocol is classified based on the value '
+          'that a constraining aspect has, not just that it is constrained on that aspect. ')),
+
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.comment,
+         ('For example, dead and alive are 0 and 1 on livingness respectively. '
+          'we can also define dead and alive, as disjoint, but that does not effectively '
+          'model that they are two sides of the same coin for any binary definition. '
+          'Note that this implies that these are not just qualities, they must have an '
+          'explicit value outcome defined.'
+         )
+        ),
+
     # object properties
     oop(ilxtr.hasOperationDefinition),
     oop(ilxtr.hasDefiningProtocol, ilxtr.hasOperationDefinition),
@@ -528,24 +548,6 @@ triples = (
     oop(ilxtr.hasConstrainingAspect_dAdT, ilxtr.hasIntention),
     olit(ilxtr.hasConstrainingAspect_dAdT, rdfs.label,
          'has intended change in constraining aspect'),
-
-    odp(ilxtr.hasAspectValue),
-    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
-    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
-    olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
-         'has constraining aspect value'),
-    olit(ilxtr.hasConstrainingAspect_value, definition,
-         ('In some cases a protocol is classified based on the value '
-          'that a constraining aspect has, not just that it is constrained on that aspect. ')),
-
-    olit(ilxtr.hasConstrainingAspect_value, rdfs.comment,
-         ('For example, dead and alive are 0 and 1 on livingness respectively. '
-          'we can also define dead and alive, as disjoint, but that does not effectively '
-          'model that they are two sides of the same coin for any binary definition. '
-          'Note that this implies that these are not just qualities, they must have an '
-          'explicit value outcome defined.'
-         )
-        ),
 
     oop(ilxtr.hasAspect, RO['0000086']),
     # FIXME make it clear that this is between material entities (it is subclassof quality)
