@@ -20,7 +20,7 @@ BOT_CON = '└'
 BOT_STEM = BOT_CON + LEAF
 TOP_CON = '┌'
 
-CYCLE = 'CYCLE DETECTED DERPS'
+CYCLE = 'CYCLE DETECTED'
 
 DEP = 'http://www.w3.org/2002/07/owl#deprecated'
 

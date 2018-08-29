@@ -18,7 +18,10 @@ Options:
 """
 
 import os
+import re
 import subprocess
+from ast import literal_eval
+from pathlib import Path
 from datetime import datetime
 from inspect import getsourcelines
 from urllib.error import HTTPError
@@ -28,11 +31,13 @@ from flask import Flask, url_for, redirect, request, render_template, render_tem
 from pyontutils import scigraph
 from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize
-from pyontutils.core import makeGraph
+from pyontutils.core import makeGraph, qname, OntId
+from pyontutils.ontload import import_tree
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
+sgc = scigraph.Cypher(cache=False, verbose=True)
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -46,6 +51,115 @@ _hr = 'http://purl.obolibrary.org/obo/RO_0000087'
 inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
+
+
+def fix_quotes(string, s1=':["', s2='"],'):
+    out = []
+    def subsplit(sstr, s=s2):
+        #print(s)
+        if s == '",' and sstr.endswith('"}'):  # special case for end of record
+            s = '"}'
+        if s:
+            string, *rest = sstr.rsplit(s, 1)
+        else:
+            string = sstr
+            rest = '',
+
+        if rest:
+            #print('>>>>', string)
+            #print('>>>>', rest)
+            r, = rest
+            if s == '"],':
+                fixed_string = fix_quotes(string, '","', '') + s + r
+            else:
+                fixed_string = string.replace('"', r'\"') + s + r
+
+            return fixed_string
+
+    for sub1 in string.split(s1):
+        ss = subsplit(sub1)
+        if ss is None:
+            if s1 == ':["':
+                out.append(fix_quotes(sub1, ':"', '",'))
+            else:
+                out.append(sub1)
+        else:
+            out.append(ss)
+
+    return s1.join(out)
+
+
+def fix_cypher(record):
+    rep = re.sub(r'({|, )(\S+)(: "|: \[)', r'\1"\2"\3',
+                 fix_quotes(record.strip()).
+                 split(']', 1)[1] .
+                 replace(':"', ': "') .
+                 replace(':[', ': [') .
+                 replace('",', '", ') .
+                 replace('"],', '"], ') .
+                 replace('\n', '\\n') .
+                 replace('xml:lang="en"', r'xml:lang=\"en\"')
+                )
+    try:
+        value = {qname(k):v for k, v in literal_eval(rep).items()}
+    except (ValueError, SyntaxError) as e:
+        print(repr(record))
+        print(repr(rep))
+        raise e
+
+    return value
+
+
+def cypher_query(sgc, query, limit):
+    out = sgc.execute(query, limit)
+    rows = []
+    if out:
+        for raw in out.split('|')[3:-1]:
+            record = raw.strip()
+            if record:
+                d = fix_cypher(record)
+                rows.append(d)
+
+    return rows
+
+
+class ImportChain:
+    def __init__(self, sgg=sgg, sgc=sgc):
+        self.sgg = sgg
+        self.sgc = sgc
+
+    def get_scigraph_onts(self):
+        self.results = cypher_query(self.sgc, 'MATCH (n:Ontology) RETURN n', 1000)
+        return self.results
+
+    def get_itrips(self):
+        results = self.get_scigraph_onts()
+        iris = sorted(set(r['iri'] for r in results))
+        nodes = [(i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
+                                           direction='OUTGOING'))
+                 for i in iris]
+        imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
+                         for e in n['edges']])
+                   for i, n in nodes if n]                               
+        self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
+                                 for i, *ts in imports if ts for t in ts))
+        return self.itrips
+
+    def make_import_chain(self, ontology='nif.ttl'):
+        itrips = self.get_itrips()
+        ontologies = ontology,  # hack around bad code in ontload
+        import_graph = rdflib.Graph()
+        [import_graph.add(t) for t in itrips]
+        self.tree, self.extra = next(import_tree(import_graph, ontologies))
+        return self.tree, self.extra
+
+    def write_import_chain(self, location='/tmp/'):
+        tree, extra  = self.make_import_chain()
+        self.name = Path(next(iter(tree.keys()))).name
+        self.path = Path(location, f'{self.name}-import-closure.html')
+        with open(self.path.as_posix(), 'wt') as f:
+            f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+
 
 def graphFromGithub(link, verbose=False):
     # mmmm no validation
@@ -202,6 +316,9 @@ def server(api_key=None, verbose=False):
     line = getsourcelines(render)[-1]
     wgb = wasGeneratedBy.format(line=line)
 
+    importchain = ImportChain()
+    importchain.make_import_chain()  # run this once, restart services on a new release
+
     app = Flask('ontology tree service')
     basename = 'trees'
 
@@ -210,9 +327,12 @@ def server(api_key=None, verbose=False):
     def route_():
         d = url_for('route_docs')
         e = url_for('route_examples')
+        i = url_for('route_import_chain')
         return htmldoc(atag(d, 'Docs'),
                        '<br>',
                        atag(e, 'Examples'),
+                       '<br>',
+                       atag(i, 'Import chain'),
                        title='NIF ontology hierarchies')
 
     @app.route(f'/{basename}/docs', methods=['GET'])
@@ -235,6 +355,10 @@ def server(api_key=None, verbose=False):
                         f'{flinks}</table>'),
                        title='Example hierarchy queries'
         )
+
+    @app.route(f'/{basename}/imports/chain', methods=['GET'])
+    def route_import_chain():
+        return importchain.extra.html
 
     @app.route(f'/{basename}/query/<pred>/<root>', methods=['GET'])
     def route_query(pred, root):

@@ -20,13 +20,10 @@ Options:
     -w --warn           warn on errors
 
 """
-import re
-import pprint
-from ast import literal_eval
 from docopt import docopt
 from pyontutils.scigraph import *
 from pyontutils.utils import TermColors as tc
-from pyontutils.core import PREFIXES, qname, OntId
+from pyontutils.core import PREFIXES, qname
 
 
 class scigPrint:
@@ -180,76 +177,6 @@ class scigPrint:
             scigPrint.pprint_edge(edge)
 
 
-def fix_quotes(string, s1=':["', s2='"],'):
-    out = []
-    def subsplit(sstr, s=s2):
-        #print(s)
-        if s == '",' and sstr.endswith('"}'):  # special case for end of record
-            s = '"}'
-        if s:
-            string, *rest = sstr.rsplit(s, 1)
-        else:
-            string = sstr
-            rest = '',
-
-        if rest:
-            #print('>>>>', string)
-            #print('>>>>', rest)
-            r, = rest
-            if s == '"],':
-                fixed_string = fix_quotes(string, '","', '') + s + r
-            else:
-                fixed_string = string.replace('"', r'\"') + s + r
-
-            return fixed_string
-
-    for sub1 in string.split(s1):
-        ss = subsplit(sub1)
-        if ss is None:
-            if s1 == ':["':
-                out.append(fix_quotes(sub1, ':"', '",'))
-            else:
-                out.append(sub1)
-        else:
-            out.append(ss)
-
-    return s1.join(out)
-
-
-def fix_cypher(record):
-    rep = re.sub(r'({|, )(\S+)(: "|: \[)', r'\1"\2"\3',
-                 fix_quotes(record.strip()).
-                 split(']', 1)[1] .
-                 replace(':"', ': "') .
-                 replace(':[', ': [') .
-                 replace('",', '", ') .
-                 replace('"],', '"], ') .
-                 replace('\n', '\\n') .
-                 replace('xml:lang="en"', r'xml:lang=\"en\"')
-                )
-    try:
-        value = {qname(k):v for k, v in literal_eval(rep).items()}
-    except (ValueError, SyntaxError) as e:
-        print(repr(record))
-        print(repr(rep))
-        raise e
-
-    return value
-
-
-def cypher_query(sgc, query, limit):
-    out = sgc.execute(query, limit)
-    rows = []
-    if out:
-        for raw in out.split('|')[3:-1]:
-            record = raw.strip()
-            if record:
-                d = fix_cypher(record)
-                rows.append(d)
-
-    return rows
-
-
 def main():
     args = docopt(__doc__, version='scig 0')
     #print(args)
@@ -312,6 +239,8 @@ def main():
             print(fmt.format(repr(curie)), repr(iri))
     elif args['cy']:
         c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        import pprint
+        from pyontutils.ontree import cypher_query
         results = cypher_query(c, args['<query>'], args['--limit'])
         if results:
             pprint.pprint(results)
@@ -320,31 +249,16 @@ def main():
     elif args['onts']:
         from pathlib import Path
         import rdflib
-        from pyontutils.ontload import import_tree
+        from pyontutils.ontree import ImportChain
         from IPython import embed
 
-        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        sgc = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
         sgg = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
-
-        results = cypher_query(c, 'MATCH (n:Ontology) RETURN n', 1000)
-        iris = sorted(set(r['iri'] for r in results))
-        nodes = [(i, sgg.getNeighbors(i, relationshipType='isDefinedBy',
-                                      direction='OUTGOING'))
-                 for i in iris]
-        imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
-                         for e in n['edges']])
-                   for i, n in nodes if n]                               
-        itrips = sorted(set(t for i, *ts in imports if ts for t in ts))
-        ontologies = 'nif.ttl',  # hack around bad code in ontload
-        import_graph = rdflib.Graph()
-        [import_graph.add((rdflib.URIRef(OntId(e).iri) for e in t)) for t in itrips]
-        for tree, extra in import_tree(import_graph, ontologies):
-            name = Path(next(iter(tree.keys()))).name
-            with open(Path('/tmp/', f'{name}-import-closure.html').as_posix(), 'wt') as f:
-                f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
-
-        fields = 'iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition', 'rdfs:comment', 'dc:publisher'
-        for r in results:
+        ic = ImportChain(sgg, sgc)
+        ic.write_import_chain()
+        fields = ('iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition',
+                  'rdfs:comment', 'dc:publisher')
+        for r in ic.results:
             scigPrint.pprint_meta(r)
             continue
             if len(r) > 1:
