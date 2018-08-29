@@ -487,7 +487,7 @@ def normalize_prefixes(graph, curies):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph, ontologies):
+def import_tree(graph, ontologies, **kwargs):
     for ontology in ontologies:
         thisfile = Path(ontology).name
         print(thisfile)
@@ -495,7 +495,7 @@ def import_tree(graph, ontologies):
         mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
         j = mg.make_scigraph_json('owl:imports', direct=True)
         try:
-            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces, **kwargs)
             #print(t)
             yield t, te
         except KeyError:

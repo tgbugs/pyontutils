@@ -23,7 +23,6 @@ import subprocess
 from ast import literal_eval
 from pathlib import Path
 from datetime import datetime
-from inspect import getsourcelines
 from urllib.error import HTTPError
 import rdflib
 from docopt import docopt, parse_defaults
@@ -33,6 +32,7 @@ from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize
 from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.ontload import import_tree
+from pyontutils.utils import getSourceLine
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)
@@ -124,9 +124,10 @@ def cypher_query(sgc, query, limit):
 
 
 class ImportChain:
-    def __init__(self, sgg=sgg, sgc=sgc):
+    def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
         self.sgg = sgg
         self.sgc = sgc
+        self.wasGeneratedBy = wasGeneratedBy
 
     def get_scigraph_onts(self):
         self.results = cypher_query(self.sgc, 'MATCH (n:Ontology) RETURN n', 1000)
@@ -150,7 +151,11 @@ class ImportChain:
         ontologies = ontology,  # hack around bad code in ontload
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
-        self.tree, self.extra = next(import_tree(import_graph, ontologies))
+
+        line = getSourceLine(self.__class__)
+        wgb = self.wasGeneratedBy.format(line=line)
+        prov = makeProv('owl:imports', 'NIFTTL:nif.ttl', wgb)
+        self.tree, self.extra = next(import_tree(import_graph, ontologies, html_head=prov))
         return self.tree, self.extra
 
     def write_import_chain(self, location='/tmp/'):
@@ -168,11 +173,14 @@ def graphFromGithub(link, verbose=False):
         print(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
-    kwargs = {'local':local, 'verbose':verbose}
-    prov = [titletag(f'Transitive closure of {root} under {pred}'),
+def makeProv(pred, root, wgb):
+    return [titletag(f'Transitive closure of {root} under {pred}'),
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
+
+def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
+    kwargs = {'local':local, 'verbose':verbose}
+    prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
         github_link = f'https://github.com/SciCrunch/NIF-Ontology/raw/{branch}/{local_filepath}'
         prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{github_link}">')
@@ -313,10 +321,10 @@ def server(api_key=None, verbose=False):
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
                       f'{commit}/pyontutils/{__file__name}'
                       '#L{line}')
-    line = getsourcelines(render)[-1]
+    line = getSourceLine(render)
     wgb = wasGeneratedBy.format(line=line)
 
-    importchain = ImportChain()
+    importchain = ImportChain(wasGeneratedBy=wasGeneratedBy)
     importchain.make_import_chain()  # run this once, restart services on a new release
 
     app = Flask('ontology tree service')
