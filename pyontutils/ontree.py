@@ -442,6 +442,7 @@ def main():
     verbose = args['--verbose']
     sgg._verbose = verbose
     sgv._verbose = verbose
+    sgc._verbose = verbose
 
     if args['--test']:
         test()
@@ -455,6 +456,7 @@ def main():
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
+            sgc.api_key = api_key
         app = server(verbose=verbose)
         app.debug = False
         app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
