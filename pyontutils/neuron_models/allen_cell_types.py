@@ -315,5 +315,3 @@ def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
 if __name__ == '__main__':
     args = docopt(__doc__, version='0.0.4')
     main(args)
-else:
-    main()

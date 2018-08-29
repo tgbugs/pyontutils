@@ -250,103 +250,104 @@ class Huang2017(Genes, Species):
     Basket = Phenotype('ilxtr:BasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
 
 
-with Huang2017:
-    with Neuron_(Mouse, Neocortex) as context:
-        #context.subClassOf(ilxtr.huang2017)
-        # TODO add the names assigned here as abbrevs somehow
-
-        #fig1b
-        # FIXME is approach to disjointness VS adding negative phenotypes
-        Neuron(Pvalb).disjointWith(Neuron(Sst), Neuron(Htr3a))
-        #Neuron(Pvalb).equivalentClass(Neuron(NegPhenotype(Sst)), Neuron(NegPhenotype(Htr3a)))
-        # FIXME for some reason the NegPhenotype neurons above fail to be added to the graph!??!
-        #a = Neuron(NegPhenotype(Sst))
-        #b = Neuron(NegPhenotype(Htr3a))
-        #Neuron(Pvalb).equivalentClass(a, b)
-        Neuron(Sst).disjointWith(Neuron(Htr3a))
-        Neuron(Vip).subClassOf(Neuron(Htr3a))
-        Neuron(Cck).subClassOf(Neuron(Htr3a))
-        Neuron(Nkx2_1).disjointWith(Neuron(Nos1), Neuron(Htr3a), Neuron(Calb2))
-        Neuron(Nos1).disjointWith(Neuron(Htr3a), Neuron(Calb2))
-
-        Neuron(Vip, Cck)
-        Neuron(Vip, Calb2, Cck)
-        Neuron(Vip, Calb2)
-        Neuron(Sst, Calb2)
-
-        fig1a = dict(
-        PVBC = Neuron(Basket, PV),
-        CHC = Neuron(Nkx2_1),
-        CCKC = Neuron(Basket, VIP, CCK),
-        MNC = Neuron(SST, CR),
-        ISC = Neuron(VIP, CR),
-        LPC = Neuron(SST, NOS1),
-        )
-
-        f7 = dict(
-        equivs = (PVBCEq, CHCEq, CCKCEq, MNCEq, ISCEq, LPCEq),
-        peptides = (PVBCPep, CHCPep, CCKCPep, MNCPep, ISCPep, LPCPep),
-        signaling = (PVBCSig, CHCSig, CCKCSig, MNCSig, ISCSig, LPCSig),
-        dendrite = (PVBCDend, CHCDend, CCKCDend, MNCDend, ISCDend, LPCDend),
-        axon = (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
-        other = (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
-
-        figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                            label=f'{type} all neuron', override=True)
-                for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
-
-        for k, v in fig1a.items():
-            # FIXME ISC currently classifies as vip cr cck which is incorrect
-            # some _subset_ of those have cck, but it is not clear how many
-            figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
-
-        peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
-                for l, p in zip(fig1a, f7['peptides'])]
-        sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
-                for l, p in zip(fig1a, f7['signaling'])]
-        # asserted by Tom Gillespie interpreting Huang
-        [p.equivalentClass(s) for p, s in zip(peps, sigs)]
-        # assert that the peptide markers are disjoint
-        for dis in (peps, sigs, tuple(fig1a.values())):
-            for i, n in enumerate(dis[:-1]):
-                for on in dis[i+1:]:
-                    n.disjointWith(on)
-        #LPCbyPepties = Neuron(*LPCPep.pes)
-
-# common usage types
-# allen 2016 hongwei
-
-#embed()
-for n, p in Huang2017.items():
-    if isinstance(p, Phenotype):
-        # FIXME rdflib allows instances but tests type so OntId can go in, but won't ever match
-        ident = OntId(p.p)
-        if n in Genes.__dict__:
-            lt = (rdflib.URIRef(ident), rdfs.label, rdflib.Literal(n))
-            Neuron.core_graph.add(lt)
-            Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
-            if ident.curie.startswith('ilxtr:'):
-                sct = (rdflib.URIRef(ident), rdfs.subClassOf, ilxtr.gene)
-                Neuron.core_graph.add(sct)
-                Neuron.out_graph.add(sct)
-        else:
-            lt = (rdflib.URIRef(ident), rdfs.label, rdflib.Literal(OntTerm(ident).label))
-            Neuron.core_graph.add(lt)
-            Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
-
-Neuron.write()
-Neuron.write_python()
-res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
-       OntTerm(s).curie.startswith('ilxtr:')
-       for r in OntTerm.query(label=l.toPython()) if
-       r.curie.startswith('ilxtr:')]
-mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
-          OntTerm(s).curie.startswith('ilxtr:')
-          for r in OntTerm.query(label=l.toPython()) if
-          not r.curie.startswith('ilxtr:')]
-
 def main():
-    embed()
+    with Huang2017:  # WHY DOES THIS WORKING AND Basic fail!??!?!?!?
+        with Neuron_(Mouse, Neocortex) as context:
+            #context.subClassOf(ilxtr.huang2017)
+            # TODO add the names assigned here as abbrevs somehow
+
+            #fig1b
+            # FIXME is approach to disjointness VS adding negative phenotypes
+            Neuron(Pvalb).disjointWith(Neuron(Sst), Neuron(Htr3a))
+            #Neuron(Pvalb).equivalentClass(Neuron(NegPhenotype(Sst)), Neuron(NegPhenotype(Htr3a)))
+            # FIXME for some reason the NegPhenotype neurons above fail to be added to the graph!??!
+            #a = Neuron(NegPhenotype(Sst))
+            #b = Neuron(NegPhenotype(Htr3a))
+            #Neuron(Pvalb).equivalentClass(a, b)
+            Neuron(Sst).disjointWith(Neuron(Htr3a))
+            Neuron(Vip).subClassOf(Neuron(Htr3a))
+            Neuron(Cck).subClassOf(Neuron(Htr3a))
+            Neuron(Nkx2_1).disjointWith(Neuron(Nos1), Neuron(Htr3a), Neuron(Calb2))
+            Neuron(Nos1).disjointWith(Neuron(Htr3a), Neuron(Calb2))
+
+            Neuron(Vip, Cck)
+            Neuron(Vip, Calb2, Cck)
+            Neuron(Vip, Calb2)
+            Neuron(Sst, Calb2)
+
+            fig1a = dict(
+            PVBC = Neuron(Basket, PV),
+            CHC = Neuron(Nkx2_1),
+            CCKC = Neuron(Basket, VIP, CCK),
+            MNC = Neuron(SST, CR),
+            ISC = Neuron(VIP, CR),
+            LPC = Neuron(SST, NOS1),
+            )
+
+            f7 = dict(
+            equivs = (PVBCEq, CHCEq, CCKCEq, MNCEq, ISCEq, LPCEq),
+            peptides = (PVBCPep, CHCPep, CCKCPep, MNCPep, ISCPep, LPCPep),
+            signaling = (PVBCSig, CHCSig, CCKCSig, MNCSig, ISCSig, LPCSig),
+            dendrite = (PVBCDend, CHCDend, CCKCDend, MNCDend, ISCDend, LPCDend),
+            axon = (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
+            other = (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
+
+            figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
+                                label=f'{type} all neuron', override=True)
+                    for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
+
+            for k, v in fig1a.items():
+                # FIXME ISC currently classifies as vip cr cck which is incorrect
+                # some _subset_ of those have cck, but it is not clear how many
+                figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
+
+            peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
+                    for l, p in zip(fig1a, f7['peptides'])]
+            sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
+                    for l, p in zip(fig1a, f7['signaling'])]
+            # asserted by Tom Gillespie interpreting Huang
+            [p.equivalentClass(s) for p, s in zip(peps, sigs)]
+            # assert that the peptide markers are disjoint
+            for dis in (peps, sigs, tuple(fig1a.values())):
+                for i, n in enumerate(dis[:-1]):
+                    for on in dis[i+1:]:
+                        n.disjointWith(on)
+            #LPCbyPepties = Neuron(*LPCPep.pes)
+
+    # common usage types
+    # allen 2016 hongwei
+
+    for n, p in Huang2017.items():
+        if isinstance(p, Phenotype):
+            # FIXME rdflib allows instances but tests type so OntId can go in, but won't ever match
+            ident = OntId(p.p)
+            if n in Genes.__dict__:
+                lt = (rdflib.URIRef(ident), rdfs.label, rdflib.Literal(n))
+                Neuron.core_graph.add(lt)
+                Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
+                if ident.curie.startswith('ilxtr:'):
+                    sct = (rdflib.URIRef(ident), rdfs.subClassOf, ilxtr.gene)
+                    Neuron.core_graph.add(sct)
+                    Neuron.out_graph.add(sct)
+            else:
+                lt = (rdflib.URIRef(ident), rdfs.label, rdflib.Literal(OntTerm(ident).label))
+                Neuron.core_graph.add(lt)
+                Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
+
+    Neuron.write()
+    Neuron.write_python()
+    res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
+           OntTerm(s).curie.startswith('ilxtr:')
+           for r in OntTerm.query(label=l.toPython()) if
+           r.curie.startswith('ilxtr:')]
+    mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
+              OntTerm(s).curie.startswith('ilxtr:')
+              for r in OntTerm.query(label=l.toPython()) if
+              not r.curie.startswith('ilxtr:')]
+
+    if __name__ == '__main__':
+        embed()
+
 
 if __name__ == '__main__':
     main()

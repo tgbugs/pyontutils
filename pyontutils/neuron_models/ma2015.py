@@ -154,4 +154,5 @@ def main():
         rows = [list(r) for r in zip(*csv.reader(f))]
     table1(rows)
 
-main()
+if __name__ == '__main__':
+    main()
