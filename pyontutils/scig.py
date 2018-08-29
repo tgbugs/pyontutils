@@ -26,7 +26,7 @@ from ast import literal_eval
 from docopt import docopt
 from pyontutils.scigraph import *
 from pyontutils.utils import TermColors as tc
-from pyontutils.core import PREFIXES, qname
+from pyontutils.core import PREFIXES, qname, OntId
 
 
 class scigPrint:
@@ -63,7 +63,6 @@ class scigPrint:
 
     @staticmethod
     def wrap(string, start, ind, wrap_=80):
-        from IPython import embed
         if len(string) + start <= wrap_:
             return string
         else:
@@ -73,23 +72,14 @@ class scigPrint:
             words = string.split(' ')
             nwords = len(words)
             word_lens = [len(word) for word in words]
-            #print(word_lens)
             valid_ends = [sum(word_lens[:i + 1]) + i
                           for i, l in enumerate(word_lens)]
-            #print(valid_ends)
-            #embed()
-
             def valid(e):
                 if valid_ends[0] >= e:
                     return valid_ends[0]
                 li, low = [(i, ve) for i, ve in enumerate(valid_ends) if ve < e][-1]
                 hi, high = [(i, ve) for i, ve in enumerate(valid_ends) if ve >= e][0]
-                #print(low, e, high)
                 use_low = e - low < high - e
-                #print(e - low, '<', high - e, '->', use_low)
-                # adjust includes the extra space at the end
-                #lw = word_lens[li]
-                #hw = word_lens[hi]
                 ind = (li if use_low else hi)
                 if ind < nwords - 1:
                     wlp1 = word_lens[ind + 1]
@@ -189,7 +179,6 @@ class scigPrint:
         for edge in sorted(result['edges'], key = lambda e: e['pred']):
             scigPrint.pprint_edge(edge)
 
-print(scigPrint.wrap('asdf asdf asdf asdf asdf asdf asdf asdf asdf', 0, 4, 20))
 
 def fix_quotes(string, s1=':["', s2='"],'):
     out = []
@@ -329,9 +318,31 @@ def main():
         else:
             print('Error?')
     elif args['onts']:
-        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        from pathlib import Path
+        import rdflib
+        from pyontutils.ontload import import_tree
         from IPython import embed
+
+        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        sgg = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
+
         results = cypher_query(c, 'MATCH (n:Ontology) RETURN n', 1000)
+        iris = sorted(set(r['iri'] for r in results))
+        nodes = [(i, sgg.getNeighbors(i, relationshipType='isDefinedBy',
+                                      direction='OUTGOING'))
+                 for i in iris]
+        imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
+                         for e in n['edges']])
+                   for i, n in nodes if n]                               
+        itrips = sorted(set(t for i, *ts in imports if ts for t in ts))
+        ontologies = 'nif.ttl',  # hack around bad code in ontload
+        import_graph = rdflib.Graph()
+        [import_graph.add((rdflib.URIRef(OntId(e).iri) for e in t)) for t in itrips]
+        for tree, extra in import_tree(import_graph, ontologies):
+            name = Path(next(iter(tree.keys()))).name
+            with open(Path('/tmp/', f'{name}-import-closure.html').as_posix(), 'wt') as f:
+                f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+
         fields = 'iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition', 'rdfs:comment', 'dc:publisher'
         for r in results:
             scigPrint.pprint_meta(r)
