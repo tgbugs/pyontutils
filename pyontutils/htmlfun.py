@@ -1,5 +1,5 @@
 """ Light weight functions for generating html
-    and working with the rest of the unholy trinity. """
+and working with the rest of the unholy trinity. """
 
 # html
 

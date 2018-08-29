@@ -2,11 +2,12 @@
 """Compile all ontology related documentation.
 
 Usage:
-    docs [options]
+    ont-docs [options]
 
 Options:
-    -h --help    show this
-    -s --spell   run hunspell on all docs
+    -h --help            show this
+    -s --spell           run hunspell on all docs
+    -o --docstring-only  build docstrings only
 
 """
 import os
@@ -17,7 +18,7 @@ import nbformat
 from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import working_dir, UTCNOW, noneMembers, TermColors as tc
+from pyontutils.utils import working_dir, TODAY, noneMembers, TermColors as tc
 from pyontutils.ontutils import tokstrip, _bads
 from pyontutils.config import devconfig
 from pyontutils.htmlfun import htmldoc, atag
@@ -49,21 +50,32 @@ def get__doc__s():
     repo = Repo(working_dir.as_posix())
     paths = sorted(f for f in repo.git.ls_files().split('\n')
                    if f.endswith('.py') and f.startswith('pyontutils'))
+    # TODO figure out how to do relative loads for resolver docs
     docs = []
     skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
     for i, path in enumerate(paths):
         if any(nope in path for nope in skip):
             continue
-        ppath = Path(path).absolute()
-        module_path = ppath.relative_to(Path(repo.working_dir) / 'pyontutils').as_posix()[:-3].replace('/', '.')
-        #print(module_path)
+        ppath = (working_dir / path).absolute()
+        #print(ppath)
+        module_path = ppath.relative_to(working_dir).as_posix()[:-3].replace('/', '.')
+        print(module_path)
         module = import_module(module_path)
         doc = (module.__doc__
                if module.__doc__
                else print(tc.red('WARNING:'), 'no docstring for', module_path))
-        docs.append((module_path, doc))
 
-    return docs
+        if doc and 'Usage:' in doc:
+            # get cli program name
+            title = doc.split('Usage:', 1)[1].strip().split(' ')[0]
+            heading = 'Scripts'
+        else:
+            title = module_path
+            heading = 'Modules'
+        #print(title)
+        docs.append((heading, title, doc))
+
+    return sorted(docs, reverse=True)
 
 
 def docstrings(theme=theme):
@@ -71,16 +83,24 @@ def docstrings(theme=theme):
     docstr_path = working_dir / docstr_file
     title = 'Command line programs and libraries' 
     authors = 'various'
-    date = UTCNOW()
+    date = TODAY()
     docstr_kwargs = (working_dir, docstr_path,
                      {'authors': authors,
                       'date': date,
                       'title': title})
     docstrings = get__doc__s()
     header = makeOrgHeader(title, authors, date, theme)
-    docstrings_org = header + '\n'.join(f'* {module}\n#+BEGIN_SRC\n{docstring}\n#+END_SRC'
-                                        for module, docstring in docstrings
-                                        if docstring is not None)
+
+    done = []
+    dslist = []
+    for type, module, docstring in docstrings:
+        if type not in done:
+            done.append(type)
+            dslist.append(f'* {type}')
+        if docstring is not None:
+            dslist.append(f'** {module}\n#+BEGIN_SRC\n{docstring}\n#+END_SRC')
+
+    docstrings_org = header + '\n'.join(dslist)
     with open(docstr_path.as_posix(), 'wt') as f:
         f.write(docstrings_org)
 
@@ -261,8 +281,20 @@ def outFile(doc, working_dir, BUILD):
     relative_html = doc.relative_to(working_dir.parent).with_suffix('.html')
     return BUILD / 'docs' / relative_html
 
+
 def run_all(doc, wd, BUILD, **kwargs):
     return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
+
+
+def render_docs(wd_docs_kwargs, BUILD):
+    if 'CI' in os.environ:
+        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
+                            for wd, doc, kwargs in wd_docs_kwargs]
+    else:
+        outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
+                                              for wd, doc, kwargs in wd_docs_kwargs)
+    return outname_rendered
+
 
 def main():
     from docopt import docopt
@@ -273,6 +305,13 @@ def main():
 
     docstring_kwargs = docstrings()
     wd_docs_kwargs = [docstring_kwargs]
+    if args['--docstring-only']:
+        outname, rendered = render_docs(wd_docs_kwargs, BUILD)[0]
+        if not outname.parent.exists():
+            outname.parent.mkdir(parents=True)
+        with open(outname.as_posix(), 'wt') as f:
+            f.write(rendered)
+        return
 
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()),
@@ -303,12 +342,7 @@ def main():
         spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
         return
 
-    if 'CI' in os.environ:
-        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
-                            for wd, doc, kwargs in wd_docs_kwargs]
-    else:
-        outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
-                                              for wd, doc, kwargs in wd_docs_kwargs)
+    outname_rendered = render_docs(wd_docs_kwargs, BUILD)
 
     titles = {
         'Components':'Components',

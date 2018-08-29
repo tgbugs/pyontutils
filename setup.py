@@ -9,6 +9,7 @@ files = [
     'pyontutils/closed_namespaces.py',
     'pyontutils/config.py',
     'pyontutils/core.py',
+    'pyontutils/docs.py',  # for dev
     'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
     'pyontutils/htmlfun.py',
@@ -81,6 +82,7 @@ try:
                 'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
                 'necromancy=pyontutils.necromancy:main',
+                'ont-docs=pyontutils.docs:main',
                 'ontload=pyontutils.ontload:main',
                 'ontree=pyontutils.ontree:main',
                 'ontutils=pyontutils.ontutils:main',

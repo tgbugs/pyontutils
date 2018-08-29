@@ -1,5 +1,4 @@
-"""
-librdf parser for rdflib
+"""librdf parser for rdflib
 
 this is not faster for pypy3 but if you want install it
 

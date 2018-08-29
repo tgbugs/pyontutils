@@ -1,4 +1,22 @@
 #!/usr/bin/env python3
+"""python .obo file parser and writer
+
+    Usage:
+        obo-io <obofile>
+        obo-io --ttl <obofile> [<ttlfile>]
+        obo-io --help
+    Options:
+        -h --help       show this
+        -t --ttl        convert obo file to ttl and exit
+
+    based on the obo 1.2 spec defined at
+    https://oboformat.googlecode.com/svn/trunk/doc/GO.format.obo-1_2.html
+
+    acts as a command line script or as a python module
+    also converts to ttl format but the conversion convetions are ill defined
+
+    ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
+"""
 
 #subsetdef: NAME "desc"
 #synonymtypedef: NAME "desc" SCOPE
@@ -31,30 +49,9 @@
 # pass tvpairstores to tvpair so that we can walk all the way back up the chain if needs be
 # nlx_qual_ is not getting split correctly to nlx_qual:
 
-"""
-    Usage:
-        obo-io <obofile>
-        obo-io --ttl <obofile> [<ttlfile>]
-        obo-io --help
-    Options:
-        -h --help       show this
-        -t --ttl        convert obo file to ttl and exit
-
-
-
-    obo_io.py
-
-    python .obo file parser and writer for the obo 1.2 spec defined at
-    https://oboformat.googlecode.com/svn/trunk/doc/GO.format.obo-1_2.html
-
-    acts as a command line script or as a python module
-
-    can also output to ttl format but conversion is currently ill defined
-
-    ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
-"""
 __title__ = 'obo_io'
 __author__ = 'Tom Gillespie'
+
 import os
 import inspect
 from datetime import datetime

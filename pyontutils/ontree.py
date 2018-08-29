@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.6
-""" Render a tree from a predicate root pair.
+"""Render a tree from a predicate root pair.
+Normally run as a web service.
 
 Usage:
     ontree server [options]

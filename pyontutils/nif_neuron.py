@@ -256,7 +256,7 @@ def make_phenotypes():
                    'NIF Neuron Defined Classes',
                    'NIFNEUDEF',
                    'This file contains defined classes derived from neuron phenotypes.',
-                   TODAY)
+                   TODAY())
     defined_graph = createOntology(filename=eont.filename,
                                    path='ttl/',
                                    prefixes=PREFIXES)

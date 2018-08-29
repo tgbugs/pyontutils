@@ -19,7 +19,9 @@ import rdflib
 
 working_dir = Path(__file__).absolute().resolve().parent.parent
 
-TODAY = date.isoformat(date.today())
+def TODAY():
+    """ This needs to be a function for long running programs. """
+    date.isoformat(date.today())
 
 
 def UTCNOW(): return datetime.isoformat(datetime.utcnow())

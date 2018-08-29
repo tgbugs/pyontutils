@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.6
-""" convert graphml files to ttl files
+"""convert graphml files to ttl files
 
 Usage:
     graphml-to-ttl [options] <file>

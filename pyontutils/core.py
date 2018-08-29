@@ -1342,7 +1342,7 @@ def createOntology(filename=    'temp-graph',
                    prefixes=    None,  # is a dict
                    shortname=   None,  # 'TO'
                    comment=     None,  # 'This is a temporary ontology.'
-                   version=     TODAY,
+                   version=     TODAY(),
                    path=        'ttl/generated/',
                    local_base=  None,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
@@ -1727,7 +1727,7 @@ class Ont:
     name = None
     shortname = None
     comment = None  # about how the file was generated, nothing about what it contains
-    version = TODAY
+    version = TODAY()
     namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()

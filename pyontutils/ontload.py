@@ -1,8 +1,8 @@
 #!/usr/bin/env python3.6
 from pyontutils.core import devconfig
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
- Remote imports are replaced with local imports.
- NIF -> http://ontology.neuinfo.org/NIF
+Remote imports are replaced with local imports.
+NIF -> http://ontology.neuinfo.org/NIF
 
 Usage:
     ontload graph [options] <repo> <remote_base>
@@ -123,7 +123,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         return (repo_name +
                 '-' + branch +
                 '-graph' +
-                '-' + ('*' if wild else TODAY) +
+                '-' + ('*' if wild else TODAY()) +
                 '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '-' + ontology_commit)
 
@@ -153,7 +153,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
                              for k, v in ont.items()}
                             for ont in config['ontologies']]
 
-    config_path = jpth(zip_location, 'graphload-' + TODAY + '.yaml')
+    config_path = jpth(zip_location, 'graphload-' + TODAY() + '.yaml')
     with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
     ontologies = [ont['url'] for ont in config['ontologies']]
@@ -235,7 +235,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
         return (repo_name +
                 '-' + branch +
                 '-services' +
-                '-' + ('*' if wild else TODAY) +
+                '-' + ('*' if wild else TODAY()) +
                 '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '.zip')
 
