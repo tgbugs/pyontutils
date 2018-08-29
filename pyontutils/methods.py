@@ -879,12 +879,15 @@ methods_helper = simpleOnt(filename=filename,
                            branch=branch,
                            _repo=_repo)
 
-methods_helper._graph.add_namespace('asp', str(asp))
-methods_helper._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
-methods_helper._graph.add_namespace('prot', str(prot))
-methods_helper._graph.add_namespace('tech', str(tech))
-methods_helper._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods_helper._graph.write()  # note to self, simpleOnt calls write as well
+
+def methods_helper_main():
+    methods_helper._graph.add_namespace('asp', str(asp))
+    methods_helper._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+    methods_helper._graph.add_namespace('prot', str(prot))
+    methods_helper._graph.add_namespace('tech', str(tech))
+    methods_helper._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+    methods_helper._graph.write()  # note to self, simpleOnt calls write as well
+
 
 ###
 #   Methods
@@ -3762,12 +3765,15 @@ methods = simpleOnt(filename=filename,
  for p2, o2 in methods.graph[s1:] if
  p2 == owl.someValuesFrom]
 
-methods._graph.add_namespace('asp', str(asp))
-methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
-methods._graph.add_namespace('prot', str(prot))
-methods._graph.add_namespace('tech', str(tech))
-methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods._graph.write()
+
+def methods_main():
+    methods._graph.add_namespace('asp', str(asp))
+    methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+    methods._graph.add_namespace('prot', str(prot))
+    methods._graph.add_namespace('tech', str(tech))
+    methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+    methods._graph.write()
+
 
 from collections import defaultdict
 data = defaultdict(set)
@@ -3868,7 +3874,8 @@ def forComparison():
                                branch=branch,
                                _repo=_repo)
 
-def main():
+
+def extra():
     forComparison()
     displayGraph(methods.graph, debug=debug)
     mc = methods.graph.__class__()
@@ -3876,6 +3883,13 @@ def main():
     expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
     expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
+
+def main():
+    from pyontutils import methods_core as mc
+    mc.main()
+    methods_main()
+    methods_helper_main()
+
+
 if __name__ == '__main__':
-    #main()
-    pass
+    main()

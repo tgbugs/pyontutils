@@ -1804,7 +1804,6 @@ def main():
                  and (l.__module__ != 'pyontutils.parcellation'
                       if __name__ == '__main__'
                       else l.__module__ != '__main__'))
-    print(onts)
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,

@@ -814,7 +814,6 @@ asdf = tuple(
 embed()
 """
 
-# TODO aspects.ttl?
 methods_core = simpleOnt(filename=filename,
                          prefixes=prefixes,
                          imports=imports,
@@ -823,10 +822,17 @@ methods_core = simpleOnt(filename=filename,
                          branch=branch,
                          _repo=_repo)
 
-collector.write()
-
 methods_core._graph.add_namespace('asp', str(asp))
 methods_core._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
 #methods_core._graph.add_namespace('tech', str(tech))
 methods_core._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods_core._graph.write()
+
+
+def main():
+    # TODO aspects.ttl?
+    collector.write()
+    methods_core._graph.write()
+
+
+if __name__ == '__main__':
+    main()
