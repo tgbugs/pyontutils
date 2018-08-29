@@ -315,7 +315,7 @@ def server(api_key=None, verbose=False):
     __file__name = os.path.basename(f)
     __file__path = os.path.dirname(f)
     try:
-        commit = subprocess.check_output(['git', '-C', f'{__file__path}', 'rev-parse', 'HEAD']).decode().rstrip()
+        commit = subprocess.check_output(['git', '-c', f'{__file__path}', 'rev-parse', 'HEAD']).decode().rstrip()
     except subprocess.CalledProcessError:
         commit = 'master' # 'NO-REPO-AT-MOST-TODO-GET-LATEST-HASH'
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
