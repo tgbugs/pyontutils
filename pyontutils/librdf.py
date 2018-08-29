@@ -14,12 +14,10 @@ cp python/Redland.py ${site_packages}
 cp python/_Redland.pypy3*.so ${site_packages}
 
 """
-import sys
 try:
     import RDF
 except ImportError as e:
-    print(e)
-    sys.exit()
+    print('WARNING: librdf bindings not found. You will have runtime errors.')
 import rdflib
 from pathlib import Path
 from IPython import embed
