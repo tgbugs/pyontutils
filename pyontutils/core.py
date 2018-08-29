@@ -105,7 +105,9 @@ def _loadPrefixes():
         'skos':'http://www.w3.org/2004/02/skos/core#',
         'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
+        'foaf':'http://xmlns.com/foaf/0.1/',
         'prov':'http://www.w3.org/ns/prov#',
+
         # defined by chebi.owl, confusingly chebi#2 -> chebi1 maybe an error?
         # better to keep it consistent in case someone tries to copy and paste
         'chebi1':'http://purl.obolibrary.org/obo/chebi#2',

@@ -57,7 +57,7 @@ from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
-from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl
+from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl, dc, definition
 from pyontutils.core import makeGraph, makePrefixes  # TODO make prefixes needs an all...
 from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile, TermColors as tc
 from pyontutils.hierarchies import creatTree
@@ -390,6 +390,10 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                 scratch.parse(data=data, format=infmt)
                 for s in scratch.subjects(rdf.type, owl.Ontology):
                     triples.add((s, owl.sameAs, rdflib.URIRef(local_filepath)))
+                    # somehow this breaks computing the chain
+                    #for p in (rdfs.comment, skos.definition, definition, dc.title, rdfs.label):
+                        #for o in scratch[s:p]:
+                            #triples.add((s, p, o))
                 for s, o in sorted(scratch.subject_objects(p)):
                     if revert:
                         raise NotImplemented('TODO')

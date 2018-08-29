@@ -222,6 +222,7 @@ def populate_tests():
             ['scig', 'g', '-v', 'BIRNLEX:796', '--rt', 'subClassOf'],
             ['scig', 'e', '-v', 'IAO:0100001' 'BIRNLEX:796' 'UBERON:0000955'],
             ['scig', 'cy', '"MATCH (n) RETURN n"'],
+            ['scig', 'onts'],
     ],
 
     }
