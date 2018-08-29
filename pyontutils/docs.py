@@ -12,11 +12,12 @@ Options:
 import os
 import subprocess
 from pathlib import Path
+from importlib import import_module
 import nbformat
 from git import Repo
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import working_dir, noneMembers, TermColors as tc
+from pyontutils.utils import working_dir, UTCNOW, noneMembers, TermColors as tc
 from pyontutils.ontutils import tokstrip, _bads
 from pyontutils.config import devconfig
 from pyontutils.htmlfun import htmldoc, atag
@@ -28,6 +29,63 @@ except ImportError:
 from IPython import embed
 
 suffixFuncs = {}
+
+theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup') # TODO can source this directly now?
+
+
+def makeOrgHeader(title, authors, date, theme=theme):
+    header = (f'#+TITLE: {title}\n'
+              f'#+AUTHOR: {authors}\n'
+              f'#+DATE: {date}\n'
+              f'#+SETUPFILE: {theme}\n'
+              f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
+              #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
+             )
+    #print(header)
+    return header
+
+
+def get__doc__s():
+    repo = Repo(working_dir.as_posix())
+    paths = sorted(f for f in repo.git.ls_files().split('\n')
+                   if f.endswith('.py') and f.startswith('pyontutils'))
+    docs = []
+    skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
+    for i, path in enumerate(paths):
+        if any(nope in path for nope in skip):
+            continue
+        ppath = Path(path).absolute()
+        module_path = ppath.relative_to(Path(repo.working_dir) / 'pyontutils').as_posix()[:-3].replace('/', '.')
+        #print(module_path)
+        module = import_module(module_path)
+        doc = (module.__doc__
+               if module.__doc__
+               else print(tc.red('WARNING:'), 'no docstring for', module_path))
+        docs.append((module_path, doc))
+
+    return docs
+
+
+def docstrings(theme=theme):
+    docstr_file = 'docstrings.org'
+    docstr_path = working_dir / docstr_file
+    title = 'Command line programs and libraries' 
+    authors = 'various'
+    date = UTCNOW()
+    docstr_kwargs = (working_dir, docstr_path,
+                     {'authors': authors,
+                      'date': date,
+                      'title': title})
+    docstrings = get__doc__s()
+    header = makeOrgHeader(title, authors, date, theme)
+    docstrings_org = header + '\n'.join(f'* {module}\n#+BEGIN_SRC\n{docstring}\n#+END_SRC'
+                                        for module, docstring in docstrings
+                                        if docstring is not None)
+    with open(docstr_path.as_posix(), 'wt') as f:
+        f.write(docstrings_org)
+
+    return docstr_kwargs
+
 
 def suffix(ext):  # TODO multisuffix?
     def decorator(function):
@@ -101,7 +159,6 @@ compile_org_file = ['emacs', '-q', '-l',
                          'orgstrap/init.el').resolve().as_posix(),
                     '--batch', '-f', 'compile-org-file']
 
-theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup')
 
 @suffix('org')
 def renderOrg(path, **kwargs):
@@ -114,12 +171,16 @@ def renderOrg(path, **kwargs):
 
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
-        org = f.read().replace(theme.name.encode(),
-                               theme.as_posix().encode())  # TODO just switch the #+SETUPFILE: line
+        org = f.read()
+        short_theme = theme.name.encode()
+        full_theme = theme.as_posix().encode()
+        if full_theme not in org:
+            org = org.replace(short_theme, full_theme)  # TODO just switch the #+SETUPFILE: line
         #print(org.decode())
         out, err = p.communicate(input=org)
 
     return out.decode()
+
 
 @suffix('md')
 def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
@@ -143,16 +204,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)  # DUH
     authors = ', '.join(authors)
-    theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup') # TODO can source this directly now?
-    header = (f'#+TITLE: {title}\n'
-              f'#+AUTHOR: {authors}\n'
-              f'#+DATE: {date}\n'
-              f'#+SETUPFILE: {theme}\n'
-              f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
-              #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
-             )
-    #print(header)
-
+    header = makeOrgHeader(title, authors, date, theme)
     out, err = s.communicate()
     #print(out.decode())
     org = header.encode() + out.replace(b'\_', b'_').replace(b'[[file:', b'[[./')
@@ -219,19 +271,23 @@ def main():
     if not BUILD.exists():
         BUILD.mkdir()
 
+    docstring_kwargs = docstrings()
+    wd_docs_kwargs = [docstring_kwargs]
+
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
-             Repo(working_dir.as_posix()))
+             Repo(working_dir.as_posix()),
+             Repo(Path(devconfig.git_local_base, 'ontquery').as_posix()))
 
     skip_folders = 'notebook-testing',
 
     # TODO move this into run_all
-    wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
-                       Path(repo.working_dir, f).resolve(),
-                       makeKwargs(repo, f))
-                      for repo in repos
-                      for f in repo.git.ls_files().split('\n')
-                      if Path(f).suffix in suffixFuncs
-                      and noneMembers(f, *skip_folders)]
+    wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
+                        Path(repo.working_dir, f).resolve(),
+                        makeKwargs(repo, f))
+                       for repo in repos
+                       for f in repo.git.ls_files().split('\n')
+                       if Path(f).suffix in suffixFuncs
+                       and noneMembers(f, *skip_folders)]
 
     # doesn't work because read-from-minibuffer cannot block
     #compile_org_forever = ['emacs', '-q', '-l',
@@ -258,23 +314,29 @@ def main():
         'Components':'Components',
         'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  # 
         'pyontutils/README.html':'Introduction to pyontutils',
+        'ontquery/README.html':'Introduction to ontquery',
         'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
+
         'Developer docs':'Developer docs',
         'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
         'NIF-Ontology/docs/development setup.html':'Ontology development setup',  # HOWTO
         'NIF-Ontology/docs/import chain.html':'Ontology import chain',  # Documentation
         'pyontutils/resolver/README.html':'Ontology resolver setup',
         'pyontutils/scigraph/README.html':'Ontology SciGraph setup',
+        'pyontutils/docstrings.html':'Command line programs',
         'NIF-Ontology/docs/external-sources.html':'External sources for the ontology',  # Other
+
         'Contributing':'Contributing',
         'pyontutils/development/README.html':'Contributing to the ontology',
         'pyontutils/development/community/README.html':'Contributing term lists to the ontology',
         'pyontutils/pyontutils/neuron_models/README.html':'Contributing neuron terminology to the ontology',
+
         'Ontology content':'Ontology content',
         'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
         'pyontutils/development/methods/README.html':'Methods and techniques',  # Ontology content
         'pyontutils/docs/NeuronLangExample.html':'Neuron Lang examples',
         'pyontutils/docs/neurons_notebook.html':'Neuron Lang setup',
+
         'Specifications':'Specifications',
         'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
         'pyontutils/docs/ttlser.html':'Deterministic turtle specification',
