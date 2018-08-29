@@ -14,7 +14,12 @@ cp python/Redland.py ${site_packages}
 cp python/_Redland.pypy3*.so ${site_packages}
 
 """
-import RDF
+import sys
+try:
+    import RDF
+except ImportError as e:
+    print(e)
+    sys.exit()
 import rdflib
 from pathlib import Path
 from IPython import embed
