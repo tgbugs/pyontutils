@@ -296,13 +296,21 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
     def __call__(self, subject, predicate, object):
         yield subject, predicate, object
 
-    def debug(self, *args, l=None):
+    @property
+    def value(self):
+        return tuple(self.__call__())
+
+    def debug(self, *args, l=None, ret=False):
         graph = rdflib.Graph()
         graph.bind('owl', str(owl))
         if l is None:
             l = self.__call__(*args)
         [graph.add(t) for t in l]
-        print(graph.serialize(format='nifttl').decode())
+        out = graph.serialize(format='nifttl').decode()
+        if ret:
+            return out
+        else:
+            print(out)
 
 
 
@@ -719,25 +727,35 @@ class Annotation(Triple):
             existing = predicate_objects
             def __init__(self, triple):
                 self.triple = triple
-                self.stored = ((p, o) for p, o in ((rdf.type, owl.Axiom),) + self.existing)
+
+            @property
+            def stored(self):
+                for p, o in ((rdf.type, owl.Axiom),) + self.existing:
+                    yield p, o
 
             def __call__(self, *predicate_objects):
-                for a_p, a_o in predicate_objects:
+                gen = self.stored  # now runs as many times as we want
+                a_p, a_o = next(gen)
+                yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s, first=True)
+                for a_p, a_o in gen:
                     yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
-                for a_p, a_o in self.stored:  # since it is a generator it will only run once
+                for a_p, a_o in predicate_objects:
                     yield from self.outer_self.serialize(self.triple, a_p, a_o, a_s=self.a_s)
 
         return AnnotationCombinator(triple)
 
-    def serialize(self, triple, a_p, a_o, a_s=None):
+    def serialize(self, triple, a_p, a_o, a_s=None, first=False):
         s, p, o = triple
         if a_s is None:
+            first = True
             a_s = rdflib.BNode()
             yield a_s, rdf.type, owl.Axiom
 
-        yield a_s, owl.annotatedSource, s
-        yield a_s, owl.annotatedProperty, p
-        yield a_s, owl.annotatedTarget, check_value(o)
+        if first:
+            yield a_s, owl.annotatedSource, s
+            yield a_s, owl.annotatedProperty, p
+            yield a_s, owl.annotatedTarget, check_value(o)
+
         yield a_s, a_p, check_value(a_o)
 
     def parse(self, *triples, graph=None):
@@ -761,6 +779,7 @@ class Annotation(Triple):
 
 
 annotation = Annotation()
+
 
 def _annotation(ap, ao, s, p, o):
     n0 = rdflib.BNode()
