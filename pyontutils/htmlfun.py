@@ -49,7 +49,7 @@ def render_table(rows, *headers):
     for row in rows:
         if headers:
             ous = ('<tr>'
-                + ''.join(f'<td class="col-{h}">{r}</td>'
+                + ''.join(f'<td class="col-{h.replace(" ", "_")}">{r}</td>'
                             for h, r in zip(headers, row))
                 + '</tr>')
             output.append(ous)
@@ -92,6 +92,7 @@ tr { vertical-align: baseline; }
 .col-RRIDs a,
 .col-Paper a,
 .col-Link a,
+.col-HTML_Link a,
 .col-Done a,
 .col-TODO a
 {
@@ -107,6 +108,7 @@ tr { vertical-align: baseline; }
 .col-RRIDs a:visited,
 .col-Paper a:visited,
 .col-Link a:visited,
+.col-HTML_Link a:visited,
 .col-Done a:visited,
 .col-TODO a:visited
 {
