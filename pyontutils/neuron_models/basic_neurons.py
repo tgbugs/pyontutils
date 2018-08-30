@@ -49,6 +49,12 @@ surface features, handy to have around
 http://ontology.neuinfo.org/trees/query/swanr:hasPart5/SWAN:629/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING
 
 """
+sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson.ttl').as_posix(), format='ttl')
+# restriction.parse(sgraph)  # FIXME this breaks with weird error message
+OntCuries({**graphBase.prefixes, **PREFIXES})
+rests = [r for r in restriction.parse(graph=sgraph) if r.p == swanr.hasPart3]
+#restriction = Restriction2(rdfs.subClassOf)
+
 
 class LocalGraphService(ontquery.BasicService):
     def __init__(self, graph):
@@ -68,12 +74,6 @@ class LocalGraphService(ontquery.BasicService):
             out[p] = o
         yield out
 
-sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson.ttl').as_posix(), format='ttl')
-# restriction.parse(sgraph)  # FIXME this breaks with weird error message
-OntCuries({**graphBase.prefixes, **PREFIXES})
-rests = [r for r in restriction.parse(graph=sgraph) if r.p == swanr.hasPart3]
-#restriction = Restriction2(rdfs.subClassOf)
-
 
 class lOntTerm(OntTerm):
     repr_arg_order = (('curie', 'label'),  # FIXME this doesn't stick?!
@@ -86,21 +86,15 @@ regions_unfilt = sorted(set(lOntTerm(e) for r in rests for e in (r.s, r.o)), key
 regions = [r for r in regions_unfilt if 'gyrus' not in r.label and 'Pineal' not in r.label]
 rows = [['label', 'soma located in', 'projection type']]
 with Basic:  # FIXME if this is called inside a function stack_magic fails :/
-    # I guess this is what we get in a language where you have to inspect the
-    # stack to bind names programatically ... sigh
     for region in regions:
         for type in (projection, intrinsic):
             n = Neuron(Phenotype(region, ilxtr.hasSomaLocatedIn, label=region.label, override=True), type)
             rows.append([n.label, region.label, type.pLabel])
 
-def main():
-    Neuron.write()
-    Neuron.write_python()
-    import csv
-    from pathlib import Path
-    csvpath = Path(graphBase.ng.filename).with_suffix('.csv').as_posix()
-    with open(csvpath, 'wt') as f:
-        csv.writer(f).writerows(rows)
-
-if __name__ == '__main__':
-    main()
+Neuron.write()
+Neuron.write_python()
+import csv
+from pathlib import Path
+csvpath = Path(graphBase.ng.filename).with_suffix('.csv').as_posix()
+with open(csvpath, 'wt') as f:
+    csv.writer(f).writerows(rows)

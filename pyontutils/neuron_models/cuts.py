@@ -2,6 +2,10 @@
 import csv
 from pathlib import Path
 import rdflib
+from pyontutils.neuron_models.compiled import neuron_data_lifted
+ndl_neurons = neuron_data_lifted.Neuron.neurons()
+from pyontutils.neuron_models.compiled import basic_neurons
+bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol, relative_path
 from pyontutils.core import resSource, interlex_namespace
 from pyontutils.config import devconfig
@@ -30,11 +34,6 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 'Trigeminal nerve principal sensory nucleus': 'Principal sensory nucleus of trigeminal nerve'}
 
 def main():
-    from pyontutils.neuron_models.compiled import neuron_data_lifted
-    ndl_neurons = neuron_data_lifted.Neuron.neurons()
-    from pyontutils.neuron_models.compiled import basic_neurons
-    bn_neurons = basic_neurons.Neuron.neurons()
-
     resources = Path(__file__).resolve().absolute().parent.parent / 'resources'
     cutcsv = resources / 'common-usage-types.csv'
     with open(cutcsv.as_posix(), 'rt') as f:
@@ -109,5 +108,4 @@ def main():
         embed()
 
 
-if __name__ == '__main__':
-    main()
+main()

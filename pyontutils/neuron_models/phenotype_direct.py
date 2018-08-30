@@ -82,5 +82,4 @@ def main():
         embed()
 
 
-if __name__ == '__main__':
-    main()
+main()
