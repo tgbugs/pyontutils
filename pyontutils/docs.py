@@ -8,9 +8,11 @@ Options:
     -h --help            show this
     -s --spell           run hunspell on all docs
     -o --docstring-only  build docstrings only
+    -j --jobs=NJOBS      number of jobs [default: 9]
 
 """
 import os
+import re
 import subprocess
 from pathlib import Path
 from importlib import import_module
@@ -227,7 +229,38 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     header = makeOrgHeader(title, authors, date, theme)
     out, err = s.communicate()
     #print(out.decode())
+
     org = header.encode() + out.replace(b'\_', b'_').replace(b'[[file:', b'[[./')
+
+    org = org.replace(b'=s', b'= s')  # FIXME need proper fix for inline code
+
+    ## org = org.replace(b'.md][', b'.html][')  # FIXME fix suffixes for doc paths
+
+    #org = re.sub(br'\[(.+\.)[a-z]+\]\[', br'[\1html][', org)
+    # [[]] case and [[][]] case
+    gitorg = kwargs['org']
+    gitrepo = kwargs['repo']
+    branch = kwargs['branch']
+    dir_ = title.rsplit('/', 1)[0]
+    dir_ = '' if dir_ == title else dir_ + '/'
+    # fix links
+    org = (re.sub(br'\[\[\.\/(.*(?:py|ttl|graphml|yml|yaml|LICENSE))\]\[(.+)\]\]', br'[[https://github.com/'
+                                             + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
+                                             + br'\1][\2]]', org))
+    org = (re.sub(br'\[\[\.\/(.+(?:py|ttl|graphml|yml|yaml|LICENSE))\]\]', br'[[https://github.com/'
+                                             + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
+                                             + br'\1][\1]]', org))
+    org = re.sub(br'\[(.+\.)(?:md|org|ipynb)(#[a-z]+)?\]\[', br'[\1html\2][', org)
+    # manual fixes FIXME this is bad news we need a mini parser for this
+    org = re.sub(b'https://github.com/tgbugs/pyontutils/blob/master/docs/(.+\.html)',
+                 b'/'.join([b'..'] * len(dir_.split('/')))  + br'/pyontutils/docs/\1',
+                 org)
+    org = org.replace(b'https://github.com/tgbugs/pyontutils/blob/master/README.html',
+                      b'/'.join([b'..'] * len(dir_.split('/')))  + b'/pyontutils/README.html')
+    org = org.replace(b'https://github.com/SciCrunch/NIF-Ontology/blob/master/docs/processes.html',
+                      b'/'.join([b'..'] * len(dir_.split('/')))  + b'/NIF-Ontology/docs/processes.html')
+    org = org
+
     #print(org.decode())
     # debug debug
     #with open(path.with_suffix('.org').as_posix(), 'wb') as f:
@@ -263,18 +296,26 @@ def renderNotebook(path, **kwargs):
 def renderDoc(path, **kwargs):
     # TODO add links back to github and additional prov for generation
     try:
+        # renderMarkdown # renderOrg
         return suffixFuncs[path.suffix](path, **kwargs)
     except KeyError as e:
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
 
 def makeKwargs(repo, filepath):
     kwargs = {}
-    kwargs['title'] = filepath
+    kwargs['title'] = (Path(repo.working_dir).name + ' ' + filepath
+                       if filepath.startswith('README.')
+                       else filepath)
     kwargs['authors'] = sorted(name.strip()
                                for name in
                                set(repo.git.log(['--pretty=format:%an%x09',
                                                  filepath]).split('\n')))
     kwargs['date'] = repo.git.log(['-n', '1', '--pretty=format:%aI']).strip()
+    repo_url = Path(next(next(r for r in repo.remotes if r.name == 'origin').urls))
+    kwargs['org'] = repo_url.parent.name
+    kwargs['repo'] = repo_url.stem
+    kwargs['branch'] = 'master'  # TODO figure out how to get the default branch on the remote
+
     return kwargs
 
 def outFile(doc, working_dir, BUILD):
@@ -286,12 +327,12 @@ def run_all(doc, wd, BUILD, **kwargs):
     return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
 
 
-def render_docs(wd_docs_kwargs, BUILD):
-    if 'CI' in os.environ:
+def render_docs(wd_docs_kwargs, BUILD, n_jobs=9):
+    if 'CI' in os.environ or n_jobs == 1:
         outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
                             for wd, doc, kwargs in wd_docs_kwargs]
     else:
-        outname_rendered = Parallel(n_jobs=9)(delayed(run_all)(doc, wd, BUILD, **kwargs)
+        outname_rendered = Parallel(n_jobs=n_jobs)(delayed(run_all)(doc, wd, BUILD, **kwargs)
                                               for wd, doc, kwargs in wd_docs_kwargs)
     return outname_rendered
 
@@ -306,7 +347,7 @@ def main():
     docstring_kwargs = docstrings()
     wd_docs_kwargs = [docstring_kwargs]
     if args['--docstring-only']:
-        outname, rendered = render_docs(wd_docs_kwargs, BUILD)[0]
+        outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1)[0]
         if not outname.parent.exists():
             outname.parent.mkdir(parents=True)
         with open(outname.as_posix(), 'wt') as f:
@@ -342,7 +383,7 @@ def main():
         spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
         return
 
-    outname_rendered = render_docs(wd_docs_kwargs, BUILD)
+    outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']))
 
     titles = {
         'Components':'Components',
@@ -368,6 +409,7 @@ def main():
         'Ontology content':'Ontology content',
         'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
         'pyontutils/development/methods/README.html':'Methods and techniques',  # Ontology content
+        'NIF-Ontology/docs/Neurons.html':'Neuron Lang overview',
         'pyontutils/docs/NeuronLangExample.html':'Neuron Lang examples',
         'pyontutils/docs/neurons_notebook.html':'Neuron Lang setup',
 
