@@ -11,7 +11,7 @@ import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
 from pyontutils.core import OntMeta, TEMP, rdf, rdfs, owl, ilxtr
-from pyontutils.utils import TODAY, rowParse, refile
+from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.scigraph import Graph, Vocabulary
@@ -19,7 +19,7 @@ from pyontutils.neurons import _NEURON_CLASS
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent  # FIXME this breaks when not run from pyontutils!??!!
+gitf = working_dir.parent
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -256,7 +256,7 @@ def make_phenotypes():
                    'NIF Neuron Defined Classes',
                    'NIFNEUDEF',
                    'This file contains defined classes derived from neuron phenotypes.',
-                   TODAY)
+                   TODAY())
     defined_graph = createOntology(filename=eont.filename,
                                    path='ttl/',
                                    prefixes=PREFIXES)
@@ -1077,7 +1077,7 @@ def make_bridge():
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
-        import_module(f'pyontutils.neuron_models.{module}')
+        m = import_module(f'pyontutils.neuron_models.{module}')
 
 
     class neuronBridge(Ont):
