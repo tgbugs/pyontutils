@@ -247,7 +247,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     org = (re.sub(br'\[\[\.\/(.*(?:py|ttl|graphml|yml|yaml|LICENSE))\]\[(.+)\]\]', br'[[https://github.com/'
                                              + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
                                              + br'\1][\2]]', org))
-    org = (re.sub(br'\[\[\.\/(.+(?:py|ttl|graphml|yml|yaml|LICENSE))\]\]', br'[[https://github.com/'
+    org = (re.sub(br'\[\[\.\/(.*(?:py|ttl|graphml|yml|yaml|LICENSE))\]\]', br'[[https://github.com/'
                                              + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
                                              + br'\1][\1]]', org))
     org = re.sub(br'\[(.+\.)(?:md|org|ipynb)(#[a-z]+)?\]\[', br'[\1html\2][', org)
