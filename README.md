@@ -54,6 +54,7 @@ If you use a development setup you will need to create symlinks described below.
 pyontutils provides a set of scripts that are useful for maintaining and managing ontologies
 using git, and making them available via SciGraph. Note that if you choose the development
 installation option you will need to `ln -sT` the scripts to your preferred bin folder.
+For the full list please see the [documentation](http://ontology.doc/pyontutils/docstrings.html).
 1. [ttlfmt](pyontutils/ttlfmt.py)
 	Reserialize ontology files using deterministic turtle ([spec](docs/ttlser.md)).
 2. [ontutils](pyontutils/ontutils.py)

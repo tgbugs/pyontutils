@@ -35,12 +35,14 @@ sudo yum install nginx
 
 ## if not handled by puppet
 
-`sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel`
-must set `alternatives --config java` to 1.8
-`wget http://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz`
-`sudo mv apache-maven-3.5.0-bin.tar.gz /opt/ && sudo cd /opt/ && sudo tar xvzf apache-maven-* && ln -sT apache-maven-* maven`
-`sudo echo "export M2_HOME=/opt/maven" > /etc/profile.d/maven.sh`
-`sudo echo "export PATH=\${M2_HOME}/bin:\${PATH}" >> /etc/profile.d/maven.sh`
+```
+sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel
+alternatives --config java  # must set to 1.8
+wget http://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz
+sudo mv apache-maven-3.5.0-bin.tar.gz /opt/ && sudo cd /opt/ && sudo tar xvzf apache-maven-* && ln -sT apache-maven-* maven
+sudo echo "export M2_HOME=/opt/maven" > /etc/profile.d/maven.sh
+sudo echo "export PATH=${M2_HOME}/bin:${PATH}" >> /etc/profile.d/maven.sh
+```
 
 # etc for centos 7
 1. local services

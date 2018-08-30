@@ -66,7 +66,7 @@ To obtain a ttl version of the file and generate hierarchies run `graphml_to_ttl
 ## NIFSTD
 [NIF-Investigation.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Investigation.ttl)  
 [NIF-Scientific-Discipline.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Scientific-Discipline.ttl)  
-[cogat_v0.3.owl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/cogat_v0.3.owl)
+[cogat_v0.3.owl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/cogat_v0.3.owl)  
 [CogPO](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/CogPO.ttl)
 
 ## BBP
