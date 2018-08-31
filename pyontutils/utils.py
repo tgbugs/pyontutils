@@ -135,6 +135,12 @@ class injective_dict(MutableMapping):
     class NotInjectiveError(Exception):
         pass
 
+    class KeyAlreadyBoundError(NotInjectiveError):
+        pass
+
+    class ValueAlreadyBoundError(NotInjectiveError):
+        pass
+
     def __init__(self, __mm=None, **kwargs):
         self._dict = {}
         self._inj = {}
@@ -145,6 +151,12 @@ class injective_dict(MutableMapping):
         if kwargs:
             for k, v in kwargs.items():
                 self.__setitem__(k, v)
+
+    def inverted(self):
+        new_ij = self.__class__()
+        new_ij._dict = self._inj
+        new_ij._inj = self._dict
+        return new_ij
 
     def __contains__(self, key):
         return key in self._dict
@@ -169,11 +181,11 @@ class injective_dict(MutableMapping):
 
     def __setitem__(self, key, value):
         if key in self._dict and self._dict[key] != value:
-            raise self.NotInjectiveError(f'{key!r} cannot be bound to {value!r} '
-                                         f'{key!r} is already bound to {self._dict[key]!r}')
+            raise self.KeyAlreadyBoundError(f'{key!r} cannot be bound to {value!r}, '
+                                            f'{key!r} is already bound to {self._dict[key]!r}')
         if value in self._inj and self._inj[value] != key:
-            raise self.NotInjectiveError(f'{key!r} cannot be bound to {value!r} '
-                                         f'{value!r} is already bound to {self._inj[value]!r}')
+            raise self.ValueAlreadyBoundError(f'{key!r} cannot be bound to {value!r}, '
+                                              f'{value!r} is already bound to {self._inj[value]!r}')
 
         self._dict[key] = value
         self._inj[value] = key
