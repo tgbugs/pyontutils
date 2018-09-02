@@ -21,10 +21,10 @@ working_dir = Path(__file__).absolute().resolve().parent.parent
 
 def TODAY():
     """ This needs to be a function for long running programs. """
-    date.isoformat(date.today())
+    date.today().isoformat()
 
 
-def UTCNOW(): return datetime.isoformat(datetime.utcnow())
+def UTCNOW(): return datetime.utcnow().isoformat()
 
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer,

@@ -37,12 +37,13 @@ def _loadPrefixes():
 
     # holding place for values that are not in the curie map
     full = {
-        # interlex predicates
+        # interlex predicates  PROVISIONAL
         'ilx.federatesElement':'http://uri.interlex.org/base/ilx_0381445',
         'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
         'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
         'ilx.hasUnit':'http://uri.interlex.org/base/ilx_0381384',
         'ilx.isAbout':'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao
+        'ilx.hasLaterality':'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
 
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
