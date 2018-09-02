@@ -15,6 +15,7 @@ from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, working_dir, getSourceLine
 from pyontutils.utils import Async, deferred, TermColors as tc, check_value
 from pyontutils.config import get_api_key, devconfig
+from pyontutils.combinators import Restriction
 from pyontutils.closed_namespaces import *
 from IPython import embed
 
