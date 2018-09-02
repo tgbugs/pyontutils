@@ -2,10 +2,23 @@
 from collections import namedtuple
 import requests
 from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.core import OntMeta
-from pyontutils.core import makePrefixes, makeGraph#, interlex_namespace, nsExact
+from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.core import rdfs
 from pyontutils.utils import TODAY, rowParse
+
+OntMeta = namedtuple('OntMeta',
+                     ['path',
+                      'filename',
+                      'name',
+                      'shortname',
+                      'comment',
+                      'version'])
+OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
+        'swallows',
+        'Python Ontology',
+        'PO',
+        'Tis a silly place.',
+        '-1')
 
 PScheme = namedtuple('PScheme',
                      ['curie',

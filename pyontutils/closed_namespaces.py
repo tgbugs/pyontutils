@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from rdflib import Graph, URIRef
+from rdflib import Graph, URIRef, RDF as rdf, RDFS as rdfs
 from rdflib.plugin import PluginException
 from rdflib.namespace import ClosedNamespace
 
@@ -10,6 +10,8 @@ __all__ = [
     'oboInOwl',
     'owl',
     'prov',
+    'rdf',
+    'rdfs',
     'skos',
 ]
 

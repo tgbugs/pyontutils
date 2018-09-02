@@ -43,6 +43,14 @@ rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
 rdflib.plugin.register('libttl', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libTurtleParser')
 
+def check_value(v):
+    if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
+        return v
+    elif isinstance(v, str) and v.startswith('http'):
+        return rdflib.URIRef(v)
+    else:
+        return rdflib.Literal(v)
+
 def test_notebook():  # also tests ipython
     try:
         config = get_ipython().config

@@ -1,13 +1,13 @@
 from rdflib import URIRef, Literal, BNode
-from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm, makeNamespaces
-from pyontutils.core import oc, oc_, oop, odp, olit, oec
-from pyontutils.core import restrictions, annotation, restriction, restrictionN
-from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx, BFO
-from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
+from pyontutils.core import OntCuries, OntId, OntTerm, makeNamespaces
+from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples
+from pyontutils.core import owl, rdf, rdfs, oboInOwl, NIFTTL, NIFRID, ilxtr, ilx, BFO
 from pyontutils.core import partOf, hasRole, locatedIn
-from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
-from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
-from pyontutils.core import owl, rdf, rdfs, oboInOwl
+from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
+from pyontutils.combinators import unionOf, intersectionOf, Restriction, EquivalentClass
+from pyontutils.combinators import oc, oc_, oop, odp, olit, oec, hasAspectChangeCombinator
+from pyontutils.combinators import Restriction2, POCombinator, disjointUnionOf, oneOf
+from pyontutils.combinators import restrictions, annotation, restriction, restrictionN
 from pyontutils.methods_core import asp, tech, prot, prov, methods_core, _t, restN, oECN, olist, branch
 
 # NOTE if vim is slow it is probably becuase there are

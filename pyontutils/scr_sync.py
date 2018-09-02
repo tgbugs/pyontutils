@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.6
-from pyontutils.core import devconfig
+from pyontutils.config import devconfig
 __doc__ = f"""Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
 
 Usage:
@@ -33,7 +33,8 @@ import rdflib
 from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
 from pyontutils.core import makePrefixes, Ont, Source, build
-from pyontutils.core import rdf, rdfs, owl, NIFRID, oboInOwl, definition
+from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
+from pyontutils.core import NIFRID, definition
 from pyontutils.core import OntId
 from pyontutils.utils import mysql_conn_helper
 from IPython import embed

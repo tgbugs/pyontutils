@@ -1,15 +1,16 @@
 from IPython import embed
 import rdflib
-from pyontutils.core import OntId, OntCuries
-from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator, Restriction2, EquivalentClass
-from pyontutils.core import restriction, restrictions
-from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces, participatesIn, partOf, intersectionOf
+from pyontutils.core import simpleOnt, OntId, OntCuries
+from pyontutils.combinators import oc, oc_, odp, oop, olit, oec, olist
+from pyontutils.combinators import POCombinator, _POCombinator, ObjectCombinator
+from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
+from pyontutils.combinators import restriction, restrictions, intersectionOf
 from pyontutils.core import owl, rdf, rdfs
+from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
+from pyontutils.core import makeNamespaces, participatesIn, partOf
+from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput
 
-import rdflib
-from pyontutils.core import propertyChainAxiom as pca
+
 class mGraph(rdflib.Graph):
     def __init__(self, *args, filename='/tmp/test.ttl', **kwargs):
         super().__init__(*args, **kwargs)
@@ -17,13 +18,17 @@ class mGraph(rdflib.Graph):
     def write(self):
         with open(self.filename, 'wb') as f:
             f.write(self.serialize(format='nifttl'))
+
+
 collector = mGraph(filename='property-chains.ttl')
+
+
 def _propertyChainAxiom(*args):
     class Derp(Combinator):
         def __init__(self):
             pass
         def __call__(self, *argsi):
-            [collector.add(_) for _ in pca(*args)(*argsi)]
+            [collector.add(_) for _ in propertyChainAxiom(*args)(*argsi)]
             yield ilxtr.a, ilxtr.b, ilxtr.c
     return Derp()
 

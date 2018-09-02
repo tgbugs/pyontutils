@@ -1,13 +1,13 @@
 import sys
 from lxml import etree
-from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, WHSSD
 from pyontutils.core import NCBITaxon, UBERON
 from pyontutils.core import nsExact
-from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, restriction, build
+from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, build
 from pyontutils.utils import Async, deferred
-# import pyontutils.parcellation as parc
+from pyontutils.combinators import restriction
 from pyontutils.parcellation import parcCore, resSource, LabelRoot, Label, Terminology
+from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
 from IPython import embed
 
 class Artifacts(Collector):

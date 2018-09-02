@@ -3,8 +3,9 @@ from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, DKT, DKTr, DKTs, MNDBGL, FSCL
 from pyontutils.core import NCBITaxon, UBERON
 from pyontutils.core import nsExact
-from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, restriction, build
+from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, build
 from pyontutils.utils import Async, deferred
+from pyontutils.combinators import restriction
 from pyontutils.parcellation import parcCore, LabelRoot, Label, Terminology
 from IPython import embed
 

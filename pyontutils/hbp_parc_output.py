@@ -5,7 +5,9 @@ from collections import defaultdict
 import rdflib
 from pyontutils.ttlser import natsort
 from pyontutils.utils import TermColors as tc
-from pyontutils.core import restriction, annotation, owl, rdf, rdfs, skos, NIFRID, qname, ilxtr, makeGraph
+from pyontutils.closed_namespaces import owl, rdf, rdfs, skos
+from pyontutils.core import NIFRID, qname, ilxtr, makeGraph
+from pyontutils.combinators import restriction, annotation
 from IPython import embed
 
 current_file = Path(__file__).absolute()
