@@ -260,7 +260,7 @@ def coln(n, iterable):
 
 def setPS1(script__file__):
     text = 'Running ' + os.path.basename(script__file__)
-    os.sys.stdout.write('\x1b]2;{}\x07'.format(text))
+    os.sys.stdout.write('\x1b]2;{}\x07\n'.format(text))
 
 
 def refile(script__file__, path):
