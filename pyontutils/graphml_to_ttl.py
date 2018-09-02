@@ -3,21 +3,37 @@
 
 Usage:
     graphml-to-ttl [options] <file>
+    graphml-to-ttl methods [options] <file>
 
 Options:
     -o --output-location=LOC    write converted files to [default: /tmp/]
 
 """
 import os
+import re
 from collections import namedtuple
 from docopt import docopt
 from lxml import etree
-from rdflib import URIRef, RDFS
+from rdflib import URIRef, RDFS, Namespace
 from IPython import embed
-from pyontutils.core import makeGraph, makePrefixes, createOntology
+from pyontutils.core import makeGraph, makePrefixes, createOntology, rdf, rdfs, owl
 from pyontutils.hierarchies import creatTree
 
 #from check_ids import safe_write  # that file very deprecated, pull safewrite out if you really need it
+
+abv = {
+    'graphml':"{http://graphml.graphdrawing.org/xmlns}graphml",
+    'graph':"{http://graphml.graphdrawing.org/xmlns}graph",
+    'node':"{http://graphml.graphdrawing.org/xmlns}node",
+    'edge':"{http://graphml.graphdrawing.org/xmlns}edge",
+    'data':"{http://graphml.graphdrawing.org/xmlns}data",
+    'ShapeNode':'{http://www.yworks.com/xml/graphml}ShapeNode',
+    'NodeLabel':"{http://www.yworks.com/xml/graphml}NodeLabel",
+    'BorderStyle':"{http://www.yworks.com/xml/graphml}BorderStyle",
+    'PolyLineEdge':"{http://www.yworks.com/xml/graphml}PolyLineEdge",
+    'EdgeLabel':"{http://www.yworks.com/xml/graphml}EdgeLabel",
+    'LineStyle':"{http://www.yworks.com/xml/graphml}LineStyle",
+}
 
 edge_to_ttl = {
     'is_a':'rdfs:subClassOf',
@@ -44,7 +60,110 @@ edge_to_ttl = {
 }
 edge_replace = lambda a: edge_to_ttl[a] if a in edge_to_ttl else a  # FIXME it is time to abstract this...
 
-import re
+def by2(one, two, *rest):
+    yield one, two
+    yield from by2(*rest)
+
+class Flatten:
+    def __init__(self, filename):
+        self.filename = os.path.splitext(os.path.basename(filename))[0]
+        parser = etree.XMLParser(remove_blank_text=True)
+        self.e = etree.parse(filename, parser)
+
+        self.namespaces = {k if k else '_':v for k, v in next(self.e.iter()).nsmap.items()}
+        self.xpath = self.mkx(self.e)
+
+    def mkx(self, element):
+        def xpath(path, e=element):
+            return e.xpath(path, namespaces=self.namespaces)
+
+        return xpath
+
+    def nodes(self):
+        # this works but would require a by_n function
+        #self.xpath('//_:node/@id|//_:node//y:BorderStyle/@type|'
+        #'//_:node//y:BorderStyle/@width|//_:node//y:NodeLabel/text()[1]')
+        for node in self.xpath('//_:node'):
+            xpath = self.mkx(node)
+            id, style_type, style_width, *label = xpath(
+                '@id|'
+                '_:data//y:BorderStyle/@type|'
+                '_:data//y:BorderStyle/@width|'
+                '_:data//y:NodeLabel/text()[1]'
+            )
+            label, *_ = label if label else [None]
+            yield (id, style_type, style_width, label)
+
+    def edges(self):
+        for edge in self.xpath('//_:edge'):
+            xpath = self.mkx(edge)
+            id, s, o, style_type, style_width, source_a, target_a, *label = xpath(
+                '@id|@source|@target|'
+                '_:data//y:LineStyle/@type|'
+                '_:data//y:LineStyle/@width|'
+                '_:data//y:Arrows/@source|'
+                '_:data//y:Arrows/@target|'
+                '_:data//y:EdgeLabel/text()'
+            )
+            source_a = None if source_a == 'none' else source_a
+            target_a = None if target_a == 'none' else target_a
+            label, *_ = label if label else [None]
+            yield (id, s, o, style_type, style_width, source_a, target_a, label)
+
+
+workflow = Namespace('https://uri.interlex.org/scibot/uris/readable/workflow/')
+RRIDCUR = Namespace('https://uri.interlex.org/scibot/uris/readable/RRIDCUR/')
+
+
+class WorkflowMapping(Flatten):
+
+    def base(self):
+        a = rdf.type
+        yield workflow.hasNextStep, a, owl.ObjectProperty
+        yield workflow.hasTag, a, owl.ObjectProperty
+        yield workflow.hasReplyTag, a, owl.ObjectProperty
+        yield workflow.hasTagOrReplyTag, a, owl.ObjectProperty
+
+        wf = workflow
+        yield wf.annotation, a, owl.Class
+        yield wf.pageNote, a, owl.Class
+        yield wf.reply, a, owl.Class
+        yield wf.tag, a, owl.Class
+
+    def nodes(self):
+        for id, style_type, style_width, label in super().nodes():
+            s = id
+            yield s, rdf.type, owl.Class
+            if style_type == 'dashed':
+                yield 'TODO', 'TODO', 'TODO'
+            elif (style_type, style_width) == ('line', '1.0'):
+                if label == 'RRID:':
+                    yield 'TODO', 'TODO', 'TODO'
+
+    def edges(self):
+        for id, s, o, style_type, style_width, source, target, label in super().edges():
+            # this is where we really want case again :/
+            if style_type == 'dashed':
+                p = workflow.hasNextStep
+            elif (style_type, style_width) == ('dashed_dotted', '2.0'):
+                p = workflow.hasTag
+                #yield o, rdfs.subClassOf, workflow.tag
+            elif (style_type, style_width) == ('line', '1.0'):
+                p = workflow.hasReplyTag
+            elif (style_type, style_width) == ('line', '2.0'):  # TODO may need arrow
+                p = workflow.hasTagOrReplyTag
+
+            yield s, p, o
+
+
+line_style_type_to_oop = {  # for workflows
+                          'dashed':'workflow:next',
+}
+
+border_type_to_class = {  # for workflows
+                        'line':'workflow:annotation-or-reply',
+                        'dashed':'workflow:action',
+}
 
 def natural_sort(l):
     convert = lambda text: int(text) if text.isdigit() else text.lower()
@@ -81,17 +200,6 @@ def make_ttl(node_dict):  # FIXME we need to deal with the prefixes earlier
 
     return ''.join(natural_sort(outputs))
 
-abv = {
-    'graphml':"{http://graphml.graphdrawing.org/xmlns}graphml",
-    'graph':"{http://graphml.graphdrawing.org/xmlns}graph",
-    'node':"{http://graphml.graphdrawing.org/xmlns}node",
-    'edge':"{http://graphml.graphdrawing.org/xmlns}edge",
-    'data':"{http://graphml.graphdrawing.org/xmlns}data",
-    'ShapeNode':'{http://www.yworks.com/xml/graphml}ShapeNode',
-    'NodeLabel':"{http://www.yworks.com/xml/graphml}NodeLabel",
-    'EdgeLabel':"{http://www.yworks.com/xml/graphml}EdgeLabel",
-}
-
 # TODO identifier mapping needs to happen before here
 
 PREFIXES = {**makePrefixes('owl','skos','BFO','NIFRID'), **{
@@ -120,6 +228,13 @@ def main():
 
     nodes = xpath(e, '//'+abv['node'])
     edges = xpath(e, '//'+abv['edge'])
+
+    w = WorkflowMapping(args['<file>'])
+    ns = list(w.nodes())
+    es = list(w.edges())
+
+    embed()
+
 
     node_dict = {}
     for node in nodes:  # slow but who cares
@@ -197,20 +312,24 @@ def main():
             label = label.replace('\n','').strip()
             note = note.replace('\n',' ').strip()
             newgraph.add_trip(source, 'rdfs:comment', note)
-        clabel = label.capitalize()
+        if args['methods']:
+            clabel = label.capitalize()
+        else:
+            clabel = label
         newgraph.add_trip(source, 'rdfs:label', clabel)
 
-    Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
-    json = newgraph.make_scigraph_json('rdfs:subClassOf', direct=True)
-    t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # methods
-    t, te = creatTree(*Query('FIXME:n236', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # techniques
-    print(t)
-
     newgraph.write()
-    with open(os.path.join(outloc, filename + '.txt'), 'wt') as f:
-        f.write(str(t))
-    with open(os.path.join(outloc, filename + '.html'), 'wt') as f:
-        f.write(te.html)
+    if args['methods']:
+        Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
+        json = newgraph.make_scigraph_json('rdfs:subClassOf', direct=True)
+        t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # methods
+        t, te = creatTree(*Query('FIXME:n236', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # techniques
+        print(t)
+
+        with open(os.path.join(outloc, filename + '.txt'), 'wt') as f:
+            f.write(str(t))
+        with open(os.path.join(outloc, filename + '.html'), 'wt') as f:
+            f.write(te.html)
 
 if __name__ == '__main__':
     main()
