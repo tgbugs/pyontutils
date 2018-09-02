@@ -218,7 +218,7 @@ def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     url_blaster(urls, rate, timeout, verbose, debug)
 
-def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'):
+def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head', fail=False, negative=False):
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]
@@ -249,7 +249,15 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
         ln = len(not_ok)
         lt = len(urls)
         lo = lt - ln
-        print(f'{ln} urls out of {lt} ({ln / lt * 100}%) are not ok. D:')
+        msg = f'{ln} urls out of {lt} ({ln / lt * 100:2.2f}%) are not ok. D:'
+        if negative and fail:
+            if len(not_ok) == len(all_):
+                raise AssertionError('Everything failed!')
+        elif fail:
+            raise AssertionError(f'{msg}\n' + '\n'.join(sorted(not_ok)))
+        else:
+            print(msg)
+
     else:
         print(f'OK. All {len(urls)} urls passed! :D')
     if debug:
@@ -285,6 +293,7 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
             show()
         asyncVis(collector)
         embed()
+
 
 def furls(filename):
     return set(url for t in rdflib.Graph().parse(filename, format='turtle')
