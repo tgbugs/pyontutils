@@ -233,9 +233,6 @@ def main():
     ns = list(w.nodes())
     es = list(w.edges())
 
-    embed()
-
-
     node_dict = {}
     for node in nodes:  # slow but who cares
         id_ = node.get('id')
