@@ -3,8 +3,10 @@
 import rdflib
 from pathlib import Path
 from lxml import etree
-from pyontutils.core import devconfig, makePrefixes, makeGraph, createOntology
+from pyontutils.core import makeGraph, createOntology
+from pyontutils.config import devconfig
 from pyontutils.scigraph import Vocabulary
+from pyontutils.namespaces import makePrefixes
 from IPython import embed
 
 # extract existing chebi classes from NIF-Chemical and NIF-Molecule

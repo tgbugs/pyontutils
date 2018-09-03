@@ -1,10 +1,10 @@
 import requests
 import pyontutils.parcellation as parc
-from pyontutils.core import NIFRID, ilx, ilxtr, TEMP
-from pyontutils.core import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
-from pyontutils.core import NCBITaxon, UBERON
-from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, build
+from pyontutils.core import Source, LabelsBase, Collector, build
 from pyontutils.utils import Async, deferred
+from pyontutils.namespaces import makePrefixes
+from pyontutils.namespaces import NCBITaxon, UBERON, NIFRID, ilx, ilxtr, TEMP
+from pyontutils.namespaces import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
 from pyontutils.combinators import restriction
 from pyontutils.parcellation import parcCore, LabelRoot, Label, Terminology
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov

@@ -32,11 +32,10 @@ from datetime import date
 import rdflib
 from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
-from pyontutils.core import makePrefixes, Ont, Source, build
-from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
-from pyontutils.core import NIFRID, definition
-from pyontutils.core import OntId
+from pyontutils.core import Ont, Source, build, OntId
 from pyontutils.utils import mysql_conn_helper
+from pyontutils.namespaces import makePrefixes, NIFRID, definition
+from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 from IPython import embed
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}

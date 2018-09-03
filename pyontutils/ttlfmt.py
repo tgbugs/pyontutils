@@ -29,10 +29,10 @@ import os
 import sys
 from io import StringIO, TextIOWrapper
 from json.decoder import JSONDecodeError
+from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from concurrent.futures import ProcessPoolExecutor
 from pyontutils.utils import readFromStdIn
 
 profile_me = lambda f:f

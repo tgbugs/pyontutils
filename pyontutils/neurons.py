@@ -8,13 +8,14 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
-from pyontutils.ttlser import natsort
-from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.core import Ont, makeGraph
 from pyontutils.utils import stack_magic, TermColors as tc, subclasses, injective_dict
-from pyontutils.core import Ont, makeGraph, makePrefixes, PREFIXES as uPREFIXES
-from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON, ilxtr
+from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig
+from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 
 _CHECKOUT_OK = False
 

@@ -5,10 +5,10 @@ from html import escape as html_escape
 from collections import namedtuple
 from collections import defaultdict as base_dd
 import requests
-from pyontutils.scigraph import Graph
-from pyontutils.core import PREFIXES as uPREFIXES
 from pyontutils.utils import TermColors as tc
 from pyontutils.ttlser import natsort
+from pyontutils.scigraph import Graph
+from pyontutils.namespaces import PREFIXES as uPREFIXES
 from IPython import embed
 
 BLANK = '   '

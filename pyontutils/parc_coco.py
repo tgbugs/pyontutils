@@ -1,10 +1,11 @@
 #!/usr/bin/env python3.6
 from collections import namedtuple
 import requests
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.core import makePrefixes, makeGraph
+from pyontutils.core import makeGraph
 from pyontutils.core import rdfs
 from pyontutils.utils import TODAY, rowParse
+from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.namespaces import makePrefixes
 
 OntMeta = namedtuple('OntMeta',
                      ['path',

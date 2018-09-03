@@ -12,7 +12,7 @@ Options:
 """
 
 import rdflib
-from pyontutils.core import PREFIXES as uPREFIXES
+from pyontutils.namespaces import PREFIXES as uPREFIXES
 
 def main():
     from docopt import docopt

@@ -21,9 +21,10 @@ Options:
 
 """
 from docopt import docopt
-from pyontutils.scigraph import *
+from pyontutils.core import qname
 from pyontutils.utils import TermColors as tc
-from pyontutils.core import PREFIXES, qname
+from pyontutils.scigraph import *
+from pyontutils.namespaces import PREFIXES
 
 
 class scigPrint:

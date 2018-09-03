@@ -14,7 +14,7 @@ import re
 from collections import namedtuple
 from docopt import docopt
 from lxml import etree
-from rdflib import URIRef, RDFS, Namespace
+from rdflib import URIRef, Namespace
 from IPython import embed
 from pyontutils.core import makeGraph, makePrefixes, createOntology, rdf, rdfs, owl
 from pyontutils.hierarchies import creatTree

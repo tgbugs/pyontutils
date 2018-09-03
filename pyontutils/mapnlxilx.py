@@ -11,18 +11,16 @@ from itertools import chain
 from collections import Counter, defaultdict
 from rdflib import Graph, URIRef, Namespace, Literal
 from sqlalchemy import create_engine, inspect
-from pyontutils.core import makePrefixes, createOntology, rdf, rdfs, owl, oboInOwl, PREFIXES as uPREFIXES
+from pyontutils.core import createOntology
 from pyontutils.utils import Async, deferred, noneMembers, anyMembers, mysql_conn_helper, TermColors as tc
-from pyontutils.scigraph_client import Vocabulary, Graph as sGraph
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.namespaces import makePrefixes, PREFIXES as uPREFIXES, ilxtr, NIFRID, NIFSTD, ilxb
+from pyontutils.scigraph_client import Vocabulary, Graph as sGraph
+from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 from IPython import embed
 
 gitf = Path(devconfig.git_local_base)
 
-ilxtr = Namespace(uPREFIXES['ilxtr'])
-ilx = Namespace(uPREFIXES['ilx'])
-NIFSTD = Namespace(uPREFIXES['NIFSTD'])
-NIFRID = Namespace(uPREFIXES['NIFRID'])
 SGG = Namespace('http://localhost:9000/scigraph/graph/')
 
 def _check_dupes(thing, known=tuple()):
@@ -54,7 +52,7 @@ def main():
     def datal(head):
         return cdata[header.index(head)]
 
-    ilx_labels = {ilx[ilx_fragment]:label for ilx_fragment, label in zip(datal('ilx'), datal('label'))}
+    ilx_labels = {ilxb[ilx_fragment]:label for ilx_fragment, label in zip(datal('ilx'), datal('label'))}
 
     mapping_no_sao = [p for p in zip(datal('iri'), datal('ilx')) if 'neuinfo' in p[0]]  # 9446
     mapping = [p for p in zip(datal('iri'), datal('ilx')) if 'neuinfo' in p[0] or '/sao' in p[0]]  # 9883
@@ -145,14 +143,14 @@ def main():
             uri = URIRef(iri)
 
         if uri in trouble:
-            #print('TROUBLE', iri, ilx[ilx_fragment])
-            print('TROUBLE', ilx[ilx_fragment])
+            #print('TROUBLE', iri, ilxb[ilx_fragment])
+            print('TROUBLE', ilxb[ilx_fragment])
 
         if uri in moved_to_scr:  # TODO I think we need to have _all_ the SCR redirects here...
             s, p, o = uri, ilxtr.hasScrId, moved_to_scr[uri]
             scr_rep_graph.g.add((s, p, o))
         else:
-            s, p, o = uri, ilxtr.hasIlxId, ilx[ilx_fragment]
+            s, p, o = uri, ilxtr.hasIlxId, ilxb[ilx_fragment]
             #s, p, o = o, ilxtr.ilxIdFor, s
             replacement_graph.g.add((s, p, o))
 
@@ -525,7 +523,7 @@ def would_you_like_to_know_more_question_mark():
         v = ' '.join((f'{val:<60}',
                       src,
                       ruri,
-                      ilx[ilx_frag],
+                      ilxb[ilx_frag],
                       differentia))
         mmr.append(v)
         proto_mmr_1_to_1[uri] = v

@@ -9,13 +9,14 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
-from pyontutils.core import TEMP, rdf, rdfs, owl, ilxtr
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_
 from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.neurons import _NEURON_CLASS
+from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
 current_file = Path(__file__).absolute()

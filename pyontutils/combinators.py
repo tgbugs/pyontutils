@@ -1,7 +1,16 @@
 import types
 import rdflib
-from pyontutils.utils import check_value, TEMP
+from pyontutils.utils import check_value
+from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
+
+
+def flattenTriples(triples):
+    for triple_or_generator in triples:
+        if isinstance(triple_or_generator, tuple):
+            yield triple_or_generator
+        else:
+            yield from triple_or_generator
 
 
 def make_predicate_object_combinator(function, p, o):

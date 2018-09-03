@@ -6,8 +6,9 @@ from pathlib import Path
 from datetime import date
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, makePrefixes
+from pyontutils.core import makeGraph
 from pyontutils.scigraph import Vocabulary
+from pyontutils.namespaces import makePrefixes
 from IPython import embed
 
 current_file = Path(__file__).absolute()

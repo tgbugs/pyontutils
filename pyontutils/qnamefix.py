@@ -21,10 +21,11 @@ import sys
 from glob import glob
 import rdflib
 from docopt import docopt
-from pyontutils.core import makePrefixes, PREFIXES, makeGraph
-from pyontutils.utils import readFromStdIn
 import pyontutils.ttlfmt
+from pyontutils.core import makeGraph
+from pyontutils.utils import readFromStdIn
 from pyontutils.ttlfmt import parse, prepare
+from pyontutils.namespaces import makePrefixes, PREFIXES
 
 PREFIXES = {k:v for k, v in PREFIXES.items()}
 PREFIXES.pop('NIFTTL')

@@ -4,8 +4,8 @@ import csv
 from os.path import expanduser
 from pathlib import Path
 import rdflib
-from pyontutils.scigraph import Vocabulary, Graph
 from pyontutils.utils import working_dir
+from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
 
 current_file = Path(__file__).absolute()

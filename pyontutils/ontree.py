@@ -26,14 +26,14 @@ from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
 import rdflib
-from docopt import docopt, parse_defaults
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort
+from docopt import docopt, parse_defaults
 from pyontutils import scigraph
+from pyontutils.core import makeGraph, qname, OntId
+from pyontutils.utils import getSourceLine
+from pyontutils.ontload import import_tree
 from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize
-from pyontutils.core import makeGraph, qname, OntId
-from pyontutils.ontload import import_tree
-from pyontutils.utils import getSourceLine
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)

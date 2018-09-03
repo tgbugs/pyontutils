@@ -1,10 +1,9 @@
 import sys
 from lxml import etree
-from pyontutils.core import NIFRID, ilx, ilxtr, WHSSD
-from pyontutils.core import NCBITaxon, UBERON
-from pyontutils.core import nsExact
-from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, build
+from pyontutils.core import Source, LabelsBase, Collector, build
 from pyontutils.utils import Async, deferred
+from pyontutils.namespaces import NIFRID, ilx, ilxtr, WHSSD
+from pyontutils.namespaces import makePrefixes, NCBITaxon, UBERON, nsExact
 from pyontutils.combinators import restriction
 from pyontutils.parcellation import parcCore, resSource, LabelRoot, Label, Terminology
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov

@@ -3,11 +3,12 @@ import subprocess
 from pathlib import Path
 from collections import defaultdict
 import rdflib
-from pyontutils.ttlser import natsort
+from pyontutils.core import qname, makeGraph
 from pyontutils.utils import TermColors as tc
-from pyontutils.closed_namespaces import owl, rdf, rdfs, skos
-from pyontutils.core import NIFRID, qname, ilxtr, makeGraph
+from pyontutils.ttlser import natsort
+from pyontutils.namespaces import  NIFRID, ilxtr
 from pyontutils.combinators import restriction, annotation
+from pyontutils.closed_namespaces import owl, rdf, rdfs, skos
 from IPython import embed
 
 current_file = Path(__file__).absolute()

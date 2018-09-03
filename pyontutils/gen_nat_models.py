@@ -7,6 +7,7 @@ import requests
 from pyontutils.utils import rowParse
 from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.namespaces import makePrefixes
 from IPython import embed
 
 def main():

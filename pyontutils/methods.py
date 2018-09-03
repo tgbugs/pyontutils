@@ -1,14 +1,16 @@
 from rdflib import URIRef, Literal, BNode
-from pyontutils.core import OntCuries, OntId, OntTerm, makeNamespaces
-from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples
-from pyontutils.core import owl, rdf, rdfs, oboInOwl, NIFTTL, NIFRID, ilxtr, ilx, BFO
-from pyontutils.core import partOf, hasRole, locatedIn
-from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.combinators import unionOf, intersectionOf, Restriction, EquivalentClass
+from pyontutils.core import OntCuries, OntId, OntTerm, qname
+from pyontutils.core import simpleOnt, displayGraph
+from pyontutils.namespaces import makeNamespaces, partOf, hasRole, locatedIn
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, ilx, BFO, TEMP
+from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.combinators import flattenTriples, unionOf, intersectionOf
+from pyontutils.combinators import Restriction, EquivalentClass
 from pyontutils.combinators import oc, oc_, oop, odp, olit, oec, hasAspectChangeCombinator
 from pyontutils.combinators import Restriction2, POCombinator, disjointUnionOf, oneOf
 from pyontutils.combinators import restrictions, annotation, restriction, restrictionN
 from pyontutils.methods_core import asp, tech, prot, prov, methods_core, _t, restN, oECN, olist, branch
+from pyontutils.closed_namespaces import owl, rdf, rdfs, oboInOwl
 
 # NOTE if vim is slow it is probably becuase there are
 # so many nested parens `:set foldexpr=` fixes the problem

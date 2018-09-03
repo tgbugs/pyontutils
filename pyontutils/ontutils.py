@@ -38,11 +38,13 @@ from random import shuffle
 from pathlib import Path
 import rdflib
 import requests
-from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, skos, definition
+from git.repo import Repo
+from pyontutils.core import makeGraph, createOntology
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
 from pyontutils.ontload import loadall, locate_config_file, getCuries
+from pyontutils.namespaces import makePrefixes, definition
+from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 from IPython import embed
 
 try:

@@ -60,9 +60,9 @@ from collections import OrderedDict
 import rdflib
 from docopt import docopt
 import pyontutils.utils
-from pyontutils.core import makeNamespaces, PREFIXES as uPREFIXES
-from pyontutils.core import rdf, owl, NIFRID, definition
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.namespaces import makeNamespaces, NIFRID, definition, PREFIXES as uPREFIXES
+from pyontutils.closed_namespaces import rdf, owl
 from IPython import embed
 
 fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')

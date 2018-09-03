@@ -3,11 +3,11 @@ import rdflib
 import ontquery
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
+from pyontutils.core import OntId, OntTerm, OntCuries
 from pyontutils.utils import relative_path
-from pyontutils.core import OntId, OntTerm, OntCuries, makePrefixes
-from pyontutils.core import makeNamespaces, interlex_namespace, PREFIXES
-from pyontutils.core import NIFRID, ilxtr
-from pyontutils.core import hasRole, definition
+from pyontutils.namespaces import makePrefixes, makeNamespaces
+from pyontutils.namespaces import interlex_namespace, PREFIXES
+from pyontutils.namespaces import NIFRID, ilxtr, hasRole, definition
 from pyontutils.combinators import restriction
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed

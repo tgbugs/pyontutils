@@ -16,11 +16,12 @@ import rdflib
 import requests
 from lxml import etree
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology, yield_recursive, build, qname
-from pyontutils.core import rdf, rdfs, owl, prov, oboInOwl, replacedBy, hasPart, hasRole
-from pyontutils.core import Ont, Source, PREFIXES as uPREFIXES
+from pyontutils.core import makeGraph, createOntology, yield_recursive, build, qname
+from pyontutils.core import Ont, Source
 from pyontutils.utils import chunk_list, dictParse, memoryCheck
 from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole, PREFIXES as uPREFIXES
+from pyontutils.closed_namespaces import rdf, rdfs, owl, prov, oboInOwl
 from IPython import embed
 
 

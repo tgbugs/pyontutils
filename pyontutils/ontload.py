@@ -46,22 +46,23 @@ import shutil
 import json
 import yaml
 import subprocess
-from os.path import join as jpth
 from io import BytesIO
 from glob import glob
 from pathlib import Path
+from os.path import join as jpth
 from contextlib import contextmanager
+from collections import namedtuple
 import rdflib
 import requests
 from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
-from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl, dc, definition
-from pyontutils.core import makeGraph, makePrefixes  # TODO make prefixes needs an all...
+from pyontutils.core import makeGraph
 from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile, TermColors as tc
+from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
-from collections import namedtuple
+from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
 from IPython import embed
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}

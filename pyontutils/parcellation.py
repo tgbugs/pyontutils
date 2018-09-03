@@ -21,15 +21,16 @@ from collections import defaultdict, Counter
 from git import Repo
 from lxml import etree
 from rdflib import Graph, URIRef, Namespace
-from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
-from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
-from pyontutils.core import NCBITaxon, UBERON, NIFTTL
 from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector
-from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, nsExact, build
+from pyontutils.core import makeGraph, build
 from pyontutils.utils import async_getter, rowParse, getSourceLine, subclasses
 from pyontutils.utils import working_dir, TermColors as tc
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
+from pyontutils.namespaces import makePrefixes, interlex_namespace, nsExact
+from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, FSLATS
+from pyontutils.namespaces import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
+from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL
 from pyontutils.combinators import annotations
 from pyontutils.process_fixed import ProcessPoolExecutor
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
