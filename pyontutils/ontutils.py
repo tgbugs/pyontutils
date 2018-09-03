@@ -5,7 +5,7 @@ __doc__ = f"""Common commands for ontology processes.
 Also old ontology refactors to run in the root ttl folder.
 
 Usage:
-    ontutils devconfig
+    ontutils devconfig [--write] [<field> ...]
     ontutils parcellation
     ontutils catalog-extras [options]
     ontutils iri-commit [options] <repo>
@@ -29,6 +29,7 @@ Options:
     -f --fetch                      fetch catalog extras from their remote location
     -d --debug                      call IPython embed when done
     -v --verbose                    verbose output
+    -w --write                      write devconfig file
 """
 import os
 from glob import glob
@@ -763,8 +764,14 @@ def main():
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
     if args['devconfig']:
-        file = devconfig.write(args['--output-file'])
-        print(f'config written to {file}')
+        if args['--write']:
+            file = devconfig.write(args['--output-file'])
+            print(f'config written to {file}')
+        elif args['<field>']:
+            for f in args['<field>']:
+                print(getattr(devconfig, f, ''))
+        else:
+            print(devconfig)
     elif args['catalog-extras']:
         catalog_extras(args['--fetch'])
     elif args['version-iri']:

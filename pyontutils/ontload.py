@@ -68,8 +68,6 @@ defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc
 
 COMMIT_HASH_HEAD_LEN = 7
 
-setPS1(__file__)
-
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
 Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
@@ -701,6 +699,7 @@ def run(args):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
+    setPS1(__file__)
     if args['--debug']:
         print(args)
     try:

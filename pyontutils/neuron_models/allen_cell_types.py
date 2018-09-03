@@ -16,11 +16,11 @@ import json
 from pathlib import Path
 import rdflib
 import requests
-from rdflib import RDF, OWL
 from rdflib.namespace import *
 from pyontutils.utils import TermColors as tc, relative_path
-from pyontutils.core import annotation, simpleOnt, makePrefixes
+from pyontutils.core import simpleOnt, makePrefixes
 from pyontutils.core import rdf, rdfs, owl, ilxtr, definition
+from pyontutils.combinators import annotation
 from pyontutils.neuron_lang import *
 from docopt import docopt, parse_defaults
 from IPython import embed

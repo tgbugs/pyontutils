@@ -5,12 +5,26 @@ import difflib
 import inspect
 import unittest
 import subprocess
+from io import BytesIO
 from random import shuffle
 import rdflib
 
 # trigger registration of rdflib extensions
 import pyontutils.utils
+from pyontutils.ttlser import CustomTurtleSerializer
 
+
+def randomize_dict_order(d):
+    random_order_keys = list(d)
+    shuffle(random_order_keys)
+    out = {}
+    for k in random_order_keys:
+        out[k] = d[k]
+
+    if tuple(d) == tuple(out):
+        return randomize_dict_order(d)  # try again
+    else:
+        return out
 
 def randomize_prefix_order(graph):
     namespace = graph.namespace_manager.store._IOMemory__namespace
@@ -81,8 +95,10 @@ class TestTtlser(unittest.TestCase):
         
     def make_ser(self, outfmt='nifttl'):
         header = ('import sys\n'
+                  'from io import BytesIO\n'
                   'from random import shuffle\n'
                   'import rdflib\n'
+                  'from pyontutils.ttlser import CustomTurtleSerializer\n'
                   "rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')\n"
                   "rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')\n"
                   'class Thing:\n'
@@ -90,8 +106,9 @@ class TestTtlser(unittest.TestCase):
         src0 = inspect.getsource(self.serialize)
         src1 = inspect.getsource(randomize_BNode_order)
         src2 = inspect.getsource(randomize_prefix_order)
+        src3 = inspect.getsource(randomize_dict_order)
         after =  f't = Thing()\nsys.stdout.buffer.write(t.serialize(\'{outfmt}\'))\n'
-        return header + src0 + '\n\n' + src1 + '\n' + src2 + '\n' + after
+        return header + src0 + '\n\n' + src1 + '\n' + src2 + '\n' + src3 + '\n' + after
 
     def serialize(self, outfmt='nifttl'):
         graph = rdflib.Graph()
@@ -99,7 +116,17 @@ class TestTtlser(unittest.TestCase):
         randomize_BNode_order(graph)
         randomize_prefix_order(graph)
 
-        actual = graph.serialize(format=outfmt)
+        if outfmt == 'nifttl':
+            ttlser = CustomTurtleSerializer(graph)
+            ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
+            ttlser.list_rankers = randomize_dict_order(ttlser.list_rankers)
+            ttlser._list_helpers = randomize_dict_order(ttlser._list_helpers)
+            stream = BytesIO()
+            ttlser.serialize(stream)
+            actual = stream.getvalue()
+        else:
+            actual = graph.serialize(format=outfmt)
+
         actual = actual.rsplit(b'\n',2)[0]  # drop versioninfo
         return actual
 

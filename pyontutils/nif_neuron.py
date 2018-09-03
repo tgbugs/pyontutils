@@ -250,18 +250,9 @@ def make_phenotypes():
                             path='ttl/',
                             prefixes=PREFIXES)
 
-
-    eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
-                   'NIF-Neuron-Defined',
-                   'NIF Neuron Defined Classes',
-                   'NIFNEUDEF',
-                   'This file contains defined classes derived from neuron phenotypes.',
-                   TODAY())
-    defined_graph = createOntology(filename=eont.filename,
+    defined_graph = createOntology(filename='NIF-Neuron-Defined',
                                    path='ttl/',
                                    prefixes=PREFIXES)
-    #ontid = eont.path + eont.filename + '.ttl'
-    #defined_graph.add_ont(ontid, *eont[2:])
     edg = rdflib.Graph().parse(defined_graph.filename, format='turtle')
     defined_id_lookup = {o.value:s for s, o in edg.subject_objects(rdflib.RDFS.label)}
     print('AAAAAAAAAAA', defined_id_lookup)

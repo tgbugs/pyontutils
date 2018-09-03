@@ -173,9 +173,9 @@ def populate_tests():
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
     mains = {'nif_cell':None,
              'methods':None,
-             'core':None,
              'scigraph':None,
              'hbp_cells':None,
+             'combinators':None,
              'chebi_bridge':None,
              'closed_namespaces':None,
              'gen_nat_models':None,
