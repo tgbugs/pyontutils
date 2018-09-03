@@ -10,7 +10,7 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
-from pyontutils.core import OntMeta, TEMP, rdf, rdfs, owl, ilxtr
+from pyontutils.core import TEMP, rdf, rdfs, owl, ilxtr
 from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
 from pyontutils.ilx_utils import ILXREPLACE

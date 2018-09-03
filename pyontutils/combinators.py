@@ -1,6 +1,6 @@
 import types
 import rdflib
-from pyontutils.utils import check_value
+from pyontutils.utils import check_value, TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 
 
