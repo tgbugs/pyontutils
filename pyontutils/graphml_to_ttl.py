@@ -13,7 +13,8 @@ Options:
 """
 import os
 import re
-from collections import namedtuple
+from itertools import chain
+from collections import namedtuple, defaultdict
 from lxml import etree
 from docopt import docopt
 from rdflib import URIRef, BNode, Namespace
@@ -21,7 +22,7 @@ from IPython import embed
 from pyontutils.core import makeGraph
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, PREFIXES as uPREFIXES
-from pyontutils.combinators import restriction, restrictionN, allDifferent, members, unionOf
+from pyontutils.combinators import restriction, restrictionN, allDifferent, members, unionOf, oneOf
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from pyontutils.hierarchies import creatTree
 
@@ -159,6 +160,12 @@ class WorkflowMapping(Flatten, TripleExport):
         yield workflow.hasTag, a, owl.ObjectProperty
         yield workflow.hasReplyTag, a, owl.ObjectProperty
         yield workflow.hasTagOrReplyTag, a, owl.ObjectProperty
+
+        yield workflow.hasOutput, a, owl.ObjectProperty
+        yield workflow.hasOutputTag, a, owl.ObjectProperty
+        yield workflow.hasOutputTag, rdfs.subPropertyOf, workflow.hasOutput
+        yield workflow.hasOutputExact, a, owl.ObjectProperty
+        yield workflow.hasOutputExact, rdfs.subPropertyOf, workflow.hasOutput
 
         yield wf.state, a, owl.Class
 
@@ -304,6 +311,23 @@ class WorkflowMapping(Flatten, TripleExport):
     def post(self):
         yield from allDifferent(None, members(*self.different_tags))
 
+    def post_graph(self, graph):
+        for p in (wf.hasTag, wf.hasReplyTag, wf.hasTagOrReplyTag, wf.hasOutputTag):
+            stags = defaultdict(set)
+            for s, o, in graph[:p:]:
+                stags[s].add(o)
+
+            for s, oneof in stags.items():
+                if len(oneof) > 1:
+                    [graph.remove((s, p, o)) for o in oneof]
+                    b = BNode()
+                    graph.add((s, p, b))
+                    graph.add((b, a, wf.tag))
+                    # note that these are not owl semantics so it is unhappy
+                    #graph.add((b, a, owl.NamedIndividual))
+                    for t in oneOf(*oneof)(b):
+                        graph.add(t)
+
 
 class PaperIdMapping(WorkflowMapping):
     def base(self):
@@ -372,10 +396,12 @@ def main():
     if args['workflow']:
         w = WorkflowMapping(args['<file>'])
         [mgraph.g.add(t) for t in w.triples]
+        w.post_graph(mgraph.g)
 
     elif args['paper']:
         w = PaperIdMapping(args['<file>'])
         [mgraph.g.add(t) for t in w.triples]
+        w.post_graph(mgraph.g)
 
     elif args['methods']:
         parser = etree.XMLParser(remove_blank_text=True)
