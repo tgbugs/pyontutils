@@ -195,6 +195,8 @@ class POCombinator(_POCombinator):
 
 oc_ = POCombinator(rdf.type, owl.Class)
 
+allDifferent = POCombinator(rdf.type, owl.AllDifferent)
+
 
 class RestrictionCombinator(_POCombinator):
     def __call__(self, subject, linking_predicate=None):
@@ -643,6 +645,12 @@ class DisjointUnionOf(PredicateList):
     predicate = owl.disjointUnionOf
 
 disjointUnionOf = DisjointUnionOf()
+
+
+class Members(PredicateList):
+    predicate = owl.members
+
+members = Members()
 
 
 class EquivalentClass(Triple):
