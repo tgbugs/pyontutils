@@ -17,7 +17,7 @@ from itertools import chain
 from collections import namedtuple, defaultdict
 from lxml import etree
 from docopt import docopt
-from rdflib import URIRef, BNode, Namespace
+from rdflib import URIRef, BNode, Namespace, Graph
 from IPython import embed
 from pyontutils.core import makeGraph
 from pyontutils.qnamefix import cull_prefixes
@@ -67,9 +67,11 @@ edge_to_ttl = {
 }
 edge_replace = lambda a: edge_to_ttl[a] if a in edge_to_ttl else a  # FIXME it is time to abstract this...
 
+
 def by2(one, two, *rest):
     yield one, two
     yield from by2(*rest)
+
 
 class Flatten:
     def __init__(self, filename):
@@ -132,7 +134,11 @@ class TripleExport:
 
     @property
     def triples(self):
-        yield from self.base()
+        for s, p, o in self.base():
+            if p == a:
+                self.types[s] = o
+            yield s, p, o
+
         for s, p, o in self.nodes():
             if p == a:
                 self.types[s] = o
@@ -141,11 +147,24 @@ class TripleExport:
         yield from self.edges()
         yield from self.post()
 
+    def graph(self, graph=Graph()):
+        [graph.add(t) for t in self.triples]
+        self.post_graph(graph)
+        out_mgraph = cull_prefixes(graph,
+                                   prefixes={**dict(workflow=workflow, RRIDCUR=RRIDCUR),
+                                             **uPREFIXES})
+
+        for c, i in out_mgraph.g.namespaces():  # will add but not take away
+            graph.bind(c, i)
+
+        return out_mgraph.g
+
 
 workflow = Namespace('https://uri.interlex.org/scibot/uris/readable/workflow/')
 RRIDCUR = Namespace('https://uri.interlex.org/scibot/uris/RRIDCUR/')
 a = rdf.type
 wf = workflow
+
 
 class WorkflowMapping(Flatten, TripleExport):
 
@@ -154,12 +173,20 @@ class WorkflowMapping(Flatten, TripleExport):
         self.node_name_lookup = {}
         self.types = {}
         self.different_tags = set()
+        self.edge_object_shift = {}  # s - o -> s - new_obj - o
+
+    def insert_object(self, id, s_new):
+        id_new = BNode()  # just an id
+        self.edge_object_shift[id] = id_new
+        self.node_name_lookup[id_new] = s_new
 
     def common(self):
         yield workflow.hasNextStep, a, owl.ObjectProperty
-        yield workflow.hasTag, a, owl.ObjectProperty
-        yield workflow.hasReplyTag, a, owl.ObjectProperty
         yield workflow.hasTagOrReplyTag, a, owl.ObjectProperty
+        yield workflow.hasTag, a, owl.ObjectProperty
+        yield workflow.hasTag, rdfs.subPropertyOf, wf.hasTagOrReplyTag
+        yield workflow.hasReplyTag, a, owl.ObjectProperty
+        yield workflow.hasReplyTag, rdfs.subPropertyOf, wf.hasTagOrReplyTag
 
         yield workflow.hasOutput, a, owl.ObjectProperty
         yield workflow.hasOutputTag, a, owl.ObjectProperty
@@ -179,6 +206,7 @@ class WorkflowMapping(Flatten, TripleExport):
         yield from isAttachedTo(wf.tag)
         refersTo = restriction(wf.refersTo, wf.annotation)
         yield from refersTo(wf.reply)
+        yield wf.pageNoteInstance, a, wf.pageNote  # wf.exactNull ...
 
     def base(self):
         yield from self.common()
@@ -237,11 +265,6 @@ class WorkflowMapping(Flatten, TripleExport):
                 else:
                     s = TEMP[label]
 
-            if s is None:
-                raise ValueError(f'unhandled node {id} {lable}')
-            else:
-                self.node_name_lookup[id] = s
-
             #yield s, rdf.type, owl.Class
             if isinstance(s, BNode):
                 #yield s, a, owl.NamedIndividual  # FIXME apparently this doesn't serializer properly ...
@@ -253,19 +276,32 @@ class WorkflowMapping(Flatten, TripleExport):
             elif (style_type, style_width) == ('line', '2.0'):
                 pass
             elif (style_type, style_width) == ('dashed_dotted', '2.0'):
-                yield s, wf.isAttachedTo, wf.pageNote
+                #yield s, wf.isAttachedTo, wf.pageNote
+                self.insert_object(id, wf.pageNoteInstance)
+                yield wf.pageNoteInstance, wf.hasTag, s
                 if s not in self.types:
                     yield s, a, wf.tagCurator
             elif (style_type, style_width) == ('dotted', '2.0'):
-                yield s, wf.isAttachedTo, wf.pageNote
+               # yield s, wf.isAttachedTo, wf.pageNote
+                self.insert_object(id, wf.pageNoteInstance)
+                yield wf.pageNoteInstance, wf.hasTag, s
                 if s not in self.types:
                     yield s, a, wf.tagScibot
             else:
                 msg = f'{id} {label} has unhandled type {style_type} {style_width}'
                 raise ValueError(msg)
 
+            if s is None:
+                raise ValueError(f'unhandled node {id} {lable}')
+            else:
+                self.node_name_lookup[id] = s
+
     def edges(self):
         for id, s_id, o_id, style_type, style_width, source, target, label, desc, url in super().edges():
+            if o_id in self.edge_object_shift:
+                o_id, __old = self.edge_object_shift[o_id], o_id
+                #print('shifting', __old, self.node_name_lookup[__old])
+
             if desc == 'legend':
                 continue
             s = self.node_name_lookup[s_id]
@@ -275,6 +311,8 @@ class WorkflowMapping(Flatten, TripleExport):
             if style_type == 'dashed':
                 if self.types[o] == wf.exact:
                     p = wf.hasOutputExact
+                elif o == wf.pageNoteInstance:
+                    p = wf.hasOutput
                 elif self.types[o] in (wf.tagCurator, wf.tag):
                     p = wf.hasOutputTag
                 else:
@@ -341,8 +379,10 @@ def natural_sort(l):
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(l, key = alphanum_key)
 
+
 def xpath(node, expression):  # this is how to (sortof) do xpaths with the nasty uris
     return etree.ETXPath(expression)(node)
+
 
 def make_ttl(node_dict):  # FIXME we need to deal with the prefixes earlier
     outputs = []
@@ -385,6 +425,7 @@ _PREFIXES = {
     #'obo_annot':'http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#',  #FIXME OLD??
     #'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',  # these aren't really from OBO files but they will be friendly known identifiers to people in the community
 }
+
 
 def main():
     args = docopt(__doc__, version='0.1')
