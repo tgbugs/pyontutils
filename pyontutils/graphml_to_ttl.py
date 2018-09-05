@@ -211,6 +211,14 @@ class WorkflowMapping(Flatten, TripleExport):
     def base(self):
         yield from self.common()
 
+        yield workflow.initiatesAction, a, owl.ObjectProperty
+
+        # FIXME these should not have to be asserted
+        # but the order of nodes is all wrong :/
+        yield RRIDCUR.Kill, a, wf.tagCurator
+        yield RRIDCUR.Validated, a, wf.tagCurator
+        yield RRIDCUR.UnresolvedCur, a, wf.tagScibot
+
         yield wf.tagScibot, a, owl.Class
         yield wf.tagScibot, rdfs.subClassOf, wf.tag
         yield wf.tagCurator, a, owl.Class
@@ -239,9 +247,11 @@ class WorkflowMapping(Flatten, TripleExport):
                 if url.startswith('exact'):
                     s = workflow[url]
                     yield s, a, workflow.exact
-                elif url == 'RRIDscibot':
+                elif url.startswith('RRIDscibot'):
                     s = workflow[url]
                     yield s, a, workflow.tagScibot
+                elif any(url.startswith(prefix) for prefix in ('release', 'resolver')):
+                    s = wf[url]
                 else:
                     s = TEMP[url]
             else:
@@ -264,6 +274,11 @@ class WorkflowMapping(Flatten, TripleExport):
                     yield s, a, wf.tag
                 else:
                     s = TEMP[label]
+
+            if s is None:  # FIXME if this happens this late we don't get the error message
+                raise ValueError(f'unhandled node {id} {lable}')
+            else:
+                self.node_name_lookup[id] = s
 
             #yield s, rdf.type, owl.Class
             if isinstance(s, BNode):
@@ -291,11 +306,6 @@ class WorkflowMapping(Flatten, TripleExport):
                 msg = f'{id} {label} has unhandled type {style_type} {style_width}'
                 raise ValueError(msg)
 
-            if s is None:
-                raise ValueError(f'unhandled node {id} {lable}')
-            else:
-                self.node_name_lookup[id] = s
-
     def edges(self):
         for id, s_id, o_id, style_type, style_width, source, target, label, desc, url in super().edges():
             if o_id in self.edge_object_shift:
@@ -309,11 +319,14 @@ class WorkflowMapping(Flatten, TripleExport):
             o = self.node_name_lookup[o_id]
             # this is where we really want case again :/
             if style_type == 'dashed':
+                # TODO if dashed -dashed-> line => line is scibot output
                 if self.types[o] == wf.exact:
                     p = wf.hasOutputExact
                 elif o == wf.pageNoteInstance:
                     p = wf.hasOutput
-                elif self.types[o] in (wf.tagCurator, wf.tag):
+                elif self.types[s] in (wf.tagCurator, wf.tagScibot) and self.types[o] == wf.state:
+                    p = wf.initiatesAction  # TODO naming
+                elif self.types[o] in (wf.tag, wf.tagCurator, wf.tagScibot):
                     p = wf.hasOutputTag
                 else:
                     p = workflow.hasNextStep
@@ -370,6 +383,9 @@ class WorkflowMapping(Flatten, TripleExport):
 class PaperIdMapping(WorkflowMapping):
     def base(self):
         yield from self.common()
+
+        yield RRIDCUR.KillPaper, a, wf.tagCurator
+
         yield wf.DOI, a, wf.tag
         yield wf.PMID, a, wf.tag
 
