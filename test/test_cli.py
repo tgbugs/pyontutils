@@ -189,6 +189,7 @@ def populate_tests():
     #['ilxcli', '--help'],
              'obo_io':['obo-io', '--ttl', nsmethodsobo],
     'ttlfmt':[['ttlfmt', ban],
+              ['ttlfmt', '--version'],
               #[zap]
              ],
     'qnamefix':[['qnamefix', ban],
