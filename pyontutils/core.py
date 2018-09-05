@@ -102,6 +102,20 @@ def getNamespace(prefix, namespace):
     else:
         return rdflib.Namespace(namespace)
 
+
+class mGraph(rdflib.Graph):
+    def __init__(self, *args, filename='/tmp/test.ttl', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bind('owl', owl)
+        self.filename = filename
+
+    def write(self, filename=None):
+        if filename is None:
+            filename = self.filename
+        with open(filename, 'wb') as f:
+            f.write(self.serialize(format='nifttl'))
+
+
 class makeGraph:
     SYNONYM = 'NIFRID:synonym'  # dangerous with prefixes
 
