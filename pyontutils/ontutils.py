@@ -253,13 +253,12 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
         lt = len(urls)
         lo = lt - ln
         msg = f'{ln} urls out of {lt} ({ln / lt * 100:2.2f}%) are not ok. D:'
+        print(msg)  # always print to get around joblib issues
         if negative and fail:
             if len(not_ok) == len(all_):
                 raise AssertionError('Everything failed!')
         elif fail:
             raise AssertionError(f'{msg}\n' + '\n'.join(sorted(not_ok)))
-        else:
-            print(msg)
 
     else:
         print(f'OK. All {len(urls)} urls passed! :D')
