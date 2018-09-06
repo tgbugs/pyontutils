@@ -384,7 +384,7 @@ class PaperIdMapping(WorkflowMapping):
     def base(self):
         yield from self.common()
 
-        yield RRIDCUR.KillPaper, a, wf.tagCurator
+        yield RRIDCUR.KillPageNote, a, wf.tagCurator  # FIXME hardcoded
 
         yield wf.DOI, a, wf.tag
         yield wf.PMID, a, wf.tag
