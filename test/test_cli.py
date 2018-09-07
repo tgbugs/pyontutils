@@ -7,7 +7,7 @@ import subprocess
 from importlib import import_module
 from pathlib import Path
 from git import Repo
-from pyontutils.utils import TermColors as tc
+from pyontutils.utils import working_dir, TermColors as tc
 
 from pyontutils.config import devconfig
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
@@ -87,7 +87,7 @@ class TestCli(Folders):
         [sys.executable, 'resolver/make_config.py'],
         # strange that make_config failed in travis in a pipenv as couldn't find pyontutils?
     )
-    
+
     def test_cli(self):
         # we still run these tests to make sure that the install process works as expected
         failed = []
@@ -102,7 +102,10 @@ class TestCli(Folders):
 
 
 class TestScripts(Folders):
-    """ Import everything and run main() on a subset of those """
+    """ Import everything and run main() on a subset of those
+        NOTE If you are debugging this. Most of the functions in this
+        class are defined dynamically by populate_tests, and you will not
+        find their code here. """
     # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
     def setUp(self, checkout_ok=checkout_ok):
@@ -170,21 +173,23 @@ def populate_tests():
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
     mains = {'nif_cell':None,
              'methods':None,
-             'core':None,
              'scigraph':None,
              'hbp_cells':None,
+             'combinators':None,
              'chebi_bridge':None,
              'closed_namespaces':None,
              'gen_nat_models':None,
              'hierarchies':None,
              'nif_neuron':None,
-             #'docs':None,  # can't seem to get this to work correctly on travis so leaving it out for now
+             'cocomac_uberon':None,
+             #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
              'make_catalog':['ont-catalog', '--jobs', '1'],
              'parcellation':['parcellation', '--jobs', '1'],
              'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
     #['ilxcli', '--help'],
              'obo_io':['obo-io', '--ttl', nsmethodsobo],
     'ttlfmt':[['ttlfmt', ban],
+              ['ttlfmt', '--version'],
               #[zap]
              ],
     'qnamefix':[['qnamefix', ban],
@@ -222,18 +227,18 @@ def populate_tests():
             ['scig', 'g', '-v', 'BIRNLEX:796', '--rt', 'subClassOf'],
             ['scig', 'e', '-v', 'IAO:0100001' 'BIRNLEX:796' 'UBERON:0000955'],
             ['scig', 'cy', '"MATCH (n) RETURN n"'],
+            ['scig', 'onts'],
     ],
 
     }
     if 'CI' not in os.environ:
         mains['mapnlxilx'] = None  # requires db connection
-        
+
     tests = tuple()  # moved to mains --test
 
     _do_mains = []
     _do_tests = []
-    parent = Path(core.__file__).absolute().parent.parent
-    repo = Repo(parent.as_posix())
+    repo = Repo(working_dir.as_posix())
     paths = sorted(f for f in repo.git.ls_files().split('\n')
                    if f.endswith('.py') and f.startswith('pyontutils'))
     for last in lasts:

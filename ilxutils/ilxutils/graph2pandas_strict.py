@@ -102,7 +102,7 @@ class Graph2Pandas():
 
     def get_sparql_dataframe(self):
         self.result = self.g.query(self.query)
-    
+
         cols = set(['qname'])
         indx = set()
         data = {}
@@ -131,10 +131,14 @@ class Graph2Pandas():
 
             # Prepare defaultdict home if it doesn't exist
             if not data.get(subj):
-                data[subj] = defaultdict(list)
-                data[subj]['qname'] = self.qname(subj_binding)
+                data[subj] = {}
+                #data[subj] = defaultdict(list) # Deprecated
+                #data[subj]['qname'] = self.qname(subj_binding) # Deprecated
 
-            data[subj][pred].append(obj)
+            if data[subj].get(pred):
+                print(subj, pred, obj)
+                exit('duplicate predicates')
+            data[subj][pred] = obj
             cols.add(pred)
             indx.add(subj)
 

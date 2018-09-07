@@ -5,17 +5,17 @@ import inspect
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
 from urllib.error import HTTPError
-from collections import MutableMapping
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
+from pyontutils.core import Ont, makeGraph
+from pyontutils.utils import stack_magic, TermColors as tc, subclasses, injective_dict
 from pyontutils.ttlser import natsort
-from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.utils import stack_magic, TermColors as tc, subclasses
-from pyontutils.core import Ont, makeGraph, makePrefixes, PREFIXES as uPREFIXES
-from pyontutils.core import rdf, rdfs, owl, TEMP, UBERON, ilxtr
 from pyontutils.config import devconfig
+from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 
 _CHECKOUT_OK = False
 
@@ -1262,42 +1262,6 @@ class NeuronArranger:  # TODO should this write the graph?
 
 
 # local naming and ordering
-
-class injective_dict(MutableMapping):
-    def __init__(self, *args, **kwargs):
-        self._dict = dict(*args, **kwargs)
-        self._inj = {v:k for k, v in self._dict.items()}
-
-    def __contains__(self, key):
-        return key in self._dict
-
-    def __delitem__(self, key):
-        value = self._dict[key]
-        del self._inj[value]
-        del self._dict[key]
-        del value
-
-    def __getitem__(self, key):
-        return self._dict[key]
-
-    def __iter__(self):
-        return iter(self._dict)
-
-    def __len__(self):
-        return len(self._dict)
-
-    def __repr__(self):
-        return '{}({!r})'.format(self.__class__.__name__, self._dict)
-
-    def __setitem__(self, key, value):
-        if key in self._dict and self._dict[key] != value:
-            raise NameError('%r is already in use as a LocalName for %r' % (key, self._dict[key]))
-        if key in self._dict:
-            raise ValueError(('Mapping between LocalNames and phenotypes must be injective.\n'
-                              'Cannot cannot bind %r to %r.\n'
-                              'It is already bound to %r') % (key, value, self._inj[value]))
-        self._dict[key] = value
-        self._inj[value] = key
 
 
 class injective(type):

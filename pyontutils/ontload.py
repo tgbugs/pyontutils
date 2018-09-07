@@ -1,8 +1,8 @@
 #!/usr/bin/env python3.6
 from pyontutils.core import devconfig
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
- Remote imports are replaced with local imports.
- NIF -> http://ontology.neuinfo.org/NIF
+Remote imports are replaced with local imports.
+NIF -> http://ontology.neuinfo.org/NIF
 
 Usage:
     ontload graph [options] <repo> <remote_base>
@@ -46,29 +46,28 @@ import shutil
 import json
 import yaml
 import subprocess
-from os.path import join as jpth
 from io import BytesIO
 from glob import glob
 from pathlib import Path
+from os.path import join as jpth
 from contextlib import contextmanager
+from collections import namedtuple
 import rdflib
 import requests
 from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
-from pyontutils.core import rdf, rdfs, owl, skos, oboInOwl
-from pyontutils.core import makeGraph, makePrefixes  # TODO make prefixes needs an all...
+from pyontutils.core import makeGraph
 from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile, TermColors as tc
+from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
-from collections import namedtuple
+from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
 from IPython import embed
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
 COMMIT_HASH_HEAD_LEN = 7
-
-setPS1(__file__)
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -123,7 +122,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
         return (repo_name +
                 '-' + branch +
                 '-graph' +
-                '-' + ('*' if wild else TODAY) +
+                '-' + ('*' if wild else TODAY()) +
                 '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '-' + ontology_commit)
 
@@ -153,7 +152,7 @@ def repro_loader(zip_location, git_remote, org, git_local, repo_name, branch, co
                              for k, v in ont.items()}
                             for ont in config['ontologies']]
 
-    config_path = jpth(zip_location, 'graphload-' + TODAY + '.yaml')
+    config_path = jpth(zip_location, 'graphload-' + TODAY() + '.yaml')
     with open(config_path, 'wt') as f:
         yaml.dump(config, f, default_flow_style=False)
     ontologies = [ont['url'] for ont in config['ontologies']]
@@ -235,7 +234,7 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
         return (repo_name +
                 '-' + branch +
                 '-services' +
-                '-' + ('*' if wild else TODAY) +
+                '-' + ('*' if wild else TODAY()) +
                 '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                 '.zip')
 
@@ -390,6 +389,10 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                 scratch.parse(data=data, format=infmt)
                 for s in scratch.subjects(rdf.type, owl.Ontology):
                     triples.add((s, owl.sameAs, rdflib.URIRef(local_filepath)))
+                    # somehow this breaks computing the chain
+                    #for p in (rdfs.comment, skos.definition, definition, dc.title, rdfs.label):
+                        #for o in scratch[s:p]:
+                            #triples.add((s, p, o))
                 for s, o in sorted(scratch.subject_objects(p)):
                     if revert:
                         raise NotImplemented('TODO')
@@ -483,7 +486,7 @@ def normalize_prefixes(graph, curies):
     #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
     return mg, ng_
 
-def import_tree(graph, ontologies):
+def import_tree(graph, ontologies, **kwargs):
     for ontology in ontologies:
         thisfile = Path(ontology).name
         print(thisfile)
@@ -491,7 +494,7 @@ def import_tree(graph, ontologies):
         mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
         j = mg.make_scigraph_json('owl:imports', direct=True)
         try:
-            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces)
+            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces, **kwargs)
             #print(t)
             yield t, te
         except KeyError:
@@ -697,6 +700,7 @@ def run(args):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
+    setPS1(__file__)
     if args['--debug']:
         print(args)
     try:

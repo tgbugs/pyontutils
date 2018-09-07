@@ -1,43 +1,38 @@
-import pandas as pd
-import requests as r
-import json
-from sqlalchemy import create_engine, inspect, Table, Column
-import numpy as np
-import asyncio
-from sys import exit
-import math as m
-import time
-from IPython import embed
 from aiohttp import ClientSession, TCPConnector, BasicAuth
-from ilxutils.args_reader import read_args
+import asyncio
 from collections import defaultdict, namedtuple
-import ilxutils.dictlib as dictlib
-from ilxutils.interlex_sql import IlxSql
+from IPython import embed
+import json
+import pandas as pd
 from pathlib import Path as p
-'''
-    Get functions need a list of term ids
-    Post functions need a list of dictionaries with their needed/optional keys & values
-
-    identifierSearches          ids, LIMIT=50, _print=True, crawl=False
-    addTerms                    data ....
-    updateTerms                 data ....
-    addAnnotations              data ....
-    getAnnotations_via_tid      tids ....
-    getAnnotations_via_id       annotation_ids ....
-    updateAnntation             data ....
-    deleteAnnotations           annotation_ids ....
-    addRelationship             data ....
-    deleteTerms                 ilx_ids .. crawl=True .
-'''
+import requests as r
+from sys import exit
+from ilxutils.args_reader import read_args
+import ilxutils.dictlib as dictlib
 
 
 class scicrunch():
+
+    '''
+        Get functions need a list of term ids
+        Post functions need a list of dictionaries with their needed/optional keys & values
+
+        identifierSearches          ids, LIMIT=50, _print=True, crawl=False
+        addTerms                    data ....
+        updateTerms                 data ....
+        addAnnotations              data ....
+        getAnnotations_via_tid      tids ....
+        getAnnotations_via_id       annotation_ids ....
+        updateAnntation             data ....
+        deleteAnnotations           annotation_ids ....
+        addRelationship             data ....
+        deleteTerms                 ilx_ids .. crawl=True .
+    '''
+
     def __init__(self, api_key, base_path, db_url, auth=('None', 'None')):
         self.key = api_key
         self.base_path = base_path
         self.auth = BasicAuth(auth)
-        # must be > 6691 items to be worth it as limit=25
-        self.sql = IlxSql(db_url=db_url)
 
     def crawl_get(self, urls):
         outputs = {}
@@ -66,6 +61,9 @@ class scicrunch():
                 elif output.get('data').get('errormsg'):
                     exit(output['data']['errormsg'])
 
+            if not output.get('data').get('id'):
+                continue
+                
             try:
                 output = {int(output['data']['id']): output['data']}  # terms
             except:
@@ -149,6 +147,7 @@ class scicrunch():
                             int(output['data'][0]['tid']): output['data']
                         }  # annotations
                 except:
+                    print('Not able to get output')
                     exit(output)
                 return output
 
@@ -204,26 +203,37 @@ class scicrunch():
                         try:
                             output = await response.json()
                         except:
-                            output = await response.text
-                        problem = str(output)
-                        exit(
-                            str(problem) + ' with status code [' +
-                            str(response.status) + '] with params:' + str(data))
+                            output = await response.text()
 
-                    else:
-                        text = await response.text()
-
-                    if not text:  # text doesnt break like json does... I know this looks bad
-                        output = None
+                        error = False
+                        if output.get('errormsg'):
+                            error = output.get('errormsg')
+                        elif output.get('data').get('errormsg'):
+                            error = output.get('data').get('errormsg')
+                        if error:
+                            if 'could not generate ILX identifier' in error:
+                                output = None
+                            elif 'already exists' in error:
+                                output = {'data':{'term':{}}}
+                            else:
+                                print('IN CATCH')
+                                problem = str(output)
+                                exit(str(problem) + ' with status code [' +
+                                    str(response.status) + '] with params:' + str(data))
+                                output = {'data':{'term':{}}}
+                        else:
+                            print('OUT CATCH')
+                            problem = str(output)
+                            exit(str(problem) + ' with status code [' +
+                                str(response.status) + '] with params:' + str(data))
+                            output = {'data':{'term':{}}}
 
                     else:
                         # allows NoneTypes to pass
                         output = await response.json(content_type=None)
 
                         if not output:
-                            output = None
-
-                        elif output.get('errormsg') == 'could not generate ILX identifier':
+                            print(response.status)
                             output = None
 
                         # Duplicates
@@ -283,12 +293,26 @@ class scicrunch():
             crawl=crawl,
             _print=_print)
 
+    def ilxSearches(self,
+                    ids=None,
+                    LIMIT=50,
+                    _print=True,
+                    crawl=False):
+        """parameters( data = "list of ilx_ids" )"""
+        url_base = self.base_path + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
+        urls = [url_base.format(identifier=str(_id), APIKEY=self.key) for _id in ids]
+        return self.get(
+            urls=urls,
+            LIMIT=LIMIT,
+            action='Searching For Terms',
+            crawl=crawl,
+            _print=_print)
+
     def updateTerms(self,
                     data,
                     LIMIT=50,
                     _print=True,
-                    crawl=False,
-                    use_sql=False,):
+                    crawl=False,):
         """
             need:
                     id              <int/str>
@@ -305,6 +329,9 @@ class scicrunch():
         merged_data = []
         for d in data:
             url = url_base.format(id=str(d['id']))
+            if d['ilx'] != old_data[int(d['id'])]['ilx']:
+                print(d['ilx'], old_data[int(d['id'])]['ilx'])
+                exit('You might be using beta insead of production!')
             merged = dictlib.merge(new=d, old=old_data[int(d['id'])])
             merged = dictlib.superclasses_bug_fix(merged)  # BUG
             merged_data.append((url, merged))
@@ -315,7 +342,7 @@ class scicrunch():
             _print=_print,
             crawl=crawl)
 
-    def addTerms(self, data, LIMIT=50, _print=True, crawl=False, use_sql=False):
+    def addTerms(self, data, LIMIT=50, _print=True, crawl=False):
         """
             need:
                     label           <str>
@@ -351,13 +378,15 @@ class scicrunch():
             _print=_print,
             crawl=crawl)
 
-        ilx = {d['term']: d for d in ilx}
+        ilx = {d['term'].replace('&#39;', "'").replace('&#34;', '"'): d for d in ilx if d['term']}
 
         url_base = self.base_path + '/api/1/term/add'
         terms = []
         for d in data:
             d['label'] = d.pop('term')
             d = dictlib.superclasses_bug_fix(d)
+            if not ilx.get(d['label']): # ilx can be incomplete if errored term
+                continue
             try:
                 d.update({'ilx': ilx[d['label']]['ilx']})
             except:
@@ -375,8 +404,7 @@ class scicrunch():
                        data,
                        LIMIT=50,
                        _print=True,
-                       crawl=False,
-                       use_sql=False):
+                       crawl=False,):
 
         need = set([
             'tid',
@@ -440,21 +468,18 @@ class scicrunch():
                           data,
                           LIMIT=50,
                           _print=True,
-                          crawl=False,
-                          use_sql=False):
+                          crawl=False,):
         """data = [{'id', 'tid', 'annotation_tid', 'value', 'comment', 'upvote', 'downvote',
         'curator_status', 'withdrawn', 'term_version', 'annotation_term_version', 'orig_uid',
         'orig_time'}]
         """
         url_base = self.base_path + \
             '/api/1/term/edit-annotation/{id}'  # id of annotation not term id
-        if use_sql:
-            annotations = self.sql.get_client_ready_annos([d['id'] for d in data])
-        else:
-            annotations = self.getAnnotations_via_id([d['id'] for d in data],
-                                                     LIMIT=LIMIT,
-                                                     _print=_print,
-                                                     crawl=crawl)
+        annotations = self.getAnnotations_via_id([d['id'] for d in data],
+                                                 LIMIT=LIMIT,
+                                                 _print=_print,
+                                                 crawl=crawl)
+
         annotations_to_update = []
         for d in data:
             annotation = annotations[int(d['id'])]
@@ -502,8 +527,7 @@ class scicrunch():
                          HELP=False,
                          LIMIT=50,
                          _print=True,
-                         crawl=False,
-                         use_sql=False):
+                         crawl=False,):
         """
         data = [{
             "term1_id", "term2_id", "relationship_tid",
@@ -550,40 +574,17 @@ class scicrunch():
 
 
 def main():
-    args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-                     db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True, cafe=True)
     # args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-    #                  db_url=p.home() / 'keys/production_engine_scicrunch_key.txt', production=True)
+    #                  db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True, cafe=True)
+    args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
+                     db_url=p.home() / 'keys/production_engine_scicrunch_key.txt', production=True, cafe=True)
     #sql = IlxSql(db_url=args.db_url)
     sci = scicrunch(api_key=args.api_key,
                     base_path=args.base_path, db_url=args.db_url)
-    #data = ['ilx_0115064']
-    #data = [{'id':4511, 'existing_ids':{'iri': 'test2.org/456', 'curie':'test:456'}}]
-    annotation_samples = [
-    # {
-    #     'tid': '1432',
-    #     'annotation_tid': '304709',
-    #     'value': '\'\'Belliveau JW\'\', Kennedy DN Jr, McKinstry RC, Buchbinder BR, Weisskoff RM, Cohen \nMS, Vevea JM, Brady TJ, Rosen BR. Functional mapping of the human visual cortex\nby magnetic resonance imaging. Science. 1991 Nov 1;254(5032):716-9. PubMed PMID: \n1948051'
-    # },
-    {
-        'tid': '1432',
-        'annotation_tid': '304708',
-        'value': '<a href="https://www.ncbi.nlm.nih.gov/pubmed/1948051">PMID:1948051</a>',
-        'term_version': 1,
-        'annotation_term_version' : 1,
-    },
-    # {
-    #     'tid': '1432',
-    #     'annotation_tid': '304710',
-    #     'value': 'BIRNLEX:2058',
-    # }
-    ]
-    # output = sci.addTerms([
-    #     {'label':'PubMed Annotation Source', 'type':'annotation'},
-    #     {'label':'PubMed Summary', 'type':'annotation'},
-    #     {'label':'PubMed URL', 'type':'annotation'},
-    # ], LIMIT=10)
-    output = sci.addAnnotations(annotation_samples, crawl=True)
+    data = ['ilx_0381361']
+    output = sci.ilxSearches(data, crawl=True)
+    #data = [{'id':6304, 'label':"Lissauer's tract of spinal cord"}]
+    #output = sci.deleteTermsFromElastic(data, crawl=True)
     print(output)
 
 '''

@@ -1,29 +1,25 @@
 from IPython import embed
 import rdflib
-from pyontutils.core import OntId, OntCuries
-from pyontutils.core import simpleOnt, oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.core import POCombinator, _POCombinator, ObjectCombinator, propertyChainAxiom, Combinator, Restriction2, EquivalentClass
-from pyontutils.core import restriction, restrictions
-from pyontutils.core import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.core import definition, hasRole, hasParticipant, hasPart, hasInput, hasOutput, makeNamespaces, participatesIn, partOf, intersectionOf
-from pyontutils.core import owl, rdf, rdfs
+from pyontutils.core import simpleOnt, OntId, OntCuries, mGraph
+from pyontutils.namespaces import makeNamespaces, NIFTTL, NIFRID, ilxtr, BFO
+from pyontutils.namespaces import participatesIn, partOf, definition, hasRole
+from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.combinators import oc, oc_, odp, oop, olit, oec, olist
+from pyontutils.combinators import POCombinator, _POCombinator, ObjectCombinator
+from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
+from pyontutils.combinators import restriction, restrictions, intersectionOf
+from pyontutils.closed_namespaces import owl, rdf, rdfs
 
-import rdflib
-from pyontutils.core import propertyChainAxiom as pca
-class mGraph(rdflib.Graph):
-    def __init__(self, *args, filename='/tmp/test.ttl', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.filename = filename
-    def write(self):
-        with open(self.filename, 'wb') as f:
-            f.write(self.serialize(format='nifttl'))
+
 collector = mGraph(filename='property-chains.ttl')
+
+
 def _propertyChainAxiom(*args):
     class Derp(Combinator):
         def __init__(self):
             pass
         def __call__(self, *argsi):
-            [collector.add(_) for _ in pca(*args)(*argsi)]
+            [collector.add(_) for _ in propertyChainAxiom(*args)(*argsi)]
             yield ilxtr.a, ilxtr.b, ilxtr.c
     return Derp()
 
@@ -77,7 +73,7 @@ prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
-obo, RO, *_ = makeNamespaces('obo', 'RO')
+obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'
 prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
@@ -90,6 +86,26 @@ _repo = True
 debug = True
 
 triples = (
+    # data properties
+
+    odp(ilxtr.hasAspectValue),
+    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
+    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
+         'has constraining aspect value'),
+    olit(ilxtr.hasConstrainingAspect_value, definition,
+         ('In some cases a protocol is classified based on the value '
+          'that a constraining aspect has, not just that it is constrained on that aspect. ')),
+
+    olit(ilxtr.hasConstrainingAspect_value, rdfs.comment,
+         ('For example, dead and alive are 0 and 1 on livingness respectively. '
+          'we can also define dead and alive, as disjoint, but that does not effectively '
+          'model that they are two sides of the same coin for any binary definition. '
+          'Note that this implies that these are not just qualities, they must have an '
+          'explicit value outcome defined.'
+         )
+        ),
+
     # object properties
     oop(ilxtr.hasOperationDefinition),
     oop(ilxtr.hasDefiningProtocol, ilxtr.hasOperationDefinition),
@@ -529,24 +545,6 @@ triples = (
     olit(ilxtr.hasConstrainingAspect_dAdT, rdfs.label,
          'has intended change in constraining aspect'),
 
-    odp(ilxtr.hasAspectValue),
-    odp(ilxtr.hasConstrainingAspect_value, ilxtr.isConstrainedBy),  # data type properties spo object property
-    (ilxtr.hasConstrainingAspect_value, rdfs.subPropertyOf, ilxtr.hasAspectValue),
-    olit(ilxtr.hasConstrainingAspect_value, rdfs.label,
-         'has constraining aspect value'),
-    olit(ilxtr.hasConstrainingAspect_value, definition,
-         ('In some cases a protocol is classified based on the value '
-          'that a constraining aspect has, not just that it is constrained on that aspect. ')),
-
-    olit(ilxtr.hasConstrainingAspect_value, rdfs.comment,
-         ('For example, dead and alive are 0 and 1 on livingness respectively. '
-          'we can also define dead and alive, as disjoint, but that does not effectively '
-          'model that they are two sides of the same coin for any binary definition. '
-          'Note that this implies that these are not just qualities, they must have an '
-          'explicit value outcome defined.'
-         )
-        ),
-
     oop(ilxtr.hasAspect, RO['0000086']),
     # FIXME make it clear that this is between material entities (it is subclassof quality)
     # for hasAspect
@@ -812,7 +810,6 @@ asdf = tuple(
 embed()
 """
 
-# TODO aspects.ttl?
 methods_core = simpleOnt(filename=filename,
                          prefixes=prefixes,
                          imports=imports,
@@ -821,10 +818,17 @@ methods_core = simpleOnt(filename=filename,
                          branch=branch,
                          _repo=_repo)
 
-collector.write()
-
 methods_core._graph.add_namespace('asp', str(asp))
 methods_core._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
 #methods_core._graph.add_namespace('tech', str(tech))
 methods_core._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods_core._graph.write()
+
+
+def main():
+    # TODO aspects.ttl?
+    collector.write()
+    methods_core._graph.write()
+
+
+if __name__ == '__main__':
+    main()

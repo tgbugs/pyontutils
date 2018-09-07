@@ -5,10 +5,10 @@ from html import escape as html_escape
 from collections import namedtuple
 from collections import defaultdict as base_dd
 import requests
-from pyontutils.scigraph import Graph
-from pyontutils.core import PREFIXES as uPREFIXES
 from pyontutils.utils import TermColors as tc
 from pyontutils.ttlser import natsort
+from pyontutils.scigraph import Graph
+from pyontutils.namespaces import PREFIXES as uPREFIXES
 from IPython import embed
 
 BLANK = '   '
@@ -20,7 +20,7 @@ BOT_CON = '└'
 BOT_STEM = BOT_CON + LEAF
 TOP_CON = '┌'
 
-CYCLE = 'CYCLE DETECTED DERPS'
+CYCLE = 'CYCLE DETECTED'
 
 DEP = 'http://www.w3.org/2002/07/owl#deprecated'
 

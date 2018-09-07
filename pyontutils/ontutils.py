@@ -1,11 +1,12 @@
 #!/usr/bin/env python3.6
 #!/usr/bin/env pypy3
 from pyontutils.core import devconfig
-__doc__ = f"""Common commands for ontology processes. As well as
-    various ontology refactors that should be run in the root ttl folder.
+__doc__ = f"""Common commands for ontology processes.
+Also old ontology refactors to run in the root ttl folder.
 
 Usage:
-    ontutils devconfig
+    ontutils devconfig [--write] [<field> ...]
+    ontutils parcellation
     ontutils catalog-extras [options]
     ontutils iri-commit [options] <repo>
     ontutils deadlinks [options] <file> ...
@@ -28,6 +29,7 @@ Options:
     -f --fetch                      fetch catalog extras from their remote location
     -d --debug                      call IPython embed when done
     -v --verbose                    verbose output
+    -w --write                      write devconfig file
 """
 import os
 from glob import glob
@@ -36,11 +38,13 @@ from random import shuffle
 from pathlib import Path
 import rdflib
 import requests
-from git.repo import Repo
 from joblib import Parallel, delayed
-from pyontutils.core import makePrefixes, makeGraph, createOntology, rdf, rdfs, owl, skos, definition
+from git.repo import Repo
+from pyontutils.core import makeGraph, createOntology
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
 from pyontutils.ontload import loadall, locate_config_file, getCuries
+from pyontutils.namespaces import makePrefixes, definition
+from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 from IPython import embed
 
 try:
@@ -217,7 +221,7 @@ def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     url_blaster(urls, rate, timeout, verbose, debug)
 
-def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'):
+def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head', fail=False, negative=False):
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]
@@ -248,7 +252,14 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
         ln = len(not_ok)
         lt = len(urls)
         lo = lt - ln
-        print(f'{ln} urls out of {lt} ({ln / lt * 100}%) are not ok. D:')
+        msg = f'{ln} urls out of {lt} ({ln / lt * 100:2.2f}%) are not ok. D:'
+        print(msg)  # always print to get around joblib issues
+        if negative and fail:
+            if len(not_ok) == len(all_):
+                raise AssertionError('Everything failed!')
+        elif fail:
+            raise AssertionError(f'{msg}\n' + '\n'.join(sorted(not_ok)))
+
     else:
         print(f'OK. All {len(urls)} urls passed! :D')
     if debug:
@@ -284,6 +295,7 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
             show()
         asyncVis(collector)
         embed()
+
 
 def furls(filename):
     return set(url for t in rdflib.Graph().parse(filename, format='turtle')
@@ -753,8 +765,14 @@ def main():
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
     if args['devconfig']:
-        file = devconfig.write(args['--output-file'])
-        print(f'config written to {file}')
+        if args['--write']:
+            file = devconfig.write(args['--output-file'])
+            print(f'config written to {file}')
+        elif args['<field>']:
+            for f in args['<field>']:
+                print(getattr(devconfig, f, ''))
+        else:
+            print(devconfig)
     elif args['catalog-extras']:
         catalog_extras(args['--fetch'])
     elif args['version-iri']:

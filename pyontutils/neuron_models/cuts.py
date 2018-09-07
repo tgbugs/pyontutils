@@ -7,8 +7,9 @@ ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neuron_models.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol, relative_path
-from pyontutils.core import resSource, interlex_namespace
+from pyontutils.core import resSource
 from pyontutils.config import devconfig
+from pyontutils.namespaces import interlex_namespace
 # import these last so that graphBase resets (sigh)
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from pyontutils.utils import rowParse, refile, relative_path
-from pyontutils.core import ilxtr
+from pyontutils.namespaces import ilxtr
 from pyontutils.neuron_lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed

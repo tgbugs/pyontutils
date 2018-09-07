@@ -9,6 +9,12 @@ ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 
 Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l /tmp/scigraph-build -O SciGraph -B patch-issue-264 -b master -p`
 
+# DO NOT FORGET TO ENABLE THE SERVICES AT STARTUP
+
+```
+sudo systemctl enable scigraph-services
+```
+
 # oneshots for centos 7
 
 ```
@@ -35,12 +41,14 @@ sudo yum install nginx
 
 ## if not handled by puppet
 
-`sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel`
-must set `alternatives --config java` to 1.8
-`wget http://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz`
-`sudo mv apache-maven-3.5.0-bin.tar.gz /opt/ && sudo cd /opt/ && sudo tar xvzf apache-maven-* && ln -sT apache-maven-* maven`
-`sudo echo "export M2_HOME=/opt/maven" > /etc/profile.d/maven.sh`
-`sudo echo "export PATH=\${M2_HOME}/bin:\${PATH}" >> /etc/profile.d/maven.sh`
+```
+sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel
+alternatives --config java  # must set to 1.8
+wget http://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz
+sudo mv apache-maven-3.5.0-bin.tar.gz /opt/ && sudo cd /opt/ && sudo tar xvzf apache-maven-* && ln -sT apache-maven-* maven
+sudo echo "export M2_HOME=/opt/maven" > /etc/profile.d/maven.sh
+sudo echo "export PATH=${M2_HOME}/bin:${PATH}" >> /etc/profile.d/maven.sh
+```
 
 # etc for centos 7
 1. local services

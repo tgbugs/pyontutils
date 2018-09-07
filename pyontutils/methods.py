@@ -1,14 +1,16 @@
 from rdflib import URIRef, Literal, BNode
-from pyontutils.core import qname, simpleOnt, displayGraph, flattenTriples, OntCuries, OntId, OntTerm, makeNamespaces
-from pyontutils.core import oc, oc_, oop, odp, olit, oec
-from pyontutils.core import restrictions, annotation, restriction, restrictionN
-from pyontutils.core import NIFTTL, NIFRID, ilxtr, ilx, BFO
-from pyontutils.core import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput, TEMP
-from pyontutils.core import partOf, hasRole, locatedIn
-from pyontutils.core import hasAspectChangeCombinator, unionOf, intersectionOf, Restriction, EquivalentClass
-from pyontutils.core import Restriction2, POCombinator, disjointUnionOf, oneOf
-from pyontutils.core import owl, rdf, rdfs, oboInOwl
-from pyontutils.methods_core import asp, tech, prot, methods_core, _t, restN, oECN, olist, branch
+from pyontutils.core import OntCuries, OntId, OntTerm, qname
+from pyontutils.core import simpleOnt, displayGraph
+from pyontutils.namespaces import makeNamespaces, partOf, hasRole, locatedIn
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, ilx, BFO, TEMP
+from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.combinators import flattenTriples, unionOf, intersectionOf
+from pyontutils.combinators import Restriction, EquivalentClass
+from pyontutils.combinators import oc, oc_, oop, odp, olit, oec, hasAspectChangeCombinator
+from pyontutils.combinators import Restriction2, POCombinator, disjointUnionOf, oneOf
+from pyontutils.combinators import restrictions, annotation, restriction, restrictionN
+from pyontutils.methods_core import asp, tech, prot, prov, methods_core, _t, restN, oECN, olist, branch
+from pyontutils.closed_namespaces import owl, rdf, rdfs, oboInOwl
 
 # NOTE if vim is slow it is probably becuase there are
 # so many nested parens `:set foldexpr=` fixes the problem
@@ -111,11 +113,6 @@ triples += ( # information entity
     (ilxtr.protocolArtifact, rdfs.subClassOf, ilxtr.protocol),
     olit(ilxtr.protocolArtifact, rdfs.label, 'protocol artifact'),
 
-    oc_(ilxtr.protocolExecution,
-       oec(ilxtr.technique,
-           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
-    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
-
     oc(ilxtr.stereotaxiCoordinateSystem, ilxtr.informationEntity),
 
     # information artifacts
@@ -164,6 +161,34 @@ triples += ( # information entity
 
 )
 
+triples += (
+    # results
+    oc(ilxtr.result),
+    olit(ilxtr.result, definition,
+         ('The result of a measurement.')),
+    oop(ilxtr.resultAspect),
+    (ilxtr.resultAspect, rdfs.domain, ilxtr.result),
+    (ilxtr.resultAspect, rdfs.range, ilxtr.aspect),  # these are preferably units?
+    odp(ilxtr.resultValue),
+
+    oop(ilxtr.hasResult),  # or hadResult ... 
+    (ilxtr.hasResult, rdfs.subClassOf, prov.generated),
+    (ilxtr.hasResult, rdfs.domain, ilxtr.protocolExecution),
+    # FIXME this domain restriction may not work quite like we want it to
+    # ideally we would like to take an instance of a material entity + an aspect
+    # and bind the result to that pair, with some additional sematics outside owl
+    # you could use [ a protc:Result; protc:onAspect asp:myAspect; protc:resultValue 100; protc:impl <some impl id>; protc:prov <id>]
+    # we could then and lift that to [ a owl:Restriction; owl:onProperty asp:myAspect; owl:hasValue 100]
+    # or we could create a new iri from the intersection of the aspect and the implementation or better yet the execution prov id ...
+    (ilxtr.hasResult, rdfs.range, ilxtr.result),
+
+    oc_(ilxtr.protocolExecution,
+       oec(ilxtr.technique,
+           *restrictions((ilxtr.isConstrainedBy, ilxtr.protocol),)),),
+    (ilxtr.protocolExecution, rdfs.subClassOf, prov.Activity),
+    olit(ilxtr.protocolExecution, rdfs.label, 'protocol execution'),
+)
+
 triples += (  # material entities
 
     ## material entity
@@ -196,23 +221,6 @@ triples += (  # material entities
         # since they are/can be derived?
         # https://en.wikipedia.org/wiki/Physical_constant
        ),
-
-    # local _to this universe_
-    oc(asp.speedOfLight, asp.Local),  # in a vacuum, as far as we know this is invariant in all universes
-    oc(asp.PlankAspect, ilxtr.aspect),
-    oc(asp.elementaryCharge, ilxtr.aspect),
-    oc(asp.JosephsonAspect, ilxtr.aspect),
-    oc(asp.vonKlitzingAspect, ilxtr.aspect),
-    oc(asp.GravitationalAspect, ilxtr.aspect),
-    oc(asp.BoltzmannAspect, ilxtr.aspect),
-    oc(asp.electronRestMass, ilxtr.aspect),
-    oc(asp.gravitationalCouplingAspect, ilxtr.aspect),
-    oc(asp.fineStructureAspect, ilxtr.aspect),
-    oc(asp.permittivityOfFreeSpace, ilxtr.aspect),
-    oc(asp.permeabilityOfFreeSpace, ilxtr.aspect),
-    oc(asp.impedanceOfFreeSpace, ilxtr.aspect),
-    oc(asp.fineStructureAspect, ilxtr.aspect),
-    oc(asp.CoulombsAspect, ilxtr.aspect),
 
     oc(ilxtr.physicalForce, ilxtr.materialEntity),
     oc(ilxtr.mechanicalForce, ilxtr.physicalForce),
@@ -287,6 +295,7 @@ triples += (  # material entities
        #),
     #(ilxtr.physiologicalSystemDisjointWithOrganism, owl.disjointWith, OntTerm('NCBITaxon:1')),
     oc(ilxtr.viralParticle, ilxtr.physiologicalSystem),
+    oc(ilxtr.AAVretro, ilxtr.viralParticle),
 
     oc(OntTerm('UBERON:0000465'), ilxtr.materialEntity),
     oc(OntTerm('UBERON:0000955'), OntTerm('UBERON:0000465')),
@@ -406,6 +415,8 @@ triples += (  # material entities
     oc(ilxtr.detectedPhenomena, ilxtr.materialEntity),  # ie a phenomena that we know how to detect
     oc(ilxtr.fluorescentMolecule, ilxtr.materialEntity),
 
+    oc(ilxtr.cultureMedia, ilxtr.materialEntity),
+
 )
 
 triples += (  # changes
@@ -434,6 +445,23 @@ triples += (  # changes
 )
 
 triples += (  # aspects
+
+    # local _to this universe_
+    oc(asp.speedOfLight, asp.Local),  # in a vacuum, as far as we know this is invariant in all universes
+    oc(asp.PlankAspect, ilxtr.aspect),
+    oc(asp.elementaryCharge, ilxtr.aspect),
+    oc(asp.JosephsonAspect, ilxtr.aspect),
+    oc(asp.vonKlitzingAspect, ilxtr.aspect),
+    oc(asp.GravitationalAspect, ilxtr.aspect),
+    oc(asp.BoltzmannAspect, ilxtr.aspect),
+    oc(asp.electronRestMass, ilxtr.aspect),
+    oc(asp.gravitationalCouplingAspect, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.permittivityOfFreeSpace, ilxtr.aspect),
+    oc(asp.permeabilityOfFreeSpace, ilxtr.aspect),
+    oc(asp.impedanceOfFreeSpace, ilxtr.aspect),
+    oc(asp.fineStructureAspect, ilxtr.aspect),
+    oc(asp.CoulombsAspect, ilxtr.aspect),
 
     # aspect value
 
@@ -507,6 +535,7 @@ triples += (  # aspects
         restriction(ilxtr.hasMaterialContext, ilxtr.periodicPhenomena),
         restriction(ilxtr.hasAspectContext, asp.startTime),
         restriction(ilxtr.hasAspectContext, asp.endTime)),
+    olit(asp.timeInterval, NIFRID.symomym, 'duration'),
 
     # no teleportation allowed unless you are a photon in its own reference frame
     oc(asp.startLocation, asp.location),
@@ -760,6 +789,10 @@ triples += (  # aspects
         # TODO hasMaterialAspectContext binding the frequency and the strenght respectively
         restriction(ilxtr.hasMaterialContext, ilxtr.magneticField),
         restriction(ilxtr.hasMaterialContext, ilxtr.radiowaves)),
+
+    oc(asp.concentration, asp.nonLocal),
+    oc_(asp.concentration,
+        restriction(ilxtr.hasMaterialContext, ilxtr.solvent)),
 )
 
 triples += (
@@ -848,12 +881,15 @@ methods_helper = simpleOnt(filename=filename,
                            branch=branch,
                            _repo=_repo)
 
-methods_helper._graph.add_namespace('asp', str(asp))
-methods_helper._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
-methods_helper._graph.add_namespace('prot', str(prot))
-methods_helper._graph.add_namespace('tech', str(tech))
-methods_helper._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods_helper._graph.write()  # note to self, simpleOnt calls write as well
+
+def methods_helper_main():
+    methods_helper._graph.add_namespace('asp', str(asp))
+    methods_helper._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+    methods_helper._graph.add_namespace('prot', str(prot))
+    methods_helper._graph.add_namespace('tech', str(tech))
+    methods_helper._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+    methods_helper._graph.write()  # note to self, simpleOnt calls write as well
+
 
 ###
 #   Methods
@@ -863,7 +899,7 @@ filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
             'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
             'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX',
+            'NLX', 'oboInOwl'
 )
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = methods_core.iri, methods_helper.iri, NIFTTL['bridge/chebi-bridge.ttl'], NIFTTL['bridge/tax-bridge.ttl']
@@ -1240,6 +1276,14 @@ triples = (
        # parent partof primary participant deliver or something
       (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:38867', label='anaesthetic')),),
 
+    _t(tech.sedation, 'sedation technique',
+       # FIXME sedative administration? reading a boring book? physical cooling? bonking on the head?
+       (ilxtr.hasPrimaryAspect, asp.behavioralActivity),  # FIXME asp.activeMovement? doesn't block pain?
+       (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
+       (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       comment='QUESTION: what is the difference between sedation and anaesthesia?',
+       synonyms=('sedation',)),
+
     _t(tech.anaesthesia, 'anaesthesia technique',
        # anaesthesia is an excellent example of a case where
        # just the use of an anaesthetic is not sufficient
@@ -1473,6 +1517,18 @@ triples = (
        #(ilxtr.hasPrimaryParticipant, OntTerm()),
        #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
        synonyms=('intracellular injection',)),
+
+    _t(i.d, 'viral injection technique',
+       (hasPart, tech.injection),
+       (hasParticipant, ilxtr.viralParticle),
+       def_='a technique for injecting viral particles',
+    ),
+
+    _t(i.d, 'AAVretro injection technique',
+       (hasPart, tech.injection),
+       (hasParticipant, ilxtr.AAVretro),
+       synonyms=('AAVretro injection',)
+    ),
 
     _t(i.d, 'electrical delivery technique',
        # FIXME electroporation doesn't actually work this way
@@ -1827,6 +1883,15 @@ triples = (
        restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)), #  FIXME data property  Literal(True)),
        synonyms=('in vivo',),),
 
+    _t(tech.animal, 'in vivo animal technique',
+       # FIXME vs animal experiment ...
+       # TODO we probably need a compose operator in addition to hasPart:
+       # which is to say that this technique is the union of these other techniques ...
+       (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
+       (ilxtr.hasConstrainingAspect, asp.livingness),
+       restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)),
+    ),
+
     _t(i.d, 'in utero technique',
        # has something in 
        #(hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
@@ -1873,8 +1938,11 @@ triples = (
                  'sample preparation',
                  'specimine preparation',),),
 
-    _t(i.d, 'dissection technique',
+    _t(tech.dissection, 'dissection technique',
        (ilxtr.hasPrimaryOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
+       # FIXME need to implement the dual for this
+       # hasDualTechnique -> hasPrimaryInput -> hasPart <-> removal invariant aka wasPartOf
+       # vs extraction technique ...
        synonyms=('dissection',),),
 
     _t(i.d, 'atlas guided microdissection technique',
@@ -2080,9 +2148,14 @@ triples = (
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:2')),  # FIXME > 1 label
        synonyms=('bacterial culture',),),
 
-    _t(i.d, 'cell culture technique',
+    _t(tech.cellCulture, 'cell culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('SAO:1813327414', label='Cell')),
+       # maybe useing subClassOf instead of equivalentClass?
        synonyms=('cell culture',),),
+    # I think this is the right way to add 'non-definitional' restrictions to a technique
+    oc_(tech.cellCulture,
+        restriction(ilxtr.hasConstrainingAspect, asp.temperature),
+        restriction(hasInput, ilxtr.cultureMedia)),
 
     _t(i.d, 'yeast culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
@@ -2570,7 +2643,7 @@ triples = (
        synonyms=('maintenance technique',),
        equivalentClass=oECN),
 
-    _t(i.d, 'analysis technique',
+    _t(tech.analysis, 'analysis technique',
        (realizes, ilxtr.analysisRole),
        synonyms=('analysis',),),
 
@@ -2622,7 +2695,7 @@ triples = (
        # TODO
       ),
 
-    _t(i.d, 'modern in vitro slice electrophysiology',
+    _t(i.d, 'in vitro IR DIC slice electrophysiology',
        #(hasPart, tech.IRDIC),
        (hasInput, ilxtr.IRCamera),
        (hasInput, ilxtr.DICmicroscope),
@@ -2918,6 +2991,11 @@ triples = (
        synonyms=('state creation technique', 'state induction technique')
     ),
 
+    _t(tech.activityModulation, 'activity modulation technique',
+       (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
+       (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
+       synonyms=('modulation technique', 'modulation', 'activity modulation')),
+
     _t(i.d, 'activation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
@@ -2939,13 +3017,13 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
       ),
 
-    _t(i.d, 'euthanasia technique',
+    _t(tech.euthanasia, 'euthanasia technique',
        (ilxtr.hasPrimaryAspect, asp.aliveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
        synonyms=('euthanasia',),
     ),
 
-    _t(i.d, 'perfusion technique',
+    _t(tech.perfusion, 'perfusion technique',
        (ilxtr.hasSomething, i.d),
       ),
 
@@ -3689,12 +3767,15 @@ methods = simpleOnt(filename=filename,
  for p2, o2 in methods.graph[s1:] if
  p2 == owl.someValuesFrom]
 
-methods._graph.add_namespace('asp', str(asp))
-methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
-methods._graph.add_namespace('prot', str(prot))
-methods._graph.add_namespace('tech', str(tech))
-methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
-methods._graph.write()
+
+def methods_main():
+    methods._graph.add_namespace('asp', str(asp))
+    methods._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...
+    methods._graph.add_namespace('prot', str(prot))
+    methods._graph.add_namespace('tech', str(tech))
+    methods._graph.add_namespace('HBP_MEM', OntCuries['HBP_MEM'])
+    methods._graph.write()
+
 
 from collections import defaultdict
 data = defaultdict(set)
@@ -3795,7 +3876,8 @@ def forComparison():
                                branch=branch,
                                _repo=_repo)
 
-def main():
+
+def extra():
     forComparison()
     displayGraph(methods.graph, debug=debug)
     mc = methods.graph.__class__()
@@ -3803,6 +3885,13 @@ def main():
     expand(methods_core._graph, methods_core.graph)#, methods_core.graph)  # FIXME including core breaks everying?
     expand(methods._graph, methods.graph)#, methods_core.graph)  # FIXME including core breaks everying?
 
+
+def main():
+    from pyontutils import methods_core as mc
+    mc.main()
+    methods_main()
+    methods_helper_main()
+
+
 if __name__ == '__main__':
-    #main()
-    pass
+    main()

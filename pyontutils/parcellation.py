@@ -17,282 +17,43 @@ import re
 import csv
 import glob
 from pathlib import Path
-from collections import namedtuple, defaultdict, Counter
-import requests
+from collections import defaultdict, Counter
 from git import Repo
 from lxml import etree
-from rdflib import Graph, URIRef, Literal, Namespace
-from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
-from pyontutils.core import NIFRID, ilx, ilxtr, TEMP, FSLATS
-from pyontutils.core import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
-from pyontutils.core import NCBITaxon, UBERON, NIFTTL
+from rdflib import Graph, URIRef, Namespace
 from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector
-from pyontutils.core import annotations, restriction, build
-from pyontutils.core import makePrefixes, makeGraph, interlex_namespace, OntMeta, nsExact
-from pyontutils.utils import TODAY, async_getter, rowParse, getSourceLine, subclasses
-from pyontutils.utils import working_dir, TermColors as tc #TERMCOLORFUNC
+from pyontutils.core import makeGraph, build
+from pyontutils.utils import async_getter, rowParse, getSourceLine, subclasses
+from pyontutils.utils import working_dir, TermColors as tc
 from pyontutils.ttlser import natsort
 from pyontutils.scigraph import Vocabulary
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.hierarchies import creatTree, Query
+from pyontutils.namespaces import makePrefixes, interlex_namespace, nsExact
+from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, FSLATS
+from pyontutils.namespaces import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
+from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL
+from pyontutils.combinators import annotations
 from pyontutils.process_fixed import ProcessPoolExecutor
+from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
 from IPython import embed
-
-WRITELOC = '/tmp/parc/'
-GENERATED = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
-PARC = GENERATED + 'parcellation/'
-NOTICE = '**FIXME**'
-
 
 sgv = Vocabulary(cache=True)
 
-PScheme = namedtuple('PScheme',
-                     ['curie',
-                      'name',
-                      'species',
-                      'devstage'])
-PScheme('ilxtr:something',
-        'some parcellation scheme concept',
-        'NCBITaxon:1234',
-        'adult')
-
-PSArtifact = namedtuple('PSArtifact',
-                        ['curie',
-                         'name',
-                         'version',
-                         'date',
-                         'link',
-                         'citation',
-                         'synonyms',
-                         'acronyms'])
-PSArtifact('SCR:something',
-           'name name',
-           'v1',
-           '01/01/01',
-           'http://wut.wut',
-           'scholarly things',
-           tuple(),
-           tuple())
-
-# annotationProperties
-#PARCLAB = 'ilxtr:parcellationLabel'
-PARCLAB = 'skos:prefLabel'
-ACRONYM = 'NIFRID:acronym'
-SYNONYM = 'NIFRID:synonym'
-
-# objectProperties
-UNTAXON = 'ilxtr:ancestralInTaxon'
-EXTAXON = 'ilxtr:hasInstanceInTaxon'  # FIXME instances?
-EXSPECIES = 'ilxtr:hasInstanceInSpecies'
-DEFTAXON = 'ilxtr:definedForTaxon'
-DEFSPECIES = 'ilxtr:definedForSpecies'
-DEVSTAGE = 'ilxtr:definedForDevelopmentalStage'
-PARTOF = 'ilxtr:partOf'
-HASPART = 'ilxtr:hasPart'
-DELINEATEDBY = 'ilxtr:delineatedBy'
-
-# classes
-ADULT = 'BIRNLEX:681'
-atname = 'Parcellation scheme artifact'
-ATLAS_SUPER = ILXREPLACE(atname) # 'NIFRES:nlx_res_20090402'  # alternatives?
-psname = 'Brain parcellation scheme concept'
-PARC_SUPER = ILXREPLACE(psname)
-
-def check_hierarchy(graph, root, edge, label_edge=None):
-    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.make_scigraph_json(edge, label_edge))
-    print(a)
-
-def add_ops(graph):
-    graph.add_op(EXSPECIES)
-    graph.add_op(DEFSPECIES)
-    graph.add_op(DEVSTAGE)
-
-def make_scheme(graph, scheme, atlas_id=None, parent=PARC_SUPER):
-    graph.add_class(scheme.curie, parent, label=scheme.name)
-    graph.add_restriction(scheme.curie, DEFSPECIES, scheme.species)
-    graph.add_restriction(scheme.curie, DEVSTAGE, scheme.devstage)
-    if atlas_id:
-        graph.add_trip(scheme.curie, rdfs.isDefinedBy, atlas_id)
-
-def make_atlas(atlas, parent=ATLAS_SUPER):
-    out = [
-        (atlas.curie, rdf.type, owl.Class),
-        (atlas.curie, rdfs.label, atlas.name),
-        (atlas.curie, rdfs.subClassOf, parent),
-        (atlas.curie, 'ilxtr:atlasVersion', atlas.version),  # FIXME
-        (atlas.curie, 'ilxtr:atlasDate', atlas.date),  # FIXME
-        (atlas.curie, 'NIFRID:externalSourceURI', atlas.link),  # FXIME probably needs to be optional...
-        (atlas.curie, 'NIFRID:definingCitation', atlas.citation),
-    ] + \
-    [(atlas.curie, SYNONYM, syn) for syn in atlas.synonyms] + \
-    [(atlas.curie, ACRONYM, ac) for ac in atlas.acronyms]
-
-    return out
-
-def add_triples(graph, struct, struct_to_triples, parent=None):
-    if not parent:
-        [graph.add_trip(*triple) for triple in struct_to_triples(struct)]
-    else:
-        [graph.add_trip(*triple) for triple in struct_to_triples(struct, parent)]
-
-def parcellation_schemes(ontids_atlases):
-    ont = OntMeta(GENERATED,
-                  'parcellation',
-                  'NIF collected parcellation schemes ontology',
-                  'NIF Parcellations',
-                  'Brain parcellation schemes as represented by root concepts.',
-                  TODAY)
-    ontid = ont.path + ont.filename + '.ttl'
-    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'NIFRID', 'ILXREPLACE')
-    graph = makeGraph(ont.filename, PREFIXES, writeloc=WRITELOC)
-    graph.add_ont(ontid, *ont[2:])
-
-    for import_id, atlas in sorted(ontids_atlases):
-        graph.add_trip(ontid, owl.imports, import_id)
-        add_triples(graph, atlas, make_atlas)
-
-    graph.add_class(ATLAS_SUPER, label=atname)
-
-    graph.add_class(PARC_SUPER, label=psname)
-    graph.write()
-
-
-class genericPScheme:
-    ont = OntMeta
-    concept = PScheme
-    atlas = PSArtifact
-    PREFIXES = makePrefixes('ilxtr', 'owl', 'skos', 'BIRNLEX', 'NCBITaxon', 'ILXREPLACE')
-
-    def __new__(cls, validate=False):
-        error = 'Expected %s got %s'
-        if type(cls.ont) != OntMeta:
-            raise TypeError(error % (OntMeta, type(cls.ont)))
-        elif type(cls.concept) != PScheme:
-            raise TypeError(error % (PScheme, type(cls.concept)))
-        elif type(cls.atlas) != PSArtifact:
-            raise TypeError(error % (PSArtifact, type(cls.atlas)))
-
-        ontid = cls.ont.path + cls.ont.filename + '.ttl'
-        PREFIXES = {k:v for k, v in cls.PREFIXES.items()}
-        PREFIXES.update(genericPScheme.PREFIXES)
-        #if '' in cls.PREFIXES:  # NOT ALLOWED!
-            #if PREFIXES[''] is None:
-                #PREFIXES[''] = ontid + '/'
-        graph = makeGraph(cls.ont.filename, PREFIXES, writeloc=WRITELOC)
-        graph.add_ont(ontid, *cls.ont[2:])
-        make_scheme(graph, cls.concept, cls.atlas.curie)
-        data = cls.datagetter()
-        cls.datamunge(data)
-        cls.dataproc(graph, data)
-        add_ops(graph)
-        graph.write()
-        if validate or getattr(cls, 'VALIDATE', False):
-            cls.validate(graph)
-        return ontid, cls.atlas
-
-    @classmethod
-    def datagetter(cls):
-        """ example datagetter function, make any local modifications here """
-        with open('myfile', 'rt') as f:
-            rows = [r for r in csv.reader(f)]
-        dothing = lambda _: [i for i, v in enumerate(_)]
-        rows = [dothing(_) for _ in rows]
-        raise NotImplementedError('You need to implement this yourlself!')
-        return rows
-
-    @classmethod
-    def datamunge(cls, data):
-        """ in place modifier of data """
-        pass
-
-    @classmethod
-    def dataproc(cls, graph, data):
-        """ example datagetter function, make any local modifications here """
-        for thing in data:
-            graph.add_trip(*thing)
-        raise NotImplementedError('You need to implement this yourlself!')
-
-    @classmethod
-    def validate(cls, graph):
-        """ Put any post validation here. """
-        raise NotImplementedError('You need to implement this yourlself!')
-
-
-class CoCoMac(genericPScheme):
-    ont = OntMeta(PARC,
-                  'cocomacslim',
-                  'CoCoMac terminology',
-                  'CoCoMac',
-                  ('This file is automatically generated from the CoCoMac '
-                   'database on the terms from BrainMaps_BrainSiteAcronyms.' + NOTICE),
-                  TODAY)
-    concept = PScheme(ILXREPLACE(ont.name),
-                       'CoCoMac terminology parcellation concept',
-                       'NCBITaxon:9544',
-                       'ilxtr:various')
-    atlas = PSArtifact(ILXREPLACE(ont.name + 'atlas'),
-                        'CoCoMac terminology',
-                        None, #'no version info',
-                        None, #'no date',
-                        'http://cocomac.g-node.org',
-                        'scholarly things',
-                        tuple(),
-                        tuple())
-
-    PREFIXES = makePrefixes('NIFRID')
-    PREFIXES['cocomac'] = 'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT%20*%20from%20BrainMaps_BrainSiteAcronyms%20where%20ID='  # looking for better options
-
-    @classmethod
-    def datagetter(cls):
-        url = 'http://cocomac.g-node.org/services/custom_sql_query.php?sql=SELECT * from BrainMaps_BrainSiteAcronyms;&format=json'
-        table = requests.get(url).json()
-        fields = table['fields']
-        data = [fields] + list(table['data'].values())
-        return data
-
-    @classmethod
-    def dataproc(cls, graph, data):
-
-        class cocomac(rowParse):
-            def ID(self, value):
-                self.identifier = 'cocomac:' + value  # safe because reset every row (ish)
-                graph.add_class(self.identifier, cls.concept.curie)
-
-            def Key(self, value):
-                pass
-
-            def Summary(self, value):
-                pass
-
-            def Acronym(self, value):
-                graph.add_trip(self.identifier, ACRONYM, value)
-
-            def FullName(self, value):
-                graph.add_trip(self.identifier, rdfs.label, '(%s) ' % cls.ont.shortname + value)
-                graph.add_trip(self.identifier, PARCLAB, value)
-
-            def LegacyID(self, value):
-                graph.add_trip(self.identifier, ACRONYM, value)
-
-            def BrainInfoID(self, value):
-                pass
-
-        cocomac(data)
-
-
 def swanson():
-    """ not really a parcellation scheme """
+    """ not really a parcellation scheme
+        NOTE: the defining information up here is now deprecated
+        it is kept around to keep the code further down happy """
+
     source = (working_dir / 'pyontutils/resources/swanson_aligned.txt').as_posix()
-    ONT_PATH = GENERATED
+    ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
     PREFIXES = SwansonLabels.prefixes
-    new_graph = makeGraph(filename, PREFIXES, writeloc=WRITELOC)
+    new_graph = makeGraph(filename, PREFIXES, writeloc='/tmp/')
     new_graph.add_ont(ontid,
                       'Swanson brain partomies',
                       'Swanson 2014 Partonomies',
-                      'This file is automatically generated from ' + source + '.' + NOTICE,
-                      TODAY)
+                      'This file is automatically generated from ' + source + '.' + '**FIXME**',
+                      'now')
 
     # FIXME citations should really go on the ... anatomy? scheme artifact
     definingCitation = 'Swanson, Larry W. Neuroanatomical Terminology: a lexicon of classical origins and historical foundations. Oxford University Press, USA, 2014.'
@@ -340,6 +101,9 @@ def swanson():
     header = ['Depth', 'Name', 'Citation', 'NextSyn', 'Uberon']
     zoop = [header] + [r for r in zip(*zip(*data), output)] + \
             [(0, 'Appendix END None', None, None, None)]  # needed to add last appendix
+
+    # TODO annotate the appendicies and the classes with these
+    appendix_root_mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
 
     class SP(rowParse):
         def __init__(self):
@@ -501,40 +265,6 @@ def swanson():
                 json_['edges'].append({'sub':'SWA:' + str(child),'pred':apo,'obj':'SWA:' + str(parent)})
 
     return new_graph
-    new_graph.write()
-    if False:
-        Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
-        mapping = (1, 1, 1, 1, 30, 83, 69, 70, 74, 1)  # should generate?
-        for i, n in enumerate(mapping):
-            a, b = creatTree(*Query('SWA:' + str(n), 'ilxtr:swansonPartOf' + str(i + 1), 'INCOMING', 10), json=json_)
-            print(a)
-    return ontid, None
-
-    #embed()
-
-def main():
-    if not os.path.exists(WRITELOC):
-        os.mkdir(WRITELOC)
-
-    with ProcessPoolExecutor(4) as ppe:
-        funs = [CoCoMac, #cocomac_make,
-                swanson]
-        futures = [ppe.submit(f) for f in funs]
-        print('futures compiled')
-        fs = [f.result() for f in futures]
-        fs = fs[0] + fs[1:]
-        parcellation_schemes(fs[:-1])
-
-    # make a protege catalog file to simplify life
-    uriline = '  <uri id="User Entered Import Resolution" name="{ontid}" uri="{filename}"/>'
-    xmllines = ['<?xml version="1.0" encoding="UTF-8" standalone="no"?>',
-    '<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">',] + \
-    [uriline.format(ontid=f, filename=f.rsplit('/',1)[-1]) for f,_ in fs] + \
-    ['  <group id="Folder Repository, directory=, recursive=true, Auto-Update=true, version=2" prefer="public" xml:base=""/>',
-    '</catalog>',]
-    xml = '\n'.join(xmllines)
-    with open('/tmp/catalog-v001.xml','wt') as f:
-        f.write(xml)
 
 
 #
@@ -1274,6 +1004,7 @@ class PaxTree_6(Source):
                         layers[parent] = []
 
                     layers[parent].append((layer, o))  # FIXME where does layer come from here?
+                    # I think this comes from the previous iteration of the loop?!
             elif struct is not None and ', layer 1' in struct:
                 # remove the precomposed, we will deal with them systematically
                 parent_, layer = abbrev[:-1], abbrev[-1]
@@ -1453,7 +1184,7 @@ class PaxLabels(LabelsBase):
         _fixes_prov = {}
         for f in self._fixes:
             for l in f[1][0]:
-                _fixes_prov[l] = [Ont.wasGeneratedBy.format(line=getSourceLine(self.__class__))]  # FIXME per file
+                _fixes_prov[l] = [ParcOnt.wasGeneratedBy.format(line=getSourceLine(self.__class__))]  # FIXME per file
         return _fixes_prov
 
     @property
@@ -2067,20 +1798,19 @@ def main():
         from pyontutils.parc_aba import Artifacts as abaArts
     from pyontutils.parc_freesurfer import Artifacts as fsArts
     from pyontutils.parc_whs import Artifacts as whsArts
+    #embed()
     onts = tuple(l for l in subclasses(ParcOnt)
                  if l.__name__ != 'parcBridge'
                  and not hasattr(l, f'_{l.__name__}__pythonOnly')
-                 and (__name__ != '__main__'
-                      # when this is run as an import
-                      # the __main__ versions do not exist
-                      or __name__ == '__main__ '
-                      and l.__module__ != 'pyontutils.parcellation')
-    )
+                 and (l.__module__ != 'pyontutils.parcellation'
+                      if __name__ == '__main__'
+                      else l.__module__ != '__main__'))
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
                 fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
+
 
 if __name__ == '__main__':
     main()

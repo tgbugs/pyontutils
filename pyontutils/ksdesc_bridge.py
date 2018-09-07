@@ -7,7 +7,9 @@ import os
 from glob import glob
 from pathlib import Path
 from rdflib import Literal
-from pyontutils.core import Ont, Source, makePrefixes, skos, build
+from pyontutils.core import Ont, Source, build
+from pyontutils.namespaces import makePrefixes
+from pyontutils.closed_namespaces import skos
 
 gitf = Path(devconfig.git_local_base)
 

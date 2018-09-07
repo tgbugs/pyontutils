@@ -15,9 +15,9 @@ git checkout neurons
 
 ## The notebook environment for neuron lang support
 This assumes that you are using python3.6.
-0. Make sure you have the pre-python [requirements](../README.md#requirements) installed.
+0. Make sure you have the pre-python [requirements](./../README.md#requirements) installed.
 Otherwise you will get cryptic errors from pipenv.
-1. Install pyontutils using pipenv as descrited in [installation](../README.md#installtion).
+1. Install pyontutils using pipenv as descrited in [installation](./../README.md#installtion).
 
 ## SciGraph
 Neuron Lang makes use of SciGraph for searching the ontologies that
@@ -27,7 +27,7 @@ instance instead [register for an account](https://scicrunch.org/register)
 and [get an api key](https://scicrunch.org/account/developer).
 To set the scigraph endpoint for all pyontutils run
 `ontutils devconfig` and then edit the `scigraph_api` key in
-[devconfig.yaml](../pyontutils/devconfig.yaml) (file doesn't exist by default)
+[devconfig.yaml](./../pyontutils/devconfig.yaml) (file doesn't exist by default)
 to `https://scicrunch.org/api/v1/scigraph`. You can they set your api key by
 running `export SCICRUNCH_API_KEY=$(cat path/to/my/apikey)` or by running
 ``` python
@@ -38,7 +38,7 @@ with open('path/to/file/containing/only/my-api-key', 'rt') as f:
 
 Beware! The following is a mess.
 Alternately follow the instructions for how to set up SciGraph in
-[scigraph/README.md]('../scigraph/README.md'). To set up SciGraph with
+[scigraph/README.md](./../scigraph/README.md). To set up SciGraph with
 the NIF-Ontology you will need Java 8 JRE and JDK and maven >=3.3. You
 will also need to have either the pipenv described above or the pipenv
 for pyontutils installed in order to generate certain scripts so that
@@ -47,7 +47,7 @@ you can run the commands below (adjust your paths accordingly).
 
 1. Download the [latest release](https://github.com/SciCrunch/NIF-Ontology/releases/latest)
 of the loaded NIF-Ontology graph.
-2. Make sure you have done the oneshots in [scigraph/README.md]('../scigraph/README.md').
+2. Make sure you have done the oneshots in [scigraph/README.md](./../scigraph/README.md).
 3. Try to follow the rest of the scigraph setup README
 
 ``` bash

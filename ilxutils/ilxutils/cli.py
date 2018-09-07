@@ -83,7 +83,7 @@ class Client:
         info_filled = info.format(label    = data['label'],
                                   id       = data['id'],
                                   ilx      = data['ilx'],
-                                  super_id = data['superclasses'][0]['superclass_tid'])
+                                  super_id = data['superclasses'][0]['id'])
         logging.info(info_filled)
         return info_filled
 
@@ -154,6 +154,7 @@ class Client:
         ilx_id = self.fix_ilx(ilx_id)
         url_base = self.base_path + "ilx/search/identifier/{identifier}?key={APIKEY}"
         url = url_base.format(identifier=ilx_id, APIKEY=self.APIKEY)
+        print(url)
         output = self.get(url)
         # Can be a successful request, but not a successful response
         success = self.check_success(output)

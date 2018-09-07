@@ -4,18 +4,22 @@ from collections import defaultdict
 from pathlib import Path as p
 from ilxutils.args_reader import read_args
 from ilxutils.tools import *
+from ilxutils.scicrunch_client import scicrunch
 import re
 #ELASTIC = 'https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/'
 
 
 class IlxSql():
-    def __init__(self, db_url, pre_load=False):
+    def __init__(self, api_key, base_path, db_url, pre_load=False):
         self.db_url = db_url
         self.engine = create_engine(self.db_url)
         self.local_degrade = light_degrade  # current degrade of choice for sql
         self.terms = self.get_terms() if pre_load else pd.DataFrame
         self.annos = self.get_annotations() if pre_load else pd.DataFrame
         self.basic_annos = self.get_basic_annos() if pre_load else pd.DataFrame
+        self.sci = scicrunch(api_key=api_key,
+                             base_path=base_path,
+                             db_url=db_url)
 
     def fetch_terms(self):
         if self.terms.empty:
@@ -34,6 +38,7 @@ class IlxSql():
 
     def remove_duplicates(self, df):
         self.terms = self.fetch_terms()
+        #check elastic?
         return df[df['tid'].isin(list(self.terms.id))]  # uses already cleaned ids as ref
 
     def get_terms(self):
@@ -101,7 +106,7 @@ class IlxSql():
     def get_synonyms(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT ts.id, ts.tid, ts.ilx as synonym_ilx, ts.literal, t.label, t.ilx as term_ilx
+                SELECT ts.id, ts.tid, ts.literal, t.id as term_id, t.ilx as term_ilx, t.label, t.definition
                 FROM term_synonyms AS ts
                 JOIN terms AS t
                 WHERE ts.tid=t.id
@@ -168,6 +173,30 @@ class IlxSql():
     def get_ilx2label(self):
         return {row['ilx']: row['label'] for row in self.fetch_terms().to_dict('records')}
 
+    def get_id2ilx(self):
+        return {row['id']: row['ilx'] for row in self.fetch_terms().to_dict('records')}
+
+    def get_ilx2id(self):
+        return {row['ilx']: row['id'] for row in self.fetch_terms().to_dict('records')}
+
+    def get_ilx2row(self):
+        return {row['ilx']: row for row in self.fetch_terms().to_dict('records')}
+
+    def get_existing_id2row(self):
+        visited = {}
+        existing_id2row = {}
+        for row in self.get_existing_ids().to_dict('records'):
+            if not visited.get(row['iri']):
+                existing_id2row[row['iri']] = row
+                visited[row['iri']] = True
+            else: # FIXME: should get a head count and see if concurrent is the way to go
+                ilx_resp_complex = self.sci.ilxSearches(row['ilx'], crawl=True, _print=False)
+                if ilx_resp_complex:
+                    ilx_data = [e for e in ilx_resp_complex.values()][0]
+                    if row['iri'] in [e.get('iri') for e in ilx_data['existing_ids'] if e]:
+                        existing_id2row[row['iri']] = row
+        return existing_id2row
+
     def show_tables(self):
         data = """
             show tables;
@@ -211,10 +240,13 @@ def main():
         api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
         db_url=p.home() / 'keys/production_engine_scicrunch_key.txt',
         production=True)
-    sql = IlxSql(db_url=args.db_url)
+    sql = IlxSql(api_key=args.api_key,
+                 base_path=args.base_path,
+                 db_url=args.db_url)
     # terms_df = sql.get_terms()
-    label2ilx = sql.get_labels_to_ilx_dict()
-    print(list(label2ilx)[0])
+    ex2row = sql.get_existing_id2row()
+    print(ex2row['http://uri.interlex.org/dicom/uris/terms/0018_0029'])
+    # print(list(label2ilx)[0])
 
 
 if __name__ == '__main__':

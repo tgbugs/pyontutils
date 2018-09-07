@@ -15,7 +15,6 @@ import json
 from pathlib import Path
 import rdflib
 import requests
-from rdflib import RDF, OWL
 from rdflib.namespace import *
 from pyontutils.core import makePrefixes, ilxtr
 from pyontutils.neuron_lang import *

@@ -78,8 +78,8 @@ def ilx_doc2args(doc):
     elif args.get('beta'):
         args['base_path'] = BETA
 
-    if args.get('db_url') and args.get('api_key') and args.get('base_path'):
-        test(args)
+    #if args.get('db_url') and args.get('api_key') and args.get('base_path'):
+    #    test(args)
 
     return args
 
@@ -112,7 +112,7 @@ def read_args(**args):
         sys.exit(
             'Need to specify the client version (-b BETA | -p PRODUCTION)')
 
-    if not args['--cafe']:
+    if not args['--cafe'] or False:
         test(pd.Series({k.replace('--', ''): v for k, v in args.items()}))
 
     args = pd.Series({k.replace('--', ''): v for k, v in args.items()})

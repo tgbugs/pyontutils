@@ -9,18 +9,22 @@ Usage:
     scig g [--local --verbose --rt=RELTYPE --key=KEY] <id>...
     scig e [--local --verbose --key=KEY] <p> <s> <o>
     scig c [--local --verbose --key=KEY]
-    scig cy <query>
+    scig cy [--limit=LIMIT] <query>
+    scig onts [options]
 
 Options:
     -l --local          hit the local scigraph server
     -v --verbose        print the full uri
     -t --limit=LIMIT    limit number of results [default: 10]
     -k --key=KEY        api key
+    -w --warn           warn on errors
 
 """
 from docopt import docopt
+from pyontutils.core import qname
+from pyontutils.utils import TermColors as tc
 from pyontutils.scigraph import *
-from pyontutils.core import PREFIXES
+from pyontutils.namespaces import PREFIXES
 
 
 class scigPrint:
@@ -48,6 +52,8 @@ class scigPrint:
         'NCBITaxon':'http://purl.obolibrary.org/obo/NCBITaxon_',
         'BRAINInfo':'http://braininfo.rprc.washington.edu/centraldirectory.aspx?ID=',
         'PMID':'http://www.ncbi.nlm.nih.gov/pubmed/',
+        'googledocs':'https://docs.google.com/document/d/',
+        'googlesheets':'https://docs.google.com/spreadsheet/',
     }
     _shorten_.update(PREFIXES)
 
@@ -59,18 +65,43 @@ class scigPrint:
             return string
         else:
             out = ''
-            ends = [_ for _ in range(wrap_ - start, len(string), wrap_ - ind - 4)] + [None]
+            string = string.replace('\n', ' ')
+            string = string.replace('\\n', ' ')
+            words = string.split(' ')
+            nwords = len(words)
+            word_lens = [len(word) for word in words]
+            valid_ends = [sum(word_lens[:i + 1]) + i
+                          for i, l in enumerate(word_lens)]
+            def valid(e):
+                if valid_ends[0] >= e:
+                    return valid_ends[0]
+                li, low = [(i, ve) for i, ve in enumerate(valid_ends) if ve < e][-1]
+                hi, high = [(i, ve) for i, ve in enumerate(valid_ends) if ve >= e][0]
+                use_low = e - low < high - e
+                ind = (li if use_low else hi)
+                if ind < nwords - 1:
+                    wlp1 = word_lens[ind + 1]
+                else:
+                    wlp1 = True
+
+                adjust = 1 if not wlp1 else 0
+
+                return (low if use_low else high) + adjust
+
+            ends = [valid(e)  # note, ideally we would adjust to the longest passing block in the fly
+                    for e in range(wrap_ - start,
+                                   len(string), wrap_ - ind - 4)] + [None]
             starts = [0] + [e for e in ends]
             blocks = [string[s:e] if e else string[s:] for s, e in zip(starts, ends)]
             return ('\n' + ' ' * (ind + 4)).join(blocks)
 
     @staticmethod
-    def sv(asdf, start, ind):
+    def sv(asdf, start, ind, warn=False):
         if type(asdf) is not bool and asdf.startswith('http'):
             for iri, short in scigPrint.shorten.items():
                 if iri in asdf:
                     return scigPrint.wrap(asdf.replace(iri, short + ':'), start, ind)
-            print('YOU HAVE FAILED!?', asdf)
+            print(tc.red('WARNING:'), 'Shorten failed for', tc.ltyellow(asdf))
             return scigPrint.wrap(repr(asdf), start, ind)
         else:
             return scigPrint.wrap(repr(asdf), start, ind)
@@ -85,11 +116,24 @@ class scigPrint:
         print('---------------------------------------------------')
         print(node['id'], '  ', node['lbl'])
         print()
-        scigPrint.pprint_meta(node['meta'])
+        scigPrint.pprint_meta(node['meta'], False)
         print('---------------------------------------------------')
 
     @staticmethod
-    def pprint_meta(meta):
+    def pprint_meta(meta, print_iri=True):
+        if print_iri:
+            if 'curie' in meta:
+                print(meta['curie'])
+            else:
+                p = qname(meta['iri'])
+                if p == meta['iri']:
+                    for iri, short in scigPrint.shorten.items():
+                        if iri in p:
+                            p = p.replace(iri, short + ':')
+                            break
+                print()
+                print(tc.blue(p))
+
         for k, v in sorted(meta.items()):
             if k in ('curie', 'iri'):
                 continue
@@ -98,19 +142,20 @@ class scigPrint:
                     k = k.replace(iri, short + ':')
                     break
             if v is not None:
-                base = ' ' * 4 + '%s:' % k
-                if hasattr(v, '__iter__'):
+                shift = 10 if len(k) <= 10 else (20 if len(k) <= 20 else 30)
+                base = ' ' * 4 + f'{k:<{shift}}'
+                if isinstance(v, list):
                     if len(v) > 1:
                         print(base, '[')
                         _ = [print(' ' * 8 + scigPrint.sv(_, 8, 8)) for _ in v]
                         print(' ' * 4 + ']')
                     elif len(v) == 1:
                         asdf = v[0]
-                        print(base, scigPrint.sv(asdf, len(base) + 1, 4))
+                        print(base, scigPrint.sv(asdf, len(base) + 1, len(base) - 3))
                     else:
                         pass
                 else:
-                    print(base, scigPrint.sv(v, len(base) + 1, 4))
+                    print(base, scigPrint.sv(v, len(base) + 1, len(base) - 3))
 
     @staticmethod
     def pprint_edge(edge):
@@ -195,12 +240,35 @@ def main():
             print(fmt.format(repr(curie)), repr(iri))
     elif args['cy']:
         c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
-        out = c.execute(args['<query>'], 10)
-        if out:
-            out = '\n'.join([_.strip() for _ in out.split('|')[3:-1]])
-            print(out)
+        import pprint
+        from pyontutils.ontree import cypher_query
+        results = cypher_query(c, args['<query>'], args['--limit'])
+        if results:
+            pprint.pprint(results)
         else:
             print('Error?')
+    elif args['onts']:
+        from pathlib import Path
+        import rdflib
+        from pyontutils.ontree import ImportChain
+        from IPython import embed
+
+        sgc = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        sgg = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
+        ic = ImportChain(sgg, sgc)
+        ic.write_import_chain()
+        fields = ('iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition',
+                  'rdfs:comment', 'dc:publisher')
+        for r in ic.results:
+            scigPrint.pprint_meta(r)
+            continue
+            if len(r) > 1:
+                for field in fields:
+                    value = r.get(field, '')
+                    if value:
+                        print(f'{field: <20}{value}')
+                print()
+
 
 if __name__ == '__main__':
     main()

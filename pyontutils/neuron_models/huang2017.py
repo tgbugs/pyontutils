@@ -2,11 +2,11 @@
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
 from ontquery import rdflibLocal
+from pyontutils.core import OntId, OntTerm
 from pyontutils.utils import relative_path
-from pyontutils.core import OntId, OntTerm, makePrefixes, makeNamespaces
-from pyontutils.core import rdf, rdfs, owl
-from pyontutils.core import NIFRID, ilxtr
-from pyontutils.core import hasRole, definition
+from pyontutils.namespaces import makePrefixes, makeNamespaces
+from pyontutils.namespaces import NIFRID, ilxtr, hasRole, definition
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 from pyontutils.phenotype_namespaces import *
 import rdflib
 from IPython import embed

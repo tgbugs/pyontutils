@@ -32,6 +32,8 @@ VERSION = '0.0.5'
 
 
 def batch(data, seg_length, start_batch, end_batch, func, **kwargs):
+    if start_batch != 0:
+        print("Warning: Start Batch isn't 0")
     total_data = [data[x:x + seg_length]
                   for x in range(0, len(data), seg_length)]
     total_count = m.floor(len(data) / seg_length)
@@ -45,6 +47,7 @@ def batch(data, seg_length, start_batch, end_batch, func, **kwargs):
 def main():
     doc = docopt(__doc__, version=VERSION)
     args = ilx_doc2args(doc)
+    print(args)
     data = open_json(infile=args.file)
     data = data[:]  # for debuging
     sci = scicrunch(api_key=args.api_key,
@@ -61,11 +64,13 @@ def main():
     }
 
     output = batch(data=data,
-                   seg_length=100,
+                   seg_length=10,
                    start_batch=0,  # 1408, # regarding uids
                    end_batch=None,  # 1410,
                    func=FUNCTION_MAP[args['<argument>']],
-                   _print=True)
+                   _print=True,
+                   crawl=False,
+                   LIMIT=10,)
 
 
 if __name__ == '__main__':

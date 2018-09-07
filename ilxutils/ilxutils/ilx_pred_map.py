@@ -8,7 +8,9 @@ class IlxPredMap:
         'label':
             ['rdfs:label',
              'skos:prefLabel',
-             'preferred_name'],
+             'preferred_name',
+             'altLabel',
+             'casn1_label',],
         'definition':
             ['definition:',
              'skos:definition',

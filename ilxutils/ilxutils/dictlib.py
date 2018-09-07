@@ -6,7 +6,6 @@ import sys
 import time
 import math as m
 import numpy as np
-from ilxutils.interlex_sql import IlxSql
 
 
 def superclasses_bug_fix(term_data):
@@ -153,6 +152,7 @@ def merge(new, old):
         ]:
             old[k] = vals
 
+        # TODO: still need to mark them... but when batch elastic for update works
         old['uid'] = 34142  # DEBUG: need to mark as mine manually until all Old terms are fixed
 
     ''' REMOVE REPEATS; needs to exist due to server overloads '''

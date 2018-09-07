@@ -1,12 +1,14 @@
 import requests
-from pyontutils.core import rdf, rdfs, owl, dc, dcterms, skos, prov
-from pyontutils.core import NIFRID, ilx, ilxtr, TEMP
-from pyontutils.core import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
-from pyontutils.core import NCBITaxon, UBERON
-from pyontutils.core import makePrefixes, Source, LabelsBase, Collector, restriction, build
-from pyontutils.utils import Async, deferred
 import pyontutils.parcellation as parc
+from pyontutils.core import Source, LabelsBase, Collector, build
+from pyontutils.utils import Async, deferred
+from pyontutils.namespaces import makePrefixes
+from pyontutils.namespaces import NCBITaxon, UBERON, NIFRID, ilx, ilxtr, TEMP
+from pyontutils.namespaces import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA, ilxDMBA, AIBS
+from pyontutils.combinators import restriction
 from pyontutils.parcellation import parcCore, LabelRoot, Label, Terminology
+from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
+from IPython import embed
 
 # TODO! there is way more metadata that we need to provide here...
 # proof that staging is a good idea -- we can can reuse allen's numbers
@@ -14,34 +16,54 @@ from pyontutils.parcellation import parcCore, LabelRoot, Label, Terminology
 def getOnts():
     # generate everything from these two so that they stay up to date
     # http://help.brain-map.org/display/api/Atlas+Drawings+and+Ontologies
-    func = lambda url: requests.get(url).json()
+    func = lambda url: requests.get(url).json()['msg']
     query = 'http://api.brain-map.org/api/v2/data/query.json?criteria=model::{model}'
     models = 'Atlas', 'Ontology', 'ReferenceSpace'
     res = Async(rate=10)(deferred(func)(query.format(model=model))
                          for model in models)
+
     _Atlas, _Ontology, _ReferenceSpace = res
+
+    # FIXME looks like this API  changed
 
     onts = {o['id']:o for o in _Ontology}
     refs = {r['id']:r for r in _ReferenceSpace}
+    refs[None] = None
+    onts[None] = None
     want_onts = set()
     # ontology metadata
     for at in _Atlas:
         at['name']
         at['description']
         ref = refs[at['reference_space_id']]
-        ont = otns[at['structure_graph_id']]
-        want_onts.add(ont['id'])
-        assert ont['organism_id'] == ref['organism_id']
-    assert want_onts == set(o['id'] for o in onts if o['has_atlas'])
+        try:
+            ont = onts[at['structure_graph_id']]
+        except KeyError as e:
+            ont = dict(id=at['structure_graph_id'], organism_id=2)
+            print('hey guys, could you please fix this missing ont?', e)
+        if ont:
+            want_onts.add(ont['id'])
+        if ont and ref:
+            assert ont['organism_id'] == ref['organism_id'], f"\n{ont['organism_id']}\n{ref['organism_id']}"
+
+    have_atlases = set(o['id'] for o in onts.values() if o and o['has_atlas'])
+    try:
+        assert want_onts == have_atlases, f'\n{sorted(want_onts)}\n{sorted(have_atlases)}'
+    except AssertionError as e:
+        print('needs more attention', e)
     for oid in want_onts:
-        ont = onts[oid]
+        try:
+            ont = onts[oid]
+        except KeyError:  # FIXME
+            continue
         ont['name']
         ont['description']
         ont['id']
 
-    _ReferenceSpace['age_id']
-    _ReferenceSpace['name']
-    _ReferenceSpace['organism_id'] == _Ontology['organism_id']
+    # FIXME I have no idea what this was doing or why it previously worked
+    #_ReferenceSpace['age_id']
+    #_ReferenceSpace['name']
+    #_ReferenceSpace['organism_id'] == _Ontology['organism_id']
 
     # the usual flattened
     # http://api.brain-map.org/api/v2/tree_search/Structure/10154.json?descendants=true

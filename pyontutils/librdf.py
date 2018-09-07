@@ -1,5 +1,4 @@
-"""
-librdf parser for rdflib
+"""librdf parser for rdflib
 
 this is not faster for pypy3 but if you want install it
 
@@ -15,7 +14,10 @@ cp python/Redland.py ${site_packages}
 cp python/_Redland.pypy3*.so ${site_packages}
 
 """
-import RDF
+try:
+    import RDF
+except ImportError as e:
+    print('WARNING: librdf bindings not found. You will have runtime errors.')
 import rdflib
 from pathlib import Path
 from IPython import embed

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3.6
 import re
 import sys
-from datetime import datetime
 from decimal import Decimal
-from rdflib.plugins.serializers.turtle import TurtleSerializer
+from datetime import datetime
 from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
+from rdflib.plugins.serializers.turtle import TurtleSerializer
 from IPython import embed
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace

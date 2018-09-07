@@ -83,7 +83,7 @@ def __degrade(sub, var):
     def helper(s):
         s = str(s)
         s = mydecoder(s)
-        s = re.sub(sub, "", s).lower().strip()
+        s = re.sub(sub, " ", s).lower().strip()
         if not s:
             return None
         return s

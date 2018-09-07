@@ -153,7 +153,6 @@ class GraphComparator(IlxPredMap):
         # unchared but checking for hits in the data itself
         for i, trow in enumerate(unshared_rows):
             if i == 0:
-                print('end')
                 break
             for j, rrow in self.rgraph.df.iterrows():
                 rrow = rrow[~rrow.isnull()]

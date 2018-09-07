@@ -8,21 +8,23 @@ import math
 import asyncio
 import hashlib
 import inspect
-from datetime import datetime, date
 from time import time, sleep
 from pathlib import Path
+from datetime import datetime, date
 from functools import wraps
-from collections import namedtuple
+from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 import psutil
 import rdflib
 
 working_dir = Path(__file__).absolute().resolve().parent.parent
 
-TODAY = date.isoformat(date.today())
+def TODAY():
+    """ This needs to be a function for long running programs. """
+    date.today().isoformat()
 
 
-def UTCNOW(): return datetime.isoformat(datetime.utcnow())
+def UTCNOW(): return datetime.utcnow().isoformat()
 
 
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer,
@@ -40,6 +42,14 @@ rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libRdfxmlParser')
 rdflib.plugin.register('libttl', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libTurtleParser')
+
+def check_value(v):
+    if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
+        return v
+    elif isinstance(v, str) and v.startswith('http'):
+        return rdflib.URIRef(v)
+    else:
+        return rdflib.Literal(v)
 
 def test_notebook():  # also tests ipython
     try:
@@ -126,6 +136,69 @@ def memoryCheck(vms_max_kb):
                           f'{buffer_gigs:.2f} needed')
 
 
+
+
+class injective_dict(MutableMapping):
+
+    class NotInjectiveError(Exception):
+        pass
+
+    class KeyAlreadyBoundError(NotInjectiveError):
+        pass
+
+    class ValueAlreadyBoundError(NotInjectiveError):
+        pass
+
+    def __init__(self, __mm=None, **kwargs):
+        self._dict = {}
+        self._inj = {}
+        if __mm and isinstance(__mm, MutableMapping):
+            for k, v in __mm.items():
+                self.__setitem__(k, v)
+
+        if kwargs:
+            for k, v in kwargs.items():
+                self.__setitem__(k, v)
+
+    def inverted(self):
+        new_ij = self.__class__()
+        new_ij._dict = self._inj
+        new_ij._inj = self._dict
+        return new_ij
+
+    def __contains__(self, key):
+        return key in self._dict
+
+    def __delitem__(self, key):
+        value = self._dict[key]
+        del self._inj[value]
+        del self._dict[key]
+        del value
+
+    def __getitem__(self, key):
+        return self._dict[key]
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __repr__(self):
+        return '{}({!r})'.format(self.__class__.__name__, self._dict)
+
+    def __setitem__(self, key, value):
+        if key in self._dict and self._dict[key] != value:
+            raise self.KeyAlreadyBoundError(f'{key!r} cannot be bound to {value!r}, '
+                                            f'{key!r} is already bound to {self._dict[key]!r}')
+        if value in self._inj and self._inj[value] != key:
+            raise self.ValueAlreadyBoundError(f'{key!r} cannot be bound to {value!r}, '
+                                              f'{value!r} is already bound to {self._inj[value]!r}')
+
+        self._dict[key] = value
+        self._inj[value] = key
+
+
 class OrderInvariantHash:
     def __init__(self, cypher=hashlib.sha256, encoding='utf-8'):
         self.cypher = cypher
@@ -195,7 +268,7 @@ def coln(n, iterable):
 
 def setPS1(script__file__):
     text = 'Running ' + os.path.basename(script__file__)
-    os.sys.stdout.write('\x1b]2;{}\x07'.format(text))
+    os.sys.stdout.write('\x1b]2;{}\x07\n'.format(text))
 
 
 def refile(script__file__, path):

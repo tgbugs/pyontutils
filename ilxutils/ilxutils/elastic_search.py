@@ -19,6 +19,7 @@ from sys import exit
 import asyncio
 from aiohttp import ClientSession, TCPConnector, BasicAuth
 import math as m
+from IPython import embed
 from ilxutils.tools import *
 from ilxutils.args_reader import doc2args
 VERSION = '0.0.2'
@@ -40,7 +41,7 @@ class ElasticSearch:
         req.raise_for_status()
         try:
             output = req.json()
-            return output
+            return output['_source']
         except:
             if req.text:
                 exit(req.text)
@@ -60,9 +61,11 @@ class ElasticSearch:
                     problem = str(output)
                     if debug:
                         return {'status_error': url_suffix}
-                    exit(
-                        str(problem) + ' with status code [' +
-                        str(response.status) + ']')
+                    # returns 'found':False... real data doesnt have 'found'; see the problem?
+                    return None
+                    # exit(
+                    #     str(problem) + ' with status code [' +
+                    #     str(response.status) + ']')
 
                 output = await response.json(content_type=None)
                 if not output:
@@ -139,15 +142,16 @@ def main():
     args = doc2args(doc)
     es = ElasticSearch(user='keys/elastic_username.txt',
                        password='keys/elastic_password.txt',)
+    hit = es.search_by_ilx_id('ilx_0101431')
+    embed()
     #hit = es.search_by_ilx_id(ilx_id='ilx_0101431')
     #hit = es.search_by_ilx_ids(ilx_ids=['ilx_010143'], _print=False, debug=True)
-    terms = open_pickle(
-        p.home() / 'Dropbox/interlex_backups/ilx_db_terms_backup')
-    ilx_ids = list(terms.ilx)
-    records = batch(ilx_ids[:1000], 100,
-                    es.search_by_ilx_ids, _print=False, debug=True)
-    df = pd.DataFrame.from_records(records)
-    print(list(df))
+    #terms = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_terms_backup')
+    #ilx_ids = list(terms.ilx)
+    #records = batch(ilx_ids[:1000], 100,
+    #                es.search_by_ilx_ids, _print=False, debug=True)
+    #df = pd.DataFrame.from_records(records)
+    #print(list(df))
     #create_json(list(df.failed), p.home() / 'Dropbox/failed_elastic')
 
 

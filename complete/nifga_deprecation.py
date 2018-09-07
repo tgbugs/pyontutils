@@ -148,7 +148,7 @@ def do_deprecation(replaced_by, g, additional_edges, conflated):
                   'UBERON Bridge',
                   ('This is the bridge file that holds local NIFSTD additions to uberon. '
                    'This is also staging for any changes that we want to push upstream.'),
-                  TODAY)
+                  TODAY())
     ontid = bmeta.path + bmeta.filename + '.ttl'
     bridge = makeGraph('uberon-bridge', PREFIXES)
     bridge.add_ont(ontid, *bmeta[2:])

@@ -9,17 +9,18 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makePrefixes, makeGraph, createOntology, OntId as OntId_
-from pyontutils.core import OntMeta, TEMP, rdf, rdfs, owl, ilxtr
-from pyontutils.utils import TODAY, rowParse, refile
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_
+from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.neurons import _NEURON_CLASS
+from pyontutils.scigraph import Graph, Vocabulary
+from pyontutils.ilx_utils import ILXREPLACE
+from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent  # FIXME this breaks when not run from pyontutils!??!!
+gitf = working_dir.parent
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -250,18 +251,9 @@ def make_phenotypes():
                             path='ttl/',
                             prefixes=PREFIXES)
 
-
-    eont = OntMeta('http://ontology.neuinfo.org/NIF/ttl/',
-                   'NIF-Neuron-Defined',
-                   'NIF Neuron Defined Classes',
-                   'NIFNEUDEF',
-                   'This file contains defined classes derived from neuron phenotypes.',
-                   TODAY)
-    defined_graph = createOntology(filename=eont.filename,
+    defined_graph = createOntology(filename='NIF-Neuron-Defined',
                                    path='ttl/',
                                    prefixes=PREFIXES)
-    #ontid = eont.path + eont.filename + '.ttl'
-    #defined_graph.add_ont(ontid, *eont[2:])
     edg = rdflib.Graph().parse(defined_graph.filename, format='turtle')
     defined_id_lookup = {o.value:s for s, o in edg.subject_objects(rdflib.RDFS.label)}
     print('AAAAAAAAAAA', defined_id_lookup)
@@ -1077,7 +1069,7 @@ def make_bridge():
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
-        import_module(f'pyontutils.neuron_models.{module}')
+        m = import_module(f'pyontutils.neuron_models.{module}')
 
 
     class neuronBridge(Ont):

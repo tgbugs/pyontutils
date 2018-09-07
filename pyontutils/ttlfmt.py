@@ -29,15 +29,22 @@ import os
 import sys
 from io import StringIO, TextIOWrapper
 from json.decoder import JSONDecodeError
+from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from concurrent.futures import ProcessPoolExecutor
 from pyontutils.utils import readFromStdIn
 
 profile_me = lambda f:f
+
+def getVersion():
+    ttlser = rdflib.plugin.get('nifttl', rdflib.serializer.Serializer)
+    ttlser_version = ttlser._CustomTurtleSerializer__version  # FIXME
+    version = f"ttlfmt v0.0.1\nttlser {ttlser_version}"
+    return version
+
 if __name__ == '__main__':
-    args = docopt(__doc__, version="ttlfmt 0")
+    args = docopt(__doc__, version=getVersion())
     if args['--debug']:
         from IPython import embed
     if args['--profile']:
@@ -130,7 +137,7 @@ def main():
     global args  # vastly preferable to classing everything since this way we can see
     global outfmt  # in 2 lines what is actually shared instead of stuffed into self
     if __name__ != '__main__':
-        args = docopt(__doc__, version="ttlfmt 0")
+        args = docopt(__doc__, version=getVersion())
 
     if args['--subclass']:
         outfmt = 'scottl'

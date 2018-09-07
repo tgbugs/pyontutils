@@ -1,13 +1,14 @@
 #!/usr/bin/env python3.6
 from pathlib import Path
 import rdflib
-from pyontutils.core import makeGraph, makePrefixes
-from pyontutils.core import rdf, rdfs, owl, TEMP
+from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
 from pyontutils.config import devconfig
+from pyontutils.namespaces import makePrefixes, TEMP
 from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
 from pyontutils.neurons import MeasuredNeuron
+from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
 
