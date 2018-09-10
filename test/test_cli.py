@@ -98,7 +98,8 @@ class TestCli(Folders):
             except BaseException as e:
                 failed.append((command, e, e.stdout if hasattr(e, 'stdout') else '', ''))
 
-        assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
+        msg = '\n'.join('\n'.join(str(e) for e in f) for f in failed)
+        assert not failed, msg
 
 
 class TestScripts(Folders):
