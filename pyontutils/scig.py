@@ -60,7 +60,7 @@ class scigPrint:
     shorten = {v:k for k, v in _shorten_.items()}
 
     @staticmethod
-    def wrap(string, start, ind, wrap_=80):
+    def wrap(string, start, ind, wrap_=80):  # FIXME protcur core has an impl
         if len(string) + start <= wrap_:
             return string
         else:

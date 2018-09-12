@@ -34,6 +34,9 @@ titletag = tag('title')
 styletag = tag('style', n=True)
 scripttag = tag('script', n=True)
 bodytag = tag('body', n=True)
+h1tag = tag('h1')
+h2tag = tag('h2')
+btag = tag('b')
 
 def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()):
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
@@ -46,11 +49,15 @@ def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()
 def render_table(rows, *headers):
     output = []
     output.append('<tr><th>' + '</th><th>'.join(headers) + '</th></tr>')
+    clean_headers = [h.split('>', 1)[1].split('<', 1)[0]  # FIXME hack
+                     if h.startswith('<a')
+                     else h
+                     for h in headers]  # deal with atag headers
     for row in rows:
         if headers:
             ous = ('<tr>'
                 + ''.join(f'<td class="col-{h.replace(" ", "_")}">{r}</td>'
-                            for h, r in zip(headers, row))
+                            for h, r in zip(clean_headers, row))
                 + '</tr>')
             output.append(ous)
         else:

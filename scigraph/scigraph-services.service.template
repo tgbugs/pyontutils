@@ -8,3 +8,6 @@ User=root
 ExecStart={path_to_start_script}
 ExecStop={path_to_stop_script}
 Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
