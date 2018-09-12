@@ -4,6 +4,9 @@ from setuptools import setup
 
 # since setuptools cannot actually exclude files so just grab the ones we want
 
+with open('README.md', 'rt') as f:
+    long_description = f.read()
+
 files = [
     'pyontutils/__init__.py',
     'pyontutils/closed_namespaces.py',
@@ -43,15 +46,15 @@ try:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.1',
-        description='utilities for working with the NIFSTD ontology and SciGraph',
-        long_description=' ',
+        version='0.0.2',
+        description='utilities for working with the NIF ontology, SciGraph, and turtle',
+        long_description=long_description,
         url='https://github.com/tgbugs/pyontutils',
         author='Tom Gillespie',
         author_email='tgbugs@gmail.com',
         license='MIT',
         classifiers=[],
-        keywords='nif nifstd ontology scigraph',
+        keywords='nif nifstd ontology scigraph rdflib turtle ttl',
         package_dir={'pyontutils':'export'},
         packages=['pyontutils'],
         install_requires=[
