@@ -73,29 +73,30 @@ def get_tokenized_sentence(sentence):
     # Tokenize and tag
     sentence = pos_tag(word_tokenize(sentence))
     # Get the synsets for the tagged words
-    synsets = [tagged_to_synset(*tagged_word) for tagged_word in sentence]
-    tokenized_sentence = [synset for synset in synsets if synset]
-    if tokenized_sentence: # wordnet might not have definitions for any of the words
-        return str(sorted(tokenized_sentence))
-    else:
-        return None
+    synsets = []
+    for tagged_word in sentence:
+        synset = tagged_to_synset(*tagged_word)
+        if synset:
+            synsets.append(str(synset))
+        else:
+            synsets.append(tagged_word[0])
+    return str(sorted(synsets))
 
 def main():
-    sentences = [
-        #"Dogs are awesome.",
-        #"Some gorgeous creatures are felines.",
-        #"Dolphins are swimming mammals.",
-        "Dogs are the best people.",
-    ]
-
-    focus_sentence = "Dogs are coolest animals."
-
-    for sentence in sentences:
-        print ("Similarity(\"%s\", \"%s\") = %s" % (focus_sentence, sentence, sentence_similarity(focus_sentence, sentence)))
-        #print ("Similarity(\"%s\", \"%s\") = %s" % (sentence, focus_sentence, sentence_similarity(sentence, focus_sentence)))
-
-    memo = {get_tokenized_sentence('Neurons, Brain'): 'myrow'}
-    print(memo)
+    # sentences = [
+    #     #"Dogs are awesome.",
+    #     #"Some gorgeous creatures are felines.",
+    #     #"Dolphins are swimming mammals.",
+    #     "Dogs are the best people.",
+    # ]
+    # focus_sentence = "Dogs are coolest animals."
+    #
+    # for sentence in sentences:
+    #     print ("Similarity(\"%s\", \"%s\") = %s" % (focus_sentence, sentence, sentence_similarity(focus_sentence, sentence)))
+    #     #print ("Similarity(\"%s\", \"%s\") = %s" % (sentence, focus_sentence, sentence_similarity(sentence, focus_sentence)))
+    # memo = {get_tokenized_sentence('Neurons, Brain'): 'myrow'}
+    # print(memo)
+    get_tokenized_sentence('mouse microRNA')
 
 if __name__ == '__main__':
     main()

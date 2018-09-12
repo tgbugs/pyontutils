@@ -1,69 +1,80 @@
 """ Maps external ontology predicates to interlex predicates if there is a one.
+AUTHOR: Troy Sincomb
 """
+from sys import exit
 from ilxutils.tools import *
 
 
 class IlxPredMap:
-    ilx2ext_map = {
-        'label':
-            ['rdfs:label',
-             'skos:prefLabel',
-             'preferred_name',
-             'altLabel',
-             'casn1_label',],
-        'definition':
-            ['definition:',
-             'skos:definition',
-             'NIFRID:birnlexDefinition',
-             'NIFRID:externallySourcedDefinition',
-             'obo:IAO_0000115', ],
-        'synonym':
-            ['oboInOwl:hasExactSynonym',
-             'oboInOwl:hasNarrowSynonym',
-             'oboInOwl:hasBroadSynonym',
-             'oboInOwl:hasRelatedSynonym',
-             'go:systematic_synonym',
-             'NIFRID:synonym', ],
-        'superclass':
-            ['rdfs:subClassOf', ],
-        'type':
-            ['rdf:type', ],
-        'existing_ids':
-            ['ilxtr:existingIds',
-             'ilxtr:existingId', ],
+    common2preds = {
+        'label': [
+            'label',
+            'prefLabel',
+            'preferred_name',
+            'altLabel',
+            'casn1_label',
+        ],
+        'definition': [
+            'definition',
+            'definition:',
+            'birnlexDefinition',
+            'externallySourcedDefinition',
+            'IAO_0000115',
+        ],
+        'synonym': [
+            'hasExactSynonym',
+            'hasNarrowSynonym',
+            'hasBroadSynonym',
+            'hasRelatedSynonym',
+            'systematic_synonym',
+            'synonym',
+        ],
+        'superclass': [
+            'subClassOf',
+        ],
+        'type': [
+            'type',
+        ],
+        'existing_ids': [
+            'existingIds',
+            'existingId',
+        ],
     }
 
     def __init__(self):
-        self.create_ext2ilx_map()
+        self.create_pred2common()
 
-    def create_ext2ilx_map(self):
-        self.ext2ilx_map = {}
-        for common_name, ext_preds in self.ilx2ext_map.items():
+    def create_pred2common(self):
+        ''' Takes list linked to common name and maps common name to accepted predicate
+            and their respected suffixes to decrease sensitivity.
+        '''
+        self.pred2common = {}
+        for common_name, ext_preds in self.common2preds.items():
             for pred in ext_preds:
-                self.ext2ilx_map[degrade(pred)] = common_name
-                if ':' in pred:  # In case the ontology prefix not shared
-                    suffix = pred.split(':')[1]
-                    self.ext2ilx_map[degrade(suffix)] = common_name
+                pred = pred.lower().strip()
+                self.pred2common[pred] = common_name
 
-    def pred_degrade(self, pred):
-        pred_degraded = self.ext2ilx_map.get(degrade(pred))
-        if pred_degraded:
-            return pred_degraded
-        elif not pred_degraded and pred[-1] != ':':
-            try:
-                partial_tar_com_pred = self.ext2ilx_map.get(
-                    degrade(pred.split(':')[1]))
-            except:
-                print(pred)
-                exit(degrade(pred))
-            return partial_tar_com_pred
+    def get_common_pred(self, pred):
+        ''' Gets version of predicate and sees if we have a translation to a common relation.
+            INPUT:
+                pred = predicate from the triple
+            OUTPUT:
+                Common relationship or None
+        '''
+        pred = pred.lower().strip()
+        if 'http' in pred:
+            pred = pred.split('/')[-1]
+        elif ':' in pred:
+            if pred[-1] != ':': # some matches are "prefix:" only
+                pred = pred.split(':')[-1]
         else:
-            return None
-
+            exit('Not a valid predicate: ' + pred + '. Needs to be an iri "/" or curie ":".')
+        common_pred = self.pred2common.get(pred)
+        return common_pred
 
 def main():
     ipm = IlxPredMap()
-    print(ipm.ext2ilx_map)
+    print(ipm.pred2common)
 
 
 if __name__ == '__main__':

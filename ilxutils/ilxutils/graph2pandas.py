@@ -6,7 +6,7 @@
         Graph2Pandas.py [-f=<path>] [-a | -t=<str>] [-o=<path>]
 
     Options:
-        -h --help           Display this help message
+            -h --help           Display this help message
         -v --version        Current version of file
         -o --output=<path>  Output path of picklized pandas DataFrame
         -f --file=<path>    owl | ttl | rdflib.Graph() -> df.to_pickle
@@ -70,6 +70,7 @@ class Graph2Pandas():
 
     def Graph2Pandas_converter(self):
         '''Updates self.g or self.path bc you could only choose 1'''
+
         if isinstance(self.path, str) or isinstance(self.path, p):
             self.path = str(self.path)
             filetype = p(self.path).suffix
@@ -100,9 +101,16 @@ class Graph2Pandas():
             except:
                 sys.exit('Format options: owl, ttl, df_pickle, rdflib.Graph()')
 
+        elif isinstance(self.g, rdflib.graph.Graph):
+            self.path = None
+            return self.get_sparql_dataframe()
+
+        else:
+            exit('Obj given is not str, pathlib obj, or an rdflib.Graph()')
+
     def get_sparql_dataframe(self):
         self.result = self.g.query(self.query)
-    
+
         cols = set(['qname'])
         indx = set()
         data = {}

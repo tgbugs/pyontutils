@@ -26,22 +26,25 @@ VERSION = '0.0.1'
 
 
 class IlxGraphComparator(IlxPredMap):
-    def __init__(self, tpath):
+
+    def __init__(self, rpath, tpath):
         IlxPredMap.__init__(self)
-        self.ex2row = open_pickle('Dropbox/interlex_backups/ilx_db_ex2row_backup')
+        if p(rpath).suffix == '.pickle':
+            self.ex2row = open_pickle(rpath)
+        elif p(rpath).suffix == '.json':
+            self.ex2row = open_json(rpath)
+        #self.ex2row = open_pickle('Dropbox/interlex_backups/ilx_db_ex2row_backup')
         self.tgraph = Graph2Pandas(tpath)
         self.create_ilx_hashes()
         self.diff = self.match()
 
-    def get_common_pred(self, pred):
-        common_pred = self.ext2ilx_map.get(degrade(pred))
-        if not common_pred:
-            if ':' in pred:
-                pred = pred.split(':')[-1]
-                common_pred = self.ext2ilx_map.get(degrade(pred))
-        return common_pred
+    def custom_degrade(self, string):
+        if '/' in string:
+            if string.count('/') == 1:
+                string = string.split('/')[0]
+        return light_degrade(string)
 
-    def pop_bad_data(self, row):
+    def pop_bad_elements_in_row(self, row):
         new_row = {}
         for pred, objs in row.items():
             if self.get_common_pred(pred):
@@ -67,10 +70,6 @@ class IlxGraphComparator(IlxPredMap):
         self.ilx_definition_hash = defaultdict(list)
 
         for iri, row in self.ex2row.items():
-
-            # skip ilx iris for comparisons. they dont exist anywhere else.
-            if '/ilx_' in iri:
-                continue
 
             # hash exact iri matches
             self.ilx_iri_hash[iri].append(row)
@@ -101,11 +100,11 @@ class IlxGraphComparator(IlxPredMap):
         # simulate a fragmented id
         _id = iri.rsplit('/', 1)[-1]
         if '=' in _id:
-            _id = _id.split('=')[1]
+            _id = _id.rsplit('=', 1)[-1]
         elif '#' in _id:
-            _id = _id.split('#')[1]
+            _id = _id.rsplit('#', 1)[-1]
         elif '_' in _id:
-            _id = _id.split('_')[1]
+            _id = _id.rsplit('_', 1)[-1]
         return _id
 
     def match(self):
@@ -117,10 +116,13 @@ class IlxGraphComparator(IlxPredMap):
         for iri, row in self.tgraph.df.iterrows():
             # if iri != "http://id.nlm.nih.gov/mesh/2018/T362525":
             #     continue
+            if 'http://id.nlm.nih.gov/mesh/vocab#SCR_Disease' not in row['rdf:type']:
+                continue
 
+            row.pop('qname')
             row = row[~row.isnull()] # removes nulls
             original_row = row.to_dict().copy()
-            row = self.pop_bad_data(row.to_dict()) # removes non ilx maps
+            row = self.pop_bad_elements_in_row(row) # removes non ilx maps
 
             # simulate a fragmented id
             _id = self.get_fragment_id(iri)
@@ -219,7 +221,8 @@ class IlxGraphComparator(IlxPredMap):
 
 def main():
     doc = docopt(__doc__, version=VERSION)
-    create_json(IlxGraphComparator(doc['--target']).diff, doc['--output'])
+    igc = IlxGraphComparator(rpath=doc['--reference'], tpath=doc['--target'])
+    create_json(igc.diff, doc['--output'])
 
 if __name__ == '__main__':
     main()
