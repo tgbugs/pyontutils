@@ -49,6 +49,7 @@ try:
         version='0.0.2',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
+        long_description_content_type='text/markdown',
         url='https://github.com/tgbugs/pyontutils',
         author='Tom Gillespie',
         author_email='tgbugs@gmail.com',
