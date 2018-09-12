@@ -1,5 +1,6 @@
 import yaml
 import rdflib
+import requests
 from pyontutils.config import devconfig
 
 # prefixes

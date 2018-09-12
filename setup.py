@@ -1,12 +1,13 @@
 import os
 import shutil
-from setuptools import setup, find_packages
+from setuptools import setup
 
 # since setuptools cannot actually exclude files so just grab the ones we want
 
 files = [
     'pyontutils/__init__.py',
     'pyontutils/closed_namespaces.py',
+    'pyontutils/combinators.py',
     'pyontutils/config.py',
     'pyontutils/core.py',
     'pyontutils/docs.py',  # for dev
@@ -15,6 +16,7 @@ files = [
     'pyontutils/htmlfun.py',
     'pyontutils/ilxcli.py',
     'pyontutils/ilx_utils.py',
+    'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
     'pyontutils/neurons.py',
     'pyontutils/neuron_lang.py',
