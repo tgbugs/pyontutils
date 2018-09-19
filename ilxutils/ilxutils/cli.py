@@ -83,7 +83,7 @@ class Client:
         info_filled = info.format(label    = data['label'],
                                   id       = data['id'],
                                   ilx      = data['ilx'],
-                                  super_id = data['superclasses'][0]['superclass_tid'])
+                                  super_id = data['superclasses'][0]['id'])
         logging.info(info_filled)
         return info_filled
 
