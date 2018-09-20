@@ -14,7 +14,7 @@ from pyontutils.config import devconfig
 p1 = Path(__file__).resolve().absolute().parent.parent.parent
 p2 = Path(devconfig.git_local_base).resolve().absolute()
 print(p1, p2)
-if not (p2 / devconfig.ontology_repo).exists():
+if (p1 / devconfig.ontology_repo).exists():
     if p1 != p2:
         devconfig.git_local_base = p1
 
@@ -242,8 +242,12 @@ def populate_tests():
     _do_tests = []
     try:
         repo = Repo(working_dir.as_posix())
-        paths = sorted(f for f in repo.git.ls_files().split('\n')
-                       if f.endswith('.py') and f.startswith('pyontutils'))
+        paths = sorted(f.rsplit('/', 1)[0] if '__main__' in f else f
+                       for f in repo.git.ls_files().split('\n')
+                       if f.endswith('.py') and
+                       f.startswith('pyontutils') and
+                       '__init__' not in f)
+
         for last in lasts:
             # FIXME hack to go last
             if last in paths:
@@ -260,7 +264,8 @@ def populate_tests():
             #if not any(f'pyontutils/{p}.py' in path for p in neurons):
                 #print('skipping:', path)
                 #continue
-            module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
+            rp = ppath.relative_to(repo.working_dir)
+            module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
             if stem not in skip:
                 def test_file(self, module_path=module_path, stem=stem):
                     print(tc.ltyellow('IMPORTING:'), module_path)

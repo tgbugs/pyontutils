@@ -88,6 +88,7 @@ try:
                 'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
                 'necromancy=pyontutils.necromancy:main',
+                'ont-catalog=pyontutils.make_catalog:main',
                 'ont-docs=pyontutils.docs:main',
                 'ontload=pyontutils.ontload:main',
                 'ontree=pyontutils.ontree:main',
