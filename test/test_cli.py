@@ -173,17 +173,17 @@ def populate_tests():
     nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
     nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
-    mains = {'nif_cell':None,
-             'methods':None,
+    mains = {'methods':None,
+             'nif_cell':None,
              'scigraph':None,
              'hbp_cells':None,
-             'combinators':None,
-             'chebi_bridge':None,
-             'closed_namespaces':None,
-             'gen_nat_models':None,
-             'hierarchies':None,
              'nif_neuron':None,
+             'combinators':None,
+             'hierarchies':None,
+             'chebi_bridge':None,
              'cocomac_uberon':None,
+             'gen_nat_models':None,
+             'closed_namespaces':None,
              #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
              'make_catalog':['ont-catalog', '--jobs', '1'],
              'parcellation':['parcellation', '--jobs', '1'],
