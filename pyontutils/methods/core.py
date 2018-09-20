@@ -1,11 +1,10 @@
-from IPython import embed
 import rdflib
 from pyontutils.core import simpleOnt, OntId, OntCuries, mGraph
 from pyontutils.namespaces import makeNamespaces, NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.namespaces import participatesIn, partOf, definition, hasRole
+from pyontutils.namespaces import partOf, definition
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
-from pyontutils.combinators import oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.combinators import POCombinator, _POCombinator, ObjectCombinator
+from pyontutils.combinators import oc, oc_, odp, oop, olit, oec
+from pyontutils.combinators import POCombinator, ObjectCombinator
 from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
 from pyontutils.combinators import restriction, restrictions, intersectionOf
 from pyontutils.closed_namespaces import owl, rdf, rdfs
@@ -328,14 +327,14 @@ triples = (
     # hasPrimaryAspectActualized
     # hasPrimaryQualifiedAspect (hasPrimaryParticipant, hasQualifiedAspect)
     # hasPrimaryQualifiedAspectActualized
-    # 
+    #
     # hasConstrainingAspect
     # hasConstrainingQualifiedAspect
     # cannot actualize constraining aspects? but they are defact actualized by thier constraint
     #
     # but then there are parts of the pp
     # hasPrimaryParticipantPartConstrainingAspect
-    # 
+    #
     # hasInput
     # hasPrimaryInput
     #
@@ -581,7 +580,7 @@ triples = (
     oop(ilxtr.aspectHasValue),
     oop(ilxtr.hasDefinedValue, ilxtr.aspectHasValue),
     oop(ilxtr.hasMeasuredValue, ilxtr.aspectHasValue),
-    oop(ilxtr.hasActualizedValue, ilxtr.aspectHasValue), 
+    oop(ilxtr.hasActualizedValue, ilxtr.aspectHasValue),
     oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasActualizedValue),
     oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasDefinedValue),
     oop(ilxtr.hasMeasuredActualizedValue, ilxtr.hasActualizedValue),
@@ -657,7 +656,7 @@ triples = (
     # hasValue, hasRealizedValue
     # hasActualizedValue
     # hasMeasuredValue
-    #ilxtr.aspect hasOutputValue 
+    #ilxtr.aspect hasOutputValue
     #ilxtr.aspect hasMeasurementProtocol
     # should aspects not be bound to symbolic entities?
     # for example a word count for a document?
@@ -744,7 +743,7 @@ triples = (
     #(ilxtr.thingA, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingB, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingA, owl.disjointWith, ilxtr.thingB),
-) 
+)
 
 def derp():
     b0 = rdflib.BNode()

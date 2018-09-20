@@ -1,15 +1,15 @@
-from rdflib import URIRef, Literal, BNode
+from rdflib import URIRef, Literal
 from pyontutils.core import OntCuries, OntId, OntTerm, qname
 from pyontutils.core import simpleOnt, displayGraph
 from pyontutils.namespaces import makeNamespaces, partOf, hasRole, locatedIn
-from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, ilx, BFO, TEMP
-from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO, TEMP
+from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput
 from pyontutils.combinators import flattenTriples, unionOf, intersectionOf
 from pyontutils.combinators import Restriction, EquivalentClass
-from pyontutils.combinators import oc, oc_, oop, odp, olit, oec, hasAspectChangeCombinator
-from pyontutils.combinators import Restriction2, POCombinator, disjointUnionOf, oneOf
-from pyontutils.combinators import restrictions, annotation, restriction, restrictionN
-from pyontutils.methods.core import methods_core, asp, tech, prot, prov, _t, restN, oECN, olist, branch
+from pyontutils.combinators import oc, oc_, olit, oec
+from pyontutils.combinators import Restriction2, POCombinator
+from pyontutils.combinators import annotation, restriction, restrictionN
+from pyontutils.methods.core import methods_core, asp, tech, prot, _t, restN, oECN, branch
 from pyontutils.methods.helper import methods_helper, restHasValue
 from pyontutils.closed_namespaces import owl, rdf, rdfs, oboInOwl
 
@@ -21,7 +21,6 @@ restSomeHasValue = Restriction2(None, owl.onProperty, owl.someValuesFrom, owl.ha
 #restSomeValuesFrom = Restriction(owl.someValuesFrom)
 restMinCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.minCardinality)
 restMaxCardValue = Restriction2(rdfs.subClassOf, owl.onProperty, owl.someValuesFrom, owl.maxCardinality)
-restN = Restriction2(None, owl.onProperty, owl.someValuesFrom)
 restrictionS = Restriction(owl.someValuesFrom)
 oECU = EquivalentClass(owl.unionOf)
 
@@ -667,7 +666,7 @@ triples = (
     _t(i.d, 'brain injection technique',
        (hasPart, tech.injection),  # FIXME we need a way to have primary aspect + target? what is a target?
        # in other similar cases we have used hasPart, but then we have to have the
-       # non-transitive hasPart because 
+       # non-transitive hasPart because
        (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000955')),
        synonyms=('brain injection', 'injection into the brain')),
 
@@ -989,7 +988,7 @@ triples = (
     _t(i.d, 'ex vivo technique',
        # (hasParticipant, ilxtr.somethingThatUsedToBeAlive),
        # more like 'was' a cellular organism
-       # ah time... 
+       # ah time...
        ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        # has part some technique destroying primary participant
@@ -1056,7 +1055,7 @@ triples = (
     ),
 
     _t(i.d, 'in utero technique',
-       # has something in 
+       # has something in
        #(hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasConstrainingAspect, asp.location),
@@ -1422,7 +1421,7 @@ triples = (
        synonyms=('immunohistochemistry technique',
                  'immunohistochemistry')),
     (OntTerm('NLXINV:20090609'), ilxtr.hasTempId, OntTerm("HBP_MEM:0000115")),
-    
+
     # TODO "HBP_MEM:0000116"
     # "Immunoelectron microscopy"
 
@@ -1745,7 +1744,7 @@ triples = (
                       restN(ilxtr.hasPrimaryAspectActualized, ilxtr.aspect)),
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasParticipantPartPrimaryAspectActualized, ilxtr.aspect)),
-       # taking action to make the value 
+       # taking action to make the value
        #unionOf(tech.ising, tech.allocating),
        def_='a technique that realizes a value of some aspect',
        synonyms=('actualize',),
@@ -1867,7 +1866,7 @@ triples = (
        (hasPart, ilxtr.cellPatching),
        (hasPart, ilxtr.eClamp),
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
-      ), 
+      ),
 
     _t(tech.ephysRecording, 'electrophysiology recording technique',
        ilxtr.technique,
@@ -2094,7 +2093,7 @@ triples = (
        intersectionOf(ilxtr.technique,
                       restrictionN(hasPart, tech.MRI),
                       # TODO 'knownProbedPhenomena' or something similar
-                      # TODO 
+                      # TODO
                       #restrictionN(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:15377', label='water')),
                       restrictionN(hasPart, tech.dwMRI_ImageProcessing)),
        intersectionOf(ilxtr.technique,
@@ -2145,7 +2144,7 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
        synonyms=('MEG',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000012")),
-       
+
     # modification techniques
     _t(i.d, 'modification technique',
        # FIXME TODO
