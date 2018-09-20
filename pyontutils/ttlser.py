@@ -6,7 +6,6 @@ from datetime import datetime
 from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from rdflib.plugins.serializers.turtle import TurtleSerializer
-from IPython import embed
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list
@@ -455,7 +454,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         try:
             recursable.sort(key=lambda t: self._globalSortKey(t[-1]))
         except TypeError as e:
-            embed()
+            raise e  # embed here if you encounter an issue
 
         sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode and not refs])  # group bnodes with classes only if they have no refs
         sections.append([subject for (isbnode, refs, subject) in recursable if not isbnode])  # annotation targets
