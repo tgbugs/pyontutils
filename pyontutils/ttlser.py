@@ -230,17 +230,26 @@ class CustomTurtleSerializer(TurtleSerializer):
         if reset:
             store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
         for s, o in store.subject_objects(OWL.disjointWith):
-            if s < o:
-                pass  # alwyas put disjointness axioms earlier in the file
-            elif o < s:
+            if isinstance(s, URIRef) and isinstance(o, URIRef):
+                if s < o:
+                    pass  # alwyas put disjointness axioms earlier in the file
+                elif o < s:
+                    store.remove((s, OWL.disjointWith, o))
+                    store.add((o, OWL.disjointWith, s))
+                else:
+                    raise TypeError('Why do you have a class that is disjoint with itself?')
+            elif isinstance(s, URIRef):
+                pass
+            elif isinstance(o, URIRef):
                 store.remove((s, OWL.disjointWith, o))
                 store.add((o, OWL.disjointWith, s))
-            else:
-                raise TypeError('Why do you have a class that is disjoint with itself?')
+            else:  # both bnodes
+                print('TODO UNHAPPYNESS')
+
         super(CustomTurtleSerializer, self).__init__(store)
         self.litsortkey = self.make_litsortkey(self.sortkey)
         self.rank_init = 0
-        self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
+        #self.terminals = set(s for s in self.store.subjects(RDF.type, None) if isinstance(s, URIRef))
         self.predicate_rank = self._PredRank()
         self.object_rank = self._LitUriRank()
         or_values = tuple(self.object_rank.values())
@@ -274,20 +283,28 @@ class CustomTurtleSerializer(TurtleSerializer):
              for i, p in enumerate(self.predicateOrder)]
         if DEBUG: debug()
 
+        # hopefully reduce any memory load?
+        self.list_rankers = None
+        self._list_helpers = None
+
     def _BNodeRank(self):
-        bnodes = {v:[[[] for _ in range(self.npreds)],  # [[]] * n produces 10 of the same list!
-                     [[] for _ in range(self.npreds)],
+        empty = []
+        bnodes = {v:[[empty for _ in range(self.npreds)],  # [[]] * n produces 10 of the same list!
+                     [empty for _ in range(self.npreds)],
                      [[], []]]
                   for t in self.store
                   for v in t
                   if isinstance(v, BNode)}
         max_worst_case = len(bnodes) + self.max_or + 2
+        mwc = [max_worst_case]
+        mwcm1 = [max_worst_case - 1]
         def smwc(l):
-            return [_ if _ else [max_worst_case] for _ in l]
+            return [_ if _ else mwc for _ in l]
         def normalize():
             for vl, il, (listlists) in bnodes.values():
                 for l in vl + il + listlists:  # FIXME SLOW
-                    l.sort()
+                    if not (l is empty or l is mwc):
+                        l.sort()
             return {k:[smwc(v), smwc(i), smwc(ll)]
                     for k, (v, i, ll) in bnodes.items()}
         def rank():
@@ -300,11 +317,20 @@ class CustomTurtleSerializer(TurtleSerializer):
                 old_ls = ls
                 out[nb] = i
             return out
+        def specref(rank_vec, pr):
+            rv = rank_vec[pr]
+            if rv is empty:
+                rv = rank_vec[pr] = []
+            elif rv is mwc:
+                rv = rank_vec[pr] = [max_worst_case]
+            elif rv is mwcm1:
+                rv = rank_vec[pr] = [max_worst_case - 1]
+            return rv
         def fixedpoint(ranks):
             for n, rank_vecs in bnodes.items():
                 if n in self._list_helpers:
                     continue
-                rank_vecs[1] = [[] for _ in range(self.npreds)]
+                rank_vecs[1] = [empty for _ in range(self.npreds)]
                 rank_vecs[2][1] = []
                 if n in self.list_rankers:
                     rank_vecs[2][1].extend(self.list_rankers[n].irank_vec(ranks))
@@ -315,25 +341,32 @@ class CustomTurtleSerializer(TurtleSerializer):
                             continue
                         elif p == RDF.rest:
                             continue
-                        rank_vecs[1][self.predicate_rank[p]].append(ranks[o])
+
+                        pr = self.predicate_rank[p]
+                        invisible_ranks = rank_vecs[1]
+                        rv = specref(invisible_ranks, pr)
+                        rv.append(ranks[o])
+
         def one_time():
-            for n, (visible_ranks, invisible_ranks, (lvr, lir)) in bnodes.items():
+            for n, (visible_ranks, invisible_ranks, (list_vis_rank, _list_invis_unused)) in bnodes.items():
                 if n in self._list_helpers:
                     continue
                 if n in self.list_rankers and self.list_rankers[n].vis_vals:
-                    lvr.extend(self.list_rankers[n].rank_vec)
+                    list_vis_rank.extend(self.list_rankers[n].rank_vec)
                 for p, o in self.store.predicate_objects(n):
-                    if p == RDF.first:
-                        continue
-                    elif p == RDF.rest:
+                    if p == RDF.first or p == RDF.rest:
                         continue
                     pr = self.predicate_rank[p]
+                    rv = specref(visible_ranks, pr)
                     if o in self.object_rank:
                         or_ = self.object_rank[o]
-                        visible_ranks[pr].append(or_)
+                        rv.append(or_)
                     else:
                         # presence of a more highly ranked predicate counts
-                        visible_ranks[pr].append(max_worst_case - 1)
+                        if not rv:
+                            visible_ranks[pr] = mwcm1
+                        else:
+                            rv.append(max_worst_case - 1)
             ranks = rank()
             fixedpoint(ranks)
         one_time()
@@ -438,9 +471,20 @@ class CustomTurtleSerializer(TurtleSerializer):
 
             subjects = []
             for member in members:
-                if classURI == RDFS.Datatype:
-                    if isinstance(member, BNode):
-                        continue  # rdfs:Datatype shows up before owl:Class in the topClasses list, so we need to avoid pulling anon members out by accident
+                if isinstance(member, BNode):
+                    if classURI == RDFS.Datatype:
+                        # rdfs:Datatype shows up before owl:Class in topClasses
+                        # we need to avoid pulling anon members out by accident
+                        continue
+                    elif classURI == OWL.Class:
+                        # XXX this does not fix the issue
+                        # the top level anon classes are no longer
+                        # correctly located, though the non-top level
+                        # are treated correctly now, it seems this is
+                        # not quite the right fix
+                        # continue
+                        pass
+
                 subjects.append(member)
                 self._topLevels[member] = True
                 seen[member] = True
@@ -456,8 +500,21 @@ class CustomTurtleSerializer(TurtleSerializer):
         except TypeError as e:
             raise e  # embed here if you encounter an issue
 
-        sections[-1].extend([subject for (isbnode, refs, subject) in recursable if isbnode and not refs])  # group bnodes with classes only if they have no refs
-        sections.append([subject for (isbnode, refs, subject) in recursable if not isbnode])  # annotation targets
+        # group bnodes with classes only if they have no refs
+        noref = [subject for (isbnode, refs, subject) in recursable
+                 if isbnode and not refs]
+        sections[-1].extend(noref)
+
+        # annotation targets
+        at = [subject for (isbnode, refs, subject) in recursable if not isbnode]
+        sections.append(at)
+
+        #bc = [(s, sorted(self.store[s::]))  # DEBUG
+              #for s in self.store[:RDF.type:OWL.Class]
+              #if isinstance(s, BNode)]
+
+        #from IPython import embed
+        #embed()
 
         return sections
 

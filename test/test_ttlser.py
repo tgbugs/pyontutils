@@ -119,8 +119,6 @@ class TestTtlser(unittest.TestCase):
         if outfmt == 'nifttl':
             ttlser = CustomTurtleSerializer(graph)
             ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
-            ttlser.list_rankers = randomize_dict_order(ttlser.list_rankers)
-            ttlser._list_helpers = randomize_dict_order(ttlser._list_helpers)
             stream = BytesIO()
             ttlser.serialize(stream)
             actual = stream.getvalue()
