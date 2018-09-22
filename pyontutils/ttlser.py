@@ -225,26 +225,32 @@ class CustomTurtleSerializer(TurtleSerializer):
                       RDFS.isDefinedBy,
                      ]
 
+    symmetric_predicates = [OWL.disjointWith,  # TODO source externally depending on resource semantics?
+                           ]
+
     def __init__(self, store, reset=True):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         if reset:
             store.namespace_manager.reset()  # ensure that the namespace_manager cache doesn't lead to non deterministic ser
-        for s, o in store.subject_objects(OWL.disjointWith):
-            if isinstance(s, URIRef) and isinstance(o, URIRef):
-                if s < o:
-                    pass  # alwyas put disjointness axioms earlier in the file
-                elif o < s:
-                    store.remove((s, OWL.disjointWith, o))
-                    store.add((o, OWL.disjointWith, s))
-                else:
-                    raise TypeError('Why do you have a class that is disjoint with itself?')
-            elif isinstance(s, URIRef):
-                pass
-            elif isinstance(o, URIRef):
-                store.remove((s, OWL.disjointWith, o))
-                store.add((o, OWL.disjointWith, s))
-            else:  # both bnodes
-                print('TODO UNHAPPYNESS')
+
+        sym_cases = []
+        for p in self.symmetric_predicates:
+            for s, o in store.subject_objects(p):
+                if isinstance(s, URIRef) and isinstance(o, URIRef):
+                    if s < o:
+                        pass  # always put disjointness axioms earlier in the file
+                    elif o < s:
+                        store.remove((s, p, o))
+                        store.add((o, p, s))
+                    else:
+                        raise TypeError('Why do you have a class that is disjoint with itself?')
+                elif isinstance(s, URIRef):
+                    pass
+                elif isinstance(o, URIRef):
+                    store.remove((s, p, o))
+                    store.add((o, p, s))
+                else:  # both bnodes
+                    sym_cases.append((s, p, o))
 
         super(CustomTurtleSerializer, self).__init__(store)
         self.litsortkey = self.make_litsortkey(self.sortkey)
@@ -258,6 +264,11 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.max_lr = len(self.list_rankers)
         self._list_helpers = {n:p for p, lr in self.list_rankers.items() for n in lr.nodes}
         self.node_rank = self._BNodeRank()
+        for s, p, o in sym_cases:
+            if self._globalSortKey(s) > self._globalSortKey(o):  # TODO verify that this does what we expect
+                store.remove((s, p, o))
+                store.add((o, p, s))
+
         def debug():
             lv = [(l.node, l.vals)
                   for l in sorted(self.list_rankers.values(),
@@ -337,9 +348,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 for p, o in self.store.predicate_objects(n):
                     # TODO speedup by not looking up from store every time
                     if o not in self.object_rank:
-                        if p == RDF.first:
-                            continue
-                        elif p == RDF.rest:
+                        if p == RDF.first or p == RDF.rest or p in self.symmetric_predicates:
                             continue
 
                         pr = self.predicate_rank[p]
@@ -354,7 +363,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 if n in self.list_rankers and self.list_rankers[n].vis_vals:
                     list_vis_rank.extend(self.list_rankers[n].rank_vec)
                 for p, o in self.store.predicate_objects(n):
-                    if p == RDF.first or p == RDF.rest:
+                    if p == RDF.first or p == RDF.rest or p in self.symmetric_predicates:
                         continue
                     pr = self.predicate_rank[p]
                     rv = specref(visible_ranks, pr)
@@ -383,6 +392,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 old_norm = norm
                 irank = rank()
                 fixedpoint(irank)
+
         out = {n:i + self.max_or for n, i in irank.items()}
         def debug():
             [sys.stderr.write(f'\n{v:<4}{k}')
