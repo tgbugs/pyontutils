@@ -133,8 +133,7 @@ class DevConfig:
 
     @dproperty
     def ontology_local_repo(self):
-        def add_default(thing=self.__class__.ontology_local_repo.default()):
-            default = self.__class__.ontology_local_repo.default()
+        def add_default(default=self.__class__.ontology_local_repo.default()):
             out = dstr(default)
             out.default = default
             return out
@@ -152,13 +151,17 @@ class DevConfig:
             return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
 
     @property
+    def _maybe_repo(self):
+        return Path(self.git_local_base, self.ontology_repo).absolute()
+
+    @property
     def _ontology_local_repo(self):
         try:
             stated_repo = Path(self.config['ontology_local_repo'])
         except FileNotFoundError:
             stated_repo = Path('/dev/null/hahaha')
 
-        maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
+        maybe_repo = self._maybe_repo
         if stated_repo.exists():
             return stated_repo
         elif maybe_repo.exists():
