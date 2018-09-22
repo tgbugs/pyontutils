@@ -11,7 +11,9 @@ import rdflib
 
 # trigger registration of rdflib extensions
 import pyontutils.utils
-from pyontutils.ttlser import CustomTurtleSerializer
+from pyontutils.ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
+from pyontutils.ttlser import CompactTurtleSerializer, UncompactTurtleSerializer
+from pyontutils.ttlser import RacketTurtleSerializer
 
 
 def randomize_dict_order(d):
@@ -69,83 +71,71 @@ def randomize_BNode_order(graph):
             graph.remove(trip)
             graph.add(new_trip)
 
+
 class TestTtlser(unittest.TestCase):
 
+    format = 'nifttl'
+    serializer = CustomTurtleSerializer
     goodpath = 'test/good.ttl'
-    scogoodpath = 'test/scogood.ttl'
     badpath = 'test/nasty.ttl'
     actualpath = 'test/actual.ttl'
     actualpath2 = 'test/actual2.ttl'
-    scoactualpath = 'test/scoactual.ttl'
-    scoactualpath2 = 'test/scoactual2.ttl'
 
     def setUp(self):
         with open(self.goodpath, 'rb') as f:
             self.good = f.read()
-        with open(self.scogoodpath, 'rb') as f:
-            self.scogood = f.read()
 
         self.actual = self.serialize()
         with open(self.actualpath, 'wb') as f:
             f.write(self.actual)
 
-        self.scoactual = self.serialize(outfmt='scottl')
-        with open(self.scoactualpath, 'wb') as f:
-            f.write(self.scoactual)
-        
-    def make_ser(self, outfmt='nifttl'):
+    def make_ser(self):
         header = ('import sys\n'
                   'from io import BytesIO\n'
                   'from random import shuffle\n'
                   'import rdflib\n'
-                  'from pyontutils.ttlser import CustomTurtleSerializer\n'
-                  "rdflib.plugin.register('nifttl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'CustomTurtleSerializer')\n"
-                  "rdflib.plugin.register('scottl', rdflib.serializer.Serializer, 'pyontutils.ttlser', 'SubClassOfTurtleSerializer')\n"
+                  f'from pyontutils.ttlser import {self.serializer.__name__}\n'
+                  f"rdflib.plugin.register({self.format!r}, rdflib.serializer.Serializer, "
+                  f"'pyontutils.ttlser', {self.serializer.__name__!r})\n"
                   'class Thing:\n'
-                  '    badpath = \'%s\'\n') % self.badpath
+                  f'    serializer = {self.serializer.__name__}\n'
+                  f'    badpath = {self.badpath!r}\n')
         src0 = inspect.getsource(self.serialize)
         src1 = inspect.getsource(randomize_BNode_order)
         src2 = inspect.getsource(randomize_prefix_order)
         src3 = inspect.getsource(randomize_dict_order)
-        after =  f't = Thing()\nsys.stdout.buffer.write(t.serialize(\'{outfmt}\'))\n'
+        after =  't = Thing()\nsys.stdout.buffer.write(t.serialize())\n'
         return header + src0 + '\n\n' + src1 + '\n' + src2 + '\n' + src3 + '\n' + after
 
-    def serialize(self, outfmt='nifttl'):
+    def serialize(self):
         graph = rdflib.Graph()
         graph.parse(self.badpath, format='turtle')
         randomize_BNode_order(graph)
         randomize_prefix_order(graph)
 
-        if outfmt == 'nifttl':
-            ttlser = CustomTurtleSerializer(graph)
-            ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
-            stream = BytesIO()
-            ttlser.serialize(stream)
-            actual = stream.getvalue()
-        else:
-            actual = graph.serialize(format=outfmt)
+        ttlser = self.serializer(graph)
+        ttlser.node_rank = randomize_dict_order(ttlser.node_rank)  # not it
+        stream = BytesIO()
+        ttlser.serialize(stream)
+        actual = stream.getvalue()
 
         actual = actual.rsplit(b'\n',2)[0]  # drop versioninfo
         return actual
 
-    def deterministic(self, outfmt='nifttl'):
+    def deterministic(self):
         nofail = True
         env = os.environ.copy()
         seed = None  # 'random'
-        if outfmt == 'nifttl':
-            actual = self.actual
-            actualpath = self.actualpath
-            actualpath2 = self.actualpath2
-        elif outfmt == 'scottl':
-            actual = self.scoactual
-            actualpath = self.scoactualpath
-            actualpath2 = self.scoactualpath2
+        actual = self.actual
+        actualpath = self.actualpath
+        actualpath2 = self.actualpath2
         for _ in range(5):  # increase this number of you are suspicious
             if seed is not None:
                 env['PYTHONHASHSEED'] = str(seed)
             else:
                 env.pop('PYTHONHASHSEED', None)
-            cmd_line = [sys.executable, '-c', self.make_ser(outfmt)]
+            code = self.make_ser()
+            cmd_line = [sys.executable, '-c', code]
             p = subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, #stderr=subprocess.STDOUT,
                                  env=env)
@@ -174,22 +164,46 @@ class TestTtlser(unittest.TestCase):
 
         return nofail
 
+
+class TestSimple:
+    actualpath = '/dev/null'
+    def test_simple(self):
+        self.serialize()
+
+
+class TestCmp(TestSimple, TestTtlser):
+    format = 'cmpttl'
+    serializer = CompactTurtleSerializer
+
+
+class TestUncmp(TestSimple, TestTtlser):
+    format = 'uncmpttl'
+    serializer = UncompactTurtleSerializer
+
+
+class TestRkt(TestSimple, TestTtlser):
+    format = 'rktttl'
+    serializer = RacketTurtleSerializer
+
+
+class TestDet(TestTtlser):
     def test_ser(self):
         assert self.actual == self.good
-
-    def _test_scoser(self):  # TODO not clear how scogood should actually work, there are many edge cases
-        assert self.scoactual == self.scogood
-
-    def test_others(self):
-        formats = ('cmpttl',
-                   'uncmpttl',
-                   'rktttl',)
-        for fmt in formats:
-            self.serialize(fmt)
 
     def test_deterministic(self):
         assert self.deterministic()
 
-    def _test_scodet(self):  # TODO not deterministic yet
-        assert self.deterministic('scottl')
 
+class TestList(TestDet):
+    badpath = 'test/list-nasty.ttl'
+    goodpath = 'test/list-good.ttl'
+    actualpath = 'test/list-act.ttl'
+    actualpath2 = 'test/list-act-2.ttl'
+
+
+class TestSCO(TestSimple):  # TODO TestDet, but not ready yet
+    format = 'scottl'
+    serializer = SubClassOfTurtleSerializer
+    goodpath = 'test/scogood.ttl'
+    actualpath = 'test/scoactual.ttl'
+    actualpath2 = 'test/scoactual2.ttl'

@@ -90,6 +90,8 @@ class ListRanker:
         self.reorder = self.test_reorder(node, serializer)
         self.node = node
         self.serializer = serializer
+        if not self.reorder:
+            self.serializer.nosort.add(self.node)
         self.vals = []
         self.nodes = []  # list helper nodes
         l = self.node
@@ -260,6 +262,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.object_rank = self._LitUriRank()
         or_values = tuple(self.object_rank.values())
         self.max_or = (max(or_values) + 1) if or_values else 1
+        self.nosort = set()
         self.list_rankers = self._ListRank()
         self.max_lr = len(self.list_rankers)
         self._list_helpers = {n:p for p, lr in self.list_rankers.items() for n in lr.nodes}
@@ -300,7 +303,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def _BNodeRank(self):
         empty = []
-        bnodes = {v:[[empty for _ in range(self.npreds)],  # [[]] * n produces 10 of the same list!
+        bnodes = {v:[[empty for _ in range(self.npreds)],
                      [empty for _ in range(self.npreds)],
                      [[], []]]
                   for t in self.store
@@ -312,7 +315,9 @@ class CustomTurtleSerializer(TurtleSerializer):
         def smwc(l):
             return [_ if _ else mwc for _ in l]
         def normalize():
-            for vl, il, (listlists) in bnodes.values():
+            for node, (vl, il, (listlists)) in bnodes.items():
+                if node in self.nosort:  # FIXME slow, break out before?
+                    continue
                 for l in vl + il + listlists:  # FIXME SLOW
                     if not (l is empty or l is mwc):
                         l.sort()
@@ -538,6 +543,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.verb(predicate, newline=self._newline)
             self.objectList(sorted(sorted(properties[predicate])[::-1], key=self._globalSortKey))
 
+        return True
+
     def sortProperties(self, properties):  # modified to sort objects using their global rank
         """Take a hash from predicate uris to lists of values.
            Sort the lists of values.  Return a sorted list of properties."""
@@ -589,9 +596,10 @@ class CustomTurtleSerializer(TurtleSerializer):
                 self.write('\n# ' + str(self._globalSortKey(node)) + '\n')  # FIXME REMOVE
             self.depth -= 1
             # self.predicateList(node, newline=True)
-            self.predicateList(node, newline=False)
+            if self.predicateList(node, newline=False):
+                self.write(' ')
             # self.write('\n' + self.indent() + ']')
-            self.write(' ]')
+            self.write(']')
             self.depth -= 1
 
         return True
