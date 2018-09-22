@@ -165,23 +165,23 @@ class TestTtlser(unittest.TestCase):
         return nofail
 
 
-class TestSimple:
+class Simple:
     actualpath = '/dev/null'
     def test_simple(self):
         self.serialize()
 
 
-class TestCmp(TestSimple, TestTtlser):
+class TestCmp(Simple, TestTtlser):
     format = 'cmpttl'
     serializer = CompactTurtleSerializer
 
 
-class TestUncmp(TestSimple, TestTtlser):
+class TestUncmp(Simple, TestTtlser):
     format = 'uncmpttl'
     serializer = UncompactTurtleSerializer
 
 
-class TestRkt(TestSimple, TestTtlser):
+class TestRkt(Simple, TestTtlser):
     format = 'rktttl'
     serializer = RacketTurtleSerializer
 
@@ -201,7 +201,7 @@ class TestList(TestDet):
     actualpath2 = 'test/list-act-2.ttl'
 
 
-class TestSCO(TestSimple):  # TODO TestDet, but not ready yet
+class TestSCO(Simple, TestTtlser):  # TODO TestDet, but not ready yet
     format = 'scottl'
     serializer = SubClassOfTurtleSerializer
     goodpath = 'test/scogood.ttl'
