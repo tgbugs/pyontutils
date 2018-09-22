@@ -146,7 +146,7 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
-    __version = 'v1.1.4'
+    __version = 'v1.2.0'
     _newline = True
     sortkey = staticmethod(natsort)
     make_litsortkey = staticmethod(make_litsort)
@@ -476,14 +476,11 @@ class CustomTurtleSerializer(TurtleSerializer):
                         # rdfs:Datatype shows up before owl:Class in topClasses
                         # we need to avoid pulling anon members out by accident
                         continue
-                    elif classURI == OWL.Class:
-                        # XXX this does not fix the issue
-                        # the top level anon classes are no longer
-                        # correctly located, though the non-top level
-                        # are treated correctly now, it seems this is
-                        # not quite the right fix
-                        # continue
-                        pass
+                    elif self._references[member] > 0:
+                        # if a member is referenced as an object then
+                        # it not a top class and should not be pulled
+                        # up since it will expose the raw bnode
+                        continue
 
                 subjects.append(member)
                 self._topLevels[member] = True
@@ -524,7 +521,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if len(propList) == 0:
             return
         self.verb(propList[0], newline=newline)
-        self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:Type
+        self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:type
         whitespace = ' ;\n' + self.indent(1) if self._newline else ';'
         for predicate in propList[1:]:
             self.write(whitespace)
@@ -678,7 +675,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(' .')
         return True
 
-    def s_squared(self, subject):  # modified to make anon topClasses behave like anon nested classes
+    def s_squared(self, subject):  # modified to enable whitespace switching
         if (self._references[subject] > 0) or not isinstance(subject, BNode):
             return False
         whitespace = '\n' + self.indent() if self._newline else ''
