@@ -43,17 +43,18 @@ def standard_checks(graph):
 
     cardinality(rdfs.label)
 
-def ont_make(o, fail=False):
+def ont_make(o, fail=False, write=True):
     o()
     o.validate()
     failed = standard_checks(o.graph)
     o.failed = failed
     if fail:
         raise BaseException('Ontology validation failed!')
-    o.write()
+    if write:
+        o.write()
     return o
 
-def build(*onts, fail=False, n_jobs=9):
+def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
     tail = lambda:tuple()
     lonts = len(onts)
@@ -68,12 +69,13 @@ def build(*onts, fail=False, n_jobs=9):
     # ont_setup must be run first on all ontologies
     # or we will get weird import errors
     if n_jobs == 1:
-        return tuple(ont_make(ont, fail=fail) for ont in
+        return tuple(ont_make(ont, fail=fail, write=write) for ont in
                      tuple(ont_setup(ont) for ont in onts) + tail())
 
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail) for o in
+    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail, write=write)
+                                   for o in
                                    #[ont_setup(ont) for ont in onts])
                                    (tuple(Async()(deferred(ont_setup)(ont)
                                                   for ont in onts)) + tail()
@@ -1047,7 +1049,8 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               path='ttl/',
               branch='master',
               fail=False,
-              _repo=True):
+              _repo=True,
+              write=False):
 
     for i in imports:
         if not isinstance(i, rdflib.URIRef):
@@ -1071,7 +1074,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'
 
-    built_ont, = build(Simple, fail=fail, n_jobs=1)
+    built_ont, = build(Simple, fail=fail, n_jobs=1, write=write)
 
     return built_ont
 
