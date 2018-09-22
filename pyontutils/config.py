@@ -116,6 +116,8 @@ class DevConfig:
 
     @git_local_base.setter
     def git_local_base(self, value):
+        if isinstance(value, Path):
+            value = value.as_posix()
         self._override['git_local_base'] = value
         self.write(self.config_file.as_posix())
 
