@@ -1,4 +1,3 @@
-from IPython import embed
 import os
 import yaml
 from pathlib import Path
@@ -26,6 +25,9 @@ class dstr(str):
 
 def default(value):
     def decorator(function, default_value=value):
+        dv = dstr(default_value)
+        dv.default = default_value
+
         @wraps(function)
         def inner(*args, **kwargs):
             try:
@@ -33,13 +35,14 @@ def default(value):
                 out.default = default_value
                 return out
             except (TypeError, KeyError, FileNotFoundError) as e:
-                return default_value
+                return dv
 
         pinner = dproperty(inner)
         pinner.default = default_value
         return pinner
 
     return decorator
+
 
 tempdir = gettempdir()
 
@@ -247,7 +250,7 @@ class DevConfig:
 devconfig = DevConfig()
 
 
-class bootstrap_config():
+def bootstrap_config():
     if not devconfig.config_file.exists():
         # scigraph api
         maybe_key = get_api_key()

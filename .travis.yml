@@ -38,9 +38,9 @@ install:
   - pip install coverage coveralls nose-timer && export HAS_COVERALLS=1
   - pipenv install --system --skip-lock
   - pipenv install --dev --system --skip-lock
-  - pipenv run python -c "__import__('pyontutils.config').config.bootstrap_config()"
 
 script:
+  - pipenv run python -c "__import__('pyontutils.config').config.bootstrap_config()"
   - PYTHONWARNINGS=default pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
 
 after_success:
