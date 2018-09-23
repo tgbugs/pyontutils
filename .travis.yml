@@ -40,7 +40,9 @@ install:
   - pipenv install --dev --system --skip-lock
 
 script:
-  - pipenv run python -c "__import__('pyontutils.config').config.bootstrap_config()"
+  - pipenv shell
+  - python -c "__import__('pyontutils.config').config.bootstrap_config()"
+  - exit
   - PYTHONWARNINGS=default pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
 
 after_success:
