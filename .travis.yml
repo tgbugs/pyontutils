@@ -5,7 +5,6 @@ env:
   global:
     - NIFSTD_CHECKOUT_OK=1
     - PIPENV_VENV_IN_PROJECT=1
-    - PIPENV_IGNORE_VIRTUALENVS=1
 branches:
   only:
     - master
@@ -36,12 +35,11 @@ before_install:
 install:
   - pip install pipenv
   - pip install coverage coveralls nose-timer && export HAS_COVERALLS=1
-  - pipenv install --system --skip-lock
   - pipenv install --dev --system --skip-lock
 
 script:
-  # - pipenv run python -c "__import__('pyontutils.config').config.bootstrap_config()"
-  - PYTHONWARNINGS=default pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
+  - pipenv run ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
+  - pipenv run nosetests --with-coverage --cover-tests --cover-package=pyontutils
 
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
