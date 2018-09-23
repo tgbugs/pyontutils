@@ -14,14 +14,12 @@ from sqlalchemy import create_engine, inspect
 from pyontutils.core import createOntology
 from pyontutils.utils import Async, deferred, noneMembers, anyMembers, mysql_conn_helper, TermColors as tc
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.scigraph import Vocabulary, Graph as sGraph
 from pyontutils.namespaces import makePrefixes, PREFIXES as uPREFIXES, ilxtr, NIFRID, NIFSTD, ilxb
-from pyontutils.scigraph_client import Vocabulary, Graph as sGraph
 from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 from IPython import embed
 
 gitf = Path(devconfig.git_local_base)
-
-SGG = Namespace('http://localhost:9000/scigraph/graph/')
 
 def _check_dupes(thing, known=tuple()):
     test = [t for t in thing if t not in known]
@@ -252,6 +250,7 @@ def main():
             for v in to_review]
 
     sgg = sGraph(cache=True)
+    SGG = Namespace(sgg._basePath.rstrip('/') + '/graph/')
     rg = Graph().parse((gitf / 'NIF-Ontology/ttl/unused/NIF-Retired.ttl').as_posix(), format='turtle')
     retired = set(e.toPython() for t in rg for e in t if 'uri.neuinfo.org' in e)
     retfile = '<ttl/unused/NIF-Retired.ttl>'

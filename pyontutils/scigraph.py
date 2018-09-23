@@ -1,6 +1,5 @@
 from pyontutils import scigraph_client
 from pyontutils.config import devconfig, get_api_key
-from IPython import embed
 
 scigraph_client.BASEPATH = (f'{devconfig.scigraph_api}')
 

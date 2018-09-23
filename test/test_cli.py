@@ -9,29 +9,7 @@ from pathlib import Path
 import git
 from git import Repo
 from pyontutils.utils import working_dir, TermColors as tc
-
 from pyontutils.config import devconfig
-p1 = Path(__file__).resolve().absolute().parent.parent.parent
-p2 = Path(devconfig.git_local_base).resolve().absolute()
-print(p1, p2)
-if (p1 / devconfig.ontology_repo).exists():
-    if p1 != p2:
-        devconfig.git_local_base = p1
-
-from pyontutils import scigraph
-from pyontutils import core
-from pyontutils import scigraph_client
-
-# orig_basepath = scigraph_client.BASEPATH
-orig_basepath = 'https://scicrunch.org/api/1/scigraph'
-
-if 'SCICRUNCH_API_KEY' in os.environ:
-    devconfig.scigraph_api = orig_basepath
-    scigraph.scigraph_client.BASEPATH = orig_basepath
-else:
-    local_basepath = 'http://localhost:9000/scigraph'
-    devconfig.scigraph_api = local_basepath
-    scigraph.scigraph_client.BASEPATH = local_basepath
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 

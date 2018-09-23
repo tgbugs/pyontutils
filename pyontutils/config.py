@@ -6,6 +6,7 @@ from tempfile import gettempdir
 from functools import wraps
 from pyontutils.utils import TermColors as tc
 
+
 def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
     except KeyError: return None
@@ -244,6 +245,28 @@ class DevConfig:
 
 
 devconfig = DevConfig()
+
+
+class bootstrap_config():
+    if not devconfig.config_file.exists():
+        # scigraph api
+        maybe_key = get_api_key()
+        if maybe_key:
+            from pyontutils.scigraph_client import BASEPATH
+            devconfig.scigraph_api = BASEPATH
+        else:
+            devconfig.scigraph_api = devconfig.scigraph_api.default
+
+        # ontology repo
+        p1 = Path(__file__).resolve().absolute().parent.parent.parent
+        p2 = Path(devconfig.git_local_base).resolve().absolute()
+        print(p1, p2)
+        if (p1 / devconfig.ontology_repo).exists():
+            if p1 != p2:
+                devconfig.git_local_base = p1
+    else:
+        print('config already exists at', devconfig.config_file)
+
 
 def main():
     from IPython import embed
