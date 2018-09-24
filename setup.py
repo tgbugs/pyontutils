@@ -21,8 +21,8 @@ files = [
     'pyontutils/ilx_utils.py',
     'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
-    'pyontutils/neurons.py',
-    'pyontutils/neuron_lang.py',
+    'pyontutils/neurons/core.py',
+    'pyontutils/neurons/lang.py',
     'pyontutils/obo_io.py',
     'pyontutils/ontload.py',
     'pyontutils/ontree.py',
@@ -42,11 +42,12 @@ files = [
 
 try:
     os.mkdir('export')
+    os.mkdir('export/neurons')
     for f in files:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.2',
+        version='0.0.3',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
         long_description_content_type='text/markdown',
