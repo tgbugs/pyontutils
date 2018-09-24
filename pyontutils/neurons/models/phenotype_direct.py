@@ -5,9 +5,9 @@ from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, TEMP
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
-from pyontutils.neurons import MeasuredNeuron
+from pyontutils.neurons.core import MeasuredNeuron
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
@@ -62,7 +62,7 @@ def main():
     #ng.filename = Neuron.ng.filename
     Neuron.existing_pes = {}  # reset this as well because the old Class references have vanished
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
-    #from neuron_lang import WRITEPYTHON
+    #from neurons.lang import WRITEPYTHON
     #WRITEPYTHON(sorted(dns))
     Neuron.write_python()
     #ng.add_ont(TEMP['defined-neurons'], 'Defined Neurons', 'NIFDEFNEU',

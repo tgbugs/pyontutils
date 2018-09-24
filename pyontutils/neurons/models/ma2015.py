@@ -3,7 +3,7 @@
 from pathlib import Path
 from pyontutils.utils import rowParse, refile, relative_path
 from pyontutils.namespaces import ilxtr
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
 
@@ -150,7 +150,7 @@ class table1(rowParse):
 
 def main():
     import csv
-    with open(refile(__file__, '../resources/26451489 table 1.csv'), 'rt') as f:
+    with open(refile(__file__, '../../resources/26451489 table 1.csv'), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
     table1(rows)
 

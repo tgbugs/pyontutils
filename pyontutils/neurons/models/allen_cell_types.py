@@ -21,7 +21,7 @@ from pyontutils.utils import TermColors as tc, relative_path
 from pyontutils.core import simpleOnt
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
 from pyontutils.combinators import annotation
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from docopt import docopt, parse_defaults
 from IPython import embed

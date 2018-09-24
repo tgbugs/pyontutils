@@ -11,7 +11,7 @@ from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import interlex_namespace
 # import these last so that graphBase resets (sigh)
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
 from IPython import embed
 

@@ -127,16 +127,16 @@ def populate_tests():
 
     lasts = tuple()
     neurons = ('neurons',
-               'neuron_lang',
-               'neuron_example',
+               'neurons/lang',
+               'neurons/example',
                'phenotype_namespaces',
-               'neuron_models/allen_cell_types',
-               'neuron_models/phenotype_direct',
-               'neuron_models/basic_neurons',
-               'neuron_models/huang2017',
-               'neuron_models/ma2015',
-               'neuron_models/cuts',
-               'nif_neuron',
+               'neurons/models/allen_cell_types',
+               'neurons/models/phenotype_direct',
+               'neurons/models/basic_neurons',
+               'neurons/models/huang2017',
+               'neurons/models/ma2015',
+               'neurons/models/cuts',
+               'neurons/build',
               )
     print('checkout ok:', checkout_ok)
 

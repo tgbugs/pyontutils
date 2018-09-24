@@ -351,7 +351,7 @@ class graphBase:
                     if _prefixes
                     else '')
         # FIXME prefixes should be separate so they are accessible in the namespace
-        out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neuron_lang
+        out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
         _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         out += f'{subs}'

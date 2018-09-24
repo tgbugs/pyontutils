@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
-from pyontutils.neuron_lang import config  # annoying, but works
+from pyontutils.neurons.lang import config  # annoying, but works
 
 __all__ = ['Test',
            'Layers',

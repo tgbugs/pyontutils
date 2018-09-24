@@ -1063,7 +1063,7 @@ def make_bridge():
     from importlib import import_module
     from pyontutils.utils import subclasses
     from pyontutils.core import Ont, build
-    from pyontutils.neuron_lang import Config
+    from pyontutils.neurons.lang import Config
     from pyontutils.neuron_models import __all__
     print(__all__)
     for module in __all__:
