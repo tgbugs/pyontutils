@@ -7,9 +7,30 @@ import subprocess
 from importlib import import_module
 from pathlib import Path
 import git
-from git import Repo
+from git import Repo as baseRepo
 from pyontutils.utils import working_dir, TermColors as tc
 from pyontutils.config import devconfig, checkout_ok
+
+
+class Repo(baseRepo):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._untracked_start = self.untracked()
+
+    def untracked(self):
+        return set(self.git.ls_files('--others', '--exclude-standard').split('\n'))
+
+    def diff_untracked(self):
+        new_untracked = self.untracked()
+        diff = new_untracked - self._untracked_start
+        return diff
+
+    def remove_diff_untracked(self):
+        wd = Path(self.working_dir)
+        for tail in self.diff_untracked():
+            path = wd / tail
+            print('removing file', path)
+            path.unlink()
 
 
 class Folders(unittest.TestCase):
@@ -218,6 +239,7 @@ def populate_tests():
     _do_mains = []
     _do_tests = []
     try:
+        ont_repo = Repo(devconfig.ontology_local_repo)
         repo = Repo(working_dir.as_posix())
         paths = sorted(f.rsplit('/', 1)[0] if '__main__' in f else f
                        for f in repo.git.ls_files().split('\n')
@@ -245,13 +267,16 @@ def populate_tests():
             module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
             if stem not in skip:
                 def test_file(self, module_path=module_path, stem=stem):
-                    print(tc.ltyellow('IMPORTING:'), module_path)
-                    module = import_module(module_path)  # this returns the submod
-                    self._modules[module_path] = module
-                    if hasattr(module, '_CHECKOUT_OK'):
-                        print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
-                        setattr(module, '_CHECKOUT_OK', True)
-                        #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    try:
+                        print(tc.ltyellow('IMPORTING:'), module_path)
+                        module = import_module(module_path)  # this returns the submod
+                        self._modules[module_path] = module
+                        if hasattr(module, '_CHECKOUT_OK'):
+                            print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
+                            setattr(module, '_CHECKOUT_OK', True)
+                            #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    finally:
+                        ont_repo.remove_diff_untracked()
 
                 setattr(TestScripts, fname, test_file)
 
@@ -292,6 +317,8 @@ def populate_tests():
                             if isinstance(e, SystemExit):
                                 return  # --help
                             raise e
+                        finally:
+                            ont_repo.remove_diff_untracked()
 
                     setattr(TestScripts, mname, test_main)
 
