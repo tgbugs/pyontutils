@@ -9,9 +9,8 @@ from pathlib import Path
 import git
 from git import Repo
 from pyontutils.utils import working_dir, TermColors as tc
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig, checkout_ok
 
-checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 
 class Folders(unittest.TestCase):
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
@@ -88,7 +87,7 @@ class TestScripts(Folders):
         find their code here. """
     # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
-    def setUp(self, checkout_ok=checkout_ok):
+    def setUp(self):
         super().setUp()
         if not hasattr(self, '_modules'):
             self.__class__._modules = {}
@@ -126,7 +125,7 @@ def populate_tests():
         )
 
     lasts = tuple()
-    neurons = ('neurons',
+    neurons = ('neurons/core',
                'neurons/lang',
                'neurons/example',
                'phenotype_namespaces',

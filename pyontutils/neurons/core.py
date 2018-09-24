@@ -11,13 +11,11 @@ from git.repo import Repo
 from pyontutils.core import Ont, makeGraph
 from pyontutils.utils import stack_magic, TermColors as tc, subclasses, injective_dict
 from pyontutils.ttlser import natsort
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES
 from pyontutils.closed_namespaces import rdf, rdfs, owl
-
-_CHECKOUT_OK = False
 
 __all__ = [
     'AND',
@@ -40,7 +38,6 @@ __all__ = [
     '_NEURON_CLASS',
     '_CUT_CLASS',
     '_EBM_CLASS',
-    '_CHECKOUT_OK',
 ]
 
 # language constructes
@@ -151,7 +148,7 @@ class graphBase:
                       out_graph=         None,
                       prefixes=          tuple(),
                       force_remote=      False,
-                      checkout_ok=       _CHECKOUT_OK,
+                      checkout_ok=       ont_checkout_ok,
                       scigraph=          None,
                       iri=               None,
                       sources=           tuple(),

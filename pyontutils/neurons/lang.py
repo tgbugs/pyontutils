@@ -5,7 +5,7 @@ from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from pyontutils.core import OntId
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 
 __all__ = [
     'AND',
@@ -24,7 +24,6 @@ __all__ = [
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
-    '_CHECKOUT_OK',
 ]
 
 
@@ -94,7 +93,7 @@ def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-O
            out_graph=         None,
            prefixes=          tuple(),
            force_remote=      False,
-           checkout_ok=       _CHECKOUT_OK,
+           checkout_ok=       ont_checkout_ok,
            scigraph=          None,
            iri=               None,
            sources=           tuple(),
