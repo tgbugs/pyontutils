@@ -7,7 +7,6 @@ import requests
 from pathlib import Path
 from collections import namedtuple
 from inspect import getsourcefile
-from git import Repo
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
@@ -672,6 +671,7 @@ class Source(tuple):
     artifact = None
 
     def __new__(cls):
+        from git import Repo
         if not hasattr(cls, '_data'):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
@@ -876,6 +876,7 @@ class Ont:
         if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
         else:
+            from git import Repo
             repo = Repo(working_dir.as_posix())
             commit = next(repo.iter_commits()).hexsha
 
