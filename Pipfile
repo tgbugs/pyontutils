@@ -3,7 +3,7 @@ python_version = '3.6'  # also works with pypy3
 
 [packages]
 ontquery = {git = "https://github.com/tgbugs/ontquery.git", editable = true, ref = "master"}
-rdflib = {git = "https://github.com/tgbugs/rdflib.git", editable = true, ref = "master"}
+rdflib = {git = "https://github.com/tgbugs/rdflib.git", editable = true, ref = "neurdflib"}
 "e1839a8" = {path = ".", editable = true}
 
 [dev-packages]
