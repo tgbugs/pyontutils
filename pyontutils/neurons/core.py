@@ -9,7 +9,8 @@ import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
 from pyontutils.core import Ont, makeGraph
-from pyontutils.utils import stack_magic, TermColors as tc, subclasses, injective_dict
+from pyontutils.utils import stack_magic, injective_dict
+from pyontutils.utils import TermColors as tc, subclasses, working_dir
 from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
@@ -153,7 +154,8 @@ class graphBase:
                       iri=               None,
                       sources=           tuple(),
                       source_file=       None,
-                      use_local_import_paths=True):
+                      use_local_import_paths=True,
+                      compiled_location= PPath(working_dir, 'pyontutils/neurons/compiled')):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -291,6 +293,9 @@ class graphBase:
         #new_graph = makeGraph('', prefixes=PREFIXES, graph=out_graph)
         graphBase.out_graph = out_graph
 
+        # python output setup
+        graphBase.compiled_location = compiled_location
+
         # makeGraph setup
         new_graph = graphBase.ng #= new_graph
         new_graph.filename = out_graph_path
@@ -330,7 +335,9 @@ class graphBase:
     @staticmethod
     def filename_python():
         p = PPath(graphBase.ng.filename)
-        return p.with_name(p.name.replace('-', '_')).with_suffix('.py').as_posix()
+        return ((graphBase.compiled_location / p.name.replace('-', '_'))
+                .with_suffix('.py')
+                .as_posix())
 
     @staticmethod
     def write_python():
