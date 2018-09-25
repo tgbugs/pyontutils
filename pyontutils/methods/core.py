@@ -688,9 +688,11 @@ triples = (
     oop_(hasParticipant,
          propertyChainAxiom(ilxtr.processHasAspect, ilxtr.hasContext)),
 
-    oc_(None,
-        restriction(ilxtr.hasPrimaryAspectActualized, ilxtr.aspect),
-        oECN(restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.nonZero))),
+    restG(blankc(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+          blankc(owl.someValuesFrom, ilxtr.nonZero),
+          blankc(rdfs.subClassOf,
+                 restN(ilxtr.hasPrimaryAspectActualized,
+                       ilxtr.aspect)))(rdflib.BNode()),
 
     ## technique
     oc(BFO['0000015']),

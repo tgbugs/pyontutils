@@ -1,5 +1,6 @@
 import types
 import rdflib
+from pyontutils import core  # to get around circular import issue
 from pyontutils.utils import check_value
 from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
@@ -133,7 +134,7 @@ class ObjectCombinator(Combinator):
 
     def __repr__(self):
         if isinstance(self.object, rdflib.URIRef):
-            o = qname(self.object)
+            o = core.qname(self.object)
         elif isinstance(self.object, rdflib.Literal):
             o = self.object.value
         else:
@@ -168,9 +169,9 @@ class _POCombinator(Combinator):
                 raise TypeError(f'{combinator} not a combinator!') from e
 
     def __repr__(self):
-        p = qname(self.predicate)
+        p = core.qname(self.predicate)
         if isinstance(self.object, rdflib.URIRef):
-            o = qname(self.object)
+            o = core.qname(self.object)
         elif isinstance(self.object, rdflib.Literal):
             o = self.object.value
         else:

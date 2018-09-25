@@ -168,4 +168,3 @@ _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
              'locatedIn',
             )
-

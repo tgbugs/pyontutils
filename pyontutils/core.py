@@ -444,6 +444,7 @@ def qname(uri, warning=False):
         print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
+
 def createOntology(filename=    'temp-graph',
                    name=        'Temp Ontology',
                    prefixes=    None,  # is a dict
