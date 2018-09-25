@@ -102,12 +102,12 @@ triples += ( # information entity
     oc(ilxtr.parcellationAtlas, ilxtr.informationArtifact),
 
     oc(ilxtr.axiom, ilxtr.informationEntity),
-    oc(ilxtr.algorithem, ilxtr.informationEntity),
-    oc(ilxtr.spikeSortingAlgorithem, ilxtr.informationEntity),
-    oc(ilxtr.superResolutionAlgorithem, ilxtr.algorithem),
-    oc(ilxtr.statisticalAlgorithem, ilxtr.algorithem),  # the old what counts as statistics question
-    oc(ilxtr.inverseProblemAlgorithem, ilxtr.algorithem),
-    oc(ilxtr.radonTransform, ilxtr.inverseProblemAlgorithem),
+    oc(ilxtr.algorithm, ilxtr.informationEntity),
+    oc(ilxtr.spikeSortingAlgorithm, ilxtr.informationEntity),
+    oc(ilxtr.superResolutionAlgorithm, ilxtr.algorithm),
+    oc(ilxtr.statisticalAlgorithm, ilxtr.algorithm),  # the old what counts as statistics question
+    oc(ilxtr.inverseProblemAlgorithm, ilxtr.algorithm),
+    oc(ilxtr.radonTransform, ilxtr.inverseProblemAlgorithm),
 
     oc(ilxtr.classificationCriteria, ilxtr.informationEntity),
     oc(ilxtr.identificationCriteria, ilxtr.informationEntity),
@@ -196,20 +196,26 @@ triples += (  # material entities
     oc(ilxtr.thingWithSequence, OntTerm('CHEBI:25367', term='molecule')),
     olit(ilxtr.thingWithSequence, rdfs.label, 'thing with molecular sequence'),
 
-    oc(OntTerm('CHEBI:33696', label='nucleic acid'), ilxtr.thingWithSequence),  # FIXME should not have to put oc here, but byto[ito] becomes unhappy
     oc(ilxtr.nucleicAcid, ilxtr.molecule),
     (ilxtr.nucleicAcid, owl.equivalentClass, OntTerm('CHEBI:33696', label='nucleic acid')),
     oc(ilxtr.methylatedDNA, OntTerm('CHEBI:16991', term='DNA')),
     (ilxtr.DNA, owl.equivalentClass, OntTerm('CHEBI:16991', term='DNA')),
     oc(ilxtr.DNA, ilxtr.nucleicAcid),
 
+    # FIXME I don't think SO refers to the actual material entity here ...
+    oc(ilxtr._NApolymer, ilxtr.thingWithSequence),
+    oc(ilxtr.DNApolymer, ilxtr._NApolymer),
+    (ilxtr.DNApolymer, owl.equivalentClass, OntTerm('SO:0000352', label='DNA')),
+    oc(ilxtr.RNApolymer, ilxtr._NApolymer),
+    (ilxtr.RNApolymer, owl.equivalentClass, OntTerm('SO:0000356', label='RNA')),
+
     oc(ilxtr.molecule, ilxtr.materialEntity),
 
     oc(OntTerm('CHEBI:25367', label='molecule'), OntTerm('CHEBI:24431', label='chemical entity')),
     (ilxtr.molecule, owl.equivalentClass, OntTerm('CHEBI:25367', label='molecule')),
-    oc(ilxtr.plasmidDNA, ilxtr.molecule),  # FIXME how do we model the physical manifestation of a sequence? 'SO:0000155'
-    oc(ilxtr.primaryHeritableGeneticMaterial, ilxtr.molecule),
-    oc(ilxtr.hybridizationProbe, ilxtr.molecule),
+    oc(ilxtr.plasmidDNA, ilxtr.DNApolymer),  # FIXME how do we model the physical manifestation of a sequence? 'SO:0000155'
+    oc(ilxtr.primaryHeritableGeneticMaterial, ilxtr.DNApolymer),
+    oc(ilxtr.hybridizationProbe, ilxtr.DNApolymer),
     oc(ilxtr.nucleicAcidLibrary, ilxtr.materialEntity),  # TODO
 
     # FIXME should probably be to a higher level go?
@@ -224,10 +230,11 @@ triples += (  # material entities
     oc(ilxtr.synapse, OntTerm('GO:0005575')),
     oc(OntTerm('GO:0044464'), OntTerm('GO:0005575')),
     oc(OntId('CHEBI:33697'), OntTerm('CHEBI:33696', label='nucleic acid')),
+
     (ilxtr.RNA, owl.equivalentClass, OntId('CHEBI:33697')),
     (ilxtr.RNA, rdfs.subClassOf, ilxtr.nucleicAcid),
     #oc(ilxtr.mRNA, OntTerm('CHEBI:33697', label='RNA')),
-    oc(OntTerm('SO:0000234', label='mRNA'), OntId('CHEBI:33697')),
+    oc(OntTerm('SO:0000234', label='mRNA'), OntId('CHEBI:33697')),  # FIXME not right ...
     (ilxtr.mRNA, owl.equivalentClass, OntTerm('SO:0000234', label='mRNA')),  # FIXME role?
 
     (OntTerm('GO:0005575', label='cellular_component'), rdfs.subClassOf, ilxtr.physiologicalSystem),
@@ -374,6 +381,9 @@ triples += (  # material entities
 
     oc(ilxtr.cultureMedia, ilxtr.materialEntity),
 
+    oc(ilxtr.opticalFiber, ilxtr.materialEntity),
+    oc(ilxtr.optrode, ilxtr.materialEntity),
+
 )
 
 triples += (  # changes
@@ -514,6 +524,9 @@ triples += (  # aspects
     oc(asp.category, asp.Local),
     oc(asp.categoryAssigned, asp.nonLocal),
     # FIXME categories are conceptual space... how to cope...
+    # the issue here is whether there is _any_ measurement or actualization
+    # that did or will occure ... I'm still not sure that the local/nonlocal
+    # is doing what I intend it too :/
     oc_(asp.categoryAssigned,
         restriction(ilxtr.isQualifiedFormOf, asp.category),
         intersectionOf(restN(ilxtr.hasInformationContext, ilxtr.categoryNames),
@@ -701,6 +714,17 @@ triples += (  # aspects
     oc(asp['count'], asp.Local),  # this is the universal count on name binding
     oc(asp.volume, asp.Local),  # NOTE these are all _rest_ values ignoring relativity
     oc(asp.length, asp.Local),  # distance is the non-direct version because the start or end point must be known as well
+    # FIXME length can change with temperature ... how does that play with local/nonlocal?
+    # I think that aside from very few things like c and some other constants, nearly
+    # everything we ever measure has to be qualified, 'in the same internal frame at STP'
+    # ANSWER: rest length does actually require some additional context, which is the
+    # exact location where you place the starting point and the ending point but that is
+    # however, the number for a length by itself is interpretable, an orientation without
+    # a reference point is not .... maybe??! In one dimesion length can be talked about
+    # unqalified for a single point in time, once you get to two dimensions things get dicy
+    # bounding radius on the other hand, actually is invariant at a single point in time at
+    # least 3 dimensions since a sphere is orientation free and volumetric center of an
+    # object is static at a single point in time
     olit(asp.length, rdfs.comment, 'This is rest-length.'),
     # NOTE all unitifications are nonLocal because they depend on the measurement tool barring demonstration of some invariant
     oc(asp.size, asp.Local),

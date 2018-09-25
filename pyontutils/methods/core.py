@@ -617,6 +617,14 @@ triples = (
     oop(ilxtr.processHasContext),
     (ilxtr.processHasContext, rdfs.domain, BFO['0000015']),
 
+    # aspects for processes
+    # these are not modelled with a notion of intention because
+    # they are processes which _must_ occur in order to be classified as such
+
+    # FIXME TODO naming, Required?
+    oop(ilxtr.hasActualPrimaryAspect),
+    oop(ilxtr.hasActualPrimaryAspect_dAdT),
+
     # classes
 
     ## executor
