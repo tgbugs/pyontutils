@@ -69,6 +69,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
         yield from olit(subject, rdfs.comment, comment)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
+proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
@@ -128,12 +129,24 @@ triples = (
     olit(ilxtr.wasDiscoveredBy, definition,
          'The relationship between a process and the person who discovered it.'),
 
-    oop(ilxtr.hasDualInputTechnique, hasPart),
+    oop(ilxtr.hasDualTechnique),
+    (ilxtr.hasDualTechnique, rdf.type, owl.SymmetricProperty),
+    olit(ilxtr.hasDualTechnique, rdfs.label, 'has dual technique'),
+    olit(ilxtr.hasDualTechnique, definition,
+         ('The relationship between techniques that are duals of each other. '
+          'An example usage is in cases where the matter constituting the primary '
+          'input in one technique is transformed (read: renamed) and becomes the '
+          'primary output of another technique. Bearing this relation implies that '
+          'both techniques are part of a same enclosing technique.')),
+    (ilxtr.hasDualTechnique, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasDualTechnique, rdfs.range, ilxtr.technique),
+
+    oop(ilxtr.hasDualInputTechnique, ilxtr.hasDualTechnique),
     olit(ilxtr.hasDualInputTechnique, rdfs.label, 'has dual input technique'),
     olit(ilxtr.hasDualInputTechnique, definition,
          ('The relationship between a technique that has a primary output '
           'and a dual technique that has a primary input that is destroyed.')),
-    oop(ilxtr.hasDualOutputTechnique, hasPart),
+    oop(ilxtr.hasDualOutputTechnique, ilxtr.hasDualTechnique),
     olit(ilxtr.hasDualOutputTechnique, rdfs.label, 'has dual output technique'),
     olit(ilxtr.hasDualOutputTechnique, definition,
          ('The relationship between a technique that has a primary input that is '
