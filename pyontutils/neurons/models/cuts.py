@@ -100,7 +100,9 @@ def main():
            prefixes={'swanr':swanr,
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
-    new = [NeuronCUT(*n.pes, label=n._origLabel, override=True) for n in ns + ans]
+    ins = [None] * len(ns)  # [n.id_ for n in ns]  # TODO
+    ians = [None] * len(ans)
+    new = [NeuronCUT(*n.pes, id_=i, label=n._origLabel, override=True) for i, n in zip(ins + ians, ns + ans)]
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()

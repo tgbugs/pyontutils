@@ -81,6 +81,27 @@ class Config:
                            source_file = source_file,
                            use_local_import_paths = import_as_local)  # FIXME conflation of import from local and render with local
 
+        # bag existing
+        if out_graph_path.exists() and False:  # TODO
+            import rdflib
+            from pyontutils.closed_namespaces import rdf, owl
+            from IPython import embed
+            load_graph = rdflib.Graph()
+            load_graph.parse(out_graph_path.as_posix(), format='turtle')  #FIXME assuming format
+            # FIXME how to pass in the proper superclass for neuron
+            # ANSWER: by reverse lookup on the ontology class id?
+            for iri in load_graph[:rdf.type:owl.Class]:
+                if isinstance(iri, rdflib.URIRef):
+                    #print(iri)
+                    #if owl.equivalentClass in [p for p, o in graphBase.in_graph[iri]]:
+                    try:
+                        Neuron(id_=iri)
+                    except AttributeError as e:
+                        print('oops')
+                        continue
+
+
+
 
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
            local_base=        None,  # devconfig.ontology_local_repo by default
