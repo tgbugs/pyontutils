@@ -147,6 +147,7 @@ class table1(rowParse):
 
     def _end(self):
         graphBase.write()
+        graphBase.write_python()
 
 def main():
     import csv
