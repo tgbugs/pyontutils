@@ -933,7 +933,8 @@ class NeuronBase(graphBase):
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
         inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        lab =  f", label={str(self._origLabel) + ' ' + self._shortname!r}" if self._origLabel else ''
+        sn = (' (' + self._shortname + ')') if self._shortname else ''  # equiv to override if no shortname
+        lab =  f", label={str(self._origLabel) + sn!r}" if self._origLabel else ''
         args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
         return '%s%s' % (self.__class__.__name__, args)
@@ -946,7 +947,9 @@ class NeuronBase(graphBase):
                 asdf += ',\n' + t + ('%s' % pe).replace('\n', '\n' + t)
             else:
                 asdf += ('%s' % pe).replace('\n', '\n' + t)
-        lab =  ',\n' + t + f"label={str(self._origLabel) + ' ' + self._shortname!r}" if self._origLabel else ''
+
+        sn = (' (' + self._shortname + ')') if self._shortname else ''  # equiv to override if no shortname
+        lab =  ',\n' + t + f"label={str(self._origLabel) + sn!r}" if self._origLabel else ''
         asdf += lab
         asdf += ')'
         return asdf
