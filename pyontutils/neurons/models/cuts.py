@@ -32,7 +32,13 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 'Substantia nigra pars reticulata': 'Reticular part of substantia nigra',
                 'Thalamic reticular nucleus': 'Reticular thalamic nucleus',
                 'Trigeminal nerve motor nucleus': 'Motor nucleus of trigeminal nerve',
-                'Trigeminal nerve principal sensory nucleus': 'Principal sensory nucleus of trigeminal nerve'}
+                'Trigeminal nerve principal sensory nucleus': 'Principal sensory nucleus of trigeminal nerve',
+                'Dorsal root ganglion cell': 'Dorsal root ganglion A alpha-beta non-nociceptive neuron',
+                'Neocortex layer 2-3 pyramidal cell': 'Neocortex pyramidal layer 2-3 cell',
+                #'Neocortex layer 5 pyramidal cell':  # TODO layer 5-6??
+                'Hippocampus CA2 Basket cell': 'Hippocampus CA2 basket cell broad',
+                'Neocortex layer 4 spiny stellate cell': 'Neocortex stellate layer 4 cell',
+}
 
 def main():
     resources = Path(devconfig.resources)
@@ -42,7 +48,7 @@ def main():
 
     bc = byCol(rows)
 
-    labels, *_ = zip(*rows)
+    labels, *_ = zip(*bc)
     labels_set0 = set(labels)
     ns = []
     for n in ndl_neurons:
@@ -81,18 +87,8 @@ def main():
     agen_missing = sagen - sans
     labels_set2 = labels_set1 - sans
 
-    nlx = [c.label for c in bc if c.Neurolex]
-    snlx = set(nlx)
-
-    lnlx = set(n.lower() for n in snlx)
-    sos = set(n._origLabel.lower() for n in ndl_neurons)
-    print('neurolex missing:', len(lnlx - sos))
-
-    progress = len(labels_set0), len(labels_set1), len(labels_set2)
-    print('progress:\n'
-          f'total:      {progress[0]}\n'
-          f'post nlx:   {progress[1]}\n'
-          f'post basic: {progress[2]}')
+    nlx_labels = [c.label for c in bc if c.Neurolex]
+    snlx_labels = set(nlx_labels)
 
     class SourceCUT(resSource):
         sourceFile = 'pyontutils/resources/common-usage-types.csv'  # FIXME relative to git workingdir...
@@ -108,6 +104,26 @@ def main():
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()
+
+    progress = len(labels_set0), len(sns), len(sans), len(labels_set1), len(labels_set2)
+    print('\nProgress:\n'
+          f'total:            {progress[0]}\n'
+          f'from nlx:         {progress[1]}\n'
+          f'from basic:       {progress[2]}\n'
+          f'TODO after nlx:   {progress[3]}\n'
+          f'TODO after basic: {progress[4]}\n')
+    assert progress[0] == progress[1] + progress[3], 'neurolex does not add up'
+    assert progress[3] == progress[2] + progress[4], 'basic does not add up'
+
+    lnlx = set(n.lower() for n in snlx_labels)
+    sos = set(n._origLabel.lower() for n in ndl_neurons)
+    nlx_review = lnlx - sos
+    print('\nNeuroLex listed as source but no mapping:', len(nlx_review))
+    _ = [print(l) for l in sorted(nlx_review)]
+
+    print('\nUnmapped:')
+    _ = [print(l) for l in sorted(labels_set2)]
+
     if __name__ == '__main__':
         embed()
 
