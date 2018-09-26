@@ -36,6 +36,7 @@ __all__ = [
     'NeuronCUT',
     'NeuronEBM',
     #'NeuronArranger',
+    'ilxtr',  # FIXME
     '_NEURON_CLASS',
     '_CUT_CLASS',
     '_EBM_CLASS',
@@ -355,10 +356,12 @@ class graphBase:
                     if _prefixes
                     else '')
         # FIXME prefixes should be separate so they are accessible in the namespace
+        # FIXME ilxtr needs to be detected as well
+        # FIXME this doesn't trigger when run as an import?
         out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
         _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
-        out += f'{subs}'
+        out += subs
         #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
         out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
         return out

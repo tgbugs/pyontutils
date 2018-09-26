@@ -28,7 +28,7 @@ from docopt import docopt, parse_defaults
 from IPython import embed
 
 
-class NeuronACT(Neuron):
+class NeuronACT(NeuronEBM):
     owlClass = ilxtr.NeuronACT
     shortname = 'AllenCT'
 
