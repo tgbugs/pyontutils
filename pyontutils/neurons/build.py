@@ -12,6 +12,7 @@ from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, createOntology, OntId as OntId_
 from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
+from pyontutils.config import devconfig
 from pyontutils.neurons import _NEURON_CLASS
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.ilx_utils import ILXREPLACE
@@ -19,8 +20,8 @@ from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
-current_file = Path(__file__).absolute()
 gitf = working_dir.parent
+resources = Path(devconfig.resources)
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -260,7 +261,7 @@ def make_phenotypes():
 
     # do edges first since we will need them for the phenotypes later
     # TODO real ilx_ids and use prefixes to manage human readability
-    with open(refile(__file__, 'resources/neuron_phenotype_edges.csv'), 'rt') as f:
+    with open((resources / 'neuron_phenotype_edges.csv').as_posix(), 'rt') as f:
         rows = [r for r in csv.reader(f)]
 
     lookup = {
@@ -293,7 +294,7 @@ def make_phenotypes():
                 t = t.strip()
                 graph.add_trip(id_, rdflib.RDF.type, lookup[t])
 
-    with open(refile(__file__, 'resources/neuron_phenotype.csv'), 'rt') as f:
+    with open((resources / 'neuron_phenotype.csv').as_posix(), 'rt') as f:
         rows = [r for r in csv.reader(f) if any(r) and not r[0].startswith('#')]
 
     class PP(rowParse):  # FIXME use add_new in _row_post?
@@ -935,7 +936,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
 
     graph = makeGraph('hbp-special', prefixes=PREFIXES)  # XXX fix all prefixes
 
-    with open(refile(__file__, 'resources/26451489 table 1.csv'), 'rt') as f:
+    with open((resources / '26451489 table 1.csv').as_posix(), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
     base = 'http://ontology.neuinfo.org/NIF/ttl/'
@@ -1064,12 +1065,12 @@ def make_bridge():
     from pyontutils.utils import subclasses
     from pyontutils.core import Ont, build
     from pyontutils.neurons.lang import Config
-    from pyontutils.neuron_models import __all__
+    from pyontutils.neurons.models import __all__
     print(__all__)
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
-        m = import_module(f'pyontutils.neuron_models.{module}')
+        m = import_module(f'pyontutils.neurons.models.{module}')
 
 
     class neuronBridge(Ont):

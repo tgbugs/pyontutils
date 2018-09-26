@@ -35,7 +35,7 @@ class Config:
                  imports =              tuple(),  # iterable
                  import_as_local =      False,  # also load from local?
                  load_from_local =      True,
-                 branch =               'neurons',
+                 branch =               devconfig.neurons_branch,
                  sources =              tuple(),
                  source_file =          None):
         import os  # FIXME probably should move some of this to neurons.py?
@@ -83,7 +83,7 @@ class Config:
 
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
            local_base=        None,  # devconfig.ontology_local_repo by default
-           branch=            'neurons',
+           branch=            devconfig.neurons_branch,
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],
            core_graph=        None,

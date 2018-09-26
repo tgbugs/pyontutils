@@ -19,6 +19,7 @@ import requests
 from rdflib.namespace import *
 from pyontutils.utils import TermColors as tc, relative_path
 from pyontutils.core import simpleOnt
+from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
 from pyontutils.combinators import annotation
 from pyontutils.neurons.lang import *
@@ -34,7 +35,7 @@ class NeuronACT(Neuron):
 
 class AllenCellTypes:
 
-    branch = 'neurons'
+    branch = devconfig.neurons_branch
 
     phenotype_preds = [
         'hasSomaLocatedIn',

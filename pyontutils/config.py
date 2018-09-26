@@ -7,7 +7,6 @@ from pyontutils.utils import TermColors as tc
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 
-
 def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
     except KeyError: return None
@@ -127,6 +126,10 @@ class DevConfig:
         self._override['git_local_base'] = value
         self.write(self.config_file.as_posix())
 
+    @default('neurons')
+    def neurons_branch(self):
+        return self.config['neurons_branch']
+
     @default('SciCrunch')
     def ontology_org(self):
         return self.config['ontology_org']
@@ -190,6 +193,10 @@ class DevConfig:
                       f'No repository found in any parent directory of {maybe_start}')
 
         return Path('/dev/null')  # seems reaonsable ...
+
+    @default((Path(__file__).parent / 'resources').as_posix())
+    def resources(self):
+        return self.config['resources']
 
     @default('localhost')
     def _scigraph_host(self):
