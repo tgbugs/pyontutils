@@ -404,7 +404,7 @@ def main():
         'Contributing':'Contributing',
         'pyontutils/development/README.html':'Contributing to the ontology',
         'pyontutils/development/community/README.html':'Contributing term lists to the ontology',
-        'pyontutils/pyontutils/neuron_models/README.html':'Contributing neuron terminology to the ontology',
+        'pyontutils/pyontutils/neurons/models/README.html':'Contributing neuron terminology to the ontology',
 
         'Ontology content':'Ontology content',
         'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
