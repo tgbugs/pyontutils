@@ -36,6 +36,7 @@ __all__ = [
     'NeuronCUT',
     'NeuronEBM',
     #'NeuronArranger',
+    'owl',  # FIXME
     'ilxtr',  # FIXME
     '_NEURON_CLASS',
     '_CUT_CLASS',
@@ -43,22 +44,21 @@ __all__ = [
 ]
 
 # language constructes
-AND = 'owl:intersectionOf'
-OR = 'owl:unionOf'
+AND = owl.intersectionOf
+OR = owl.unionOf
 
 # utility identifiers
 _NEURON_CLASS = 'SAO:1417703748'
-_CUT_CLASS = 'ilxtr:NeuronCUT'
-_EBM_CLASS = 'ilxtr:NeuronEBM'
-PHENO_ROOT = 'ilxtr:hasPhenotype'  # needs to be qname representation
-DEF_ROOT = 'ilxtr:definedClassNeurons'
+_CUT_CLASS = ilxtr.NeuronCUT
+_EBM_CLASS = ilxtr.NeuronEBM
+PHENO_ROOT = ilxtr.hasPhenotype  # needs to be qname representation
 
 # utility functions
 
 def getPhenotypePredicates(graph):
     # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
     qstring = ('SELECT DISTINCT ?prop WHERE '
-               '{ ?prop rdfs:subPropertyOf* %s . }') % PHENO_ROOT
+               '{ ?prop rdfs:subPropertyOf* %s . }') % graph.qname(PHENO_ROOT)
     out = [_[0] for _ in graph.query(qstring)]
     literal_map = {uri.rsplit('/',1)[-1]:uri for uri in out}  # FIXME this will change
     classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
@@ -345,30 +345,37 @@ class graphBase:
         with open(graphBase.filename_python(), 'wt') as f:
             f.write(graphBase.python())
 
-    @staticmethod
-    def python():
+    @classmethod
+    def python_header(cls):
         out = '#!/usr/bin/env python3.6\n'
-        out += f'from {graphBase.__import_name__} import *\n\n'
-        _prefixes = {k:str(v) for k, v in graphBase.ng.namespaces.items()
+        out += f'from {cls.__import_name__} import *\n\n'
+        _prefixes = {k:str(v) for k, v in cls.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
-        len_thing = len(f'Config({graphBase.ng.name!r}, prefixes={{')
+        len_thing = len(f'Config({cls.ng.name!r}, prefixes={{')
         prefixes = (f', prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
                     if _prefixes
                     else '')
         # FIXME prefixes should be separate so they are accessible in the namespace
         # FIXME ilxtr needs to be detected as well
         # FIXME this doesn't trigger when run as an import?
-        out += f'Config({graphBase.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
+        out += f'Config({cls.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
         _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         out += subs
-        #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
-        out += '\n\n'.join('\n'.join(('# ' + n.label, str(n))) for n in graphBase.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
         return out
 
-    @staticmethod
-    def ttl():
-        og = cull_prefixes(graphBase.out_graph, prefixes=uPREFIXES)
+    @classmethod
+    def python(cls):
+        out = cls.python_header()
+        #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
+        out += '\n\n'.join(n.python() for n in cls.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
+        return out
+
+    @classmethod
+    def ttl(cls):
+        # trying this as a class method to see whether it makes it
+        # easier to reason about which graph is being exported
+        og = cull_prefixes(cls.out_graph, prefixes=uPREFIXES)
         return og.g.serialize(format='nifttl').decode()
 
     @staticmethod
@@ -704,12 +711,12 @@ class LogicalPhenotype(graphBase):
         return hash(tuple(sorted(self.pes)))
 
     def __repr__(self):
-        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
+        op = self.local_names[self.op]  # FIXME inefficient but safe
         pes = ", ".join([_.__repr__() for _ in self.pes])
         return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
 
     def __str__(self):
-        op = self.local_names[self.ng.qname(self.expand(self.op))]  # FIXME inefficient but safe
+        op = self.local_names[self.op]  # FIXME inefficient but safe
         t =  ' ' * (len(self.__class__.__name__) + 1)
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
@@ -805,9 +812,32 @@ class NeuronBase(graphBase):
             self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
             self.existing_pes[self] = self.Class
 
+        self.ttl = self._instance_ttl
+        self.python = self._instance_python
+
     def _tuplesToPes(self, pes):
         for p, e in pes:
             yield Phenotype(p, e)
+
+    def _subgraph(self):
+        def f(t, g):
+            subject, predicate, object = t
+            for p, o in g[object]:
+                yield object, p, o
+
+        g = rdflib.Graph()
+        _ = [g.add(t) for t in self.out_graph.transitiveClosure(f, (None, None, self.id_))]
+
+        og = cull_prefixes(g, prefixes=uPREFIXES)  # FIXME local prefixes?
+        return og
+
+    def _instance_ttl(self):
+        og = self._subgraph()
+        return og.g.serialize(format='nifttl').decode()
+
+    def _instance_python(self):
+        return '\n'.join(('# ' + self.label, str(self)))
+        #return self.python_header() + str(self)
 
     @staticmethod
     def setContext(*neuron_or_phenotypeEdges):
