@@ -156,7 +156,8 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= PPath(working_dir, 'pyontutils/neurons/compiled')):
+                      compiled_location= PPath(working_dir, 'pyontutils/neurons/compiled'),
+                      ignore_existing=   False):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -262,6 +263,7 @@ class graphBase:
 
         nin_graph = makeGraph('', prefixes=PREFIXES, graph=in_graph)
         graphBase.in_graph = in_graph
+        graphBase.ignore_existing = ignore_existing
 
         # output graph setup
         if out_graph is None:
@@ -349,6 +351,11 @@ class graphBase:
     def python_header(cls):
         out = '#!/usr/bin/env python3.6\n'
         out += f'from {cls.__import_name__} import *\n\n'
+
+        _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
+        subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
+        out += subs
+
         _prefixes = {k:str(v) for k, v in cls.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
         len_thing = len(f'Config({cls.ng.name!r}, prefixes={{')
@@ -359,9 +366,7 @@ class graphBase:
         # FIXME ilxtr needs to be detected as well
         # FIXME this doesn't trigger when run as an import?
         out += f'Config({cls.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
-        _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
-        subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
-        out += subs
+
         return out
 
     @classmethod
@@ -731,6 +736,38 @@ class NeuronBase(graphBase):
     ids_pes = {}
     pes_ids = {}
     __context = tuple()  # this cannot be changed after __init__, neurons are not dynamic
+    _ocTrip = owlClass, rdf.type, owl.Class
+    _loading = False
+
+    def __new__(cls, *args, **kwargs):
+        parent = cls.mro()[1]  # FIXME EVIL
+        if (hasattr(parent, 'owlClass') and
+            cls.owlClass != parent.owlClass and
+            cls not in (NeuronBase, Neuron, NeuronCUT, NeuronEBM) and
+            not hasattr(cls, '_runonce')):
+            cls._runonce = True
+            cls.ng.add_trip(cls.owlClass, rdf.type, owl.Class)
+            cls.ng.add_trip(cls.owlClass, rdfs.subClassOf, _EBM_CLASS)
+
+        return super().__new__(cls)
+
+    @classmethod
+    def _load_existing(cls):
+        if not cls._loading:
+            NeuronBase._loading = True  # block all other neuron loading
+            try:
+                for iri in (s for s in cls.load_graph[:rdf.type:owl.Class]
+                            if isinstance(s, rdflib.URIRef)
+                            and not cls.ng.qname(s).startswith('TEMP')):
+                    try:
+                        cls(id_=iri)
+                    except AttributeError as e:
+                        print('oops', e)
+                        raise e
+                        continue
+            finally:
+                NeuronBase._loading = False
+
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
         super().__init__()
         self.ORDER = [
@@ -1065,6 +1102,8 @@ class Neuron(NeuronBase):
         # PR ??
 
     def bagExisting(self):  # TODO intersections
+        #if self.ng.qname(self.id_).startswith('TEMP'):
+            #raise TypeError('TEMP id, no need to bag')
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         for c in self.Class.equivalentClass:
             pe = self._unpackPheno(c)
@@ -1073,9 +1112,10 @@ class Neuron(NeuronBase):
                     out.update(pe)
                 else:
                     out.add(pe)
+            else:
+                raise TypeError('owlClass does not match')  # TODO
 
-        for c in self.Class.disjointWith:
-            print(c)
+        for c in self.Class.disjointWith:  # replaced by complementOf
             pe = self._unpackPheno(c, NegPhenotype)
             if pe:
                 out.add(pe)
@@ -1096,29 +1136,53 @@ class Neuron(NeuronBase):
         # return out
 
     def _unpackPheno(self, c, type_=Phenotype):  # FIXME need to deal with intersections
+        # this is super slow ...
+
+        def restriction_to_phenotype(r, ptype=type_):
+            p = r.someValuesFrom  # if _NEURON_CLASS is not a owl:Class > problems
+            e = r.onProperty
+            return ptype(p, e)
+
+        if c.identifier == self.id_ or c.identifier == self.owlClass:
+            return
+
         if isinstance(c.identifier, rdflib.BNode):
             putativeRestriction = infixowl.CastClass(c, graph=self.in_graph)
             if isinstance(putativeRestriction, infixowl.BooleanClass):
                 bc = putativeRestriction
                 op = bc._operator
                 pes = []
-                for id_ in bc._rdfList:
-                    #print(id_)
+                for id_ in bc._rdfList:  # FIXME should be getting the base class before ...
                     pr = infixowl.CastClass(id_, graph=self.in_graph)
                     if isinstance(pr, infixowl.BooleanClass):
                         lpe = self._unpackLogical(pr)
                         pes.append(lpe)
                         continue
-                    if isinstance(pr, infixowl.Class):
-                        if id_ == self.expand(self.owlClass):
-                            #print('we got neuron root', id_)
-                            continue
+                    elif type(pr) == infixowl.Class:  # restriction is sco class so use type
+                        if isinstance(id_, rdflib.URIRef):
+                            print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
+                            return
                         else:
-                            pass  # it is a restriction
+                            if pr.complementOf:
+                                coc = infixowl.CastClass(pr.complementOf, graph=self.in_graph)
+                                if isinstance(coc, infixowl.Restriction):
+                                    pes.append(restriction_to_phenotype(coc, ptype=NegPhenotype))
+                                else:
+                                    print(coc)
+                                    raise BaseException('wat')
+                            else:
+                                print(pr)
+                                raise BaseException('wat')
+                    elif isinstance(pr, infixowl.Restriction):
+                        pes.append(restriction_to_phenotype(pr))
+                    elif id_ == self.expand(self.owlClass):  # FIXME SAO: not a namespace
+                        continue
+                    elif pr is None:
+                        print('dangling reference', id_)
+                    else:
+                        print(pr)
+                        raise BaseException('wat')
 
-                    p = pr.someValuesFrom  # if _NEURON_CLASS is not a owl:Class > problems
-                    e = pr.onProperty
-                    pes.append(type_(p, e))
                 return tuple(pes)
             else:
                 print('WHAT')  # FIXME something is wrong for negative phenotypes...
@@ -1177,10 +1241,6 @@ class NeuronCUT(Neuron):
 class NeuronEBM(Neuron):
     owlClass = _EBM_CLASS
 
-    def __new__(cls, *args, **kwargs):
-        if cls.owlClass != _EBM_CLASS:
-            cls.ng.add_trip(cls.owlClass, rdfs.subClassOf, _EBM_CLASS)
-        return super().__new__(cls)
 
 class TypeNeuron(Neuron):  # TODO
     """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.

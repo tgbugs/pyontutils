@@ -1,11 +1,10 @@
 import unittest
 import rdflib
-#import pyontutils.neuron_lang as nl
-#import test.example_neurons as en
+
 
 class TestNeurons(unittest.TestCase):
     def setUp(self):
-        print('hello')
+        pass
 
     def test_ttl(self):  # roundtrip from ttl
         #example_ttl = 'test/example_neurons.ttl'
@@ -20,3 +19,12 @@ class TestNeurons(unittest.TestCase):
         #print('WHAT IS GOING ON')
         assert True
 
+    # TODO make sure this runs after cli test? it should ...
+    # but then we need to keep the output of ndl around
+    def test_load_existing(self):
+        from pyontutils.neurons.lang import Neuron, Config
+        cfg = Config('neuron_data_lifted')
+        assert len(Neuron.load_graph)
+        neurons = Neuron.neurons()
+        assert neurons
+        assert 'TEMP' not in neurons[0].id_

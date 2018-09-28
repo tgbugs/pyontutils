@@ -1,9 +1,11 @@
 #!/usr/bin/env python3.6
+from IPython import embed
 import csv
 from pathlib import Path
 import rdflib
 from pyontutils.neurons.compiled import neuron_data_lifted
 ndl_neurons = neuron_data_lifted.Neuron.neurons()
+embed()
 from pyontutils.neurons.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol, relative_path
@@ -13,7 +15,6 @@ from pyontutils.namespaces import interlex_namespace
 # import these last so that graphBase resets (sigh)
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
-from IPython import embed
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -59,6 +60,7 @@ def main():
             n._origLabel = l
             ns.append(n)
 
+    embed()
     sns = set(n._origLabel for n in ns)
 
     labels_set1 = labels_set0 - sns
@@ -130,4 +132,5 @@ def main():
         embed()
 
 
-main()
+if __name__ == '__main__':
+    main()

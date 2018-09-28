@@ -5,6 +5,7 @@ from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
 from pyontutils.core import OntId
+from pyontutils.utils import subclasses
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 
 __all__ = [
@@ -38,7 +39,8 @@ class Config:
                  load_from_local =      True,
                  branch =               devconfig.neurons_branch,
                  sources =              tuple(),
-                 source_file =          None):
+                 source_file =          None,
+                 ignore_existing =      False):
         import os  # FIXME probably should move some of this to neurons.py?
         imports = list(imports)
         remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
@@ -79,28 +81,24 @@ class Config:
                            iri = lConfig.iri,
                            sources = sources,
                            source_file = source_file,
-                           use_local_import_paths = import_as_local)  # FIXME conflation of import from local and render with local
+                           # FIXME conflation of import from local and render with local
+                           use_local_import_paths = import_as_local,
+                           ignore_existing = ignore_existing)
 
         # bag existing
-        if out_graph_path.exists() and False:  # TODO
-            import rdflib
-            from pyontutils.closed_namespaces import rdf, owl
-            from IPython import embed
-            load_graph = rdflib.Graph()
-            load_graph.parse(out_graph_path.as_posix(), format='turtle')  #FIXME assuming format
-            # FIXME how to pass in the proper superclass for neuron
-            # ANSWER: by reverse lookup on the ontology class id?
-            for iri in load_graph[:rdf.type:owl.Class]:
-                if isinstance(iri, rdflib.URIRef):
-                    #print(iri)
-                    #if owl.equivalentClass in [p for p, o in graphBase.in_graph[iri]]:
-                    try:
-                        Neuron(id_=iri)
-                    except AttributeError as e:
-                        print('oops')
-                        continue
 
-
+        if not graphBase.ignore_existing:
+            print('LOAD EXISTING', graphBase.ng.filename)
+            from itertools import chain
+            from rdflib import Graph  # FIXME
+            graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+            ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
+            if ogp.exists():
+                # FIXME memory inefficiency here ...
+                _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
+            for sc in chain(subclasses(NeuronEBM), (Neuron,)):
+                if sc._ocTrip in graphBase.load_graph or sc == Neuron:
+                    sc._load_existing()
 
 
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
@@ -120,7 +118,8 @@ def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-O
            iri=               None,
            sources=           tuple(),
            source_file=       None,
-           use_local_import_paths=True):  # defaults to devconfig.scigraph_api
+           use_local_import_paths=True,
+           ignore_existing=   True):  # defaults to devconfig.scigraph_api
     """ Wraps graphBase.configGraphIO to provide a set of sane defaults
         for input ontologies and output files. """
     graphBase.configGraphIO(remote_base=remote_base,
@@ -139,7 +138,9 @@ def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-O
                             iri=iri,
                             sources=sources,
                             source_file=source_file,
-                            use_local_import_paths=use_local_import_paths)
+                            use_local_import_paths=use_local_import_paths,
+                            ignore_existing=ignore_existing)
+
     pred = graphBase._predicates
     return pred  # because the python module system is opinionated :/
 
