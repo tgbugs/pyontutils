@@ -6,13 +6,15 @@
         Graph2Pandas.py [-f=<path>] [-a | -t=<str>] [-o=<path>]
 
     Options:
-            -h --help           Display this help message
+        -h --help           Display this help message
         -v --version        Current version of file
         -o --output=<path>  Output path of picklized pandas DataFrame
         -f --file=<path>    owl | ttl | rdflib.Graph() -> df.to_pickle
         -t --type=<str>     type of class you want in the ttl file
         -a --all            If seleted you get all types of classes
+
 """
+from docopt import docopt
 import pandas as pd
 import pickle
 from pathlib import Path as p
@@ -140,7 +142,8 @@ class Graph2Pandas():
             # Prepare defaultdict home if it doesn't exist
             if not data.get(subj):
                 data[subj] = defaultdict(list)
-                data[subj]['qname'] = self.qname(subj_binding)
+                # I really dont think i need this...
+                # data[subj]['qname'] = self.qname(subj_binding)
 
             data[subj][pred].append(obj)
             cols.add(pred)

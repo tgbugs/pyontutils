@@ -10,16 +10,13 @@ import re
 
 
 class IlxSql():
-    def __init__(self, api_key, base_path, db_url, pre_load=False):
+    def __init__(self, db_url, pre_load=False):
         self.db_url = db_url
         self.engine = create_engine(self.db_url)
         self.local_degrade = light_degrade  # current degrade of choice for sql
         self.terms = self.get_terms() if pre_load else pd.DataFrame
         self.annos = self.get_annotations() if pre_load else pd.DataFrame
         self.basic_annos = self.get_basic_annos() if pre_load else pd.DataFrame
-        self.sci = scicrunch(api_key=api_key,
-                             base_path=base_path,
-                             db_url=db_url)
 
     def fetch_terms(self):
         if self.terms.empty:
@@ -66,12 +63,12 @@ class IlxSql():
     def get_existing_ids(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT tei.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition
+                SELECT tei.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition, t.comment
                 FROM terms AS t
                 JOIN term_existing_ids AS tei ON t.id=tei.tid
                 """
         df = pd.read_sql(data, engine)
-        df = self.remove_duplicates(df)
+        df = self.remove_duplicates(df) # takes out dead terms
         #print('here')
         #df.drop_duplicates(keep='first', subset=['curie', 'iri', 'ilx'], inplace=True)
         return df
@@ -106,7 +103,7 @@ class IlxSql():
     def get_synonyms(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT ts.id, ts.tid, ts.literal, t.id as term_id, t.ilx as term_ilx, t.label, t.definition
+                SELECT ts.id, ts.tid, ts.literal, t.ilx, t.label
                 FROM term_synonyms AS ts
                 JOIN terms AS t
                 WHERE ts.tid=t.id
@@ -182,21 +179,6 @@ class IlxSql():
     def get_ilx2row(self):
         return {row['ilx']: row for row in self.fetch_terms().to_dict('records')}
 
-    def get_existing_id2row(self):
-        visited = {}
-        existing_id2row = {}
-        for row in self.get_existing_ids().to_dict('records'):
-            if not visited.get(row['iri']):
-                existing_id2row[row['iri']] = row
-                visited[row['iri']] = True
-            else: # FIXME: should get a head count and see if concurrent is the way to go
-                ilx_resp_complex = self.sci.ilxSearches(row['ilx'], crawl=True, _print=False)
-                if ilx_resp_complex:
-                    ilx_data = [e for e in ilx_resp_complex.values()][0]
-                    if row['iri'] in [e.get('iri') for e in ilx_data['existing_ids'] if e]:
-                        existing_id2row[row['iri']] = row
-        return existing_id2row
-
     def show_tables(self):
         data = """
             show tables;
@@ -211,6 +193,8 @@ class IlxSql():
         """.format(tablename, limit)
         return pd.read_sql(data, self.engine)
 
+    def get_custom(self, data):
+        return pd.read_sql(data, self.engine)
 
 class EzIlxSql(IlxSql):
     def __init__(self, db_url):
@@ -248,6 +232,17 @@ def main():
     print(ex2row['http://uri.interlex.org/dicom/uris/terms/0018_0029'])
     # print(list(label2ilx)[0])
 
+# engine = create_engine('mysql+mysqlconnector://root:water@localhost/umls2018ab', pool_size=10, max_overflow=2)
+# data = """
+#     select m.code, m.str, s.atv, d.def
+#     from MRCONSO m
+#     left outer join MRSAT s ON m.AUI=s.METAUI
+#     left outer join MRDEF d on m.AUI=d.AUI ;
+# """
+# umls = pd.read_sql(data, engine)
+# umls.to_pickle(p.home()/'Dropbox/SciCrunchDumps/umls/umls.pickle')
+
+# psql -U interlex-admin -h localhost -d interlex_test;
 
 if __name__ == '__main__':
     main()

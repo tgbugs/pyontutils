@@ -6,7 +6,6 @@ Usage:  foo.py [-h | --help]
         foo.py [-k API_KEY] [-d DB_URL] [-p | -b] [-o OUTPUT]
         foo.py [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b]
         foo.py [options] [-f FILE] [-k API_KEY] [-d DB_URL] [-p | -b] [--index=<int>]
-        graph_comparator.py [-r REFERENCE_GRAPH] [-t TARGET_GRAPH] [-o OUTPUT]
 
 Options:
     -h --help                      Display this help message
@@ -36,6 +35,11 @@ BETA = 'https://beta.scicrunch.org'  # current beta
 #BETA = 'https://test.scicrunch.org'
 PRODUCTION = 'https://scicrunch.org'
 
+
+def open_doc_files(doc):
+    for option_key, option_value in doc.items():
+        if isinstance(option_value, str):
+            gerneral_open(option_value)
 
 def doc2args(doc):
     return pd.Series({k.replace('--', ''): fix_path(v) for k, v in doc.items()})

@@ -89,6 +89,7 @@ def merge(new, old):
 
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
+            vals['preferred'] = 0
 
             if 'change' not in list(vals):  # notion that you want to add it
                 vals['change'] = False

@@ -9,6 +9,7 @@ import requests as r
 from sys import exit
 from ilxutils.args_reader import read_args
 import ilxutils.dictlib as dictlib
+import os
 
 
 class scicrunch():
@@ -29,7 +30,7 @@ class scicrunch():
         deleteTerms                 ilx_ids .. crawl=True .
     '''
 
-    def __init__(self, api_key, base_path, db_url, auth=('None', 'None')):
+    def __init__(self, api_key, base_path, auth=('None', 'None')):
         self.key = api_key
         self.base_path = base_path
         self.auth = BasicAuth(auth)
@@ -63,7 +64,7 @@ class scicrunch():
 
             if not output.get('data').get('id'):
                 continue
-                
+
             try:
                 output = {int(output['data']['id']): output['data']}  # terms
             except:
@@ -182,10 +183,9 @@ class scicrunch():
             return self.crawl_post(data, _print=_print)
 
         async def post_single(url, data, session, i):
-            if 'Annotation' in action:
-                data.update({
-                    'batch-elastic': 'True'
-                })  # term endpoints cant handle this key yet
+            # data.update({
+            #     'batch-elastic': 'True'
+            # })  # term should be able to handle it now
             data = json.dumps({
                 **{'key': self.key, },
                 **data,
@@ -231,6 +231,7 @@ class scicrunch():
                     else:
                         # allows NoneTypes to pass
                         output = await response.json(content_type=None)
+                        print(output)
 
                         if not output:
                             print(response.status)
@@ -239,7 +240,6 @@ class scicrunch():
                         # Duplicates
                         elif output.get('data').get('errormsg'):
                             print(data)
-                            # exit(output) # TODO: might want to expand this for server crashes
 
             if _print:
                 try:
@@ -294,13 +294,13 @@ class scicrunch():
             _print=_print)
 
     def ilxSearches(self,
-                    ids=None,
+                    ilx_ids=None,
                     LIMIT=50,
                     _print=True,
                     crawl=False):
         """parameters( data = "list of ilx_ids" )"""
         url_base = self.base_path + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
-        urls = [url_base.format(identifier=str(_id), APIKEY=self.key) for _id in ids]
+        urls = [url_base.format(identifier=str(ilx_id), APIKEY=self.key) for ilx_id in ilx_ids]
         return self.get(
             urls=urls,
             LIMIT=LIMIT,
@@ -320,7 +320,7 @@ class scicrunch():
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
                     type            term, cde, anntation, or relationship <str>
-                    synonym         {'literal':<str>}
+                    synonyms         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
         """
         old_data = self.identifierSearches(
@@ -334,6 +334,7 @@ class scicrunch():
                 exit('You might be using beta insead of production!')
             merged = dictlib.merge(new=d, old=old_data[int(d['id'])])
             merged = dictlib.superclasses_bug_fix(merged)  # BUG
+            #merged['batch-elastic'] = 'True'
             merged_data.append((url, merged))
         return self.post(
             merged_data,
@@ -350,7 +351,7 @@ class scicrunch():
             options:
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
-                    synonym         {'literal':<str>}
+                    synonyms         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
         """
         needed = set([
@@ -368,7 +369,8 @@ class scicrunch():
             if not d.get('label') or not d.get('type'): # php wont catch empty type!
                 exit('=== Data is missing label or type! ===')
 
-            d['term'] = d.pop('label')
+            d['term'] = d.pop('label') # ilx only accepts term, will need to replaced back
+            #d['batch-elastic'] = 'True' # term/add and edit should be ready now
             terms.append((url_base, d))
 
         ilx = self.post(
@@ -574,15 +576,25 @@ class scicrunch():
 
 
 def main():
-    # args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-    #                  db_url=p.home() / 'keys/beta_engine_scicrunch_key.txt', beta=True, cafe=True)
-    args = read_args(api_key=p.home() / 'keys/production_api_scicrunch_key.txt',
-                     db_url=p.home() / 'keys/production_engine_scicrunch_key.txt', production=True, cafe=True)
-    #sql = IlxSql(db_url=args.db_url)
-    sci = scicrunch(api_key=args.api_key,
-                    base_path=args.base_path, db_url=args.db_url)
-    data = ['ilx_0381361']
-    output = sci.ilxSearches(data, crawl=True)
+
+    sci = scicrunch(
+        api_key=os.environ.get('SCICRUNCH_API_KEY'),
+        base_path=os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION'),
+    )
+
+    data = [
+        {
+            'id': 1641,
+            'ilx': 'ilx_0101640',
+            'synonyms': {'literal': 'test'},
+            'existing_ids': {
+                'curie': 'NLXWIKI:TaxonomyID:9922',
+                'iri': 'http://neurolex.org/wiki/TaxonomyID:9922',
+            }
+        },
+    ]
+
+    output = sci.updateTerms(data)
     #data = [{'id':6304, 'label':"Lissauer's tract of spinal cord"}]
     #output = sci.deleteTermsFromElastic(data, crawl=True)
     print(output)

@@ -2,7 +2,7 @@
 
 Usage:  api_wrapper.py [-h | --help]
         api_wrapper.py [-v | --version]
-        api_wrapper.py <argument> [-f=<path>] [-k=<path>] [-d=<path>] [-p | -b]
+        api_wrapper.py <argument> [-f=<path>] [-p | -b]
 
 Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
@@ -14,8 +14,6 @@ Options:
     -h --help                      Display this help message
     -v --version                   Current version of file
     -f --file=<path>               File that holds the data you wish to upload to Scicrunch
-    -k --api_key=<path>            Key path [default: keys/production_api_scicrunch_key.txt]
-    -d --db_url=<path>             Engine key path [default: keys/production_engine_scicrunch_key.txt]
     -p --production                Production SciCrunch
     -b --beta                      Beta SciCrunch
 """
@@ -25,7 +23,6 @@ import math as m
 from pathlib import Path as p
 import time
 from sys import exit
-from ilxutils.args_reader import ilx_doc2args
 from ilxutils.scicrunch_client import scicrunch
 from ilxutils.tools import open_json
 VERSION = '0.0.5'
@@ -46,13 +43,22 @@ def batch(data, seg_length, start_batch, end_batch, func, **kwargs):
 
 def main():
     doc = docopt(__doc__, version=VERSION)
-    args = ilx_doc2args(doc)
-    print(args)
-    data = open_json(infile=args.file)
+    if doc['--production']:
+        base_path = os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION')
+        db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION')
+    elif doc['--beta']:
+        base_path = os.environ.get('SCICRUNCH_BASEBATH_BETA')
+        db_url = os.environ.get('SCICRUNCH_DB_URL_BETA')
+    else:
+        exit('Need to specify SciCrunch client version.')
+
+    data = open_json(infile=doc['--file'])
     data = data[:]  # for debuging
-    sci = scicrunch(api_key=args.api_key,
-                    base_path=args.base_path,
-                    db_url=args.db_url)
+    sci = scicrunch(
+        api_key = os.environ.get('SCICRUNCH_API_KEY'),
+        base_path = base_path,
+        db_url = db_url,
+    )
 
     FUNCTION_MAP = {
         'addTerms': sci.addTerms,
@@ -63,14 +69,16 @@ def main():
         'addRelationships': sci.addRelationships,
     }
 
-    output = batch(data=data,
-                   seg_length=10,
-                   start_batch=0,  # 1408, # regarding uids
-                   end_batch=None,  # 1410,
-                   func=FUNCTION_MAP[args['<argument>']],
-                   _print=True,
-                   crawl=False,
-                   LIMIT=10,)
+    output = batch(
+        data=data,
+        seg_length=10,
+        start_batch=0,  # 1408, # regarding uids
+        end_batch=None,  # 1410,
+        func=FUNCTION_MAP[args['<argument>']],
+        _print=True,
+        crawl=False,
+        LIMIT=10,
+    )
 
 
 if __name__ == '__main__':
