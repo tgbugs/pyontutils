@@ -5,7 +5,6 @@ from pathlib import Path
 import rdflib
 from pyontutils.neurons.compiled import neuron_data_lifted
 ndl_neurons = neuron_data_lifted.Neuron.neurons()
-embed()
 from pyontutils.neurons.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
 from pyontutils.utils import byCol, relative_path
@@ -54,13 +53,14 @@ def main():
     ns = []
     for n in ndl_neurons:
         l = n._origLabel
-        for replace, match in rename_rules.items():  # HEH
-            l = l.replace(match, replace)
+        if l is not None:
+            for replace, match in rename_rules.items():  # HEH
+                l = l.replace(match, replace)
+
         if l in labels:
             n._origLabel = l
             ns.append(n)
 
-    embed()
     sns = set(n._origLabel for n in ns)
 
     labels_set1 = labels_set0 - sns
@@ -120,7 +120,7 @@ def main():
     assert progress[3] == progress[2] + progress[4], 'basic does not add up'
 
     lnlx = set(n.lower() for n in snlx_labels)
-    sos = set(n._origLabel.lower() for n in ndl_neurons)
+    sos = set(n._origLabel.lower() if n._origLabel else None for n in ndl_neurons)  # FIXME load origLabel
     nlx_review = lnlx - sos
     print('\nNeuroLex listed as source but no mapping:', len(nlx_review))
     _ = [print(l) for l in sorted(nlx_review)]
