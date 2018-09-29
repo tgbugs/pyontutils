@@ -410,18 +410,24 @@ triples = (
        (hasPart, tech.dropSep),  # TODO
        (hasPart, tech.rnaSeq),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
-       def_='commercialized drop seq which uses ',
+       def_='a droplet based sequencing library preparation technique',
        # snRNA-seq 10x Genomics Chromium v2
        # 10x Genomics Chromium V2 scRNA-seq
        # 10X (sigh)
        synonyms=('10x Genomics sequencing', '10x sequencing', '10x', 'Chromium sequencing'
-                 "10x 3' chemistry", "chromium 3' assay"
+                 "10x 3' chemistry", "chromium 3' assay",
+                 "10x Chromium 3' chemsitry",
+                 "10x chromium 3' sequencing",
+                 "Chromium Single Cell 3' Library",
        )),
 
     _t(tech.chromium3pv1, "chromium 3' sequencing v1",
        tech.chromium3p,
        (hasParticipant, ilxtr.chromium3pv1kit),
        (hasPart, tech.rnaSeq),  # TODO
+       synonyms=("10x Chromium Single Cell 3' Solution v1",
+                 "10x chromium 3' v1 sequencing",
+       ),  # FIXME
        comment=("different versions of the chromium 3' chemistry use different barcoding "
                 'strategies and require different processing pipelines.')),
 
@@ -429,6 +435,9 @@ triples = (
        tech.chromium3p,
        (hasParticipant, ilxtr.chromium3pv2kit),
        (hasPart, tech.rnaSeq),  # TODO
+       synonyms=("10x Chromium Single Cell 3' Solution v2",
+                 "10x chromium 3' v2 sequencing",
+       ),  # FIXME
        comment=("different versions of the chromium 3' chemistry use different barcoding "
                 'strategies and require different processing pipelines.')),
     (tech.chromium3pv1, owl.disjointWith, tech.chromium3pv2),
