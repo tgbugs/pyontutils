@@ -47,7 +47,7 @@ try:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.3',
+        version='0.0.4',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
         long_description_content_type='text/markdown',
