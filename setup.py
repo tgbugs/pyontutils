@@ -70,7 +70,7 @@ try:
             'psutil',
             'pymysql',
             'pyyaml',
-            'rdflib',
+            'neurdflib',
             'requests',
             'robobrowser',
             'sqlalchemy',
