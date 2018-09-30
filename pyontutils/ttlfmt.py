@@ -107,7 +107,11 @@ def serialize(graph, outpath):
         else:
             from IPython import embed
             embed()
-    out = graph.serialize(format=outfmt)
+    if outfmt == 'json-ld':
+        kwargs = {'auto_compact': True}
+    else:
+        kwargs = {}
+    out = graph.serialize(format=outfmt, **kwargs)
     if args['--nowrite']:
         print('PARSING Success', outpath)
     elif not isinstance(outpath, str):  # FIXME not a good test that it is stdout
