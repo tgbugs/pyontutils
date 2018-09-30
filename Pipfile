@@ -7,5 +7,5 @@ neurdflib = {git = "https://github.com/tgbugs/rdflib.git", editable = true, ref 
 "e1839a8" = {path = ".", editable = true}
 
 [dev-packages]
-RDFClosure = {git = "https://github.com/rdflib/OWL-RL.git", editable = true, ref = "0c74fd060176255463e23abbdf4d91c14a0145a8"}
+#RDFClosure = {git = "https://github.com/rdflib/OWL-RL.git", editable = true, ref = "0c74fd060176255463e23abbdf4d91c14a0145a8"}
 "e1839a8" = {path = ".", extras = ["dev"], editable = true}
