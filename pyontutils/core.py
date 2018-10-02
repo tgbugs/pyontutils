@@ -481,9 +481,13 @@ class OntId(ontquery.OntId, rdflib.URIRef):
     #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
         #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
 
-    #@property
-    #def URIRef(self):  # FIXME stopgap for comparison issues
-        #return rdflib.URIRef(self)
+    @property
+    def URIRef(self):  # FIXME stopgap for comparison issues
+        return rdflib.URIRef(self)
+
+    @property
+    def u(self):
+        return self.URIRef
 
     def __str__(self):
         return rdflib.URIRef.__str__(self)
@@ -492,7 +496,7 @@ class OntTerm(ontquery.OntTerm, OntId):
     pass
 
 
-OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
+OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()), ontquery.InterLexRemote())
 ontquery.QueryResult._OntTerm = OntTerm
 query = ontquery.OntQueryCli(query=OntTerm.query)
 

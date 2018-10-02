@@ -9,7 +9,7 @@ import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
 from pyontutils.core import Ont, makeGraph
-from pyontutils.utils import stack_magic, injective_dict
+from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
 from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
@@ -17,6 +17,8 @@ from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES
 from pyontutils.closed_namespaces import rdf, rdfs, owl
+
+log = makeSimpleLogger('neurons.core')
 
 __all__ = [
     'AND',
@@ -233,7 +235,7 @@ class graphBase:
             use_in_paths = local_in_paths
         else:
             if not force_remote:
-                print("Warning local ontology path '%s' not found!" % local_base)
+                log.warning(f'Warning local ontology path {local_base!r} not found!')
             use_core_paths = remote_core_paths
             use_in_paths = remote_in_paths
 
@@ -245,7 +247,8 @@ class graphBase:
                 core_graph.parse(cg, format='turtle')
             except (FileNotFoundError, HTTPError) as e:
                 # TODO failover to local if we were remote?
-                print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
+                #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
+                log.warning(f'no file found for core graph at {cg}')
         graphBase.core_graph = core_graph
 
         # store prefixes
@@ -478,10 +481,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         except StopIteration:  # is a phenotype derived from an external class
             try:
                 if not self._sgv.findById(subject):
-                    print(tc.red('WARNING:'), 'Unknown phenotype', subject)
+                    log.info(f'Unknown phenotype {subject}')
+                    #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
             except ConnectionError:
-                print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
-                      self._sgv._basePath)
+                #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
+                      #self._sgv._basePath)
+                log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
         return subject
 
     def getObjectProperty(self, phenotype):
@@ -554,7 +559,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         try:
             resp = self._sgv.findById(pn)
         except ConnectionError as e:
-            print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
+            #print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
+            log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
 
         if resp:  # DERP
@@ -800,7 +806,8 @@ class NeuronBase(graphBase):
 
         if id_ and phenotypeEdges:
             self.id_ = self.expand(id_)
-            print('WARNING: you may be redefining a neuron!')
+            #print('WARNING: you may be redefining a neuron!')
+            log.warning('you may be redefining a neuron!')
             #raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
         elif id_:
             self.id_ = self.expand(id_)
@@ -1092,7 +1099,7 @@ class Neuron(NeuronBase):
         for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
             for pe in self.pes:
                 if pe.e == predicate and pe.p not in usage_ok and invalid_superclass in pe.p:
-                    print(tc.red(f'WARNING: subClassOf restriction violated for {invalid_superclass} due to {pe}'))
+                    log.warning(tc.red(f'subClassOf restriction violated for {invalid_superclass} due to\n{pe}'))
                     #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
         # species matched identifiers TODO

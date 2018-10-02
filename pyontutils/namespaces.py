@@ -67,6 +67,7 @@ def _loadPrefixes():
         'obsReason':'http://purl.obolibrary.org/obo/IAO_0000231',
         'curatorNote':'http://purl.obolibrary.org/obo/IAO_0000232',
         'importedFrom':'http://purl.obolibrary.org/obo/IAO_0000412',
+        'isAbout':'http://purl.obolibrary.org/obo/IAO_0000136',
 
         # realizes the proper way to connect a process to a continuant
         'realizedIn':'http://purl.obolibrary.org/obo/BFO_0000054',
@@ -163,8 +164,8 @@ WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes, partOf, participatesIn, locatedIn,
+ realizes, partOf, participatesIn, locatedIn, isAbout,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
-             'locatedIn',
+             'locatedIn', 'isAbout',
             )
