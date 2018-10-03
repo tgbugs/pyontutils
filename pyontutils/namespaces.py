@@ -28,11 +28,24 @@ def _loadPrefixes():
     full = {
         # interlex predicates  PROVISIONAL
         'ilx.federatesElement':'http://uri.interlex.org/base/ilx_0381445',
-        'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
-        'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
+        'ilx.relatedTo':'http://uri.interlex.org/base/ilx_0112796',
+        'ilx.hasRole':'http://uri.interlex.org/base/ilx_0112784',
+        'ilx.partOf':'http://uri.interlex.org/base/ilx_0112785',
+        'ilx.anno.hasConstraint':'http://uri.interlex.org/base/ilx_0115071',
+        'ilx.anno.filterElement':'http://uri.interlex.org/base/ilx_0381352',
+        'ilx.anno.required':'http://uri.interlex.org/base/ilx_0381353',
+        'ilx.anno.condition':'http://uri.interlex.org/base/ilx_0381354',
+        'ilx.anno.size':'http://uri.interlex.org/base/ilx_0381355',
+        'ilx.anno.minValue':'http://uri.interlex.org/base/ilx_0381356',
+        'ilx.anno.maxValue':'http://uri.interlex.org/base/ilx_0381357',
+        'ilx.anno.allowedTypes':'http://uri.interlex.org/base/ilx_0381358',
+        'ilx.anno.allowedValues':'http://uri.interlex.org/base/ilx_0381359',
+        'ilx.hasDbXref':'http://uri.interlex.org/base/ilx_0381360',
         'ilx.hasUnit':'http://uri.interlex.org/base/ilx_0381384',
         'ilx.isAbout':'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao
         'ilx.hasLaterality':'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
+        'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
+        'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
 
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
