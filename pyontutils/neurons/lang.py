@@ -88,17 +88,18 @@ class Config:
         # bag existing
 
         if not graphBase.ignore_existing:
-            print('LOAD EXISTING', graphBase.ng.filename)
-            from itertools import chain
-            from rdflib import Graph  # FIXME
-            graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
             ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
             if ogp.exists():
+                from itertools import chain
+                from rdflib import Graph  # FIXME
+                graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
-            for sc in chain(subclasses(NeuronEBM), (Neuron,)):
-                if sc._ocTrip in graphBase.load_graph or sc == Neuron:
-                    sc._load_existing()
+                python_subclasses = list(subclasses(NeuronEBM)) + [Neuron]
+                graphBase.knownClasses = [c.owlClass for c in python_subclasses]
+                for sc in python_subclasses:
+                    if sc._ocTrip in graphBase.load_graph or sc == Neuron:
+                        sc._load_existing()
 
 
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',

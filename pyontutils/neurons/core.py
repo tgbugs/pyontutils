@@ -86,6 +86,9 @@ class graphBase:
 
     #_sgv = Vocabulary(cache=True)
 
+    class owlClassMismatch(Exception):
+        pass
+
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -760,13 +763,18 @@ class NeuronBase(graphBase):
     @classmethod
     def _load_existing(cls):
         if not cls._loading:
+            print(cls, cls.owlClass)
             NeuronBase._loading = True  # block all other neuron loading
             try:
                 for iri in (s for s in cls.load_graph[:rdf.type:owl.Class]
                             if isinstance(s, rdflib.URIRef)
-                            and not cls.ng.qname(s).startswith('TEMP')):
+                            and not cls.ng.qname(s).startswith('TEMP')
+                            and s not in cls.knownClasses):
                     try:
                         cls(id_=iri)
+                    except cls.owlClassMismatch as e:
+                        print(e)
+                        continue
                     except AttributeError as e:
                         print('oops', e)
                         raise e
@@ -983,7 +991,11 @@ class NeuronBase(graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = 'interneuron' if Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else 'neuron'
+        nin_switch = ('interneuron' if
+                      Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                      ('motor neuron' if
+                       Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                       'neuron'))
         label.append(nin_switch)
         if self._shortname:
             label.append(self._shortname)
@@ -1120,7 +1132,7 @@ class Neuron(NeuronBase):
                 else:
                     out.add(pe)
             else:
-                raise TypeError('owlClass does not match')  # TODO
+                raise self.owlClassMismatch(f'owlClass does not match {self.owlClass} {self.id_}')  # TODO
 
         for c in self.Class.disjointWith:  # replaced by complementOf
             pe = self._unpackPheno(c, NegPhenotype)
