@@ -496,6 +496,9 @@ class OntTerm(ontquery.OntTerm, OntId):
     pass
 
 
+for rc in (ontquery.SciGraphRemote, ontquery.InterLexRemote):
+    rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
+
 OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()), ontquery.InterLexRemote())
 ontquery.QueryResult._OntTerm = OntTerm
 query = ontquery.OntQueryCli(query=OntTerm.query)
