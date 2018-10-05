@@ -837,6 +837,11 @@ class NeuronBase(graphBase):
         if not phenotypeEdges and id_ is not None:
             self.Class = infixowl.Class(self.id_, graph=self.in_graph)  # IN
             phenotypeEdges = self.bagExisting()  # rebuild the bag from the -class- id
+            if label is None:
+                try:
+                    label, *_extra = self.Class.label
+                except ValueError:
+                    pass  # no label in the graph
 
         self.pes = tuple(sorted(sorted(phenotypeEdges), key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
         self.validate()
