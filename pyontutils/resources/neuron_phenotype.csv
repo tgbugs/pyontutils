@@ -38,6 +38,8 @@ ilxtr:InvertedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalP
 ilxtr:NarrowPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,"this class is circumspect, and may actually be NarrowTuftedPyramidalPhenotype",hasMorphologicalPhenotype
 ilxtr:StarPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:TuftedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilxtr:UntuftedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:SmallPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:EarlyBifurcatingTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,we are not modelling dendrite phenotypes directly at the moment so we cant break about EB/LB,hasMorphologicalPhenotype
 ilxtr:LateBifurcatingTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:NarrowTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,issues with NarowPyramidalPhenotype,hasMorphologicalPhenotype
@@ -45,9 +47,10 @@ ilxtr:SlenderTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,note th
 ilxtr:ThickTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
 ilxtr:EarlyBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:LateBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
-ilxtr:UntuftedPyramidalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,
 ilxtr:BistratifiedPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:GranulePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+,,,,,,,
+,,,,,,,
 ,,,,,,,
 ,,,,,,,
 ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
@@ -68,6 +71,7 @@ ilxtr:LocalAxon,ilxtr:AxonPhenotype,,,,,,
 ilxtr:RemoteAxon,ilxtr:AxonPhenotype,,,,,hasProjectionPhenotype (some (class brainRegion (not (brainRegion containing this neruon)))),
 ilxtr:LocalAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:RemoteAxon)? This really feels like we are overcomplicating things… all we should need to know is that in projects to its own brain region… or better to a specific cell population that has a known location,
 ilxtr:RemoteAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:LocalAxon) except that this entails boutons/terminals,
+ilxtr:MotorPhenotype,ilxtr:AxonPhenotype,,,,,"motor neuron phenotype, motor projecting phenotype, muscle projecting phenotype",
 ,,,,,,,
 ilxtr:PerforantPathwayAssociated,,,,,,Needs work,
 ilxtr:DirectPathway,,,,,,Needs work,
