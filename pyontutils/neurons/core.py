@@ -763,7 +763,6 @@ class NeuronBase(graphBase):
     @classmethod
     def _load_existing(cls):
         if not cls._loading:
-            print(cls, cls.owlClass)
             NeuronBase._loading = True  # block all other neuron loading
             try:
                 for iri in (s for s in cls.load_graph[:rdf.type:owl.Class]
@@ -1128,11 +1127,14 @@ class Neuron(NeuronBase):
             pe = self._unpackPheno(c)
             if pe:
                 if isinstance(pe, tuple):  # we hit a case where we need to inherit phenos from above
-                    out.update(pe)
+                    out.update([_ for _ in pe if _ != self.ng.expand(self.owlClass)])
                 else:
                     out.add(pe)
             else:
-                raise self.owlClassMismatch(f'owlClass does not match {self.owlClass} {self.id_}')  # TODO
+                print(pe)
+                # FIXME the owl.Ontology doesn't work if there are multiple in graphs
+                raise self.owlClassMismatch(f'owlClass does not match {self.owlClass} {c}\n'
+                                            f'the current file is {list(self.Class.graph[:rdf.type:owl.Ontology])}')
 
         for c in self.Class.disjointWith:  # replaced by complementOf
             pe = self._unpackPheno(c, NegPhenotype)
@@ -1178,8 +1180,13 @@ class Neuron(NeuronBase):
                         pes.append(lpe)
                         continue
                     elif type(pr) == infixowl.Class:  # restriction is sco class so use type
-                        if isinstance(id_, rdflib.URIRef):
+                        if id_ == self.ng.expand(self.owlClass):
+                            # in case we didn't catch it before
+                            pes.append(id_)
+                        elif isinstance(id_, rdflib.URIRef):
                             print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
+                            from IPython import embed
+                            embed()
                             return
                         else:
                             if pr.complementOf:
