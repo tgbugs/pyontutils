@@ -6,8 +6,10 @@ Swagger Version: 2.0, API Version: 1.0.1
 generated for http://localhost:9000/scigraph/swagger.json
 by scigraph.py
 """
+import re
 import builtins
 import requests
+from ast import literal_eval
 from json import dumps
 from urllib import parse
 
@@ -302,7 +304,7 @@ class Annotations(restService):
         """ Annotate a URL from: /annotations/url
 
             Arguments:
-            url: 
+            url:
             includeCat: A set of categories to include
             excludeCat: A set of categories to exclude
             minLength: The minimum number of characters in annotated entities
@@ -330,7 +332,7 @@ class Annotations(restService):
         return output if output else None
 
 
-class Cypher(restService):
+class CypherBase(restService):
     """ Cypher utility services """
 
     def __init__(self, basePath=None, verbose=False, cache=False, key=None):
@@ -394,6 +396,92 @@ class Cypher(restService):
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
+
+
+class Cypher(CypherBase):
+    @staticmethod
+    def fix_quotes(string, s1=':["', s2='"],'):
+        out = []
+        def subsplit(sstr, s=s2):
+            #print(s)
+            if s == '",' and sstr.endswith('"}'):  # special case for end of record
+                s = '"}'
+            if s:
+                string, *rest = sstr.rsplit(s, 1)
+            else:
+                string = sstr
+                rest = '',
+
+            if rest:
+                #print('>>>>', string)
+                #print('>>>>', rest)
+                r, = rest
+                if s == '"],':
+                    fixed_string = Cypher.fix_quotes(string, '","', '') + s + r
+                else:
+                    fixed_string = string.replace('"', r'\"') + s + r
+
+                return fixed_string
+
+        for sub1 in string.split(s1):
+            ss = subsplit(sub1)
+            if ss is None:
+                if s1 == ':["':
+                    out.append(Cypher.fix_quotes(sub1, ':"', '",'))
+                else:
+                    out.append(sub1)
+            else:
+                out.append(ss)
+
+        return s1.join(out)
+
+    def fix_cypher(self, record):
+        rep = re.sub(r'({|, )(\S+)(: "|: \[)', r'\1"\2"\3',
+                     self.fix_quotes(record.strip()).
+                     split(']', 1)[1] .
+                     replace(':"', ': "') .
+                     replace(':[', ': [') .
+                     replace('",', '", ') .
+                     replace('"],', '"], ') .
+                     replace('\n', '\\n') .
+                     replace('xml:lang="en"', r'xml:lang=\"en\"')
+                    )
+        try:
+            value = {self.qname(k):v for k, v in literal_eval(rep).items()}
+        except (ValueError, SyntaxError) as e:
+            print(repr(record))
+            print(repr(rep))
+            raise e
+
+        return value
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._curies = self.getCuries()
+        self._inv = {v:k for k, v in self._curies.items()}
+
+    def qname(self, iri):
+        for prefix, curie in self._inv.items():
+            if iri.startswith(prefix):
+                return iri.replace(prefix, curie + ':')
+        else:
+            return iri
+
+    def execute(self, query, limit, output='text/plain'):
+        if output == 'text/plain':
+            out = super().execute(query, limit, output)
+            rows = []
+            if out:
+                for raw in out.split('|')[3:-1]:
+                    record = raw.strip()
+                    if record:
+                        d = self.fix_cypher(record)
+                        rows.append(d)
+
+            return rows
+
+        else:
+            return super().execute(query, limit, output)
 
 
 class Dynamic(restService):
@@ -725,7 +813,7 @@ class Refine(restService):
         """  from: /refine/preview/{id}
 
             Arguments:
-            id: 
+            id:
             outputs:
                 application/json
                 application/javascript
@@ -818,7 +906,7 @@ class Refine(restService):
         """  from: /refine/view/{id}
 
             Arguments:
-            id: 
+            id:
             outputs:
                 application/json
                 application/javascript
