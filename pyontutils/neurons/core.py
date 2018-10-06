@@ -364,14 +364,14 @@ class graphBase:
 
         _prefixes = {k:str(v) for k, v in cls.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
-        len_thing = len(f'Config({cls.ng.name!r}, prefixes={{')
+        len_thing = len(f'config = Config({cls.ng.name!r}, prefixes={{')
         prefixes = (f', prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
                     if _prefixes
                     else '')
         # FIXME prefixes should be separate so they are accessible in the namespace
         # FIXME ilxtr needs to be detected as well
         # FIXME this doesn't trigger when run as an import?
-        out += f'Config({cls.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
+        out += f'config = Config({cls.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
 
         return out
 
@@ -770,11 +770,13 @@ class NeuronBase(graphBase):
                             and not cls.ng.qname(s).startswith('TEMP')
                             and s not in cls.knownClasses):
                     try:
-                        cls(id_=iri)
+                        cls(id_=iri, out_graph=cls.load_graph)
                     except cls.owlClassMismatch as e:
                         print(e)
                         continue
                     except AttributeError as e:
+                        from IPython import embed
+                        embed()
                         print('oops', e)
                         raise e
                         continue
@@ -834,7 +836,7 @@ class NeuronBase(graphBase):
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
 
-        if not phenotypeEdges and id_ is not None:
+        if not phenotypeEdges and id_ is not None and id_ not in self.knownClasses:
             self.Class = infixowl.Class(self.id_, graph=self.in_graph)  # IN
             phenotypeEdges = self.bagExisting()  # rebuild the bag from the -class- id
             if label is None:
@@ -843,7 +845,8 @@ class NeuronBase(graphBase):
                 except ValueError:
                     pass  # no label in the graph
 
-        self.pes = tuple(sorted(sorted(phenotypeEdges), key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
+        self.pes = tuple(sorted(sorted(phenotypeEdges),
+                                key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
         self.validate()
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
@@ -1143,7 +1146,7 @@ class Neuron(NeuronBase):
             pe = self._unpackPheno(c)
             if pe:
                 if isinstance(pe, tuple):  # we hit a case where we need to inherit phenos from above
-                    out.update([_ for _ in pe if _ != self.ng.expand(self.owlClass)])
+                    out.update([_ for _ in pe if _ not in self.knownClasses])
                 else:
                     out.add(pe)
             else:

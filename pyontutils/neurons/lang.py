@@ -7,6 +7,7 @@ from pyontutils.neurons import *
 from pyontutils.core import OntId
 from pyontutils.utils import subclasses
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
+from pyontutils.neurons.core import NeuronBase  # FIXME temporary until we can rework the config
 
 __all__ = [
     'AND',
@@ -85,6 +86,36 @@ class Config:
                            use_local_import_paths = import_as_local,
                            ignore_existing = ignore_existing)
 
+        # temporary fix to persist graphs and neurons with a config
+        # until I have time to rewrite Config so that multiple configs
+        # can co-exist but only one config at a time can be operated on
+        # when creating new neurons (since only CUTs can be modified)
+        # the 'proper' way to move neurons from one config to another
+        # is not to switch everything behind the scenes, which is very confusin
+        # but simply to take neurons that are statically tied to another config
+        # and add them to another config, or just recreate them under the current
+        # config, this means that we will do away with the in graph and out graph
+        # every config will only have one graph and it will be in or out not both
+        # note that different configs can read and write to the same file
+        # NOTE that we will need to modify how the superclass is handled as well
+        # because at the moment the code assumes that the superclass is invariant
+        # this is not the case, and we need equality with and without the superclass
+        # we are currently missing equality with the superclass
+        # we can probably us a conjuctive graph to 
+        self.out_graph = graphBase.out_graph
+        self.existing_pes = NeuronBase.existing_pes
+
+    @property
+    def neurons(self):
+        yield from self.existing_pes
+
+    def activate(self):
+        """ set this config as the active config """
+        raise NotImplemented
+
+    def load_existing(self):
+        """ advanced usage allows loading multiple sets of neurons and using a config
+            object to keep track of the different graphs """
         # bag existing
 
         if not graphBase.ignore_existing:
@@ -96,7 +127,7 @@ class Config:
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
                 python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
-                graphBase.knownClasses = [graphBase.ng.expand(graphBase.ng.qname(c.owlClass))  # FIXME ICK
+                graphBase.knownClasses = [OntId(c.owlClass).u
                                           for c in python_subclasses]
                 for sc in python_subclasses:
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
