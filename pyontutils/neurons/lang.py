@@ -95,8 +95,9 @@ class Config:
                 graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
-                python_subclasses = list(subclasses(NeuronEBM)) + [Neuron]
-                graphBase.knownClasses = [c.owlClass for c in python_subclasses]
+                python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
+                graphBase.knownClasses = [graphBase.ng.expand(graphBase.ng.qname(c.owlClass))  # FIXME ICK
+                                          for c in python_subclasses]
                 for sc in python_subclasses:
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
                         sc._load_existing()

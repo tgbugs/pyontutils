@@ -849,8 +849,8 @@ class NeuronBase(graphBase):
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
 
-        self.phenotypes = set((pe.p for pe in self.pes))
-        self.edges = set((pe.e for pe in self.pes))
+        self.phenotypes = set(pe.p for pe in self.pes)
+        self.edges = set(pe.e for pe in self.pes)
         self._pesDict = {}
         for pe in self.pes:  # FIXME TODO
             if pe.e in self._pesDict:
@@ -1068,6 +1068,17 @@ class NeuronBase(graphBase):
         else:
             return self.__class__(*self.pes, *other.pes)
 
+    def __contains__(self, thing):
+        if isinstance(thing, type(self)):
+            raise NotImplemented
+        elif isinstance(thing, Phenotype) or isinstance(thing, LogicalPhenotype):
+            return thing in self.pes
+        else:
+            return thing in self._pesDict  # FIXME make it clear that this allows neurons to behavie like _pesDict ...
+
+    def __getitem__(self, predicate):
+        return self._pesDict[predicate]
+
     def __enter__(self):
         """ Using a neuron in a context manager treats it as context! """
         self._old_context = self.getContext()
@@ -1185,7 +1196,9 @@ class Neuron(NeuronBase):
                         pes.append(lpe)
                         continue
                     elif type(pr) == infixowl.Class:  # restriction is sco class so use type
-                        if id_ == self.ng.expand(self.owlClass):
+                        if id_ in self.knownClasses:
+                            pes.append(id_)
+                        elif id_ == self.ng.expand(self.owlClass):  # this can fail ...
                             # in case we didn't catch it before
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):

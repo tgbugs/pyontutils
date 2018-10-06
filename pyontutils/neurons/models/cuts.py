@@ -87,7 +87,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
                       oxytocin=Phenotype('CHEBI:7872', ilxtr.hasExpressionPhenotype),
                       bitufted=BBP.BTC,
                       radiatum=Layers.SR,
-                      motor=Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype),
+                      #motor=Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype),
 )
 
 contains_rules.update({  # FIXME still need to get some of the original classes from neurolex
@@ -127,6 +127,8 @@ contains_rules.update({  # FIXME still need to get some of the original classes 
     'Salivatory nucleus  ': Phenotype('UBERON:0004133', ilxtr.hasSomaLocatedIn),
     'Gracile nucleus  ': Phenotype('UBERON:0002161', ilxtr.hasSomaLocatedIn),
     'Laterodorsal tegmental nucleus  ': Phenotype('UBERON:0002267', ilxtr.hasSomaLocatedIn),
+    'Medial entorhinal  ': Phenotype('UBERON:0007224', ilxtr.hasSomaLocatedIn),
+    'Vagus dorsal motor nucleus': Phenotype('UBERON:0002870', ilxtr.hasSomaLocatedIn),
 
 })
 
@@ -135,6 +137,43 @@ exact_rules = {'pyramidal cell': BBP.PC,
                'Thalamic': CUT.Thal,
 }
 terminals = 'cell', 'Cell', 'neuron', 'neurons', 'positive cell'  # TODO flag cell and neurons for inconsistency
+
+
+def export_for_review():
+    neurons = graphBase.neurons()
+    predicates = sorted(set(e for n in neurons
+                            for me in n.edges
+                            for e in (me if isinstance(me, tuple) else (me,))))  # columns
+    empty = []
+    col_labels = {p.e:p.eLabel for n in neurons
+                  for mp in n.pes
+                  for p in (mp.pes if isinstance(mp, LogicalPhenotype) else (mp,))}
+
+    header = ['curie', 'label'] + [col_labels[p] for p in predicates]
+
+    def neuron_to_review_row(neuron, cols=predicates):  # TODO column names
+        _curie = neuron.ng.qname(neuron.id_)
+        curie = None if 'TEMP:' in _curie else _curie
+        row = [curie, neuron.label]
+        for col in cols:
+            if col in neuron:
+                row.append(','.join(sorted([_.pLabel for _ in neuron[col]] if
+                                           isinstance(neuron[col], list) else
+                                           [neuron[col].pLabel])))
+            else:
+                row.append(None)
+
+        return row
+
+    #[n for n in neurons]
+    resources = Path(devconfig.resources)
+    reviewcsv = resources / 'cut-review.csv'
+    rows = sorted((neuron_to_review_row(neuron) for neuron in neurons), key=lambda r:r[1])
+    with open(reviewcsv.as_posix(), 'wt', newline='\n') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(rows)
+        
 
 def main():
     resources = Path(devconfig.resources)
@@ -198,10 +237,17 @@ def main():
            prefixes={'swanr':swanr,
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
-    ins = [None] * len(ns)  # [n.id_ for n in ns]  # TODO
+    ins = [n.id_ for n in ns]
     ians = [None] * len(ans)
+    def zap(pes):
+        for pe in pes:
+            if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
+                          Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),):
+                yield pe
+
     with Neuron(CUT.Mammalia):
-        new = [NeuronCUT(*n.pes, id_=i, label=n._origLabel, override=True) for i, n in zip(ins + ians, ns + ans)]
+        new = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=True) for i, n in zip(ins + ians, ns + ans)]
     smatch = set()
     rem = {}
     for l in labels_set2:
@@ -244,7 +290,7 @@ def main():
             rem[l] = l_rem
 
             with Neuron(CUT.Mammalia):
-                NeuronCUT(*pes, label=l, override=True)
+                NeuronCUT(*zap(pes), label=l, override=True)
 
     labels_set3 = labels_set2 - smatch
 
@@ -277,6 +323,10 @@ def main():
     _ = [print(l) for l in sorted(labels_set3)]
 
     if __name__ == '__main__':
+        try:
+            export_for_review()
+        except:
+            print('oops no export')
         embed()
 
 
