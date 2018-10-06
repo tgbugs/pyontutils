@@ -454,9 +454,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'UBERON:0001950':'Neocortex',
         'UBERON:0008933':'S1',
     }
-    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False):
+    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=False):
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
+        self.do_check = check
         super().__init__()
         if isinstance(phenotype, Phenotype):  # simplifies negation of a phenotype
             ObjectProperty = phenotype.e
@@ -480,16 +481,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     def checkPhenotype(self, phenotype):
         subject = self.expand(phenotype)
-        try: next(self.core_graph.predicate_objects(subject))
-        except StopIteration:  # is a phenotype derived from an external class
+        if self.do_check:
             try:
-                if not self._sgv.findById(subject):
-                    log.info(f'Unknown phenotype {subject}')
-                    #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
-            except ConnectionError:
-                #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
-                      #self._sgv._basePath)
-                log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
+                next(self.core_graph.predicate_objects(subject))
+            except StopIteration:  # is a phenotype derived from an external class
+                try:
+                    if not self._sgv.findById(subject):
+                        log.info(f'Unknown phenotype {subject}')
+                        #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
+                except ConnectionError:
+                    #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
+                        #self._sgv._basePath)
+                    log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
         return subject
 
     def getObjectProperty(self, phenotype):
