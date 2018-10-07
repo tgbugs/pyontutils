@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
-from pyontutils.core import Ont, makeGraph, OntTerm
+from pyontutils.core import Ont, makeGraph, OntTerm, OntId, OntCuries
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
 from pyontutils.ttlser import natsort
@@ -105,6 +105,7 @@ class graphBase:
         if type(putativeURI) == infixowl.Class:
             return putativeURI.identifier
         elif type(putativeURI) == str:
+            return OntId(putativeURI).u
             try: prefix, suffix = putativeURI.split(':',1)
             except ValueError:  # FIXME this is wrong...
                 return rdflib.URIRef(putativeURI)
@@ -261,6 +262,7 @@ class graphBase:
             graphBase.prefixes = makePrefixes(*prefixes)
 
         PREFIXES = {**graphBase.prefixes, **uPREFIXES}
+        OntCuries(PREFIXES)
 
         # input graph setup
         in_graph = core_graph
@@ -628,8 +630,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return hash((self.p, self.e))
 
     def __expanded__(self):
-        pn = self.in_graph.namespace_manager.qname(self.p)
-        en = self.in_graph.namespace_manager.qname(self.e)
+        if hasattr(self, 'ng'):
+            pn = self.ng.qname(self.p)
+            en = self.ng.qname(self.e)
+        else:
+            pn = self.in_graph.namespace_manager.qname(self.p)
+            en = self.in_graph.namespace_manager.qname(self.e)
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
 
@@ -641,8 +647,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return self.__expanded__()
 
     def __str__(self):
-        pn = self.in_graph.namespace_manager.qname(self.p)
-        en = self.in_graph.namespace_manager.qname(self.e)
+        if hasattr(self, 'ng'):
+            pn = self.ng.qname(self.p)
+            en = self.ng.qname(self.e)
+        else:
+            pn = self.in_graph.namespace_manager.qname(self.p)
+            en = self.in_graph.namespace_manager.qname(self.e)
         lab = str(self.pLabel)
         t = ' ' * (len(self.__class__.__name__) + 1)
         return f"{self.__class__.__name__}({pn!r},\n{t}{en!r},\n{t}label={lab!r})"
@@ -1053,9 +1063,9 @@ class NeuronBase(graphBase):
         for i, pe in enumerate(self.pes):
             t = ' ' * (len(self.__class__.__name__) + 1)
             if i:
-                asdf += ',\n' + t + ('%s' % pe).replace('\n', '\n' + t)
+                asdf += ',\n' + t + str(pe).replace('\n', '\n' + t)
             else:
-                asdf += ('%s' % pe).replace('\n', '\n' + t)
+                asdf += str(pe).replace('\n', '\n' + t)
 
         sn = (' (' + self._shortname + ')') if self._shortname else ''  # equiv to override if no shortname
         lab =  ',\n' + t + f"label={str(self._origLabel) + sn!r}" if self._origLabel else ''
