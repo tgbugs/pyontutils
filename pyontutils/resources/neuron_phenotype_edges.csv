@@ -3,6 +3,8 @@ hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive, functional"
 phenotypeOf,,,,,,,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
+hasClassificationPhenotype,,,Expresses a relationship between a neuron type and an opaque symbol that is used by experts to distinguish subtypes.,,,hasPhenotype,,"asymmetric, irreflexive"
+,,,,,,,,
 #hasIntrinsicPhenotype,,,,,,hasPhenotype,,"asymmetric, irreflexive"
 #hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type. This should be used for direct detection of the molecule, whether it is a small molecule or a peptide.",,,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasSmallMoleculeExpressionPhenotype,,,,,,hasExpressionPhenotype,,
