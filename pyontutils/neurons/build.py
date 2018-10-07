@@ -265,6 +265,7 @@ def make_phenotypes():
         rows = [r for r in csv.reader(f)]
 
     lookup = {
+        'symmetric':'owl:SymmetricProperty',
         'asymmetric':'owl:AsymmetricProperty',
         'irreflexive':'owl:IrreflexiveProperty',
         'functional':'owl:FunctionalProperty',

@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
-from pyontutils.core import Ont, makeGraph
+from pyontutils.core import Ont, makeGraph, OntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
 from pyontutils.ttlser import natsort
@@ -454,7 +454,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'UBERON:0001950':'Neocortex',
         'UBERON:0008933':'S1',
     }
-    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=False):
+    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         self.do_check = check
@@ -486,9 +486,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 next(self.core_graph.predicate_objects(subject))
             except StopIteration:  # is a phenotype derived from an external class
                 try:
-                    if not self._sgv.findById(subject):
+                    t = OntTerm(subject)
+                    #if not self._sgv.findById(subject):
+                    if not t.label:
                         log.info(f'Unknown phenotype {subject}')
                         #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
+                    else:
+                        self.in_graph.add((subject, rdfs.label, rdflib.Literal(t.label)))
                 except ConnectionError:
                     #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                         #self._sgv._basePath)
@@ -534,7 +538,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             try:
                 l = self._sgv.findById(self.p)['labels'][0]
             except ConnectionError as e:
-                print(e)
+                log.error(str(e))
                 l = self.ng.qname(self.p)
             except TypeError:
                 l = self.ng.qname(self.p)

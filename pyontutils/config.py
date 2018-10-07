@@ -126,6 +126,14 @@ class DevConfig:
         self._override['git_local_base'] = value
         self.write(self.config_file.as_posix())
 
+    @default('uri.interlex.org')
+    def ilx_host(self):
+        return self.config['ilx_host']
+
+    @default('')
+    def ilx_port(self):
+        return self.config['ilx_port']
+
     @default('neurons')
     def neurons_branch(self):
         return self.config['neurons_branch']

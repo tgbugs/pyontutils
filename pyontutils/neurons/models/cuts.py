@@ -4,6 +4,7 @@ import csv
 from pprint import pprint
 from pathlib import Path
 import rdflib
+import ontquery as oq
 from pyontutils.neurons.compiled import neuron_data_lifted
 ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neurons.compiled import basic_neurons
@@ -15,7 +16,7 @@ from pyontutils.namespaces import interlex_namespace
 # import these last so that graphBase resets (sigh)
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
-from pyontutils.phenotype_namespaces import BBP, Layers, Regions
+from pyontutils.phenotype_namespaces import BBP, CUT, Layers, Regions
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -53,17 +54,6 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 'Neocortex layer 4 spiny stellate cell': 'Neocortex stellate layer 4 cell',
 }
 
-class CUT(LocalNameManager):
-    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasTaxonRank)
-    proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
-    inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
-    Ach = Phenotype('SAO:185580330', ilxtr.hasExpressionPhenotype)
-    Glu = Phenotype('CHEBI:16015', ilxtr.hasExpressionPhenotype)
-    Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
-    TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
-    TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
-    Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)
-
 
 contains_rules = dict(GABAergic=BBP.GABA,
                       cholinergic=CUT.Ach,
@@ -93,7 +83,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
 contains_rules.update({  # FIXME still need to get some of the original classes from neurolex
     'TH+': CUT.TH,
     'Thalamic reticular nucleus': CUT.TRN,  # FIXME disambiguate with reticular nucleus
-    'reticular nucleus': CUT.TRN,  # FIXME confirm
+    'Midbrain reticular nucleus': CUT.MRN,
     'Ambiguous nucleus': Phenotype('UBERON:0001719', ilxtr.hasSomaLocatedIn),
     'Accumbens nucleus': Phenotype('UBERON:0001882', ilxtr.hasSomaLocatedIn),
     'Neocortex layer I': Layers.L1, # FIXME consistency in naming?
@@ -248,6 +238,7 @@ def main():
 
     with Neuron(CUT.Mammalia):
         new = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=True) for i, n in zip(ins + ians, ns + ans)]
+    skip = set()
     smatch = set()
     rem = {}
     for l in labels_set2:
@@ -255,12 +246,17 @@ def main():
         l_rem = l
         for match, pheno in contains_rules.items():
             t = None
-            if pheno == OntTerm:
-                t = OntTerm(term=match)
-                if t.validated:
-                    pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
-                else:
+            if pheno == OntTerm and match not in skip:
+                try:
+                    t = OntTerm(term=match)
+                    if t.validated:
+                        pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
+                    else:
+                        pheno = None
+                except oq.NotFoundError:
+                    skip.add(match)
                     pheno = None
+
             if match in l_rem and pheno:
                 l_rem = l_rem.replace(match, '').strip()
                 pes += (pheno,)
@@ -274,21 +270,27 @@ def main():
             #embed()
             maybe_region, *rest = l_rem.split('  ')
             try:
-                t = OntTerm(term=maybe_region)
+                #t = OntTerm(term=maybe_region)
+                # using query avoids the NoExplicitIdError
+                t = next(OntTerm.query(term=maybe_region)).OntTerm
+                if 'oboInOwl:id' in t.predicates:  # uberon replacement
+                    t = OntTerm(t.predicates['oboInOwl:id'])
 
-                print(maybe_region, t)
+                t.set_next_repr('curie', 'label')
+                print(maybe_region, repr(t))
                 if t.validated:
                     l_rem = rest
                     pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)  # FIXME
                     pes += (pheno,)
 
-            except ValueError as e:  # FIXME this needs to be a custom error
+            except StopIteration as e:
                 pass
                 #raise e
         if pes:
             smatch.add(l)
             rem[l] = l_rem
 
+            print(pes)
             with Neuron(CUT.Mammalia):
                 NeuronCUT(*zap(pes), label=l, override=True)
 
