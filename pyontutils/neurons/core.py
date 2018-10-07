@@ -526,6 +526,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return op
         else:
             raise TypeError('WARNING: Unknown ObjectProperty %s' % repr(op))
+            #t = OntTerm(ObjectProperty)  # will fail here?
+            #if t.label:
+                #setattr(self._predicates, t.curie.replace(':', '_'), op)
+            #else:
 
     @property
     def eLabel(self):
@@ -796,25 +800,27 @@ class NeuronBase(graphBase):
             # FIXME it may make more sense to manage this in the NeuronArranger
             # so that it can interconvert the two representations
             # this is really high overhead to load this here
-            self._predicates.hasInstanceInSpecies,
-            self._predicates.hasTaxonRank,
+            ilxtr.hasInstanceInSpecies,
+            ilxtr.hasTaxonRank,
             # TODO hasDevelopmentalStage   !!!!! FIXME
-            self._predicates.hasLocationPhenotype,  # FIXME
-            self._predicates.hasSomaLocatedIn,  # hasSomaLocation?
-            self._predicates.hasLayerLocationPhenotype,  # TODO soma naming...
-            self._predicates.hasDendriteMorphologicalPhenotype,
-            self._predicates.hasDendriteLocatedIn,
-            self._predicates.hasAxonLocatedIn,
-            self._predicates.hasMorphologicalPhenotype,
-            self._predicates.hasElectrophysiologicalPhenotype,
+            ilxtr.hasLocationPhenotype,  # FIXME
+            ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
+            ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
+            ilxtr.hasDendriteMorphologicalPhenotype,
+            ilxtr.hasDendriteLocatedIn,
+            ilxtr.hasAxonLocatedIn,
+            ilxtr.hasMorphologicalPhenotype,
+            ilxtr.hasElectrophysiologicalPhenotype,
             #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
             self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-            self._predicates.hasExpressionPhenotype,
-            self._predicates.hasNeurotransmitterPhenotype,
-            self._predicates.hasCircuitRolePhenotype,
-            self._predicates.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-            self._predicates.hasExperimentalPhenotype,
-            self._predicates.hasPhenotype,  # last
+            ilxtr.hasExpressionPhenotype,
+            ilxtr.hasNeurotransmitterPhenotype,
+            ilxtr.hasCircuitRolePhenotype,
+            ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
+            ilxtr.hasContactWith,
+            ilxtr.hasExperimentalPhenotype,
+            ilxtr.hasClassificationPhenotype,
+            ilxtr.hasPhenotype,  # last
         ]
 
         self._localContext = self.__context
@@ -823,7 +829,7 @@ class NeuronBase(graphBase):
         if id_ and phenotypeEdges:
             self.id_ = self.expand(id_)
             #print('WARNING: you may be redefining a neuron!')
-            log.warning('you may be redefining a neuron!')
+            log.warning(f'you may be redefining a neuron! {id_}')
             #raise TypeError('This has not been implemented yet. This could serve as a way to validate a match or assign an id manually?')
         elif id_:
             self.id_ = self.expand(id_)
@@ -1125,19 +1131,9 @@ class Neuron(NeuronBase):
         ]
 
         for disjoint in disjoints:
-            phenos = [pe for pe in self.pes if pe.e == disjoint]
+            phenos = [pe for pe in self.pes if pe.e == disjoint and type(pe) == Phenotype]
             if len(phenos) > 1:
                 raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
-
-        # subClassOf restrictions (hacked impl using curie prefixes as a proxy)
-        # no panther
-        # no uberon
-        usage_ok = {UBERON['0000955'], UBERON['0001950']}
-        for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
-            for pe in self.pes:
-                if pe.e == predicate and pe.p not in usage_ok and invalid_superclass in pe.p:
-                    log.warning(tc.red(f'subClassOf restriction violated for {invalid_superclass} due to\n{pe}'))
-                    #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
         # species matched identifiers TODO
         # developmental stages (if we use the uberon associated ones)
@@ -1294,6 +1290,21 @@ class NeuronCUT(Neuron):
 
 class NeuronEBM(Neuron):
     owlClass = _EBM_CLASS
+
+    def validate(self):
+        # EBM's probably should not be using UBERON ids since they are not species specific
+        # subClassOf restrictions (hacked impl using curie prefixes as a proxy)
+        # no panther
+        # no uberon
+        super().validate()
+        usage_ok = {UBERON['0000955'], UBERON['0001950']}
+        for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
+            for pe in self.pes:
+                if pe.e == predicate and pe.p not in usage_ok and invalid_superclass in pe.p:
+                    log.warning(tc.red(f'subClassOf restriction violated '
+                                       '(please use a more specific identifier) '
+                                       'for {invalid_superclass} due to\n{pe}'))
+                    #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
 
 class TypeNeuron(Neuron):  # TODO
@@ -1521,6 +1532,9 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
         'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
+        ilxtr.hasContactWith,
+        ilxtr.hasExperimentalPhenotype,
+        ilxtr.hasClassificationPhenotype,
         'ilxtr:hasPhenotype',
     )
 
