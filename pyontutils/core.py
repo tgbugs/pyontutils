@@ -495,7 +495,6 @@ class OntId(ontquery.OntId, rdflib.URIRef):
 class OntTerm(ontquery.OntTerm, OntId):
     pass
 
-
 SGR = ontquery.plugin.get('SciGraph')
 IXR = ontquery.plugin.get('InterLex')
 #sgr.verbose = True

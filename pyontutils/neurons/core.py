@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
-from pyontutils.core import Ont, makeGraph, OntTerm, OntId, OntCuries
+from pyontutils.core import Ont, makeGraph, OntId, OntCuries, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
 from pyontutils.ttlser import natsort
@@ -37,6 +37,7 @@ __all__ = [
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
+    'OntTerm',
     #'NeuronArranger',
     'owl',  # FIXME
     'ilxtr',  # FIXME
@@ -70,6 +71,13 @@ def getPhenotypePredicates(graph):
 
 #
 # classes
+
+class OntTerm(bOntTerm):
+    def as_phenotype(self, predicate=None):
+        if self.prefix == 'UBERON':  # FIXME layers
+            predicate = ilxtr.hasSomaLocatedIn
+        return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
+
 
 class graphBase:
     core_graph = 'ASSIGN ME AFTER IMPORT!'
@@ -457,6 +465,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         'UBERON:0008933':'S1',
     }
     def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
+        # FIXME allow ObjectProperty or predicate? keyword?
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         self.do_check = check
@@ -487,18 +496,21 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             try:
                 next(self.core_graph.predicate_objects(subject))
             except StopIteration:  # is a phenotype derived from an external class
-                try:
-                    t = OntTerm(subject)
-                    #if not self._sgv.findById(subject):
-                    if not t.label:
-                        log.info(f'Unknown phenotype {subject}')
-                        #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
-                    else:
-                        self.in_graph.add((subject, rdfs.label, rdflib.Literal(t.label)))
-                except ConnectionError:
-                    #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
-                        #self._sgv._basePath)
-                    log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
+                prefix, suffix = phenotype.split(':', 1)
+                if prefix not in ('SWAN',):  # known not registered  FIXME abstract this
+                    try:
+                        t = OntTerm(subject)
+                        #if not self._sgv.findById(subject):
+                        if not t.label:
+                            log.info(f'Unknown phenotype {subject}')
+                            #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
+                        else:
+                            self.in_graph.add((subject, rdfs.label, rdflib.Literal(t.label)))
+                    except ConnectionError:
+                        #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
+                            #self._sgv._basePath)
+                        log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
+
         return subject
 
     def getObjectProperty(self, phenotype):

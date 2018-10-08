@@ -9,8 +9,8 @@ from pyontutils.neurons.compiled import neuron_data_lifted
 ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neurons.compiled import basic_neurons
 bn_neurons = basic_neurons.Neuron.neurons()
-from pyontutils.utils import byCol, relative_path
-from pyontutils.core import resSource, OntTerm
+from pyontutils.utils import byCol, relative_path, noneMembers
+from pyontutils.core import resSource, OntId, OntCuries
 from pyontutils.config import devconfig
 from pyontutils.namespaces import interlex_namespace
 # import these last so that graphBase resets (sigh)
@@ -59,7 +59,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
                       cholinergic=CUT.Ach,
                       glutamatergic=CUT.Glu,
                       serotonergic=CUT.Ser,
-                      principle=CUT.proj,
+                      principle=CUT.proj,  # NOTE this was a spelling error
                       projection=CUT.proj,
                       intrinsic=CUT.inter,
                       interneuron=CUT.inter,
@@ -67,6 +67,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
                       #CA1=Regions.CA1,
                       #CA2=Regions.CA2,
                       #CA3=Regions.CA3,
+                      trilaminar=BBP.TRI,
                       neurogliaform=BBP.NGC,  # FIXME
                       parvalbumin=BBP.PV,  # FIXME
                       calbindin=BBP.CB,
@@ -77,6 +78,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
                       oxytocin=Phenotype('CHEBI:7872', ilxtr.hasExpressionPhenotype),
                       bitufted=BBP.BTC,
                       radiatum=Layers.SR,
+
                       #motor=Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype),
 )
 
@@ -119,12 +121,45 @@ contains_rules.update({  # FIXME still need to get some of the original classes 
     'Laterodorsal tegmental nucleus  ': Phenotype('UBERON:0002267', ilxtr.hasSomaLocatedIn),
     'Medial entorhinal  ': Phenotype('UBERON:0007224', ilxtr.hasSomaLocatedIn),
     'Vagus dorsal motor nucleus': Phenotype('UBERON:0002870', ilxtr.hasSomaLocatedIn),
+    'Bed nuclei of terminal stria': Phenotype('UBERON:0001880', ilxtr.hasSomaLocatedIn, label='bed nucleus of stria terminalis'),
+    'Olfactory cortex': Phenotype('UBERON:0002894', ilxtr.hasSomaLocatedIn, label='olfactory cortex'),
+    'Globus pallidus external segment': Phenotype('UBERON:0002476', ilxtr.hasSomaLocatedIn,  label='lateral globus pallidus'),
+    'Globus pallidus internal segment': Phenotype('UBERON:0002477', ilxtr.hasSomaLocatedIn,  label='medial globus pallidus'),
+    'Septal complex lateral': Phenotype('UBERON:0007628', ilxtr.hasSomaLocatedIn, label='lateral septal complex'),  # FIXME missing synonym in uberon
+    'Septal complex medial': Phenotype('UBERON:0007629', ilxtr.hasSomaLocatedIn, label='medial septal complex'),  # FIXME missing synonym in uberon
+    'Premammillary nucleus dorsal': OntTerm('UBERON:0007767', label='dorsal premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+    'Premammillary nucleus ventral': OntTerm('UBERON:0007768', label='ventral premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+    'Raphe nucleus dorsal': OntTerm('UBERON:0002043', label='dorsal raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+    'Raphe nucleus medial': OntTerm('UBERON:0003004', label='median raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+    'Periventricular hypothalamic zone': OntTerm('UBERON:0002271', label='periventricular zone of hypothalamus').as_phenotype(),  # FIXME missing synonym in uberon
+    'Lateral lemniscus nuclear complex': OntTerm('UBERON:0006840', label='nucleus of lateral lemniscus').as_phenotype(),  # FIXME wow this was hard to find :/ may synonyms needed
+    # 'nuclear complex of lateral lemniscus'
+    # 'lateral lemniscus nucleus'
+    'Medial hypothalamic zone': OntTerm('UBERON:0002272', label='medial zone of hypothalamus').as_phenotype(),  # SciGraph default search is really bad >_<
+    'Incertus nucleus': OntTerm('UBERON:0035973', label='nucleus incertus').as_phenotype(),  # WOW ... that was bad
+    'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').as_phenotype(),  # spelling ...
+    'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').as_phenotype(),  # had to cook up my search function to find this
+    'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').as_phenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
+    'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').as_phenotype(),  # oof
+    'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').as_phenotype(),  # conclusion: scigraph cannot handle reordering
+    'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').as_phenotype(),
+    'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
+    'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
 
 })
+
+for k, v in contains_rules.items():  # ah lack of types
+    if v == OntTerm:
+        continue
+    if not isinstance(v, graphBase):
+        raise TypeError(f'{k!r}: {v!r}  # is not a Phenotype or some such')
 
 exact_rules = {'pyramidal cell': BBP.PC,
                'Neocortex': Regions.CTX,
                'Thalamic': CUT.Thal,
+               'principal cell': CUT.proj,
+               'principal neuron': CUT.proj,
+               'Hypothalamus': Phenotype('UBERON:0001898', ilxtr.hasSomaLocatedIn, label='hypothalamus'),
 }
 terminals = 'cell', 'Cell', 'neuron', 'neurons', 'positive cell'  # TODO flag cell and neurons for inconsistency
 
@@ -227,7 +262,7 @@ def main():
            prefixes={'swanr':swanr,
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
-    ins = [n.id_ for n in ns]
+    ins = [None if OntId(n.id_).prefix == 'TEMP' else n.id_ for n in ns]
     ians = [None] * len(ans)
     def zap(pes):
         for pe in pes:
@@ -237,7 +272,7 @@ def main():
                 yield pe
 
     with Neuron(CUT.Mammalia):
-        new = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=True) for i, n in zip(ins + ians, ns + ans)]
+        new = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)) for i, n in zip(ins + ians, ns + ans)]
     skip = set()
     smatch = set()
     rem = {}
@@ -246,16 +281,19 @@ def main():
         l_rem = l
         for match, pheno in contains_rules.items():
             t = None
-            if pheno == OntTerm and match not in skip:
+            if match not in skip and pheno == OntTerm:
                 try:
                     t = OntTerm(term=match)
+                    print('WTF', match, t)
                     if t.validated:
                         pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
                     else:
                         pheno = None
-                except oq.NotFoundError:
+                except oq.exceptions.NotFoundError:
                     skip.add(match)
                     pheno = None
+            if match in skip and pheno == OntTerm:
+                pheno = None
 
             if match in l_rem and pheno:
                 l_rem = l_rem.replace(match, '').strip()
@@ -265,10 +303,28 @@ def main():
             pes += (exact_rules[l_rem],)
             l_rem = ''
 
+        if l_rem == '  neuron':
+            l_rem = ''
+        elif l_rem.endswith('  cell'):
+            l_rem = l_rem[:-len('  cell')]
+            #print('l_rem no cell:', l_rem)
+        elif l_rem.endswith('  neuron'):
+            l_rem = l_rem[:-len('  neuron')]
+            #print('l_rem no neuron:', l_rem)
+
+        hrm = [pe for pe in pes if pe.e == ilxtr.hasSomaLocatedIn]
         if '  ' in l_rem:
-            print(l_rem)
+            #print('l_rem:', l_rem)
             #embed()
-            maybe_region, *rest = l_rem.split('  ')
+            maybe_region, rest = l_rem.split('  ', 1)
+        elif noneMembers(l_rem, *terminals) and not hrm:
+            maybe_region, rest = l_rem, ''
+            #print('MR:', maybe_region)
+        else:
+            #print(hrm)
+            maybe_region = None
+
+        if maybe_region:
             try:
                 #t = OntTerm(term=maybe_region)
                 # using query avoids the NoExplicitIdError
@@ -277,7 +333,7 @@ def main():
                     t = OntTerm(t.predicates['oboInOwl:id'])
 
                 t.set_next_repr('curie', 'label')
-                print(maybe_region, repr(t))
+                print('maybe region', maybe_region, repr(t))
                 if t.validated:
                     l_rem = rest
                     pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)  # FIXME
@@ -286,11 +342,11 @@ def main():
             except StopIteration as e:
                 pass
                 #raise e
+
         if pes:
             smatch.add(l)
             rem[l] = l_rem
 
-            print(pes)
             with Neuron(CUT.Mammalia):
                 NeuronCUT(*zap(pes), label=l, override=True)
 
@@ -320,7 +376,11 @@ def main():
 
     partial = {k:v for k, v in rem.items() if v and v not in terminals}
     print(f'\nPartially mapped (n = {len(partial)}):')
-    pprint(partial, width=200)
+    mk = max((len(k) for k in partial.keys())) + 2
+    for k, v in sorted(partial.items()):
+        print(f'{k:<{mk}} {v!r}')
+        #print(f'{k!r:<{mk}}{v!r}')
+    #pprint(partial, width=200)
     print('\nUnmapped:')
     _ = [print(l) for l in sorted(labels_set3)]
 
