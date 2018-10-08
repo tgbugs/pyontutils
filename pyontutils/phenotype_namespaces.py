@@ -9,7 +9,8 @@ __all__ = ['Test',
            'Regions',
            'PaxRatRegions',
            'Species',
-           'BBP']
+           'BBP',
+           'CUT']
 
 
 class Test(LocalNameManager):

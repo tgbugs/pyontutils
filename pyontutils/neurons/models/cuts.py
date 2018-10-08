@@ -5,6 +5,7 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
+
 def loadn(ns):
     ns.config.load_existing()
     neurons = [ns.Neuron(id_=s)  # amazing how this actually works ...
@@ -24,7 +25,7 @@ bn_neurons = loadn(basic_neurons)
 from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource, OntId, OntCuries
 from pyontutils.config import devconfig
-from pyontutils.namespaces import interlex_namespace
+from pyontutils.namespaces import interlex_namespace, definition, NIFRID
 # import these last so that graphBase resets (sigh)
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
@@ -176,17 +177,17 @@ exact_rules = {'pyramidal cell': BBP.PC,
 terminals = 'cell', 'Cell', 'neuron', 'neurons', 'positive cell'  # TODO flag cell and neurons for inconsistency
 
 
-def export_for_review():
+def export_for_review(unmapped, partial, nlx_missing):
     neurons = graphBase.neurons()
     predicates = sorted(set(e for n in neurons
                             for me in n.edges
                             for e in (me if isinstance(me, tuple) else (me,))))  # columns
-    empty = []
+
     col_labels = {p.e:p.eLabel for n in neurons
                   for mp in n.pes
                   for p in (mp.pes if isinstance(mp, LogicalPhenotype) else (mp,))}
 
-    header = ['curie', 'label'] + [col_labels[p] for p in predicates]
+    header = ['curie', 'label'] + [col_labels[p] for p in predicates] + ['Status', 'PMID', 'synonyms', 'definition']
 
     def neuron_to_review_row(neuron, cols=predicates):  # TODO column names
         _curie = neuron.ng.qname(neuron.id_)
@@ -197,6 +198,12 @@ def export_for_review():
                 row.append(','.join(sorted([_.pLabel for _ in neuron[col]] if
                                            isinstance(neuron[col], list) else
                                            [neuron[col].pLabel])))
+                #if col == ilxtr.hasLayerLocationPhenotype:
+                    #derp = neuron[col]
+                    #log = [p for p in derp if isinstance(p, LogicalPhenotype)]
+                    #if log:
+                        #print(log, row)
+                        #embed()
             else:
                 row.append(None)
 
@@ -206,11 +213,38 @@ def export_for_review():
     resources = Path(devconfig.resources)
     reviewcsv = resources / 'cut-review.csv'
     rows = sorted((neuron_to_review_row(neuron) for neuron in neurons), key=lambda r:r[1])
+    incomplete = [[None, u] + [None] * (len(rows[0]) - 2) for u in unmapped]
+    rows += incomplete
+
+    for i, row in enumerate(rows):
+        label = row[1]
+        if label in unmapped:
+            row.append('Unmapped')
+        elif label in partial:
+            rem = partial[label]
+            row.append(f'Partial: {rem!r}')
+        if label in nlx_missing:
+            row.append('Could not find NeuroLex mapping')
+        else:
+            row.append(None)
+
+        row.append(None)  # pmid
+        if i <= len(neurons):
+            n = neurons[i]
+            # FIXME
+            row.append(','.join(n.config.out_graph[n.id_:NIFRID.synonym:]))  # syn
+            row.append(','.join(n.config.out_graph[n.id_:definition:]))  # def
+        else:
+            row.extend((None, None))
+
+        print(row)
+        
     with open(reviewcsv.as_posix(), 'wt', newline='\n') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(rows)
         
+    return [header] + rows
 
 def main():
     resources = Path(devconfig.resources)
@@ -285,7 +319,8 @@ def main():
                 yield pe
 
     with Neuron(CUT.Mammalia):
-        new = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)) for i, n in zip(ins + ians, ns + ans)]
+        _ = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).populate_from(n)
+             for i, n in zip(ins + ians, ns + ans)]
     skip = set()
     smatch = set()
     rem = {}
@@ -384,8 +419,9 @@ def main():
     lnlx = set(n.lower() for n in snlx_labels)
     sos = set(n._origLabel.lower() if n._origLabel else None for n in ndl_neurons)  # FIXME load origLabel
     nlx_review = lnlx - sos
-    print('\nNeuroLex listed as source but no mapping (n = {len(nlx_review)}):')
-    _ = [print(l) for l in sorted(nlx_review)]
+    nlx_missing = sorted(nlx_review)
+    print(f'\nNeuroLex listed as source but no mapping (n = {len(nlx_review)}):')
+    _ = [print(l) for l in nlx_missing]
 
     partial = {k:v for k, v in rem.items() if v and v not in terminals}
     print(f'\nPartially mapped (n = {len(partial)}):')
@@ -394,15 +430,18 @@ def main():
         print(f'{k:<{mk}} {v!r}')
         #print(f'{k!r:<{mk}}{v!r}')
     #pprint(partial, width=200)
+    unmapped = sorted(labels_set3)
     print(f'\nUnmapped (n = {len(labels_set3)}):')
-    _ = [print(l) for l in sorted(labels_set3)]
+    _ = [print(l) for l in unmapped]
 
     if __name__ == '__main__':
         try:
-            export_for_review()
+            rows = export_for_review(unmapped, partial, nlx_missing)
         except:
             print('oops no export')
         embed()
+    else:
+        return unmapped, partial, nlx_missing
 
 
 if __name__ == '__main__':

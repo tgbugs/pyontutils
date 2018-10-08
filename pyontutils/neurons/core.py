@@ -15,7 +15,7 @@ from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
-from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES
+from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 
 log = makeSimpleLogger('neurons.core')
@@ -37,6 +37,7 @@ __all__ = [
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
+    'OntId',
     'OntTerm',
     #'NeuronArranger',
     'owl',  # FIXME
@@ -700,13 +701,14 @@ class LogicalPhenotype(graphBase):
 
     @property
     def pLabel(self):
-        return f'({self.op} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
+        #return f'({self.local_names[self.op]} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
+        return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in self.pes) + ')'
 
     @property
     def pHiddenLabel(self):
         label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
-        return self.labelPostRule('(%s %s)' % (op, label))
+        return self.labelPostRule(f'({op} {label})')
 
     @property
     def pShortName(self):
@@ -775,6 +777,7 @@ class LogicalPhenotype(graphBase):
 class NeuronBase(graphBase):
     owlClass = _NEURON_CLASS
     shortname = None
+    preserve_predicates = NIFRID.synonym, definition
     existing_pes = {}
     existing_ids = {}
     ids_pes = {}
@@ -849,6 +852,7 @@ class NeuronBase(graphBase):
         ]
 
         self._localContext = self.__context
+        self.config = self.__class__.config  # persist the config a neuron was created with
         phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
 
         if id_ and phenotypeEdges:
@@ -898,6 +902,12 @@ class NeuronBase(graphBase):
                 self._pesDict[pe.e].append(pe)
             else:
                 self._pesDict[pe.e] = [pe]
+            if isinstance(pe, LogicalPhenotype):
+                for _pe in pe.pes:
+                    if _pe.e in self._pesDict and pe not in self._pesDict[_pe.e]:
+                        self._pesDict[_pe.e].append(pe)
+                    else:
+                        self._pesDict[_pe.e] = [pe]
 
         self._origLabel = label
         self._override = override
@@ -916,6 +926,18 @@ class NeuronBase(graphBase):
         for p, e in pes:
             yield Phenotype(p, e)
 
+    @property
+    def _existing(self):  # TODO
+        if hasattr(self.config, 'load_graph'):
+            for p in self.preserve_predicates:
+                for o in self.config.load_graph[self.id_:p:]:
+                    yield self.id_, p, o
+
+    def populate_from(self, neuron):
+        [self.out_graph.add(t) for t in neuron._existing]
+        if self.id_ != neuron.id_:
+            self.out_graph.add((self.id_, ilxtr.populatedFrom, neuron.id_))
+
     def _subgraph(self):
         def f(t, g):
             subject, predicate, object = t
@@ -924,6 +946,8 @@ class NeuronBase(graphBase):
 
         g = rdflib.Graph()
         _ = [g.add(t) for t in self.out_graph.transitiveClosure(f, (None, None, self.id_))]
+        _ = [g.add(t) for t in self._existing]
+
 
         og = cull_prefixes(g, prefixes=uPREFIXES)  # FIXME local prefixes?
         return og
@@ -1054,6 +1078,10 @@ class NeuronBase(graphBase):
             #print(new_label)
         return new_label
 
+    @property
+    def HiddenLabel(self):
+        return f'({self.__class__.__name__} ' + ' '.join(pe.pHiddenLabel for pe in self.pes) + ')'
+
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -1116,6 +1144,9 @@ class NeuronBase(graphBase):
             return thing in self.pes
         else:
             return thing in self._pesDict  # FIXME make it clear that this allows neurons to behavie like _pesDict ...
+
+    def __iter__(self):
+        yield from self.pes
 
     def __getitem__(self, predicate):
         return self._pesDict[predicate]

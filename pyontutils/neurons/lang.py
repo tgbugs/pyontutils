@@ -4,7 +4,6 @@ from pathlib import Path
 from git.repo import Repo
 from rdflib import Graph, URIRef
 from pyontutils.neurons import *
-from pyontutils.core import OntId
 from pyontutils.utils import subclasses
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.neurons.core import NeuronBase  # FIXME temporary until we can rework the config
@@ -26,6 +25,8 @@ __all__ = [
     'Neuron',
     'NeuronCUT',
     'NeuronEBM',
+    'OntId',
+    'OntTerm',
     'ilxtr',  # FIXME
 ]
 
@@ -91,6 +92,7 @@ class Config:
                            use_local_import_paths = import_as_local,
                            ignore_existing = ignore_existing)
 
+        graphBase.config = self  # a nice hack ... can do this for self.activate() too
         # temporary fix to persist graphs and neurons with a config
         # until I have time to rewrite Config so that multiple configs
         # can co-exist but only one config at a time can be operated on
@@ -128,7 +130,8 @@ class Config:
             if ogp.exists():
                 from itertools import chain
                 from rdflib import Graph  # FIXME
-                graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                self.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                graphBase.load_graph = self.load_graph
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
                 for sc in graphBase.python_subclasses:
