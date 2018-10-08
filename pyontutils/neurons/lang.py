@@ -44,9 +44,9 @@ class Config:
                  ignore_existing =      False):
         import os  # FIXME probably should move some of this to neurons.py?
 
-        python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
+        graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
         graphBase.knownClasses = [OntId(c.owlClass).u
-                                    for c in python_subclasses]
+                                  for c in graphBase.python_subclasses]
 
         imports = list(imports)
         remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
@@ -131,7 +131,7 @@ class Config:
                 graphBase.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
                 # FIXME memory inefficiency here ...
                 _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
-                for sc in python_subclasses:
+                for sc in graphBase.python_subclasses:
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
                         sc._load_existing()
 

@@ -497,6 +497,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 next(self.core_graph.predicate_objects(subject))
             except StopIteration:  # is a phenotype derived from an external class
                 prefix, suffix = phenotype.split(':', 1)
+                if 'swanson' in subject:
+                    return subject
                 if prefix not in ('SWAN',):  # known not registered  FIXME abstract this
                     try:
                         t = OntTerm(subject)
@@ -803,7 +805,8 @@ class NeuronBase(graphBase):
                             and not cls.ng.qname(s).startswith('TEMP')
                             and s not in cls.knownClasses):
                     try:
-                        cls(id_=iri, out_graph=cls.load_graph)
+                        cls(id_=iri, override=True)#, out_graph=cls.load_graph)  # I think we can get away without this
+                        # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:
                         print(e)
                         continue
@@ -899,7 +902,7 @@ class NeuronBase(graphBase):
         self._origLabel = label
         self._override = override
 
-        if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph:
+        if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph and not override:
             self.Class = self.existing_pes[self]
         else:
             self.Class = self._graphify()

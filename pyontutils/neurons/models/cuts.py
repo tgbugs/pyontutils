@@ -5,10 +5,22 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
+def loadn(ns):
+    ns.config.load_existing()
+    neurons = [ns.Neuron(id_=s)  # amazing how this actually works ...
+               for s in ns.config.out_graph[:rdflib.RDF.type:rdflib.OWL.Class]
+               if isinstance(s, rdflib.URIRef) and ('temp' not in s or 'SWAN' in s)]
+    for n in neurons:
+        n._override = True
+    return neurons
+
 from pyontutils.neurons.compiled import neuron_data_lifted
-ndl_neurons = neuron_data_lifted.Neuron.neurons()
+ndl_neurons = loadn(neuron_data_lifted)
+#ndl_neurons = neuron_data_lifted.Neuron.neurons()
 from pyontutils.neurons.compiled import basic_neurons
-bn_neurons = basic_neurons.Neuron.neurons()
+#neuron_data_lifted.config.load_existing()
+#bn_neurons = basic_neurons.Neuron.neurons()
+bn_neurons = loadn(basic_neurons)
 from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource, OntId, OntCuries
 from pyontutils.config import devconfig
@@ -231,6 +243,7 @@ def main():
     sans = set()
     missed = set()
     for n in bn_neurons:
+        continue  # we actually get all of these with uberon, will map between them later
         # can't use capitalize here because there are proper names that stay uppercase
         l = n.label.replace('(swannt) ',
                             '').replace('Intrinsic',
@@ -371,7 +384,7 @@ def main():
     lnlx = set(n.lower() for n in snlx_labels)
     sos = set(n._origLabel.lower() if n._origLabel else None for n in ndl_neurons)  # FIXME load origLabel
     nlx_review = lnlx - sos
-    print('\nNeuroLex listed as source but no mapping:', len(nlx_review))
+    print('\nNeuroLex listed as source but no mapping (n = {len(nlx_review)}):')
     _ = [print(l) for l in sorted(nlx_review)]
 
     partial = {k:v for k, v in rem.items() if v and v not in terminals}
@@ -381,7 +394,7 @@ def main():
         print(f'{k:<{mk}} {v!r}')
         #print(f'{k!r:<{mk}}{v!r}')
     #pprint(partial, width=200)
-    print('\nUnmapped:')
+    print(f'\nUnmapped (n = {len(labels_set3)}):')
     _ = [print(l) for l in sorted(labels_set3)]
 
     if __name__ == '__main__':
