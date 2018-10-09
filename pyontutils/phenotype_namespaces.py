@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
-from pyontutils.neurons.lang import config  # annoying, but works
+from pyontutils.neurons import *
 
 __all__ = ['Test',
            'Layers',
@@ -11,6 +10,8 @@ __all__ = ['Test',
            'Species',
            'BBP',
            'CUT']
+
+Config()  # explicitly load the core graph TODO need a lighter weight way to do this
 
 
 class Test(LocalNameManager):
