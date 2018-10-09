@@ -103,6 +103,8 @@ class GraphOpsMixin:
             if o:  # '' False 0 should all be wrapped in rdflib.Literal
                 setattr(self, p, o)
 
+        return self  # allow chaining in the event this is called at construction
+
     @property
     def _load_graph(self):
         return self.config.load_graph

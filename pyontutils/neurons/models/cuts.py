@@ -15,13 +15,14 @@ def loadn(ns):
         n._override = True
     return neurons
 
-from pyontutils.neurons.compiled import neuron_data_lifted
-ndl_neurons = loadn(neuron_data_lifted)
+#from pyontutils.neurons.compiled import neuron_data_lifted
+#ndl_neurons = loadn(neuron_data_lifted)
 #ndl_neurons = neuron_data_lifted.Neuron.neurons()
-from pyontutils.neurons.compiled import basic_neurons
+#from pyontutils.neurons.compiled import basic_neurons
 #neuron_data_lifted.config.load_existing()
 #bn_neurons = basic_neurons.Neuron.neurons()
-bn_neurons = loadn(basic_neurons)
+#bn_neurons = loadn(basic_neurons)
+
 from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource, OntId, OntCuries
 from pyontutils.config import devconfig
@@ -30,6 +31,13 @@ from pyontutils.namespaces import interlex_namespace, definition, NIFRID
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
 from pyontutils.phenotype_namespaces import BBP, CUT, Layers, Regions
+
+ndl_config = Config('neuron_data_lifted')
+ndl_config.load_existing()
+ndl_neurons = list(ndl_config.neurons)
+bn_config = Config('basic-neurons')
+bn_config.load_existing()
+bn_neurons = list(bn_config.neurons)
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -212,9 +220,7 @@ def export_for_review(unmapped, partial, nlx_missing):
     #[n for n in neurons]
     resources = Path(devconfig.resources)
     reviewcsv = resources / 'cut-review.csv'
-    rows = sorted((neuron_to_review_row(neuron) for neuron in neurons), key=lambda r:r[1])
-    incomplete = [[None, u] + [None] * (len(rows[0]) - 2) for u in unmapped]
-    rows += incomplete
+    rows = [neuron_to_review_row(neuron) for neuron in neurons]
 
     for i, row in enumerate(rows):
         label = row[1]
@@ -229,16 +235,16 @@ def export_for_review(unmapped, partial, nlx_missing):
             row.append(None)
 
         row.append(None)  # pmid
-        if i <= len(neurons):
+        if i < len(neurons):
             n = neurons[i]
             # FIXME
             row.append(','.join(n.config.out_graph[n.id_:NIFRID.synonym:]))  # syn
             row.append(','.join(n.config.out_graph[n.id_:definition:]))  # def
-        else:
-            row.extend((None, None))
 
-        print(row)
-        
+    rows = sorted(rows, key=lambda r:r[1])
+    incomplete = [[None, u] + [None] * (len(rows[0]) - 2) + ['Unmapped', None, None] for u in unmapped]
+    incomplete = sorted(incomplete, key=lambda r:r[1])
+    rows += incomplete
     with open(reviewcsv.as_posix(), 'wt', newline='\n') as f:
         writer = csv.writer(f)
         writer.writerow(header)
@@ -305,10 +311,10 @@ def main():
 
     sources = SourceCUT(),
     swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
-    Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
-           prefixes={'swanr':swanr,
-                     'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+    config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
+                    prefixes={'swanr':swanr,
+                              'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                              'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
     ins = [None if OntId(n.id_).prefix == 'TEMP' else n.id_ for n in ns]
     ians = [None] * len(ans)
     def zap(pes):
@@ -319,7 +325,7 @@ def main():
                 yield pe
 
     with Neuron(CUT.Mammalia):
-        _ = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).populate_from(n)
+        _ = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
              for i, n in zip(ins + ians, ns + ans)]
     skip = set()
     smatch = set()
@@ -435,10 +441,7 @@ def main():
     _ = [print(l) for l in unmapped]
 
     if __name__ == '__main__':
-        try:
-            rows = export_for_review(unmapped, partial, nlx_missing)
-        except:
-            print('oops no export')
+        rows = export_for_review(unmapped, partial, nlx_missing)
         embed()
     else:
         return unmapped, partial, nlx_missing

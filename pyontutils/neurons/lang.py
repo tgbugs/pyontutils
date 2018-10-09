@@ -13,7 +13,6 @@ __all__ = [
     'OR',
     'graphBase',
     'Config',
-    'pred',
     'setLocalContext',
     'getLocalContext',
     'setLocalNames',
