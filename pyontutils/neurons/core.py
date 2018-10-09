@@ -16,13 +16,14 @@ from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
-from pyontutils.closed_namespaces import rdf, rdfs, owl
+from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurons.core')
 
 __all__ = [
     'AND',
     'OR',
+    'Config',
     'getPhenotypePredicates',
     'graphBase',
     'setLocalContext',
@@ -70,8 +71,7 @@ def getPhenotypePredicates(graph):
     phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
     return phenoPreds
 
-#
-# classes
+# helper classes
 
 class OntTerm(bOntTerm):
     def as_phenotype(self, predicate=None):
@@ -79,6 +79,223 @@ class OntTerm(bOntTerm):
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
+
+class GraphOpsMixin:
+    # TODO this could be populated automatically in a OntComplete case
+    # given a graph and an id and possibly the set of all possible
+    # edges, give access to that id as an object, I'm sure this has been
+    # done before
+
+    # TODO even if it is the same underlying graph (conjuctive?) we should
+    # still separate the read and write aspects
+
+    default_properties = 'definition', 'synonyms', 'abbrevs'
+    # TODO label ...
+
+    class ObjectTypeError(Exception):
+        pass
+
+    def adopt_meta(self, other, properties=None):
+        if properties is None:
+            properties = self.default_properties
+        for p in properties:
+            o = getattr(other, p)
+            if o:  # '' False 0 should all be wrapped in rdflib.Literal
+                setattr(self, p, o)
+
+    @property
+    def _load_graph(self):
+        return self.config.load_graph
+
+    @property
+    def identifier(self):
+        return self.id_  # fix for current graphBase subclasses
+
+    def objects(self, *predicates):
+        for predicate in predicates:
+            yield from self._load_graph[self.identifier:predicate]
+
+    def add_objects(self, predicate, *objects):
+        bads = []
+        for object in objects:
+            if not isinstance(object, rdflib.URIRef) and not isinstance(object, rdflib.Literal):
+                bads.append(object)
+
+        if bads:
+            raise self.ObjectTypeError(' '.join(str(type(object)) for object in bads))
+
+        [self.out_graph.add((self.identifier, predicate, object)) for object in objects]
+
+    @property
+    def definition(self):
+        try:
+            return next(self.definitions)
+        except StopIteration:
+            pass
+
+    @definition.setter
+    def definition(self, value):
+        # TODO ccardinality 1
+        self.add_objects(definition, value)
+
+    @property
+    def definitions(self):
+        yield from self.objects(definition, skos.definition)
+
+    @property
+    def synonyms(self):
+        yield from self.objects(NIFRID.synonym)
+
+    @synonyms.setter
+    def synonyms(self, values):
+        self.add_objects(NIFRID.synonym, *values)
+
+    @property
+    def abbrevs(self):
+        yield from self.objects(NIFRID.abbrev)
+
+    @abbrevs.setter  # adder really
+    def abbrevs(self, value):
+        self.add_objects(NIFRID.abbrev, *value)
+
+# config
+
+class Config:
+    _subclasses = set()
+
+    class ExistingNeuronsError(Exception):
+        pass
+
+    def __init__(self,
+                 name =                 'test-neurons',
+                 prefixes =             tuple(),  # dict or list
+                 imports =              tuple(),  # iterable
+                 import_as_local =      False,  # also load from local?
+                 load_from_local =      True,
+                 branch =               devconfig.neurons_branch,
+                 sources =              tuple(),
+                 source_file =          None,
+                 ignore_existing =      False):
+        import os  # FIXME probably should move some of this to neurons.py?
+
+        graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
+        graphBase.knownClasses = [OntId(c.owlClass).u
+                                  for c in graphBase.python_subclasses]
+
+        imports = list(imports)
+        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
+        imports += [remote.iri + 'phenotype-core.ttl', remote.iri + 'phenotypes.ttl']
+        local = Path(devconfig.ontology_local_repo, 'ttl')
+        out_local_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+        out_remote_base = os.path.join(remote.iri, 'generated/neurons')
+        out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
+        imports = [OntId(i) for i in imports]
+
+        remote_base = remote.iri.rsplit('/', 2)[0]
+        local_base = local.parent
+
+        if import_as_local:
+            # NOTE: we currently do the translation more ... inelegantly inside of config so we
+            # have to keep the translation layer out here (sigh)
+            core_graph_paths = [Path(local, i.iri.replace(remote.iri, '')).relative_to(local_base).as_posix()
+                                if remote.iri in i.iri else
+                                i for i in imports]
+        else:
+            core_graph_paths = imports
+
+        out_graph_path = (out_local_base / f'{name}.ttl')
+
+        class lConfig(self.__class__):
+            iri = os.path.join(out_remote_base, f'{name}.ttl')
+
+        self.__class__._subclasses.add(lConfig)
+
+
+        kwargs = dict(remote_base = remote_base,  # leave it as raw for now?
+                      local_base = local_base.as_posix(),
+                      core_graph_paths = core_graph_paths,
+                      out_graph_path = out_graph_path.as_posix(),
+                      out_imports = imports, #[i.iri for i in imports],
+                      prefixes = prefixes,
+                      force_remote = not load_from_local,
+                      branch = branch,
+                      iri = lConfig.iri,
+                      sources = sources,
+                      source_file = source_file,
+                      # FIXME conflation of import from local and render with local
+                      use_local_import_paths = import_as_local,
+                      ignore_existing = ignore_existing)
+
+        for name, value in kwargs.items():
+            @property
+            def nochangepls(v=value):
+                return v
+
+            setattr(self, name, nochangepls)
+
+        graphBase.configGraphIO(**kwargs)  # FIXME KILL IT WITH FIRE
+
+        graphBase.config = self  # a nice hack ... can do this for self.activate() too
+        # temporary fix to persist graphs and neurons with a config
+        # until I have time to rewrite Config so that multiple configs
+        # can co-exist but only one config at a time can be operated on
+        # when creating new neurons (since only CUTs can be modified)
+        # the 'proper' way to move neurons from one config to another
+        # is not to switch everything behind the scenes, which is very confusin
+        # but simply to take neurons that are statically tied to another config
+        # and add them to another config, or just recreate them under the current
+        # config, this means that we will do away with the in graph and out graph
+        # every config will only have one graph and it will be in or out not both
+        # note that different configs can read and write to the same file
+        # NOTE that we will need to modify how the superclass is handled as well
+        # because at the moment the code assumes that the superclass is invariant
+        # this is not the case, and we need equality with and without the superclass
+        # we are currently missing equality with the superclass
+        # we can probably us a conjuctive graph to 
+        self.out_graph = graphBase.out_graph
+        self.existing_pes = NeuronBase.existing_pes
+
+    @property
+    def neurons(self):
+        yield from self.existing_pes
+
+    def activate(self):
+        """ set this config as the active config """
+        raise NotImplemented
+
+    def load_existing(self):
+        """ advanced usage allows loading multiple sets of neurons and using a config
+            object to keep track of the different graphs """
+        from pyontutils.closed_namespaces import rdfs
+        # bag existing
+
+        try:
+            next(self.neurons)
+            raise self.ExistingNeuronsError('Existing neurons detect. Please load first!')
+        except StopIteration:
+            pass
+
+        if not graphBase.ignore_existing:
+            ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
+            if ogp.exists():
+                from itertools import chain
+                from rdflib import Graph  # FIXME
+                self.load_graph = Graph().parse(graphBase.ng.filename, format='turtle')
+                graphBase.load_graph = self.load_graph
+                # FIXME memory inefficiency here ...
+                _ = [graphBase.in_graph.add(t) for t in graphBase.load_graph]  # FIXME use conjuctive ...
+                if len(graphBase.python_subclasses) == 2:  # FIXME magic number for Neuron and NeuronCUT
+                    ebms = [type(OntId(s).suffix, (NeuronCUT,), dict(owlClass=s))
+                            for s in self.load_graph[:rdfs.subClassOf:NeuronEBM.owlClass]
+                            if not graphBase.knownClasses.append(s)]
+                sc = None
+                for sc in chain(graphBase.python_subclasses, ebms):
+                    if sc._ocTrip in graphBase.load_graph or sc == Neuron:
+                        sc._load_existing()
+                if sc is None:
+                    raise ImportError(f'Failed to find any neurons to load in {graphBase.ng.filename}')
+
+# the monstrosity
 
 class graphBase:
     core_graph = 'ASSIGN ME AFTER IMPORT!'
@@ -432,6 +649,7 @@ class graphBase:
 
         return self
 
+# neurons and phenotypes
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
@@ -774,7 +992,7 @@ class LogicalPhenotype(graphBase):
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
 
 
-class NeuronBase(graphBase):
+class NeuronBase(GraphOpsMixin, graphBase):
     owlClass = _NEURON_CLASS
     shortname = None
     preserve_predicates = NIFRID.synonym, definition
@@ -803,12 +1021,13 @@ class NeuronBase(graphBase):
         if not cls._loading:
             NeuronBase._loading = True  # block all other neuron loading
             try:
-                for iri in (s for s in cls.load_graph[:rdf.type:owl.Class]
+                for iri in (s for s in cls.config.load_graph[:rdf.type:owl.Class]
+                            # going through config mitigates risk a mismatch at the graph level
                             if isinstance(s, rdflib.URIRef)
-                            and not cls.ng.qname(s).startswith('TEMP')
+                            #and not cls.ng.qname(s).startswith('TEMP')  # TEMP ids are ok when loading only from file
                             and s not in cls.knownClasses):
                     try:
-                        cls(id_=iri, override=True)#, out_graph=cls.load_graph)  # I think we can get away without this
+                        cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
                         # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:
                         print(e)
@@ -1265,7 +1484,6 @@ class Neuron(NeuronBase):
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):
                             print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
-                            from IPython import embed
                             embed()
                             return
                         else:
