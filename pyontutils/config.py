@@ -48,6 +48,24 @@ def default(value):
 tempdir = gettempdir()
 
 
+class GoogleSpreadsheets:
+    def __init__(self, devconfig):
+        self.devconfig = devconfig
+
+    @property
+    def filename(self):
+        return self.devconfig.google_sheets_file
+
+    @property
+    def name_id_map(self):
+        # sometimes the easiest solution is just to read from disk every single time
+        with open(self.filename, 'rt') as f:
+            return yaml.load(f)
+
+    def __call__(self, name):
+        return self.name_id_map[name]
+
+
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
     def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
@@ -55,6 +73,7 @@ class DevConfig:
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
+        self.google_sheets = GoogleSpreadsheets(self)
 
     @property
     def config(self):
@@ -102,6 +121,10 @@ class DevConfig:
         path = Path(path)
         prefix = path.home()
         return '~' + path.as_posix().strip(prefix.as_posix())
+
+    @default((Path(__file__).parent / 'google-sheets.yaml').as_posix())
+    def google_sheets_file(self):
+        return self.config['google-sheets-file']
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
