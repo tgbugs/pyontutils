@@ -80,7 +80,7 @@ contains_rules = dict(GABAergic=BBP.GABA,
                       cholinergic=CUT.Ach,
                       glutamatergic=CUT.Glu,
                       serotonergic=CUT.Ser,
-                      principle=CUT.proj,  # NOTE this was a spelling error
+                      #principle=CUT.proj,  # NOTE this was a spelling error
                       projection=CUT.proj,
                       intrinsic=CUT.inter,
                       interneuron=CUT.inter,
