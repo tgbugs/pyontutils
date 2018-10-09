@@ -1,4 +1,5 @@
 import os
+import stat
 import yaml
 from pathlib import Path
 from tempfile import gettempdir
@@ -48,13 +49,18 @@ def default(value):
 tempdir = gettempdir()
 
 
-class GoogleSpreadsheets:
+class Secrets:
     def __init__(self, devconfig):
         self.devconfig = devconfig
+        self.filename
+        fstat = os.stat(self.filename)
+        mode = oct(stat.S_IMODE(fstat.st_mode))
+        if mode != '0o600' and mode != '0o700':
+            raise FileNotFoundError(f'Your secrets file can be read by the whole world! {mode}')
 
     @property
     def filename(self):
-        return self.devconfig.google_sheets_file
+        return self.devconfig.secrets_file
 
     @property
     def name_id_map(self):
@@ -63,7 +69,18 @@ class GoogleSpreadsheets:
             return yaml.load(f)
 
     def __call__(self, name):
-        return self.name_id_map[name]
+        nidm = self.name_id_map
+        # NOTE under these circumstances this pattern is ok because anyone
+        # or anything who can call this function can access the secrets file.
+        # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
+        # secrets could be exposted by brute force, but in thise case it is ok
+        # because it is more important to alter the user that they have just
+        # tried to use a secret as a name and that it might be in their code.
+        if name in set(nidm.values()):
+            ANGRY = '*' * len(name)
+            raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+        else:
+            return nidm[name]
 
 
 class DevConfig:
@@ -73,7 +90,7 @@ class DevConfig:
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
-        self.google_sheets = GoogleSpreadsheets(self)
+        self.secrets = Secrets(self)
 
     @property
     def config(self):
@@ -122,9 +139,9 @@ class DevConfig:
         prefix = path.home()
         return '~' + path.as_posix().strip(prefix.as_posix())
 
-    @default((Path(__file__).parent / 'google-sheets.yaml').as_posix())
-    def google_sheets_file(self):
-        return self.config['google-sheets-file']
+    @default(Path('~/pyontutils-secrets.yaml').as_posix())
+    def secrets_file(self):
+        return self.config['secrets_file']
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
