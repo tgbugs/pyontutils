@@ -9,6 +9,12 @@ ontload graph NIF-Ontology NIF -p -b master -l ${BUILD_DIR} -z ${BUILD_DIR}
 
 Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l /tmp/scigraph-build -O SciGraph -B patch-issue-264 -b master -p`
 
+See also [.travis.yml](https://github.com/SciCrunch/NIF-Ontology/blob/master/.travis.yml) for NIF-Ontology.
+
+# Merging commits from SciGraph/SciGraph master into upstream
+
+https://github.com/SciCrunch/SciGraph/compare/upstream...SciGraph:master
+
 # DO NOT FORGET TO ENABLE THE SERVICES AT STARTUP
 
 ```

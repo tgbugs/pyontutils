@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rdflib
 import ontquery
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
 from pyontutils.core import OntId, OntTerm, OntCuries
 from pyontutils.utils import relative_path
@@ -22,6 +22,12 @@ c = Config('basic-neurons',
 pred = c.pred
 
 from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
+
+class NeuronSWAN(NeuronEBM):
+    owlClass = 'ilxtr:NeuronSWAN'
+
+_Neuron = Neuron
+Neuron = NeuronSWAN
 
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
@@ -57,7 +63,7 @@ rests = [r for r in restriction.parse(graph=sgraph) if r.p == swanr.hasPart3]
 #restriction = Restriction2(rdfs.subClassOf)
 
 
-class LocalGraphService(ontquery.BasicService):
+class LocalGraphService(ontquery.services.BasicService):
     def __init__(self, graph):
         self.graph = graph
         super().__init__()
@@ -80,7 +86,7 @@ class lOntTerm(OntTerm):
     repr_arg_order = (('curie', 'label'),  # FIXME this doesn't stick?!
                       ('iri', 'label'),)
     __firsts = 'curie', 'iri'
-    query = ontquery.OntQuery(ontquery.rdflibLocal(sgraph))
+    query = ontquery.OntQuery(ontquery.plugin.get('rdflib')(sgraph))
 
 
 regions_unfilt = sorted(set(lOntTerm(e) for r in rests for e in (r.s, r.o)), key=lambda t:int(t.suffix))

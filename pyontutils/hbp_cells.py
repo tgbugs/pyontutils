@@ -250,8 +250,6 @@ def clean_hbp_cell():
     #ilx_conv_mem = memoize('hbp_cell_interlex.json')(ilx_conv)  # FIXME NOPE, also need to modify the graph :/
     ilx_labels, ilx_replace = ilx_conv(graph=newgraph, prefix='HBP_CELL', ilx_start=ilx_start)
     ilx_add_ids(ilx_labels)
-    with open('hbp_cell_ilx_ids.json', 'wt') as f:
-        json.dump(ilx_replace, f)
 
     replace_map = ilx_replace
     for hbp, rep in skip.items():
@@ -274,14 +272,15 @@ def clean_hbp_cell():
 
 def main():
     mg, rep_map = clean_hbp_cell()
-    #print(sorted(rep_map.items()))
-    with open('hbp_cell_conv.json', 'wt') as f:
-        json.dump(rep_map, f)
-    with open('hbp_cell_conv.csv', 'wt') as f:
-        writer = csv.writer(f)
-        for hbp_new in sorted(rep_map.items()):
-            writer.writerow(hbp_new)
-    mg.write()
+    if __name__ == '__main__':
+        with open('hbp_cell_conv.json', 'wt') as f:
+            json.dump(rep_map, f)
+        with open('hbp_cell_conv.csv', 'wt') as f:
+            writer = csv.writer(f)
+            for hbp_new in sorted(rep_map.items()):
+                writer.writerow(hbp_new)
+
+        mg.write()
 
 if __name__ == '__main__':
     main()

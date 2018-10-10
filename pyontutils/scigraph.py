@@ -1,12 +1,13 @@
 from pyontutils import scigraph_client
 from pyontutils.config import devconfig, get_api_key
-from IPython import embed
 
 scigraph_client.BASEPATH = (f'{devconfig.scigraph_api}')
 
 scigraph_client.restService.api_key = get_api_key()
 
-__all__ = [e for e in dir(scigraph_client) if type(getattr(scigraph_client, e)) == type]
+__all__ = [e for e in dir(scigraph_client)
+           if type(getattr(scigraph_client, e)) == type and
+           not e.endswith('Base')]
 
 ###
 Analyzer = scigraph_client.Analyzer

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from pyontutils.neurons import *  # namesets can only be effectively defined over a specific base...
-from pyontutils.neuron_lang import config  # annoying, but works
+from pyontutils.neurons import *
 
 __all__ = ['Test',
            'Layers',
@@ -9,7 +8,10 @@ __all__ = ['Test',
            'Regions',
            'PaxRatRegions',
            'Species',
-           'BBP']
+           'BBP',
+           'CUT']
+
+Config()  # explicitly load the core graph TODO need a lighter weight way to do this
 
 
 class Test(LocalNameManager):
@@ -25,6 +27,7 @@ class Layers(LocalNameManager):
     L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype')
     L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype')
     L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype')
+    L56 = LogicalPhenotype(OR, L5, L6)
 
     SO = Phenotype('UBERON:0005371', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
     SPy = Phenotype('UBERON:0002313', 'ilxtr:hasLayerLocationPhenotype')  # SP
@@ -56,10 +59,11 @@ class Regions(LocalNameManager):
     #('brain = Phenotype('UBERON:0000955', 'ilxtr:hasLocationPhenotype')  # hasLocationPhenotype a high level
     brain = Phenotype('UBERON:0000955', 'ilxtr:hasSomaLocatedIn')
     CTX = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')
+    CA1 = Phenotype('UBERON:0003881', 'ilxtr:hasSomaLocatedIn')
     CA2 = Phenotype('UBERON:0003882', 'ilxtr:hasSomaLocatedIn')
     CA3 = Phenotype('UBERON:0003883', 'ilxtr:hasSomaLocatedIn')
     S1 = Phenotype('UBERON:0008933', 'ilxtr:hasSomaLocatedIn')
-    CA1 = Phenotype('UBERON:0003881', 'ilxtr:hasSomaLocatedIn')
+    V1 = Phenotype('UBERON:0002436', 'ilxtr:hasSomaLocatedIn')
 
 
 class PaxRatRegions(LocalNameManager):
@@ -158,3 +162,15 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     CER = Phenotype('PAXRAT:191', 'ilxtr:hasSomaLocatedIn')
     GRAN = Phenotype('ilxtr:GranulePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # vs granular?
 
+
+class CUT(LocalNameManager):
+    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasTaxonRank)
+    proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
+    inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
+    Ach = Phenotype('SAO:185580330', ilxtr.hasExpressionPhenotype)
+    Glu = Phenotype('CHEBI:16015', ilxtr.hasExpressionPhenotype)
+    Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
+    TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
+    TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
+    Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)
+    MRN = Phenotype('UBERON:0007415', ilxtr.hasSomaLocatedIn)

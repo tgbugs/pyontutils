@@ -1,11 +1,10 @@
-from IPython import embed
 import rdflib
 from pyontutils.core import simpleOnt, OntId, OntCuries, mGraph
 from pyontutils.namespaces import makeNamespaces, NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.namespaces import participatesIn, partOf, definition, hasRole
+from pyontutils.namespaces import partOf, definition
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
-from pyontutils.combinators import oc, oc_, odp, oop, olit, oec, olist
-from pyontutils.combinators import POCombinator, _POCombinator, ObjectCombinator
+from pyontutils.combinators import oc, oc_, odp, oop, olit, oec
+from pyontutils.combinators import POCombinator, ObjectCombinator
 from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
 from pyontutils.combinators import restriction, restrictions, intersectionOf
 from pyontutils.closed_namespaces import owl, rdf, rdfs
@@ -70,6 +69,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
         yield from olit(subject, rdfs.comment, comment)
 
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
+proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 
@@ -129,12 +129,24 @@ triples = (
     olit(ilxtr.wasDiscoveredBy, definition,
          'The relationship between a process and the person who discovered it.'),
 
-    oop(ilxtr.hasDualInputTechnique, hasPart),
+    oop(ilxtr.hasDualTechnique),
+    (ilxtr.hasDualTechnique, rdf.type, owl.SymmetricProperty),
+    olit(ilxtr.hasDualTechnique, rdfs.label, 'has dual technique'),
+    olit(ilxtr.hasDualTechnique, definition,
+         ('The relationship between techniques that are duals of each other. '
+          'An example usage is in cases where the matter constituting the primary '
+          'input in one technique is transformed (read: renamed) and becomes the '
+          'primary output of another technique. Bearing this relation implies that '
+          'both techniques are part of a same enclosing technique.')),
+    (ilxtr.hasDualTechnique, rdfs.domain, ilxtr.technique),
+    (ilxtr.hasDualTechnique, rdfs.range, ilxtr.technique),
+
+    oop(ilxtr.hasDualInputTechnique, ilxtr.hasDualTechnique),
     olit(ilxtr.hasDualInputTechnique, rdfs.label, 'has dual input technique'),
     olit(ilxtr.hasDualInputTechnique, definition,
          ('The relationship between a technique that has a primary output '
           'and a dual technique that has a primary input that is destroyed.')),
-    oop(ilxtr.hasDualOutputTechnique, hasPart),
+    oop(ilxtr.hasDualOutputTechnique, ilxtr.hasDualTechnique),
     olit(ilxtr.hasDualOutputTechnique, rdfs.label, 'has dual output technique'),
     olit(ilxtr.hasDualOutputTechnique, definition,
          ('The relationship between a technique that has a primary input that is '
@@ -328,14 +340,14 @@ triples = (
     # hasPrimaryAspectActualized
     # hasPrimaryQualifiedAspect (hasPrimaryParticipant, hasQualifiedAspect)
     # hasPrimaryQualifiedAspectActualized
-    # 
+    #
     # hasConstrainingAspect
     # hasConstrainingQualifiedAspect
     # cannot actualize constraining aspects? but they are defact actualized by thier constraint
     #
     # but then there are parts of the pp
     # hasPrimaryParticipantPartConstrainingAspect
-    # 
+    #
     # hasInput
     # hasPrimaryInput
     #
@@ -581,7 +593,7 @@ triples = (
     oop(ilxtr.aspectHasValue),
     oop(ilxtr.hasDefinedValue, ilxtr.aspectHasValue),
     oop(ilxtr.hasMeasuredValue, ilxtr.aspectHasValue),
-    oop(ilxtr.hasActualizedValue, ilxtr.aspectHasValue), 
+    oop(ilxtr.hasActualizedValue, ilxtr.aspectHasValue),
     oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasActualizedValue),
     oop(ilxtr.hasDefinedActualizedValue, ilxtr.hasDefinedValue),
     oop(ilxtr.hasMeasuredActualizedValue, ilxtr.hasActualizedValue),
@@ -604,6 +616,14 @@ triples = (
 
     oop(ilxtr.processHasContext),
     (ilxtr.processHasContext, rdfs.domain, BFO['0000015']),
+
+    # aspects for processes
+    # these are not modelled with a notion of intention because
+    # they are processes which _must_ occur in order to be classified as such
+
+    # FIXME TODO naming, Required?
+    oop(ilxtr.hasActualPrimaryAspect),
+    oop(ilxtr.hasActualPrimaryAspect_dAdT),
 
     # classes
 
@@ -657,7 +677,7 @@ triples = (
     # hasValue, hasRealizedValue
     # hasActualizedValue
     # hasMeasuredValue
-    #ilxtr.aspect hasOutputValue 
+    #ilxtr.aspect hasOutputValue
     #ilxtr.aspect hasMeasurementProtocol
     # should aspects not be bound to symbolic entities?
     # for example a word count for a document?
@@ -689,9 +709,11 @@ triples = (
     oop_(hasParticipant,
          propertyChainAxiom(ilxtr.processHasAspect, ilxtr.hasContext)),
 
-    oc_(None,
-        restriction(ilxtr.hasPrimaryAspectActualized, ilxtr.aspect),
-        oECN(restN(ilxtr.hasPrimaryAspect_dAdT, ilxtr.nonZero))),
+    restG(blankc(owl.onProperty, ilxtr.hasPrimaryAspect_dAdT),
+          blankc(owl.someValuesFrom, ilxtr.nonZero),
+          blankc(rdfs.subClassOf,
+                 restN(ilxtr.hasPrimaryAspectActualized,
+                       ilxtr.aspect)))(rdflib.BNode()),
 
     ## technique
     oc(BFO['0000015']),
@@ -744,7 +766,7 @@ triples = (
     #(ilxtr.thingA, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingB, rdfs.subClassOf, ilxtr.materialEntity),
     #(ilxtr.thingA, owl.disjointWith, ilxtr.thingB),
-) 
+)
 
 def derp():
     b0 = rdflib.BNode()

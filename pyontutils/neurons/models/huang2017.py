@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
 from ontquery import rdflibLocal
 from pyontutils.core import OntId, OntTerm

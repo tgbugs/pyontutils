@@ -5,9 +5,9 @@ from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, TEMP
-from pyontutils.neuron_lang import *
 from pyontutils.neurons import *
-from pyontutils.neurons import MeasuredNeuron
+from pyontutils.neurons.lang import *
+from pyontutils.neurons.core import MeasuredNeuron
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
@@ -36,7 +36,7 @@ def main():
 
     #graphBase.core_graph = EXISTING_GRAPH
     #graphBase.out_graph = rdflib.Graph()
-    graphBase.__import_name__ = 'pyontutils.neurons'
+    graphBase.__import_name__ = 'pyontutils.neurons.lang'
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
@@ -49,22 +49,23 @@ def main():
 
     mns = [MeasuredNeuron(id_=n) for n in nodef]
     mnsp = [n for n in mns if n.pes]
-    Neuron.out_graph = rdflib.Graph()  # XXX NEVER DO THIS IT IS EVIL ZALGO WILL EAT YOUR FACE
+    graphBase.out_graph = rdflib.Graph()  # XXX NEVER DO THIS IT IS EVIL ZALGO WILL EAT YOUR FACE
+    graphBase.ng.g = graphBase.out_graph
+    # and he did, had to swtich to graphBase for exactly this reason >_<
     dns = [Neuron(id_=n) for n in sorted(def_neurons)]
     #dns += [Neuron(*m.pes) if m.pes else m.id_ for m in mns]
     dns += [Neuron(*m.pes) for m in mns if m.pes]
 
     # reset everything for export
     Config('phenotype-direct', source_file=relative_path(__file__))
-    Neuron.out_graph = graphBase.out_graph  # each subclass of graphBase has a distinct out graph IF it was set manually
+    #Neuron.out_graph = graphBase.out_graph  # each subclass of graphBase has a distinct out graph IF it was set manually
     #Neuron.out_graph = rdflib.Graph()
     #ng = makeGraph('', prefixes={}, graph=Neuron.out_graph)
     #ng.filename = Neuron.ng.filename
-    Neuron.existing_pes = {}  # reset this as well because the old Class references have vanished
+    Neuron.mro()[1].existing_pes = {}  # wow, new adventures in evil python patterns mro()[1]
     dns = [Neuron(*d.pes) for d in set(dns)]  # TODO remove the set and use this to test existing bags?
-    #from neuron_lang import WRITEPYTHON
+    #from neurons.lang import WRITEPYTHON
     #WRITEPYTHON(sorted(dns))
-    Neuron.write_python()
     #ng.add_ont(TEMP['defined-neurons'], 'Defined Neurons', 'NIFDEFNEU',
                #'VERY EXPERIMENTAL', '0.0.0.1a')
     #ng.add_trip(TEMP['defined-neurons'], owl.imports, rdflib.URIRef('file:///home/tom/git/NIF-Ontology/ttl/phenotype-core.ttl'))
@@ -77,6 +78,7 @@ def main():
     )
     [Neuron.out_graph.add(t) for t in ontinfo]
     Neuron.write()
+    Neuron.write_python()
     bads = [n for n in Neuron.ng.g.subjects(rdf.type, owl.Class)
             if len(list(Neuron.ng.g.predicate_objects(n))) == 1]
     if __name__ == '__main__':

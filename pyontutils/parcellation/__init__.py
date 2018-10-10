@@ -682,7 +682,7 @@ class LocalSource(Source):
         line = getSourceLine(cls)
         cls.iri_head = URIRef(cls.iri_prefix_hd + Path(__file__).name)
         cls._this_file = Path(__file__).absolute()
-        repobase = cls._this_file.parent.parent.as_posix()
+        repobase = cls._this_file.parent.parent.parent.as_posix()
         cls.repo = Repo(repobase)
         cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         if cls.artifact is None:  # for prov...
@@ -1795,9 +1795,9 @@ def main():
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     if not args['--local']:
-        from pyontutils.parc_aba import Artifacts as abaArts
-    from pyontutils.parc_freesurfer import Artifacts as fsArts
-    from pyontutils.parc_whs import Artifacts as whsArts
+        from pyontutils.parcellation.aba import Artifacts as abaArts
+    from pyontutils.parcellation.freesurfer import Artifacts as fsArts
+    from pyontutils.parcellation.whs import Artifacts as whsArts
     #embed()
     onts = tuple(l for l in subclasses(ParcOnt)
                  if l.__name__ != 'parcBridge'

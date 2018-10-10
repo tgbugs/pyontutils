@@ -7,7 +7,6 @@ import requests
 from pathlib import Path
 from collections import namedtuple
 from inspect import getsourcefile
-from git import Repo
 from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
@@ -43,17 +42,18 @@ def standard_checks(graph):
 
     cardinality(rdfs.label)
 
-def ont_make(o, fail=False):
+def ont_make(o, fail=False, write=True):
     o()
     o.validate()
     failed = standard_checks(o.graph)
     o.failed = failed
     if fail:
         raise BaseException('Ontology validation failed!')
-    o.write()
+    if write:
+        o.write()
     return o
 
-def build(*onts, fail=False, n_jobs=9):
+def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
     tail = lambda:tuple()
     lonts = len(onts)
@@ -68,12 +68,13 @@ def build(*onts, fail=False, n_jobs=9):
     # ont_setup must be run first on all ontologies
     # or we will get weird import errors
     if n_jobs == 1:
-        return tuple(ont_make(ont, fail=fail) for ont in
+        return tuple(ont_make(ont, fail=fail, write=write) for ont in
                      tuple(ont_setup(ont) for ont in onts) + tail())
 
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail) for o in
+    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail, write=write)
+                                   for o in
                                    #[ont_setup(ont) for ont in onts])
                                    (tuple(Async()(deferred(ont_setup)(ont)
                                                   for ont in onts)) + tail()
@@ -443,6 +444,7 @@ def qname(uri, warning=False):
         print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
 
+
 def createOntology(filename=    'temp-graph',
                    name=        'Temp Ontology',
                    prefixes=    None,  # is a dict
@@ -479,9 +481,13 @@ class OntId(ontquery.OntId, rdflib.URIRef):
     #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
         #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
 
-    #@property
-    #def URIRef(self):  # FIXME stopgap for comparison issues
-        #return rdflib.URIRef(self)
+    @property
+    def URIRef(self):  # FIXME stopgap for comparison issues
+        return rdflib.URIRef(self)
+
+    @property
+    def u(self):
+        return self.URIRef
 
     def __str__(self):
         return rdflib.URIRef.__str__(self)
@@ -489,9 +495,18 @@ class OntId(ontquery.OntId, rdflib.URIRef):
 class OntTerm(ontquery.OntTerm, OntId):
     pass
 
+SGR = ontquery.plugin.get('SciGraph')
+IXR = ontquery.plugin.get('InterLex')
+#sgr.verbose = True
+for rc in (SGR, IXR):
+    rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
-OntTerm.query = ontquery.OntQuery(ontquery.SciGraphRemote(api_key=get_api_key()))
-ontquery.QueryResult._OntTerm = OntTerm
+sgr = SGR(api_key=get_api_key())
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port)
+OntTerm.query = ontquery.OntQuery(sgr, ixr)
+[OntTerm.repr_level(verbose=False) for _ in range(2)]
+#ontquery.QueryResult._OntTerm = OntTerm
+OntTerm.bindQueryResult()
 query = ontquery.OntQueryCli(query=OntTerm.query)
 
 #
@@ -670,6 +685,7 @@ class Source(tuple):
     artifact = None
 
     def __new__(cls):
+        from git import Repo
         if not hasattr(cls, '_data'):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
@@ -874,6 +890,7 @@ class Ont:
         if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
         else:
+            from git import Repo
             repo = Repo(working_dir.as_posix())
             commit = next(repo.iter_commits()).hexsha
 
@@ -1047,7 +1064,8 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               path='ttl/',
               branch='master',
               fail=False,
-              _repo=True):
+              _repo=True,
+              write=False):
 
     for i in imports:
         if not isinstance(i, rdflib.URIRef):
@@ -1071,7 +1089,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'
 
-    built_ont, = build(Simple, fail=fail, n_jobs=1)
+    built_ont, = build(Simple, fail=fail, n_jobs=1, write=write)
 
     return built_ont
 

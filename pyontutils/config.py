@@ -1,10 +1,12 @@
-from IPython import embed
 import os
+import stat
 import yaml
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 from pyontutils.utils import TermColors as tc
+
+checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 
 def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
@@ -25,6 +27,9 @@ class dstr(str):
 
 def default(value):
     def decorator(function, default_value=value):
+        dv = dstr(default_value)
+        dv.default = default_value
+
         @wraps(function)
         def inner(*args, **kwargs):
             try:
@@ -32,7 +37,7 @@ def default(value):
                 out.default = default_value
                 return out
             except (TypeError, KeyError, FileNotFoundError) as e:
-                return default_value
+                return dv
 
         pinner = dproperty(inner)
         pinner.default = default_value
@@ -40,7 +45,42 @@ def default(value):
 
     return decorator
 
+
 tempdir = gettempdir()
+
+
+class Secrets:
+    def __init__(self, devconfig):
+        self.devconfig = devconfig
+        self.filename
+        fstat = os.stat(self.filename)
+        mode = oct(stat.S_IMODE(fstat.st_mode))
+        if mode != '0o600' and mode != '0o700':
+            raise FileNotFoundError(f'Your secrets file can be read by the whole world! {mode}')
+
+    @property
+    def filename(self):
+        return self.devconfig.secrets_file
+
+    @property
+    def name_id_map(self):
+        # sometimes the easiest solution is just to read from disk every single time
+        with open(self.filename, 'rt') as f:
+            return yaml.load(f)
+
+    def __call__(self, name):
+        nidm = self.name_id_map
+        # NOTE under these circumstances this pattern is ok because anyone
+        # or anything who can call this function can access the secrets file.
+        # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
+        # secrets could be exposted by brute force, but in thise case it is ok
+        # because it is more important to alter the user that they have just
+        # tried to use a secret as a name and that it might be in their code.
+        if name in set(nidm.values()):
+            ANGRY = '*' * len(name)
+            raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+        else:
+            return nidm[name]
 
 
 class DevConfig:
@@ -50,6 +90,7 @@ class DevConfig:
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
+        self.secrets = Secrets(self)
 
     @property
     def config(self):
@@ -98,6 +139,10 @@ class DevConfig:
         prefix = path.home()
         return '~' + path.as_posix().strip(prefix.as_posix())
 
+    @default(Path('~/pyontutils-secrets.yaml').as_posix())
+    def secrets_file(self):
+        return self.config['secrets_file']
+
     @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
         return self.config['curies']
@@ -116,8 +161,22 @@ class DevConfig:
 
     @git_local_base.setter
     def git_local_base(self, value):
+        if isinstance(value, Path):
+            value = value.as_posix()
         self._override['git_local_base'] = value
         self.write(self.config_file.as_posix())
+
+    @default('uri.interlex.org')
+    def ilx_host(self):
+        return self.config['ilx_host']
+
+    @default('')
+    def ilx_port(self):
+        return self.config['ilx_port']
+
+    @default('neurons')
+    def neurons_branch(self):
+        return self.config['neurons_branch']
 
     @default('SciCrunch')
     def ontology_org(self):
@@ -133,8 +192,7 @@ class DevConfig:
 
     @dproperty
     def ontology_local_repo(self):
-        def add_default(thing=self.__class__.ontology_local_repo.default()):
-            default = self.__class__.ontology_local_repo.default()
+        def add_default(default=self.__class__.ontology_local_repo.default()):
             out = dstr(default)
             out.default = default
             return out
@@ -152,13 +210,17 @@ class DevConfig:
             return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
 
     @property
+    def _maybe_repo(self):
+        return Path(self.git_local_base, self.ontology_repo).absolute()
+
+    @property
     def _ontology_local_repo(self):
         try:
             stated_repo = Path(self.config['ontology_local_repo'])
         except FileNotFoundError:
             stated_repo = Path('/dev/null/hahaha')
 
-        maybe_repo = Path(self.git_local_base, self.ontology_repo).absolute()
+        maybe_repo = self._maybe_repo
         if stated_repo.exists():
             return stated_repo
         elif maybe_repo.exists():
@@ -179,6 +241,10 @@ class DevConfig:
                       f'No repository found in any parent directory of {maybe_start}')
 
         return Path('/dev/null')  # seems reaonsable ...
+
+    @default((Path(__file__).parent / 'resources').as_posix())
+    def resources(self):
+        return self.config['resources']
 
     @default('localhost')
     def _scigraph_host(self):
@@ -232,13 +298,38 @@ class DevConfig:
         return self.config['zip_location']
 
     def __repr__(self):
-        return f'DevConfig {self.config_file}\n' + '\n'.join(f'{k:<20} {v}' for k, v in {k:getattr(self, k) for k in dir(self) if
-                    not k.startswith('_') and
-                    k not in ('config', 'write', 'config_file') and
-                    isinstance(getattr(self.__class__, k), property)}.items())
+        return (f'DevConfig {self.config_file}\n' +
+                '\n'.join(f'{k:<20} {v}'
+                          for k, v in {k:getattr(self, k)
+                                       for k in dir(self) if
+                                       not k.startswith('_') and
+                                       k not in ('config', 'write', 'config_file') and
+                                       isinstance(getattr(self.__class__, k), property)}.items()))
 
 
 devconfig = DevConfig()
+
+
+def bootstrap_config():
+    if not devconfig.config_file.exists():
+        # scigraph api
+        maybe_key = get_api_key()
+        if maybe_key:
+            from pyontutils.scigraph_client import BASEPATH
+            devconfig.scigraph_api = BASEPATH
+        else:
+            devconfig.scigraph_api = devconfig.scigraph_api.default
+
+        # ontology repo
+        p1 = Path(__file__).resolve().absolute().parent.parent.parent
+        p2 = Path(devconfig.git_local_base).resolve().absolute()
+        print(p1, p2)
+        if (p1 / devconfig.ontology_repo).exists():
+            if p1 != p2:
+                devconfig.git_local_base = p1
+    else:
+        print('config already exists at', devconfig.config_file)
+
 
 def main():
     from IPython import embed

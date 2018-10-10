@@ -10,6 +10,7 @@ Options:
     -b --big                    when creating catalog also import big files
                                 reccomend running this option with pypy3
     -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
+    -d --debug                  drop into IPython embed at the end
 
 """
 import os
@@ -72,7 +73,8 @@ def main():
     xml = '\n'.join(xmllines)
     with open('/tmp/nif-catalog-v001.xml','wt') as f:
         f.write(xml)
-    if __name__ == '__main__':
+
+    if args['--debug']:
         embed()
 
 if __name__ == '__main__':

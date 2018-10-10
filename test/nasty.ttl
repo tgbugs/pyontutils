@@ -20,6 +20,7 @@
 @prefix C: <http://cc.org/prefix_> .
 @prefix c: <http://c.org/prefix_> .
 @prefix l: <http://list.org/> .
+@prefix p: <http://prefix.org/> .
 @prefix sco: <http://sco.lol/> .
 @prefix prefixA: <http://example.org/A/> .
 @prefix prefixZ: <http://example.org/Z/> .
@@ -464,3 +465,67 @@ prefixz: a owl:Class .
 
 l:plistTest owl:propertyChainAxiom (blx:predicate3 blx:predicate1 blx:predicate2) .
 
+# property chain axiom ordering issue
+
+p:property a owl:ObjectProperty ;
+    owl:propertyChainAxiom ( p:R_3 p:B_1 ),
+                           ( p:B_1 p:R_3 ),
+                           ( p:R_3 p:B_2 ),
+                           ( p:R_3 p:R_1 ),
+                           ( p:R_2 p:R_3 ) .
+
+# symmetric predicates
+
+<b> owl:disjointWith <a> .
+
+[] owl:disjointWith <c> .
+
+[ a owl:Class ] owl:disjointWith <d> .
+
+<e> owl:disjointWith [ a owl:Class ] .
+
+[ a owl:Restriction ] owl:disjointWith <f> .
+
+<g> owl:disjointWith [ a owl:Restriction ] .
+
+[] a owl:Restriction ;
+    owl:onProperty p:same ;
+    owl:someValuesFrom <thing/2> ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty p:same ;
+            owl:someValuesFrom <thing/1> ] .
+
+
+# terminal bnode case (with the cryptic symmetric dangling case)
+
+<dangling> a [] .
+
+<dangling> owl:disjointWith [] .
+
+[] owl:disjointWith <dangling> .
+
+# anon classes issue
+#  otherwise known as why the heck do the examples above
+#  serialize correctly but this one gets split!??!
+#  ISSUE: anon classes not treated correctly if parent type is not a owl:Class
+
+<hrm1> a p:Class ;
+    p:maybe-a-thing
+        [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
+<hrm2> a owl:Class ;
+    p:maybe-a-thing
+        [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
+[] a owl:Axiom ;
+    p:p [ a owl:Class ;
+            owl:intersectionOf (
+            <thing>
+            [ a owl:Restriction ;
+                owl:onProperty <pred> ;
+                owl:someValuesFrom <other> ] ) ] ;
+    oboInOwl:source "hrm"^^xsd:string .

@@ -21,7 +21,6 @@ Options:
 import os
 import re
 import subprocess
-from ast import literal_eval
 from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
@@ -54,76 +53,6 @@ out = 'OUTGOING'
 both = 'BOTH'
 
 
-def fix_quotes(string, s1=':["', s2='"],'):
-    out = []
-    def subsplit(sstr, s=s2):
-        #print(s)
-        if s == '",' and sstr.endswith('"}'):  # special case for end of record
-            s = '"}'
-        if s:
-            string, *rest = sstr.rsplit(s, 1)
-        else:
-            string = sstr
-            rest = '',
-
-        if rest:
-            #print('>>>>', string)
-            #print('>>>>', rest)
-            r, = rest
-            if s == '"],':
-                fixed_string = fix_quotes(string, '","', '') + s + r
-            else:
-                fixed_string = string.replace('"', r'\"') + s + r
-
-            return fixed_string
-
-    for sub1 in string.split(s1):
-        ss = subsplit(sub1)
-        if ss is None:
-            if s1 == ':["':
-                out.append(fix_quotes(sub1, ':"', '",'))
-            else:
-                out.append(sub1)
-        else:
-            out.append(ss)
-
-    return s1.join(out)
-
-
-def fix_cypher(record):
-    rep = re.sub(r'({|, )(\S+)(: "|: \[)', r'\1"\2"\3',
-                 fix_quotes(record.strip()).
-                 split(']', 1)[1] .
-                 replace(':"', ': "') .
-                 replace(':[', ': [') .
-                 replace('",', '", ') .
-                 replace('"],', '"], ') .
-                 replace('\n', '\\n') .
-                 replace('xml:lang="en"', r'xml:lang=\"en\"')
-                )
-    try:
-        value = {qname(k):v for k, v in literal_eval(rep).items()}
-    except (ValueError, SyntaxError) as e:
-        print(repr(record))
-        print(repr(rep))
-        raise e
-
-    return value
-
-
-def cypher_query(sgc, query, limit):
-    out = sgc.execute(query, limit)
-    rows = []
-    if out:
-        for raw in out.split('|')[3:-1]:
-            record = raw.strip()
-            if record:
-                d = fix_cypher(record)
-                rows.append(d)
-
-    return rows
-
-
 class ImportChain:
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
         self.sgg = sgg
@@ -131,7 +60,7 @@ class ImportChain:
         self.wasGeneratedBy = wasGeneratedBy
 
     def get_scigraph_onts(self):
-        self.results = cypher_query(self.sgc, 'MATCH (n:Ontology) RETURN n', 1000)
+        self.results = self.sgc.execute('MATCH (n:Ontology) RETURN n', 1000)
         return self.results
 
     def get_itrips(self):
@@ -142,7 +71,7 @@ class ImportChain:
                  for i in iris]
         imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
                          for e in n['edges']])
-                   for i, n in nodes if n]                               
+                   for i, n in nodes if n]
         self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
                                  for i, *ts in imports if ts for t in ts))
         return self.itrips

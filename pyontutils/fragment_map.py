@@ -13,10 +13,10 @@ gitf = current_file.parent.parent.parent
 c = Cypher()
 v = Vocabulary(cache=True)
 
-curies = c.getCuries()
-curies.pop('')  # don't want NIFSTD uris just yet
-
 def main():
+    curies = c.getCuries()
+    curies.pop('')  # don't want NIFSTD uris just yet
+
     with open((gitf / 'nlxeol/neurolex_full.csv').as_posix(), 'rt') as f:
         rows = [r for r in csv.reader(f)]
 

@@ -8,9 +8,11 @@ class TestConfig(unittest.TestCase):
         v2 = '/tmp/not-a-thing'
         devconfig.git_local_base = v2
         v3 = devconfig.git_local_base
-        ontology_local_after_change_base = devconfig.ontology_local_repo
+        maybe_ontology_local_after_change_base = devconfig._maybe_repo
         devconfig.git_local_base = git_local_base_1
-        assert ontology_local_1 != ontology_local_after_change_base  # propagate to other values
+        assert ontology_local_1 != maybe_ontology_local_after_change_base
+        # we can only check against _maybe_repo because
+        # v2 does not exist and thus will not propagate
         assert git_local_base_1 != v2
         assert git_local_base_1 != v3
         assert v2 == v3

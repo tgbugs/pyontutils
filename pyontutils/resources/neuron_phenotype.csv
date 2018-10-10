@@ -1,5 +1,5 @@
 ilx_id,subClassOf,label,synonyms,xrefs,rules,notes,use_edge
-ilxtr:AxonPhenotype,ilxtr:Phenotype,,,,,,
+ilxtr:AxonPhenotype,ilxtr:Phenotype,,,,,,hasAxonPhenotype
 ilxtr:DendritePhenotype,ilxtr:Phenotype,,,,,,hasDendriteMorphologicalPhenotype
 ilxtr:BranchingPhenotype,ilxtr:DendritePhenotype,,,,subClassesDisjoint,,hasDendriteMorphologicalPhenotype
 ilxtr:EarlyBifurcatingPhenotype,ilxtr:BranchingPhenotype,,,,,,hasDendriteMorphologicalPhenotype
@@ -38,6 +38,8 @@ ilxtr:InvertedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalP
 ilxtr:NarrowPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,"this class is circumspect, and may actually be NarrowTuftedPyramidalPhenotype",hasMorphologicalPhenotype
 ilxtr:StarPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:TuftedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
+ilxtr:UntuftedPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:SmallPyramidalPhenotype,ilxtr:PyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:EarlyBifurcatingTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,we are not modelling dendrite phenotypes directly at the moment so we cant break about EB/LB,hasMorphologicalPhenotype
 ilxtr:LateBifurcatingTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:NarrowTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,issues with NarowPyramidalPhenotype,hasMorphologicalPhenotype
@@ -45,9 +47,10 @@ ilxtr:SlenderTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,,note th
 ilxtr:ThickTuftedPyramidalPhenotype,ilxtr:TuftedPyramidalPhenotype,,,,subClassesDisjoint,,hasMorphologicalPhenotype
 ilxtr:EarlyBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:LateBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
-ilxtr:UntuftedPyramidalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,
 ilxtr:BistratifiedPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:GranulePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+,,,,,,,
+,,,,,,,
 ,,,,,,,
 ,,,,,,,
 ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
@@ -62,12 +65,15 @@ ilxtr:MediumSpinyPhenotype,ilxtr:MorphologicalPhenotype,,,,,we really should be 
 ilxtr:SpinyStellatePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:TrilaminarPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
-ilxtr:InterneuronPhenotype,ilxtr:AxonPhenotype,Intrinsic Phenotype,,,,local projections only? (define local) equivalent to LocalAxonOnly,
+ilxtr:InterneuronPhenotype,ilxtr:IntrinsicPhenotype,,,,,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,
+ilxtr:IntrinsicPhenotype,ilxtr:AxonPhenotype,,,,subClassesDisjoint,"local projections only? (define local) equivalent to LocalAxonOnly, is this an axon phenotype or an axon location phenotype?",
 ilxtr:ProjectionPhenotype,ilxtr:AxonPhenotype,,,,,"we don’t always have target location information, sometimes the best we get is ‘the axon leaves the section’, equivalent to RemoteAxon",
 ilxtr:LocalAxon,ilxtr:AxonPhenotype,,,,,,
 ilxtr:RemoteAxon,ilxtr:AxonPhenotype,,,,,hasProjectionPhenotype (some (class brainRegion (not (brainRegion containing this neruon)))),
 ilxtr:LocalAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:RemoteAxon)? This really feels like we are overcomplicating things… all we should need to know is that in projects to its own brain region… or better to a specific cell population that has a known location,
 ilxtr:RemoteAxonOnly,ilxtr:AxonPhenotype,,,,,model this as NegPhenotype(ilxtr:LocalAxon) except that this entails boutons/terminals,
+ilxtr:MotorPhenotype,ilxtr:ProjectionPhenotype,,,,,"motor neuron phenotype, motor projecting phenotype, muscle projecting phenotype, hasForwardConnectionPhenotype some myocyte, implies ",
+ilxtr:SensoryPhenotype,ilxtr:Phenotype,,,,,the implementation of the sensor in a sensory neuron is essentially arbitrary with respect to subcompartment and projection pattern,
 ,,,,,,,
 ilxtr:PerforantPathwayAssociated,,,,,,Needs work,
 ilxtr:DirectPathway,,,,,,Needs work,
@@ -93,5 +99,5 @@ ilxtr:AccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:
 ilxtr:NonAccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ,,,,,,,
 ilxtr:ExpressionPhenotype,ilxtr:CellPhenotype,,molecular phenotype,,,,hasExpressionPhenotype
-ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,,hasExpressionPhenotype
+ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,"figure out how to regularize these since I have used ilxtr:parvalbumin elsewhere, probably ilxtr:phenotype/thing will be best",hasExpressionPhenotype
 ilxtr:SerotonergicPhenotype,ilxtr:ExpressionPhenotype,,,,,,

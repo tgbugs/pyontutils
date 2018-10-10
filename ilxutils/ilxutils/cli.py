@@ -84,7 +84,6 @@ class Client:
                                   id       = data['id'],
                                   ilx      = data['ilx'],
                                   super_id = data['superclasses'][0]['id'])
-
         logging.info(info_filled)
         return info_filled
 

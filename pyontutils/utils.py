@@ -8,6 +8,7 @@ import math
 import asyncio
 import hashlib
 import inspect
+import logging
 from time import time, sleep
 from pathlib import Path
 from datetime import datetime, date
@@ -21,7 +22,7 @@ working_dir = Path(__file__).absolute().resolve().parent.parent
 
 def TODAY():
     """ This needs to be a function for long running programs. """
-    date.today().isoformat()
+    return date.today().isoformat()
 
 
 def UTCNOW(): return datetime.utcnow().isoformat()
@@ -42,6 +43,21 @@ rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libRdfxmlParser')
 rdflib.plugin.register('libttl', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libTurtleParser')
+
+
+def makeSimpleLogger(name):
+    # TODO use extra ...
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()  # FileHander goes to disk
+    formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - '
+                                  '%(name)s - '
+                                  '%(filename)s:%(lineno)d - '
+                                  '%(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    return logger
+
 
 def check_value(v):
     if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
@@ -432,6 +448,21 @@ def mysql_conn_helper(host, db, user, port=3306):
         raise ConnectionError(f'No record for {user}@{host}:{port}/{db}')
 
     return kwargs
+
+
+def ordered(start, edges, predicate=None, inverse=False):
+    """ Depth first edges from a SciGraph response. """
+    s, o = 'sub', 'obj'
+    if inverse:
+        s, o = o, s
+    for edge in edges:
+        if predicate is not None and edge['pred'] != predicate:
+            print('scoop!')
+            continue
+
+        if edge[s] == start:
+            yield edge
+            yield from ordered(edge[o], edges, predicate=predicate)
 
 
 def chunk_list(list_, size):

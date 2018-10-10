@@ -1,0 +1,12 @@
+recursive-exclude export *
+recursive-exclude complete *
+recursive-exclude ilxutils *
+recursive-exclude development *
+recursive-exclude pyontutils.egg-info *
+exclude .gitignore
+exclude .travis.yml
+exclude MANIFEST.in
+exclude *.rkt
+exclude *.csv
+exclude *.json
+

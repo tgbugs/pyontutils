@@ -1,23 +1,23 @@
 #!/usr/bin/env python3.6
 
 from pathlib import Path
-from pyontutils.utils import rowParse, refile, relative_path
+from pyontutils.utils import rowParse, relative_path
 from pyontutils.namespaces import ilxtr
-from pyontutils.neuron_lang import *
+from pyontutils.neurons.lang import *
 from pyontutils.phenotype_namespaces import BBP
 from IPython import embed
-
-Config('markram-2015', source_file=relative_path(__file__))
 
 class NeuronMarkram2015(NeuronEBM):
     owlClass = ilxtr.NeuronMarkram2015
     shortname = 'Markram2015'
 
+Config('markram-2015', source_file=relative_path(__file__))
+
 with BBP:
     context = Neuron(Rat, S1, INT, GABA)
 
 class table1(rowParse):
-    citation = 'Markhram et al Cell 2015'
+    citation = 'Markram et al Cell 2015'
     pmid = 'PMID:26451489'
     _sep = '|'
 
@@ -25,7 +25,7 @@ class table1(rowParse):
         syn, abrv = value.split(' (')
         syn = syn.strip()
         abrv = abrv.rstrip(')').strip()
-        print((syn, abrv))
+        # print((syn, abrv))
         self._mtype = BBP[abrv]
 
         return self._mtype
@@ -147,10 +147,12 @@ class table1(rowParse):
 
     def _end(self):
         graphBase.write()
+        graphBase.write_python()
 
 def main():
     import csv
-    with open(refile(__file__, '../resources/26451489 table 1.csv'), 'rt') as f:
+    from pyontutils.config import devconfig
+    with open(Path(devconfig.resources, '26451489 table 1.csv').as_posix(), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
     table1(rows)
 

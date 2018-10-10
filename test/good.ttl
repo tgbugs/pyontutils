@@ -13,6 +13,7 @@
 @prefix oboInOwl: <http://www.geneontology.org/formats/oboInOwl#> .
 @prefix other: <http://FIXME.org/other_> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix p: <http://prefix.org/> .
 @prefix prefixA: <http://example.org/A/> .
 @prefix prefixa: <http://example.org/a/> .
 @prefix prefixZ: <http://example.org/Z/> .
@@ -66,6 +67,23 @@ BLX:21 a owl:ObjectProperty ;
         (
             BLX:19
             BLX:21 ) .
+
+p:property a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            p:B_1
+            p:R_3 ),
+        (
+            p:R_2
+            p:R_3 ),
+        (
+            p:R_3
+            p:B_1 ),
+        (
+            p:R_3
+            p:B_2 ),
+        (
+            p:R_3
+            p:R_1 ) .
 
 sco:4 a owl:ObjectProperty ;
     rdfs:subPropertyOf sco:5 .
@@ -280,6 +298,11 @@ BLX:BB a owl:Class ;
 
 <http://ihavenoqname.org/heuhuehue_12345678> a owl:Class .
 
+<http://ihavenoqname.org/hrm2> a owl:Class ;
+    p:maybe-a-thing [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
+
 ns1:1234 a owl:Class .
 
 ns1:12345 a owl:Class .
@@ -469,6 +492,22 @@ sco:8 a owl:Class .
     owl:annotatedTarget "ARDS"^^xsd:string ;
     oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string .
 
+[] a owl:Axiom ;
+    oboInOwl:source "hrm"^^xsd:string ;
+    p:p [ a owl:Class ;
+            owl:intersectionOf (
+                    <http://ihavenoqname.org/thing>
+                    [ a owl:Restriction ;
+                        owl:onProperty <http://ihavenoqname.org/pred> ;
+                        owl:someValuesFrom <http://ihavenoqname.org/other> ] ) ] .
+
+[] a owl:Restriction ;
+    owl:onProperty p:same ;
+    owl:someValuesFrom <http://ihavenoqname.org/thing/1> ;
+    owl:disjointWith [ a owl:Restriction ;
+            owl:onProperty p:same ;
+            owl:someValuesFrom <http://ihavenoqname.org/thing/2> ] .
+
 [] a (
             "BB"
             "cc"
@@ -537,6 +576,27 @@ sco:8 a owl:Class .
 BLX:9 rdfs:subClassOf [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom B:1 ] .
+
+<http://ihavenoqname.org/a> owl:disjointWith <http://ihavenoqname.org/b> .
+
+<http://ihavenoqname.org/c> owl:disjointWith [] .
+
+<http://ihavenoqname.org/d> owl:disjointWith [ a owl:Class ] .
+
+<http://ihavenoqname.org/dangling> a [] ;
+    owl:disjointWith [],
+        [] .
+
+<http://ihavenoqname.org/e> owl:disjointWith [ a owl:Class ] .
+
+<http://ihavenoqname.org/f> owl:disjointWith [ a owl:Restriction ] .
+
+<http://ihavenoqname.org/g> owl:disjointWith [ a owl:Restriction ] .
+
+<http://ihavenoqname.org/hrm1> a p:Class ;
+    p:maybe-a-thing [ a owl:Class ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:2 ] .
 
 l:0 rdfs:label (
             1

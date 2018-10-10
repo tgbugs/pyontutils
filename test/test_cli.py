@@ -7,33 +7,31 @@ import subprocess
 from importlib import import_module
 from pathlib import Path
 import git
-from git import Repo
+from git import Repo as baseRepo
 from pyontutils.utils import working_dir, TermColors as tc
+from pyontutils.config import devconfig, checkout_ok
 
-from pyontutils.config import devconfig
-p1 = Path(__file__).resolve().absolute().parent.parent.parent
-p2 = Path(devconfig.git_local_base).resolve().absolute()
-print(p1, p2)
-if not (p2 / devconfig.ontology_repo).exists():
-    if p1 != p2:
-        devconfig.git_local_base = p1
 
-from pyontutils import scigraph
-from pyontutils import core
-from pyontutils import scigraph_client
+class Repo(baseRepo):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._untracked_start = self.untracked()
 
-# orig_basepath = scigraph_client.BASEPATH
-orig_basepath = 'https://scicrunch.org/api/1/scigraph'
+    def untracked(self):
+        return set(self.git.ls_files('--others', '--exclude-standard').split('\n'))
 
-if 'SCICRUNCH_API_KEY' in os.environ:
-    devconfig.scigraph_api = orig_basepath
-    scigraph.scigraph_client.BASEPATH = orig_basepath
-else:
-    local_basepath = 'http://localhost:9000/scigraph'
-    devconfig.scigraph_api = local_basepath
-    scigraph.scigraph_client.BASEPATH = local_basepath
+    def diff_untracked(self):
+        new_untracked = self.untracked()
+        diff = new_untracked - self._untracked_start
+        return diff
 
-checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
+    def remove_diff_untracked(self):
+        wd = Path(self.working_dir)
+        for tail in self.diff_untracked():
+            path = wd / tail
+            print('removing file', path)
+            path.unlink()
+
 
 class Folders(unittest.TestCase):
     _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
@@ -110,7 +108,7 @@ class TestScripts(Folders):
         find their code here. """
     # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
-    def setUp(self, checkout_ok=checkout_ok):
+    def setUp(self):
         super().setUp()
         if not hasattr(self, '_modules'):
             self.__class__._modules = {}
@@ -148,17 +146,17 @@ def populate_tests():
         )
 
     lasts = tuple()
-    neurons = ('neurons',
-               'neuron_lang',
-               'neuron_example',
+    neurons = ('neurons/core',
+               'neurons/lang',
+               'neurons/example',
                'phenotype_namespaces',
-               'neuron_models/allen_cell_types',
-               'neuron_models/phenotype_direct',
-               'neuron_models/basic_neurons',
-               'neuron_models/huang2017',
-               'neuron_models/ma2015',
-               'neuron_models/cuts',
-               'nif_neuron',
+               'neurons/models/allen_cell_types',
+               'neurons/models/phenotype_direct',
+               'neurons/models/basic_neurons',
+               'neurons/models/huang2017',
+               'neurons/models/ma2015',
+               'neurons/models/cuts',
+               'neurons/build',
               )
     print('checkout ok:', checkout_ok)
 
@@ -173,17 +171,17 @@ def populate_tests():
     nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
     nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
-    mains = {'nif_cell':None,
-             'methods':None,
+    mains = {'methods':None,
+             'nif_cell':None,
              'scigraph':None,
              'hbp_cells':None,
-             'combinators':None,
-             'chebi_bridge':None,
-             'closed_namespaces':None,
-             'gen_nat_models':None,
-             'hierarchies':None,
              'nif_neuron':None,
+             'combinators':None,
+             'hierarchies':None,
+             'chebi_bridge':None,
              'cocomac_uberon':None,
+             'gen_nat_models':None,
+             'closed_namespaces':None,
              #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
              'make_catalog':['ont-catalog', '--jobs', '1'],
              'parcellation':['parcellation', '--jobs', '1'],
@@ -241,9 +239,14 @@ def populate_tests():
     _do_mains = []
     _do_tests = []
     try:
+        ont_repo = Repo(devconfig.ontology_local_repo)
         repo = Repo(working_dir.as_posix())
-        paths = sorted(f for f in repo.git.ls_files().split('\n')
-                       if f.endswith('.py') and f.startswith('pyontutils'))
+        paths = sorted(f.rsplit('/', 1)[0] if '__main__' in f else f
+                       for f in repo.git.ls_files().split('\n')
+                       if f.endswith('.py') and
+                       f.startswith('pyontutils') and
+                       '__init__' not in f)
+
         for last in lasts:
             # FIXME hack to go last
             if last in paths:
@@ -260,16 +263,20 @@ def populate_tests():
             #if not any(f'pyontutils/{p}.py' in path for p in neurons):
                 #print('skipping:', path)
                 #continue
-            module_path = ppath.relative_to(repo.working_dir).as_posix()[:-3].replace('/', '.')
+            rp = ppath.relative_to(repo.working_dir)
+            module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
             if stem not in skip:
                 def test_file(self, module_path=module_path, stem=stem):
-                    print(tc.ltyellow('IMPORTING:'), module_path)
-                    module = import_module(module_path)  # this returns the submod
-                    self._modules[module_path] = module
-                    if hasattr(module, '_CHECKOUT_OK'):
-                        print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
-                        setattr(module, '_CHECKOUT_OK', True)
-                        #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    try:
+                        print(tc.ltyellow('IMPORTING:'), module_path)
+                        module = import_module(module_path)  # this returns the submod
+                        self._modules[module_path] = module
+                        if hasattr(module, '_CHECKOUT_OK'):
+                            print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
+                            setattr(module, '_CHECKOUT_OK', True)
+                            #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    finally:
+                        ont_repo.remove_diff_untracked()
 
                 setattr(TestScripts, fname, test_file)
 
@@ -310,6 +317,8 @@ def populate_tests():
                             if isinstance(e, SystemExit):
                                 return  # --help
                             raise e
+                        finally:
+                            ont_repo.remove_diff_untracked()
 
                     setattr(TestScripts, mname, test_main)
 

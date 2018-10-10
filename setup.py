@@ -21,8 +21,8 @@ files = [
     'pyontutils/ilx_utils.py',
     'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
-    'pyontutils/neurons.py',
-    'pyontutils/neuron_lang.py',
+    'pyontutils/neurons/core.py',
+    'pyontutils/neurons/lang.py',
     'pyontutils/obo_io.py',
     'pyontutils/ontload.py',
     'pyontutils/ontree.py',
@@ -42,11 +42,12 @@ files = [
 
 try:
     os.mkdir('export')
+    os.mkdir('export/neurons')
     for f in files:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.2',
+        version='0.0.4-post2',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
         long_description_content_type='text/markdown',
@@ -69,7 +70,7 @@ try:
             'psutil',
             'pymysql',
             'pyyaml',
-            'rdflib',
+            'neurdflib',
             'requests',
             'robobrowser',
             'sqlalchemy',
@@ -83,11 +84,13 @@ try:
         ]},
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
+        scripts=['bin/ttlcmp'],
         entry_points={
             'console_scripts': [
                 'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
                 'ilxcli=pyontutils.ilxcli:main',
                 'necromancy=pyontutils.necromancy:main',
+                'ont-catalog=pyontutils.make_catalog:main',
                 'ont-docs=pyontutils.docs:main',
                 'ontload=pyontutils.ontload:main',
                 'ontree=pyontutils.ontree:main',
@@ -99,6 +102,17 @@ try:
                 'scigraph-deploy=pyontutils.scigraph_deploy:main',
                 'scig=pyontutils.scig:main',
                 'ttlfmt=pyontutils.ttlfmt:main',
+            ],
+            'rdf.plugins.parser': [
+                'librdfxml = pyontutils.librdf:libRdfxmlParser',
+                'libttl = pyontutils.librdf:libTurtleParser',
+            ],
+            'rdf.plugins.serializer': [
+                'nifttl = pyontutils.ttlser:CustomTurtleSerializer',
+                'detttl = pyontutils.ttlser:CustomTurtleSerializer',
+                'cmpttl = pyontutils.ttlser:CompactTurtleSerializer',
+                'uncmpttl = pyontutils.ttlser:CompactTurtleSerializer',
+                'rktttl = pyontutils.ttlser:CompactTurtleSerializer',
             ],
         },
     )

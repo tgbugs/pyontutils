@@ -1,0 +1,9 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix p: <http://prefix.org/> .
+
+p:property a owl:ObjectProperty ;
+    owl:propertyChainAxiom ( p:R_3 p:B_1 ),
+                           ( p:B_1 p:R_3 ),
+                           ( p:R_3 p:B_2 ),
+                           ( p:R_3 p:R_1 ),
+                           ( p:R_2 p:R_3 ) .

@@ -170,3 +170,9 @@ body {
 }
 '''
 
+redlink_style = '''
+.redlink {
+    color: darkred;
+    font-weight: bold;
+}
+'''

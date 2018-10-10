@@ -1,36 +1,55 @@
 edge,neurolex names,existing equiv,definition,label,notes,subPropertyOf,inverse,types
 hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive, functional"
-phenotypeOf,,,,,,,,"asymmetric, irreflexive"
+phenotypeOf,,,,,"of course this can never be universal, so is mostly useful for the python representation",,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
+hasClassificationPhenotype,,,Expresses a relationship between a neuron type and an opaque symbol that is used by experts to distinguish subtypes.,,Use this when numbers or letters have been assigned to disambiguate naming.,hasPhenotype,,"asymmetric, irreflexive"
+,,,,,,,,
 #hasIntrinsicPhenotype,,,,,,hasPhenotype,,"asymmetric, irreflexive"
-#hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type. This should be used for direct detection of the molecule, whether it is a small molecule or a peptide.",,,hasExpressionPhenotype,,"asymmetric, irreflexive"
-hasSmallMoleculeExpressionPhenotype,,,,,,hasExpressionPhenotype,,
-hasProteinExpressionPhenotype,,,,,,hasExpressionPhenotype,,
-hasNucleicAcidExpressionPhenotype,,,,,,hasExpressionPhenotype,,
-hasReporterExpressionPhenotype,,,,,,hasExpressionPhenotype,,
-hasDriverExpressionPhenotype,,,,,,hasExpressionPhenotype,,
-hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type. This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,,,hasPhenotype,,"asymmetric, irreflexive"
-hasNeurotransmitterPhenotype,Neurotransmitter,,,,not entirely sure if we need this one,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type, a gene type, or a gene product type.",,This can be used for detection of the molecule or gene by any means.,hasPhenotype,,"asymmetric, irreflexive"
+hasSmallMoleculePhenotype,,,Expresses a relationship between a neuron and a small molecule that is the product of some molecular pathway that may or may not be expressed in the neuron in question.,,This would probably be used to indicate the detection of the machinery for the synthesis pathway. If just the molecule is detected then hasMolecularPhenotype should be used since expression cannot be inferred (for neurotransmitters).,hasMolecularPhenotype,,"asymmetric, irreflexive"
+hasProteinExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasNucleicAcidExpressionPhenotype,,,,,This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasReporterExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasDriverExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type including any gene products.,,"This may also include the products of molecular synthesis pathways that are indirectly supported by genes, however it seems likely that that relationship should not be though of as an expression phenotype.",hasMolecularPhenotype,,"asymmetric, irreflexive"
+hasNeurotransmitterPhenotype,Neurotransmitter,,,,"includes small molecule and peptide, not entirely sure if we need this one",hasMolecularPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
+hasAxonMorphologicalPhenotype,,,,,,,,"asymmetric, irreflexive"
 hasDendriteMorphologicalPhenotype,,,Expresses a relationship between a neuron and a dendrite phenotype. This should be used when a neuron type is described by the morphology of its dendrites.,,,hasMorphologicalPhenotype,,"asymmetric, irreflexive"
 hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron type and an electrophysiological phenotype concept. This should be used when a neuron type is described using a high level electrophysiological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
 #hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
 #hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
 #hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
-hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,needs work,,hasPhenotype,,
+hasDevelopmentalStructure,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental anatomical entity.,,needs work,hasPhenotype,,
+hasDevelopmentalType,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell type.,,,,,
 #intrinsic/extrinsic phenotypes,,,,,,,,
 #hasExtrinsicPhenotype,,,,,,hasPhenotype,,
 hasProjectionPhenotype,Has role,,Expresses a relationship between a neuron type and a brain region that said neuron type sends axons to.,,"this might be clearer than hasCircuitRole but might confuse with projectsTo or the like, excitatory/inhibitory shouldn't be handled here? The way that projection vs intrinsic is modelled relates whether axons leave the brain region that contains the soma or not, this is not fully modelled at the moment",hasPhenotype,,"asymmetric, irreflexive"
+hasConnectionPhenotype,,,Expresses a relationship between a neuron type and a neuron type or a neuron type and a subcompartment of a neuron type some members are connected with eachother.,,Absent a specific subcompartment we can only infer hasProjectionPhenotype at the granularity of soma + dendrite location. NOTE: This relationship does not imply direction. If you need direction please choose a subproperty.,hasPhenotype,,symmetric
+hasForwardConnectionPhenotype,,,,,can be inferred from symmetric connection + projects to,hasConnectionPhenotype,hasReverseConnectionPhenotype,"asymmetric, irreflexive"
+hasReverseConnectionPhenotype,,,,,,hasConnectionPhenotype,hasForwardConnectionPhenotype,"asymmetric, irreflexive"
+#projectsOnTo,,,,,,,,
+hasConnectionDeterminedByElectrophysiology,,,,,anything from estim to in vitro slice,hasForwardConnectionPhenotype,,
+hasConnectionDeterminedBySynapticPhysiology,,,,,ephys or ca2+,hasConnectionDeterminedByElectrophysiology,,
+hasConnectionDeterminedByPharmacology,,,,,specificity of connections often require pharm,hasConnectionDeterminedByElectrophysiology,,
+hasConnectionDeterminedByViralTracing,,,,,transsynaptic?,hasForwardConnectionPhenotype,,
+hasConnectionDeterminedByCellFilling,,,,,,hasForwardConnectionPhenotype,,
+hasConnectionDeterminedByElectronMicroscopy,,,,,traditionally harder to get granular types here?,hasForwardConnectionPhenotype,,
+,,,,,,,,
+#hasContactWith,,,Expresses a relationship between a neuron type and a neuron type where some members make physical contact with eachother.,,"Could be makesContactWith, this is primarily for purely visual or anatomical contacts. NOTE: this is a symmetric relation unlike hasConnectionPhenotype, it can be inferred from hasConnectionPhenotype, but not the reverse.",hasProjectionPhenotype,,symmetric
 hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a laminar brain region.,,"May need hasSomaLayerLocation or something, do we really even need this?? if axioms are missing in parcellation schemes and uberon then it should be easy enough to add them, or at least we won't get disjointness issues because layers of cortex are orthogonal to parts of cortex (eg) and thus we shouldnt get reasoning errors",hasLocationPhenotype,,"asymmetric, irreflexive"
-hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly.,,,hasPhenotype,,"asymmetric, irreflexive"
+hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly.,,This property should not be used directly.,hasPhenotype,,"asymmetric, irreflexive"
 hasSomaLocatedIn,Located in,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasDendriteLocatedIn,DendriteLocation,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
+hasAxonPhenotype,,,Expresses a relationship between a a neuron type and some phenotype of its axon.,,Use to provide clarity about where a generic phenotype is attached in the event that the object is not qualified. The alternative is to precompose the subcompartments e.g. SmallSomaPhenotype and SmallAxonPhenotype.,hasPhenotype,,
+hasDendritePhenotype,,,Expresses a relationship between a a neuron type and some phenotype of its dendrite.,,Use to provide clarity about where a generic phenotype is attached in the event that the object is not qualified. The alternative is to precompose the subcompartments e.g. SmallSomaPhenotype and SmallAxonPhenotype.,hasPhenotype,,
+hasSomaPhenotype,,,Expresses a relationship between a a neuron type and some phenotype of its soma.,,Use to provide clarity about where a generic phenotype is attached in the event that the object is not qualified. The alternative is to precompose the subcompartments e.g. SmallSomaPhenotype and SmallAxonPhenotype.,hasPhenotype,,
 ,,,,,,,,
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
-#projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments",,,
+#projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments, fasciculates with?",,,
 hasPresynapticTerminalsIn,,,,,projectsTo?,hasLocationPhenotype,,"asymmetric, irreflexive"
-hasCircuitRolePhenotype,,,,needs work,,hasPhenotype,,"asymmetric, irreflexive"
+hasCircuitRolePhenotype,,,,,needs work,hasPhenotype,,"asymmetric, irreflexive"
 hasExperimentalPhenotype,,,Expresses a relationship between a neuron and an experimental condition. This should be used when a neuron type is described by some experimental condition or functional designation.,,This needs a better name. It is clear what it means when you see examples of the usage.,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,,hasPhenotype,,"asymmetric, irreflexive"
