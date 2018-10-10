@@ -21,7 +21,8 @@ hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron typ
 #hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
 #hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
 #hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
-hasDevelopmentalOrigin,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell population.,,needs work,hasPhenotype,,
+hasDevelopmentalStructure,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental anatomical entity.,,needs work,hasPhenotype,,
+hasDevelopmentalType,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell type.,,,,,
 #intrinsic/extrinsic phenotypes,,,,,,,,
 #hasExtrinsicPhenotype,,,,,,hasPhenotype,,
 hasProjectionPhenotype,Has role,,Expresses a relationship between a neuron type and a brain region that said neuron type sends axons to.,,"this might be clearer than hasCircuitRole but might confuse with projectsTo or the like, excitatory/inhibitory shouldn't be handled here? The way that projection vs intrinsic is modelled relates whether axons leave the brain region that contains the soma or not, this is not fully modelled at the moment",hasPhenotype,,"asymmetric, irreflexive"
