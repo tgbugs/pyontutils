@@ -3,8 +3,8 @@ from IPython import embed
 from rdflib import Graph, RDF, OWL, RDFS, BNode, Literal, URIRef, Namespace
 from sys import exit
 from typing import Dict, Tuple, List, Union
-from rdfdata import common_namespaces
-
+from ilxutils.rdfdata import common_namespaces
+# TODO: integrate ### entity type commentss
 
 class SimpleGraph:
     """ rdflib shortcuts | rdflib made simple
@@ -155,7 +155,7 @@ class SimpleGraph:
             self.g.add((a_s, RDF.type, OWL.Axiom))
             self.g.add((a_s, OWL.annotatedSource, self.process_subj_or_pred(subj)))
             self.g.add((a_s, OWL.annotatedProperty,self.process_subj_or_pred(pred)))
-            self.g.add((a_s, OWL.annotatedTarget, self.process_subj_or_pred(obj)))
+            self.g.add((a_s, OWL.annotatedTarget, self.process_obj(obj)))
         else:
             a_s: BNode = bnode
         self.g.add((a_s, self.process_subj_or_pred(a_p), self.process_obj(a_o)))
@@ -251,6 +251,11 @@ class SimpleGraph:
         if isinstance(obj, dict) or isinstance(obj, list):
             exit(str(obj) + ': should be str or intended to be a URIRef or Literal.')
 
+        if isinstance(obj, Literal) or isinstance(obj, URIRef):
+            prefix = self.find_prefix(obj)
+            if prefix: self.process_prefix(prefix)
+            return obj
+
         if len(obj) > 8:
             if 'http' == obj[:4] and '://' in obj and ' ' not in obj:
                 prefix = self.find_prefix(obj)
@@ -280,7 +285,6 @@ class SimpleGraph:
             **args: None
         """
         kwargs = {key: str(value) for key, value in kwargs.items()}
-        kwargs['format'] = 'turtle' if not kwargs.get('format') else None
         return self.g.serialize(**kwargs).encode('utf-8') # FIXME: might ruin it when conv to utf-8
 
     def remove_triple(
@@ -306,22 +310,6 @@ class SimpleGraph:
         """ prints serialized formated rdflib Graph """
         print(self.g.serialize(format=format).decode('utf-8'))
 
-    def add_relationship(self, subj, ):
-    # def add_op(self, id_, label=None, subPropertyOf=None, inverse=None, transitive=False, addPrefix=True):
-    #     """ Add id_ as an owl:ObjectProperty"""
-    #     self.add_trip(id_, rdf.type, owl.ObjectProperty)
-    #     if inverse:
-    #         self.add_trip(id_, owl.inverseOf, inverse)
-    #     if subPropertyOf:
-    #         self.add_trip(id_, rdfs.subPropertyOf, subPropertyOf)
-    #     if label:
-    #         self.add_trip(id_, rdfs.label, label)
-    #         if addPrefix:
-    #             prefix = ''.join([s.capitalize() for s in label.split()])
-    #             namespace = self.expand(id_)
-    #             self.add_namespace(prefix, namespace)
-    #     if transitive:
-    #         self.add_trip(id_, rdf.type, owl.TransitiveProperty)
 
 def main():
     g = RDFGraph()

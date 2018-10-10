@@ -563,7 +563,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             l = self.store.value(l, RDF.rest)
 
         whitespace = '\n' + self.indent(1) if self._newline else ''
-        
+
         if reorder:
             ordered = sorted(to_sort, key=self._globalSortKey)
         else:

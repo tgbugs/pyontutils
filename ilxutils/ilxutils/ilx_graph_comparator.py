@@ -1,5 +1,6 @@
 """ Diff for ontologies
 
+
 Usage:  ilx_graph_comparator [-h | --help]
         ilx_graph_comparator [-v | --version]
         ilx_graph_comparator [options]

@@ -41,9 +41,9 @@ class IlxSql():
     def get_terms(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT t.*
-                FROM terms as t
-                """
+            SELECT t.*
+            FROM terms as t
+        """
         df = pd.read_sql(data, engine)
         df.drop_duplicates(keep='first', subset=['ilx'], inplace=True)
         return df
@@ -51,11 +51,11 @@ class IlxSql():
     def get_annotations(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT ta.id, ta.tid,  ta.annotation_tid, ta.value, ta.orig_uid as uid, t1.label as term_label, t1.ilx as term_ilx, t2.label as annotation_label, t2.ilx as annotation_ilx
-                FROM term_annotations AS ta
-                JOIN terms AS t1 ON ta.tid=t1.id
-                JOIN terms AS t2 ON ta.annotation_tid=t2.id
-                """
+            SELECT ta.id, ta.tid,  ta.annotation_tid, ta.value, ta.orig_uid as uid, t1.label as term_label, t1.ilx as term_ilx, t2.label as annotation_label, t2.ilx as annotation_ilx
+            FROM term_annotations AS ta
+            JOIN terms AS t1 ON ta.tid=t1.id
+            JOIN terms AS t2 ON ta.annotation_tid=t2.id
+        """
         df = pd.read_sql(data, engine)
         df = self.remove_duplicates(df)
         return df
@@ -63,39 +63,44 @@ class IlxSql():
     def get_existing_ids(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT tei.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition, t.comment
-                FROM terms AS t
-                JOIN term_existing_ids AS tei ON t.id=tei.tid
-                """
+            SELECT tei.id, tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.type, t.label, t.definition, t.comment
+            FROM terms AS t
+            JOIN term_existing_ids AS tei ON t.id=tei.tid
+        """
         df = pd.read_sql(data, engine)
         df = self.remove_duplicates(df) # takes out dead terms
-        #print('here')
-        #df.drop_duplicates(keep='first', subset=['curie', 'iri', 'ilx'], inplace=True)
         return df
 
     def get_relationships(self):
         engine = create_engine(self.db_url)
         data = """
-               SELECT tr.id, t1.ilx AS term1, t3.ilx AS relationship_id, t2.ilx AS term2 FROM term_relationships AS tr
-               JOIN terms AS t1 ON t1.id = tr.term1_id
-               JOIN terms AS t2 ON t2.id = tr.term2_id
-               JOIN terms AS t3 ON t3.id = tr.relationship_tid
-               """
+           SELECT
+               tr.id,
+               t1.id as term1_tid, t1.ilx AS term1_ilx, t1.type as term1_type,
+               t2.id as term2_tid, t2.ilx AS term2_ilx, t2.type as term2_type,
+               t3.id as relationship_tid, t3.ilx AS relationship_ilx, t3.label as relationship_label
+           FROM term_relationships AS tr
+           JOIN terms AS t1 ON t1.id = tr.term1_id
+           JOIN terms AS t2 ON t2.id = tr.term2_id
+           JOIN terms AS t3 ON t3.id = tr.relationship_tid
+        """
         df = pd.read_sql(data, engine)
+        df.rename(columns={'relationship_tid': 'tid'}, inplace=True)
         df = self.remove_duplicates(df)
-        df.drop_duplicates(keep='first',
-                           subset=['term1', 'relationship_id', 'term2'],
-                           inplace=True)
+        df.rename(columns={'tid':'relationship_tid'}, inplace=True)
         return df
 
     def get_superclasses(self):
         engine = create_engine(self.db_url)
         data = """
-                SELECT ts.id, ts.tid, ts.superclass_tid, t.label, t.ilx
-                FROM term_superclasses AS ts
-                JOIN terms AS t
-                WHERE ts.tid=t.id
-                """
+            SELECT
+                ts.id, ts.tid, ts.superclass_tid,
+                t1.label as term_label, t1.ilx as term_ilx,
+                t2.label as superclass_label, t2.ilx as superclass_ilx
+            FROM term_superclasses AS ts
+            JOIN terms as t1 ON t1.id = ts.tid
+            JOIN terms AS t2 ON t2.id = ts.superclass_tid
+        """
         df = pd.read_sql(data, engine)
         df = self.remove_duplicates(df)
         return df
@@ -195,6 +200,38 @@ class IlxSql():
 
     def get_custom(self, data):
         return pd.read_sql(data, self.engine)
+
+    def get_terms_complete(self):
+        from functools import reduce
+
+        self.terms = self.fetch_terms()
+        self.annos = self.fetch_annos()
+        synonyms = self.get_synonyms()
+        superclasses = self.get_superclasses()
+        relationships = self.get_relationships()
+        existing_ids = self.get_existing_ids()
+
+        df1 = superclasses.rename({'term_ilx': 'ilx'}, axis='columns')[['ilx', 'superclass_ilx']]
+        df2 = existing_ids.rename({'curie': 'superclass_curie', 'iri': 'superclass_iri'}, axis='columns')[['ilx', 'superclass_curie', 'superclass_iri']]
+        direct_superclasses = pd.merge(df1, df2, on='ilx', how='outer')
+
+        df1 = relationships.rename({'term1_ilx': 'ilx', 'term2_ilx': 'relationship'}, axis='columns')[['ilx', 'relationship']]
+        df2 = relationships.rename({'term2_ilx': 'ilx', 'term1_ilx': 'relationship'}, axis='columns')[['ilx', 'relationship']]
+        direct_relationships = pd.concat([df1,df2]).drop_duplicates().reset_index(drop=True)
+
+        dfs = [
+            self.terms[['id', 'ilx', 'label']],
+            direct_superclasses,
+            self.annos.rename({'term_ilx': 'ilx'}, axis='columns')[['ilx', 'annotation_label', 'value']],
+            synonyms.rename({'literal': 'synonym'}, axis='columns')[['ilx', 'synonym']],
+            existing_ids[['ilx', 'curie', 'iri']],
+            relationships.rename({'relationship_ilx': 'ilx'}, axis='columns')[['ilx', 'term1_ilx', 'term2_ilx']],
+            direct_relationships,
+        ]
+
+        df_final = reduce(lambda left,right: pd.merge(left, right, on='ilx', how='outer'), dfs)
+
+        return df_final
 
 class EzIlxSql(IlxSql):
     def __init__(self, db_url):

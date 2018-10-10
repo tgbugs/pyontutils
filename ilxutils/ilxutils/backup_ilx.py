@@ -35,3 +35,8 @@ superclasses = sql.get_superclasses()
 create_pickle(superclasses, p.home() / 'Dropbox/interlex_backups/ilx_db_superclasses_backup.pickle')
 print('=== superclasses backup complete ===')
 del superclasses
+
+relationships = sql.get_relationships()
+create_pickle(relationships, p.home() / 'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle')
+print('=== relationships backup complete ===')
+del relationships
