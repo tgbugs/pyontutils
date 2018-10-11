@@ -168,12 +168,13 @@ wf = workflow
 
 class WorkflowMapping(Flatten, TripleExport):
 
-    def __init__(self, filename):
+    def __init__(self, filename, do_restrictions=True):
         super().__init__(filename)
         self.node_name_lookup = {}
         self.types = {}
         self.different_tags = set()
         self.edge_object_shift = {}  # s - o -> s - new_obj - o
+        self.do_restrictions = do_restrictions
 
     def insert_object(self, id, s_new):
         id_new = BNode()  # just an id
@@ -201,11 +202,14 @@ class WorkflowMapping(Flatten, TripleExport):
         yield wf.exact, a, owl.Class
         yield wf.reply, a, owl.Class
         yield wf.tag, a, owl.Class
-        isAttachedTo = restriction(wf.isAttachedTo, wf.annotation)
-        yield from isAttachedTo(wf.exact)
-        yield from isAttachedTo(wf.tag)
-        refersTo = restriction(wf.refersTo, wf.annotation)
-        yield from refersTo(wf.reply)
+        if self.do_restrictions:
+            # prevent double up if both are imported at the same time
+            isAttachedTo = restriction(wf.isAttachedTo, wf.annotation)
+            yield from isAttachedTo(wf.exact)
+            yield from isAttachedTo(wf.tag)
+            refersTo = restriction(wf.refersTo, wf.annotation)
+            yield from refersTo(wf.reply)
+
         yield wf.pageNoteInstance, a, wf.pageNote  # wf.exactNull ...
 
     def base(self):
@@ -218,6 +222,7 @@ class WorkflowMapping(Flatten, TripleExport):
         yield RRIDCUR.Kill, a, wf.tagCurator
         yield RRIDCUR.Validated, a, wf.tagCurator
         yield RRIDCUR.UnresolvedCur, a, wf.tagScibot
+        yield RRIDCUR.MetadataMismatch, a, wf.tagCurator
 
         yield wf.tagScibot, a, owl.Class
         yield wf.tagScibot, rdfs.subClassOf, wf.tag
@@ -310,6 +315,8 @@ class WorkflowMapping(Flatten, TripleExport):
         for id, s_id, o_id, style_type, style_width, source, target, label, desc, url in super().edges():
             if o_id in self.edge_object_shift:
                 o_id, __old = self.edge_object_shift[o_id], o_id
+            else:
+                __old = None
                 #print('shifting', __old, self.node_name_lookup[__old])
 
             if desc == 'legend':
@@ -320,16 +327,24 @@ class WorkflowMapping(Flatten, TripleExport):
             # this is where we really want case again :/
             if style_type == 'dashed':
                 # TODO if dashed -dashed-> line => line is scibot output
-                if self.types[o] == wf.exact:
+                if self.types[s] == wf.state and self.types[o] == wf.exact:
                     p = wf.hasOutputExact
-                elif o == wf.pageNoteInstance:
+                elif self.types[s] == wf.state and o == wf.pageNoteInstance:
                     p = wf.hasOutput
                 elif self.types[s] in (wf.tagCurator, wf.tagScibot) and self.types[o] == wf.state:
                     p = wf.initiatesAction  # TODO naming
                 elif self.types[o] in (wf.tag, wf.tagCurator, wf.tagScibot):
                     p = wf.hasOutputTag
-                else:
+                elif self.types[o] == wf.state:
                     p = workflow.hasNextStep
+                elif self.types[o] == wf.pageNote:
+                    print(f'pageNotes happen {s} {o}')
+                    continue
+                elif self.types[o] == wf.exact:
+                    print(f'exacts happen {s} {o}')
+                    continue
+                else:
+                    raise TypeError(f'HRM {s} {o}')
 
             elif (style_type, style_width) == ('dashed_dotted', '2.0'):
                 p = workflow.hasTag
