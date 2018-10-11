@@ -31,6 +31,8 @@ namespaces = {
     'definition': 'http://purl.obolibrary.org/obo/IAO_0000115',
     'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/',
     'owl': 'http://www.w3.org/2002/07/owl#',
+    'PMID': 'https://www.ncbi.nlm.nih.gov/pubmed/',
+    'NIFSTD': 'http://uri.neuinfo.org/nif/nifstd/',
 }
 for prefix, uri in namespaces.items():
     g.bind(prefix, uri)
@@ -142,10 +144,11 @@ def main():
         if 'SuperCategory=Resource' not in text and 'Id=\\n' not in text and 'PMID=\\n' not in text]
 
     ### PRIMER
-    id_count, pmid_count = 0, 0
+    id_count, pmid_count, definition_count = 0, 0, 0
     total_data = {}
+    id2def = {}
     for d in data:
-        local_data = {'id':None, 'pmids':set()}
+        local_data = {'id':None, 'pmids':set(), 'definition':None}
         for segment in d.split('|'):
             if 'Id=' == segment[:3]:
                 id_count += 1
@@ -153,17 +156,24 @@ def main():
             if 'PMID=' == segment[:5]:
                 pmid_count += 1
                 local_data['pmids'].add(segment)
-        if local_data['id'] and local_data['pmids']:
+            if 'Definition=' == segment[:11]:
+                definition_count += 1
+                local_data['definition'] = segment.split('Definition=')[-1].replace('\\n', '')
+        if local_data['id'] and local_data['pmids'] and local_data['definition']:
             total_data[local_data['id']] = local_data['pmids']
-    print(id_count, pmid_count)
+            id2def[local_data['id']] = local_data['definition']
+    print(id_count, pmid_count, definition_count)
 
     ### Nuances
     raw_id2pmids = total_data
     total_data = defaultdict(list)
+    clean_id2def = {}
     for exid, pmids in raw_id2pmids.items():
+        curr_def = id2def[exid]
         for hit in exid.split('\\n'):
             if 'Id=' in hit:
                 clean_id = hit.replace('Id=', '').strip()
+
         clean_pmids = []
         for hit in [pmid.split('\\n') for pmid in pmids]:
             for h in hit:
@@ -172,21 +182,23 @@ def main():
                     clean_pmids.extend(h)
         if clean_pmids:
             total_data[clean_id].extend(clean_pmids)
+            clean_id2def[clean_id] = curr_def
     suffix2pmids = total_data
 
     ### Annotation Creation
     suffix2row = get_suffix2row()
     for _id, pmids in suffix2pmids.items():
         row = suffix2row.get(_id)
+        definition = Literal(clean_id2def[_id])
         if row:
             for pmid in pmids:
                 ilx_uri = URIRef('/'.join([ilx_uri_base, row['ilx']]))
                 add_annotation(
-                    ilx_uri,
+                    URIRef(row['iri']),
                     URIRef('http://purl.obolibrary.org/obo/IAO_0000115'),
-                    Literal(row['definition']),
+                    definition,
                     URIRef('http://uri.interlex.org/tgbugs/uris/readable/literatureCitation'),
-                    Literal('PMID:'+pmid)
+                    URIRef('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid)
                 )
 
     g.serialize(output, format='turtle')
