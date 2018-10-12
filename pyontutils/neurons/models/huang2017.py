@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import ontquery
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
-from ontquery import rdflibLocal
 from pyontutils.core import OntId, OntTerm
 from pyontutils.utils import relative_path
 from pyontutils.namespaces import makePrefixes, makeNamespaces
@@ -14,7 +14,7 @@ from IPython import embed
 Config('huang-2017',
        imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
        source_file=relative_path(__file__))
-OntTerm.query.add(rdflibLocal(Neuron.core_graph, OntId))
+OntTerm.query.add(ontquery.plugin.get('rdflib')(Neuron.core_graph, OntId))
 
 class NeuronHuang2017(NeuronEBM):
     owlClass = ilxtr.NeuronHuang2017

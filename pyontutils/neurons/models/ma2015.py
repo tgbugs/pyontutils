@@ -11,7 +11,7 @@ class NeuronMarkram2015(NeuronEBM):
     owlClass = ilxtr.NeuronMarkram2015
     shortname = 'Markram2015'
 
-Config('markram-2015', source_file=relative_path(__file__))
+config = Config('markram-2015', source_file=relative_path(__file__))
 
 with BBP:
     context = Neuron(Rat, S1, INT, GABA)
@@ -53,7 +53,7 @@ class table1(rowParse):
             self.graph.add_trip(self._morpho_parent_id, 'NIFRID:synonym', v)
 
     def Predominantly_expressed_Ca2_binding_proteins_and_peptides(self, value):
-        p_edge = pred.hasExpressionPhenotype
+        p_edge = ilxtr.hasExpressionPhenotype
         with BBP:
             p_map = {
                 'CB':CB,

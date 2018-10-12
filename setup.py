@@ -76,6 +76,7 @@ try:
             'sqlalchemy',
         ],
         extras_require={'dev':[
+            'google-api-python-client',
             'hunspell',
             'jupyter',
             'mysql-connector',
