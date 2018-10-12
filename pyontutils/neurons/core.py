@@ -1066,7 +1066,7 @@ class NeuronBase(GraphOpsMixin, graphBase):
             ilxtr.hasNeurotransmitterPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-            ilxtr.hasContactWith,
+            ilxtr.hasConnectionPhenotype,
             ilxtr.hasExperimentalPhenotype,
             ilxtr.hasClassificationPhenotype,
             ilxtr.hasPhenotype,  # last

@@ -5,28 +5,11 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
-
-def loadn(ns):
-    ns.config.load_existing()
-    neurons = [ns.Neuron(id_=s)  # amazing how this actually works ...
-               for s in ns.config.out_graph[:rdflib.RDF.type:rdflib.OWL.Class]
-               if isinstance(s, rdflib.URIRef) and ('temp' not in s or 'SWAN' in s)]
-    for n in neurons:
-        n._override = True
-    return neurons
-
-#from pyontutils.neurons.compiled import neuron_data_lifted
-#ndl_neurons = loadn(neuron_data_lifted)
-#ndl_neurons = neuron_data_lifted.Neuron.neurons()
-#from pyontutils.neurons.compiled import basic_neurons
-#neuron_data_lifted.config.load_existing()
-#bn_neurons = basic_neurons.Neuron.neurons()
-#bn_neurons = loadn(basic_neurons)
-
 from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource, OntId, OntCuries
 from pyontutils.config import devconfig
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID
+from pyontutils.closed_namespaces import rdfs
 # import these last so that graphBase resets (sigh)
 from pyontutils.neurons.lang import *
 from pyontutils.neurons import *
@@ -184,19 +167,29 @@ exact_rules = {'pyramidal cell': BBP.PC,
 }
 terminals = 'cell', 'Cell', 'neuron', 'neurons', 'positive cell'  # TODO flag cell and neurons for inconsistency
 
+def skip_pred(p):
+    """ probably don't need to use this """
+    return False
+    #if 'ConnectionDetermined' in p:
+        #return True
 
 def export_for_review(unmapped, partial, nlx_missing):
     neurons = graphBase.neurons()
     predicates = sorted(set(e for n in neurons
                             for me in n.edges
                             for e in (me if isinstance(me, tuple) else (me,))))  # columns
+    q = graphBase.core_graph.transitive_subjects(rdfs.subPropertyOf, ilxtr.hasPhenotype)
+    all_predicates = set(s for s in q)
+    extra_predicates = sorted(p for p in all_predicates if p not in predicates)
 
     col_labels = {p.e:p.eLabel for n in neurons
                   for mp in n.pes
                   for p in (mp.pes if isinstance(mp, LogicalPhenotype) else (mp,))}
 
-    header = ['curie', 'label'] + [col_labels[p] for p in predicates] + ['Status', 'PMID', 'synonyms', 'definition']
-
+    header = (['curie', 'label'] +
+              [col_labels[p] for p in predicates] +
+              ['Status', 'PMID', 'synonyms', 'definition'] +
+              [OntId(p).suffix for p in extra_predicates if not skip_pred(p)])
     def neuron_to_review_row(neuron, cols=predicates):  # TODO column names
         _curie = neuron.ng.qname(neuron.id_)
         curie = None if 'TEMP:' in _curie else _curie
