@@ -68,7 +68,7 @@ class Secrets:
     def exists(self):
         e = Path(self.filename).exists()
         if not e:
-            asdf
+            log.warning(f'secrets file {self.filename} does not exist')
 
         return e
 
