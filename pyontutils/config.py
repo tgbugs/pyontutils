@@ -4,9 +4,11 @@ import yaml
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
-from pyontutils.utils import TermColors as tc
+from pyontutils.utils import TermColors as tc, makeSimpleLogger
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
+
+log = makeSimpleLogger('config')
 
 def get_api_key():
     try: return os.environ['SCICRUNCH_API_KEY']
@@ -52,35 +54,45 @@ tempdir = gettempdir()
 class Secrets:
     def __init__(self, devconfig):
         self.devconfig = devconfig
-        self.filename
-        fstat = os.stat(self.filename)
-        mode = oct(stat.S_IMODE(fstat.st_mode))
-        if mode != '0o600' and mode != '0o700':
-            raise FileNotFoundError(f'Your secrets file can be read by the whole world! {mode}')
+        if self.exists:
+            fstat = os.stat(self.filename)
+            mode = oct(stat.S_IMODE(fstat.st_mode))
+            if mode != '0o600' and mode != '0o700':
+                raise FileNotFoundError(f'Your secrets file can be read by the whole world! {mode}')
 
     @property
     def filename(self):
         return self.devconfig.secrets_file
 
     @property
+    def exists(self):
+        e = Path(self.filename).exists()
+        if not e:
+            asdf
+
+        return e
+
+    @property
     def name_id_map(self):
         # sometimes the easiest solution is just to read from disk every single time
-        with open(self.filename, 'rt') as f:
-            return yaml.load(f)
+        if self.exists:
+            with open(self.filename, 'rt') as f:
+                return yaml.load(f)
 
     def __call__(self, name):
-        nidm = self.name_id_map
-        # NOTE under these circumstances this pattern is ok because anyone
-        # or anything who can call this function can access the secrets file.
-        # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
-        # secrets could be exposted by brute force, but in thise case it is ok
-        # because it is more important to alter the user that they have just
-        # tried to use a secret as a name and that it might be in their code.
-        if name in set(nidm.values()):
-            ANGRY = '*' * len(name)
-            raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
-        else:
-            return nidm[name]
+        if self.exists:
+            nidm = self.name_id_map
+            # NOTE under these circumstances this pattern is ok because anyone
+            # or anything who can call this function can access the secrets file.
+            # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
+            # secrets could be exposted by brute force, but in thise case it is ok
+            # because it is more important to alter the user that they have just
+            # tried to use a secret as a name and that it might be in their code.
+            if name in set(nidm.values()):
+                ANGRY = '*' * len(name)
+                raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+            else:
+                return nidm[name]
 
 
 class DevConfig:
@@ -139,7 +151,7 @@ class DevConfig:
         prefix = path.home()
         return '~' + path.as_posix().strip(prefix.as_posix())
 
-    @default(Path('~/pyontutils-secrets.yaml').as_posix())
+    @default(Path('~/pyontutils-secrets.yaml').expanduser().as_posix())
     def secrets_file(self):
         return self.config['secrets_file']
 
@@ -232,13 +244,13 @@ class DevConfig:
             while maybe_base != fsroot:
                 maybe_repo = maybe_base / self.ontology_repo
                 if maybe_repo.exists():
-                    print(tc.blue('INFO:'), f'Ontology repository found at {maybe_repo}')
+                    log.info(tc.blue('INFO:') + f'Ontology repository found at {maybe_repo}')
                     return maybe_repo
                 else:
                     maybe_base = maybe_base.parent
             else:
-                print(tc.red('WARNING:'),
-                      f'No repository found in any parent directory of {maybe_start}')
+                log.warning(tc.red('WARNING:') +
+                            f'No repository found in any parent directory of {maybe_start}')
 
         return Path('/dev/null')  # seems reaonsable ...
 
@@ -328,7 +340,7 @@ def bootstrap_config():
             if p1 != p2:
                 devconfig.git_local_base = p1
     else:
-        print('config already exists at', devconfig.config_file)
+        log.info('config already exists at ' + devconfig.config_file)
 
 
 def main():
