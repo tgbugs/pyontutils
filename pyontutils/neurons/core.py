@@ -290,6 +290,9 @@ class Config:
                     ebms = [type(OntId(s).suffix, (NeuronCUT,), dict(owlClass=s))
                             for s in self.load_graph[:rdfs.subClassOf:NeuronEBM.owlClass]
                             if not graphBase.knownClasses.append(s)]
+                else:
+                    ebms = []
+
                 sc = None
                 for sc in chain(graphBase.python_subclasses, ebms):
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
