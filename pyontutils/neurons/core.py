@@ -1811,7 +1811,7 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
         'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
-        ilxtr.hasContactWith,
+        ilxtr.hasConnectionPhenotype,
         ilxtr.hasExperimentalPhenotype,
         ilxtr.hasClassificationPhenotype,
         'ilxtr:hasPhenotype',
