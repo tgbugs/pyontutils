@@ -58,7 +58,7 @@ try:
         classifiers=[],
         keywords='nif nifstd ontology scigraph rdflib turtle ttl',
         package_dir={'pyontutils':'export'},
-        packages=['pyontutils'],
+        packages=['pyontutils', 'pyontutils.neurons'],
         install_requires=[
             'docopt',
             'flask',
