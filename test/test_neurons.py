@@ -24,8 +24,8 @@ class TestNeurons(unittest.TestCase):
     def test_load_existing(self):
         from pyontutils.neurons.lang import Neuron, Config
         config = Config('neuron_data_lifted')
-        assert len(Neuron.load_graph)
         config.load_existing()
+        assert len(Neuron.load_graph)
         neurons = Neuron.neurons()
         assert neurons
 
