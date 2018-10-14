@@ -450,21 +450,6 @@ def mysql_conn_helper(host, db, user, port=3306):
     return kwargs
 
 
-def ordered(start, edges, predicate=None, inverse=False):
-    """ Depth first edges from a SciGraph response. """
-    s, o = 'sub', 'obj'
-    if inverse:
-        s, o = o, s
-    for edge in edges:
-        if predicate is not None and edge['pred'] != predicate:
-            print('scoop!')
-            continue
-
-        if edge[s] == start:
-            yield edge
-            yield from ordered(edge[o], edges, predicate=predicate)
-
-
 def chunk_list(list_, size):
     """ Split a list list_ into sublists of length size.
         NOTE: len(chunks[-1]) <= size. """
