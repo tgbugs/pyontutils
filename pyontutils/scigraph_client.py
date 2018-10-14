@@ -105,12 +105,14 @@ class Analyzer(restService):
         """ Class Enrichment Service from: /analyzer/enrichment
 
             Arguments:
-            sample: A list of CURIEs for nodes whose attributes are to be tested for enrichment. For example, a list of genes.
-            ontologyClass: CURIE for parent ontology class for the attribute to be tested. For example, GO biological process
+            sample: A list of CURIEs for nodes whose attributes are to be tested for
+                    enrichment. For example, a list of genes.
+            ontologyClass: CURIE for parent ontology class for the attribute to be tested.
+                           For example, GO biological process
             path: A path expression that connects sample nodes to attribute class nodes
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
         """
@@ -346,9 +348,9 @@ class CypherBase(restService):
         """ Get the curie map from: /cypher/curies
 
             Arguments:
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
         """
@@ -497,7 +499,7 @@ class Dynamic(restService):
     # No methods exist for this API endpoint.
 
 
-class Graph(restService):
+class GraphBase(restService):
     """ Graph services """
 
     def __init__(self, basePath=None, verbose=False, cache=False, key=None):
@@ -515,9 +517,9 @@ class Graph(restService):
             entail: Should subproperties and equivalent properties be included
             limit: The number of edges to be returned
             skip: The number of edges to skip
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/graphson
@@ -549,12 +551,13 @@ class Graph(restService):
             depth: How far to traverse neighbors
             blankNodes: Traverse blank nodes
             relationshipType: Which relationship to traverse
-            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default). Only used if relationshipType is specified.
+            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default).
+                       Only used if relationshipType is specified.
             entail: Should subproperties and equivalent properties be included
             project: Which properties to project. Defaults to '*'.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/graphson
@@ -586,12 +589,13 @@ class Graph(restService):
             depth: How far to traverse neighbors
             blankNodes: Traverse blank nodes
             relationshipType: Which relationship to traverse
-            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default). Only used if relationshipType is specified.
+            direction: Which direction to traverse: INCOMING, OUTGOING, BOTH (default).
+                       Only used if relationshipType is specified.
             entail: Should subproperties and equivalent properties be included
             project: Which properties to project. Defaults to '*'.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/graphson
@@ -619,9 +623,9 @@ class Graph(restService):
         """ Get all property keys from: /graph/properties
 
             Arguments:
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
         """
@@ -640,11 +644,12 @@ class Graph(restService):
             Arguments:
             id: The type of the edge
             hint: A label hint to find the start node.
-            relationships: A list of relationships to traverse, in order. Supports cypher operations such as relA|relB or relA*.
+            relationships: A list of relationships to traverse, in order. Supports cypher
+                           operations such as relA|relB or relA*.
             lbls: A list of node labels to filter.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/graphson
@@ -672,9 +677,9 @@ class Graph(restService):
         """ Get all relationship types from: /graph/relationship_types
 
             Arguments:
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
         """
@@ -693,9 +698,9 @@ class Graph(restService):
             Arguments:
             id: This ID should be either a CURIE or an IRI
             project: Which properties to project. Defaults to '*'.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/graphson
@@ -718,6 +723,23 @@ class Graph(restService):
         requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
         output = self._get('GET', url, requests_params, output)
         return output if output else None
+
+
+class Graph(GraphBase):
+    @staticmethod
+    def ordered(start, edges, predicate=None, inverse=False):
+        """ Depth first edges from a SciGraph response. """
+        s, o = 'sub', 'obj'
+        if inverse:
+            s, o = o, s
+        for edge in edges:
+            if predicate is not None and edge['pred'] != predicate:
+                print('scoop!')
+                continue
+
+            if edge[s] == start:
+                yield edge
+                yield from Graph.ordered(edge[o], edges, predicate=predicate)
 
 
 class Lexical(restService):
@@ -833,27 +855,29 @@ class Refine(restService):
         """ Reconcile terms from: /refine/reconcile
 
             Arguments:
-            query: A call to a reconciliation service API
-            for a single query looks like either
-            of these:<ul><li>http://foo.com/bar/reconcile?query=...string...</li><li>http://foo.com/bar/reconcile?query={...json object literal...}</li></ul>If the query parameter
-            is a string, then it's an abbreviation
-            of <em>query={"query":...string...}</em>.<em>NOTE:</em> We encourage all API consumers
-            to consider the single query mode <b>DEPRECATED</b>.Refine
-            currently only uses the multiple query mode,
-            but other consumers of the API may
-            use the single query option since it
-            was included in the spec.
-            queries: A call to a standard reconciliation service API
-            for multiple queries looks like this:<ul><li>http://foo.com/bar/reconcile?queries={...json object literal...}</li></ul>The
-            json object literal has zero or more key/value
-            pairs with arbitrary keys where the value is
-            in the same format as a single query,
-            e.g.<ul><li>http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo" },
-            "q1" : { "query" : "bar" } }</li></ul>"q0"
-            and "q1" can be arbitrary strings.
-            callback: Name of the JSONP callback ('fn' by default). Supplying this parameter or
-            requesting a javascript media type will cause a JSONP response to be
-            rendered.
+            query: A call to a reconciliation service API for a single query looks
+                   like either of these:<ul><li>
+                   http://foo.com/bar/reconcile?query=...string...</li>
+                   <li>http://foo.com/bar/reconcile?query={...json object
+                   literal...}</li></ul>If the query parameter is a
+                   string, then it's an abbreviation of <em>
+                   query={"query":...string...}</em>.<em>NOTE:</em>
+                    We encourage all API consumers to consider the single query
+                   mode <b>DEPRECATED</b>.Refine currently only uses the
+                   multiple query mode, but other consumers of the API may use the
+                   single query option since it was included in the spec.
+            queries: A call to a standard reconciliation service API for multiple
+                     queries looks like this:<ul><li>
+                     http://foo.com/bar/reconcile?queries={...json object
+                     literal...}</li></ul>The json object literal has zero
+                     or more key/value pairs with arbitrary keys where the value is in
+                     the same format as a single query, e.g.<ul><li>
+                     http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo"
+                     }, "q1" : { "query" : "bar" } }</li></ul>"q0" and
+                     "q1" can be arbitrary strings.
+            callback: Name of the JSONP callback ('fn' by default). Supplying this
+                      parameter or requesting a javascript media type will cause a
+                      JSONP response to be rendered.
             outputs:
                 application/json
                 application/javascript
@@ -871,24 +895,26 @@ class Refine(restService):
         """ Reconcile terms from: /refine/reconcile
 
             Arguments:
-            query: A call to a reconciliation service API
-            for a single query looks like either
-            of these:<ul><li>http://foo.com/bar/reconcile?query=...string...</li><li>http://foo.com/bar/reconcile?query={...json object literal...}</li></ul>If the query parameter
-            is a string, then it's an abbreviation
-            of <em>query={"query":...string...}</em>.<em>NOTE:</em> We encourage all API consumers
-            to consider the single query mode <b>DEPRECATED</b>.Refine
-            currently only uses the multiple query mode,
-            but other consumers of the API may
-            use the single query option since it
-            was included in the spec.
-            queries: A call to a standard reconciliation service API
-            for multiple queries looks like this:<ul><li>http://foo.com/bar/reconcile?queries={...json object literal...}</li></ul>The
-            json object literal has zero or more key/value
-            pairs with arbitrary keys where the value is
-            in the same format as a single query,
-            e.g.<ul><li>http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo" },
-            "q1" : { "query" : "bar" } }</li></ul>"q0"
-            and "q1" can be arbitrary strings.
+            query: A call to a reconciliation service API for a single query looks
+                   like either of these:<ul><li>
+                   http://foo.com/bar/reconcile?query=...string...</li>
+                   <li>http://foo.com/bar/reconcile?query={...json object
+                   literal...}</li></ul>If the query parameter is a
+                   string, then it's an abbreviation of <em>
+                   query={"query":...string...}</em>.<em>NOTE:</em>
+                    We encourage all API consumers to consider the single query
+                   mode <b>DEPRECATED</b>.Refine currently only uses the
+                   multiple query mode, but other consumers of the API may use the
+                   single query option since it was included in the spec.
+            queries: A call to a standard reconciliation service API for multiple
+                     queries looks like this:<ul><li>
+                     http://foo.com/bar/reconcile?queries={...json object
+                     literal...}</li></ul>The json object literal has zero
+                     or more key/value pairs with arbitrary keys where the value is in
+                     the same format as a single query, e.g.<ul><li>
+                     http://foo.com/bar/reconcile?queries={ "q0" : { "query" : "foo"
+                     }, "q1" : { "query" : "bar" } }</li></ul>"q0" and
+                     "q1" can be arbitrary strings.
             outputs:
                 application/json
                 application/javascript
