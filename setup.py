@@ -21,6 +21,7 @@ files = [
     'pyontutils/ilx_utils.py',
     'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
+    'pyontutils/neurons/__init__.py',
     'pyontutils/neurons/core.py',
     'pyontutils/neurons/lang.py',
     'pyontutils/obo_io.py',
