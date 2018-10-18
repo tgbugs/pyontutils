@@ -47,7 +47,7 @@ try:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.4-post2',
+        version='0.0.5',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
         long_description_content_type='text/markdown',
@@ -66,7 +66,7 @@ try:
             'ipython',
             'joblib',
             'lxml',
-            'ontquery',
+            'ontquery>=0.0.4',
             'psutil',
             'pymysql',
             'pyyaml',
