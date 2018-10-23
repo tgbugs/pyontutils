@@ -8,7 +8,7 @@ from pathlib import Path as p
 import requests as r
 from sys import exit
 from ilxutils.args_reader import read_args
-import ilxutils.dictlib as dictlib
+import ilxutils.scicrunch_client_helper as scicrunch_client_helper
 import os
 
 
@@ -93,27 +93,49 @@ class scicrunch():
                     output = response.json()
                 except:
                     output = response.text
-                problem = str(output)
-                exit(str(problem) + ' with status code [' +
-                     str(response.status_code) + '] with params:' + str(data))
+                error = False
+                if output.get('errormsg'):
+                    error = output.get('errormsg')
+                elif output.get('data').get('errormsg'):
+                    error = output.get('data').get('errormsg')
+                if error:
+                    if 'could not generate ILX identifier' in error:
+                        output = None
+                    elif 'already exists' in error.lower():
+                        print(error)
+                        output = {'data':{'term':{}}}
+                    else:
+                        print('IN CATCH')
+                        problem = str(output)
+                        exit(str(problem) + ' with status code [' +
+                            str(response.status) + '] with params:' + str(data))
+                else:
+                    print('OUT CATCH')
+                    problem = str(output)
+                    exit(str(problem) + ' with status code [' +
+                        str(response.status) + '] with params:' + str(data))
 
             else:
                 output = response.json()
-
+                error = False
                 if output.get('errormsg'):
-                    exit(output['errormsg'])
-
+                    error = output['errormsg']
                 # Duplicates; don't exit
                 elif output.get('data').get('errormsg'):
-                    exit(output['data']['errormsg'])
+                    error = output['data']['errormsg']
+                if error:
+                    print(error)
+                    output = {'failed':data}
+                else:
+                    output = output['data']
 
             if _print:
                 try:
-                    print(i, output['data']['label'])
+                    print(i, output['label'])
                 except:
-                    print(i, output['data'])
+                    print(i, output)
 
-            outputs.append(output['data'])
+            outputs.append(output)
 
         return outputs
 
@@ -173,14 +195,15 @@ class scicrunch():
         outputs = loop.run_until_complete(future)  # loop until done
         return {k: v for keyval in outputs for k, v in keyval.items()}
 
-    def post(self,
-             data,
-             LIMIT=50,
-             action='Pushing Info',
-             _print=True,
-             crawl=False):
-        if crawl:
-            return self.crawl_post(data, _print=_print)
+    def post(
+        self,
+        data: list,
+        LIMIT: int = 20,
+        action: str = 'Pushing Info',
+        _print: bool = True,
+        crawl: bool = False):
+
+        if crawl: return self.crawl_post(data, _print=_print)
 
         async def post_single(url, data, session, i):
             # data.update({
@@ -214,6 +237,7 @@ class scicrunch():
                             if 'could not generate ILX identifier' in error:
                                 output = None
                             elif 'already exists' in error:
+                                print(error)
                                 output = {'data':{'term':{}}}
                             else:
                                 print('IN CATCH')
@@ -300,7 +324,7 @@ class scicrunch():
                     crawl=False):
         """parameters( data = "list of ilx_ids" )"""
         url_base = self.base_path + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
-        urls = [url_base.format(identifier=str(ilx_id), APIKEY=self.key) for ilx_id in ilx_ids]
+        urls = [url_base.format(identifier=ilx_id.replace('ILX:', 'ilx_'), APIKEY=self.key) for ilx_id in ilx_ids]
         return self.get(
             urls=urls,
             LIMIT=LIMIT,
@@ -308,40 +332,71 @@ class scicrunch():
             crawl=crawl,
             _print=_print)
 
-    def updateTerms(self,
-                    data,
-                    LIMIT=50,
-                    _print=True,
-                    crawl=False,):
-        """
-            need:
-                    id              <int/str>
-            options:
+    def updateTerms(
+        self,
+        data: list,
+        LIMIT: int = 20,
+        _print: bool = True,
+        crawl: bool = False,
+        ) -> list:
+        """ Updates existing entities
+
+        Args:
+            data:
+                needs:
+                    id              <str>
+                    ilx_id          <str>
+                options:
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
                     type            term, cde, anntation, or relationship <str>
                     synonyms         {'literal':<str>}
                     existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
+            LIMIT:
+                limit of concurrent
+            _print:
+                prints label of data presented
+            crawl:
+                True: Uses linear requests.
+                False: Uses concurrent requests from the asyncio and aiohttp modules
+
+        Returns:
+            List of filled in data parallel with the input data. If any entity failed with an
+            ignorable reason, it will return empty for the item in the list returned.
         """
-        old_data = self.identifierSearches(
-            [d['id'] for d in data], LIMIT=LIMIT, _print=_print, crawl=crawl)
+
         url_base = self.base_path + '/api/1/term/edit/{id}'
         merged_data = []
-        for d in data:
+
+        # PHP on the server is is LOADED with bugs. Best to just duplicate entity data and change
+        # what you need in it before re-upserting the data.
+        old_data = self.identifierSearches(
+            [d['id'] for d in data], # just need the ids
+            LIMIT = LIMIT,
+            _print = _print,
+            crawl = crawl,
+        )
+
+        for d in data: # d for dictionary
             url = url_base.format(id=str(d['id']))
+
+            # Reason this exists is to avoid contradictions in case you are using a local reference
             if d['ilx'] != old_data[int(d['id'])]['ilx']:
                 print(d['ilx'], old_data[int(d['id'])]['ilx'])
                 exit('You might be using beta insead of production!')
-            merged = dictlib.merge(new=d, old=old_data[int(d['id'])])
-            merged = dictlib.superclasses_bug_fix(merged)  # BUG
-            #merged['batch-elastic'] = 'True'
+
+            merged = scicrunch_client_helper.merge(new=d, old=old_data[int(d['id'])])
+            merged = scicrunch_client_helper.superclasses_bug_fix(merged)  # BUG: superclass output diff than input needed
+            # merged['batch-elastic'] = 'True' # does not exist yet... or maybe ever
             merged_data.append((url, merged))
+
         return self.post(
             merged_data,
-            LIMIT=LIMIT,
-            action='Updating Terms',
-            _print=_print,
-            crawl=crawl)
+            LIMIT = LIMIT,
+            action = 'Updating Terms', # forced input from each function
+            _print = _print,
+            crawl = crawl,
+        )
 
     def addTerms(self, data, LIMIT=50, _print=True, crawl=False):
         """
@@ -351,8 +406,8 @@ class scicrunch():
             options:
                     definition      <str> #bug with qutations
                     superclasses    [{'id':<int>}]
-                    synonyms         {'literal':<str>}
-                    existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
+                    synonyms        [{'literal':<str>}]
+                    existing_ids    [{'iri':<str>,'curie':<str>'}]
         """
         needed = set([
             'label',
@@ -386,7 +441,7 @@ class scicrunch():
         terms = []
         for d in data:
             d['label'] = d.pop('term')
-            d = dictlib.superclasses_bug_fix(d)
+            d = scicrunch_client_helper.superclasses_bug_fix(d)
             if not ilx.get(d['label']): # ilx can be incomplete if errored term
                 continue
             try:
@@ -430,11 +485,13 @@ class scicrunch():
 
             annotations.append((url_base, annotation))
 
-        return self.post(annotations,
-                         LIMIT=LIMIT,
-                         action='Adding Annotations',
-                         _print=_print,
-                         crawl=crawl)
+        return self.post(
+            annotations,
+            LIMIT = LIMIT,
+            action = 'Adding Annotations',
+            _print = _print,
+            crawl = crawl,
+        )
 
     def getAnnotations_via_tid(self,
                                tids,
@@ -524,12 +581,13 @@ class scicrunch():
                          _print=_print,
                          crawl=crawl)
 
-    def addRelationships(self,
-                         data,
-                         HELP=False,
-                         LIMIT=50,
-                         _print=True,
-                         crawl=False,):
+    def addRelationships(
+        self,
+        data: list,
+        LIMIT: int = 20,
+        _print: bool = True,
+        crawl: bool = False,
+        ) -> list:
         """
         data = [{
             "term1_id", "term2_id", "relationship_tid",
@@ -547,10 +605,11 @@ class scicrunch():
             relationships.append((url_base, relationship))
         return self.post(
             relationships,
-            LIMIT=LIMIT,
-            action='Adding Relationships',
-            _print=True,
-            crawl=False)
+            LIMIT = LIMIT,
+            action = 'Adding Relationships',
+            _print = _print,
+            crawl = crawl,
+        )
 
     def deleteTermsFromElastic(self,
                                ilx_ids,
@@ -574,6 +633,128 @@ class scicrunch():
         return self.post(
             data, LIMIT=LIMIT, _print=_print, crawl=crawl)
 
+    def deprecate_entity(
+        self,
+        ilx_id: str,
+        note = None,
+        ) -> None:
+        """ Tagged term in interlex to warn this term is no longer used
+
+        There isn't an proper way to delete a term and so we have to mark it so I can
+        extrapolate that in mysql/ttl loads.
+
+        Args:
+            term_id: id of the term of which to be deprecated
+            term_version: version of the term of which to be deprecated
+
+        Example: deprecateTerm('ilx_0101431', '6')
+        """
+
+        term_id, term_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx_id], crawl=True, _print=False).values()][0]
+
+        annotations = [{
+            'tid': term_id,
+            'annotation_tid': '306375', # id for annotation "deprecated"
+            'value': 'True',
+            'term_version': term_version,
+            'annotation_term_version': '1', # term version for annotation "deprecated"
+        }]
+        if note:
+            editor_note = {
+                'tid': term_id,
+                'annotation_tid': '306378', # id for annotation "editorNote"
+                'value': note,
+                'term_version': term_version,
+                'annotation_term_version': '1', # term version for annotation "deprecated"
+            }
+            annotations.append(editor_note)
+        self.addAnnotations(annotations, crawl=True, _print=False)
+        print(annotations)
+
+    def add_editor_note(
+        self,
+        ilx_id: str,
+        note = None,
+        ) -> None:
+        """ Tagged term in interlex to warn this term is no longer used
+
+        There isn't an proper way to delete a term and so we have to mark it so I can
+        extrapolate that in mysql/ttl loads.
+
+        Args:
+            term_id: id of the term of which to be deprecated
+            term_version: version of the term of which to be deprecated
+
+        Example: deprecateTerm('ilx_0101431', '6')
+        """
+
+        term_id, term_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx_id], crawl=True, _print=False).values()][0]
+
+        editor_note = {
+            'tid': term_id,
+            'annotation_tid': '306378', # id for annotation "editorNote"
+            'value': note,
+            'term_version': term_version,
+            'annotation_term_version': '1', # term version for annotation "deprecated"
+        }
+        self.addAnnotations([editor_note], crawl=True, _print=False)
+        print(editor_note)
+
+    def add_merge_properties(
+        self,
+        ilx1_id: str,
+        ilx2_id: str,
+        ) -> None:
+
+        term1_id, term1_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx1_id], crawl=True, _print=False).values()][0]
+        term2_id, term2_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx2_id], crawl=True, _print=False).values()][0]
+
+        replaced_info = {
+            "term1_id": term1_id,
+            "term2_id": term2_id,
+            "relationship_tid": '306376', # "replacedBy" id ,
+            "term1_version": term1_version,
+            "term2_version": term2_version,
+            "relationship_term_version": '1', # "replacedBy" version,
+        }
+        self.addRelationships([replaced_info], crawl=True, _print=False)
+        print(replaced_info)
+
+        reason_info = {
+            'tid': term1_id,
+            'annotation_tid': '306377', # id for annotation "obsReason"
+            'value': 'http://purl.obolibrary.org/obo/IAO_0000227', # termsMerged rdf iri
+            'term_version': term1_version,
+            'annotation_term_version': '1', # term version for annotation "obsReason"
+        }
+        self.addAnnotations([reason_info], crawl=True, _print=False)
+        print(reason_info)
+
+    def add_syn_relationship_properties(
+        self,
+        ilx1_id: str,
+        ilx2_id: str,
+        ) -> None:
+
+        term1_id, term1_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx1_id], crawl=True, _print=False).values()][0]
+        term2_id, term2_version = [(d['id'], d['version'])
+            for d in self.ilxSearches([ilx2_id], crawl=True, _print=False).values()][0]
+
+        replaced_info = {
+            "term1_id": term1_id,
+            "term2_id": term2_id,
+            "relationship_tid": '306379', # "isTreatedAsSynonymOf" id ,
+            "term1_version": term1_version,
+            "term2_version": term2_version,
+            "relationship_term_version": '1', # "isTreatedAsSynonymOf" version,
+        }
+        self.addRelationships([replaced_info], crawl=True, _print=False)
+        print(replaced_info)
 
 def main():
 

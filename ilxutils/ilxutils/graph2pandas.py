@@ -30,8 +30,8 @@ class Graph2Pandas():
     query = """
         select ?subj ?pred ?obj
         where {
-            ?subj rdf:type %s .
-            ?subj ?pred ?obj .
+            ?subj rdf:type %s ;
+                  ?pred ?obj .
         } """
 
     def __init__(self, obj, _type='owl:Class'):

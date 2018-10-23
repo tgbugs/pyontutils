@@ -1,5 +1,5 @@
-import pandas as pd
-from sqlalchemy import create_engine, inspect, Table, Column
+import pandas as pd # vicky
+from sqlalchemy import create_engine, inspect, Table, Column # vicky
 from collections import defaultdict
 from ilxutils.tools import light_degrade
 import os
@@ -7,10 +7,10 @@ import os
 
 
 class IlxSql():
-    
+
     def __init__(self, db_url, pre_load=False):
         self.db_url = db_url
-        self.engine = create_engine(self.db_url)
+        self.engine = create_engine(self.db_url) #vicky
         self.local_degrade = light_degrade  # current degrade of choice for sql
         self.terms = self.get_terms() if pre_load else pd.DataFrame
         self.annos = self.get_annotations() if pre_load else pd.DataFrame
@@ -26,13 +26,13 @@ class IlxSql():
         return self.annos
 
     def get_terms(self):
-        engine = create_engine(self.db_url)
+        engine = create_engine(self.db_url) # vicky
         data = """
             SELECT *
             FROM terms
             GROUP BY terms.ilx
         """
-        df = pd.read_sql(data, engine)
+        df = pd.read_sql(data, engine) # vicky
         return df
 
     def get_annotations(self):
@@ -170,6 +170,17 @@ class IlxSql():
                 visited[(label, row.type, row.uid)] = True
         return label_to_ilx
 
+    def get_label2row(self):
+        self.terms = self.fetch_terms()
+        visited = {}
+        label2row = defaultdict(list)
+        for i, row in self.terms.iterrows():
+            label = self.local_degrade(row.label)
+            if not visited.get((label, row.type, row.uid)):
+                label2row[label].append(row.to_dict())
+                visited[(label, row.type, row.uid)] = True
+        return label2row
+
     def get_id2label(self):
         return {row['id']: row['label'] for row in self.fetch_terms().to_dict('records')}
 
@@ -202,8 +213,8 @@ class IlxSql():
 
 
 def main():
-    db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION')
-    sql = IlxSql(db_url)
+    db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION') # vicky
+    sql = IlxSql(db_url) # vicky
     rels = sql.get_relationships()
     print(rels.head())
 

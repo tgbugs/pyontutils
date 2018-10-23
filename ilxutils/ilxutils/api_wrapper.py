@@ -25,19 +25,21 @@ import time
 from sys import exit
 from ilxutils.scicrunch_client import scicrunch
 from ilxutils.tools import open_json
+import os
 VERSION = '0.0.5'
 
 
 def batch(data, seg_length, start_batch, end_batch, func, **kwargs):
-    if start_batch != 0:
-        print("Warning: Start Batch isn't 0")
-    total_data = [data[x:x + seg_length]
-                  for x in range(0, len(data), seg_length)]
+    if start_batch != 0: print("Warning: Start Batch isn't 0")
+
+    total_data = [data[x:x + seg_length] for x in range(0, len(data), seg_length)]
     total_count = m.floor(len(data) / seg_length)
     output = []
+
     for i, _data in enumerate(total_data[start_batch:end_batch], start_batch):
         print('Batch', i, 'out of', total_count)
         output.extend(func(_data, **kwargs))
+
     return output
 
 
@@ -45,10 +47,8 @@ def main():
     doc = docopt(__doc__, version=VERSION)
     if doc['--production']:
         base_path = os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION')
-        db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION')
     elif doc['--beta']:
         base_path = os.environ.get('SCICRUNCH_BASEBATH_BETA')
-        db_url = os.environ.get('SCICRUNCH_DB_URL_BETA')
     else:
         exit('Need to specify SciCrunch client version.')
 
@@ -57,7 +57,6 @@ def main():
     sci = scicrunch(
         api_key = os.environ.get('SCICRUNCH_API_KEY'),
         base_path = base_path,
-        db_url = db_url,
     )
 
     FUNCTION_MAP = {
@@ -68,16 +67,15 @@ def main():
         'deleteAnnotations': sci.deleteAnnotations,
         'addRelationships': sci.addRelationships,
     }
-
     output = batch(
-        data=data,
-        seg_length=10,
-        start_batch=0,  # 1408, # regarding uids
-        end_batch=None,  # 1410,
-        func=FUNCTION_MAP[args['<argument>']],
-        _print=True,
-        crawl=False,
-        LIMIT=10,
+        data = data,
+        seg_length = 20,
+        start_batch = 4925,  # 1408, # regarding uids
+        end_batch = None,  # 1410,
+        func = FUNCTION_MAP[doc['<argument>']],
+        _print = True,
+        crawl = False,
+        LIMIT = 20,
     )
 
 

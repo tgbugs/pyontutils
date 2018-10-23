@@ -46,8 +46,8 @@ def sentence_similarity(sentence1, sentence2):
     # Filter out the Nones
     synsets1 = [ss for ss in synsets1 if ss]
     synsets2 = [ss for ss in synsets2 if ss]
-    print(synsets1)
-    print(synsets2)
+    #print(synsets1)
+    #print(synsets2)
     score, count = 0.0, 0.0
 
     # For each word in the first sentence
