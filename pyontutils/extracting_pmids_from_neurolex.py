@@ -12,7 +12,7 @@ db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION')
 ilx_uri_base = 'http://uri.interlex.org/base'
 triple2annotation_bnode = {}
 g = Graph()
-output = '/home/tmsincomb/Desktop/anno-test2.ttl'
+output = '/home/tmsincomb/Dropbox/NIF-Ontology/ttl/generated/neurolex_to_interlex_pmids.ttl'
 
 
 with open('/home/tmsincomb/Dropbox/PMID/pmid-dump.tsv', 'r') as csvFile:
