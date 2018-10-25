@@ -65,8 +65,8 @@ ilxtr:MediumSpinyPhenotype,ilxtr:MorphologicalPhenotype,,,,,we really should be 
 ilxtr:SpinyStellatePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:TrilaminarPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
-ilxtr:InterneuronPhenotype,ilxtr:IntrinsicPhenotype,,,,,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,
 ilxtr:IntrinsicPhenotype,ilxtr:AxonPhenotype,,,,subClassesDisjoint,"local projections only? (define local) equivalent to LocalAxonOnly, is this an axon phenotype or an axon location phenotype?",
+ilxtr:InterneuronPhenotype,ilxtr:IntrinsicPhenotype,,,,,this is the 'general' morphological phenotype that might be made up of soma/axon/dendrite,
 ilxtr:ProjectionPhenotype,ilxtr:AxonPhenotype,,,,,"we don’t always have target location information, sometimes the best we get is ‘the axon leaves the section’, equivalent to RemoteAxon",
 ilxtr:LocalAxon,ilxtr:AxonPhenotype,,,,,,
 ilxtr:RemoteAxon,ilxtr:AxonPhenotype,,,,,hasProjectionPhenotype (some (class brainRegion (not (brainRegion containing this neruon)))),

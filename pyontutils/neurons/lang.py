@@ -17,6 +17,7 @@ __all__ = [
     'getLocalContext',
     'setLocalNames',
     'getLocalNames',
+    'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
     'LogicalPhenotype',

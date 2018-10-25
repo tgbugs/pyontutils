@@ -241,8 +241,8 @@ def main():
     elif args['cy']:
         c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
         import pprint
-        from pyontutils.ontree import cypher_query
-        results = cypher_query(c, args['<query>'], args['--limit'])
+        results = c.execute(args['<query>'], args['--limit'])
+        #results = c.execute(args['<query>'], args['--limit'], 'application/json')
         if results:
             pprint.pprint(results)
         else:

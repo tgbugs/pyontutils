@@ -290,6 +290,9 @@ class Config:
                     ebms = [type(OntId(s).suffix, (NeuronCUT,), dict(owlClass=s))
                             for s in self.load_graph[:rdfs.subClassOf:NeuronEBM.owlClass]
                             if not graphBase.knownClasses.append(s)]
+                else:
+                    ebms = []
+
                 sc = None
                 for sc in chain(graphBase.python_subclasses, ebms):
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
@@ -1066,7 +1069,7 @@ class NeuronBase(GraphOpsMixin, graphBase):
             ilxtr.hasNeurotransmitterPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-            ilxtr.hasContactWith,
+            ilxtr.hasConnectionPhenotype,
             ilxtr.hasExperimentalPhenotype,
             ilxtr.hasClassificationPhenotype,
             ilxtr.hasPhenotype,  # last
@@ -1808,7 +1811,7 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
         'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
-        ilxtr.hasContactWith,
+        ilxtr.hasConnectionPhenotype,
         ilxtr.hasExperimentalPhenotype,
         ilxtr.hasClassificationPhenotype,
         'ilxtr:hasPhenotype',

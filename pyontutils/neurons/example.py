@@ -3,9 +3,7 @@
 import inspect
 import pyontutils.neurons
 from pyontutils.utils import TermColors as tc
-from pyontutils.neurons import *  # always import via pyontutils or you will get errors
 from pyontutils.neurons.lang import *
-#pred = config(checkout_ok=True)
 from pyontutils import phenotype_namespaces as phns
 from IPython import embed
 
@@ -98,11 +96,11 @@ with phns.BBP:
     print('sumn a neuron again', repr(nn))
 
 setLocalNames(phns.BBP)
-setLocalContext(Phenotype('NCBITaxon:10090', pred.hasInstanceInSpecies))
-Neuron(Phenotype('UBERON:0001950', pred.hasSomaLocatedIn, label='neocortex'))
+setLocalContext(Phenotype('NCBITaxon:10090', ilxtr.hasInstanceInSpecies))
+Neuron(Phenotype('UBERON:0001950', ilxtr.hasSomaLocatedIn, label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))
 Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'))
-Neuron(Phenotype('UBERON:0001950', pred.hasSomaLocatedIn))
+Neuron(Phenotype('UBERON:0001950', ilxtr.hasSomaLocatedIn))
 Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'), Phenotype('PR:000013502'))
 
 def inner():

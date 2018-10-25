@@ -19,7 +19,6 @@ c = Config('basic-neurons',
                      'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
            source_file=relative_path(__file__))
-pred = c.pred
 
 from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
 

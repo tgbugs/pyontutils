@@ -117,6 +117,8 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         g = graphFromGithub(github_link, verbose)
         if pred == 'subClassOf':
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
+        elif pred == 'subPropertyOf':
+            pred = 'rdfs:subPropertyOf'
         try:
             kwargs['json'] = g.make_scigraph_json(pred, direct=not restriction)
             kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}

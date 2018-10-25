@@ -187,6 +187,23 @@ class Cypher(SUBCLASS):
             return super().execute(query, limit, output)
 
 
+class Graph(SUBCLASS):
+    @staticmethod
+    def ordered(start, edges, predicate=None, inverse=False):
+        """ Depth first edges from a SciGraph response. """
+        s, o = 'sub', 'obj'
+        if inverse:
+            s, o = o, s
+        for edge in edges:
+            if predicate is not None and edge['pred'] != predicate:
+                print('scoop!')
+                continue
+
+            if edge[s] == start:
+                yield edge
+                yield from Graph.ordered(edge[o], edges, predicate=predicate)
+
+
 class CLASSNAME(restService):
     """ DOCSTRING """
 
@@ -228,7 +245,7 @@ class State:
     def __init__(self, api_url, basepath=None):
         # TODO autopopulate from subclasses
         self.classname = None
-        self._subclasses = {'Cypher': Cypher}
+        self._subclasses = {sc.__name__:sc for sc in SUBCLASS.__subclasses__()}
 
         self.shebang = "#!/usr/bin/env python3\n"
         self.imports = ('import re\n'
@@ -321,18 +338,35 @@ class State:
         param_rest = '{name}'
         param_rest = param_rest.format(name=dict_['name'])
 
-        param_doc = '{t}{t}{t}{name}: {description}'
-
+        param_doc = '{t}{t}{t}{name}:{description}'
 
         desc = dict_.get('description','')
-        if len(desc) > 60:
+        LIMIT = 65
+        if len(desc) > LIMIT:
+            desc = desc.replace('>', '> ||').replace('<', '|| <')
             tmp = desc.split(' ')
-            part = len(desc) // 60
-            size = len(tmp) // part
             lines = []
-            for i in range(part + 1):
-                lines.append(' '.join(tmp[i*size:(i+1) * size]))
-            desc = '\n{t}{t}{t}'.format(t=self.tab).join([l for l in lines if l])
+            line = None
+            for token in tmp:
+                if not line:
+                    line = token
+                elif len(line) + len(' ' + token) > LIMIT:
+                    lines.append(line)
+                    line = token
+                else:
+                    line += ' ' + token
+
+            if line not in lines:
+                if len(line) < 10:
+                    lines[-1] += ' ' + line
+                else:
+                    lines.append(line)
+
+            space = (' ' * (len(dict_['name']) + 2))
+            desc = '\n{t}{t}{t}{space}'.format(t=self.tab, space=space).join([l for l in lines if l])
+            desc = desc.replace('> ||', '>').replace('|| <', '<').replace('||', '')
+
+        desc = ' ' + desc if desc else desc
         param_doc = param_doc.format(name=dict_['name'], description=desc, t=self.tab)
 
         return param_args, param_rest, param_doc, required

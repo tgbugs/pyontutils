@@ -21,6 +21,7 @@ files = [
     'pyontutils/ilx_utils.py',
     'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
+    'pyontutils/neurons/__init__.py',
     'pyontutils/neurons/core.py',
     'pyontutils/neurons/lang.py',
     'pyontutils/obo_io.py',
@@ -47,7 +48,7 @@ try:
         shutil.copyfile(f, f.replace('pyontutils','export'))
     setup(
         name='pyontutils',
-        version='0.0.4-post2',
+        version='0.0.5',
         description='utilities for working with the NIF ontology, SciGraph, and turtle',
         long_description=long_description,
         long_description_content_type='text/markdown',
@@ -58,7 +59,7 @@ try:
         classifiers=[],
         keywords='nif nifstd ontology scigraph rdflib turtle ttl',
         package_dir={'pyontutils':'export'},
-        packages=['pyontutils'],
+        packages=['pyontutils', 'pyontutils.neurons'],
         install_requires=[
             'docopt',
             'flask',
@@ -66,7 +67,7 @@ try:
             'ipython',
             'joblib',
             'lxml',
-            'ontquery',
+            'ontquery>=0.0.4',
             'psutil',
             'pymysql',
             'pyyaml',
@@ -76,6 +77,7 @@ try:
             'sqlalchemy',
         ],
         extras_require={'dev':[
+            'google-api-python-client',
             'hunspell',
             'jupyter',
             'mysql-connector',
