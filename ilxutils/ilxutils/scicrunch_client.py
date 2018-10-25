@@ -385,6 +385,7 @@ class scicrunch():
                 print(d['ilx'], old_data[int(d['id'])]['ilx'])
                 exit('You might be using beta insead of production!')
 
+
             merged = scicrunch_client_helper.merge(new=d, old=old_data[int(d['id'])])
             merged = scicrunch_client_helper.superclasses_bug_fix(merged)  # BUG: superclass output diff than input needed
             # merged['batch-elastic'] = 'True' # does not exist yet... or maybe ever

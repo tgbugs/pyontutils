@@ -5,6 +5,7 @@ import os
 from rdflib import Graph, URIRef, Literal, BNode, RDF, RDFS, OWL
 from sqlalchemy import create_engine, inspect, Table, Column
 from sqlalchemy.orm.session import sessionmaker
+from pyontutils import utils
 from typing import Dict, Tuple, List, Union
 
 
@@ -33,6 +34,9 @@ namespaces = {
     'owl': 'http://www.w3.org/2002/07/owl#',
     'PMID': 'https://www.ncbi.nlm.nih.gov/pubmed/',
     'NIFSTD': 'http://uri.neuinfo.org/nif/nifstd/',
+    'BIRNLEX': 'http://uri.neuinfo.org/nif/nifstd/birnlex_',
+    'UBERON': 'http://purl.obolibrary.org/obo/UBERON_',
+    'PR': 'http://purl.obolibrary.org/obo/PR_',
 }
 for prefix, uri in namespaces.items():
     g.bind(prefix, uri)
@@ -139,6 +143,16 @@ def pmid_fix(string):
     return new_obj
 
 
+def add_uri(ID):
+    if 'nlx_' in ID or 'birnlex_' in ID or 'sao' in ID or 'BAMSC' in ID:
+        return 'http://uri.neuinfo.org/nif/nifstd/' + ID
+    elif 'UBERON' in ID:
+        return 'http://purl.obolibrary.org/obo/UBERON_' + ID.split('_')[-1]
+    else:
+        print('Warning: ', ID, 'does not have a stored prefix')
+        return 'http://uri.neuinfo.org/nif/nifstd/' + ID
+
+
 def main():
     data = [text for text in old_text
         if 'SuperCategory=Resource' not in text and 'Id=\\n' not in text and 'PMID=\\n' not in text]
@@ -154,6 +168,8 @@ def main():
                 id_count += 1
                 local_data['id'] = segment
             if 'PMID=' == segment[:5]:
+                if 'nlx_12' in segment:
+                    print(segment)
                 pmid_count += 1
                 local_data['pmids'].add(segment)
             if 'Definition=' == segment[:11]:
@@ -193,15 +209,29 @@ def main():
         if row:
             for pmid in pmids:
                 ilx_uri = URIRef('/'.join([ilx_uri_base, row['ilx']]))
+                g.add((
+                    URIRef(row['iri']),
+                    URIRef('http://uri.interlex.org/tgbugs/uris/readable/literatureCitation'),
+                    URIRef('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid),
+                ))
                 add_annotation(
                     URIRef(row['iri']),
                     URIRef('http://purl.obolibrary.org/obo/IAO_0000115'),
                     definition,
                     URIRef('http://uri.interlex.org/tgbugs/uris/readable/literatureCitation'),
-                    URIRef('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid)
+                    URIRef('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid),
+                )
+        else:
+            for pmid in pmids:
+                add_annotation(
+                    URIRef(add_uri(str(_id))),
+                    URIRef('http://purl.obolibrary.org/obo/IAO_0000115'),
+                    definition,
+                    URIRef('http://uri.interlex.org/tgbugs/uris/readable/literatureCitation'),
+                    URIRef('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid),
                 )
 
-    g.serialize(output, format='turtle')
+    g.serialize(output, format='nifttl')
 
 
 if __name__ == '__main__':

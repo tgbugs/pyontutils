@@ -40,7 +40,8 @@ def preferred_change(data):
         'BIRNLEX',
         'SAO',
         'NDA.CDE',
-        'PRO',
+        'PR',
+        'IAO',
         'NIFEXT',
         'ILX',
     ]
@@ -105,8 +106,7 @@ def merge(new, old):
                         old['existing_ids'] = new_existing_ids
                     else:
                         print(new_existing_id)
-                        sys.exit("You want to delete an iri that doesn't exist",
-                                 '\n', new)
+                        sys.exit("You want to delete an iri that doesn't exist")
 
                 elif new_existing_id.get('replace') == True:
                     if not new_existing_id.get('old_iri'):
@@ -147,7 +147,6 @@ def merge(new, old):
                         pass  # for sanity readability
                     else:
                         sys.exit('Something broke while merging in existing_ids')
-                old = preferred_change(old)
 
         elif k in [
                 'definition', 'superclasses', 'id', 'type', 'comment', 'label', 'uid'
@@ -172,5 +171,6 @@ def merge(new, old):
             new_existing_ids.append(e)
             visited[e['iri']] = True
     old['existing_ids'] = new_existing_ids
+    old = preferred_change(old)
 
     return old

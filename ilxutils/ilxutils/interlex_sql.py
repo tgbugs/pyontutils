@@ -1,7 +1,8 @@
 import pandas as pd # vicky
+from pathlib import Path
 from sqlalchemy import create_engine, inspect, Table, Column # vicky
 from collections import defaultdict
-from ilxutils.tools import light_degrade
+from ilxutils.tools import light_degrade, open_pickle
 import os
 #ELASTIC = 'https://5f86098ac2b28a982cebf64e82db4ea2.us-west-2.aws.found.io:9243/interlex/term/'
 
@@ -73,6 +74,11 @@ class IlxSql():
         """
         df = pd.read_sql(data, engine)
         return df
+
+    def get_existing_ids_from_backup(backup_path=None):
+        if not backup_path:
+            backup_path = Path.home() / 'Dropbox/interlex_backups/ilx_db_ex_backup.pickle'
+        return open_pickle(backup_path)
 
     def get_relationships(self):
         engine = create_engine(self.db_url)
@@ -203,9 +209,9 @@ class IlxSql():
     def get_table(self, tablename, limit=5):
         data = """
             SELECT *
-            FROM {}
-            LIMIT {}
-        """.format(tablename, limit)
+            FROM {tablename}
+            LIMIT {limit}
+        """.format(tablename=tablename, limit=limit)
         return pd.read_sql(data, self.engine)
 
     def get_custom(self, data):
