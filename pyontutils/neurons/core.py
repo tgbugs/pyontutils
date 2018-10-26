@@ -830,7 +830,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abvs = None
 
         if abvs:
-            return abvs[0]
+            abv = abvs[0]
+            if abv == 'Glu,':
+                return 'Glu'  # FIXME tempfix for bad glutamate abv
+            else:
+                return abv
         elif pn in self.local_names:
             return self.local_names[pn]
         else:
@@ -1268,6 +1272,8 @@ class NeuronBase(GraphOpsMixin, graphBase):
                         l = 'Projecting To ' + l
                     elif pe.e == self._predicates.hasDendriteLocatedIn:
                         l = 'With dendrite in ' + l  # 'Toward' in bbp speak
+                    elif pe.e == self._predicates.hasCircuitRolePhenotype:
+                        l = l.lower()
 
                     sublabs.append(l)
 
@@ -1292,12 +1298,18 @@ class NeuronBase(GraphOpsMixin, graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = ('interneuron' if
-                      Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                      ('motor neuron' if
-                       Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                       'neuron'))
-        label.append(nin_switch)
+
+        nin_switch = ('neuron' if
+                       Phenotype('ilxtr:IntrinsicPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                      (None if
+                       Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                       ('neuron' if
+                        Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                        'neuron')))
+
+        if nin_switch:
+            label.append(nin_switch)
+
         if self._shortname:
             label.append(self._shortname)
 
