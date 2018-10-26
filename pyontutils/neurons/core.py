@@ -265,6 +265,12 @@ class Config:
         """ set this config as the active config """
         raise NotImplemented
 
+    def write(self):
+        # FIXME per config prefixes using derived OntCuries?
+        og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
+        og.filename = graphBase.ng.filename
+        og.write()
+
     def load_existing(self):
         """ advanced usage allows loading multiple sets of neurons and using a config
             object to keep track of the different graphs """
@@ -273,7 +279,8 @@ class Config:
 
         try:
             next(self.neurons)
-            raise self.ExistingNeuronsError('Existing neurons detect. Please load first!')
+            raise self.ExistingNeuronsError('Existing neurons detected. Please '
+                                            'load from file before creating neurons!')
         except StopIteration:
             pass
 
@@ -1065,8 +1072,9 @@ class NeuronBase(GraphOpsMixin, graphBase):
             ilxtr.hasElectrophysiologicalPhenotype,
             #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
             self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-            ilxtr.hasExpressionPhenotype,
+            ilxtr.hasMolecularPhenotype,
             ilxtr.hasNeurotransmitterPhenotype,
+            ilxtr.hasExpressionPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
             ilxtr.hasConnectionPhenotype,
@@ -1347,7 +1355,12 @@ class NeuronBase(GraphOpsMixin, graphBase):
         return hash(self) == hash(other)
 
     def __lt__(self, other):
-        return repr(self.pes) < repr(other.pes)
+        try:
+            return repr(self.pes) < repr(other.pes)
+        except AttributeError as e:
+            from IPython import embed
+            embed()
+            raise e
 
     def __gt__(self, other):
         return not self.__lt__(other)
