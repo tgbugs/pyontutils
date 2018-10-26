@@ -7,23 +7,53 @@ from pyontutils.config import devconfig
 from IPython import embed
 from interlex.utils import printD
 
-
-# the first time you run this you will need to use the --noauth_local_webserver args
-
-# If modifying these scopes, delete the file token.json.
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
-
 spath = Path(devconfig.secrets_file).parent
 
 
-def get_oauth_service():
-    store = file.Storage((spath /'google-api-token.json').as_posix())
+def get_oauth_service(readonly=True):
+    if readonly:
+        store_file = 'google-api-token.json'
+        SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
+    else:
+        store_file = 'google-api-token-rw.json'
+        SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+
+    store = file.Storage((spath / store_file).as_posix())
     creds = store.get()
     if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets((spath / 'google-api-creds.json').as_posix(), SCOPES)
+        # the first time you run this you will need to use the --noauth_local_webserver args
+        creds_file = devconfig.secrets('google-api-creds-file')
+        flow = client.flow_from_clientsecrets((spath / creds_file).as_posix(), SCOPES)
         creds = tools.run_flow(flow, store)
     service = build('sheets', 'v4', http=creds.authorize(Http()))
     return service
+
+
+def update_sheet_values(spreadsheet_name, sheet_name, values):
+    SPREADSHEET_ID = devconfig.secrets(spreadsheet_name)
+    service = get_oauth_service(readonly=False)
+    ss = service.spreadsheets()
+    """
+    requests = [
+        {'updateCells': {
+            'start': {'sheetId': TODO,
+                      'rowIndex': 0,
+                      'columnIndex': 0}
+            'rows': {'values'}
+        }
+        }]
+    response = ss.batchUpdate(
+        spreadsheetId=SPREADSHEET_ID, range=sheet_name,
+        body=body).execute()
+
+    """
+    body = {'values': values}
+
+    response = ss.values().update(
+        spreadsheetId=SPREADSHEET_ID, range=sheet_name,
+        valueInputOption='USER_ENTERED', body=body).execute()
+
+    return response
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True):
@@ -216,10 +246,14 @@ def sheet_to_neurons(values, notes_index):
 
 
 def main():
+    service = get_oauth_service(readonly=False)
     values, notes_index = get_sheet_values('neurons-cut', 'CUT V1.0', get_notes=False)
     #show_notes(values, notes_index)
     config, errors, new = sheet_to_neurons(values, notes_index)
     config.write()
+    from pyontutils.neurons.models.cuts import export_for_review
+    rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
+    resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     embed()
 
 if __name__ == '__main__':

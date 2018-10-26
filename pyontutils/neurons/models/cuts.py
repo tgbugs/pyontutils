@@ -173,8 +173,10 @@ def skip_pred(p):
     #if 'ConnectionDetermined' in p:
         #return True
 
-def export_for_review(unmapped, partial, nlx_missing):
-    neurons = graphBase.neurons()
+def export_for_review(config, unmapped, partial, nlx_missing,
+                      filename='cuts-review.csv',
+                      with_curies=False):
+    neurons = list(config.neurons)
     predicates = sorted(set(e for n in neurons
                             for me in n.edges
                             for e in (me if isinstance(me, tuple) else (me,))))  # columns
@@ -196,7 +198,9 @@ def export_for_review(unmapped, partial, nlx_missing):
         row = [curie, neuron.label]
         for col in cols:
             if col in neuron:
-                row.append(','.join(sorted([_.pLabel for _ in neuron[col]] if
+                row.append(','.join(sorted([f'{_._pClass.qname}|{_.pLabel}' if
+                                            with_curies else
+                                            _.pLabel for _ in neuron[col]] if
                                            isinstance(neuron[col], list) else
                                            [neuron[col].pLabel])))
                 #if col == ilxtr.hasLayerLocationPhenotype:
@@ -212,7 +216,7 @@ def export_for_review(unmapped, partial, nlx_missing):
 
     #[n for n in neurons]
     resources = Path(devconfig.resources)
-    reviewcsv = resources / 'cut-review.csv'
+    reviewcsv = resources / filename
     rows = [neuron_to_review_row(neuron) for neuron in neurons]
 
     for i, row in enumerate(rows):
@@ -437,7 +441,7 @@ def main():
     _ = [print(l) for l in unmapped]
 
     if __name__ == '__main__':
-        rows = export_for_review(unmapped, partial, nlx_missing)
+        rows = export_for_review(config, unmapped, partial, nlx_missing)
         embed()
     else:
         return unmapped, partial, nlx_missing
