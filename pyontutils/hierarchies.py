@@ -2,6 +2,7 @@
 import os
 from copy import deepcopy
 from html import escape as html_escape
+from urllib.parse import quote
 from collections import namedtuple
 from collections import defaultdict as base_dd
 import requests
@@ -351,16 +352,34 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head='', local=False, verbose=False):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None):
+    html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
+    root_iri = None  # FIXME 268
     if json is None:
         if relationshipType == 'rdfs:subClassOf':
             relationshipType = 'subClassOf'
         elif relationshipType == 'rdfs:subPropertyOf':
             relationshipType = 'subPropertyOf'
-        j = graph.getNeighbors(root, relationshipType=relationshipType, direction=direction, depth=depth)
+        j = graph.getNeighbors(root, relationshipType=relationshipType,
+                               direction=direction, depth=depth)
+        html_head.append('<link rel="http://www.w3.org/ns/prov#'
+                         f'wasDerivedFrom" href="{graph._last_url}">')  # FIXME WARNING leaking keys
+        if j is None:
+            raise ValueError(f'Unknown root {root}')
+        elif root.startswith('http'):
+            # FIXME https://github.com/SciGraph/SciGraph/issues/268
+            _ids = set(n['id'] for n in j['nodes'])
+            if root not in _ids:
+                root_iri = root
+                root = curie
+                if root is None:
+                    raise ValueError('please provide a curie for {root_iri}')
+
         if filter_prefix is not None:
-            j['edges'] = [e for e in j['edges'] if not [v for v in e.values() if filter_prefix in v]]
+            j['edges'] = [e for e in j['edges']
+                          if not [v for v in e.values()
+                                  if filter_prefix in v]]
 
         if hasattr(graph, '_cache'):
             j = deepcopy(j)  # avoid dangers of mutable cache
@@ -454,14 +473,19 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         if ':' in k and not k.startswith('http') and not k.startswith('file'):
             prefix, suffix = k.split(':')
             prefix = prefix.strip('\x1b[91m')  # colors :/
-            if graph is not None and local:
+            if graph is not None and not suffix and k == root:  # FIXME 268
+                url = os.path.join(graph._basePath, 'vocabulary', 'id',
+                                   quote(root_iri, safe=[]))
+                                   #root_iri.replace('/','%2F').replace('#','%23'))
+            elif graph is not None and local:
                 url = os.path.join(graph._basePath, 'vocabulary', 'id', k)
             else:
                 url = str(prefixes[prefix]) + suffix
         else:
             if graph is not None and local:
-                url = os.path.join(graph._basePath, 'vocabulary',
-                                   k.replace('/','%2F').replace('#','%23'))
+                url = os.path.join(graph._basePath, 'vocabulary', 'id',
+                                   quote(k, safe=[]))
+                                   #k.replace('/','%2F').replace('#','%23'))
             else:
                 url = k
         if v is None:  # if there is no label fail over to the url

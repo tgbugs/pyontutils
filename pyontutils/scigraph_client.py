@@ -40,6 +40,13 @@ class restService:
     def __del__(self):
         self._session.close()
 
+    def _safe_url(self, url):
+        return url.replace(self.api_key, '[secure]') if self.api_key else url
+
+    @property
+    def _last_url(self):
+        return self._safe_url(self.__last_url)
+
     def _normal_get(self, method, url, params=None, output=None):
         s = self._session
         if self.api_key is not None:
@@ -51,10 +58,10 @@ class restService:
         if output:
             req.headers['Accept'] = output
         prep = req.prepare()
-        safe = prep.url.replace(self.api_key, '[secure]') if self.api_key else prep.url
-        if self._verbose: print(safe)
+        if self._verbose: print(self._safe_url(prep.url))
         try:
             resp = s.send(prep)
+            self.__last_url = resp.url
         except requests.exceptions.ConnectionError as e:
             host_port = prep.url.split(prep.path_url)[0]
             raise ConnectionError('Could not connect to %s are SciGraph services running?' % host_port) from e
@@ -78,11 +85,13 @@ class restService:
         if  key in self._cache:
             if self._verbose:
                 print('cache hit', key)
-            return self._cache[key]
+            resp = self._cache[key]
+            self.__last_url = resp.url
         else:
             resp = self._normal_get(method, url, params, output)
             self._cache[key] = resp
-            return resp
+
+        return resp
 
     def _make_rest(self, default=None, **kwargs):
         kwargs = {k:v for k, v in kwargs.items() if v}
