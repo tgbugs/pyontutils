@@ -1,5 +1,5 @@
 import unittest
-from pyontutils.utils import injective_dict
+from pyontutils.utils import injective_dict, Async, deferred
 
 
 class TestInjectiveDict(unittest.TestCase):
@@ -48,3 +48,14 @@ class TestInjectiveDict(unittest.TestCase):
                     raise AssertionError(f'test for {bad} should have failed')
             except injective_dict.NotInjectiveError:
                 pass
+
+
+class TestAsync(unittest.TestCase):
+    def test_fast(self):
+        out = Async()(deferred(lambda a:a)('lol') for _ in range(1000))
+
+    def test_rate(self):
+        out = Async(rate=10)(deferred(lambda a:a)('lol') for _ in range(10))
+
+    def test_rate_empty(self):
+        out = Async(rate=20)(deferred(lambda a:a)('lol') for _ in range(0))

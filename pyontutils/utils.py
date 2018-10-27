@@ -339,6 +339,7 @@ def deferred(function):
 
 
 def Async(rate=None, debug=False, collector=None):  # ah conclib
+    # FIXME can't break this with C-c
     if rate:
         workers = math.ceil(rate) if rate < 40 else 40
         # 40 comes from the TPE default 5 * cpu cores, this has not been tuned
@@ -361,6 +362,9 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
         #Parallel(generator)
         if rate:
             funclist = list(generator)
+            if not funclist:
+                return
+
             # divide by workers not rate, time_per_job will compensate
             size = math.ceil(len(funclist) / workers) if rate >= 1 else 1
             time_est = len(funclist) / rate
@@ -391,6 +395,7 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
         loop = asyncio.get_event_loop()
         loop.run_until_complete(future_loop(future))
         return future.result()
+
     return inner
 
 
