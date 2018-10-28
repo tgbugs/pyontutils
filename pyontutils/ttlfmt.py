@@ -107,6 +107,10 @@ def serialize(graph, outpath):
         else:
             from IPython import embed
             embed()
+    elif args['--profile'] and type(outpath) != type(sys.stdout):
+        *_, _out = outpath.rsplit('/', 1)
+        print(f'triple count for {_out}:', len(graph))
+
     if outfmt == 'json-ld':
         kwargs = {'auto_compact': True}
     else:
@@ -167,12 +171,12 @@ def main():
         else:
             print(__doc__)
     else:
-        from joblib import Parallel, delayed
         if outpath or args['--slow'] or len(files) == 1:
             if len(files) == 1:
                 files,  = files
             convert(files, outpath=outpath)
         else:
+            from joblib import Parallel, delayed
             Parallel(n_jobs=9)(delayed(convert)(f) for f in files)
 
 if __name__ == '__main__':
