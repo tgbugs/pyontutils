@@ -1049,10 +1049,10 @@ class NeuronBase(GraphOpsMixin, graphBase):
                         print(e)
                         continue
                     except AttributeError as e:
-                        from IPython import embed
-                        embed()
                         print('oops', e)
                         raise e
+                        from IPython import embed
+                        embed()
                         continue
             finally:
                 NeuronBase._loading = False
