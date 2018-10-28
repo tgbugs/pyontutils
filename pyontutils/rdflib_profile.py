@@ -6,6 +6,7 @@ Usage:
 
 Options:
     -s --setup      run setup only
+    -p --pipenv     setup pipenv
     -l --local      run tests in the parent process rather than forking
 """
 
@@ -24,7 +25,8 @@ from rdflib.plugins.serializers.turtle import TurtleSerializer
 
 
 class _prof:
-    filters = 'namespace.py', 'compute_qname'
+    #filters = 'namespace.py', 'compute_qname'
+    filters = 'turtle.py', 'serialize'
 
     def serialize(self, stream, base=None, encoding=None,
                   spacious=None, **args):
@@ -40,6 +42,7 @@ class _prof:
 
     def do_stats(self, pr):
         ps = pstats.Stats(pr)
+        #print({k:v for k, v in ps.stats.items()})
         _ = [print(v[:4], ',') for k, v in ps.stats.items()
              if self.filters[0] in k[0] and self.filters[1] == k[2]]
         return ps
@@ -153,7 +156,7 @@ def main():
         venvs = 'rdflib-4.2.2', 'neurdflib-5.0.0'
 
         data = {}
-        pipenv = False
+        pipenv = args['--pipenv']
         for venv in venvs:
             p = Path.cwd() / venv
             po = p / 'pyontutils'
@@ -189,7 +192,7 @@ def main():
         if args['--setup']:
             return
 
-        n_files_tested = len(fetch) + 1
+        n_files_tested = len(fetch + functions)
         perf_result_index = 3
         avg_cumtime = [{k:sum([_[3] for _ in v[i][perf_result_index]]) / REPS
                         for k, v in data.items()}
@@ -198,8 +201,8 @@ def main():
         print(avg_cumtime)
 
         asdf = []  # alternate computation
-        for i in range(n_files_tested):
-            z = {}
+        for i, name in enumerate(fetch + tuple(f.__name__ for f in functions)):
+            z = {'name':name}
             for k, v in data.items():
                 nv = 0
                 for q in v[i][perf_result_index]:
