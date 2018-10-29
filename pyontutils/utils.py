@@ -578,19 +578,56 @@ class rowParse:
 
 
 class byCol:
-    def __init__(self, rows, header=None):
-        if header is None:
+    def __new__(cls, rows, header=None, to_index=tuple()):
+        if header is None:  # FIXME non None header might have bad names?
+            orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
             header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
-                      for c in rows[0]]
+                      for c in orig_header]
+            #changes = {new:old for old, new in zip(rows[0], header) if old != new}
             rows = rows[1:]
 
-        for name, col in zip(header, zip(*rows)):
-            setattr(self, name, list(col))
+        newcls = cls.bindHeader(header)
+        self = super().__new__(newcls)
+
+        # normalize row lenght  # FIXME account for rows longer than header
+        rows = [row + [None] * (len(header) - len(row)) for row in rows]
 
         nt = namedtuple('row', header)
+        self.orig_header = nt(*orig_header)
+        self.header = nt(*header)
         self.rows = [nt(*r) for r in rows]
+        self.__indexes = {}
+        for col_name in to_index:
+            ind = {getattr(r, col_name):r for r in self.rows}
+            ind[col_name] = self.header  # the header
+            self.__indexes[col_name] = ind
+
+        for name, col in zip(header, zip(*rows)):
+            @property
+            def col_gen(self, n=name):
+                for row in self.rows:
+                    yield getattr(row, n)
+
+            setattr(newcls, name, col_gen)
+
+        return self
+
+    @classmethod
+    def bindHeader(cls, header):
+        new_name = cls.__name__ + '_' + '_'.join(header)
+        classTypeInstance = type(new_name,
+                                 (cls,),
+                                 dict())
+        return classTypeInstance
+
+    def searchIndex(self, index, value):
+        return self.__indexes[index][value]
+
+    def __getitem__(self, key):
+        return list(getattr(self, key))
 
     def __iter__(self):
+        yield self.orig_header
         yield from self.rows
 
 

@@ -252,8 +252,33 @@ def main():
     config, errors, new = sheet_to_neurons(values, notes_index)
     config.write()
     from pyontutils.neurons.models.cuts import export_for_review
-    rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
-    resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
+    review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
+    from pyontutils.utils import byCol
+    valuesC = byCol(values, to_index=['label'])
+    reviewC = byCol(review_rows, to_index=['label'])
+    def grow(r):
+        # TODO implement on the object to allow joining on an index?
+        # man this would be easier with sql >_< probably pandas too
+        # but so many dependencies ... also diffing issues etc
+        return valuesC.searchIndex('label', r.label)
+
+    def key(field_value):
+        field, value = field_value
+        return valuesC.header._fields.index(field)  # TODO warn on field mismatch
+
+    def replace(r, *cols):
+        """ replace and reorder """
+        # FIXME _super_ inefficient
+        vrow = grow(r)
+        for field, value in sorted(zip(r._fields, r), key=key):
+            if field in cols:
+                value = getattr(vrow, field)
+
+            yield '' if value is None else value  # completely overwrite the sheet
+
+    embed()
+    rows = [list(replace(r, 'Status', 'definition', 'synonyms', 'PMID')) for r in reviewC]
+    #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     embed()
 
 if __name__ == '__main__':
