@@ -110,12 +110,23 @@ class GraphOpsMixin:
         return self.config.load_graph
 
     @property
+    def _out_graph(self):
+        return self.config.out_graph
+
+    @property
     def identifier(self):
         return self.id_  # fix for current graphBase subclasses
 
     def objects(self, *predicates):
+        graph = (self._load_graph if
+                 # FIXME this is a hack that could cause massive confusion
+                 # depending on when this is called
+                 # maybe we can protect this by making sure that out_graph
+                 # has been written?
+                 hasattr(self.config, 'load_graph') else
+                 self._out_graph)
         for predicate in predicates:
-            yield from self._load_graph[self.identifier:predicate]
+            yield from graph[self.identifier:predicate]
 
     def add_objects(self, predicate, *objects):
         bads = []
@@ -179,6 +190,8 @@ class Config:
                  source_file =          None,
                  ignore_existing =      False):
         import os  # FIXME probably should move some of this to neurons.py?
+
+        self.__name = name  # TODO allow reload from owl to get the load graph? how to handle this
 
         graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
         graphBase.knownClasses = [OntId(c.owlClass).u
@@ -256,6 +269,10 @@ class Config:
         # we can probably us a conjuctive graph to 
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
+
+    @property
+    def name(self):
+        return self.__name
 
     @property
     def neurons(self):
