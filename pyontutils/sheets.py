@@ -128,7 +128,7 @@ def select_by_curie_rank(results):
 def sheet_to_neurons(values, notes_index):
     # TODO import existing ids to register by label
     from pyontutils.core import OntId
-    from pyontutils.neurons import NeuronCUT, Config, Phenotype
+    from pyontutils.neurons import NeuronCUT, Config, Phenotype, LogicalPhenotype
     from pyontutils.namespaces import ilxtr
     from pyontutils.closed_namespaces import rdfs
     from pyontutils.scigraph import Vocabulary
@@ -142,34 +142,63 @@ def sheet_to_neurons(values, notes_index):
         else:
             return None
 
+    def mapCell(cell):
+        result = [r for r in sgv.findByTerm(cell, searchSynonyms=False)
+                    if not r['deprecated']]
+        #printD(cell, result)
+        if not result:
+            return None, None
+        elif len(result) > 1:
+            #printD('WARNING', result)
+            result = select_by_curie_rank(result)
+        else:
+            result = result[0]
+
+        return result['iri'], result['labels'][0]
+
+    def lower_check(label, cell):
+        return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
+
+    lnlu = {v:k for k, v in LogicalPhenotype.local_names.items()}
     def convert_cell(cell_or_comma_sep):
         #printD('CONVERTING', cell_or_comma_sep)
         for cell_w_junk in cell_or_comma_sep.split(','):  # XXX WARNING need a way to alter people to this
             cell = cell_w_junk.strip()
-            result = [r for r in sgv.findByTerm(cell, searchSynonyms=False)
-                    if not r['deprecated']]
-            #printD(cell, result)
-            if not result:
-                yield None, cell_or_comma_sep  # FIXME need a way to handle this that doesn't break things?
-                continue
-            elif len(result) > 1:
-                #printD('WARNING', result)
-                result = select_by_curie_rank(result)
-            else:
-                result = result[0]
+            if cell.startswith('(OR') or cell.startswith('(AND'):
+                start, *middle, end = cell.split('" "')
+                OPoperator, first = start.split(' "')
+                operator = OPoperator[1:]
+                operator = lnlu[operator]
+                last, CP = end.rsplit('"')
+                iris, labels = [], []
+                for term in (first, *middle, last):
+                    iri, label = mapCell(term)
+                    if label is None:
+                        label = cell_or_comma_sep
+                    iris.append(iri)
+                    labels.append(label)
 
-            yield result['iri'], result['labels'][0]
+                yield (operator, *iris), tuple(labels)
+
+            else:
+                iri, label = mapCell(cell)
+                if label is None:
+                    yield iri, cell_or_comma_sep  # FIXME need a way to handle this that doesn't break things?
+                else:
+                    yield iri, label
 
     config = Config('cut-roundtrip')
     skip = 'alignment label',
     headers, *rows = values
     errors = []
     new = []
+    release = []
     for i, neuron_row in enumerate(rows):
         id = None
         label_neuron  = None
         current_neuron = None
         phenotypes = []
+        do_release = False
         for j, (header, cell) in enumerate(zip(headers, neuron_row)):
             if header == 'curie':
                 id = OntId(cell).u if cell else None
@@ -187,7 +216,7 @@ def sheet_to_neurons(values, notes_index):
             elif header == 'Status':
                 # TODO
                 if cell == 'Yes':
-                    pass
+                    do_release = True
                 elif cell == 'Maybe':
                     pass
                 elif cell == 'Not yet':
@@ -222,7 +251,17 @@ def sheet_to_neurons(values, notes_index):
                 printD(header, cell, note)
                 predicate = convert_header(header)
                 for object, label in convert_cell(cell):
-                    if label != cell:
+                    if isinstance(label, tuple):
+                        _err = []
+                        for l in label:
+                            if lower_check(l, cell):
+                                _err.append((cell, label))
+                        if _err:
+                            errors.extend(_err)
+                        else:
+                            objects.append(object)
+
+                    elif lower_check(label, cell):
                         errors.append((cell, label))
                     else:
                         objects.append(object)
@@ -231,7 +270,11 @@ def sheet_to_neurons(values, notes_index):
 
             if predicate and objects:
                 for object in objects:  # FIXME has layer location phenotype
-                    if object:
+                    if isinstance(object, tuple):
+                        op, *rest = object
+                        pes = (Phenotype(r, predicate) for r in rest)  # FIXME nonhomogenous phenotypes
+                        phenotypes.append(LogicalPhenotype(op, *pes))
+                    elif object:
                         phenotypes.append(Phenotype(object, predicate))
                     else:
                         errors.append((object, predicate, cell))
@@ -248,7 +291,8 @@ def sheet_to_neurons(values, notes_index):
             printD(phenotypes)
             if id is not None:
                 printD(id, bool(id))
-            NeuronCUT(*phenotypes, id_=id, label=label_neuron, override=bool(id) or bool(label))
+            neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron, override=bool(id) or bool(label))
+            neuron.adopt_meta(current_neuron)
             # FIXME occasionally this will error?!
         else:
             errors.append((i, neuron_row))
@@ -260,19 +304,28 @@ def sheet_to_neurons(values, notes_index):
                         replace('+','-'))
 
             fn = fixname(label_neuron)
-            NeuronCUT(Phenotype('TEMP:' + fn),
-                      id_='ilxtr:TODO' + fn,
-                      label=label_neuron, override=True)
+            neuron = NeuronCUT(Phenotype('TEMP:' + fn),
+                               id_='ilxtr:TODO' + fn,
+                               label=label_neuron, override=True)
 
-    return config, errors, new
+        if do_release:
+            release.append(neuron)
+
+    return config, errors, new, release
 
 
 def main():
     service = get_oauth_service(readonly=False)
     values, notes_index = get_sheet_values('neurons-cut', 'CUT V1.0', get_notes=False)
     #show_notes(values, notes_index)
-    config, errors, new = sheet_to_neurons(values, notes_index)
+    config, errors, new, release = sheet_to_neurons(values, notes_index)
     config.write()
+    #config = Config(config.name)
+    #config.load_existing()  # FIXME this is a hack to get get a load_graph
+    from pyontutils.neurons import Config, NeuronCUT
+    release_config = Config('cut-release')
+    [NeuronCUT(*n, id_=n.id_, label=n.label, override=True).adopt_meta(n) for n in release]
+    release_config.write()
     from pyontutils.neurons.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
     from pyontutils.utils import byCol
