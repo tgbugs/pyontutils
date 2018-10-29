@@ -241,6 +241,17 @@ def sheet_to_neurons(values, notes_index):
             # FIXME occasionally this will error?!
         else:
             errors.append((i, neuron_row))
+            def fixname(name):
+                return (name.
+                        replace(' ', '-').
+                        replace('(','-').
+                        replace(')', '-').
+                        replace('+','-'))
+
+            fn = fixname(label_neuron)
+            NeuronCUT(Phenotype('TEMP:' + fn),
+                      id_='ilxtr:TODO' + fn,
+                      label=label_neuron, override=True)
 
     return config, errors, new
 
@@ -276,7 +287,6 @@ def main():
 
             yield '' if value is None else value  # completely overwrite the sheet
 
-    embed()
     rows = [list(replace(r, 'Status', 'definition', 'synonyms', 'PMID')) for r in reviewC]
     #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     embed()
