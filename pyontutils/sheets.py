@@ -186,6 +186,17 @@ def sheet_to_neurons(values, notes_index):
                 continue
             elif header == 'Status':
                 # TODO
+                if cell == 'Yes':
+                    pass
+                elif cell == 'Maybe':
+                    pass
+                elif cell == 'Not yet':
+                    pass
+                elif cell == 'Delete':
+                    pass
+                else:
+                    pass
+
                 continue
             elif header == 'PMID':
                 # TODO
