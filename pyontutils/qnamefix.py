@@ -30,6 +30,7 @@ from pyontutils.namespaces import makePrefixes, PREFIXES
 
 PREFIXES = {k:v for k, v in PREFIXES.items()}
 PREFIXES.pop('NIFTTL')
+null_prefix = PREFIXES['']
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
 
@@ -37,7 +38,7 @@ def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
     namespaces = [str(n) for p, n in graph.namespaces()]
     prefs = ['']
     if '' not in prefixes:
-        prefixes[''] = PREFIXES['']  # ban enforcement
+        prefixes[''] = null_prefix  # null prefix
     pi = {v:k for k, v in prefixes.items()}
     asdf = {} #{v:k for k, v in ps.items()}
     asdf.update(pi)
