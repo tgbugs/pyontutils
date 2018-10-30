@@ -173,6 +173,20 @@ def skip_pred(p):
     #if 'ConnectionDetermined' in p:
         #return True
 
+
+def fixname(name):
+    return (name.
+            replace('/', '-').
+            replace(' ', '-').
+            replace('(','-').
+            replace(')', '-').
+            replace('+','-'))
+
+
+def make_cut_id(label):
+    return 'TEMP:' + fixname(label)
+
+
 def export_for_review(config, unmapped, partial, nlx_missing,
                       filename='cuts-review.csv',
                       with_curies=False):
@@ -196,13 +210,17 @@ def export_for_review(config, unmapped, partial, nlx_missing,
         _curie = neuron.ng.qname(neuron.id_)
         curie = None if 'TEMP:' in _curie else _curie
         row = [curie, neuron.label]
-        for col in cols:
-            if col in neuron:
-                row.append(','.join(sorted([f'{_._pClass.qname}|{_.pLabel}' if
-                                            with_curies else
-                                            _.pLabel for _ in neuron[col]] if
-                                           isinstance(neuron[col], list) else
-                                           [neuron[col].pLabel])))
+        for pdim in cols:  # pdim -> phenotypic dimension
+            if pdim in neuron:
+                #print('>>>>>>>>>>>>>', pdim, neuron)
+                #if any(isinstance(p, LogicalPhenotype) for p in neuron):
+                    #embed()
+                row.append(','.join(sorted([f'{_._pClass.qname}|{_.pLabel}'
+                                            if with_curies else
+                                            _.pLabel
+                                            for _ in neuron[pdim]] if
+                                           isinstance(neuron[pdim], list) else
+                                           [neuron[pdim].pLabel])))
                 #if col == ilxtr.hasLayerLocationPhenotype:
                     #derp = neuron[col]
                     #log = [p for p in derp if isinstance(p, LogicalPhenotype)]
@@ -261,7 +279,7 @@ def main():
     labels_set0 = set(labels)
     ns = []
     for n in ndl_neurons:
-        l = n._origLabel
+        l = str(n._origLabel)
         if l is not None:
             for replace, match in rename_rules.items():  # HEH
                 l = l.replace(match, replace)
@@ -401,7 +419,7 @@ def main():
             rem[l] = l_rem
 
             with Neuron(CUT.Mammalia):
-                NeuronCUT(*zap(pes), label=l, override=True)
+                NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
 
     labels_set3 = labels_set2 - smatch
     added_unmapped = sadded & labels_set3

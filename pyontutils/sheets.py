@@ -132,6 +132,7 @@ def sheet_to_neurons(values, notes_index):
     from pyontutils.namespaces import ilxtr
     from pyontutils.closed_namespaces import rdfs
     from pyontutils.scigraph import Vocabulary
+    from pyontutils.neurons.models.cuts import make_cut_id, fixname
     sgv = Vocabulary()
     e_config = Config('common-usage-types')
     e_config.load_existing()
@@ -251,7 +252,7 @@ def sheet_to_neurons(values, notes_index):
                 printD(header, cell, note)
                 predicate = convert_header(header)
                 for object, label in convert_cell(cell):
-                    if isinstance(label, tuple):
+                    if isinstance(label, tuple):  # LogicalPhenotype case
                         _err = []
                         for l in label:
                             if lower_check(l, cell):
@@ -291,21 +292,17 @@ def sheet_to_neurons(values, notes_index):
             printD(phenotypes)
             if id is not None:
                 printD(id, bool(id))
-            neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron, override=bool(id) or bool(label))
+            elif label_neuron:
+                id = make_cut_id(label_neuron)
+            neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron,
+                               override=bool(id) or bool(label_neuron))
             neuron.adopt_meta(current_neuron)
             # FIXME occasionally this will error?!
         else:
             errors.append((i, neuron_row))
-            def fixname(name):
-                return (name.
-                        replace(' ', '-').
-                        replace('(','-').
-                        replace(')', '-').
-                        replace('+','-'))
-
             fn = fixname(label_neuron)
-            neuron = NeuronCUT(Phenotype('TEMP:' + fn),
-                               id_='ilxtr:TODO' + fn,
+            neuron = NeuronCUT(Phenotype('TEMP:phenotype/' + fn),
+                               id_=make_cut_id(label_neuron),
                                label=label_neuron, override=True)
 
         if do_release:

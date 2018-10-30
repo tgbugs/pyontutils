@@ -951,6 +951,16 @@ class LogicalPhenotype(graphBase):
         return tuple((pe.e for pe in self.pes))
 
     @property
+    def _pClass(self):
+        class OpClass(tuple):
+            @property
+            def qname(self):  # a not entirely unreasonably way to define qnames for collections
+                op, *rest = self
+                return (op, *(r.qname for r in rest))
+
+        return OpClass((self.op, *(p._pClass for p in self.pes)))
+
+    @property
     def pLabel(self):
         #return f'({self.local_names[self.op]} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
         return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in self.pes) + ')'
