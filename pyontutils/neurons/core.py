@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
+from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId, OntCuries, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
@@ -96,6 +97,7 @@ class GraphOpsMixin:
         pass
 
     def adopt_meta(self, other, properties=None):
+        # TODO FIXME annotations
         if properties is None:
             properties = self.default_properties
         for p in properties:
@@ -135,7 +137,8 @@ class GraphOpsMixin:
                 bads.append(object)
 
         if bads:
-            raise self.ObjectTypeError(' '.join(str(type(object)) for object in bads))
+            raise self.ObjectTypeError(', '.join(str(type(object)) + ' ' + str(object)
+                                                 for object in bads))
 
         [self.out_graph.add((self.identifier, predicate, object)) for object in objects]
 
@@ -242,7 +245,8 @@ class Config:
                       ignore_existing = ignore_existing)
 
         for name, value in kwargs.items():
-            @property
+            # FIXME only works if we do this in __new__
+            #@property
             def nochangepls(v=value):
                 return v
 
@@ -273,6 +277,10 @@ class Config:
     @property
     def name(self):
         return self.__name
+
+    @property
+    def core_graph(self):
+        return graphBase.core_graph  # FIXME :/
 
     @property
     def neurons(self):
@@ -953,10 +961,11 @@ class LogicalPhenotype(graphBase):
     @property
     def _pClass(self):
         class OpClass(tuple):
+            local_names = self.local_names
             @property
             def qname(self):  # a not entirely unreasonably way to define qnames for collections
                 op, *rest = self
-                return (op, *(r.qname for r in rest))
+                return (self.local_names[op], *(r.qname for r in rest))
 
         return OpClass((self.op, *(p._pClass for p in self.pes)))
 
@@ -1358,7 +1367,62 @@ class NeuronBase(GraphOpsMixin, graphBase):
         self.id_ = 'ILX:1234567'
 
     def validate(self):
-        raise TypeError('Ur Neuron Sucks')
+        raise TypeError('Your neuron is bad and you should feel bad.')
+
+    def getPredicate(self, object):
+        for p in self.pes:
+            if p.p == object:  # FIXME probably need to munge the object
+                return p.e
+            # FIXME warn/error on ambiguous?
+
+        raise AttributeError(f'{self} has no aspect with the phenotype {OntId(object)!r}')  # FIXME AttributeError seems wrong
+
+    def getObject(self, predicate):
+        for p in self.pes:
+            if p.e == predicate:  # FIXME probably need to munge the object
+                return p.p  # just to confuse you, the second p here is phenotype not predicate >_<
+
+        return rdf.nil  # FIXME how to indicate all values?
+        # predicate is different than object in the sense that it is possible
+        # for neurons to have aspects (aka phenotype dimensions) without anyone
+        # having measured those values, also handy when we don't know how to parse a value
+        # but there is note attached
+        #raise AttributeError(f'{self} has no phenotype for {predicate}')  # FIXME AttributeError seems wrong
+
+    def annotate(self, predicate, object, annotations):
+        t = self.id_, predicate, object
+        print(t)
+        # FIXME obviously it is quite a trick to annotat a bnode without
+        # so we annotate the lowered version (or is it the lifted version?)
+        [self.out_graph.add(t) for t in cmb.annotation(t, *annotations)()]
+
+    def annotateByPredicate(self, predicate, annotations):
+        # TODO more sane conversion of predicate in the event it is a curie
+        print(predicate, annotations)
+        predicate = rdflib.URIRef(predicate)
+        object = self.getObject(predicate)
+        self.annotate(predicate, object, annotations)
+
+    def annotateByObject(self, object, annotations):
+        # TODO more sane conversion of object in the event it is a curie
+        print(object, annotations)
+        object = rdflib.URIRef(object)
+        predicate = self.getPredicate(object)
+        self.annotate(predicate, object, annotations)
+
+    def batchAnnotate(self, thing_annotations, function=None):
+        if function is None:
+            for (predicate, object), annotations in thing_annotations.items():
+                self.annotate(predicate, object, annotations)
+        else:
+            for thing, annotations in thing_annotations.items():
+                function(thing, annotations)
+
+    def batchAnnotateByPredicate(self, predicate_annotations):
+        self.batchAnnotate(predicate_annotations, self.annotateByPredicate)
+
+    def batchAnnotateByObject(self, object_annotations):
+        self.batchAnnotate(object_annotations, self.annotateByObject)
 
     def __expanded__(self):
         args = '(' + ', '.join([_.__expanded__() for _ in self.pes]) + ')'
