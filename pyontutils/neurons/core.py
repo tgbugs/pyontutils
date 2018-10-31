@@ -8,7 +8,6 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
-from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId, OntCuries, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
@@ -16,6 +15,7 @@ from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.annotation import AnnotationMixin
 from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 
@@ -1044,7 +1044,7 @@ class LogicalPhenotype(graphBase):
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
 
 
-class NeuronBase(GraphOpsMixin, graphBase):
+class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     owlClass = _NEURON_CLASS
     shortname = None
     preserve_predicates = NIFRID.synonym, definition
@@ -1388,41 +1388,6 @@ class NeuronBase(GraphOpsMixin, graphBase):
         # having measured those values, also handy when we don't know how to parse a value
         # but there is note attached
         #raise AttributeError(f'{self} has no phenotype for {predicate}')  # FIXME AttributeError seems wrong
-
-    def annotate(self, predicate, object, annotations):
-        t = self.id_, predicate, object
-        print(t)
-        # FIXME obviously it is quite a trick to annotat a bnode without
-        # so we annotate the lowered version (or is it the lifted version?)
-        [self.out_graph.add(t) for t in cmb.annotation(t, *annotations)()]
-
-    def annotateByPredicate(self, predicate, annotations):
-        # TODO more sane conversion of predicate in the event it is a curie
-        print(predicate, annotations)
-        predicate = rdflib.URIRef(predicate)
-        object = self.getObject(predicate)
-        self.annotate(predicate, object, annotations)
-
-    def annotateByObject(self, object, annotations):
-        # TODO more sane conversion of object in the event it is a curie
-        print(object, annotations)
-        object = rdflib.URIRef(object)
-        predicate = self.getPredicate(object)
-        self.annotate(predicate, object, annotations)
-
-    def batchAnnotate(self, thing_annotations, function=None):
-        if function is None:
-            for (predicate, object), annotations in thing_annotations.items():
-                self.annotate(predicate, object, annotations)
-        else:
-            for thing, annotations in thing_annotations.items():
-                function(thing, annotations)
-
-    def batchAnnotateByPredicate(self, predicate_annotations):
-        self.batchAnnotate(predicate_annotations, self.annotateByPredicate)
-
-    def batchAnnotateByObject(self, object_annotations):
-        self.batchAnnotate(object_annotations, self.annotateByObject)
 
     def __expanded__(self):
         args = '(' + ', '.join([_.__expanded__() for _ in self.pes]) + ')'
