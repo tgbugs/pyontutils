@@ -26,7 +26,7 @@ class Artifacts(Collector):
         species=NCBITaxon['9606']
         devstage=UBERON['0000113']  # FIXME not sure if this is accurate
 
-    fsclut = FreeSurferColorLUT()
+    #fsclut = FreeSurferColorLUT()  # do not need to call this, but is in python import system as usual
 
     FreeSurferColorLUT1_105 = FreeSurferColorLUT(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
                                                  abbrevs=('FSCL1.105',),

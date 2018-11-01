@@ -22,7 +22,7 @@ class Artifacts(Collector):
                    'sometimes slightly modify the label, but indexes are never '
                    'reused and retain their meaning.')
 
-    whssd = WHSSD()  # FIXME need to clean up how this works wrt subclassing
+    #whssd = WHSSD()  # FIXME need to clean up how this works wrt subclassing
 
     WHSSD1 = WHSSD(iri=ilx['waxholm/uris/sd/versions/1'],
                    rdfs_label='Waxholm Space Sprague Dawley Terminology v1',

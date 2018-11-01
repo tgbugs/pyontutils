@@ -9,6 +9,7 @@ Options:
     -f --fail                   fail loudly on common common validation checks
     -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
     -l --local                  only build files with local source copies
+    -s --stats                  generate report on current parcellations
 
 """
 
@@ -606,7 +607,9 @@ class parcArts(ParcOnt):
                 yield from collector.arts()
 
     def _triples(self):
+        from pyontutils.parcellation import Artifact
         yield from Artifact.class_triples()
+        # OH LOOK PYTHON IS BEING AN AWFUL LANGUAGE AGAIN
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
             # do not comment this out it is what makes the
             # upper classes in the artifacts hierarchy
@@ -1798,18 +1801,20 @@ def main():
         from pyontutils.parcellation.aba import Artifacts as abaArts
     from pyontutils.parcellation.freesurfer import Artifacts as fsArts
     from pyontutils.parcellation.whs import Artifacts as whsArts
-    #embed()
     onts = tuple(l for l in subclasses(ParcOnt)
                  if l.__name__ != 'parcBridge'
                  and not hasattr(l, f'_{l.__name__}__pythonOnly')
                  and (l.__module__ != 'pyontutils.parcellation'
-                      if __name__ == '__main__'
-                      else l.__module__ != '__main__'))
+                      if __name__ == '__main__' or __name__ == '__init__'
+                      else l.__module__ != '__main__' and l.__module__ != '__init__'
+                 ))
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
                 fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
+    if args['--stats']:
+        embed()
 
 
 if __name__ == '__main__':
