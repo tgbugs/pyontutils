@@ -636,6 +636,15 @@ class Class:
             for kw, arg in kwargs:
                 setattr(self, kw, arg)
 
+        self.validate()
+
+    def validate(self):
+        """ Put checks here. They will save you. """
+        if hasattr(self, 'iri'):
+            assert self.iri != self.parentClass, f'{self} iri and subClassOf match! {self.iri}'
+        else:
+            pass  # TODO do we the class_label?
+
     def addTo(self, graph):
         [graph.add_trip(*t) for t in self]
         return graph  # enable chaining
@@ -893,8 +902,8 @@ class Ont:
     imports = tuple()
     source_file = None  # override for cases where __class__ is used internally
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      '{commit}/pyontutils/'  # FIXME prefer {filepath} to assuming pyontutils...
-                      '{file}'
+                      '{commit}/'  # FIXME prefer {filepath} to assuming pyontutils...
+                      '{filepath}'
                       '{hash_L_line}')
 
     propertyMapping = dict(
@@ -940,15 +949,16 @@ class Ont:
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
-                file = Path(_file).name
+                file = Path(_file).resolve().absolute()
+                filepath = file.relative_to(working_dir).as_posix()
         except TypeError:  # emacs is silly
             line = '#Lnoline'
             _file = 'nofile'
-            file = Path(_file).name
+            filepath = Path(_file).name
 
         self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
                                                          hash_L_line=line,
-                                                         file=file)
+                                                         filepath=filepath)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
