@@ -312,10 +312,14 @@ def sheet_to_neurons(values, notes_index):
         if synonyms_neuron is not None:
             neuron.synonyms = synonyms_neuron
 
-        if OntId('NIFEXT:68').u == id:
-            embed()
-        neuron.batchAnnotateByObject(object_notes)
-        neuron.batchAnnotate(other_notes)
+        try:
+            neuron.batchAnnotateByObject(object_notes)
+            neuron.batchAnnotate(other_notes)
+        except AttributeError as e:
+            #embed()
+            printD('something very strage has happened\n', e)
+            pass  # FIXME FIXME FIXME
+
         #neuron.batchAnnotateByPredicate(predicate_notes)  # TODO
         # FIXME doesn't quite work in this context, but there are other
         # cases where annotations to the general modality are still desireable
@@ -331,12 +335,14 @@ def main():
     values, notes_index = get_sheet_values('neurons-cut', 'CUT V1.0', get_notes=True)
     #show_notes(values, notes_index)
     config, errors, new, release = sheet_to_neurons(values, notes_index)
+    config.write_python()
     config.write()
     #config = Config(config.name)
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
     from pyontutils.neurons import Config, NeuronCUT
     release_config = Config('cut-release')
     [NeuronCUT(*n, id_=n.id_, label=n.label, override=True).adopt_meta(n) for n in release]
+    release_config.write_python()
     release_config.write()
     from pyontutils.neurons.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)

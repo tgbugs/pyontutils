@@ -274,6 +274,9 @@ class Config:
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
 
+    def query(self, identifier = None):
+        return
+
     @property
     def name(self):
         return self.__name
@@ -295,6 +298,10 @@ class Config:
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
+
+    def write_python(self):
+        # FIXME hack, will write other configs if call after graphbase has switched
+        graphBase.write_python()
 
     def load_existing(self):
         """ advanced usage allows loading multiple sets of neurons and using a config
@@ -547,10 +554,10 @@ class graphBase:
                 sources = _sources
                 source_file = _source_file
                 # FIXME temp fix for issue with wgb in core
-                wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
-                                  '{commit}/'
-                                  '{file}'
-                                  '{hash_L_line}')
+                #wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
+                                  #'{commit}/'
+                                  #'{filepath}'
+                                  #'{hash_L_line}')
 
             no = NeurOnt()
             out_graph = no.graph
@@ -1104,6 +1111,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             # TODO hasDevelopmentalStage   !!!!! FIXME
             ilxtr.hasLocationPhenotype,  # FIXME
             ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
+            ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
             ilxtr.hasDendriteMorphologicalPhenotype,
             ilxtr.hasDendriteLocatedIn,
@@ -1605,7 +1613,10 @@ class Neuron(NeuronBase):
                     print(putativeRestriction)
         else:
             # TODO make sure that Neuron is in there somehwere...
-            print('what is this thing?', c)
+            # objects = sorted(c.graph.transitive_objects(c.identifier, None))
+            # cryptic errors are due to the fact that infixowl still has
+            # lingering byte/string issues
+            log.warning(f'Could not convert class to Neuron {c}')
 
     def _unpackLogical(self, bc, type_=Phenotype):  # TODO this will be needed for disjoint as well
         op = bc._operator
