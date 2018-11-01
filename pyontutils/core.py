@@ -113,6 +113,7 @@ class mGraph(rdflib.Graph):
     def write(self, filename=None):
         if filename is None:
             filename = self.filename
+
         with open(filename, 'wb') as f:
             f.write(self.serialize(format='nifttl'))
 
@@ -176,12 +177,15 @@ class makeGraph:
                             ' The graph is not isomorphic to a single ontology!')
         return ontids[0]
 
-    def write(self):
-        """ Serialize self.g and write to self.filename"""
-        ser = self.g.serialize(format='nifttl')
-        with open(self.filename, 'wb') as f:
-            f.write(ser)
-            #print('yes we wrote the first version...', self.name)
+    def write(self, cull=False):
+        """ Serialize self.g and write to self.filename, set cull to true to remove unwanted prefixes """
+        if cull:
+            cull_prefixes(self).write()
+        else:
+            ser = self.g.serialize(format='nifttl')
+            with open(self.filename, 'wb') as f:
+                f.write(ser)
+                #print('yes we wrote the first version...', self.name)
 
     def expand(self, curie):
         prefix, suffix = curie.split(':', 1)
@@ -443,6 +447,41 @@ def qname(uri, warning=False):
     if warning:
         print(tc.red('WARNING:'), tc.yellow(f'qname({uri}) is deprecated! please use OntId({uri}).curie'))
     return __helper_graph.qname(uri)
+
+
+null_prefix = uPREFIXES['']
+def cull_prefixes(graph, prefixes={k:v for k, v in uPREFIXES.items() if k != 'NIFTTL'},
+                  cleanup=lambda ps, graph: None, keep=False):
+    """ Remove unused curie prefixes and normalize to a standard set. """
+    prefs = ['']
+    if keep:
+        prefixes.update({p:str(n) for p, n in graph.namespaces()})
+
+    if '' not in prefixes:
+        prefixes[''] = null_prefix  # null prefix
+
+    pi = {v:k for k, v in prefixes.items()}
+    asdf = {} #{v:k for k, v in ps.items()}
+    asdf.update(pi)
+    # determine which prefixes we need
+    for uri in set((e for t in graph for e in t)):
+        if uri.endswith('.owl') or uri.endswith('.ttl') or uri.endswith('$$ID$$'):
+            continue  # don't prefix imports or templates
+        for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
+            lrn = len(rn)
+            if type(uri) == rdflib.BNode:
+                continue
+            elif uri.startswith(rn) and '#' not in uri[lrn:] and '/' not in uri[lrn:]:  # prevent prefixing when there is another sep
+                prefs.append(rp)
+                break
+
+    ps = {p:prefixes[p] for p in prefs}
+
+    cleanup(ps, graph)
+
+    ng = makeGraph('', prefixes=ps)
+    [ng.g.add(t) for t in graph]
+    return ng
 
 
 def createOntology(filename=    'temp-graph',
@@ -1015,9 +1054,9 @@ class Ont:
     def iri(self):
         return self._graph.ontid
 
-    def write(self):
+    def write(self, cull=False):
         # TODO warn in ttl file when run when __file__ has not been committed
-        self._graph.write()
+        self._graph.write(cull=cull)
 
 
 class ParcOnt(Ont):

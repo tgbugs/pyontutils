@@ -10,6 +10,7 @@ Usage:
 
 Options:
     -h --help       print this
+    -k --keep       keep only existing used prefixes
     -x --exclude=X  do not include the prefix when rewriting, ALL will strip
     -v --verbose    do something fun!
     -s --slow       do not use a process pool
@@ -23,44 +24,14 @@ from glob import glob
 import rdflib
 from docopt import docopt
 import pyontutils.ttlfmt
-from pyontutils.core import makeGraph
+from pyontutils.core import makeGraph, cull_prefixes
 from pyontutils.utils import readFromStdIn
 from pyontutils.ttlfmt import parse, prepare
-from pyontutils.namespaces import makePrefixes, PREFIXES
+from pyontutils.namespaces import PREFIXES as uPREFIXES
 
-PREFIXES = {k:v for k, v in PREFIXES.items()}
-PREFIXES.pop('NIFTTL')
-null_prefix = PREFIXES['']
+PREFIXES = {k:v for k, v in uPREFIXES.items() if k != 'NIFTTL'}
 
 exclude = 'generated/swanson_hierarchies.ttl', 'generated/NIF-NIFSTD-mapping.ttl'
-
-def cull_prefixes(graph, prefixes=PREFIXES, cleanup=lambda ps, graph: None):
-    namespaces = [str(n) for p, n in graph.namespaces()]
-    prefs = ['']
-    if '' not in prefixes:
-        prefixes[''] = null_prefix  # null prefix
-    pi = {v:k for k, v in prefixes.items()}
-    asdf = {} #{v:k for k, v in ps.items()}
-    asdf.update(pi)
-    # determine which prefixes we need
-    for uri in set((e for t in graph for e in t)):
-        if uri.endswith('.owl') or uri.endswith('.ttl') or uri.endswith('$$ID$$'):
-            continue  # don't prefix imports or templates
-        for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
-            lrn = len(rn)
-            if type(uri) == rdflib.BNode:
-                continue
-            elif uri.startswith(rn) and '#' not in uri[lrn:] and '/' not in uri[lrn:]:  # prevent prefixing when there is another sep
-                prefs.append(rp)
-                break
-
-    ps = {p:prefixes[p] for p in prefs}
-
-    cleanup(ps, graph)
-
-    ng = makeGraph('', prefixes=ps)
-    [ng.g.add(t) for t in graph]
-    return ng
 
 def serialize(graph, outpath):
     def prefix_cleanup(ps, graph):
@@ -91,7 +62,6 @@ def serialize(graph, outpath):
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
     graph = cull_prefixes(graph, cleanup=pc)
 
-    #print(bool(PREFIXES))
     out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
