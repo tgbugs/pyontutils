@@ -704,14 +704,18 @@ class LocalSource(Source):
         #source_lines = getSourceLine
 
         def get_commit_data(start, end):
-            records = cls.repo.git.blame('--line-porcelain', f'-L {start},{end}', cls._this_file.as_posix()).split('\n')
+            records = cls.repo.git.blame('--line-porcelain',
+                                         f'-L {start},{end}',
+                                         cls._this_file.as_posix()).split('\n')
             rl = 13
+            filenames = [l.split(' ', 1)[-1].strip() for l in records[rl - 2::rl]]
             linenos = [(hexsha, int(nowL), int(thenL)) for r in records[::rl]
                        for hexsha, nowL, thenL, *n in (r.split(' '),)]
             author_times = [int(epoch) for r in records[3::rl] for _, epoch in (r.split(' '),)]
             lines = [r.strip('\t') for r in records[12::rl]]
             index, time = max(enumerate(author_times), key=lambda iv: iv[1])
             commit, then, now = linenos[index]
+            filepath = filenames[index]
             # there are some hefty assumptions that go into this
             # that other lines have not been deleted from or added to the code block
             # between commits, or essentially that the code in the block is the
@@ -723,14 +727,14 @@ class LocalSource(Source):
             shift = then - now
             then_start = start + shift
             then_end = end + shift
-            return commit, then_start, then_end
+            return filepath, commit, then_start, then_end
 
         source_lines, start = getsourcelines(cls)
         end = start + len(source_lines)
-        most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
+        filepath, most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
 
-        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit)
-                         + f'{cls._this_file.name}#L{then_start}-L{then_end}')
+        cls.iri = URIRef(cls.iri_prefix_working_dir.format(file_commit=most_recent_block_commit)
+                         + f'{filepath}#L{then_start}-L{then_end}')
 
 
 ##

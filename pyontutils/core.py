@@ -724,7 +724,8 @@ class Class:
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """
-    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'
+    iri_prefix_working_dir = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/'
+    iri_prefix_wdf = iri_prefix_working_dir + 'pyontutils/'
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
