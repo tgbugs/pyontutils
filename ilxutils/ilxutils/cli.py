@@ -39,7 +39,7 @@ import logging
 import os
 import requests as r
 from sys import exit
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 logging.basicConfig(filename='cli.log', level=logging.DEBUG)
 logging.getLogger("urllib3").setLevel(logging.WARNING) # removes noise
 
@@ -298,7 +298,7 @@ class Client:
             'BIRNLEX',
             'SAO',
             'NDA.CDE',
-            'PRO',
+            'PR',
             'NIFEXT',
             'ILX',
         ]

@@ -140,8 +140,8 @@ def batch(data, seg_length, func, **kwargs):
 def main():
     doc = docopt(__doc__, version=VERSION)
     args = doc2args(doc)
-    es = ElasticSearch(user='keys/elastic_username.txt',
-                       password='keys/elastic_password.txt',)
+    es = ElasticSearch(user='keys/.elastic_username',
+                       password='keys/.elastic_password',)
     hit = es.search_by_ilx_id('ilx_0101431')
     embed()
     #hit = es.search_by_ilx_id(ilx_id='ilx_0101431')

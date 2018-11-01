@@ -41,7 +41,7 @@ class IlxSql():
         data = """
             SELECT
                 ta.id, ta.tid,  ta.annotation_tid, ta.value, ta.orig_uid as uid,
-                t1.label as term_label, t1.ilx as term_ilx,
+                t1.label as term_label, t1.ilx as term_ilx, t1.definition as term_def, t1.version as term_version,
                 t2.label as annotation_label, t2.ilx as annotation_ilx
             FROM term_annotations AS ta
             JOIN (
@@ -75,7 +75,7 @@ class IlxSql():
         df = pd.read_sql(data, engine)
         return df
 
-    def get_existing_ids_from_backup(backup_path=None):
+    def get_existing_ids_from_backup(self, backup_path=None):
         if not backup_path:
             backup_path = Path.home() / 'Dropbox/interlex_backups/ilx_db_ex_backup.pickle'
         return open_pickle(backup_path)

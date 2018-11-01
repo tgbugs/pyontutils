@@ -1,11 +1,4 @@
-import json
-from sqlalchemy import create_engine, inspect, Table, Column
-import pandas as pd
-from ilxutils.args_reader import read_args
 import sys
-import time
-import math as m
-import numpy as np
 
 
 def superclasses_bug_fix(term_data):

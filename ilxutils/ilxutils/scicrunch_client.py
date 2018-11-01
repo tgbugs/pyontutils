@@ -4,10 +4,8 @@ from collections import defaultdict, namedtuple
 from IPython import embed
 import json
 import pandas as pd
-from pathlib import Path as p
 import requests as r
 from sys import exit
-from ilxutils.args_reader import read_args
 import ilxutils.scicrunch_client_helper as scicrunch_client_helper
 import os
 
@@ -31,7 +29,7 @@ class scicrunch():
     '''
 
     def __init__(self, api_key, base_path, auth=('None', 'None')):
-        self.key = api_key
+        self.api_key = api_key
         self.base_path = base_path
         self.auth = BasicAuth(auth)
 
@@ -79,7 +77,7 @@ class scicrunch():
         for i, tupdata in enumerate(total_data):
             url, data = tupdata
             params = {
-                **{'key': self.key, },
+                **{'key': self.api_key, },
                 **data,
             }
             auth = ('scicrunch',
@@ -210,7 +208,7 @@ class scicrunch():
             #     'batch-elastic': 'True'
             # })  # term should be able to handle it now
             data = json.dumps({
-                **{'key': self.key, },
+                **{'key': self.api_key, },
                 **data,
             })
             headers = {'Content-type': 'application/json'}
@@ -308,7 +306,7 @@ class scicrunch():
                            _print=True,
                            crawl=False):
         """parameters( data = "list of term_ids" )"""
-        url_base = self.base_path + '/api/1/term/view/{id}' + '?key=' + self.key
+        url_base = self.base_path + '/api/1/term/view/{id}' + '?key=' + self.api_key
         urls = [url_base.format(id=str(_id)) for _id in ids]
         return self.get(
             urls=urls,
@@ -324,7 +322,7 @@ class scicrunch():
                     crawl=False):
         """parameters( data = "list of ilx_ids" )"""
         url_base = self.base_path + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
-        urls = [url_base.format(identifier=ilx_id.replace('ILX:', 'ilx_'), APIKEY=self.key) for ilx_id in ilx_ids]
+        urls = [url_base.format(identifier=ilx_id.replace('ILX:', 'ilx_'), APIKEY=self.api_key) for ilx_id in ilx_ids]
         return self.get(
             urls=urls,
             LIMIT=LIMIT,
@@ -503,7 +501,7 @@ class scicrunch():
         tids = list of term ids that possess the annoations
         """
         url_base = self.base_path + \
-            '/api/1/term/get-annotations/{tid}?key=' + self.key
+            '/api/1/term/get-annotations/{tid}?key=' + self.api_key
         urls = [url_base.format(tid=str(tid)) for tid in tids]
         return self.get(urls,
                         LIMIT=LIMIT,
@@ -517,7 +515,7 @@ class scicrunch():
                               crawl=False):
         """tids = list of strings or ints that are the ids of the annotations themselves"""
         url_base = self.base_path + \
-            '/api/1/term/get-annotation/{id}?key=' + self.key
+            '/api/1/term/get-annotation/{id}?key=' + self.api_key
         urls = [
             url_base.format(id=str(annotation_id))
             for annotation_id in annotation_ids
@@ -618,21 +616,26 @@ class scicrunch():
                                _print=True,
                                crawl=True):
         url = self.base_path + \
-            '/api/1/term/elastic/delete/{ilx_id}?key=' + self.key
+            '/api/1/term/elastic/delete/{ilx_id}?key=' + self.api_key
         data = [(url.format(ilx_id=str(ilx_id)), {}) for ilx_id in ilx_ids]
         return self.post(
             data, LIMIT=LIMIT, _print=_print, crawl=crawl)
 
-    def addTermsToElastic(self,
-                          tids,
-                          LIMIT=50,
-                          _print=True,
-                          crawl=True):
-        url = self.base_path + \
-            '/api/1/term/elastic/upsert/{tid}?key=' + self.key
+    def addTermsToElastic(
+        self,
+        tids,
+        LIMIT = 50,
+        _print = True,
+        crawl = True
+        ) -> list:
+        url = self.base_path + '/api/1/term/elastic/upsert/{tid}?key=' + self.api_key
         data = [(url.format(tid=str(tid)), {}) for tid in tids]
         return self.post(
-            data, LIMIT=LIMIT, _print=_print, crawl=crawl)
+            data,
+            LIMIT = LIMIT,
+            _print=_print,
+            crawl=crawl
+        )
 
     def deprecate_entity(
         self,
@@ -764,6 +767,7 @@ def main():
         base_path=os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION'),
     )
 
+    # EAMPLE UPDATE
     data = [
         {
             'id': 1641,
@@ -776,10 +780,8 @@ def main():
         },
     ]
 
-    output = sci.updateTerms(data)
-    #data = [{'id':6304, 'label':"Lissauer's tract of spinal cord"}]
-    #output = sci.deleteTermsFromElastic(data, crawl=True)
-    print(output)
+    #output = sci.updateTerms(data)
+    #print(output)
 
 '''
 Hoersch D, Otto H, Joshi CP, Borucki B, Cusanovich MA, Heyn MP. Role of a Conserved Salt
