@@ -13,6 +13,7 @@ class Artifacts(Collector):
     collects = Terminology
 
     class WHSSD(Terminology):
+        """Parent class for versions of the WHSSD terminology."""
         iri = ilx['waxholm/uris/sd/']
         class_label = 'Waxholm Space Sprague Dawley Terminology'
         citation = 'https://www.ncbi.nlm.nih.gov/pubmed/24726336'

@@ -334,7 +334,6 @@ class Terminology(Artifact):
     #class_definition = ('An artifact that only contains semantic information, '
                         #'not geometric information, about a parcellation.')
 
-
 class CoordinateSystem(Artifact):
     """ An artifact that defines the geometric coordinates used by
         one or more parcellations. """
@@ -1791,7 +1790,6 @@ class FSL(LabelsBase):
             cls.sources += source,
 
         super().prepare()
-
 
 def main():
     from docopt import docopt

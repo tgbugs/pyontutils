@@ -17,6 +17,7 @@ class Artifacts(Collector):
     #  such as a github url and then we can use the prov: relationships to track
     #  the changes at maximum granularity. I think that this is the right approach.
     class FreeSurferColorLUT(Terminology):
+        """Parent class for versions of the FSCL terminology."""
         iri=ilx['freesurfer/uris/FreeSurferColorLUT/']
         class_label='FreeSurfer Color LUT parcellation terminology'
         abbrevs=('FSCL',)
