@@ -16,7 +16,7 @@ from pyontutils.utils import Async, deferred, TermColors as tc, check_value
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
-from pyontutils.combinators import Restriction, flattenTriples
+from pyontutils import combinators as cmb
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
 from IPython import embed
 
@@ -667,7 +667,7 @@ class Class:
         yield iri, rdf.type, self.rdf_type
         for key, predicate in self_or_cls.propertyMapping.items():
             if key in self.lift:
-                restriction = Restriction(rdfs.subClassOf, scope=self.lift[key])
+                restriction = cmb.Restriction(rdfs.subClassOf, scope=self.lift[key])
             else:
                 restriction = None
             if hasattr(self_or_cls, key):
@@ -945,7 +945,7 @@ class Ont:
 
         try:
             if self.source_file:
-                file = self.source_file
+                filepath = self.source_file
                 line = ''
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
@@ -1124,7 +1124,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
 
         def _triples(self):
-            yield from flattenTriples(triples)
+            yield from cmb.flattenTriples(triples)
 
     Simple._repo = _repo
     Simple.path = path
@@ -1199,7 +1199,7 @@ def displayGraph(graph_,
                 #graph.add((bo, p, bo))
 
     [graph.add(t)
-     for t in flattenTriples((oc(owl.Thing),
+     for t in cmb.flattenTriples((oc(owl.Thing),
                               olit(owl.Thing, rdfs.label, 'Thing'),
                               oop(owl.topObjectProperty),
                               olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
