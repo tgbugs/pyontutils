@@ -69,7 +69,9 @@ class Secrets:
     def exists(self):
         e = Path(self.filename).exists()
         if not e:
-            log.warning(f'secrets file {self.filename} does not exist')
+            log.warning(f'secrets file {self.filename} does not exist. '
+                        'You can set an alternate path under the secrets_file: '
+                        'variable in {self.devconfig.config_file}')
 
         return e
 
