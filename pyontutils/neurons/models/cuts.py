@@ -17,10 +17,10 @@ from pyontutils.phenotype_namespaces import BBP, CUT, Layers, Regions
 
 ndl_config = Config('neuron_data_lifted')
 ndl_config.load_existing()
-ndl_neurons = list(ndl_config.neurons)
+ndl_neurons = ndl_config.neurons()
 bn_config = Config('basic-neurons')
 bn_config.load_existing()
-bn_neurons = list(bn_config.neurons)
+bn_neurons = bn_config.neurons()
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -190,7 +190,7 @@ def make_cut_id(label):
 def export_for_review(config, unmapped, partial, nlx_missing,
                       filename='cuts-review.csv',
                       with_curies=False):
-    neurons = list(config.neurons)
+    neurons = config.neurons()
     predicates = sorted(set(e for n in neurons
                             for me in n.edges
                             for e in (me if isinstance(me, tuple) else (me,))))  # columns

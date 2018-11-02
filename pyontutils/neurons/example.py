@@ -3,9 +3,11 @@
 import inspect
 import pyontutils.neurons
 from pyontutils.utils import TermColors as tc
-from pyontutils.neurons.lang import *
+from pyontutils.neurons import *
 from pyontutils import phenotype_namespaces as phns
 from IPython import embed
+
+config = Config('neurons-example-script')
 
 def printe(*args, **kwargs):
     print(*(tc.blue(str(a)) for a in args), **kwargs)
@@ -116,7 +118,7 @@ messup(pv)  # the localNames call inside here persists
 print('testing printing pv after localNames is called inside messup')
 print(repr(pv))
 
-print(graphBase.neurons())
+print(config.neurons())
 
 if __name__ == '__main__':
     embed()

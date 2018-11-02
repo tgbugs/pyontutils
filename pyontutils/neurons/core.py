@@ -274,8 +274,13 @@ class Config:
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
 
-    def query(self, identifier = None):
-        return
+    def ttl(self):
+        # FIXME do this correctly
+        return graphBase.ttl()
+
+    def python(self):
+        # FIXME do this correctly
+        return graphBase.python()
 
     @property
     def name(self):
@@ -285,9 +290,8 @@ class Config:
     def core_graph(self):
         return graphBase.core_graph  # FIXME :/
 
-    @property
     def neurons(self):
-        yield from self.existing_pes
+        return sorted(self.existing_pes)
 
     def activate(self):
         """ set this config as the active config """
@@ -310,7 +314,7 @@ class Config:
         # bag existing
 
         try:
-            next(self.neurons)
+            next(iter(self.neurons()))
             raise self.ExistingNeuronsError('Existing neurons detected. Please '
                                             'load from file before creating neurons!')
         except StopIteration:
