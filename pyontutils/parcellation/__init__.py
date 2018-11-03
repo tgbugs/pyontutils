@@ -1795,6 +1795,16 @@ class FSL(LabelsBase):
 
         super().prepare()
 
+
+def getOnts():
+    return tuple(l for l in subclasses(ParcOnt)
+                 if l.__name__ != 'parcBridge'
+                 and not hasattr(l, f'_{l.__name__}__pythonOnly')
+                 and (l.__module__ != 'pyontutils.parcellation'
+                      if __name__ == '__main__' or __name__ == '__init__'
+                      else l.__module__ != '__main__' and l.__module__ != '__init__'))
+
+
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
@@ -1803,13 +1813,7 @@ def main():
         from pyontutils.parcellation.aba import Artifacts as abaArts
     from pyontutils.parcellation.freesurfer import Artifacts as fsArts
     from pyontutils.parcellation.whs import Artifacts as whsArts
-    onts = tuple(l for l in subclasses(ParcOnt)
-                 if l.__name__ != 'parcBridge'
-                 and not hasattr(l, f'_{l.__name__}__pythonOnly')
-                 and (l.__module__ != 'pyontutils.parcellation'
-                      if __name__ == '__main__' or __name__ == '__init__'
-                      else l.__module__ != '__main__' and l.__module__ != '__init__'
-                 ))
+    onts = getOnts()
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
