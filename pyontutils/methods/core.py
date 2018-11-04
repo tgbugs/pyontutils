@@ -63,7 +63,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
             # this is why python sucks and racket is awesome if this was racket
             # the error would show up on the line where the problem was :/
             raise TypeError(f'Type of {synonyms!r} should not be {type(synonyms)}!')
-        yield from olit(subject, NIFRID.synonyms, *synonyms)
+        yield from olit(subject, NIFRID.synonym, *synonyms)
 
     if comment:
         yield from olit(subject, rdfs.comment, comment)
