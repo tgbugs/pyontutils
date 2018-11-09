@@ -11,14 +11,16 @@ def tag(_tag, n=False):
         return s + nl.join(value) + e
     return tagwrap
 
-def atag(href, value=None, new_tab=False, uriconv=None, cls=None):
+def atag(href, value=None, new_tab=False, uriconv=None, cls=None, title=None):
     target = ' target="_blank"' if new_tab else ''
     class_ = '' if cls is None else f' class="{cls}"'
+    title = '' if title is None else f' title="{title}"'
     if value is None:
         value = href
         if uriconv is not None:
             href = uriconv(href)
-    return f'<a href="{href}"{target}{class_}>{value}</a>'
+
+    return f'<a href="{href}"{target}{class_}{title}>{value}</a>'
 
 def divtag(*values, cls=None):
     class_ = f'class="{cls}"' if cls else ''
