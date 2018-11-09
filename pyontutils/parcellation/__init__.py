@@ -9,6 +9,7 @@ Options:
     -f --fail                   fail loudly on common common validation checks
     -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
     -l --local                  only build files with local source copies
+    -s --stats                  generate report on current parcellations
 
 """
 
@@ -333,7 +334,6 @@ class Terminology(Artifact):
     #class_definition = ('An artifact that only contains semantic information, '
                         #'not geometric information, about a parcellation.')
 
-
 class CoordinateSystem(Artifact):
     """ An artifact that defines the geometric coordinates used by
         one or more parcellations. """
@@ -606,7 +606,9 @@ class parcArts(ParcOnt):
                 yield from collector.arts()
 
     def _triples(self):
+        from pyontutils.parcellation import Artifact
         yield from Artifact.class_triples()
+        # OH LOOK PYTHON IS BEING AN AWFUL LANGUAGE AGAIN
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
             # do not comment this out it is what makes the
             # upper classes in the artifacts hierarchy
@@ -702,14 +704,18 @@ class LocalSource(Source):
         #source_lines = getSourceLine
 
         def get_commit_data(start, end):
-            records = cls.repo.git.blame('--line-porcelain', f'-L {start},{end}', cls._this_file.as_posix()).split('\n')
+            records = cls.repo.git.blame('--line-porcelain',
+                                         f'-L {start},{end}',
+                                         cls._this_file.as_posix()).split('\n')
             rl = 13
+            filenames = [l.split(' ', 1)[-1].strip() for l in records[rl - 2::rl]]
             linenos = [(hexsha, int(nowL), int(thenL)) for r in records[::rl]
                        for hexsha, nowL, thenL, *n in (r.split(' '),)]
             author_times = [int(epoch) for r in records[3::rl] for _, epoch in (r.split(' '),)]
             lines = [r.strip('\t') for r in records[12::rl]]
             index, time = max(enumerate(author_times), key=lambda iv: iv[1])
             commit, then, now = linenos[index]
+            filepath = filenames[index]
             # there are some hefty assumptions that go into this
             # that other lines have not been deleted from or added to the code block
             # between commits, or essentially that the code in the block is the
@@ -721,14 +727,14 @@ class LocalSource(Source):
             shift = then - now
             then_start = start + shift
             then_end = end + shift
-            return commit, then_start, then_end
+            return filepath, commit, then_start, then_end
 
         source_lines, start = getsourcelines(cls)
         end = start + len(source_lines)
-        most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
+        filepath, most_recent_block_commit, then_start, then_end = get_commit_data(start, end)
 
-        cls.iri = URIRef(cls.iri_prefix_wdf.format(file_commit=most_recent_block_commit)
-                         + f'{cls._this_file.name}#L{then_start}-L{then_end}')
+        cls.iri = URIRef(cls.iri_prefix_working_dir.format(file_commit=most_recent_block_commit)
+                         + f'{filepath}#L{then_start}-L{then_end}')
 
 
 ##
@@ -1790,6 +1796,15 @@ class FSL(LabelsBase):
         super().prepare()
 
 
+def getOnts():
+    return tuple(l for l in subclasses(ParcOnt)
+                 if l.__name__ != 'parcBridge'
+                 and not hasattr(l, f'_{l.__name__}__pythonOnly')
+                 and (l.__module__ != 'pyontutils.parcellation'
+                      if __name__ == '__main__' or __name__ == '__init__'
+                      else l.__module__ != '__main__' and l.__module__ != '__init__'))
+
+
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
@@ -1798,18 +1813,14 @@ def main():
         from pyontutils.parcellation.aba import Artifacts as abaArts
     from pyontutils.parcellation.freesurfer import Artifacts as fsArts
     from pyontutils.parcellation.whs import Artifacts as whsArts
-    #embed()
-    onts = tuple(l for l in subclasses(ParcOnt)
-                 if l.__name__ != 'parcBridge'
-                 and not hasattr(l, f'_{l.__name__}__pythonOnly')
-                 and (l.__module__ != 'pyontutils.parcellation'
-                      if __name__ == '__main__'
-                      else l.__module__ != '__main__'))
+    onts = getOnts()
     _ = *(print(ont) for ont in onts),
     out = build(*onts,
                 parcBridge,
                 fail=args['--fail'],
                 n_jobs=int(args['--jobs']))
+    if args['--stats']:
+        embed()
 
 
 if __name__ == '__main__':

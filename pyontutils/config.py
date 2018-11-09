@@ -58,7 +58,8 @@ class Secrets:
             fstat = os.stat(self.filename)
             mode = oct(stat.S_IMODE(fstat.st_mode))
             if mode != '0o600' and mode != '0o700':
-                raise FileNotFoundError(f'Your secrets file can be read by the whole world! {mode}')
+                raise FileNotFoundError(f'Your secrets file {self.filename} '
+                                        f'can be read by the whole world! {mode}')
 
     @property
     def filename(self):
@@ -68,7 +69,9 @@ class Secrets:
     def exists(self):
         e = Path(self.filename).exists()
         if not e:
-            log.warning(f'secrets file {self.filename} does not exist')
+            log.warning(f'secrets file {self.filename} does not exist. '
+                        'You can set an alternate path under the secrets_file: '
+                        'variable in {self.devconfig.config_file}')
 
         return e
 

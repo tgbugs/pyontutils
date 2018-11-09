@@ -15,6 +15,7 @@ from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
+from pyontutils.annotation import AnnotationMixin
 from pyontutils.namespaces import makePrefixes, TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 
@@ -96,6 +97,7 @@ class GraphOpsMixin:
         pass
 
     def adopt_meta(self, other, properties=None):
+        # TODO FIXME annotations
         if properties is None:
             properties = self.default_properties
         for p in properties:
@@ -110,12 +112,23 @@ class GraphOpsMixin:
         return self.config.load_graph
 
     @property
+    def _out_graph(self):
+        return self.config.out_graph
+
+    @property
     def identifier(self):
         return self.id_  # fix for current graphBase subclasses
 
     def objects(self, *predicates):
+        graph = (self._load_graph if
+                 # FIXME this is a hack that could cause massive confusion
+                 # depending on when this is called
+                 # maybe we can protect this by making sure that out_graph
+                 # has been written?
+                 hasattr(self.config, 'load_graph') else
+                 self._out_graph)
         for predicate in predicates:
-            yield from self._load_graph[self.identifier:predicate]
+            yield from graph[self.identifier:predicate]
 
     def add_objects(self, predicate, *objects):
         bads = []
@@ -124,7 +137,8 @@ class GraphOpsMixin:
                 bads.append(object)
 
         if bads:
-            raise self.ObjectTypeError(' '.join(str(type(object)) for object in bads))
+            raise self.ObjectTypeError(', '.join(str(type(object)) + ' ' + str(object)
+                                                 for object in bads))
 
         [self.out_graph.add((self.identifier, predicate, object)) for object in objects]
 
@@ -180,6 +194,8 @@ class Config:
                  ignore_existing =      False):
         import os  # FIXME probably should move some of this to neurons.py?
 
+        self.__name = name  # TODO allow reload from owl to get the load graph? how to handle this
+
         graphBase.python_subclasses = list(subclasses(NeuronEBM)) + [Neuron, NeuronCUT]
         graphBase.knownClasses = [OntId(c.owlClass).u
                                   for c in graphBase.python_subclasses]
@@ -229,7 +245,8 @@ class Config:
                       ignore_existing = ignore_existing)
 
         for name, value in kwargs.items():
-            @property
+            # FIXME only works if we do this in __new__
+            #@property
             def nochangepls(v=value):
                 return v
 
@@ -257,13 +274,38 @@ class Config:
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
 
+    def ttl(self):
+        # FIXME do this correctly
+        return graphBase.ttl()
+
+    def python(self):
+        # FIXME do this correctly
+        return graphBase.python()
+
     @property
+    def name(self):
+        return self.__name
+
+    @property
+    def core_graph(self):
+        return graphBase.core_graph  # FIXME :/
+
     def neurons(self):
-        yield from self.existing_pes
+        return sorted(self.existing_pes)
 
     def activate(self):
         """ set this config as the active config """
         raise NotImplemented
+
+    def write(self):
+        # FIXME per config prefixes using derived OntCuries?
+        og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
+        og.filename = graphBase.ng.filename
+        og.write()
+
+    def write_python(self):
+        # FIXME hack, will write other configs if call after graphbase has switched
+        graphBase.write_python()
 
     def load_existing(self):
         """ advanced usage allows loading multiple sets of neurons and using a config
@@ -272,8 +314,9 @@ class Config:
         # bag existing
 
         try:
-            next(self.neurons)
-            raise self.ExistingNeuronsError('Existing neurons detect. Please load first!')
+            next(iter(self.neurons()))
+            raise self.ExistingNeuronsError('Existing neurons detected. Please '
+                                            'load from file before creating neurons!')
         except StopIteration:
             pass
 
@@ -515,10 +558,10 @@ class graphBase:
                 sources = _sources
                 source_file = _source_file
                 # FIXME temp fix for issue with wgb in core
-                wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
-                                  '{commit}/'
-                                  '{file}'
-                                  '{hash_L_line}')
+                #wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
+                                  #'{commit}/'
+                                  #'{filepath}'
+                                  #'{hash_L_line}')
 
             no = NeurOnt()
             out_graph = no.graph
@@ -823,7 +866,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abvs = None
 
         if abvs:
-            return abvs[0]
+            abv = abvs[0]
+            if abv == 'Glu,':
+                return 'Glu'  # FIXME tempfix for bad glutamate abv
+            else:
+                return abv
         elif pn in self.local_names:
             return self.local_names[pn]
         else:
@@ -923,6 +970,17 @@ class LogicalPhenotype(graphBase):
         return tuple((pe.e for pe in self.pes))
 
     @property
+    def _pClass(self):
+        class OpClass(tuple):
+            local_names = self.local_names
+            @property
+            def qname(self):  # a not entirely unreasonably way to define qnames for collections
+                op, *rest = self
+                return (self.local_names[op], *(r.qname for r in rest))
+
+        return OpClass((self.op, *(p._pClass for p in self.pes)))
+
+    @property
     def pLabel(self):
         #return f'({self.local_names[self.op]} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
         return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in self.pes) + ')'
@@ -997,7 +1055,7 @@ class LogicalPhenotype(graphBase):
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
 
 
-class NeuronBase(GraphOpsMixin, graphBase):
+class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     owlClass = _NEURON_CLASS
     shortname = None
     preserve_predicates = NIFRID.synonym, definition
@@ -1038,10 +1096,10 @@ class NeuronBase(GraphOpsMixin, graphBase):
                         print(e)
                         continue
                     except AttributeError as e:
-                        from IPython import embed
-                        embed()
                         print('oops', e)
                         raise e
+                        from IPython import embed
+                        embed()
                         continue
             finally:
                 NeuronBase._loading = False
@@ -1057,6 +1115,7 @@ class NeuronBase(GraphOpsMixin, graphBase):
             # TODO hasDevelopmentalStage   !!!!! FIXME
             ilxtr.hasLocationPhenotype,  # FIXME
             ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
+            ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
             ilxtr.hasDendriteMorphologicalPhenotype,
             ilxtr.hasDendriteLocatedIn,
@@ -1065,8 +1124,9 @@ class NeuronBase(GraphOpsMixin, graphBase):
             ilxtr.hasElectrophysiologicalPhenotype,
             #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
             self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-            ilxtr.hasExpressionPhenotype,
+            ilxtr.hasMolecularPhenotype,
             ilxtr.hasNeurotransmitterPhenotype,
+            ilxtr.hasExpressionPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
             ilxtr.hasConnectionPhenotype,
@@ -1260,6 +1320,8 @@ class NeuronBase(GraphOpsMixin, graphBase):
                         l = 'Projecting To ' + l
                     elif pe.e == self._predicates.hasDendriteLocatedIn:
                         l = 'With dendrite in ' + l  # 'Toward' in bbp speak
+                    elif pe.e == self._predicates.hasCircuitRolePhenotype:
+                        l = l.lower()
 
                     sublabs.append(l)
 
@@ -1284,12 +1346,18 @@ class NeuronBase(GraphOpsMixin, graphBase):
         # circuit role? (principle interneuron...)
         if not label:
             label.append('????')
-        nin_switch = ('interneuron' if
-                      Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                      ('motor neuron' if
-                       Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                       'neuron'))
-        label.append(nin_switch)
+
+        nin_switch = ('neuron' if
+                       Phenotype('ilxtr:IntrinsicPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                      (None if
+                       Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                       ('neuron' if
+                        Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
+                        'neuron')))
+
+        if nin_switch:
+            label.append(nin_switch)
+
         if self._shortname:
             label.append(self._shortname)
 
@@ -1311,7 +1379,27 @@ class NeuronBase(GraphOpsMixin, graphBase):
         self.id_ = 'ILX:1234567'
 
     def validate(self):
-        raise TypeError('Ur Neuron Sucks')
+        raise TypeError('Your neuron is bad and you should feel bad.')
+
+    def getPredicate(self, object):
+        for p in self.pes:
+            if p.p == object:  # FIXME probably need to munge the object
+                return p.e
+            # FIXME warn/error on ambiguous?
+
+        raise AttributeError(f'{self} has no aspect with the phenotype {OntId(object)!r}')  # FIXME AttributeError seems wrong
+
+    def getObject(self, predicate):
+        for p in self.pes:
+            if p.e == predicate:  # FIXME probably need to munge the object
+                return p.p  # just to confuse you, the second p here is phenotype not predicate >_<
+
+        return rdf.nil  # FIXME how to indicate all values?
+        # predicate is different than object in the sense that it is possible
+        # for neurons to have aspects (aka phenotype dimensions) without anyone
+        # having measured those values, also handy when we don't know how to parse a value
+        # but there is note attached
+        #raise AttributeError(f'{self} has no phenotype for {predicate}')  # FIXME AttributeError seems wrong
 
     def __expanded__(self):
         args = '(' + ', '.join([_.__expanded__() for _ in self.pes]) + ')'
@@ -1347,7 +1435,12 @@ class NeuronBase(GraphOpsMixin, graphBase):
         return hash(self) == hash(other)
 
     def __lt__(self, other):
-        return repr(self.pes) < repr(other.pes)
+        try:
+            return repr(self.pes) < repr(other.pes)
+        except AttributeError as e:
+            from IPython import embed
+            embed()
+            raise e
 
     def __gt__(self, other):
         return not self.__lt__(other)
@@ -1524,7 +1617,10 @@ class Neuron(NeuronBase):
                     print(putativeRestriction)
         else:
             # TODO make sure that Neuron is in there somehwere...
-            print('what is this thing?', c)
+            # objects = sorted(c.graph.transitive_objects(c.identifier, None))
+            # cryptic errors are due to the fact that infixowl still has
+            # lingering byte/string issues
+            log.warning(f'Could not convert class to Neuron {c}')
 
     def _unpackLogical(self, bc, type_=Phenotype):  # TODO this will be needed for disjoint as well
         op = bc._operator

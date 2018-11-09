@@ -1,6 +1,7 @@
 import types
 import rdflib
 from pyontutils import core  # to get around circular import issue
+# FIXME breaks if import this files as import pyontutils.combinators as cmb
 from pyontutils.utils import check_value
 from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl

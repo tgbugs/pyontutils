@@ -9,6 +9,7 @@ with open('README.md', 'rt') as f:
 
 files = [
     'pyontutils/__init__.py',
+    'pyontutils/annotation.py',
     'pyontutils/closed_namespaces.py',
     'pyontutils/combinators.py',
     'pyontutils/config.py',

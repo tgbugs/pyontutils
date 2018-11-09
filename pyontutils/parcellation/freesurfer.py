@@ -17,6 +17,7 @@ class Artifacts(Collector):
     #  such as a github url and then we can use the prov: relationships to track
     #  the changes at maximum granularity. I think that this is the right approach.
     class FreeSurferColorLUT(Terminology):
+        """Parent class for versions of the FSCL terminology."""
         iri=ilx['freesurfer/uris/FreeSurferColorLUT/']
         class_label='FreeSurfer Color LUT parcellation terminology'
         abbrevs=('FSCL',)
@@ -26,7 +27,7 @@ class Artifacts(Collector):
         species=NCBITaxon['9606']
         devstage=UBERON['0000113']  # FIXME not sure if this is accurate
 
-    fsclut = FreeSurferColorLUT()
+    #fsclut = FreeSurferColorLUT()  # do not need to call this, but is in python import system as usual
 
     FreeSurferColorLUT1_105 = FreeSurferColorLUT(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
                                                  abbrevs=('FSCL1.105',),

@@ -8,7 +8,7 @@ Usage:
     ontree --test
 
 Options:
-    -a --api=API            SciGraph api endpoint
+    -a --api=API            Full url to SciGraph api endpoint
     -k --key=APIKEY         apikey for SciGraph instance
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
     -o --outgoing           if not specified defaults to incoming
@@ -128,7 +128,10 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return abort(422, 'Unknown predicate.')
     else:
         kwargs['graph'] = sgg
-        versionIRI = [e['obj'] for e in sgg.getNeighbors('http://ontology.neuinfo.org/NIF/ttl/nif.ttl')['edges'] if e['pred'] == 'versionIRI'][0]
+        versionIRI = [e['obj']
+                      for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
+                                                'NIF/ttl/nif.ttl')['edges']
+                      if e['pred'] == 'versionIRI'][0]
         #print(versionIRI)
         prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
@@ -146,7 +149,16 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             else:
                 rec = sgv.findById(root)
             if 'curie' in rec:
-                root = rec['curie']
+                root_curie = rec['curie']
+                # FIXME https://github.com/SciGraph/SciGraph/issues/268
+                if not root_curie.endswith(':'):
+                    root = root_curie
+                else:
+                    kwargs['curie'] = root_curie
+        elif 'prefixes' not in kwargs and root.endswith(':'):
+            kwargs['curie'] = root
+            root = sgc._curies[root.rstrip(':')]  # also 268
+
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
         return extras.html
@@ -232,6 +244,8 @@ examples = (
 extra_examples = (
     ('Old NIFGA part of', hpp, 'BIRNLEX:796'),
     ('Cereberal cortex parts', po, 'UBERON:0002749'),
+    ('Broken iri of borken curie', a, 'http://uri.interlex.org/paxinos/uris/rat/labels/'),
+    ('Broken curie', a, 'PAXRAT:'),
 )
 
 file_examples = (
@@ -392,6 +406,7 @@ def main():
             scigraph.scigraph_client.BASEPATH = api
             sgg._basePath = api
             sgv._basePath = api
+            sgc._basePath = api
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key

@@ -16,7 +16,7 @@ from pyontutils.utils import Async, deferred, TermColors as tc, check_value
 from pyontutils.config import get_api_key, devconfig
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
-from pyontutils.combinators import Restriction, flattenTriples
+from pyontutils import combinators as cmb
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
 from IPython import embed
 
@@ -113,6 +113,7 @@ class mGraph(rdflib.Graph):
     def write(self, filename=None):
         if filename is None:
             filename = self.filename
+
         with open(filename, 'wb') as f:
             f.write(self.serialize(format='nifttl'))
 
@@ -176,12 +177,15 @@ class makeGraph:
                             ' The graph is not isomorphic to a single ontology!')
         return ontids[0]
 
-    def write(self):
-        """ Serialize self.g and write to self.filename"""
-        ser = self.g.serialize(format='nifttl')
-        with open(self.filename, 'wb') as f:
-            f.write(ser)
-            #print('yes we wrote the first version...', self.name)
+    def write(self, cull=False):
+        """ Serialize self.g and write to self.filename, set cull to true to remove unwanted prefixes """
+        if cull:
+            cull_prefixes(self).write()
+        else:
+            ser = self.g.serialize(format='nifttl')
+            with open(self.filename, 'wb') as f:
+                f.write(ser)
+                #print('yes we wrote the first version...', self.name)
 
     def expand(self, curie):
         prefix, suffix = curie.split(':', 1)
@@ -445,6 +449,41 @@ def qname(uri, warning=False):
     return __helper_graph.qname(uri)
 
 
+null_prefix = uPREFIXES['']
+def cull_prefixes(graph, prefixes={k:v for k, v in uPREFIXES.items() if k != 'NIFTTL'},
+                  cleanup=lambda ps, graph: None, keep=False):
+    """ Remove unused curie prefixes and normalize to a standard set. """
+    prefs = ['']
+    if keep:
+        prefixes.update({p:str(n) for p, n in graph.namespaces()})
+
+    if '' not in prefixes:
+        prefixes[''] = null_prefix  # null prefix
+
+    pi = {v:k for k, v in prefixes.items()}
+    asdf = {} #{v:k for k, v in ps.items()}
+    asdf.update(pi)
+    # determine which prefixes we need
+    for uri in set((e for t in graph for e in t)):
+        if uri.endswith('.owl') or uri.endswith('.ttl') or uri.endswith('$$ID$$'):
+            continue  # don't prefix imports or templates
+        for rn, rp in sorted(asdf.items(), key=lambda a: -len(a[0])):  # make sure we get longest first
+            lrn = len(rn)
+            if type(uri) == rdflib.BNode:
+                continue
+            elif uri.startswith(rn) and '#' not in uri[lrn:] and '/' not in uri[lrn:]:  # prevent prefixing when there is another sep
+                prefs.append(rp)
+                break
+
+    ps = {p:prefixes[p] for p in prefs}
+
+    cleanup(ps, graph)
+
+    ng = makeGraph('', prefixes=ps)
+    [ng.g.add(t) for t in graph]
+    return ng
+
+
 def createOntology(filename=    'temp-graph',
                    name=        'Temp Ontology',
                    prefixes=    None,  # is a dict
@@ -502,7 +541,7 @@ for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(api_key=get_api_key())
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port)
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None)
 OntTerm.query = ontquery.OntQuery(sgr, ixr)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 #ontquery.QueryResult._OntTerm = OntTerm
@@ -597,6 +636,15 @@ class Class:
             for kw, arg in kwargs:
                 setattr(self, kw, arg)
 
+        self.validate()
+
+    def validate(self):
+        """ Put checks here. They will save you. """
+        if hasattr(self, 'iri'):
+            assert self.iri != self.parentClass, f'{self} iri and subClassOf match! {self.iri}'
+        else:
+            pass  # TODO do we the class_label?
+
     def addTo(self, graph):
         [graph.add_trip(*t) for t in self]
         return graph  # enable chaining
@@ -619,7 +667,7 @@ class Class:
         yield iri, rdf.type, self.rdf_type
         for key, predicate in self_or_cls.propertyMapping.items():
             if key in self.lift:
-                restriction = Restriction(rdfs.subClassOf, scope=self.lift[key])
+                restriction = cmb.Restriction(rdfs.subClassOf, scope=self.lift[key])
             else:
                 restriction = None
             if hasattr(self_or_cls, key):
@@ -676,7 +724,8 @@ class Class:
 
 class Source(tuple):
     """ Manages loading and converting source files into ontology representations """
-    iri_prefix_wdf = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/pyontutils/'
+    iri_prefix_working_dir = 'https://github.com/tgbugs/pyontutils/blob/{file_commit}/'
+    iri_prefix_wdf = iri_prefix_working_dir + 'pyontutils/'
     iri_prefix_hd = f'https://github.com/tgbugs/pyontutils/blob/master/pyontutils/'
     iri = None
     source = None
@@ -854,8 +903,8 @@ class Ont:
     imports = tuple()
     source_file = None  # override for cases where __class__ is used internally
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'  # TODO predicate ordering
-                      '{commit}/pyontutils/'  # FIXME prefer {filepath} to assuming pyontutils...
-                      '{file}'
+                      '{commit}/'  # FIXME prefer {filepath} to assuming pyontutils...
+                      '{filepath}'
                       '{hash_L_line}')
 
     propertyMapping = dict(
@@ -896,20 +945,21 @@ class Ont:
 
         try:
             if self.source_file:
-                file = self.source_file
+                filepath = self.source_file
                 line = ''
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
-                file = Path(_file).name
+                file = Path(_file).resolve().absolute()
+                filepath = file.relative_to(working_dir).as_posix()
         except TypeError:  # emacs is silly
             line = '#Lnoline'
             _file = 'nofile'
-            file = Path(_file).name
+            filepath = Path(_file).name
 
         self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
                                                          hash_L_line=line,
-                                                         file=file)
+                                                         filepath=filepath)
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
@@ -1015,9 +1065,9 @@ class Ont:
     def iri(self):
         return self._graph.ontid
 
-    def write(self):
+    def write(self, cull=False):
         # TODO warn in ttl file when run when __file__ has not been committed
-        self._graph.write()
+        self._graph.write(cull=cull)
 
 
 class ParcOnt(Ont):
@@ -1074,7 +1124,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
 
         def _triples(self):
-            yield from flattenTriples(triples)
+            yield from cmb.flattenTriples(triples)
 
     Simple._repo = _repo
     Simple.path = path
@@ -1149,7 +1199,7 @@ def displayGraph(graph_,
                 #graph.add((bo, p, bo))
 
     [graph.add(t)
-     for t in flattenTriples((oc(owl.Thing),
+     for t in cmb.flattenTriples((oc(owl.Thing),
                               olit(owl.Thing, rdfs.label, 'Thing'),
                               oop(owl.topObjectProperty),
                               olit(owl.topObjectProperty, rdfs.label, 'TOP'),))]
