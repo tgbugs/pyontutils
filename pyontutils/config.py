@@ -71,7 +71,7 @@ class Secrets:
         if not e:
             log.warning(f'secrets file {self.filename} does not exist. '
                         'You can set an alternate path under the secrets_file: '
-                        'variable in {self.devconfig.config_file}')
+                        f'variable in {self.devconfig.config_file}')
 
         return e
 
