@@ -28,6 +28,9 @@ def divtag(*values, cls=None):
 def deltag(text):
     return f'<del>{text}</del>'
 
+def zerotag(text):
+    return f'<span class="zero">{text}</span>'
+
 htmltag = tag('html', n=True)
 headtag = tag('head', n=True)
 titletag = tag('title')
@@ -88,6 +91,7 @@ table {
 a:link { color: black; }
 a:visited { color: grey; }
 del { color: white; }
+.zero { color: red; }
 '''
 
 cur_style = '''
