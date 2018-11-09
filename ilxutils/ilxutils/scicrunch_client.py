@@ -116,7 +116,7 @@ class scicrunch():
             else:
                 output = response.json()
                 error = False
-                if output.get('errormsg'):
+                if output.get('error msg'):
                     error = output['errormsg']
                 # Duplicates; don't exit
                 elif output.get('data').get('errormsg'):
@@ -407,6 +407,8 @@ class scicrunch():
                     superclasses    [{'id':<int>}]
                     synonyms        [{'literal':<str>}]
                     existing_ids    [{'iri':<str>,'curie':<str>'}]
+
+        [{'type':'term', 'label':'brain'}]
         """
         needed = set([
             'label',
@@ -461,6 +463,7 @@ class scicrunch():
                        LIMIT=50,
                        _print=True,
                        crawl=False,):
+
 
         need = set([
             'tid',
@@ -555,7 +558,7 @@ class scicrunch():
                           LIMIT=50,
                           _print=True,
                           crawl=False,):
-        """data = list of tids"""
+        """data = list of ids"""
         url_base = self.base_path + \
             '/api/1/term/edit-annotation/{annotation_id}'  # id of annotation not term id; thx past troy!
         annotations = self.getAnnotations_via_id(annotation_ids,
@@ -764,23 +767,22 @@ def main():
 
     sci = scicrunch(
         api_key=os.environ.get('SCICRUNCH_API_KEY'),
-        base_path=os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION'),
+        base_path=os.environ.get('SCICRUNCH_BASEBATH_BETA'),
     )
 
     # EAMPLE UPDATE
     data = [
         {
-            'id': 1641,
-            'ilx': 'ilx_0101640',
-            'synonyms': {'literal': 'test'},
-            'existing_ids': {
-                'curie': 'NLXWIKI:TaxonomyID:9922',
-                'iri': 'http://neurolex.org/wiki/TaxonomyID:9922',
-            }
+            'id': 15068,
+            'ilx': 'ilx_0115062',
+            'type': 'pde',
         },
     ]
 
-    #output = sci.updateTerms(data)
+    annotations = [
+
+    ]
+    output = sci.updateTerms(data)
     #print(output)
 
 '''
