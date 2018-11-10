@@ -766,7 +766,7 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
     """ Produce a htmlized ttl file with working hyperlinks. """
 
     _nl = '<br>\n'
-    _space = '&nbsp;'
+    _space = '\u00A0'
 
     def __init__(self, store, *args, **kwargs):
         from pyontutils.htmlfun import atag
