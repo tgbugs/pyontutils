@@ -69,6 +69,7 @@ try:
             'ipython',
             'joblib',
             'lxml',
+            'oauth2client',
             'ontquery>=0.0.4',
             'psutil',
             'pymysql',
