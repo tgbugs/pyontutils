@@ -42,7 +42,7 @@ from joblib import Parallel, delayed
 from git.repo import Repo
 from pyontutils.core import makeGraph, createOntology
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
-from pyontutils.ontload import loadall, locate_config_file, getCuries
+from pyontutils.ontload import loadall, getCuries
 from pyontutils.namespaces import makePrefixes, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 from IPython import embed
@@ -751,7 +751,6 @@ def main():
     epoch = args['--epoch']
 
     curies_location = args['--curies']
-    #curies_location = locate_config_file(curies_location, git_local)
     curies, curie_prefixes = getCuries(curies_location)
 
     filenames = args['<file>']
