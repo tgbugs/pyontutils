@@ -65,6 +65,7 @@ try:
             'docopt',
             'flask',
             'gitpython',
+            'hyputils',
             'ipython',
             'joblib',
             'lxml',
