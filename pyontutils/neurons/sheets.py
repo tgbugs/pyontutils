@@ -8,10 +8,10 @@ from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.neurons.models.cuts import make_cut_id, fixname
-from interlex.utils import printD
 
 from IPython import embed
 
+printD = print
 
 def normalizeDoi(doi):
     if 'http' in doi:
