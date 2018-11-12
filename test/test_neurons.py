@@ -35,8 +35,8 @@ class TestNeurons(unittest.TestCase):
         ndl_config.load_existing()
         bn_config = Config('basic-neurons')
         bn_config.load_existing()
-        ndl_neurons = list(ndl_config.neurons)
-        bn_neurons = list(bn_config.neurons)
+        ndl_neurons = ndl_config.neurons()
+        bn_neurons = bn_config.neurons()
         config = Config('__test_output')
         shapeshifter = Neuron(Phenotype('ilxtr:soul-stealer'))
         for n in ndl_neurons:
