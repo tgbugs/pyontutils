@@ -56,7 +56,7 @@ from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import run as ontload_main
-from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, locate_config_file, getCuries
+from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, getCuries
 from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
@@ -541,13 +541,13 @@ class Builder:
         else:
             return config
 
-    def locate_folder(self, path):
-        return locate_config_file(path, self.git_local)
+    #def locate_folder(self, path):
+        #return locate_config_file(path, self.git_local)
 
-    def locate_config(self, config):
-        config = self._config_path(config)
-        folder = self.locate_folder(self.scigraph_config_folder)
-        return jpth(folder, config)
+    #def locate_config(self, config):
+        #config = self._config_path(config)
+        #folder = self.locate_folder(self.scigraph_config_folder)
+        #return jpth(folder, config)
 
     def locate_config_template(self, config):
         extension = '.template'  # XXX this line defines the expected template extension
