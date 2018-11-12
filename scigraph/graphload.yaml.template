@@ -9,6 +9,7 @@ graphConfiguration:
       - curie
       - acronym
       - abbreviation
+      - category
 
     exactNodeProperties:
       - label
