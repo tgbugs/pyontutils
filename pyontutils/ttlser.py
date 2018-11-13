@@ -800,6 +800,13 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
             label = self._labels[node] if node in self._labels else None
             return self.atag(node, out, new_tab=True, title=label)
 
+    def serialize(self, *args, **kwargs):
+        """ Modified to allow additional labels to be passed in. """
+        if 'labels' in kwargs:
+            # populate labels from outside the local graph
+            self._labels.update(kwargs['labels'])
+        super(HtmlTurtleSerializer, self).serialize(*args, **kwargs)
+
 
 class RacketTurtleSerializer(CustomTurtleSerializer):
     def startDocument(self):
