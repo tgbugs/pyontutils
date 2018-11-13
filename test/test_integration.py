@@ -80,6 +80,7 @@ def populate_tests(only=tuple(), do_mains=True):
                'neurons/models/ma2015',
                'neurons/models/cuts',
                'neurons/build',
+               'neurons/sheets',
               )
     print('checkout ok:', checkout_ok)
 
