@@ -14,13 +14,15 @@ def tag(_tag, n=False):
 def atag(href, value=None, new_tab=False, uriconv=None, cls=None, title=None):
     target = ' target="_blank"' if new_tab else ''
     class_ = '' if cls is None else f' class="{cls}"'
+    title_tip = '' if title is None else f'<div class="cont"> <div class="tooltip">{title}</div></div></div>'
+    tstart = '' if title is None else '<div class="tip">'
     title = '' if title is None else f' title="{title}"'
     if value is None:
         value = href
         if uriconv is not None:
             href = uriconv(href)
 
-    return f'<a href="{href}"{target}{class_}{title}>{value}</a>'
+    return f'{tstart}<a href="{href}"{target}{class_}{title}>{value}</a>{title_tip}'
 
 def divtag(*values, cls=None):
     class_ = f'class="{cls}"' if cls else ''
@@ -181,4 +183,41 @@ redlink_style = '''
     color: darkred;
     font-weight: bold;
 }
+'''
+
+ttl_html_style = '''
+body { font-family: monospace }
+.tip { display: inline; }
+.cont {
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    display: inline;
+    z-index: 2;
+    transition: 0s;
+    transition-delay: 0s;
+}
+
+.tooltip {
+    position: inherit;
+    display: inherit;
+    background: white;
+    color: black;
+    border-style: solid;
+    border-color: black
+    text-style: bold;
+    border-width: 2px 2px 2px 2px;
+    padding: 1px 1px 1px 1px;
+}
+
+.tip:hover .cont {
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+    transition: 0s;
+    transition-delay: 0s;
+}
+
+a:link { text-decoration: none;
+         color: #252069; }
 '''
