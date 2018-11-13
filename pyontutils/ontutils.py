@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 #!/usr/bin/env pypy3
-from pyontutils.core import devconfig
+from pyontutils.config import devconfig
 __doc__ = f"""Common commands for ontology processes.
 Also old ontology refactors to run in the root ttl folder.
 

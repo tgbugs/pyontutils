@@ -7,6 +7,8 @@ from functools import wraps
 from pyontutils.utils import TermColors as tc, makeSimpleLogger
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
+default_config = Path(__file__).parent / 'devconfig.yaml'
+PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
 
 log = makeSimpleLogger('config')
 
@@ -100,7 +102,8 @@ class Secrets:
 
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v'
-    def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
+    secrets = None  # prevent AttributeError during bootstrap
+    def __init__(self, config_file=PYONTUTILS_DEVCONFIG):
         self._override = {}
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
@@ -135,7 +138,7 @@ class DevConfig:
 
     def write(self, file=None):
         if file is None:
-            file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
+            file = (PYONTUTILS_DEVCONFIG).as_posix()
 
         config = {k:str(v) for k, v in self._config.items()}
 
