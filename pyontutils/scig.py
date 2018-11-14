@@ -6,13 +6,14 @@ Usage:
     scig i [--local --verbose --key=KEY] <id>...
     scig t [--local --verbose --limit=LIMIT --key=KEY] <term>...
     scig s [--local --verbose --limit=LIMIT --key=KEY] <term>...
-    scig g [--local --verbose --rt=RELTYPE --key=KEY] <id>...
+    scig g [--local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
     scig e [--local --verbose --key=KEY] <p> <s> <o>
     scig c [--local --verbose --key=KEY]
     scig cy [--limit=LIMIT] <query>
     scig onts [options]
 
 Options:
+    -e --edges          print edges only
     -l --local          hit the local scigraph server
     -v --verbose        print the full uri
     -t --limit=LIMIT    limit number of results [default: 10]
@@ -169,10 +170,11 @@ class scigPrint:
         print('({pred} {sub} {obj}) ; {meta}'.format(**e))
 
     @staticmethod
-    def pprint_neighbors(result):
-        print('\tnodes')
-        for node in sorted(result['nodes'], key = lambda n: n['id']):
-            scigPrint.pprint_node({'nodes':[node]})
+    def pprint_neighbors(result, nodes=True):
+        if nodes:
+            print('\tnodes')
+            for node in sorted(result['nodes'], key = lambda n: n['id']):
+                scigPrint.pprint_node({'nodes':[node]})
         print('\tedges')
         for edge in sorted(result['edges'], key = lambda e: e['pred']):
             scigPrint.pprint_edge(edge)
@@ -220,7 +222,7 @@ def main():
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
                 print(id_,)
-                scigPrint.pprint_neighbors(out)
+                scigPrint.pprint_neighbors(out, nodes=not args['--edges'])
     elif args['e']:
         v = Vocabulary(server, verbose, key=api_key) if server else Vocabulary(verbose=verbose, key=api_key)
         p, s, o = args['<p>'], args['<s>'], args['<o>']
