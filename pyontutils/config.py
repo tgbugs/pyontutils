@@ -108,7 +108,12 @@ class DevConfig:
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
-        self.secrets = Secrets(self)
+
+    @property
+    def secrets(self):
+        if not hasattr(self, '__secrets'):
+            self.__secrets = Secrets(self)
+        return self.__secrets
 
     @property
     def config(self):
