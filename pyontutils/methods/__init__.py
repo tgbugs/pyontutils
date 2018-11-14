@@ -1,7 +1,8 @@
 from rdflib import URIRef, Literal
-from pyontutils.core import OntCuries, OntId, OntTerm, qname
+from pyontutils.core import OntId, OntTerm, qname
 from pyontutils.core import simpleOnt, displayGraph
-from pyontutils.namespaces import makeNamespaces, partOf, hasRole, locatedIn
+from pyontutils.namespaces import OntCuries, makeNamespaces
+from pyontutils.namespaces import partOf, hasRole, locatedIn
 from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO, TEMP
 from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput
 from pyontutils.combinators import flattenTriples, unionOf, intersectionOf

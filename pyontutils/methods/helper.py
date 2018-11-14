@@ -1,7 +1,7 @@
 from rdflib import Literal
-from pyontutils.core import OntCuries, OntId, OntTerm
+from pyontutils.core import OntId, OntTerm
 from pyontutils.core import simpleOnt
-from pyontutils.namespaces import partOf
+from pyontutils.namespaces import OntCuries, partOf
 from pyontutils.namespaces import NIFRID, ilxtr, ilx, BFO
 from pyontutils.namespaces import definition, hasPart
 from pyontutils.combinators import unionOf, intersectionOf
