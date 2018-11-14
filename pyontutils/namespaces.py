@@ -1,6 +1,7 @@
 import yaml
 import rdflib
 import requests
+from ontquery.terms import OntCuries
 from pyontutils.config import devconfig
 
 # prefixes
@@ -133,6 +134,8 @@ def _loadPrefixes():
     return curie_map
 
 PREFIXES = _loadPrefixes()
+
+OntCuries(PREFIXES)  # anything importing this file should see these bindings
 
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
