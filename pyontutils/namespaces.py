@@ -180,8 +180,8 @@ WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes, partOf, participatesIn, locatedIn, isAbout,
+ realizes, partOf, participatesIn, locatedIn, isAbout, editorNote,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
-             'locatedIn', 'isAbout',
+             'locatedIn', 'isAbout', 'editorNote',
             )
