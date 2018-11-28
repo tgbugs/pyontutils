@@ -35,6 +35,9 @@ def deltag(text):
 def zerotag(text):
     return f'<span class="zero">{text}</span>'
 
+def zeronotetag(text):
+    return f'<span class="zeronote">{text}</span>'
+
 htmltag = tag('html', n=True)
 headtag = tag('head', n=True)
 titletag = tag('title')
@@ -96,6 +99,7 @@ a:link { color: black; }
 a:visited { color: grey; }
 del { color: white; }
 .zero { color: red; }
+.zeronote { color: olive; }
 '''
 
 cur_style = '''
