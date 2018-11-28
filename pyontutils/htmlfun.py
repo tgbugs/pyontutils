@@ -99,7 +99,7 @@ a:link { color: black; }
 a:visited { color: grey; }
 del { color: white; }
 .zero { color: red; }
-.zeronote { color: olive; }
+.zeronote { color: #c08800; }
 '''
 
 cur_style = '''
