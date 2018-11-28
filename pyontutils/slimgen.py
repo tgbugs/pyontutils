@@ -18,7 +18,8 @@ from lxml import etree
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, createOntology, yield_recursive, build, qname
 from pyontutils.core import Ont, Source
-from pyontutils.utils import chunk_list, dictParse, memoryCheck
+from pyontutils.utils import chunk_list, dictParse
+from pyontutils.utils_extra import memoryCheck
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole, PREFIXES as uPREFIXES
 from pyontutils.closed_namespaces import rdf, rdfs, owl, prov, oboInOwl

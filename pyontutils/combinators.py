@@ -1,7 +1,7 @@
 import types
 import rdflib
 from ontquery.terms import OntId
-from pyontutils.utils import check_value
+from pyontutils.utils_extra import check_value
 from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 

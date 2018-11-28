@@ -62,7 +62,8 @@ from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
 from pyontutils.core import makeGraph
-from pyontutils.utils import memoryCheck, noneMembers, TODAY, setPS1, refile, TermColors as tc
+from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
+from pyontutils.utils_extra import memoryCheck
 from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
