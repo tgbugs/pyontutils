@@ -99,6 +99,8 @@ def _loadPrefixes():
         # for obo files with 'fake' namespaces, http://uri.interlex.org/fakeobo/uris/ eqiv to purl.obolibrary.org/
         'fobo':'http://uri.interlex.org/fakeobo/uris/obo/',
 
+        'hyp':'https://hyp.is/',
+
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'ILXREPLACE':'http://ILXREPLACE.org/',
         'TEMP': interlex_namespace('temp/uris/'),
