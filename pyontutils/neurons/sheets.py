@@ -66,7 +66,7 @@ def sheet_to_neurons(values, notes_index):
     e_config = Config('common-usage-types')
     e_config.load_existing()
     query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph))
-    existing = {str(n.label):n for n in e_config.neurons}
+    existing = {str(n.label):n for n in e_config.neurons()}
     def convert_header(header):
         if header.startswith('has'):  # FIXME use a closed namespace
             return ilxtr[header]
