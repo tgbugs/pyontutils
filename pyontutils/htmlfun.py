@@ -5,10 +5,13 @@ and working with the rest of the unholy trinity. """
 
 def tag(_tag, n=False):
     nl = '\n' if n else ''
-    s = f'<{_tag}>{nl}'
+    s = f'<{_tag}{{extra}}>{nl}'
     e = f'{nl}</{_tag}>'
-    def tagwrap(*value):
-        return s + nl.join(value) + e
+    def tagwrap(*value, **kwargs):
+        extra = (' ' + ' '.join(f'{k}="{v}"'
+                                for k, v in kwargs.items())
+                 if kwargs else '')
+        return s.format(extra=extra) + nl.join(value) + e
     return tagwrap
 
 def atag(href, value=None, new_tab=False, uriconv=None, cls=None, title=None):
