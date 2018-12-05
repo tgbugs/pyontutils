@@ -14,9 +14,11 @@ def tag(_tag, n=False):
         return s.format(extra=extra) + nl.join(value) + e
     return tagwrap
 
-def atag(href, value=None, new_tab=False, uriconv=None, cls=None, title=None):
+def atag(href, value=None, new_tab=False, uriconv=None,
+         cls=None, title=None, id=None):
     target = ' target="_blank"' if new_tab else ''
     class_ = '' if cls is None else f' class="{cls}"'
+    id_ = '' if id is None else f' id="{id}"'
     title_tip = '' if title is None else f'<div class="cont"> <div class="tooltip">{title}</div></div></div>'
     tstart = '' if title is None else '<div class="tip">'
     title = '' if title is None else f' title="{title}"'
@@ -25,7 +27,7 @@ def atag(href, value=None, new_tab=False, uriconv=None, cls=None, title=None):
         if uriconv is not None:
             href = uriconv(href)
 
-    return f'{tstart}<a href="{href}"{target}{class_}{title}>{value}</a>{title_tip}'
+    return f'{tstart}<a href="{href}"{target}{class_}{id_}{title}>{value}</a>{title_tip}'
 
 def divtag(*values, cls=None):
     class_ = f'class="{cls}"' if cls else ''
@@ -227,4 +229,95 @@ body { font-family: monospace }
 
 a:link { text-decoration: none;
          color: #252069; }
+'''
+
+emacs_style = '''
+body {
+    color: #00ff00 ;
+    background-color: black ;
+}
+.symbol { color : #770055; background-color : transparent; border: 0px; margin: 0px;}
+a.symbol:link { color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:active { color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:visited { color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+a.symbol:hover { color : #229955; background-color : transparent; text-decoration: none; border: 0px; margin: 0px; }
+.special { color : #FF5000; background-color : inherit; }
+
+.keyword { color : #cd5c5c;
+    background-color : inherit; }
+
+.comment { color : #ff1493 ;
+    background-color : inherit;
+    font-weight: normal;
+    /* text-decoration: underline; */
+}
+
+.string { color : cyan;
+    background-color : inherit;
+    font-weight: normal;
+    white-space: wrap;
+}
+
+.quote { color : #2e8b57 ;
+    background-color : inherit;
+    font-weight: normal;
+}
+
+.number { color : #2e8b57 ;
+    background-color : inherit;
+    font-weight: normal;
+}
+
+.atom { color : #314F4F; background-color : inherit; }
+
+.macro { color : #FF5000; background-color : inherit; }
+.variable { color : #36648B; background-color : inherit; }
+.function { color : #8B4789; background-color : inherit; }
+.attribute { color : #FF5000; background-color : inherit; }
+.character { color : #0055AA; background-color : inherit; }
+.syntaxerror { color : #FF0000; background-color : inherit; }
+.diff-deleted { color : #5F2121; background-color : inherit; }
+.diff-added { color : #215F21; background-color : inherit; }
+
+span.paren1 { color: #006400 ;
+    font-weight: bold;
+}
+
+span.paren2 { color: #0000ff ;
+    font-weight: bold;
+}
+
+span.paren3 { color: #a020f0 ;
+    font-weight: bold;
+}
+
+span.paren4 { color: #4682b4 ;
+    font-weight: bold;
+}
+
+span.paren5 { color: #ffa500 ;
+    font-weight: bold;
+}
+
+span.paren6 { color: #8b008b ;
+    font-weight: bold;
+}
+
+span.paren7 { color: #556b2f ;
+    font-weight: bold;
+}
+
+span.paren8 { color: #008b8b ;
+    font-weight: bold;
+}
+
+span.paren9 { color: #4d4d4d ;
+    font-weight: bold;
+}
+
+.default { color: #00ff00 ;
+    font-weight: normal;
+    background-color: none;
+    }
+.default:hover { background-color: none; color: #00ff00; }
 '''
