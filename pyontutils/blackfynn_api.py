@@ -184,9 +184,9 @@ def mvp():
 
 
 def process_files(bf, files):
-    ns = [nifti1.load(f.as_posix()) for f in files if '.nii' in f.suffixes]
-    ms = [loadmat(f.as_posix()) for f in files if '.mat' in f.suffixes]
-    dcs = [dcmread(f.as_posix()) for f in files if '.dcm' in f.suffixes]  # loaded dicom files
+    niftis = [nifti1.load(f.as_posix()) for f in files if '.nii' in f.suffixes]
+    mats = [loadmat(f.as_posix()) for f in files if '.mat' in f.suffixes]
+    dicoms = [dcmread(f.as_posix()) for f in files if '.dcm' in f.suffixes]  # loaded dicom files
     embed()  # XXX you will drop into an interactive terminal in this scope
 
 
