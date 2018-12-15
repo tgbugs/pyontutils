@@ -18,28 +18,31 @@ python:
 addons:
   apt:
     packages:
-    - pandoc
-    - hunspell
-    - libhunspell-dev
+      - pandoc
+      - hunspell
+      - libhunspell-dev
 
 before_install:
   - pushd "${TRAVIS_BUILD_DIR}/../"
-  - git clone https://github.com/SciCrunch/NIF-Ontology.git
-  - git clone https://github.com/tgbugs/methodsOntology.git
-  - git clone https://github.com/tgbugs/entity_mapping.git
+  - git clone --depth=1 https://github.com/SciCrunch/NIF-Ontology.git
+  - pushd NIF-Ontology
+  - git fetch origin neurons:neurons --depth=1
+  - popd
+  - git clone --depth=1 https://github.com/tgbugs/methodsOntology.git
+  - git clone --depth=1 https://github.com/tgbugs/entity_mapping.git
   - git clone https://github.com/tgbugs/orgstrap.git
   - orgstrap/orgstrap
-  - git clone https://github.com/BlueBrain/nat.git
+  - git clone --depth=1 https://github.com/BlueBrain/nat.git
   - popd
 
 install:
-  - pip install pipenv
-  - pip install coverage coveralls nose-timer && export HAS_COVERALLS=1
+  - pip install pipenv pytest pytest-cov
+  - pip install coverage coveralls && export HAS_COVERALLS=1
   - pipenv install --dev --system --skip-lock --deploy
 
 script:
   - pipenv run ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
-  - pipenv run nosetests --verbose --with-coverage --cover-tests --cover-package=pyontutils
+  - pipenv run pytest --verbose --cov=pyontutils test
 
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
