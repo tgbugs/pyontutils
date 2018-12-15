@@ -542,7 +542,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             return
         self.verb(propList[0], newline=newline)
         self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:type
-        whitespace = f' ;{self._nl}' + self.indent(1) if self._newline else ';'
+        whitespace = f'{self._space};{self._nl}' + self.indent(1) if self._newline else ';'
         for predicate in propList[1:]:
             self.write(whitespace)
             self.verb(predicate, newline=self._newline)
@@ -674,21 +674,20 @@ class CustomTurtleSerializer(TurtleSerializer):
             self.depth += 1  # 2
             self.doList(node)
             self.depth -= 1  # 2
-            self.write(' )')
+            self.write(self._space)
+            self.write(')')
         else:
             self.subjectDone(node)
             self.depth += 2
-            # self.write(f'[{self._nl}' + self.indent())
             self.write('[')
             if SDEBUG:
                 self.write('{self._nl}#{self._space}' +
                            str(self._globalSortKey(node)) +
                            self._nl)  # FIXME REMOVE
             self.depth -= 1
-            # self.predicateList(node, newline=True)
-            self.predicateList(node, newline=False)
-            # self.write(self._nl + self.indent() + ']')
-            self.write(' ]')
+            if self.predicateList(node, newline=False):
+                self.write(self._space)
+            self.write(']')
             self.depth -= 1
 
         return True
@@ -726,6 +725,14 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     def getQName(self, uri, gen_prefix=True): # modified to make it possible to block gen_prefix
         return super(CustomTurtleSerializer, self).getQName(uri, gen_prefix and self._gen_prefix)
+
+    def _write(self, value):
+        """ rename to write and import inspect to debut the callstack """
+        if ' ' in value:
+            s = inspect.stack()
+            fn = s[1].function
+            super().write(f'%%DEBUG {fn} %%')
+        super().write(value)
 
     def serialize(self, stream, base=None, encoding=None,  # modified to enable section headers
                   spacious=None, gen_prefix=True, **args):
