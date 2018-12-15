@@ -101,7 +101,7 @@ class Secrets:
 
 
 class DevConfig:
-    skip = 'config', 'write', 'ontology_remote_repo', 'v'
+    skip = 'config', 'write', 'ontology_remote_repo', 'v', 'secrets'
     secrets = None  # prevent AttributeError during bootstrap
     def __init__(self, config_file=PYONTUTILS_DEVCONFIG):
         self._override = {}
