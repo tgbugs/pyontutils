@@ -371,6 +371,8 @@ def test():
     for _, predicate, root, *_ in examples + extra_examples:
         if root == 'UBERON:0001062':
             continue  # too big
+        if root == 'PAXRAT:':
+            continue  # not an official curie yet
 
         print('ontree testing', predicate, root)
         if root.startswith('http'):
