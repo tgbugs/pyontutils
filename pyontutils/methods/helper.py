@@ -815,7 +815,7 @@ triples += (
     (ilxtr.cellLabel, ilxtr.hasTracingStartLocation, ilxtr.nervousSystemRegion),  # FIXME find correct UBERON id
     (ilxtr.activeLabel, ilxtr.hasDeliveryVector, ilxtr.someVector),
 
-    (ilxtr.interLabel, owl.disjointWith, ilxtr.activeLabel),
+    (ilxtr.inertLabel, owl.disjointWith, ilxtr.activeLabel),
 )
 
 # FIXME cellLabel is tracer/logic + contrast/color??!
