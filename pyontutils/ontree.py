@@ -32,7 +32,7 @@ from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.utils import getSourceLine
 from pyontutils.ontload import import_tree
 from pyontutils.htmlfun import htmldoc, titletag, atag
-from pyontutils.hierarchies import Query, creatTree, dematerialize
+from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)
@@ -108,7 +108,7 @@ def makeProv(pred, root, wgb):
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
+def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
@@ -161,7 +161,11 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
 
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
-        return extras.html
+        if flatten:
+            out = sorted(set(n for n in flatten_tree(extras.hierarchy)))
+            return '\n'.join(out), 200, {'Content-Type':'text/plain'}
+        else:
+            return extras.html
     except (KeyError, TypeError) as e:
         if verbose:
             print(e)
@@ -188,6 +192,7 @@ def getArgs(request):
             'branch':'master',
             'restriction':False,  # True False
             'local':False,  # True False  # canonoical vs scigraph ? interlex?
+            'flatten':False,
            }
 
     def convert(k):
@@ -222,6 +227,7 @@ def sanitize(pred, kwargs):
 examples = (
     ('Brain parts', hpp, 'UBERON:0000955', '?direction=OUTGOING'),  # FIXME direction=lol doesn't cause issues...
     ('Brain parts alt', po, 'UBERON:0000955'),
+    ('Brain parts alt flat', po, 'UBERON:0000955', '?flatten=true'),
     ('Anatomical entities', a, 'UBERON:0001062'),
     ('Cell parts', a, 'GO:0044464'),
     ('Cells', a, 'SAO:1813327414'),

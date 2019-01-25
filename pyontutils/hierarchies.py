@@ -540,7 +540,9 @@ def count(tree): return sum([count(tree[k]) if tree[k] else 1 for k in tree])
 
 def todict(tree): return {k:todict(v) for k, v in tree.items()}
 
-def flatten(tree, out=[]):
+def flatten(tree, out=None):
+    if out is None:
+        out = []
     for name, subtree in tree.items():
         out.append(name)
         flatten(subtree, out)
