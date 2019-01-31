@@ -163,7 +163,9 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         dematerialize(list(tree.keys())[0], tree)
         if flatten:
             out = set(n for n in flatten_tree(extras.hierarchy))
-            rows = sorted(sgv.findById(n)['labels'][0] + ',' + n for n in out)  # FIXME so much wrong here ...
+            rows = sorted((sgv.findById(n)['labels'][0] if sgv.findById(n)['labels'] else '')
+                          + ',' + n for n in out
+                          if not sgv.findById(n)['deprecated'])  # FIXME so much wrong here ...
             return '\n'.join(rows), 200, {'Content-Type':'text/plain'}
         else:
             return extras.html
