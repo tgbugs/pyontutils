@@ -237,15 +237,21 @@ def fetch_file(file, file_path, limit=False):
 
     limit_mb = 2
     file_mb = file.size / 1024 ** 2
-    if limit and file_mb < limit_mb:
+    skip = 'jpeg', 'jpg', 'tif', 'png'
+    if (not limit or
+        (file_mb < limit_mb and
+         (not file_path.suffixes or
+          file_path.suffixes[0][1:].lower() not in skip))):
         print('fetching', file)
         try:
+            # FIXME I think README_README is an s3_key related error
             file.download(file_path.as_posix())
         except HTTPError as e:
             print(e)
             file_path.with_suffix(file_path.suffix + f'.fake.ERROR.{e.response.status_code}').touch()
     else:
-        file_path.with_suffix(file_path.suffix + '.fake.' + str(int(file_mb)) + 'M').touch()
+        fsize = str(int(file_mb)) + 'M' if file_mb >= 1 else str(file.size // 1024) + 'K'
+        file_path.with_suffix(file_path.suffix + '.fake.' + fsize).touch()
 
 def make_folder_and_meta(parent_path, collection):
     folder_path = parent_path / collection.name
@@ -261,11 +267,13 @@ def cons():
     ds = bf.datasets()
     useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
     small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
-    big = useful['N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb']
-    datasets = [d for d in ds if d != big]
+    skip = (
+        'N:dataset:83e0ebd2-dae2-4ca0-ad6e-81eb39cfc053',  # hackathon
+        'N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb',  # big max
+    )
+    datasets = [d for d in ds if d.id not in skip]
     #datasets = small,
     #embed()
-    #get_packages_(big)
     #return
     packages = []
     collections = [(bf.context, local_storage_prefix)]
