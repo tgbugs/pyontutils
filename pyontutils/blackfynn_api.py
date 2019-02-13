@@ -18,6 +18,8 @@ You have to find your way through the UI if you don't know your org id :/
 
 SPARC MVP is at
 https://app.blackfynn.io/N:organization:89dfbdad-a451-4941-ad97-4b8479ed3de4/profile/
+SPARC Consortium is at
+https://app.blackfynn.io/N:organization:618e8dd9-f8d2-4dc4-9abb-c6aaab2e78a0/profile/
 
 add the following lines to your secrets.yaml file from the blackfynn site
 you can (and should) save those keys elsewhere as well
@@ -34,9 +36,10 @@ from pydicom import dcmread
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from blackfynn import Blackfynn, Collection
+from joblib import Parallel, delayed
+from blackfynn import Blackfynn, Collection, DataPackage
 from blackfynn import base as bfb
-from pyontutils.utils import Async, deferred
+from pyontutils.utils import Async, deferred, async_getter, chunk_list
 from pyontutils.config import devconfig
 from scipy.io import loadmat
 from IPython import embed
@@ -127,6 +130,27 @@ def pp(package, path, doasync=True):
     return list(process_package(package, path, doasync))
 
 
+def inner(thing):
+    """ one level """
+    if isinstance(thing, DataPackage):
+        return thing,
+    else:
+        return list(thing)
+
+def outer(dataset):
+    return [e for t in Async()(deferred(inner)(thing) for thing in dataset) for e in t]
+
+def heh(c):
+    #print(c)
+    return list(c)
+
+def asynchelper(chunk):
+    import asyncio
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    wat = async_getter(heh, [(c,) for c in chunk]) 
+    print('chunkdone')
+    return [e for t in wat for e in t]
+
 def get_packages(package_or_collection, path):
     """ flatten collections into packages """
     if isinstance(package_or_collection, Collection):
@@ -134,8 +158,64 @@ def get_packages(package_or_collection, path):
         for npc in package_or_collection:
             yield from get_packages(npc, npath)
     else:
+        print(path, package_or_collection)
         yield package_or_collection, path
 
+
+def get_packages_(dataset):
+    """ flatten collections into packages """
+
+    hrm1 = outer(dataset)
+    print(len(dataset))
+    print(len(hrm1))
+    hrm2 = outer(hrm1)
+    print(len(hrm2))
+    chunks = chunk_list([c for c in hrm2 if isinstance(c, Collection)], 1000)
+    #wat = async_getter(heh, [(c,) for c in hrm2 if isinstance(c, Collection)][:1000]) 
+    Parallel(n_jobs=8, backend="threading")(delayed(asynchelper)(chunk) for chunk in chunks)
+    embed()
+    return
+    if collector is None:
+        collector = []
+        
+    files = []
+    folders = []
+    if isinstance(package_or_collection, Collection):
+        list(package_or_collection)
+    else:
+        files.append(package_or_collection, path)
+
+def blah():
+    if isinstance(package_or_collection, Collection):
+        [t for npc in package_or_collection
+         for t in (list(npc) if isinstance(npc, Collection) else (npc,))]
+    else:
+        yield package_or_collection, path
+
+def pkgs_breadth(package_or_collection, path):
+    print(path)
+    if isinstance(package_or_collection, Collection):
+        npath = path / package_or_collection.name
+        to_iter = list(package_or_collection)
+        #print(to_iter)
+        coll = []
+        for thing in Async()(deferred(get_packages)(npc, npath) for npc in to_iter):
+            coll.append(thing)
+            #yield from thing
+
+        yield coll
+        Async()(deferred(list)(t) for t in thing)
+        #yield (list(c) for c in coll)
+        #[v for h in hrm for v in h]
+        
+        #for npc in package_or_collection:
+            #for poc_p in 
+            #yield from get_packages(npc, npath)
+    else:
+        yield package_or_collection, path
+
+def pkgs_depth(mess):
+    hrm = Async()(deferred(list)(t) for t in mess)
 
 def gfiles(p, f):
     # print(p.name)
@@ -148,6 +228,40 @@ def fetch_file(file, file_path):
 
     print('fetching', file)
     file.download(file_path)
+
+def cons():
+    bf = Blackfynn(api_token=devconfig.secrets('blackfynn-sparc-key'),
+                   api_secret=devconfig.secrets('blackfynn-sparc-secret'))
+    project_name = bf.context.name
+    ds = bf.datasets()
+    useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
+    small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
+    big = useful['N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb']
+    datasets = [d for d in ds if d != big]
+    #embed()
+    #get_packages_(big)
+    #return
+    packages = []
+    for dataset in datasets:
+        dataset_name = dataset.name
+        ds_path = local_storage_prefix / project_name / dataset_name
+        for package_or_collection in dataset:
+            packages.extend(get_packages(package_or_collection, ds_path))
+
+    meta_subset = [(fp, p) for fp, p in packages if False]
+    embed()
+    return
+    bfolders = [folder_path.mkdir(parents=True, exists_ok=True) for folder_path, package in packages]
+    bfiles = {folder_path / make_filename(file):file
+              for folder_path, files in
+              Async()(deferred(gfiles)(p, f) for p, f in meta_subset)
+              for file in files}
+
+    # beware that this will send as many requests as it can as fast as it can
+    # which is not the friendliest thing to do to an api
+    Async()(deferred(fetch_file)(f, fp) for fp, f in bfiles.items() if not fp.exists())
+
+
 
 def mvp():
     """ In order to be performant for large numbers of packages we have
@@ -190,9 +304,12 @@ def process_files(bf, files):
     embed()  # XXX you will drop into an interactive terminal in this scope
 
 
-def main():
+def mvp_main():
     bf, files = mvp()
     process_files(bf, files)
+
+def main():
+    cons()
 
 if __name__ == '__main__':
     main()
