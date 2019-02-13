@@ -30,10 +30,12 @@ blackfynn-mvp-secret: ${apisecret}
 
 """
 
+import asyncio
 from pathlib import Path
 from nibabel import nifti1
 from pydicom import dcmread
 from requests import Session
+from requests.exceptions import HTTPError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from joblib import Parallel, delayed
@@ -222,14 +224,28 @@ def pkgs_depth(mess):
 def gfiles(p, f):
     # print(p.name)
     # the fanout is horrible ...
-    return f, p.files
+    while True:
+        try:
+            return f, p.files
+        except HTTPError as e:
+            print(e)
+            asyncio.sleep(2)
 
-def fetch_file(file, file_path):
+def fetch_file(file, file_path, limit=False):
     if not file_path.parent.exists():
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print('fetching', file)
-    file.download(file_path)
+    limit_mb = 2
+    file_mb = file.size / 1024 ** 2
+    if limit and file_mb < limit_mb:
+        print('fetching', file)
+        try:
+            file.download(file_path.as_posix())
+        except HTTPError as e:
+            print(e)
+            file_path.with_suffix(file_path.suffix + f'.fake.ERROR.{e.response.status_code}').touch()
+    else:
+        file_path.with_suffix(file_path.suffix + '.fake.' + str(int(file_mb)) + 'M').touch()
 
 def make_folder_and_meta(parent_path, collection):
     folder_path = parent_path / collection.name
@@ -246,8 +262,8 @@ def cons():
     useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
     small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
     big = useful['N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb']
-    #datasets = [d for d in ds if d != big]
-    datasets = small,
+    datasets = [d for d in ds if d != big]
+    #datasets = small,
     #embed()
     #get_packages_(big)
     #return
@@ -263,17 +279,18 @@ def cons():
             collections.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, BaseCollection) or isinstance(poc, Organization)))
 
     bfolders = [make_folder_and_meta(parent_path, collection) for collection, parent_path in collections]  # FIXME duplicates and missing ids
-    meta = 'subjects', 'submission', 'submission_spreadsheet', 'dataset_description', 'detaset_description_spreadsheet', 'manifest', 'README'
-    meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
+    # TODO the collection file should hold the mapping from the file names to their blackfynn ids and local hashes
+    #meta = 'subjects', 'submission', 'submission_spreadsheet', 'dataset_description', 'detaset_description_spreadsheet', 'manifest', 'README'
+    #meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
     bfiles = {folder_path / make_filename(file):file
               for folder_path, files in
-              Async()(deferred(gfiles)(p, f) for p, f in meta_subset)
+              Async()(deferred(gfiles)(p, f) for p, f in packages)
               for file in files}
 
     # beware that this will send as many requests as it can as fast as it can
     # which is not the friendliest thing to do to an api
-    Async()(deferred(fetch_file)(f, fp) for fp, f in bfiles.items() if not fp.exists())
-
+    Async()(deferred(fetch_file)(f, fp, limit=True) for fp, f in bfiles.items() if not fp.exists())
+    #embed()
 
 
 def mvp():
