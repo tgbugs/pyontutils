@@ -37,7 +37,8 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from joblib import Parallel, delayed
-from blackfynn import Blackfynn, Collection, DataPackage
+from blackfynn import Blackfynn, Collection, DataPackage, Organization
+from blackfynn.models import BaseCollection
 from blackfynn import base as bfb
 from pyontutils.utils import Async, deferred, async_getter, chunk_list
 from pyontutils.config import devconfig
@@ -155,6 +156,7 @@ def get_packages(package_or_collection, path):
     """ flatten collections into packages """
     if isinstance(package_or_collection, Collection):
         npath = path / package_or_collection.name
+        yield package_or_collection, path
         for npc in package_or_collection:
             yield from get_packages(npc, npath)
     else:
@@ -224,34 +226,45 @@ def gfiles(p, f):
 
 def fetch_file(file, file_path):
     if not file_path.parent.exists():
-        file_path.parent.mkdir(parents=True, exists_ok=True)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
     print('fetching', file)
     file.download(file_path)
+
+def make_folder_and_meta(parent_path, collection):
+    folder_path = parent_path / collection.name
+    meta_file = folder_path / collection.id
+    folder_path.mkdir(parents=True, exist_ok=True)
+    meta_file.touch()
 
 def cons():
     bf = Blackfynn(api_token=devconfig.secrets('blackfynn-sparc-key'),
                    api_secret=devconfig.secrets('blackfynn-sparc-secret'))
     project_name = bf.context.name
+    project_path = local_storage_prefix / project_name
     ds = bf.datasets()
     useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
     small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
     big = useful['N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb']
-    datasets = [d for d in ds if d != big]
+    #datasets = [d for d in ds if d != big]
+    datasets = small,
     #embed()
     #get_packages_(big)
     #return
     packages = []
+    collections = [(bf.context, local_storage_prefix)]
     for dataset in datasets:
         dataset_name = dataset.name
-        ds_path = local_storage_prefix / project_name / dataset_name
+        ds_path = project_path / dataset_name
+        collections.append((dataset, local_storage_prefix / project_name))
         for package_or_collection in dataset:
-            packages.extend(get_packages(package_or_collection, ds_path))
+            pocs = list(get_packages(package_or_collection, ds_path))
+            packages.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, DataPackage)))
+            collections.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, BaseCollection) or isinstance(poc, Organization)))
 
-    meta_subset = [(fp, p) for fp, p in packages if False]
-    embed()
-    return
-    bfolders = [folder_path.mkdir(parents=True, exists_ok=True) for folder_path, package in packages]
+    bfolders = [make_folder_and_meta(parent_path, collection) for collection, parent_path in collections]  # FIXME duplicates and missing ids
+    meta = 'subjects', 'submission', 'submission_spreadsheet', 'dataset_description', 'detaset_description_spreadsheet', 'manifest', 'README'
+    meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
     bfiles = {folder_path / make_filename(file):file
               for folder_path, files in
               Async()(deferred(gfiles)(p, f) for p, f in meta_subset)
