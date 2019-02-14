@@ -352,7 +352,7 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None):
+def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None, entail=True):
     html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
     root_iri = None  # FIXME 268
@@ -362,7 +362,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         elif relationshipType == 'rdfs:subPropertyOf':
             relationshipType = 'subPropertyOf'
         j = graph.getNeighbors(root, relationshipType=relationshipType,
-                               direction=direction, depth=depth)
+                               direction=direction, depth=depth, entail=entail)
         html_head.append('<link rel="http://www.w3.org/ns/prov#'
                          f'wasDerivedFrom" href="{graph._last_url}">')  # FIXME WARNING leaking keys
         if j is None:

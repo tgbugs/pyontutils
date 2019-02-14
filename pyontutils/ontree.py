@@ -78,6 +78,9 @@ class ImportChain:
 
     def make_import_chain(self, ontology='nif.ttl'):
         itrips = self.get_itrips()
+        if not any(ontology in t[0] for t in itrips):
+            return None, None
+
         ontologies = ontology,  # hack around bad code in ontload
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
@@ -90,10 +93,16 @@ class ImportChain:
 
     def write_import_chain(self, location='/tmp/'):
         tree, extra  = self.make_import_chain()
-        self.name = Path(next(iter(tree.keys()))).name
-        self.path = Path(location, f'{self.name}-import-closure.html')
+        if tree is None:
+            self.path = '/tmp/noimport.html'
+            html = ''
+        else:
+            self.name = Path(next(iter(tree.keys()))).name
+            self.path = Path(location, f'{self.name}-import-closure.html')
+            html = extra.html.replace('NIFTTL:', '')
+
         with open(self.path.as_posix(), 'wt') as f:
-            f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+            f.write(html)  # much more readable
 
 
 def graphFromGithub(link, verbose=False):
@@ -128,12 +137,16 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return abort(422, 'Unknown predicate.')
     else:
         kwargs['graph'] = sgg
-        versionIRI = [e['obj']
-                      for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
-                                                'NIF/ttl/nif.ttl')['edges']
-                      if e['pred'] == 'versionIRI'][0]
-        #print(versionIRI)
-        prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
+        # FIXME this does not work for a generic scigraph load ...
+        # and it should not be calculated every time anyway!
+        # oh look, here we are needed a class again
+        if False:
+            versionIRI = [e['obj']
+                        for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
+                                                  'NIF/ttl/nif.ttl')['edges']
+                        if e['pred'] == 'versionIRI'][0]
+            #print(versionIRI)
+            prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
