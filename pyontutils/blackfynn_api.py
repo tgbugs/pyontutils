@@ -30,16 +30,19 @@ blackfynn-mvp-secret: ${apisecret}
 
 """
 
+import io
+import os
 import asyncio
 from pathlib import Path
 from nibabel import nifti1
 from pydicom import dcmread
+import requests
 from requests import Session
 from requests.exceptions import HTTPError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from joblib import Parallel, delayed
-from blackfynn import Blackfynn, Collection, DataPackage, Organization
+from blackfynn import Blackfynn, Collection, DataPackage, Organization, File
 from blackfynn.models import BaseCollection
 from blackfynn import base as bfb
 from pyontutils.utils import Async, deferred, async_getter, chunk_list
@@ -78,9 +81,34 @@ def patch_session(self):
 
     return self._session
 
-
 # monkey patch to avoid session overflow during async
 bfb.ClientSession.session = patch_session
+
+
+def download(self, destination):
+    """ remove prefix functionality since there are filenames without extensions ... """
+    if self.type=="DirectoryViewerData":
+        raise NotImplementedError("Downloading S3 directories is currently not supported")
+
+    if os.path.isdir(destination):
+        # destination dir
+        f_local = os.path.join(destination, os.path.basename(self.s3_key))
+    else:
+        # exact location
+        f_local = destination
+
+    r = requests.get(self.url, stream=True)
+    with io.open(f_local, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: f.write(chunk)
+
+    # set local path
+    self.local_path = f_local
+
+    return f_local
+
+# monkey patch File.download to
+File.download = download
 
 
 def destructure_uri(uri):
@@ -235,6 +263,11 @@ def fetch_file(file, file_path, limit=False):
     if not file_path.parent.exists():
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
+    if file_path.exists():
+        print('already have', file_path)
+        return
+
+    error_path = file_path.with_suffix(file_path.suffix + f'.fake.ERROR.500')  # FIXME glob
     limit_mb = 2
     file_mb = file.size / 1024 ** 2
     skip = 'jpeg', 'jpg', 'tif', 'png'
@@ -243,10 +276,18 @@ def fetch_file(file, file_path, limit=False):
          (not file_path.suffixes or
           file_path.suffixes[0][1:].lower() not in skip))):
         print('fetching', file)
-        try:
-            # FIXME I think README_README is an s3_key related error
-            file.download(file_path.as_posix())
-        except HTTPError as e:
+        for i in range(4):  # try 4 times
+            try:
+                # FIXME I think README_README is an s3_key related error
+                file.download(file_path.as_posix())
+                if error_path.exists():  # FIXME glob
+                    error_path.unlink()
+                return
+            except HTTPError as e:
+                if e.response.status_code == 500:
+                    asyncio.sleep(3)
+            e = e
+        else:
             print(e)
             file_path.with_suffix(file_path.suffix + f'.fake.ERROR.{e.response.status_code}').touch()
     else:
@@ -267,11 +308,14 @@ def cons():
     ds = bf.datasets()
     useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
     small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
+    hrm = useful['N:dataset:be0183e4-a912-465a-bd15-ff36973ee8b3']  # lots of 500 errors
+    readme_bug = useful['N:dataset:6d6818f2-ef75-4be5-9360-8d37661a8463']
     skip = (
         'N:dataset:83e0ebd2-dae2-4ca0-ad6e-81eb39cfc053',  # hackathon
         'N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb',  # big max
     )
     datasets = [d for d in ds if d.id not in skip]
+    #datasets = hrm, readme_bug
     #datasets = small,
     #embed()
     #return
