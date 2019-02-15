@@ -10,6 +10,7 @@ Usage:
 Options:
     -a --api=API            Full url to SciGraph api endpoint
     -k --key=APIKEY         apikey for SciGraph instance
+    -p --port=PORT          port on which to run the server [default: 8000]
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
     -o --outgoing           if not specified defaults to incoming
     -b --both               if specified goes in both directions
@@ -438,7 +439,7 @@ def main():
             sgc.api_key = api_key
         app = server(verbose=verbose)
         app.debug = False
-        app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
+        app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
         os.sys.exit()
     else:
