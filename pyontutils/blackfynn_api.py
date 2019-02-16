@@ -33,9 +33,11 @@ blackfynn-mvp-secret: ${apisecret}
 import io
 import os
 import asyncio
-from pathlib import Path
+from pathlib import PosixPath
 from nibabel import nifti1
 from pydicom import dcmread
+import yaml
+import xattr
 import requests
 from requests import Session
 from requests.exceptions import HTTPError
@@ -49,6 +51,24 @@ from pyontutils.utils import Async, deferred, async_getter, chunk_list
 from pyontutils.config import devconfig
 from scipy.io import loadmat
 from IPython import embed
+
+
+class Path(PosixPath):
+    """ pathlib Path augmented with xattr support """
+
+    def setxattr(self, key, value, namespace=xattr.NS_USER):
+        str_value = str(value)
+        xattr.set(self.as_posix(), key, str_value, namespace=namespace)
+
+    def setxattrs(self, xattr_dict, namespace=xattr.NS_USER):
+        for k, v in xattr_dict.items():
+            self.setxattr(k, v, namespace=namespace)
+
+    def getxattr(self, key, namespace=xattr.NS_USER):
+        return xattr.get(self.as_posix(), key, namespace=namespace).decode()
+
+    def xattrs(self, namespace=xattr.NS_USER):
+        return {k.decode():v.decode() for k, v in xattr.get_all(self.as_posix(), namespace=namespace)}
 
 
 # CHANGE THIS PATH TO MATCH YOUR SYSTEM
@@ -249,12 +269,12 @@ def pkgs_breadth(package_or_collection, path):
 def pkgs_depth(mess):
     hrm = Async()(deferred(list)(t) for t in mess)
 
-def gfiles(p, f):
+def gfiles(package, path):
     # print(p.name)
     # the fanout is horrible ...
     while True:
         try:
-            return f, p.files
+            return path, package.files
         except HTTPError as e:
             print(e)
             asyncio.sleep(2)
@@ -267,10 +287,17 @@ def fetch_file(file, file_path, limit=False):
         print('already have', file_path)
         return
 
-    error_path = file_path.with_suffix(file_path.suffix + f'.fake.ERROR.500')  # FIXME glob
+    error_path = file_path.with_suffix(file_path.suffix + f'.fake.ERROR')  # FIXME glob
     limit_mb = 2
     file_mb = file.size / 1024 ** 2
     skip = 'jpeg', 'jpg', 'tif', 'png'
+    file_xattrs = {
+        'bf.id':file.pkg_id,
+        'bf.file_id':file.id,
+        'bf.size':file.size,
+        'bf.checksum':'',  # TODO
+    }
+
     if (not limit or
         (file_mb < limit_mb and
          (not file_path.suffixes or
@@ -280,25 +307,44 @@ def fetch_file(file, file_path, limit=False):
             try:
                 # FIXME I think README_README is an s3_key related error
                 file.download(file_path.as_posix())
+                file_path.setxattrs(file_xattrs)
                 if error_path.exists():  # FIXME glob
                     error_path.unlink()
                 return
             except HTTPError as e:
-                if e.response.status_code == 500:
-                    asyncio.sleep(3)
-            e = e
+                error = str(e)
+                status_code = e.response.status_code
+                asyncio.sleep(3)
         else:
-            print(e)
-            file_path.with_suffix(file_path.suffix + f'.fake.ERROR.{e.response.status_code}').touch()
+            print(error)
+            error_path.touch()
+            file_xattrs['bf.error'] = str(status_code)
+            error_path.setxattrs(file_xattrs)
     else:
         fsize = str(int(file_mb)) + 'M' if file_mb >= 1 else str(file.size // 1024) + 'K'
-        file_path.with_suffix(file_path.suffix + '.fake.' + fsize).touch()
+        fakepath = file_path.with_suffix(file_path.suffix + '.fake.' + fsize)
+        fakepath.touch()
+        fakepath.setxattrs(file_xattrs)
+
+def make_files_meta(collection):
+    # TODO file fetching status? file hash?
+    return {make_filename(file):[package.id, file.id, file.size]
+            for package in collection
+            if isinstance(package, DataPackage)
+            for file in package.files}
 
 def make_folder_and_meta(parent_path, collection):
     folder_path = parent_path / collection.name
-    meta_file = folder_path / collection.id
+    #meta_file = folder_path / collection.id
+    #if isinstance(collection, Organization):
+        #files_meta = {}
+    #else:
+        #files_meta = make_files_meta(collection)
     folder_path.mkdir(parents=True, exist_ok=True)
-    meta_file.touch()
+    folder_path.setxattr('bf.id', collection.id)
+    #with open(meta_file, 'wt') as f:
+        #yaml.dump(files_meta, f, default_flow_style=False)
+
 
 def cons():
     bf = Blackfynn(api_token=devconfig.secrets('blackfynn-sparc-key'),
@@ -324,7 +370,7 @@ def cons():
     for dataset in datasets:
         dataset_name = dataset.name
         ds_path = project_path / dataset_name
-        collections.append((dataset, local_storage_prefix / project_name))
+        collections.append((dataset, project_path))
         for package_or_collection in dataset:
             pocs = list(get_packages(package_or_collection, ds_path))
             packages.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, DataPackage)))
@@ -336,12 +382,12 @@ def cons():
     #meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
     bfiles = {folder_path / make_filename(file):file
               for folder_path, files in
-              Async()(deferred(gfiles)(p, f) for p, f in packages)
+              Async()(deferred(gfiles)(package, path) for package, path in packages)
               for file in files}
 
     # beware that this will send as many requests as it can as fast as it can
     # which is not the friendliest thing to do to an api
-    Async()(deferred(fetch_file)(f, fp, limit=True) for fp, f in bfiles.items() if not fp.exists())
+    Async()(deferred(fetch_file)(file, filepath, limit=True) for filepath, file in bfiles.items() if not filepath.exists())
     #embed()
 
 
@@ -369,7 +415,7 @@ def mvp():
 
     bfiles = {folder_path / make_filename(file):file
               for folder_path, files in
-              Async()(deferred(gfiles)(p, f) for p, f in packages)
+              Async()(deferred(gfiles)(package, path) for package, path in packages)
               for file in files}
 
     # beware that this will send as many requests as it can as fast as it can
