@@ -487,9 +487,11 @@ class byCol:
         if header is None:  # FIXME non None header might have bad names?
             orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
             header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
-                      for c in orig_header]
+                      for i, c in enumerate(orig_header)]
             #changes = {new:old for old, new in zip(rows[0], header) if old != new}
             rows = rows[1:]
+        else:
+            orig_header = header
 
         newcls = cls.bindHeader(header)
         self = super().__new__(newcls)
