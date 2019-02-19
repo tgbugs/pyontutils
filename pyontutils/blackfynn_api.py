@@ -38,9 +38,10 @@ from nibabel import nifti1
 from pydicom import dcmread
 import yaml
 import xattr
+import sqlite3
 import requests
 from requests import Session
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, ConnectionError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from joblib import Parallel, delayed
@@ -279,24 +280,40 @@ def gfiles(package, path):
             print(e)
             asyncio.sleep(2)
 
-def fetch_file(file, file_path, limit=False):
-    if not file_path.parent.exists():
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+def unlink_fakes(attrs, fake_paths, metastore):
+    for fpath in fake_paths:
+        fattrs = fpath.xattrs()
+        if fattrs == attrs:
+            fpath.unlink()
+            metastore.remove(fpath)
+        else:
+            print('WARNING: fake xattrs and real xattrs do not match!', attrs, fattrs)
 
-    if file_path.exists():
-        print('already have', file_path)
-        return
-
-    error_path = file_path.with_suffix(file_path.suffix + f'.fake.ERROR')  # FIXME glob
-    limit_mb = 2
-    file_mb = file.size / 1024 ** 2
-    skip = 'jpeg', 'jpg', 'tif', 'png'
-    file_xattrs = {
+def make_file_xattrs(file):
+    return {
         'bf.id':file.pkg_id,
         'bf.file_id':file.id,
         'bf.size':file.size,
         'bf.checksum':'',  # TODO
+        # 'bf.old_id': '',  # TODO does this work? also naming previous_id, old_version_id etc...
     }
+
+def fetch_file(file_path, file, metastore, limit=False):
+    if not file_path.parent.exists():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fake_paths = list(file_path.parent.glob(file_path.name + '.fake*'))
+
+    if file_path.exists():
+        print('already have', file_path)
+        attrs = file_path.xattrs()
+        unlink_fakes(attrs, fake_paths, metastore)
+        return
+
+    limit_mb = 2
+    file_mb = file.size / 1024 ** 2
+    skip = 'jpeg', 'jpg', 'tif', 'png'
+    file_xattrs = make_file_xattrs(file)
 
     if (not limit or
         (file_mb < limit_mb and
@@ -308,23 +325,28 @@ def fetch_file(file, file_path, limit=False):
                 # FIXME I think README_README is an s3_key related error
                 file.download(file_path.as_posix())
                 file_path.setxattrs(file_xattrs)
-                if error_path.exists():  # FIXME glob
-                    error_path.unlink()
+                metastore.setxattrs(file_path, file_xattrs)
+                attrs = file_path.xattrs()  # yes slow, but is a sanity check
+                # TODO validate the checksum when we get it
+                unlink_fakes(attrs, fake_paths, metastore)
                 return
-            except HTTPError as e:
+            except (HTTPError, ConnectionError) as e:
                 error = str(e)
                 status_code = e.response.status_code
                 asyncio.sleep(3)
         else:
             print(error)
+            error_path = file_path.with_suffix(file_path.suffix + '.fake.ERROR')
             error_path.touch()
             file_xattrs['bf.error'] = str(status_code)
             error_path.setxattrs(file_xattrs)
+            metastore.setxattrs(error_path, file_xattrs)
     else:
         fsize = str(int(file_mb)) + 'M' if file_mb >= 1 else str(file.size // 1024) + 'K'
         fakepath = file_path.with_suffix(file_path.suffix + '.fake.' + fsize)
         fakepath.touch()
         fakepath.setxattrs(file_xattrs)
+        metastore.setxattrs(fakepath, file_xattrs)
 
 def make_files_meta(collection):
     # TODO file fetching status? file hash?
@@ -333,7 +355,7 @@ def make_files_meta(collection):
             if isinstance(package, DataPackage)
             for file in package.files}
 
-def make_folder_and_meta(parent_path, collection):
+def make_folder_and_meta(parent_path, collection, metastore):
     folder_path = parent_path / collection.name
     #meta_file = folder_path / collection.id
     #if isinstance(collection, Organization):
@@ -341,54 +363,268 @@ def make_folder_and_meta(parent_path, collection):
     #else:
         #files_meta = make_files_meta(collection)
     folder_path.mkdir(parents=True, exist_ok=True)
-    folder_path.setxattr('bf.id', collection.id)
+    folder_path.setxattr('bf.id', collection.id)  # sadly xattrs are easy to accidentally zap :/
+    metastore.setxattr(folder_path, 'bf.id', collection.id)
     #with open(meta_file, 'wt') as f:
         #yaml.dump(files_meta, f, default_flow_style=False)
 
 
-def cons():
-    bf = Blackfynn(api_token=devconfig.secrets('blackfynn-sparc-key'),
-                   api_secret=devconfig.secrets('blackfynn-sparc-secret'))
-    project_name = bf.context.name
-    project_path = local_storage_prefix / project_name
-    ds = bf.datasets()
-    useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
-    small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
-    hrm = useful['N:dataset:be0183e4-a912-465a-bd15-ff36973ee8b3']  # lots of 500 errors
-    readme_bug = useful['N:dataset:6d6818f2-ef75-4be5-9360-8d37661a8463']
-    skip = (
-        'N:dataset:83e0ebd2-dae2-4ca0-ad6e-81eb39cfc053',  # hackathon
-        'N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb',  # big max
-    )
-    datasets = [d for d in ds if d.id not in skip]
-    #datasets = hrm, readme_bug
-    #datasets = small,
-    #embed()
-    #return
-    packages = []
-    collections = [(bf.context, local_storage_prefix)]
-    for dataset in datasets:
-        dataset_name = dataset.name
-        ds_path = project_path / dataset_name
-        collections.append((dataset, project_path))
-        for package_or_collection in dataset:
-            pocs = list(get_packages(package_or_collection, ds_path))
-            packages.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, DataPackage)))
-            collections.extend(((poc, fp) for poc, fp in pocs if isinstance(poc, BaseCollection) or isinstance(poc, Organization)))
+def get_file_by_id(get, file_path, pid, fid):
+    package = get(pid)
+    if package is None:
+        print('WARNING package does not exist', file_path, pid, fid)
+        return None, None
 
-    bfolders = [make_folder_and_meta(parent_path, collection) for collection, parent_path in collections]  # FIXME duplicates and missing ids
-    # TODO the collection file should hold the mapping from the file names to their blackfynn ids and local hashes
-    #meta = 'subjects', 'submission', 'submission_spreadsheet', 'dataset_description', 'detaset_description_spreadsheet', 'manifest', 'README'
-    #meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
-    bfiles = {folder_path / make_filename(file):file
-              for folder_path, files in
-              Async()(deferred(gfiles)(package, path) for package, path in packages)
-              for file in files}
+    for f in package.files:
+        if f.id == fid:
+            return file_path, f
+    else:
+        print('WARNING file does not exist', file_path, pid, fid)
+        return None, None
 
-    # beware that this will send as many requests as it can as fast as it can
-    # which is not the friendliest thing to do to an api
-    Async()(deferred(fetch_file)(file, filepath, limit=True) for filepath, file in bfiles.items() if not filepath.exists())
-    #embed()
+class MetaStore:
+    """ A local backup against accidental xattr removal """
+    attrs = 'bf.id', 'bf.file_id', 'bf.size', 'bf.checksum', 'bf.error'
+    # FIXME horribly inefficient 1 connection per file due to the async code ... :/
+    def __init__(self, db_path):
+        if isinstance(db_path, Path):
+            db_path = db_path.as_posix()
+
+        self.db_path = db_path
+        self.setup()
+
+    def conn(self):
+        return sqlite3.connect(self.db_path)
+
+    def setup(self):
+        sqls = (('CREATE TABLE IF NOT EXISTS fsxattrs '
+                 '(path TEXT PRIMARY KEY,'
+                 'bf_id TEXT NOT NULL,'
+                 'bf_file_id INTEGER,'
+                 'bf_size INTEGER,'
+                 'bf_checksum BLOB,'
+                 'bf_error INTEGER);'),
+                ('CREATE UNIQUE INDEX IF NOT EXISTS fsxattrs_u_path ON fsxattrs (path);'))
+        conn = self.conn()
+        with conn:
+            for sql in sqls:
+                conn.execute(sql)
+
+    def bulk(self, pdict):
+        sql = (f'INSERT OR REPLACE INTO fsxattrs (path, bf_id, bf_file_id, bf_size, bf_checksum, bf_error) VALUES (?, ?, ?, ?, ?, ?)')
+        conn = self.conn()
+        with conn:
+            for path, attrs in pdict.items():
+                args = path.as_posix(), *self.convert_attrs(attrs)
+                conn.execute(sql, args)
+
+    def remove(self, path):
+        sql = 'DELETE FROM fsxattrs WHERE path = ?'
+        args = path.as_posix(),
+        conn = self.conn()
+        with conn:
+            return conn.execute(sql, args)
+        
+    def convert_attrs(self, attrs):
+        for key in self.attrs:
+            if key in attrs:
+                yield attrs[key]
+            else:
+                yield None
+
+    def xattrs(self, path):
+        sql = 'SELECT * FROM fsxattrs WHERE path = ?'
+        args = path.as_posix(),
+        conn = self.conn()
+        with conn:
+            cursor = conn.execute(sql, args)
+            values = cursor.fetchone()
+            print(values)
+            if values:
+                keys = [n.replace('_', '.', 1) for n, *_ in cursor.description]
+                #print(keys, values)
+                return {k:v for k, v in zip(keys, values) if k != 'path' and v is not None}  # skip path itself
+            else:
+                return {}
+
+    def setxattr(self, path, key, value):
+        return self.setxattrs(path, {key:value})
+
+    def setxattrs(self, path, attrs):
+        # FIXME skip nulls on replace
+        sql = (f'INSERT OR REPLACE INTO fsxattrs (path, bf_id, bf_file_id, bf_size, bf_checksum, bf_error) VALUES (?, ?, ?, ?, ?, ?)')
+        args = path.as_posix(), *self.convert_attrs(attrs)
+        conn = self.conn()
+        with conn:
+            return conn.execute(sql, args)
+
+    def getxattr(self, path, key):
+        if key in self.attrs:
+            col = key.replace('.', '_')
+            sql = f'SELECT {col} FROM fsxattrs WHERE path = ?'
+            args = path.as_posix(),
+            conn = self.conn()
+            with conn:
+                return conn.execute(sql, args)
+        else:
+            print('WARNING unknown key', key)
+        
+
+class BFLocal:
+
+    class NoBfMeta(Exception):
+        """ There is not bf id for this file. """
+
+    def __init__(self):
+        self.bf = Blackfynn(api_token=devconfig.secrets('blackfynn-sparc-key'),
+                            api_secret=devconfig.secrets('blackfynn-sparc-secret'))
+        self.project_name = self.bf.context.name
+        self.project_path = local_storage_prefix / self.project_name
+        self.metastore = MetaStore(self.project_path.parent / (self.project_name + ' xattrs.db'))
+
+    @property
+    def error_meta(self):
+        for path in list(self.project_path.rglob('*ERROR')):
+            yield self.get_file_meta(path)
+
+    @property
+    def fake_files(self):
+        yield from self.project_path.rglob('*.fake.*')
+
+    @property
+    def big_meta(self):
+        for path in self.fake_files:
+            if path.suffix != '.ERROR':
+                yield self.get_file_meta(path)
+
+    def populate_metastore(self):
+        """ This should be run after find_missing_meta. """
+        # FIXME this function is monstrously slow :/
+        # need a bulk insert
+        all_attrs = {path:path.xattrs() for path in self.project_path.rglob('*')}
+        bad = [path for path, attrs in all_attrs.items() if not attrs]
+        if bad:
+            print('WARNING:', path, 'is missing meta, run find_missing_meta')
+            all_attrs = {p:a for p, a in all_attrs.items() if a}
+
+        self.metastore.bulk(all_attrs)
+
+    def find_missing_meta(self):
+        for path in self.project_path.rglob('*'):
+            attrs = path.xattrs()
+            if not attrs:
+                print('Found path with missing metadata', path)
+                attrs = self.metastore.xattrs(path)
+                if not attrs:
+                    print('No local metadata was found for', path)
+                    attrs = self.recover_meta(path)
+
+                path.setxattrs(attrs)
+                # TODO checksum may no longer match since we changed it
+
+    def recover_meta(self, path):
+        pattrs = path.parent.xattrs()
+        codid = pattrs['bf.id']
+        if codid.startswith('N:collection:'):
+            thing = self.bf.get(codid)
+        elif codid.startswith('N:dataset:'):
+            thing = self.bf.get_dataset(codid)  # heterogenity is fun!
+        else:
+            raise BaseException('What are you doing!??!?!')
+
+        test_path = path
+        while '.fake' in test_path.suffixes:
+            test_path = test_path.with_suffix('')
+
+        for poc in thing:
+            if poc.name == test_path.stem:  # FIXME
+                for file in poc.files:  # FIXME files vs folders
+                    filename = make_filename(file)
+                    if filename == test_path.name:
+                        return make_file_xattrs(file)
+
+    def get_file_meta(self, path):
+        attrs = path.xattrs()
+        if 'bf.id' not in attrs:
+            # TODO maintain a single backup mapping of xattrs to paths
+            # and just use the xattrs for performance
+            attrs = self.metastore.xattrs(path)
+            if attrs:
+                # TODO checksum ... (sigh git)
+                path.setxattrs(attrx)
+                attrs = path.xattrs()
+            else:
+                raise self.NoBfMeta
+
+        pid = attrs['bf.id']
+        if pid.startswith('N:package:'):
+            fid = int(attrs['bf.file_id'])
+            file_path = path
+            while '.fake' in file_path.suffixes:
+                file_path = file_path.with_suffix('')
+            
+            return file_path, pid, fid
+        else:
+            print('WARNING what is going on with', path, attrs)
+
+    def fetch_path(self, path):
+        """ Fetch individual big files.
+            `path` argument must be to a fake file which has the meta stored in xattrs """
+        # automatic async function application inside a list comp ... would be fun
+        fetch_file(*get_file_by_id(self.bf.get, *self.get_file_meta(path)), self.metastore)
+
+    def fetch_errors(self):
+        bfiles = {fp:f for fp, f in
+                  Async()(deferred(get_file_by_id)(self.bf.get, file_path, pid, fid)
+                          for file_path, pid, fid in self.error_meta)}
+        Async()(deferred(fetch_file)(filepath, file, self.metastore) for filepath, file in bfiles.items() if not filepath.exists())
+
+    def file_fetch_dict(self, packages):
+        return {folder_path / make_filename(file):file
+                for folder_path, files in
+                Async()(deferred(gfiles)(package, path) for package, path in packages)
+                for file in files}
+
+    def cons(self):
+        ds = self.bf.datasets()
+        useful = {d.id:d for d in ds}  # don't worry, I've made this mistake too
+        small = useful['N:dataset:f3ccf58a-7789-4280-836e-ad9d84ee2082']
+        hrm = useful['N:dataset:be0183e4-a912-465a-bd15-ff36973ee8b3']  # lots of 500 errors
+        readme_bug = useful['N:dataset:6d6818f2-ef75-4be5-9360-8d37661a8463']
+        skip = (
+            'N:dataset:83e0ebd2-dae2-4ca0-ad6e-81eb39cfc053',  # hackathon
+            'N:dataset:ec2e13ae-c42a-4606-b25b-ad4af90c01bb',  # big max
+        )
+        datasets = [d for d in ds if d.id not in skip]
+        #datasets = hrm, readme_bug
+        #datasets = small,
+        #embed()
+        #return
+        packages = []
+        collections = [(self.bf.context, local_storage_prefix)]
+        for dataset in datasets:
+            dataset_name = dataset.name
+            ds_path = self.project_path / dataset_name
+            collections.append((dataset, self.project_path))
+            for package_or_collection in dataset:
+                pocs = list(get_packages(package_or_collection, ds_path))
+                packages.extend(((poc, fp) for poc, fp in pocs
+                                 if isinstance(poc, DataPackage)))
+                collections.extend(((poc, fp) for poc, fp in pocs
+                                    if isinstance(poc, BaseCollection) or isinstance(poc, Organization)))
+
+        bfolders = [make_folder_and_meta(parent_path, collection, self.metastore)
+                    for collection, parent_path in collections]  # FIXME duplicates and missing ids
+        # TODO the collection file should hold the mapping from the file names to their blackfynn ids and local hashes
+        #meta = 'subjects', 'submission', 'submission_spreadsheet', 'dataset_description', 'detaset_description_spreadsheet', 'manifest', 'README'
+        #meta_subset = [(package, fp) for package, fp in packages if package.name in meta]
+        bfiles = self.file_fetch_dict(packages)
+
+        # beware that this will send as many requests as it can as fast as it can
+        # which is not the friendliest thing to do to an api
+        Async()(deferred(fetch_file)(filepath, file, self.metastore, limit=True)
+                for filepath, file in bfiles.items() if not filepath.exists())
+        #embed()
 
 
 def mvp():
@@ -420,7 +656,7 @@ def mvp():
 
     # beware that this will send as many requests as it can as fast as it can
     # which is not the friendliest thing to do to an api
-    Async()(deferred(fetch_file)(f, fp) for fp, f in bfiles.items() if not fp.exists())
+    Async()(deferred(fetch_file)(*fpf, self.metastore) for fpf in bfiles.items() if not fp.exists())
 
     return bf, bfiles
 
@@ -436,8 +672,13 @@ def mvp_main():
     bf, files = mvp()
     process_files(bf, files)
 
+
 def main():
-    cons()
+    bfl = BFLocal()
+    #bfl.cons()
+    #bfl.fetch_errors()
+    ff = list(bfl.fake_files)
+    embed()
 
 if __name__ == '__main__':
     main()
