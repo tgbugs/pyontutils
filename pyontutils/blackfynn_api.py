@@ -282,7 +282,7 @@ def gfiles(package, path):
 
 def unlink_fakes(attrs, fake_paths, metastore):
     for fpath in fake_paths:
-        fattrs = fpath.xattrs()
+        fattrs = {k:v for k, v in fpath.xattrs().items() if k != 'bf.error'}
         if fattrs == attrs:
             fpath.unlink()
             metastore.remove(fpath)
