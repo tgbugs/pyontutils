@@ -29,6 +29,11 @@ def UTCNOW(): return datetime.utcnow().isoformat()
 
 def makeSimpleLogger(name):
     # TODO use extra ...
+
+    # remove any logging set by an inadvertent call to basicConfig
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()  # FileHander goes to disk
