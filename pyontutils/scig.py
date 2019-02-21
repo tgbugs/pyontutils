@@ -9,7 +9,7 @@ Usage:
     scig g [--local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
     scig e [--local --verbose --key=KEY] <p> <s> <o>
     scig c [--local --verbose --key=KEY]
-    scig cy [--limit=LIMIT] <query>
+    scig cy [--verbose --limit=LIMIT] <query>
     scig onts [options]
 
 Options:
@@ -98,7 +98,7 @@ class scigPrint:
 
     @staticmethod
     def sv(asdf, start, ind, warn=False):
-        if type(asdf) is not bool and asdf.startswith('http'):
+        if type(asdf) not in (bool, int) and asdf.startswith('http'):
             for iri, short in scigPrint.shorten.items():
                 if iri in asdf:
                     return scigPrint.wrap(asdf.replace(iri, short + ':'), start, ind)
@@ -243,10 +243,13 @@ def main():
     elif args['cy']:
         c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
         import pprint
-        results = c.execute(args['<query>'], args['--limit'])
-        #results = c.execute(args['<query>'], args['--limit'], 'application/json')
+        #results = c.execute(args['<query>'], args['--limit'])
+        results = c.execute(args['<query>'], args['--limit'], 'application/json')
         if results:
-            pprint.pprint(results)
+            import json
+            s = json.dumps(results, indent=4)
+            print(s)
+            #pprint.pprint(results)
         else:
             print('Error?')
     elif args['onts']:
