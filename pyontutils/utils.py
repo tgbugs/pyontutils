@@ -489,6 +489,9 @@ class rowParse:
 
 class byCol:
     def __new__(cls, rows, header=None, to_index=tuple()):
+        """ to_index should be a list of normalized column
+            names that should be indexed for use in retrieving rows"""
+
         if header is None:  # FIXME non None header might have bad names?
             orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
             header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
@@ -531,6 +534,11 @@ class byCol:
                                  (cls,),
                                  dict())
         return classTypeInstance
+
+    @property
+    def cols(self):
+        for col in self.header:
+            yield [col, *getattr(self, col)]
 
     def searchIndex(self, index, value):
         return self.__indexes[index][value]
