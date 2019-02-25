@@ -461,7 +461,7 @@ triples = (
                 'See https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5449089/ for a review. '
                 'This is also a great example of the conflation of protocol with technique.'),
        synonyms=('Switching Mechanism at 5\' End of RNA Template sequencing',
-                 'Smart-seq'
+                 'Smart-seq',
                  'SMART-Seq®',
        )),
 
@@ -2963,15 +2963,36 @@ triples = (
     _t(i.d, 'microendoscopic technique',
        (ilxtr.hasSomething, i.d)),
     _t(tech.twoPhoton, 'two-photon microscopy technique',
-       (ilxtr.hasSomething, i.d)),
+       (hasInput, ilxtr.twoPhotonMicroscope),  # TODO
+       (ilxtr.hasSomething, i.d),  # TODO visible light vs microscopy
+       synonyms=('two-photon microscopy',)),
+    _t(tech.lightsheetMicroscopy, 'light sheet microscopy technique',
+       (hasInput, ilxtr.lightSheetMicroscope),  # TODO
+       (ilxtr.detects, ilxtr.visibleLight),
+       (ilxtr.hasInformationOutput, ilxtr.image),
+       (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
+       synonyms=('light sheet microscopy',)),
+    _t(i.d, 'light sheet fluorescence microscopy technique',
+       (hasInput, ilxtr.lightSheetMicroscope),  # TODO
+       (ilxtr.detects, ilxtr.visibleLight),
+       (hasInput, ilxtr.fluorescentMolecule),  # hasParticipant hasPart FIXME
+       (ilxtr.hasInformationOutput, ilxtr.image),
+       (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
+       synonyms=('light sheet fluorescence microscopy', 'LSFM')),
     _t(i.d, 'two-photon tomographic technique',
        (hasPart, tech.twoPhoton),
-       (hasPart, tech.tomography)),
-    _t(i.d, 'serial two-photon tomography',
-       (hasPart, tech.twoPhoton),
        (hasPart, tech.tomography),
-       (ilxtr.hasSomething, i.d),
-       synonyms=('STPT',)),
+       (ilxtr.hasSomething, i.d), # TODO serial??  this model conflates with 2p tomography ...
+       synonyms=('serial two-photon tomography', 'STPT',)
+       # FIXME acronym
+      ),
+    _t(i.d, 'oblique light sheet tomographic technique',
+       (hasPart, tech.lightsheetMicroscopy),
+       (hasPart, tech.tomography),
+       (ilxtr.hasSomething, i.d), # TODO oblique?
+       synonyms=('oblique light sheet tomography', 'OLST',)
+       # FIXME acronym
+      ),
     _t(i.d, 'wide-field microscopy technique',
        (ilxtr.hasSomething, i.d)),
     _t(i.d, 'brain-wide technique',

@@ -309,6 +309,7 @@ triples += (  # material entities
     oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
     (OntTerm('BIRNLEX:2029', label='Confocal microscope'), rdfs.subClassOf, ilxtr.lightMicroscope),
     oc(ilxtr.DICmicroscope, ilxtr.lightMicroscope),
+    oc(ilxtr.lightSheetMicroscope, ilxtr.lightMicroscope),
     oc(ilxtr.microtome, ilxtr.materialEntity),
     oc(ilxtr.serialBlockfaceMicrotome, ilxtr.microtome),
     oc(ilxtr.ultramicrotome, ilxtr.microtome),
@@ -737,6 +738,11 @@ triples += (  # aspects
 
     oc(asp.orientation, asp.spatial),
     oc_(asp.orientation,
+        restriction(ilxtr.hasMaterialContext,
+                    ilxtr.measurableReferenceFrame)),
+
+    oc(asp.position, asp.spatial),
+    oc_(asp.position,
         restriction(ilxtr.hasMaterialContext,
                     ilxtr.measurableReferenceFrame)),
 
