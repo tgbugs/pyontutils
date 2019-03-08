@@ -36,12 +36,15 @@ def preferred_change(data):
         'PR',
         'IAO',
         'NIFEXT',
+        'OEN',
         'ILX',
     ]
     mock_rank = ranking[::-1]
     score = []
     old_pref_index = None
     for i, d in enumerate(data['existing_ids']):
+        if not d.get('preferred'): # db allows None or '' which will cause a problem
+            d['preferred'] = 0
         if int(d['preferred']) == 1:
             old_pref_index = i
         if d.get('curie'):
@@ -71,15 +74,14 @@ def merge(new, old):
     for k, vals in new.items():
 
         if k == 'synonyms':
+            new_synonyms = vals
             if old['synonyms']:
-                literals = [
-                    s['literal'].lower().strip() for s in old['synonyms']
-                ]
-                for v in vals:
-                    if vals['literal'].lower().strip() not in literals:
-                        old['synonyms'].append(vals)
+                old_literals = [syn['literal'].lower().strip() for syn in old['synonyms']]
+                for new_synonym in new_synonyms:
+                    if new_synonym['literal'].lower().strip() not in old_literals:
+                        old['synonyms'].append(new_synonym) # default is a list in SciCrunch, that's why this works without initing old['synonyms']
             else:
-                old['synonyms'].append(new['synonyms'])
+                old['synonyms'].extend(new['synonyms'])
 
         elif k == 'existing_ids':
             iris = [e['iri'] for e in old['existing_ids']]
@@ -141,22 +143,22 @@ def merge(new, old):
                     else:
                         sys.exit('Something broke while merging in existing_ids')
 
-        elif k in [
-                'definition', 'superclasses', 'id', 'type', 'comment', 'label', 'uid'
-        ]:
+        elif k in ['definition', 'superclasses', 'id', 'type', 'comment', 'label', 'uid', 'ontologies']:
             old[k] = vals
 
         # TODO: still need to mark them... but when batch elastic for update works
-        old['uid'] = 34142  # DEBUG: need to mark as mine manually until all Old terms are fixed
+        # old['uid'] = 34142  # DEBUG: need to mark as mine manually until all Old terms are fixed
 
     ''' REMOVE REPEATS; needs to exist due to server overloads '''
-    visited = {}
-    new_synonyms = []
-    for synonym in old['synonyms']:
-        if not visited.get(synonym['literal']):
-            new_synonyms.append(synonym)
-            visited[synonym['literal']] = True
-    old['synonyms'] = new_synonyms
+    if old.get('synonyms'):
+        visited = {}
+        new_synonyms = []
+        for synonym in old['synonyms']:
+            if not visited.get(synonym.get('literal')):
+                new_synonyms.append(synonym)
+                visited[synonym['literal']] = True
+        old['synonyms'] = new_synonyms
+
     visited = {}
     new_existing_ids = []
     for e in old['existing_ids']:
@@ -167,3 +169,13 @@ def merge(new, old):
     old = preferred_change(old)
 
     return old
+
+def test():
+    new = {'id': 427103, 'ilx': 'ilx_0503992', 'existing_ids':
+        [{'iri':'http://purl.obolibrary.org/obo/UBERON_0018412', 'curie': 'UBERON:0018412'}]}
+    old = {'id': 427103, 'ilx': 'ilx_0503992', 'existing_ids':
+        [{'iri':'http://purl.obolibrary.org/obo/UBERON_0018413', 'curie': 'UBERON:0018413'}]}
+    merge(new, old)
+
+if __name__ == '__main__':
+    test()
