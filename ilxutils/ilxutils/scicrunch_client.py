@@ -4,11 +4,15 @@ from collections import defaultdict, namedtuple
 from IPython import embed
 import json
 import pandas as pd
+import random
 import requests as r
+import string
 from sys import exit
+from typing import Union, List, Dict
 import ilxutils.scicrunch_client_helper as scicrunch_client_helper
 import os
-
+# TODO: create a check for superclass... if entity superclass is known to be different then create your own. else biggy back known entity
+# THOUGHTS: What if you don't know if superclass is different?
 
 class scicrunch():
 
@@ -16,7 +20,7 @@ class scicrunch():
         Get functions need a list of term ids
         Post functions need a list of dictionaries with their needed/optional keys & values
 
-        identifierSearches          ids, LIMIT=50, _print=True, crawl=False
+        identifierSearches          ids, LIMIT=25, _print=True, crawl=False
         addTerms                    data ....
         updateTerms                 data ....
         addAnnotations              data ....
@@ -28,9 +32,9 @@ class scicrunch():
         deleteTerms                 ilx_ids .. crawl=True .
     '''
 
-    def __init__(self, api_key, base_path, auth=('None', 'None')):
+    def __init__(self, api_key, base_url, auth=('None', 'None')):
         self.api_key = api_key
-        self.base_path = base_path
+        self.base_url = base_url
         self.auth = BasicAuth(auth)
 
     def crawl_get(self, urls):
@@ -83,8 +87,8 @@ class scicrunch():
             auth = ('scicrunch',
                     'perl22(query)')  # needed for test2.scicrunch.org
             headers = {'Content-type': 'application/json'}
+            # print(data['uid'], 'data')
             response = r.post(url, data=json.dumps(params), headers=headers, auth=auth)
-
             # strict codes due to odd behavior in past
             if response.status_code not in [200, 201]:
                 try:
@@ -139,7 +143,7 @@ class scicrunch():
 
     def get(self,
             urls=False,
-            LIMIT=50,
+            LIMIT=25,
             action='Getting Info',
             _print=True,
             crawl=False):
@@ -250,10 +254,10 @@ class scicrunch():
                                 str(response.status) + '] with params:' + str(data))
                             output = {'data':{'term':{}}}
 
+                    # Missing required fields I didn't account for OR Duplicates.
                     else:
                         # allows NoneTypes to pass
                         output = await response.json(content_type=None)
-                        print(output)
 
                         if not output:
                             print(response.status)
@@ -261,7 +265,10 @@ class scicrunch():
 
                         # Duplicates
                         elif output.get('data').get('errormsg'):
-                            print(data)
+                            print(output.get('data').get('errormsg'))
+                            # print(response.status)
+                            # print(data) # TODO: its hitting here and idk why
+
 
             if _print:
                 try:
@@ -302,11 +309,11 @@ class scicrunch():
 
     def identifierSearches(self,
                            ids=None,
-                           LIMIT=50,
+                           LIMIT=25,
                            _print=True,
                            crawl=False):
         """parameters( data = "list of term_ids" )"""
-        url_base = self.base_path + '/api/1/term/view/{id}' + '?key=' + self.api_key
+        url_base = self.base_url + '/api/1/term/view/{id}' + '?key=' + self.api_key
         urls = [url_base.format(id=str(_id)) for _id in ids]
         return self.get(
             urls=urls,
@@ -317,11 +324,11 @@ class scicrunch():
 
     def ilxSearches(self,
                     ilx_ids=None,
-                    LIMIT=50,
+                    LIMIT=25,
                     _print=True,
                     crawl=False):
         """parameters( data = "list of ilx_ids" )"""
-        url_base = self.base_path + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
+        url_base = self.base_url + "/api/1/ilx/search/identifier/{identifier}?key={APIKEY}"
         urls = [url_base.format(identifier=ilx_id.replace('ILX:', 'ilx_'), APIKEY=self.api_key) for ilx_id in ilx_ids]
         return self.get(
             urls=urls,
@@ -330,40 +337,34 @@ class scicrunch():
             crawl=crawl,
             _print=_print)
 
-    def updateTerms(
-        self,
-        data: list,
-        LIMIT: int = 20,
-        _print: bool = True,
-        crawl: bool = False,
-        ) -> list:
+    def updateTerms(self, data:list, LIMIT:int=20, _print:bool=True, crawl:bool=False,) -> list:
         """ Updates existing entities
 
-        Args:
-            data:
-                needs:
-                    id              <str>
-                    ilx_id          <str>
-                options:
-                    definition      <str> #bug with qutations
-                    superclasses    [{'id':<int>}]
-                    type            term, cde, anntation, or relationship <str>
-                    synonyms         {'literal':<str>}
-                    existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
-            LIMIT:
-                limit of concurrent
-            _print:
-                prints label of data presented
-            crawl:
-                True: Uses linear requests.
-                False: Uses concurrent requests from the asyncio and aiohttp modules
+            Args:
+                data:
+                    needs:
+                        id              <str>
+                        ilx_id          <str>
+                    options:
+                        definition      <str> #bug with qutations
+                        superclasses    [{'id':<int>}]
+                        type            term, cde, anntation, or relationship <str>
+                        synonyms         {'literal':<str>}
+                        existing_ids    {'iri':<str>,'curie':<str>','change':<bool>, 'delete':<bool>}
+                LIMIT:
+                    limit of concurrent
+                _print:
+                    prints label of data presented
+                crawl:
+                    True: Uses linear requests.
+                    False: Uses concurrent requests from the asyncio and aiohttp modules
 
-        Returns:
-            List of filled in data parallel with the input data. If any entity failed with an
-            ignorable reason, it will return empty for the item in the list returned.
-        """
+            Returns:
+                List of filled in data parallel with the input data. If any entity failed with an
+                ignorable reason, it will return empty for the item in the list returned.
+            """
 
-        url_base = self.base_path + '/api/1/term/edit/{id}'
+        url_base = self.base_url + '/api/1/term/edit/{id}'
         merged_data = []
 
         # PHP on the server is is LOADED with bugs. Best to just duplicate entity data and change
@@ -383,21 +384,20 @@ class scicrunch():
                 print(d['ilx'], old_data[int(d['id'])]['ilx'])
                 exit('You might be using beta insead of production!')
 
-
             merged = scicrunch_client_helper.merge(new=d, old=old_data[int(d['id'])])
             merged = scicrunch_client_helper.superclasses_bug_fix(merged)  # BUG: superclass output diff than input needed
-            # merged['batch-elastic'] = 'True' # does not exist yet... or maybe ever
             merged_data.append((url, merged))
 
-        return self.post(
+        resp = self.post(
             merged_data,
             LIMIT = LIMIT,
             action = 'Updating Terms', # forced input from each function
             _print = _print,
             crawl = crawl,
         )
+        return resp
 
-    def addTerms(self, data, LIMIT=50, _print=True, crawl=False):
+    def addTerms(self, data, LIMIT=25, _print=True, crawl=False):
         """
             need:
                     label           <str>
@@ -407,6 +407,7 @@ class scicrunch():
                     superclasses    [{'id':<int>}]
                     synonyms        [{'literal':<str>}]
                     existing_ids    [{'iri':<str>,'curie':<str>'}]
+                    ontologies      [{'id':<int>}]
 
         [{'type':'term', 'label':'brain'}]
         """
@@ -415,8 +416,7 @@ class scicrunch():
             'type',
         ])
 
-        url_base = self.base_path + '/api/1/ilx/add'
-
+        url_base = self.base_url + '/api/1/ilx/add'
         terms = []
         for d in data:
             if (set(list(d)) & needed) != needed:
@@ -429,26 +429,31 @@ class scicrunch():
             #d['batch-elastic'] = 'True' # term/add and edit should be ready now
             terms.append((url_base, d))
 
-        ilx = self.post(
+        primer_responses = self.post(
             terms,
             action='Priming Terms',
             LIMIT=LIMIT,
             _print=_print,
             crawl=crawl)
 
-        ilx = {d['term'].replace('&#39;', "'").replace('&#34;', '"'): d for d in ilx if d['term']}
+        ilx = {}
+        for primer_response in primer_responses:
+            primer_response['term'] = primer_response['term'].replace('&#39;', "'")
+            primer_response['term'] = primer_response['term'].replace('&#34;', '"')
+            primer_response['label'] = primer_response.pop('term')
+            ilx[primer_response['label'].lower()] = primer_response
 
-        url_base = self.base_path + '/api/1/term/add'
+        url_base = self.base_url + '/api/1/term/add'
         terms = []
         for d in data:
             d['label'] = d.pop('term')
             d = scicrunch_client_helper.superclasses_bug_fix(d)
-            if not ilx.get(d['label']): # ilx can be incomplete if errored term
+            if not ilx.get(d['label'].lower()): # ilx can be incomplete if errored term
                 continue
             try:
-                d.update({'ilx': ilx[d['label']]['ilx']})
+                d.update({'ilx': ilx[d['label'].lower()]['ilx']})
             except:
-                d.update({'ilx': ilx[d['label']]['fragment']})
+                d.update({'ilx': ilx[d['label'].lower()]['fragment']})
             terms.append((url_base, d))
 
         return self.post(
@@ -460,10 +465,9 @@ class scicrunch():
 
     def addAnnotations(self,
                        data,
-                       LIMIT=50,
+                       LIMIT=25,
                        _print=True,
                        crawl=False,):
-
 
         need = set([
             'tid',
@@ -473,7 +477,7 @@ class scicrunch():
             'annotation_term_version',
         ])
 
-        url_base = self.base_path + '/api/1/term/add-annotation'
+        url_base = self.base_url + '/api/1/term/add-annotation'
         annotations = []
         for annotation in data:
             annotation.update({
@@ -497,13 +501,13 @@ class scicrunch():
 
     def getAnnotations_via_tid(self,
                                tids,
-                               LIMIT=50,
+                               LIMIT=25,
                                _print=True,
                                crawl=False):
         """
         tids = list of term ids that possess the annoations
         """
-        url_base = self.base_path + \
+        url_base = self.base_url + \
             '/api/1/term/get-annotations/{tid}?key=' + self.api_key
         urls = [url_base.format(tid=str(tid)) for tid in tids]
         return self.get(urls,
@@ -513,11 +517,11 @@ class scicrunch():
 
     def getAnnotations_via_id(self,
                               annotation_ids,
-                              LIMIT=50,
+                              LIMIT=25,
                               _print=True,
                               crawl=False):
         """tids = list of strings or ints that are the ids of the annotations themselves"""
-        url_base = self.base_path + \
+        url_base = self.base_url + \
             '/api/1/term/get-annotation/{id}?key=' + self.api_key
         urls = [
             url_base.format(id=str(annotation_id))
@@ -527,14 +531,14 @@ class scicrunch():
 
     def updateAnnotations(self,
                           data,
-                          LIMIT=50,
+                          LIMIT=25,
                           _print=True,
                           crawl=False,):
         """data = [{'id', 'tid', 'annotation_tid', 'value', 'comment', 'upvote', 'downvote',
         'curator_status', 'withdrawn', 'term_version', 'annotation_term_version', 'orig_uid',
         'orig_time'}]
         """
-        url_base = self.base_path + \
+        url_base = self.base_url + \
             '/api/1/term/edit-annotation/{id}'  # id of annotation not term id
         annotations = self.getAnnotations_via_id([d['id'] for d in data],
                                                  LIMIT=LIMIT,
@@ -555,11 +559,11 @@ class scicrunch():
 
     def deleteAnnotations(self,
                           annotation_ids,
-                          LIMIT=50,
+                          LIMIT=25,
                           _print=True,
                           crawl=False,):
         """data = list of ids"""
-        url_base = self.base_path + \
+        url_base = self.base_url + \
             '/api/1/term/edit-annotation/{annotation_id}'  # id of annotation not term id; thx past troy!
         annotations = self.getAnnotations_via_id(annotation_ids,
                                                  LIMIT=LIMIT,
@@ -596,7 +600,7 @@ class scicrunch():
             "term1_version", "term2_version",
             "relationship_term_version",}]
         """
-        url_base = self.base_path + '/api/1/term/add-relationship'
+        url_base = self.base_url + '/api/1/term/add-relationship'
         relationships = []
         for relationship in data:
             relationship.update({
@@ -615,10 +619,10 @@ class scicrunch():
 
     def deleteTermsFromElastic(self,
                                ilx_ids,
-                               LIMIT=50,
+                               LIMIT=25,
                                _print=True,
                                crawl=True):
-        url = self.base_path + \
+        url = self.base_url + \
             '/api/1/term/elastic/delete/{ilx_id}?key=' + self.api_key
         data = [(url.format(ilx_id=str(ilx_id)), {}) for ilx_id in ilx_ids]
         return self.post(
@@ -631,7 +635,7 @@ class scicrunch():
         _print = True,
         crawl = True
         ) -> list:
-        url = self.base_path + '/api/1/term/elastic/upsert/{tid}?key=' + self.api_key
+        url = self.base_url + '/api/1/term/elastic/upsert/{tid}?key=' + self.api_key
         data = [(url.format(tid=str(tid)), {}) for tid in tids]
         return self.post(
             data,
@@ -763,32 +767,92 @@ class scicrunch():
         self.addRelationships([replaced_info], crawl=True, _print=False)
         print(replaced_info)
 
+    def addOntology(self, ontology_url:str) -> List[dict]:
+        add_ontology_url = self.base_url + '/api/1/term/ontology/add'
+        data = json.dumps({
+            'url': ontology_url,
+            'key': self.api_key,
+        })
+        response = r.post(add_ontology_url, data=data, headers={'Content-type': 'application/json'})
+        print(response.status_code)
+        try:
+            return response.json()
+        except:
+            return response.text
+
+    def force_add_term(self, entity: dict):
+        """ Need to add an entity that already has a label existing in InterLex?
+            Well this is the function for you!
+
+            entity:
+                need:
+                        label           <str>
+                        type            term, cde, pde, fde, anntation, or relationship <str>
+                options:
+                        definition      <str>
+                        superclasses    [{'id':<int>}]
+                        synonyms        [{'literal':<str>}]
+                        existing_ids    [{'iri':<str>,'curie':<str>'}]
+                        ontologies      [{'id':<int>}]
+
+            example:
+                entity = [{
+                    'type':'term',
+                    'label':'brain',
+                    'existing_ids': [{
+                        'iri':'http://ncbi.org/123',
+                        'curie':'NCBI:123'
+                    }]
+                }]
+        """
+        needed = set([
+            'label',
+            'type',
+        ])
+        url_ilx_add = self.base_url + '/api/1/ilx/add'
+        url_term_add = self.base_url + '/api/1/term/add'
+        url_term_update = self.base_url + '/api/1/term/edit/{id}'
+
+        if (set(list(entity)) & needed) != needed:
+            exit('You need keys: '+ str(needed - set(list(d))))
+
+        # to ensure uniqueness
+        random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=25))
+        real_label = entity['label']
+        entity['label'] = entity['label'] + '_' + random_string
+
+        entity['term'] = entity.pop('label') # ilx only accepts term, will need to replaced back
+        primer_response = self.post([(url_ilx_add, entity.copy())], _print=False, crawl=True)[0]
+        entity['label'] = entity.pop('term')
+        entity['ilx'] = primer_response['fragment'] if primer_response.get('fragment') else primer_response['ilx']
+        entity = scicrunch_client_helper.superclasses_bug_fix(entity)
+
+        response = self.post([(url_term_add, entity.copy())], _print=False, crawl=True)[0]
+
+        old_data = self.identifierSearches(
+            [response['id']], # just need the ids
+            _print = False,
+            crawl = True,
+        )[response['id']]
+
+        old_data['label'] = real_label
+        entity = old_data.copy()
+        url_term_update = url_term_update.format(id=entity['id'])
+        return self.post([(url_term_update, entity)], _print=False, crawl=True)
+
 def main():
 
     sci = scicrunch(
         api_key=os.environ.get('SCICRUNCH_API_KEY'),
-        base_path=os.environ.get('SCICRUNCH_BASEBATH_BETA'),
+        base_url=os.environ.get('SCICRUNCH_BASEURL_BETA'),
     )
+    entity = {
+        'label': 'test_force_add_term',
+        'type': 'term',
+    }
+    print(sci.force_add_term(entity))
+    update_entity = {'id': '305199', 'ilx': 'tmp_0382117', 'label': 'test_force_add_term', 'key': 'Mf8f6S5gD6cy6cuRWMyjUeLGxUPfo0SZ'}
+    # print(sci.updateTerms([update_entity], _print=False, crawl=True))
 
-    # EAMPLE UPDATE
-    data = [
-        {
-            'id': 15068,
-            'ilx': 'ilx_0115062',
-            'type': 'pde',
-        },
-    ]
-
-    annotations = [
-
-    ]
-    output = sci.updateTerms(data)
-    #print(output)
-
-'''
-Hoersch D, Otto H, Joshi CP, Borucki B, Cusanovich MA, Heyn MP. Role of a Conserved Salt
-Bridge between the PAS Core and the N-Terminal Domain in the Activation of the Photoreceptor
-Photoactive Yellow Protein. Biophysical Journal. 2007;93(5):1687-1699. doi:10.1529/biophysj.107.106633.
-'''
 if __name__ == '__main__':
     main()
