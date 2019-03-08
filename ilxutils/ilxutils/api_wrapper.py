@@ -2,7 +2,7 @@
 
 Usage:  api_wrapper.py [-h | --help]
         api_wrapper.py [-v | --version]
-        api_wrapper.py <argument> [-f=<path>] [-p | -b]
+        api_wrapper.py <argument> [-f=<path>] [-o=<path>] [-p | -b]
 
 Arugments:
     addTerms                        Add terms|cdes|annotations|relationships to SciCrunch
@@ -16,15 +16,17 @@ Options:
     -f --file=<path>               File that holds the data you wish to upload to Scicrunch
     -p --production                Production SciCrunch
     -b --beta                      Beta SciCrunch
+    -o --output=<path>             saved outputed data location
 """
+import datetime
 from docopt import docopt
 import json
 import math as m
-from pathlib import Path as p
+from pathlib import Path
 import time
 from sys import exit
 from ilxutils.scicrunch_client import scicrunch
-from ilxutils.tools import open_json
+from ilxutils.tools import open_json, create_json
 import os
 VERSION = '0.0.5'
 
@@ -46,17 +48,25 @@ def batch(data, seg_length, start_batch, end_batch, func, **kwargs):
 def main():
     doc = docopt(__doc__, version=VERSION)
     if doc['--production']:
-        base_path = os.environ.get('SCICRUNCH_BASEBATH_PRODUCTION')
+        base_url = os.environ.get('SCICRUNCH_BASEURL_PRODUCTION')
     elif doc['--beta']:
-        base_path = os.environ.get('SCICRUNCH_BASEBATH_BETA')
+        base_url = os.environ.get('SCICRUNCH_BASEURL_BETA')
     else:
         exit('Need to specify SciCrunch client version.')
+
+    if doc['--output']:
+        output_path = doc['--output']
+    else:
+        now = datetime.datetime.now().strftime('%Y-%m-%d')
+        output_path = Path.home()/('Dropbox/tmp/api_wrapper_output_on_'+str(now)+'.json')
+
+    api_key = os.environ.get('SCICRUNCH_API_KEY')
 
     data = open_json(infile=doc['--file'])
     data = data[:]  # for debuging
     sci = scicrunch(
-        api_key = os.environ.get('SCICRUNCH_API_KEY'),
-        base_path = base_path,
+        api_key = api_key,
+        base_url = base_url,
     )
 
     FUNCTION_MAP = {
@@ -67,16 +77,18 @@ def main():
         'deleteAnnotations': sci.deleteAnnotations,
         'addRelationships': sci.addRelationships,
     }
-    output = batch(
+
+    resp = batch(
         data = data,
-        seg_length = 20,
-        start_batch = 11217,  # 2340, regarding meshdump
-        end_batch = None,  # 1410,
+        seg_length = 100,
+        start_batch = 0,  # WHAT?! -> 2340, regarding meshdump
+        end_batch = None,  #
         func = FUNCTION_MAP[doc['<argument>']],
         _print = True,
         crawl = False,
-        LIMIT = 10,
+        LIMIT = 25,
     )
+    #create_json(resp, output_path)
 
 
 if __name__ == '__main__':
