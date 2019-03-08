@@ -1,6 +1,7 @@
 from collections import defaultdict
 from IPython import embed
 from rdflib import Graph, RDF, OWL, RDFS, BNode, Literal, URIRef, Namespace
+from rdflib.plugins.sparql.processor import processUpdate
 from sys import exit
 from typing import Dict, Tuple, List, Union
 from ilxutils.rdfdata import common_namespaces
@@ -285,7 +286,7 @@ class SimpleGraph:
             **args: None
         """
         kwargs = {key: str(value) for key, value in kwargs.items()}
-        return self.g.serialize(**kwargs).encode('utf-8') # FIXME: might ruin it when conv to utf-8
+        return self.g.serialize(**kwargs) # .decode('utf-8') # FIXME: might ruin it when conv to utf-8
 
     def remove_triple(
             self,
