@@ -92,6 +92,7 @@ def _loadPrefixes():
 
     normal = {
         'ILX':'http://uri.interlex.org/base/ilx_',
+        'tmp':'http://uri.interlex.org/base/tmp_',
         'ilx':'http://uri.interlex.org/base/',
         'ilxr':'http://uri.interlex.org/base/readable/',
         'ilxtr':'http://uri.interlex.org/tgbugs/uris/readable/',
