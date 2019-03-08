@@ -3,12 +3,55 @@ import pickle
 import re
 import pandas as pd
 from pathlib import Path as p
+import pprint
 from subprocess import call
 from sys import exit
 import csv
 
-''' Custom encoder to allow json to convert any sets in nested data to become lists '''
+def string_profiler(string, start_delimiter='(', end_delimiter=')', remove=True):
+    '''
+        long = '(life is is good) love world "(blah) blah" "here I am" once again "yes" blah '
+        print(string_profiler(long))
+        null = ''
+        print(string_profiler(null))
+        short = '(life love) yes(and much more)'
+        print(string_profiler(short))
+        short = 'yes "life love"'
+        print(string_profiler(short))
+    '''
+    mark = 0
+    string_list = []
+    tmp_string = ''
+    for i in range(len(string)):
+        curr_index = i + mark
+        if curr_index == len(string):
+            break
+        if string[curr_index] == start_delimiter:
+            flag = True
+        else:
+            flag = False
+        if flag:
+            if tmp_string:
+                string_list.extend(tmp_string.strip().split())
+                tmp_string = ''
+            quoted_string = ''
+            for j in range(curr_index+1, len(string)):
+                mark += 1
+                if string[j] == end_delimiter:
+                    break
+                quoted_string += string[j]
+            if not remove:
+                string_list.append(quoted_string)
+        else:
+            tmp_string += string[curr_index]
+    if tmp_string:
+        string_list.extend(tmp_string.strip().split())
+    return string_list
+
+pp = pprint.PrettyPrinter(indent=4).pprint
+
 class SetEncoder(json.JSONEncoder):
+    ''' Custom encoder to allow json to convert any sets in nested data to become lists '''
     def default(self, obj):
         if isinstance(obj, set):
             return sorted(list(obj))
