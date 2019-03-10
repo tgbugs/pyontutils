@@ -240,7 +240,7 @@ class DevConfig:
                 raise ValueError('config entry for ontology_local_repo is empty')
         except (KeyError, ValueError, TypeError, FileNotFoundError) as e:
             # key for line missing from config
-            # value for ???
+            # value from where we raise above if olr is the empty string ''
             # type for key present but value is None
             # file not found for path does not exist
             return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
@@ -253,7 +253,7 @@ class DevConfig:
     def _ontology_local_repo(self):
         try:
             stated_repo = Path(self.config['ontology_local_repo'])
-        except (TypeError, FileNotFoundError) as e:
+        except (KeyError, TypeError, FileNotFoundError) as e:
             stated_repo = Path('/dev/null/does-not-exist')
 
         maybe_repo = self._maybe_repo
