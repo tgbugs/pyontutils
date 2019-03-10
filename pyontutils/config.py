@@ -166,7 +166,7 @@ class DevConfig:
     def secrets_file(self):
         return self.config['secrets_file']
 
-    @secrets_files.setter
+    @secrets_file.setter
     def secrets_file(self, value):
         if isinstance(value, Path):
             value = value.as_posix()
