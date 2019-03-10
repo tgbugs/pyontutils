@@ -20,7 +20,7 @@ def get_oauth_service(readonly=True):
     creds = store.get()
     if not creds or creds.invalid:
         # the first time you run this you will need to use the --noauth_local_webserver args
-        creds_file = devconfig.secrets('google-api-creds-file')
+        creds_file = devconfig.secrets('google', 'api', 'creds-file')
         flow = client.flow_from_clientsecrets((spath / creds_file).as_posix(), SCOPES)
         creds = tools.run_flow(flow, store)
     service = build('sheets', 'v4', http=creds.authorize(Http()))
