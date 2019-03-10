@@ -84,21 +84,35 @@ class Secrets:
             with open(self.filename, 'rt') as f:
                 return yaml.load(f)
 
-    def __call__(self, name):
+    def __call__(self, *names):
         if self.exists:
             nidm = self.name_id_map
             # NOTE under these circumstances this pattern is ok because anyone
             # or anything who can call this function can access the secrets file.
             # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
             # secrets could be exposted by brute force, but in thise case it is ok
-            # because it is more important to alter the user that they have just
+            # because it is more important to alert the user that they have just
             # tried to use a secret as a name and that it might be in their code.
-            if name in set(nidm.values()):
-                ANGRY = '*' * len(name)
-                raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
-            else:
-                return nidm[name]
+            def all_values(d):
+                for v in d.values():
+                    if isinstance(v, dict):
+                        yield from all_values(v)
+                    else:
+                        yield v
 
+            av = set(all_values(nidm))
+            current = nidm
+            for name in names:
+                if name in av:
+                    ANGRY = '*' * len(name)
+                    raise ValueError(f'WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+                else:
+                    current = current[name]
+
+            if isinstance(current, dict):
+                raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
+
+            return current
 
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v', 'secrets'
