@@ -166,6 +166,13 @@ class DevConfig:
     def secrets_file(self):
         return self.config['secrets_file']
 
+    @secrets_files.setter
+    def secrets_file(self, value):
+        if isinstance(value, Path):
+            value = value.as_posix()
+        self._override['secrets_file'] = value
+        self.write(self.config_file.as_posix())
+
     @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
         return self.config['curies']
