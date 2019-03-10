@@ -145,7 +145,9 @@ class DevConfig:
         if file is None:
             file = (PYONTUTILS_DEVCONFIG).as_posix()
 
-        config = {k:str(v) for k, v in self._config.items()}
+        config = self.config
+        new_config = {k:str(v) for k, v in self._config.items()}
+        config.update(new_config)  # roundtrip keys that we don't manage in this class
 
         if config:
             with open(file, 'wt') as f:
