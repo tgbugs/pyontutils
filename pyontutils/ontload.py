@@ -26,6 +26,7 @@ Options:
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
     -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
 
+    -i --build-scigraph             build scigraph codebase
     -O --scigraph-org=SORG          user/org for scigraph       [default: SciCrunch]
     -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
@@ -39,7 +40,7 @@ Options:
     -K --check-built                check whether a local copy is present but do not build if it is not
 
     -d --debug                      call IPython embed when done
-    -i --logfile=LOG                log output here             [default: ontload.log]
+    -L --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
     -f --graph-config-out=GCO       output for graphload.yaml   [default: {devconfig.scigraph_graphload}]
                                     only useful for `ontload config` ignored otherwise
@@ -648,11 +649,17 @@ def run(args):
         local_base = jpth(git_local, repo_name)
 
     if graph:
-        (scigraph_commit, load_base, services_zip,
-         scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
-                                                git_local, sbranch, scommit,
-                                                check_built=check_built,
-                                                cleanup_later=True)
+        if args['--build-scigraph']:
+            (scigraph_commit, load_base, services_zip,
+            scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
+                                                    git_local, sbranch, scommit,
+                                                    check_built=check_built,
+                                                    cleanup_later=True)
+        else:
+            scigraph_commit = 'dev-9999'
+            services_zip = 'None'
+            load_base = 'scigraph-load -c {config_path}'  # now _this_ is easier
+            scigraph_reset_state = lambda : None
         with execute_regardless(scigraph_reset_state):
             rl = ReproLoader(zip_location, git_remote, org,
                              git_local, repo_name, branch,
