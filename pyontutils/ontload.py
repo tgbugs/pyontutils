@@ -398,7 +398,14 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                         return
                         #raise ValueError('local_imports has already been run') from e
                     else:
-                        print(e)
+                        print(e)  # TODO raise a warning if the file cannot be matched
+                        # seems like good practice to have any imported ontology under
+                        # version control so all imports are guaranteed to have good
+                        # provenance and not split the prior informaiton between the
+                        # scigraph config and the repository, the repository remains
+                        # the source of truth, load.yaml files can then pick a subset
+                        # of the properly tracked files to load as they see fit, but
+                        # not add to them (at least in pyontutils land)
                         raw = b''
             if oo in raw:  # we only care if there are imports or an ontology iri
                 scratch = rdflib.Graph()
