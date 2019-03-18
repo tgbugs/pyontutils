@@ -133,13 +133,14 @@ class DevConfig:
     def config(self):
         """ Allows changing the config on the fly """
         # TODO more efficient to read once and put watch on the file
+        config = {}
         if self.config_file.exists():
             with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
                 config = {k:self._override[k] if
                         k in self._override else
                         v for k, v in yaml.load(f).items()}
 
-            return config if config else None
+        return config
 
     @property
     def _config(self):
