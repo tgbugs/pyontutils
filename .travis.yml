@@ -37,6 +37,7 @@ before_install:
 
 install:
   - pip install pipenv
+  - pip install --upgrade pytest pytest-cov
   - pip install coverage coveralls && export HAS_COVERALLS=1
   - pipenv install --dev --system --skip-lock --deploy
 
