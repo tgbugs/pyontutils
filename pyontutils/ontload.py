@@ -201,7 +201,7 @@ class ReproLoader:
         # config graphload.yaml from template
         graphload_config_template = graphload_config + '.template'
         with open(graphload_config_template, 'rt') as f:
-            config = yaml.load(f)
+            config = yaml.safe_load(f)
 
         config['graphConfiguration']['location'] = graph_path
         config['ontologies'] = [{k:v.replace(remote_base, local_base)
@@ -304,7 +304,7 @@ def do_patch(patch_config, local_base):
     repo_base = Path(local_base)
     config_path = Path(patch_config)
     with open(patch_config, 'rt') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
 
     for patchset, patches in config.items():
         for patch, target_remote in patches.items():
@@ -590,7 +590,7 @@ def deploy_scp(local_path, remote_spec):
 
 def getCuries(curies_location):
     with open(curies_location, 'rt') as f:
-        curies = yaml.load(f)
+        curies = yaml.safe_load(f)
     curie_prefixes = set(curies.values())
     return curies, curie_prefixes
 

@@ -434,7 +434,7 @@ class Builder:
         curies_location = self.curies
         curies, _ = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
-            services_config = yaml.load(f)
+            services_config = yaml.safe_load(f)
         services_config['graphConfiguration']['curies'] = curies
         if self.graph_folder != combined_defaults['--graph-folder']:
             services_config['graphConfiguration']['location'] = self.graph_folder
@@ -717,7 +717,7 @@ class Builder:
         use_python = ("import sys\\n"
                       "import yaml\\n"
                       "with open(\\\"$F\\\", \\\"rt\\\") as f:\\n"
-                      "    sys.stdout.write(yaml.load(f)[\\\"graphConfiguration\\\"][\\\"location\\\"])")
+                      "    sys.stdout.write(yaml.safe_load(f)[\\\"graphConfiguration\\\"][\\\"location\\\"])")
 
         get_graph_folder = f'$(F={services_config_file}; echo -e "{use_python}" | python)'
 

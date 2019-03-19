@@ -18,12 +18,12 @@ def nsExact(namespace, slash=True):
 def _loadPrefixes():
     try:
         with open(devconfig.curies, 'rt') as f:
-            curie_map = yaml.load(f)
+            curie_map = yaml.safe_load(f)
     except FileNotFoundError:
         master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
         raw_path = 'scigraph/nifstd_curie_map.yaml?raw=true'
         curie_map = requests.get(master_blob + raw_path)
-        curie_map = yaml.load(curie_map.text)
+        curie_map = yaml.safe_load(curie_map.text)
 
     # holding place for values that are not in the curie map
     full = {

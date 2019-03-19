@@ -82,7 +82,7 @@ class Secrets:
         # sometimes the easiest solution is just to read from disk every single time
         if self.exists:
             with open(self.filename, 'rt') as f:
-                return yaml.load(f)
+                return yaml.safe_load(f)
 
     def __call__(self, *names):
         if self.exists:
@@ -138,7 +138,7 @@ class DevConfig:
             with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
                 config = {k:self._override[k] if
                         k in self._override else
-                        v for k, v in yaml.load(f).items()}
+                        v for k, v in yaml.safe_load(f).items()}
 
         return config
 
