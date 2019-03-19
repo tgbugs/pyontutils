@@ -36,7 +36,7 @@ before_install:
   - popd
 
 install:
-  - pip install pipenv pytest pytest-cov
+  - pip install pipenv
   - pip install coverage coveralls && export HAS_COVERALLS=1
   - pipenv install --dev --system --skip-lock --deploy
 
