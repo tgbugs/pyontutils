@@ -517,7 +517,7 @@ class byCol:
             ind[col_name] = self.header  # the header
             self.__indexes[col_name] = ind
 
-        for name, col in zip(header, zip(*rows)):
+        for name in header:
             @property
             def col_gen(self, n=name):
                 for row in self.rows:
