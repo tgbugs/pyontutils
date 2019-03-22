@@ -20,8 +20,7 @@ from pyontutils.core import makeGraph, createOntology, yield_recursive, build, q
 from pyontutils.core import Ont, Source
 from pyontutils.utils import chunk_list, dictParse
 from pyontutils.utils_extra import memoryCheck
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole, PREFIXES as uPREFIXES
+from pyontutils.namespaces import SO, ilxtr, makePrefixes, replacedBy, hasPart, hasRole, PREFIXES as uPREFIXES
 from pyontutils.closed_namespaces import rdf, rdfs, owl, prov, oboInOwl
 from IPython import embed
 
@@ -36,7 +35,7 @@ from IPython import embed
 #}
 
 class ncbi(dictParse):
-    superclass = ILXREPLACE('ilx_gene_concept')
+    superclass = SO['0000110']  # sequence feature
     def __init__(self, thing, graph):
         self.g = graph
         super().__init__(thing, order=['uid'])
@@ -103,7 +102,7 @@ def ncbigene_make():
 
     ng = createOntology('ncbigeneslim',
                         'NIF NCBI Gene subset',
-                        makePrefixes('ILXREPLACE', 'ilxtr', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
+                        makePrefixes('ilxtr', 'NIFRID', 'NCBIGene', 'NCBITaxon', 'skos', 'owl'),
                         'ncbigeneslim',
                         'This subset is automatically generated from the NCBI Gene database on a subset of terms listed in %s.' % IDS_FILE,
                         remote_base= 'http://ontology.neuinfo.org/NIF/')
