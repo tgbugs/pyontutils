@@ -11,6 +11,7 @@ Usage:
     ontload imports [options] <repo> <remote_base> <ontologies>...
     ontload chain [options] <repo> <remote_base> <ontologies>...
     ontload extra [options] <repo>
+    ontload patch [options] <repo>
     ontload [options]
 
 Options:
@@ -187,12 +188,13 @@ class ReproLoader:
                 zip_path = maybe_zip_path[0]  # this way we get the actual date
                 print('Graph already loaded at', zip_path)
 
+            # this needs to be run when the branch is checked out
+            # FIXME might be worth adding this to the load config?
+            self.ontologies = [get_iri(load_header(rec['url'])) for rec in config['ontologies']]
+
         self.zip_path = zip_path
         self.itrips = itrips
         self.config = config
-
-    def __call__(self):
-        return self.zip_path, self.itrips, self.config
 
     @staticmethod
     def make_graphload_config(graphload_config, graph_path,
@@ -322,8 +324,8 @@ def do_patch(patch_config, local_base):
             print(tc.blue('INFO: patching'), patchset, patchfile, targetfile)
             try:
                 out = subprocess.check_output(['patch', '-p1', '-N', '-i', patchfile.as_posix()],
-                                            cwd=repo_base.as_posix(),
-                                            stderr=subprocess.STDOUT).decode().rstrip()
+                                              cwd=repo_base.as_posix(),
+                                              stderr=subprocess.STDOUT).decode().rstrip()
                 print(out)
                 yield targetfile.as_posix()
             except subprocess.CalledProcessError as e:
@@ -674,15 +676,16 @@ def run(args):
                              graphload_config, patch_config,
                              patch, scigraph_commit,
                              check_built=check_built)
-            graph_zip, itrips, config = rl()
+
+        itrips, config = rl.itrips, rl.config
 
         if not check_built:
             deploy_scp(services_zip, sscp)
-            deploy_scp(graph_zip, scp)
+            deploy_scp(rl.graph_zip, scp)
         if not ontologies:
-            ontologies = [get_iri(load_header(rec['url'])) for rec in config['ontologies']]
+            ontologies = rl.ontologies
         print(services_zip)
-        print(graph_zip)
+        print(rl.graph_zip)
         if '--local' in args:
             return
     elif scigraph:
@@ -713,6 +716,9 @@ def run(args):
         ng_.add_known_namespaces('NIFRID')  # not officially in the curies yet...
         for_burak(ng_)
         debug = True
+    elif patch:
+        local_base = jpth(git_local, repo_name)
+        local_versions = tuple(do_patch(patch_config, local_base))
     else:
         raise BaseException('How did we possibly get here docopt?')
 
