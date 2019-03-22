@@ -681,11 +681,11 @@ def run(args):
 
         if not check_built:
             deploy_scp(services_zip, sscp)
-            deploy_scp(rl.graph_zip, scp)
+            deploy_scp(rl.zip_path, scp)
         if not ontologies:
             ontologies = rl.ontologies
         print(services_zip)
-        print(rl.graph_zip)
+        print(rl.zip_path)
         if '--local' in args:
             return
     elif scigraph:
