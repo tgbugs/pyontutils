@@ -1,8 +1,8 @@
 diff --git a/ttl/external/doid-ext.owl b/ttl/external/doid-ext.owl
-index 843a716..b716ca1 100644
+index 843a716..9a86061 100644
 --- a/ttl/external/doid-ext.owl
 +++ b/ttl/external/doid-ext.owl
-@@ -13,254 +13,6 @@ Ontology(<http://purl.obolibrary.org/obo/doid/obo/ext.owl>
+@@ -13,254 +13,8 @@ Ontology(<http://purl.obolibrary.org/obo/doid/obo/ext.owl>
  Import(<http://purl.obolibrary.org/obo/doid/imports/symp_import.owl>)
  Import(<http://purl.obolibrary.org/obo/doid/imports/omim_susc_import.owl>)
  Import(<http://purl.obolibrary.org/obo/doid/imports/geno_import.owl>)
@@ -15,7 +15,7 @@ index 843a716..b716ca1 100644
  Import(<http://purl.obolibrary.org/obo/doid/imports/trans_import.owl>)
  Import(<http://purl.obolibrary.org/obo/doid/imports/hp_import.owl>)
 -Import(<http://purl.obolibrary.org/obo/doid/imports/so_import.owl>)
--
+ 
 -Declaration(Class(obo:NCBITaxon_1))
 -Declaration(Class(doid:chebi))
 -Declaration(Class(doid:sequence))
@@ -258,3 +258,4 @@ index 843a716..b716ca1 100644
 -AnnotationAssertion(rdfs:label obo:UBERON_0001062 "anatomy"^^xsd:string)
 -)
 \ No newline at end of file
++)
