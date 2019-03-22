@@ -136,9 +136,9 @@ def makeURIs(*prefixes):
 
 # namespaces
 
-(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, ilxtr,
+(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
  ilxb, TEMP, ILX) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
-                    'NIFTTL', 'UBERON', 'BFO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
+                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
 
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
