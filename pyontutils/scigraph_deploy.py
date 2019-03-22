@@ -32,7 +32,7 @@ Options:
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log-loc=FOLDER           services logs           [default: /var/log/scigraph-services/]
+    --services-log-loc=FOLDER           services logs           [default: /var/log/scigraph/]
 
     -H --ssh-user                       if
 """
