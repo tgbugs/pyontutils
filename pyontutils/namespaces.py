@@ -92,36 +92,22 @@ def _loadPrefixes():
     }
 
     normal = {
-        'ILX':'http://uri.interlex.org/base/ilx_',
-        'ilx':'http://uri.interlex.org/base/',
-        'ilxr':'http://uri.interlex.org/base/readable/',
-        'ilxtr':'http://uri.interlex.org/tgbugs/uris/readable/',
         # for obo files with 'fake' namespaces, http://uri.interlex.org/fakeobo/uris/ eqiv to purl.obolibrary.org/
         'fobo':'http://uri.interlex.org/fakeobo/uris/obo/',
 
         'hyp':'https://hyp.is/',
 
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
-        'ILXREPLACE':'http://ILXREPLACE.org/',
         'TEMP': interlex_namespace('temp/uris/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
-        'dc':'http://purl.org/dc/elements/1.1/',
-        'dcterms':'http://purl.org/dc/terms/',
-        'dctypes':'http://purl.org/dc/dcmitype/',  # FIXME there is no agreement on qnames
         # FIXME a thought: was # intentionally used to increase user privacy? or is this just happenstance?
         'nsu':'http://www.FIXME.org/nsupper#',
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-        'owl':'http://www.w3.org/2002/07/owl#',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
-        'foaf':'http://xmlns.com/foaf/0.1/',
-        'prov':'http://www.w3.org/ns/prov#',
 
         # defined by chebi.owl, confusingly chebi#2 -> chebi1 maybe an error?
         # better to keep it consistent in case someone tries to copy and paste

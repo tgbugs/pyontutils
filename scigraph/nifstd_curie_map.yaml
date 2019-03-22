@@ -1,6 +1,18 @@
 # NO EMPTY
 '': 'file:///ERROR/EMPTY/PREFIX/BANNED/'
 
+# rdf and friends
+'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+'rdfs': 'http://www.w3.org/2000/01/rdf-schema#'
+'owl': 'http://www.w3.org/2002/07/owl#'
+'skos': 'http://www.w3.org/2004/02/skos/core#'
+'foaf': 'http://xmlns.com/foaf/0.1/'
+'prov': 'http://www.w3.org/ns/prov#'
+
+'dc': 'http://purl.org/dc/elements/1.1/'
+'dcterms': 'http://purl.org/dc/terms/'
+'dctypes': 'http://purl.org/dc/dcmitype/'  # FIXME there is no agreement on qnames
+
 # base
 'NIFSTD': 'http://uri.neuinfo.org/nif/nifstd/'
 
@@ -29,6 +41,9 @@
 
 # interlex
 'ILX': 'http://uri.interlex.org/base/ilx_'
+'ilx': 'http://uri.interlex.org/'  # NOTE no /base/
+'ilxr': 'http://uri.interlex.org/base/readable/'
+'TEMP': 'http://uri.interlex.org/temp/uris/'
 'ILXREPLACE': 'http://ILXREPLACE.org/'
 
 # interlex user/org namespaces
@@ -36,6 +51,7 @@
 'PAR': 'http://uri.interlex.org/fakeobo/uris/obo/PAR_'
 'PAXRAT': 'http://uri.interlex.org/paxinos/uris/rat/labels/'
 'NDA.CDE': 'http://uri.interlex.org/NDA/uris/datadictionary/elements/'
+'ilxtr': 'http://uri.interlex.org/tgbugs/uris/readable/'
 
 # alternate ids
 'GBIF': 'http://www.gbif.org/species/'
@@ -57,6 +73,7 @@
 'SO': 'http://purl.obolibrary.org/obo/SO_'
 'BFO': 'http://purl.obolibrary.org/obo/BFO_'
 'DOID': 'http://purl.obolibrary.org/obo/DOID_'
+'MONDO': 'http://purl.obolibrary.org/obo/MONDO_'
 'PATO': 'http://purl.obolibrary.org/obo/PATO_'
 'PR': 'http://purl.obolibrary.org/obo/PR_' 
 'PW': 'http://purl.obolibrary.org/obo/PW_'
@@ -77,6 +94,7 @@
 'CHEBI': 'http://purl.obolibrary.org/obo/CHEBI_'
 'chebi': 'http://purl.obolibrary.org/obo/chebi/'
 'FMA': 'http://purl.org/sig/ont/fma/fma'
+'fma': 'http://purl.org/sig/ont/fma/'
 'HBA': 'http://api.brain-map.org:80/api/v2/data/Structure/'  # FIXME hack :/
 'MBA': 'http://api.brain-map.org/api/v2/data/Structure/'
 #'NEMOANN': 'http://purl.bioontology.org/NEMO/ontology/NEMO_annotation_properties.owl'
