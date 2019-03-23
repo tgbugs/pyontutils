@@ -12,9 +12,14 @@ PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_confi
 
 log = makeSimpleLogger('config')
 
+
 def get_api_key():
-    try: return os.environ['SCICRUNCH_API_KEY']
-    except KeyError: return None
+    try:
+        return os.environ['SCICRUNCH_API_KEY']
+    except KeyError:
+        maybe_key = devconfig.secrets('scicrunch', 'api', devconfig.scigraph_api_user)
+        if maybe_key:
+            return maybe_key
 
 
 class dproperty(property):
@@ -320,6 +325,10 @@ class DevConfig:
     def scigraph_api(self, value):
         self._override['scigraph_api'] = value
         self.write(self.config_file.as_posix())
+
+    @default(None)
+    def scigraph_api_user(self):
+        return self.config['scigraph_api_user']
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
