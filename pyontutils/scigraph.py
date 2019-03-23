@@ -3,6 +3,11 @@ from pyontutils.config import devconfig, get_api_key
 
 scigraph_client.BASEPATH = (f'{devconfig.scigraph_api}')
 
+# WARNING if you import this module anywhere in your program
+# and you change the BASEPATH from what it is in devconfig
+# you may LEAK YOUR API KEY !!!!!!! To avoid this import
+# from scigraph_client directly and do not import this
+
 scigraph_client.restService.api_key = get_api_key()
 
 __all__ = [e for e in dir(scigraph_client)

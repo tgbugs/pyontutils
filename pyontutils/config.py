@@ -17,9 +17,10 @@ def get_api_key():
     try:
         return os.environ['SCICRUNCH_API_KEY']
     except KeyError:
-        maybe_key = devconfig.secrets('scicrunch', 'api', devconfig.scigraph_api_user)
-        if maybe_key:
-            return maybe_key
+        if 'https' in devconfig.scigraph_api and 'scicrunch.org' in devconfig.scigraph_api:
+            maybe_key = devconfig.secrets('scicrunch', 'api', devconfig.scigraph_api_user)
+            if maybe_key:
+                return maybe_key
 
 
 class dproperty(property):
