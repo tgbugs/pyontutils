@@ -16,7 +16,8 @@ import pandas as pd
 from pathlib import Path as p
 import subprocess as sb
 from ilxutils.graph2pandas import Graph2Pandas
-from ilxutils.tools import *
+from ilxutils.tools import create_pickle
+from ilxutils.args_reader import doc2args
 VERSION = '0.0.1'
 
 
@@ -43,13 +44,13 @@ class Picklize:
             print(i, len(self.files), f)
             name = p(f).stem
             output = p(self.output)/name
-            cp(Graph2Pandas(f).df, p(self.output)/name)
+            create_pickle(Graph2Pandas(f).df, p(self.output)/name)
 
 
 def main():
     from docopt import docopt
     doc = docopt(__doc__, version=VERSION)
-    args = pd.Series({k.replace('--', ''): tilda(v) for k, v in doc.items()})
+    args = doc2args(doc)
     Picklize(wildcard=args.files, output=args.output)
 
 

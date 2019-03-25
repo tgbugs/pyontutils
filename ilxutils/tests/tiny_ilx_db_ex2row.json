@@ -1,0 +1,112 @@
+{
+    "http://purl.obolibrary.org/obo/UBERON_0001063": {
+        "id": 2191983,
+        "tid": 4288,
+        "curie": "UBERON:0001063",
+        "iri": "http://purl.obolibrary.org/obo/UBERON_0001063",
+        "preferred": "1",
+        "ilx": "ilx_0104287",
+        "type": "term",
+        "label": "Flocculus",
+        "definition": ""
+    },
+    "http://uri.neuinfo.org/nif/nifstd/nlx_153221": {
+        "id": 2191944,
+        "tid": 4289,
+        "curie": "NLX:153221",
+        "iri": "http://uri.neuinfo.org/nif/nifstd/nlx_153221",
+        "preferred": "1",
+        "ilx": "ilx_0104288",
+        "type": "term",
+        "label": "Flocculus of ABA 2009",
+        "definition": ""
+    },
+    "http://uri.interlex.org/base/ilx_0104288": {
+        "id": 2191962,
+        "tid": 4289,
+        "curie": "ILX:0104288",
+        "iri": "http://uri.interlex.org/base/ilx_0104288",
+        "preferred": "0",
+        "ilx": "ilx_0104288",
+        "type": "term",
+        "label": "Flocculus of ABA 2009",
+        "definition": ""
+    },
+    "http://purl.obolibrary.org/obo/PATO_0001574": {
+        "id": 2191940,
+        "tid": 4290,
+        "curie": "PATO:0001574",
+        "iri": "http://purl.obolibrary.org/obo/PATO_0001574",
+        "preferred": "0",
+        "ilx": "ilx_0104289",
+        "type": "term",
+        "label": "Flow",
+        "definition": "The motion characteristics of fluids (liquids and gasses)."
+    },
+    "http://uri.interlex.org/base/ilx_0104289": {
+        "id": 2191948,
+        "tid": 4290,
+        "curie": "ILX:0104289",
+        "iri": "http://uri.interlex.org/base/ilx_0104289",
+        "preferred": "1",
+        "ilx": "ilx_0104289",
+        "type": "term",
+        "label": "Flow",
+        "definition": "The motion characteristics of fluids (liquids and gasses)."
+    },
+    "http://uri.neuinfo.org/nif/nifstd/nlx_150012": {
+        "id": 2787169,
+        "tid": 4291,
+        "curie": "NLX:150012",
+        "iri": "http://uri.neuinfo.org/nif/nifstd/nlx_150012",
+        "preferred": "0",
+        "ilx": "ilx_0104290",
+        "type": "term",
+        "label": "Flow Compensation",
+        "definition": "Flow Compensation."
+    },
+    "http://uri.interlex.org/base/ilx_0104290": {
+        "id": 2787173,
+        "tid": 4291,
+        "curie": "ILX:0104290",
+        "iri": "http://uri.interlex.org/base/ilx_0104290",
+        "preferred": "0",
+        "ilx": "ilx_0104290",
+        "type": "term",
+        "label": "Flow Compensation",
+        "definition": "Flow Compensation."
+    },
+    "http://uri.interlex.org/dicom/uris/terms/0018_9010": {
+        "id": 2787183,
+        "tid": 4291,
+        "curie": "DICOM:0018_9010",
+        "iri": "http://uri.interlex.org/dicom/uris/terms/0018_9010",
+        "preferred": "1",
+        "ilx": "ilx_0104290",
+        "type": "term",
+        "label": "Flow Compensation",
+        "definition": "Flow Compensation."
+    },
+    "http://uri.neuinfo.org/nif/nifstd/nlx_150013": {
+        "id": 2787263,
+        "tid": 4292,
+        "curie": "NLX:150013",
+        "iri": "http://uri.neuinfo.org/nif/nifstd/nlx_150013",
+        "preferred": "0",
+        "ilx": "ilx_0104291",
+        "type": "term",
+        "label": "Flow Compensation Direction",
+        "definition": "Flow Compensation Direction."
+    },
+    "http://uri.interlex.org/base/ilx_0104291": {
+        "id": 2787283,
+        "tid": 4292,
+        "curie": "ILX:0104291",
+        "iri": "http://uri.interlex.org/base/ilx_0104291",
+        "preferred": "0",
+        "ilx": "ilx_0104291",
+        "type": "term",
+        "label": "Flow Compensation Direction",
+        "definition": "Flow Compensation Direction."
+    }
+}
