@@ -390,6 +390,9 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         #if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
             #flag_dep(j)
 
+    # filter out owl:Nothing
+    j['edges'] = [e for e in j['edges'] if 'owl:Nothing' not in e.values()]
+
     if verbose:
         print(len(j['nodes']))
 
