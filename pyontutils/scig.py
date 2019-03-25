@@ -4,8 +4,8 @@
 Usage:
     scig v [--local --verbose --key=KEY] <id>...
     scig i [--local --verbose --key=KEY] <id>...
-    scig t [--local --verbose --limit=LIMIT --key=KEY] <term>...
-    scig s [--local --verbose --limit=LIMIT --key=KEY] <term>...
+    scig t [--local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
+    scig s [--local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
     scig g [--local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
     scig e [--local --verbose --key=KEY] <p> <s> <o>
     scig c [--local --verbose --key=KEY]
@@ -19,6 +19,7 @@ Options:
     -t --limit=LIMIT    limit number of results [default: 10]
     -k --key=KEY        api key
     -w --warn           warn on errors
+    -p --prefix=P...    filter by prefix
 
 """
 from docopt import docopt
@@ -191,11 +192,14 @@ def main():
     if args['--verbose']:
         verbose = True
 
+    kwargs = {}
+    if args['--prefix']:
+        kwargs['prefix'] = args['--prefix']
 
     if args['i'] or args['v']:
         v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose, key=api_key)
         for id_ in args['<id>']:
-            out = v.findById(id_)
+            out = v.findById(id_, **kwargs)
             if out:
                 print(id_,)
                 for key, value in sorted(out.items()):
@@ -205,7 +209,7 @@ def main():
         for term in args['<term>']:
             print(term)
             limit = args['--limit']
-            out = v.searchByTerm(term, limit=limit) if args['s'] else v.findByTerm(term, limit=limit)
+            out = v.searchByTerm(term, limit=limit) if args['s'] else v.findByTerm(term, limit=limit, **kwargs)
             if out:
                 for resp in sorted(out, key=lambda t: t['labels'][0] if t['labels'] else 'zzzzzzzzz'):
                     try:
