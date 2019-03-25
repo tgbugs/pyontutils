@@ -165,7 +165,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             if 'curie' in rec:
                 root_curie = rec['curie']
                 # FIXME https://github.com/SciGraph/SciGraph/issues/268
-                if not root_curie.endswith(':'):
+                if not root_curie.endswith(':') and '/' not in root_curie:
                     root = root_curie
                 else:
                     kwargs['curie'] = root_curie
@@ -179,6 +179,11 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             def safe_find(n):  # FIXME scigraph bug
                 if n.endswith(':'):
                     n = sgc._curies[n.rstrip(':')]
+                elif '/' in n:
+                    prefix, suffix = n.split(':')
+                    iriprefix = sgc._curies[prefix]
+                    n = iriprefix + suffix
+
                 return sgv.findById(n)
 
             out = set(n for n in flatten_tree(extras.hierarchy))
