@@ -176,11 +176,16 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
         if flatten:
+            def safe_find(n):  # FIXME scigraph bug
+                if n.endswith(':'):
+                    n = sgc._curies[n.rstrip(':')]
+                return sgv.findById(n)
+
             out = set(n for n in flatten_tree(extras.hierarchy))
-            rows = sorted((sgv.findById(n)['labels'][0] if sgv.findById(n)['labels'] else '')
+            rows = sorted((safe_find(n)['labels'][0] if safe_find(n)['labels'] else '')
                           + ',' + n for n in out
-                          if not sgv.findById(n)['deprecated'])  # FIXME so much wrong here ...
-            return '\n'.join(rows), 200, {'Content-Type':'text/plain'}
+                          if not safe_find(n)['deprecated'])  # FIXME so much wrong here ...
+            return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
         else:
             return extras.html
     except (KeyError, TypeError) as e:
