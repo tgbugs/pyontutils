@@ -11,31 +11,52 @@ Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l 
 
 See also [.travis.yml](https://github.com/SciCrunch/NIF-Ontology/blob/master/.travis.yml) for NIF-Ontology.
 
+# RPM builds
+The easiest way to deploy SciGraph to amazon is to build an RPM using [scigraph.spec](./.scigraph.spec).
+If you have a default rpmbuild setup, and you have the
+[services files](https://github.com/tgbugs/tgbugs-overlay/tree/master/dev-java/scigraph-bin/files/)
+from `tgbugs-overlay` in `rpmbuild/SOURCES`, you should be able to run the following.
+`TODO` CI for this via the SciGraph repo?
+``` bash
+rpmbuild --nodeps -ba scigraph.spec &&
+scp ~/rpmbuild/RPMS/scigraph*.rpm ${scigraph_host}:
+ssh ${scigraph_host} "sudo yum -y install scigraph*.rpm""
+
+scp services.yaml ${scigraph_host}:
+ssh ${scigraph_host} "sudo chown scigraph:scigraph services.yaml;
+                      sudo mv services.yaml ~scigraph/;"
+
+scp NIF-Ontology*.zip ${scigraph_host}:
+ssh ${scigraph_host} "sudo unzip NIF-Ontology-*-graph-*.zip
+                      export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)
+                      sudo chown -R scigraph:scigraph $GRAPH_NAME
+                      sudo mv ${GRAPH_NAME} ~scigraph/
+
+                      sudo systemctl stop scigraph
+                      sudo unlink /var/lib/scigraph/graph
+                      sudo ln -sT /var/lib/scigraph/${GRAPH_NAME} /var/lib/scigraph/graph
+                      sudo systemctl start scigraph"
+```
+
+Later installs from the 9999 version require the use of `reinstall`
+instead of `install`. If you want to have more than one service
+or have a different name for `services.yaml` then take a look at
+`/lib/systemd/system/scigraph.service` and take what you want to
+customize and put it in `/etc/systemd/system/scigraph.service.d/scigraph.conf`
+(retaining the section hearders).
+
+One alternative for systems that don't use sudo is to set an ssh key for
+the SciGraph user and use that to deposit files directly. This is probably
+preferable for a variety of reasons.
+
+I will upstream the spec file to the main SciGraph repo in the near future.
+
 # Merging commits from SciGraph/SciGraph master into upstream
 
 https://github.com/SciCrunch/SciGraph/compare/upstream...SciGraph:master
 
-# DO NOT FORGET TO ENABLE THE SERVICES AT STARTUP
-
-```
-sudo systemctl enable scigraph-services
-```
-
-# oneshots for centos 7
-
-```
-export $USER=bamboo
-sudo mkdir /opt/scigraph-services/
-sudo chown ${USER}:${USER} /opt/scigraph-services/
-sudo mkdir /var/log/scigraph-services/
-sudo chown ${USER}:${USER} /var/log/scigraph-services/
-sudo touch /etc/scigraph-services.conf
-sudo chown ${USER}:${USER} /etc/scigraph-services.conf
-sudo mkdir -p /var/scigraph-services/
-sudo chown -R ${USER}:${USER} /var/scigraph-services
-```
-
-# oneshots for rhel 7 on ec2
+# Old but possibly still useful if something strange comes up.
+## oneshots for rhel 7 on ec2
 
 ```
 sudo yum install screen vim
@@ -45,7 +66,7 @@ sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.
 sudo yum install nginx
 ```
 
-## if not handled by puppet
+### if not handled by puppet
 
 ```
 sudo yum install java-1.8.0-openjdk java-1.8.0-openjdk-devel
@@ -56,7 +77,7 @@ sudo echo "export M2_HOME=/opt/maven" > /etc/profile.d/maven.sh
 sudo echo "export PATH=${M2_HOME}/bin:${PATH}" >> /etc/profile.d/maven.sh
 ```
 
-# etc for centos 7
+## etc for centos 7
 1. local services
 
 ```
@@ -97,39 +118,3 @@ ontload scigraph-deploy config --local $(hostname) ${TARGET} -z ${BUILD_DIR}
 scp ${BUILD_DIR}/s* ${TARGET}:~/
 rm services.yaml  # prevent staleness by accident
 ```
-
-4. remote graph
-
-```
-# deploy services config
-export SERVICES_FOLDER=/opt/scigraph-services/  # FIXME from ontload as well?
-sudo cp services.yaml ${SERVICES_FOLDER}
-sudo cp start.sh ${SERVICES_FOLDER}
-sudo cp stop.sh ${SERVICES_FOLDER}
-# systemd services config
-sudo cp scigraph-services.service /etc/systemd/system/
-sudo systemctl daemon-reload
-# java server config
-sudo cp scigraph-services.conf /etc/
-
-# deploy graph
-export GRAPH_FOLDER=$(grep location services.yaml | cut -d':' -f2 | tr -d '[:space:]')
-export GRAPH_PARENT_FOLDER=$(dirname ${GRAPH_FOLDER})/
-# get a graph build TODO
-export $USER=bamboo
-curl -LOk $(curl --silent https://api.github.com/repos/SciCrunch/NIF-Ontology/releases/latest | awk '/browser_download_url/ { print $2 }' | sed 's/"//g')
-sudo unzip NIF-Ontology-*-graph-*.zip
-export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)
-sudo chown -R ${USER}:${USER} $GRAPH_NAME
-sudo mv ${GRAPH_NAME} ${GRAPH_PARENT_FOLDER}
-sudo systemctl stop scigraph-services
-sudo unlink ${GRAPH_FOLDER}
-sudo ln -sT ${GRAPH_PARENT_FOLDER}/${GRAPH_NAME} ${GRAPH_FOLDER}
-sudo systemctl start scigraph-services
-unset SERVICES_FOLDER
-unset GRAPH_FOLDER
-unset GRAPH_PARENT_FOLDER
-unset GRAPH_NAME
-```
-
-# deploy services config

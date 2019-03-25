@@ -1,8 +1,7 @@
 import types
 import rdflib
-from pyontutils import core  # to get around circular import issue
-# FIXME breaks if import this files as import pyontutils.combinators as cmb
-from pyontutils.utils import check_value
+from ontquery.terms import OntId
+from pyontutils.utils_extra import check_value
 from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 
@@ -135,7 +134,7 @@ class ObjectCombinator(Combinator):
 
     def __repr__(self):
         if isinstance(self.object, rdflib.URIRef):
-            o = core.qname(self.object)
+            o = OntId(self.object).curie
         elif isinstance(self.object, rdflib.Literal):
             o = self.object.value
         else:
@@ -170,9 +169,9 @@ class _POCombinator(Combinator):
                 raise TypeError(f'{combinator} not a combinator!') from e
 
     def __repr__(self):
-        p = core.qname(self.predicate)
+        p = OntId(self.predicate).curie
         if isinstance(self.object, rdflib.URIRef):
-            o = core.qname(self.object)
+            o = OntId(self.object).curie
         elif isinstance(self.object, rdflib.Literal):
             o = self.object.value
         else:

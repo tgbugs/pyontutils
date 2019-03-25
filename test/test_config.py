@@ -28,3 +28,16 @@ class TestConfig(unittest.TestCase):
         assert v1 != v3
         assert v2 == v3
         assert v1 == devconfig.scigraph_api
+
+    def test_set_secrets_file(self):
+        v1 = devconfig.secrets_file
+        v2 = '/tmp/not-a-thing'
+        devconfig.secrets_file = v2
+        v3 = devconfig.secrets_file
+        devconfig.secrets_file = v1
+        assert v1 != v2
+        assert v1 != v3
+        assert v2 == v3
+        assert v1 == devconfig.secrets_file
+
+

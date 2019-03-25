@@ -32,7 +32,7 @@ Options:
     -R --build-only                     build but do not deploy various components
     -L --local                          run all commands locally (runs actual python!)
 
-    --services-log-loc=FOLDER           services logs           [default: /var/log/scigraph-services/]
+    --services-log-loc=FOLDER           services logs           [default: /var/log/scigraph/]
 
     -H --ssh-user                       if
 """
@@ -56,7 +56,7 @@ from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import run as ontload_main
-from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, locate_config_file, getCuries
+from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, getCuries
 from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
@@ -434,7 +434,7 @@ class Builder:
         curies_location = self.curies
         curies, _ = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
-            services_config = yaml.load(f)
+            services_config = yaml.safe_load(f)
         services_config['graphConfiguration']['curies'] = curies
         if self.graph_folder != combined_defaults['--graph-folder']:
             services_config['graphConfiguration']['location'] = self.graph_folder
@@ -541,13 +541,13 @@ class Builder:
         else:
             return config
 
-    def locate_folder(self, path):
-        return locate_config_file(path, self.git_local)
+    #def locate_folder(self, path):
+        #return locate_config_file(path, self.git_local)
 
-    def locate_config(self, config):
-        config = self._config_path(config)
-        folder = self.locate_folder(self.scigraph_config_folder)
-        return jpth(folder, config)
+    #def locate_config(self, config):
+        #config = self._config_path(config)
+        #folder = self.locate_folder(self.scigraph_config_folder)
+        #return jpth(folder, config)
 
     def locate_config_template(self, config):
         extension = '.template'  # XXX this line defines the expected template extension
@@ -717,7 +717,7 @@ class Builder:
         use_python = ("import sys\\n"
                       "import yaml\\n"
                       "with open(\\\"$F\\\", \\\"rt\\\") as f:\\n"
-                      "    sys.stdout.write(yaml.load(f)[\\\"graphConfiguration\\\"][\\\"location\\\"])")
+                      "    sys.stdout.write(yaml.safe_load(f)[\\\"graphConfiguration\\\"][\\\"location\\\"])")
 
         get_graph_folder = f'$(F={services_config_file}; echo -e "{use_python}" | python)'
 

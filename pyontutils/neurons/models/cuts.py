@@ -6,8 +6,9 @@ from pathlib import Path
 import rdflib
 import ontquery as oq
 from pyontutils.utils import byCol, relative_path, noneMembers
-from pyontutils.core import resSource, OntId, OntCuries
+from pyontutils.core import resSource, OntId
 from pyontutils.config import devconfig
+from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID
 from pyontutils.closed_namespaces import rdfs
 # import these last so that graphBase resets (sigh)

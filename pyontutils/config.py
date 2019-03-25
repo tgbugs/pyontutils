@@ -7,12 +7,20 @@ from functools import wraps
 from pyontutils.utils import TermColors as tc, makeSimpleLogger
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
+default_config = Path(__file__).parent / 'devconfig.yaml'
+PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
 
 log = makeSimpleLogger('config')
 
+
 def get_api_key():
-    try: return os.environ['SCICRUNCH_API_KEY']
-    except KeyError: return None
+    try:
+        return os.environ['SCICRUNCH_API_KEY']
+    except KeyError:
+        if 'https' in devconfig.scigraph_api and 'scicrunch.org' in devconfig.scigraph_api:
+            maybe_key = devconfig.secrets('scicrunch', 'api', devconfig.scigraph_api_user)
+            if maybe_key:
+                return maybe_key
 
 
 class dproperty(property):
@@ -71,7 +79,7 @@ class Secrets:
         if not e:
             log.warning(f'secrets file {self.filename} does not exist. '
                         'You can set an alternate path under the secrets_file: '
-                        'variable in {self.devconfig.config_file}')
+                        f'variable in {self.devconfig.config_file}')
 
         return e
 
@@ -80,43 +88,65 @@ class Secrets:
         # sometimes the easiest solution is just to read from disk every single time
         if self.exists:
             with open(self.filename, 'rt') as f:
-                return yaml.load(f)
+                return yaml.safe_load(f)
 
-    def __call__(self, name):
+    def __call__(self, *names):
         if self.exists:
             nidm = self.name_id_map
             # NOTE under these circumstances this pattern is ok because anyone
             # or anything who can call this function can access the secrets file.
             # Normally this would be an EXTREMELY DANGEROUS PATTERN. Because short
             # secrets could be exposted by brute force, but in thise case it is ok
-            # because it is more important to alter the user that they have just
+            # because it is more important to alert the user that they have just
             # tried to use a secret as a name and that it might be in their code.
-            if name in set(nidm.values()):
-                ANGRY = '*' * len(name)
-                raise ValueError('WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
-            else:
-                return nidm[name]
+            def all_values(d):
+                for v in d.values():
+                    if isinstance(v, dict):
+                        yield from all_values(v)
+                    else:
+                        yield v
 
+            av = set(all_values(nidm))
+            current = nidm
+            for name in names:
+                if name in av:
+                    ANGRY = '*' * len(name)
+                    raise ValueError(f'WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
+                else:
+                    current = current[name]
+
+            if isinstance(current, dict):
+                raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
+
+            return current
 
 class DevConfig:
-    skip = 'config', 'write', 'ontology_remote_repo', 'v'
-    def __init__(self, config_file=Path(__file__).parent / 'devconfig.yaml'):
+    skip = 'config', 'write', 'ontology_remote_repo', 'v', 'secrets'
+    secrets = None  # prevent AttributeError during bootstrap
+    def __init__(self, config_file=PYONTUTILS_DEVCONFIG):
         self._override = {}
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
-        self.secrets = Secrets(self)
+
+    @property
+    def secrets(self):
+        if not hasattr(self, '__secrets'):
+            self.__secrets = Secrets(self)
+        return self.__secrets
 
     @property
     def config(self):
         """ Allows changing the config on the fly """
         # TODO more efficient to read once and put watch on the file
-        with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
-            config = {k:self._override[k] if
-                      k in self._override else
-                      v for k, v in yaml.load(f).items()}
+        config = {}
+        if self.config_file.exists():
+            with open(self.config_file.as_posix(), 'rt') as f:  # 3.5/pypy3 can't open Path directly
+                config = {k:self._override[k] if
+                        k in self._override else
+                        v for k, v in yaml.safe_load(f).items()}
 
-        return config if config else None
+        return config
 
     @property
     def _config(self):
@@ -135,9 +165,11 @@ class DevConfig:
 
     def write(self, file=None):
         if file is None:
-            file = (Path(__file__).parent / 'devconfig.yaml').as_posix()
+            file = (PYONTUTILS_DEVCONFIG).as_posix()
 
-        config = {k:str(v) for k, v in self._config.items()}
+        config = self.config
+        new_config = {k:str(v) for k, v in self._config.items()}
+        config.update(new_config)  # roundtrip keys that we don't manage in this class
 
         if config:
             with open(file, 'wt') as f:
@@ -157,6 +189,13 @@ class DevConfig:
     @default(Path('~/pyontutils-secrets.yaml').expanduser().as_posix())
     def secrets_file(self):
         return self.config['secrets_file']
+
+    @secrets_file.setter
+    def secrets_file(self, value):
+        if isinstance(value, Path):
+            value = value.as_posix()
+        self._override['secrets_file'] = value
+        self.write(self.config_file.as_posix())
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
@@ -221,7 +260,11 @@ class DevConfig:
                     return add_default(self._ontology_local_repo.as_posix())
             else:
                 raise ValueError('config entry for ontology_local_repo is empty')
-        except (KeyError, ValueError, FileNotFoundError) as e:
+        except (KeyError, ValueError, TypeError, FileNotFoundError) as e:
+            # key for line missing from config
+            # value from where we raise above if olr is the empty string ''
+            # type for key present but value is None
+            # file not found for path does not exist
             return add_default(self._ontology_local_repo) if self._ontology_local_repo else add_default()
 
     @property
@@ -232,8 +275,8 @@ class DevConfig:
     def _ontology_local_repo(self):
         try:
             stated_repo = Path(self.config['ontology_local_repo'])
-        except FileNotFoundError:
-            stated_repo = Path('/dev/null/hahaha')
+        except (KeyError, TypeError, FileNotFoundError) as e:
+            stated_repo = Path('/dev/null/does-not-exist')
 
         maybe_repo = self._maybe_repo
         if stated_repo.exists():
@@ -255,7 +298,7 @@ class DevConfig:
                 log.warning(tc.red('WARNING:') +
                             f'No repository found in any parent directory of {maybe_start}')
 
-        return Path('/dev/null')  # seems reaonsable ...
+        return Path('/dev/null/does-not-exist')  # seems reaonsable ...
 
     @default((Path(__file__).parent / 'resources').as_posix())
     def resources(self):
@@ -283,6 +326,10 @@ class DevConfig:
     def scigraph_api(self, value):
         self._override['scigraph_api'] = value
         self.write(self.config_file.as_posix())
+
+    @default(None)
+    def scigraph_api_user(self):
+        return self.config['scigraph_api_user']
 
     @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):

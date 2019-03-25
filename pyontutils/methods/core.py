@@ -1,6 +1,7 @@
 import rdflib
-from pyontutils.core import simpleOnt, OntId, OntCuries, mGraph
-from pyontutils.namespaces import makeNamespaces, NIFTTL, NIFRID, ilxtr, BFO
+from pyontutils.core import simpleOnt, OntId, mGraph
+from pyontutils.namespaces import OntCuries, makeNamespaces
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.namespaces import partOf, definition
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
 from pyontutils.combinators import oc, oc_, odp, oop, olit, oec

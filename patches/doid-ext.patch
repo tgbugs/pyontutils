@@ -1,10 +1,12 @@
+diff --git a/ttl/external/doid.owl b/ttl/external/doid.owl
+index e4c1f29..5dd8bb5 100644
 --- a/ttl/external/doid.owl
 +++ b/ttl/external/doid.owl
-@@ -15,7 +15,6 @@
-      xmlns:dc="http://purl.org/dc/elements/1.1/">
+@@ -13,7 +13,6 @@
+      xmlns:oboInOwl="http://www.geneontology.org/formats/oboInOwl#">
      <owl:Ontology rdf:about="http://purl.obolibrary.org/obo/doid.owl">
-         <owl:versionIRI rdf:resource="http://purl.obolibrary.org/obo/doid/releases/2018-05-11/doid.owl"/>
+         <owl:versionIRI rdf:resource="http://purl.obolibrary.org/obo/doid/releases/2019-03-01/doid.owl"/>
 -        <owl:imports rdf:resource="http://purl.obolibrary.org/obo/doid/obo/ext.owl"/>
-         <oboInOwl:default-namespace rdf:datatype="http://www.w3.org/2001/XMLSchema#string">disease_ontology</oboInOwl:default-namespace>
-         <oboInOwl:saved-by rdf:datatype="http://www.w3.org/2001/XMLSchema#string">lschriml</oboInOwl:saved-by>
-         <rdfs:comment>The Disease Ontology content is available via the Creative Commons Public Domain Dedication CC0 1.0 Universal license (https://creativecommons.org/publicdomain/zero/1.0/).</rdfs:comment>
+         <dc:description>The Disease Ontology has been developed as a standardized ontology for human disease with the purpose of providing the biomedical community with consistent, reusable and sustainable descriptions of human disease terms, phenotype characteristics and related medical vocabulary disease concepts.</dc:description>
+         <dc:title>Human Disease Ontology</dc:title>
+         <terms:license rdf:resource="https://creativecommons.org/publicdomain/zero/1.0/"/>

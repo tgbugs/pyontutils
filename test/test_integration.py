@@ -63,6 +63,7 @@ def populate_tests(only=tuple(), do_mains=True):
     skip = ('cocomac_uberon',  # known broken
             'old_neuron_example',  # known broken
             'cuts',  # issues with neuron_models.compiled vs load from ontology
+            'blackfynn_api',  # needed a temporary place to live, has many extra imports
     )
     if 'TRAVIS' in os.environ:
         skip += ('librdf',  # getting python3-librdf installed is too much of a pain atm
@@ -80,6 +81,7 @@ def populate_tests(only=tuple(), do_mains=True):
                'neurons/models/ma2015',
                'neurons/models/cuts',
                'neurons/build',
+               'neurons/sheets',
               )
     print('checkout ok:', checkout_ok)
 

@@ -1,6 +1,7 @@
 import yaml
 import rdflib
 import requests
+from ontquery.terms import OntCuries
 from pyontutils.config import devconfig
 
 # prefixes
@@ -17,12 +18,12 @@ def nsExact(namespace, slash=True):
 def _loadPrefixes():
     try:
         with open(devconfig.curies, 'rt') as f:
-            curie_map = yaml.load(f)
+            curie_map = yaml.safe_load(f)
     except FileNotFoundError:
         master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
         raw_path = 'scigraph/nifstd_curie_map.yaml?raw=true'
         curie_map = requests.get(master_blob + raw_path)
-        curie_map = yaml.load(curie_map.text)
+        curie_map = yaml.safe_load(curie_map.text)
 
     # holding place for values that are not in the curie map
     full = {
@@ -91,35 +92,22 @@ def _loadPrefixes():
     }
 
     normal = {
-        'ILX':'http://uri.interlex.org/base/ilx_',
-        'tmp':'http://uri.interlex.org/base/tmp_',
-        'ilx':'http://uri.interlex.org/base/',
-        'ilxr':'http://uri.interlex.org/base/readable/',
-        'ilxtr':'http://uri.interlex.org/tgbugs/uris/readable/',
         # for obo files with 'fake' namespaces, http://uri.interlex.org/fakeobo/uris/ eqiv to purl.obolibrary.org/
         'fobo':'http://uri.interlex.org/fakeobo/uris/obo/',
 
+        'hyp':'https://hyp.is/',
+
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
-        'ILXREPLACE':'http://ILXREPLACE.org/',
         'TEMP': interlex_namespace('temp/uris/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
         'NIFRET':'http://ontology.neuinfo.org/NIF/Retired/NIF-Retired.owl#',
         'NLXWIKI':'http://neurolex.org/wiki/',
-        'dc':'http://purl.org/dc/elements/1.1/',
-        'dcterms':'http://purl.org/dc/terms/',
-        'dctypes':'http://purl.org/dc/dcmitype/',  # FIXME there is no agreement on qnames
         # FIXME a thought: was # intentionally used to increase user privacy? or is this just happenstance?
         'nsu':'http://www.FIXME.org/nsupper#',
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-        'owl':'http://www.w3.org/2002/07/owl#',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'rdf':'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'rdfs':'http://www.w3.org/2000/01/rdf-schema#',
-        'foaf':'http://xmlns.com/foaf/0.1/',
-        'prov':'http://www.w3.org/ns/prov#',
 
         # defined by chebi.owl, confusingly chebi#2 -> chebi1 maybe an error?
         # better to keep it consistent in case someone tries to copy and paste
@@ -135,6 +123,8 @@ def _loadPrefixes():
 
 PREFIXES = _loadPrefixes()
 
+OntCuries(PREFIXES)  # anything importing this file should see these bindings
+
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
 
@@ -146,9 +136,9 @@ def makeURIs(*prefixes):
 
 # namespaces
 
-(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, ilxtr,
+(HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
  ilxb, TEMP, ILX) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
-                    'NIFTTL', 'UBERON', 'BFO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
+                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
 
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
@@ -178,8 +168,8 @@ WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))
 
 (replacedBy, definition, hasPart, hasRole, hasParticipant, hasInput, hasOutput,
- realizes, partOf, participatesIn, locatedIn, isAbout,
+ realizes, partOf, participatesIn, locatedIn, isAbout, editorNote,
 ) = makeURIs('replacedBy', 'definition', 'hasPart', 'hasRole', 'hasParticipant',
              'hasInput', 'hasOutput', 'realizes', 'partOf', 'participatesIn',
-             'locatedIn', 'isAbout',
+             'locatedIn', 'isAbout', 'editorNote',
             )

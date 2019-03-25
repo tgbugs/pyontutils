@@ -1,7 +1,7 @@
 from rdflib import Literal
-from pyontutils.core import OntCuries, OntId, OntTerm
+from pyontutils.core import OntId, OntTerm
 from pyontutils.core import simpleOnt
-from pyontutils.namespaces import partOf
+from pyontutils.namespaces import OntCuries, partOf
 from pyontutils.namespaces import NIFRID, ilxtr, ilx, BFO
 from pyontutils.namespaces import definition, hasPart
 from pyontutils.combinators import unionOf, intersectionOf
@@ -309,6 +309,7 @@ triples += (  # material entities
     oc(OntTerm('BIRNLEX:2041', label='Electron microscope', synonyms=[]), ilxtr.microscope),
     (OntTerm('BIRNLEX:2029', label='Confocal microscope'), rdfs.subClassOf, ilxtr.lightMicroscope),
     oc(ilxtr.DICmicroscope, ilxtr.lightMicroscope),
+    oc(ilxtr.lightSheetMicroscope, ilxtr.lightMicroscope),
     oc(ilxtr.microtome, ilxtr.materialEntity),
     oc(ilxtr.serialBlockfaceMicrotome, ilxtr.microtome),
     oc(ilxtr.ultramicrotome, ilxtr.microtome),
@@ -740,6 +741,11 @@ triples += (  # aspects
         restriction(ilxtr.hasMaterialContext,
                     ilxtr.measurableReferenceFrame)),
 
+    oc(asp.position, asp.spatial),
+    oc_(asp.position,
+        restriction(ilxtr.hasMaterialContext,
+                    ilxtr.measurableReferenceFrame)),
+
     oc(asp.thickness, asp.nonLocal),
     oc_(asp.thickness,
         restriction(ilxtr.hasAspectContext, asp.orientation)),
@@ -815,7 +821,7 @@ triples += (
     (ilxtr.cellLabel, ilxtr.hasTracingStartLocation, ilxtr.nervousSystemRegion),  # FIXME find correct UBERON id
     (ilxtr.activeLabel, ilxtr.hasDeliveryVector, ilxtr.someVector),
 
-    (ilxtr.interLabel, owl.disjointWith, ilxtr.activeLabel),
+    (ilxtr.inertLabel, owl.disjointWith, ilxtr.activeLabel),
 )
 
 # FIXME cellLabel is tracer/logic + contrast/color??!

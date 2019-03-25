@@ -804,7 +804,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                                         d['labels'])
                                         for d in data])
                     for d in data:
-                        if 'PR:' in d['curie']:
+                        if 'curie' in d and 'PR:' in d['curie']:
                             sgt = ng.expand(d['curie'])
                             ng.add_hierarchy(sgt, p, s)
                             ng.g.remove((s, p, o_lit))

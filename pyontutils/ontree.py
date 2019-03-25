@@ -10,6 +10,7 @@ Usage:
 Options:
     -a --api=API            Full url to SciGraph api endpoint
     -k --key=APIKEY         apikey for SciGraph instance
+    -p --port=PORT          port on which to run the server [default: 8000]
     -f --input-file=FILE    don't use SciGraph, load an individual file instead
     -o --outgoing           if not specified defaults to incoming
     -b --both               if specified goes in both directions
@@ -32,7 +33,7 @@ from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.utils import getSourceLine
 from pyontutils.ontload import import_tree
 from pyontutils.htmlfun import htmldoc, titletag, atag
-from pyontutils.hierarchies import Query, creatTree, dematerialize
+from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)
@@ -78,6 +79,9 @@ class ImportChain:
 
     def make_import_chain(self, ontology='nif.ttl'):
         itrips = self.get_itrips()
+        if not any(ontology in t[0] for t in itrips):
+            return None, None
+
         ontologies = ontology,  # hack around bad code in ontload
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
@@ -90,10 +94,16 @@ class ImportChain:
 
     def write_import_chain(self, location='/tmp/'):
         tree, extra  = self.make_import_chain()
-        self.name = Path(next(iter(tree.keys()))).name
-        self.path = Path(location, f'{self.name}-import-closure.html')
+        if tree is None:
+            self.path = '/tmp/noimport.html'
+            html = ''
+        else:
+            self.name = Path(next(iter(tree.keys()))).name
+            self.path = Path(location, f'{self.name}-import-closure.html')
+            html = extra.html.replace('NIFTTL:', '')
+
         with open(self.path.as_posix(), 'wt') as f:
-            f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
+            f.write(html)  # much more readable
 
 
 def graphFromGithub(link, verbose=False):
@@ -108,7 +118,7 @@ def makeProv(pred, root, wgb):
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False):
+def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
@@ -128,12 +138,16 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return abort(422, 'Unknown predicate.')
     else:
         kwargs['graph'] = sgg
-        versionIRI = [e['obj']
-                      for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
-                                                'NIF/ttl/nif.ttl')['edges']
-                      if e['pred'] == 'versionIRI'][0]
-        #print(versionIRI)
-        prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
+        # FIXME this does not work for a generic scigraph load ...
+        # and it should not be calculated every time anyway!
+        # oh look, here we are needed a class again
+        if False:
+            versionIRI = [e['obj']
+                        for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
+                                                  'NIF/ttl/nif.ttl')['edges']
+                        if e['pred'] == 'versionIRI'][0]
+            #print(versionIRI)
+            prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
@@ -161,7 +175,14 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
 
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
-        return extras.html
+        if flatten:
+            out = set(n for n in flatten_tree(extras.hierarchy))
+            rows = sorted((sgv.findById(n)['labels'][0] if sgv.findById(n)['labels'] else '')
+                          + ',' + n for n in out
+                          if not sgv.findById(n)['deprecated'])  # FIXME so much wrong here ...
+            return '\n'.join(rows), 200, {'Content-Type':'text/plain'}
+        else:
+            return extras.html
     except (KeyError, TypeError) as e:
         if verbose:
             print(e)
@@ -188,6 +209,7 @@ def getArgs(request):
             'branch':'master',
             'restriction':False,  # True False
             'local':False,  # True False  # canonoical vs scigraph ? interlex?
+            'flatten':False,
            }
 
     def convert(k):
@@ -222,6 +244,7 @@ def sanitize(pred, kwargs):
 examples = (
     ('Brain parts', hpp, 'UBERON:0000955', '?direction=OUTGOING'),  # FIXME direction=lol doesn't cause issues...
     ('Brain parts alt', po, 'UBERON:0000955'),
+    ('Brain parts alt flat', po, 'UBERON:0000955', '?flatten=true'),
     ('Anatomical entities', a, 'UBERON:0001062'),
     ('Cell parts', a, 'GO:0044464'),
     ('Cells', a, 'SAO:1813327414'),
@@ -371,6 +394,8 @@ def test():
     for _, predicate, root, *_ in examples + extra_examples:
         if root == 'UBERON:0001062':
             continue  # too big
+        if root == 'PAXRAT:':
+            continue  # not an official curie yet
 
         print('ontree testing', predicate, root)
         if root.startswith('http'):
@@ -414,7 +439,7 @@ def main():
             sgc.api_key = api_key
         app = server(verbose=verbose)
         app.debug = False
-        app.run(host='localhost', port=8000, threaded=True)  # nginxwoo
+        app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
         os.sys.exit()
     else:
