@@ -479,10 +479,15 @@ def main():
     ind = ' ' * (tw + len('terms=['))
     functions = ''
     for name, uri in sorted(uris.items()):
+        print(uri)
         try:
             g = Graph().parse(uri.rstrip('#'))
         except PluginException:
-            g = Graph().parse(uri.rstrip('#') + '.owl')
+            try:
+                g = Graph().parse(uri.rstrip('#') + '.owl')
+            except PluginException:  # redirecting via github breaks mimetypes (sigh)
+                g = Graph().parse(uri.rstrip('#') + '.owl', format='xml')
+
         sep = uri[-1]
         globals().update(locals())
         terms = sorted(set(s.rsplit(sep, 1)[-1]
