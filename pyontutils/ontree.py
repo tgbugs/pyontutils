@@ -21,6 +21,7 @@ Options:
 
 import os
 import re
+import asyncio
 import subprocess
 from pathlib import Path
 from datetime import datetime
@@ -31,6 +32,7 @@ from docopt import docopt, parse_defaults
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.utils import getSourceLine
+from pyontutils.utils import Async, deferred
 from pyontutils.ontload import import_tree
 from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
@@ -68,9 +70,9 @@ class ImportChain:
     def get_itrips(self):
         results = self.get_scigraph_onts()
         iris = sorted(set(r['iri'] for r in results))
-        nodes = [(i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
-                                           direction='OUTGOING'))
-                 for i in iris]
+        gin = lambda i: (i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
+                                                  direction='OUTGOING'))
+        nodes = Async()(deferred(gin)(i) for i in iris)
         imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
                          for e in n['edges']])
                    for i, n in nodes if n]
@@ -197,10 +199,11 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
                     return sgv.findById(n)
 
             out = set(n for n in flatten_tree(extras.hierarchy))
-            rows = sorted(((safe_find(n)['labels'][0] if safe_find(n)['labels'] else '')
-                           + ',' + n for n in out
-                           # FIXME so much wrong here ...
-                           if not safe_find(n)['deprecated']), key=lambda lid: lid.lower())
+            lrecs = Async()(deferred(safe_find)(n) for n in out)
+            rows = sorted(((r['labels'][0] if r['labels'] else '')
+                           + ',' + n for r, n in zip(lrecs, out)
+                           # FIXME still stuff wrong, but better for non cache case
+                           if not r['deprecated']), key=lambda lid: lid.lower())
             return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
         else:
             return extras.html
@@ -321,8 +324,18 @@ def server(api_key=None, verbose=False):
     importchain = ImportChain(wasGeneratedBy=wasGeneratedBy)
     importchain.make_import_chain()  # run this once, restart services on a new release
 
+    loop = asyncio.get_event_loop()
     app = Flask('ontology tree service')
+    #app.config['loop'] = loop
+
     basename = 'trees'
+
+    @app.before_first_request
+    def runonce():
+        # set the eventloop in worker threads so that Async can use it
+        # TODO not sure if this works as expected if there is more than
+        # one worker thread
+        asyncio.set_event_loop(loop)
 
     @app.route(f'/{basename}', methods=['GET'])
     @app.route(f'/{basename}/', methods=['GET'])
