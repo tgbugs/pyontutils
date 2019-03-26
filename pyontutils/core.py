@@ -823,7 +823,7 @@ class Source(tuple):
             if cls._type == 'git-local':
                 object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
             else:
-                object = rdflib.URIRef(cls.source)
+                object = rdflib.URIRef(cls.source.as_posix())
             if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):  # FIXME no help on mispelling
                 cls.iri_head = object
                 if hasattr(cls.artifact, 'hadDerivation'):

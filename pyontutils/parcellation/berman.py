@@ -93,29 +93,39 @@ class BermanSrc(resSource):
         Adding dry_run/bootstrap to __new__ sort of helps? """
         """ Have to run this out here because resSource is handicapped """
         data = []
-        for folder in cls.source_images.glob('*'):
-            plate_num = int(folder.stem)
-            text_file = cls.source / f'{plate_num}.txt'
-            if not text_file.exists() or cls.run_ocr:
-                legends = []
-                raw_text = ''
-                for img in folder.glob('*.png'):
-                    print('num', plate_num, img.stem)
-                    p = subprocess.Popen(('tesseract',
-                                            img.as_posix(),
-                                            'stdout', '-l', 'eng', '--oem', '2', '--psm', '6'),
-                                        stdout=subprocess.PIPE)
-                    bytes_text, err = p.communicate()
-                    raw_text += bytes_text.decode() + '\n'
+        if cls.source_images.exists():
+            for folder in cls.source_images.glob('*'):
+                plate_num = int(folder.stem)
+                text_file = cls.source / f'{plate_num}.txt'
+                if not text_file.exists() or cls.run_ocr:
+                    legends = []
+                    raw_text = ''
+                    for img in folder.glob('*.png'):
+                        print('num', plate_num, img.stem)
+                        p = subprocess.Popen(('tesseract',
+                                                img.as_posix(),
+                                                'stdout', '-l', 'eng', '--oem', '2', '--psm', '6'),
+                                            stdout=subprocess.PIPE)
+                        bytes_text, err = p.communicate()
+                        raw_text += bytes_text.decode() + '\n'
 
-                with open(text_file, 'wt') as f:
-                    f.write(raw_text)
-            else:
+                    with open(text_file, 'wt') as f:
+                        f.write(raw_text)
+                else:
+                    with open(text_file, 'rt') as f:
+                        raw_text = f.read()
+
+                legends = get_legends(raw_text)
+                data.append((plate_num, legends))
+
+        elif cls.source.exists():
+            for text_file in cls.source.glob('*.txt'):
+                plate_num = int(text_file.stem)
                 with open(text_file, 'rt') as f:
                     raw_text = f.read()
 
-            legends = get_legends(raw_text)
-            data.append((plate_num, legends))
+                legends = get_legends(raw_text)
+                data.append((plate_num, legends))
 
         return data
 
