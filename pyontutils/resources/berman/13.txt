@@ -1,0 +1,53 @@
+IFT infratrigeminal nucleus (8)
+
+INA nucleus interpositus, anterior division (11)
+
+P pyramidal tract
+
+PH nucleus praepositus hypoglossi (8)
+
+PON _ preolivary nucleus (15)
+
+RB restiform body
+
+SA stria acustica
+
+SGL _ subependymal granular layer (5)
+
+SOM _ medial nucleus of the superior olive (15)
+
+T nucleus of the trapezoid body (15)
+
+TB trapezoid body
+
+V4 fourth ventricle
+
+VLD _ lateral vestibular nucleus, dorsal division (13)
+VLV _ lateral vestibular nucleus, ventral division (13)
+VMN _ medial vestibular nucleus (10)
+
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+5ST _ spinal trigeminal tract
+
+6 abducens nucleus (14)
+
+7G genu of the facial nerve
+
+7L facial nucleus, lateral division (12)
+7M facial nucleus, medial division (12)
+C cerebral cortex
+
+CB cerebellar cortex
+
+CGL _ cochlear granular layer (12)
+
+Cl inferior central nucleus (13)
+
+CN cochlear nerve
+
+CVA _ anteroventral cochlear nucleus (12)
+CVP _ posteroventral cochlear nucleus (12)
+FTL lateral tegmental field (3)
+
+FTM _ magnocellular tegmental field (11)
+

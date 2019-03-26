@@ -1,0 +1,60 @@
+SB subiculum
+SNL _ substantia nigra, lateral division (26)
+SNR _ substantia nigra, reticular division (26)
+
+MGM _ magnocellular nucleus of the medial geniculate body
+MGP _ principal nucleus of the medial geniculate body
+OR optic radiation
+
+OT optic tract
+
+OTN _ nucleus of the optic tract
+
+PAG _ periaqueductal gray (23)
+
+PCN _ nucleus of the posterior commissure (28)
+
+PIN pineal body
+
+PO posterior complex
+
+PP pes pedunculi
+
+PSB _ presubicular cortex
+
+PTM _ medial pretectal area
+
+PUL _ pulvinar
+
+R red nucleus (26)
+
+RF retroflex bundle
+
+3N oculomotor nerve
+
+AF Ammon‘s formation
+
+AQ aqueduct
+
+BIN _ nucleus of the brachium of the inferior colliculus (28)
+C cerebral cortex
+
+198 corpus callosum
+
+ENT _ entorhinal cortex
+
+EW Edinger—Westphal nucleus (27)
+
+F fornix
+
+FC commissure of the fornix
+
+FTC _ central tegmental field (25)
+
+ICA interstitial nucleus of Cajal (29)
+
+IF interfascicular nucleus (28)
+
+LGD _ dorsal nucleus of the lateral geniculate body
+LR rostral linear nucleus (27)
+

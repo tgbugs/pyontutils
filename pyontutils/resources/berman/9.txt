@@ -1,0 +1,44 @@
+IOP _ principal nucleus of the inferior olive (9)
+P pyramidal tract
+
+PH nucleus praepositus hypoglossi (8)
+
+PPR _ postpyramidal nucleus of the raphe (10)
+RB restiform body
+
+RFN _ retrofacial nucleus (9)
+
+V4 fourth ventricle
+
+VIN inferior vestibular nucleus (10)
+
+VMN _ medial vestibular nucleus (10)
+
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+SST _ spinal trigeminal tract
+
+10N _ vagus nerve
+
+CB cerebellar cortex
+
+CBL _ lateral cerebellar nucleus (11)
+
+CBM _ medial cerebellar nucleus (11)
+
+Cl inferior central nucleus (13)
+
+CX external cuneate nucleus (7)
+
+FTG _ gigantocellular tegmental field (11)
+
+FTL lateral tegmental field (3)
+
+FTM _ magnocellular tegmental field (11)
+
+IFT infratrigeminal nucleus (8)
+
+INP nucleus interpositus, posterior division (11)
+
+IOD dorsal accessory nucleus of the inferior olive (9)
+IOM _ medial accessory inferior olive (9)
+

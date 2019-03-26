@@ -1,0 +1,37 @@
+PAG _ periaqueductal gray (23)
+
+PBG _ parabigeminal nucleus (24)
+
+PGR _ pontine gray, rostroventral division (22)
+RR retrorubral nucleus (26)
+
+SCI superior colliculus, intermediate layer (25)
+SCS _ superior colliculus, superficial layer (25)
+
+3 oculomotor nucleus (27)
+
+5ME _ mesencephalic trigeminal nucleus (19)
+
+SN trigeminal nerve
+
+AF Ammon‘s formation
+
+AQ aqueduct
+
+BCX _ decussation of the brachium conjunctivum
+
+BIN nucleus of the brachium of the inferior colliculus (28)
+C cerebral cortex
+
+FTC _ central tegmental field (25)
+
+al posterior interpeduncular nucleus, inner division (24)
+IPO posterior interpeduncular nucleus, outer division (24)
+IPP paramedian interpeduncular nucleus (24)
+
+LC central linear nucleus (25)
+
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+

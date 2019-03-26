@@ -1,0 +1,40 @@
+PAG _ periaqueductal gray (23)
+
+PBG _ parabigeminal nucleus (24)
+
+PGD _ pontine gray, dorsolateral division (22)
+PGL _ pontine gray, lateral division (22)
+
+PGM _ pontine gray, medial division (22)
+
+PGR _ pontine gray, rostroventral division (22)
+SCI superior colliculus, intermediate layer (25)
+SCS _ superior colliculus, superficial layer (25)
+
+4 trochlear nucleus (23)
+
+SN trigeminal nerve
+
+AQ aqueduct
+
+BCX _ decussation of the brachium conjunctivum
+
+BIN _ nucleus of the brachium of the inferior colliculus (28)
+BP brachium pontis
+
+C cerebral cortex
+
+DRM _ dorsal nucleus of the raphe, median division (22)
+FTC _ central tegmental field (25)
+
+ICX external nucleus of the inferior colliculus (21)
+
+IPA apical interpeduncular nucleus (24)
+
+IPO posterior interpeduncular nucleus, outer division (24)
+LV lateral ventricle
+
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+

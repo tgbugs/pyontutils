@@ -1,0 +1,42 @@
+LRI lateral reticular nucleus, internal division (2)
+LRX _ lateral reticular nucleus, external division (2)
+P pyramidal tract
+
+PR paramedian reticular nucleus (6)
+
+$ solitary tract
+
+SGL _ subependymal granular layer (5)
+
+SM medial nucleus of the solitary tract (4)
+
+V4 fourth ventricle
+
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+5ST _ spinal trigeminal tract
+
+12 hypoglossal nucleus (5)
+
+12N _ hypoglossal nerve
+
+AMB _ nucleus ambiguus (5)
+
+CB cerebellar cortex
+
+Cl inferior central nucleus (13)
+
+CUR _ cuneate nucleus, rostral division (1)
+
+CX external cuneate nucleus (7)
+
+DMV _ dorsal motor nucleus of the vagus (5)
+
+FTL lateral tegmental field (3)
+
+IFT infratrigeminal nucleus (8)
+
+INT nucleus intercalatus (5)
+
+IOD _ dorsal accessory nucleus of the inferior olive (9)
+IOM _ medial accessory inferior olive (9)
+

@@ -1,0 +1,70 @@
+PTM _ medial pretectal area
+
+PUL _ pulvinar
+
+R red nucleus (26)
+
+RF retroflex bundle
+
+SB subiculum
+
+SCO _ subcommissural organ (29)
+
+SNL _ substantia nigra, lateral division (26)
+SNR _ substantia nigra, reticular division (26)
+VTA _ ventral tegmental area of Tsai (27)
+
+IF interfascicular nucleus (28)
+
+LGD _ dorsal nucleus of the lateral geniculate body
+LP lateral posterior complex
+
+MGM _ magnocellular nucleus of the medial geniculate body
+MGP _ principal nucleus of the medial geniculate body
+OR optic radiation
+
+OT optic tract
+
+PAG _ periaqueductal gray (23)
+
+PC posterior commissure
+
+PCN _ nucleus of the posterior commissure (28)
+
+PIN pineal body
+
+PO posterior complex
+
+PP pes pedunculi
+
+PSB _ presubicular cortex
+
+PTA _ anterior pretectal nucleus
+
+3N oculomotor nerve
+
+AF Ammon‘s formation
+
+AOB _ nucleus of the accessory optic tract, basal division (29)
+AQ aqueduct
+
+¢ cerebral cortex
+
+CC corpus callosum
+
+D nucleus of Darkschewitsch (29)
+ENT _ entorhinal cortex
+
+EW Edinger—Westphal nucleus (27)
+F fornix
+
+FC commissure of the fornix
+
+FTC _ central tegmental field (25)
+
+HC habenular commissure
+
+HM medial habenular nucleus
+
+ICA interstitial nucleus of Cajal (29)
+

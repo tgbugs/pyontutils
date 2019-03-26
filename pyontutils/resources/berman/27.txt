@@ -1,0 +1,53 @@
+LR rostral linear nucleus (27)
+
+MGP _ principal nucleus of the medial geniculate body
+MLB _ medial longitudinal bundle
+
+PAG _ periaqueductal gray (23)
+
+PP pes pedunculi
+
+PSB _ presubicular cortex
+
+PTP _ posterior pretectal nucleus
+
+R red nucleus (26)
+
+SCC _ commissure of the superior colliculi
+
+SCD _ superior colliculus, deep layer (25)
+
+SCI superior colliculus, intermediate layer (25)
+SCS _ superior colliculus, superficial layer (25)
+SNC _ substantia nigra, compact division (26)
+SNR _ substantia nigra, reticular division (26)
+VTA _ ventral tegmental area of Tsai (27)
+
+3 oculomotor nucleus (27)
+
+3N oculomotor nerve
+
+SME _ mesencephalic trigeminal nucleus (19)
+
+AF Ammon‘s formation
+
+AOL _ nucleus of the accessory optic tract, lateral division (29)
+AQ aqueduct
+
+BIN _ nucleus of the brachium of the inferior colliculus (28)
+C cerebral cortex
+
+CC corpus callosum
+
+ENT _ entorhinal cortex
+
+EW Edinger—Westphal nucleus (27)
+
+F fornix
+
+FTC _ central tegmental field (25)
+
+IF interfascicular nucleus (28)
+
+LGD _ dorsal nucleus of the lateral geniculate body
+

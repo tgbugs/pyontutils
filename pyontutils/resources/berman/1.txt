@@ -1,0 +1,12 @@
+5SL _ laminar spinal trigeminal nucleus (1)
+1 superficial layer
+2 intermediate layer
+3 deep layer
+CB cerebellar cortex
+CE central canal
+CUC _ cuneate nucleus, caudal division (1)
+FTL lateral tegmental field (3)
+GRC _ gracile nucleus, caudal division (1)
+PX pyramidal decussation
+VH ventral horn
+

@@ -1,0 +1,51 @@
+INC nucleus incertus (18)
+
+LLD _ dorsal nucleus of the lateral lemniscus (19)
+
+LLV _ ventral nucleus of the lateral lemniscus (19)
+
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+
+PGD _ pontine gray, dorsolateral division (22)
+
+PGL _ pontine gray, lateral division (22)
+
+PGM _ pontine gray, medial division (22)
+
+SAG _ nucleus sagulum (21)
+
+TDC _ dorsal tegmental nucleus, central division (19)
+TDP _ dorsal tegmental nucleus, pericentral division (19)
+TRC _ tegmental reticular nucleus, central division (20)
+TRP _ tegmental reticular nucleus, pericentral division (20)
+V4 fourth ventricle
+
+4X trochlear decussation
+
+SME _ mesencephalic trigeminal nucleus (19)
+
+SN trigeminal nerve
+
+BC brachium conjunctivum
+
+BP brachium pontis
+
+C cerebral cortex
+
+CAE _ nucleus caeruleus (19)
+
+CB cerebellar cortex
+
+CNF _ cuneiform nucleus (20)
+
+s superior central nucleus (22)
+
+DRM _ dorsal nucleus of the raphe, median division (22)
+FTP _ paralemniscal tegmental field (20)
+
+ICC central nucleus of the inferior colliculus (21)
+ICP pericentral nucleus of the inferior colliculus (21)
+ICX external nucleus of the inferior colliculus (21)
+

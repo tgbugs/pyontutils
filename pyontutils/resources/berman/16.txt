@@ -1,0 +1,42 @@
+FTG _ gigantocellular tegmental field (11)
+
+FTL lateral tegmental field (3)
+
+P pyramidal tract
+
+PON _ preolivary nucleus (15)
+
+SOM _ medial nucleus of the superior olive (15)
+T nucleus of the trapezoid body (15)
+
+TB trapezoid body
+
+V4 fourth ventricle
+
+SMD _ motor trigeminal nucleus, dorsal division (16)
+
+5MV _ motor trigeminal nucleus, ventral division (16)
+
+SPD _ principal sensory trigeminal nucleus, dorsal division (16)
+SPV _ principal sensory trigeminal nucleus, ventral division (16)
+5SM _ alaminar spinal trigeminal nucleus, magnocellular division (14)
+5ST _ spinal trigeminal tract
+
+6N abducens nerve
+
+7N facial nerve
+
+BN stato—acoustic nerve
+
+BC brachium conjunctivum
+
+BP brachium pontis
+
+C cerebral cortex
+
+CB cerebellar cortex
+
+Cl inferior central nucleus (13)
+
+CVA _ anteroventral cochlear nucleus (12)
+

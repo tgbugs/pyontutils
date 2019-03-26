@@ -1,0 +1,42 @@
+P pyramidal tract
+
+PH nucleus praepositus hypoglossi (8)
+
+PPR _ postpyramidal nucleus of the raphe (10)
+PR paramedian reticular nucleus (6)
+
+S solitary tract
+
+SM medial nucleus of the solitary tract (4)
+V4 fourth ventricle
+
+VIN inferior vestibular nucleus (10)
+
+SSP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+5ST _ spinal trigeminal tract
+
+12 hypoglossal nucleus (5)
+
+CB cerebellar cortex
+
+CBM _ medial cerebellar nucleus (11)
+
+Cl inferior central nucleus (13)
+
+CX external cuneate nucleus (7)
+
+DMV _ dorsal motor nucleus of the vagus (5)
+
+FIL lateral tegmental field (3)
+
+IFT infratrigeminal nucleus (8)
+
+INT nucleus intercalatus (5)
+
+IOD _ dorsal accessory nucleus of the inferior olive (9)
+IOM _ medial accessory inferior olive (9)
+
+IOP principal nucleus of the inferior olive (9)
+
+LRI lateral reticular nucleus, internal division (2)
+

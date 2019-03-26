@@ -1,0 +1,29 @@
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+12 hypoglossal nucleus (5)
+
+12N _ hypoglossal nerve
+
+CB cerebellar cortex
+
+CE central canal
+
+CUC _ cuneate nucleus, caudal division (1)
+
+CX external cuneate nucleus (7)
+
+DMV _ dorsal motor nucleus of the vagus (5)
+
+FTL lateral tegmental field (3)
+
+GRR _ gracile nucleus, rostral division (1)
+
+IOM _ medial accessory inferior olive (9)
+
+LRI lateral reticular nucleus, internal division (2)
+LRX _ lateral reticular nucleus, external division (2)
+P pyramidal tract
+
+S solitary tract
+
+SM medial nucleus of the solitary tract (4)
+

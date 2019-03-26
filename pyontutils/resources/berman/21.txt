@@ -1,0 +1,47 @@
+LLD _ dorsal nucleus of the lateral lemniscus (19)
+
+LLV _ ventral nucleus of the lateral lemniscus (19)
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+
+PAG _ periaqueductal gray (23)
+
+PGD _ pontine gray, dorsolateral division (22)
+
+PGL _ pontine gray, lateral division (22)
+
+PGM _ pontine gray, medial division (22)
+
+SAG _ nucleus sagulum (21)
+
+TRC _ tegmental reticular nucleus, central division (20)
+TRP _ tegmental reticular nucleus, pericentral division (20)
+TV ventral tegmental nucleus (20)
+
+SN trigeminal nerve
+
+AQ aqueduct
+
+BP brachium pontis
+
+C cerebral cortex
+
+CAE _ nucleus caeruleus (19)
+
+CNF _ cuneiform nucleus (20)
+
+CS superior central nucleus (22)
+
+DRM _ dorsal nucleus of the raphe, median division (22)
+FTC _ central tegmental field (25)
+
+FTP _ paralemniscal tegmental field (20)
+
+1CC _ central nucleus of the inferior colliculus (21)
+ICO _ commissure of the inferior colliculi
+
+ICP pericentral nucleus of the inferior colliculus (21)
+ICX _ external nucleus of the inferior colliculus (21)
+INC _ nucleus incertus (18)
+

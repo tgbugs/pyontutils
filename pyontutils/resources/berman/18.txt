@@ -1,0 +1,44 @@
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+
+PGD _ pontine gray, dorsolateral division (22)
+
+T nucleus of the trapezoid body (15)
+
+TAD _ accessory dorsal tegmental nucleus (18)
+
+TB trapezoid body
+
+TDP _ dorsal tegmental nucleus, pericentral division (19)
+TRC _ tegmental reticular nucleus, central division (20)
+V4 fourth ventricle
+
+4N trochlear nerve
+
+SN trigeminal nerve
+
+BC brachium conjunctivum
+
+BCM _ marginal nucleus of the brachium conjunctivum (17)
+BP brachium pontis
+
+C cerebral cortex
+
+CAE _ nucleus caeruleus (19)
+
+CB cerebellar cortex
+
+CS superior central nucleus (22)
+
+FTG _ gigantocellular tegmental field (11)
+
+FTP _ paralemniscal tegmental field (20)
+
+ICP pericentral nucleus of the inferior colliculus (21)
+INC nucleus incertus (18)
+
+KF Kolliker—Fuse nucleus (17)
+
+LLV ventral nucleus of the lateral lemniscus (19)
+

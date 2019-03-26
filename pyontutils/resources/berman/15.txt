@@ -1,0 +1,41 @@
+SOL _ lateral nucleus of the superior olive (15)
+
+SOM _ medial nucleus of the superior olive (15)
+
+T nucleus of the trapezoid body (15)
+
+TB trapezoid body
+
+V4 fourth ventricle
+
+VSL _ superior vestibular nucleus, lateral division (14)
+VSM _ superior vestibular nucleus, medial division (14)
+
+5P principal sensory trigeminal nucleus (16)
+SSM _ alaminar spinal trigeminal nucleus, magnocellular division (14)
+SST _ spinal trigeminal tract
+
+GN abducens nerve
+
+7N facial nerve
+
+BC brachium conjunctivum
+
+BP brachium pontis
+
+C cerebral cortex
+
+CB cerebellar cortex
+
+Cl inferior central nucleus (13)
+
+CVA _ anteroventral cochlear nucleus (12)
+
+FTG _ gigantocellular tegmental field (11)
+
+FTL lateral tegmental field (3)
+
+P pyramidal tract
+
+PON _ preolivary nucleus (15)
+

@@ -1,0 +1,45 @@
+INA nucleus interpositus, anterior division (11)
+P pyramidal tract
+
+PH nucleus praepositus hypoglossi (8)
+
+PPR _ postpyramidal nucleus of the raphe (10)
+RB restiform body
+
+RT retrotrigeminal nucleus (12)
+
+SA stria acustica
+
+T nucleus of the trapezoid body (15)
+
+V4 fourth ventricle
+
+VIN inferior vestibular nucleus (10)
+
+VLD _ lateral vestibular nucleus, dorsal division (13)
+VMN _ medial vestibular nucleus (10)
+
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+5ST _ spinal trigeminal tract
+
+7L facial nucleus, lateral division (12)
+7M facial nucleus, medial division (12)
+C cerebral cortex
+
+CB cerebellar cortex
+
+CBM _ medial cerebellar nucleus (11)
+
+CD dorsal cochlear nucleus (12)
+
+CGL _ cochlear granular layer (12)
+
+Cl inferior central nucleus (13)
+
+CVP _ posteroventral cochlear nucleus (12)
+FTG _ gigantocellular tegmental field (11)
+FTL lateral tegmental field (3)
+
+FTM _ magnocellular tegmental field (11)
+IFT infratrigeminal nucleus (8)
+

@@ -1,0 +1,45 @@
+FTL lateral tegmental field (3)
+
+FTM _ magnocellular tegmental field (11)
+
+IFC infracerebellar nucleus (11)
+
+IFT infratrigeminal nucleus (8)
+
+INA _ nucleus interpositus, anterior division (11)
+P pyramidal tract
+
+PH nucleus praepositus hypoglossi (8)
+
+PPR _ postpyramidal nucleus of the raphe (10)
+RB restiform body
+
+SA stria acustica
+
+V4 fourth ventricle
+
+VIN inferior vestibular nucleus (10)
+
+VLD _ lateral vestibular nucleus, dorsal division (13)
+VMN _ medial vestibular nucleus (10)
+
+5SP _ alaminar spinal trigeminal nucleus, parvocellular division (6)
+5ST _ spinal trigeminal tract
+7L facial nucleus, lateral division (12)
+7M facial nucleus, medial division (12)
+CB cerebellar cortex
+CBL _ lateral cerebellar nucleus (11)
+CBM _ medial cerebellar nucleus (11)
+CD dorsal cochlear nucleus (12)
+
+1 ependymal layer
+
+2 molecular layer
+
+3 pyramidal layer
+
+4 polymorph layer
+C inferior central nucleus (13)
+CVP _ posteroventral cochlear nucleus (12)
+FTG _ gigantocellular tegmental field (11)
+

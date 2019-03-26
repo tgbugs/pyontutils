@@ -1,0 +1,22 @@
+5SL laminar spinal trigeminal nucleus (1)
+
+12 hypoglossal nucleus (5)
+
+CB cerebellar cortex
+
+CE central canal
+
+CUC _ cuneate nucleus, caudal division (1)
+
+FTL _ lateral tegmental field (3)
+
+GRR _ gracile nucleus, rostral division (1)
+
+LRI lateral reticular nucleus, internal division (2)
+LRX _ lateral reticular nucleus, external division (2)
+MLX _ decussation of the medial lemniscus
+
+P pyramidal tract
+
+SM medial nucleus of the solitary tract (4)
+

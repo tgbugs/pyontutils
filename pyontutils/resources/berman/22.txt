@@ -1,0 +1,40 @@
+PAG _ periaqueductal gray (23)
+
+PGD _ pontine gray, dorsolateral division (22)
+
+PGL _ pontine gray, lateral division (22)
+
+PGM _ pontine gray, medial division (22)
+
+PGR _ pontine gray, rostroventral division (22)
+
+SAG _ nucleus sagulum (21)
+
+SC superior colliculus (25)
+
+TRP _ tegmental reticular nucleus, pericentral division (20)
+
+SN trigeminal nerve
+
+AQ aqueduct
+
+BP brachium pontis
+
+C cerebral cortex
+
+CS superior central nucleus (22)
+
+DRL _ dorsal nucleus of the raphe, lateral division (22)
+DRM _ dorsal nucleus of the raphe, median division (22)
+FTC _ central tegmental field (25)
+
+ICC _ central nucleus of the inferior colliculus (21)
+I1CO _ commissure of the inferior colliculi
+
+ICP pericentral nucleus of the inferior colliculus (21)
+ICX external nucleus of the inferior colliculus (21)
+LLV ventral nucleus of the lateral lemniscus (19)
+MLB _ medial longitudinal bundle
+
+P pyramidal tract
+
