@@ -15,10 +15,10 @@ import json
 from pathlib import Path
 import rdflib
 import requests
-from pyontutils.core import annotation, makeGraph, makePrefixes
+from pyontutils.core import makeGraph, makePrefixes
+from pyontutils.combinators import annotation
 from docopt import docopt
 from IPython import embed
-args = docopt(__doc__, version='0.0.4')
 
 
 class AllenTransgenicLines:
@@ -63,10 +63,11 @@ class AllenTransgenicLines:
         self.g.write()
 
 def main():
-    print(args)
+    args = docopt(__doc__, version='0.0.0')
+    #print(args)
     if not args['--refresh'] and args['--input'] and Path(args['--input']).exists():
         with open(args['--input'], 'rt') as f:
-            input = json.load(f)['msg']
+            input = json.load(f)
     else:
         response = requests.get('http://api.brain-map.org/api/v2/data/query.json?criteria='
                                 'model::Specimen,rma::criteria,[is_cell_specimen$eq%27true%27],'

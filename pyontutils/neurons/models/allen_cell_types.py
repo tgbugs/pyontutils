@@ -295,7 +295,7 @@ class AllenCellTypes:
 
 
 def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
-    print(args)
+    #print(args)
     if not args['--refresh'] and args['--input'] and Path(args['--input']).exists():
         with open(args['--input'], 'rt') as f:
             input = json.load(f)
