@@ -77,7 +77,7 @@ class WHSSDilfSrc(resSource):
 
     @classmethod
     def loadData(cls):
-        tree = etree.parse(cls.source)
+        tree = etree.parse(cls.source.as_posix())
         return tree
 
     @classmethod

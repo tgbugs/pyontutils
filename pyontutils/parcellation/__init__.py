@@ -1813,6 +1813,7 @@ def main():
         from pyontutils.parcellation.aba import Artifacts as abaArts
     from pyontutils.parcellation.freesurfer import Artifacts as fsArts
     from pyontutils.parcellation.whs import Artifacts as whsArts
+    from pyontutils.parcellation.berman import Artifacts as bermArts
     onts = getOnts()
     _ = *(print(ont) for ont in onts),
     out = build(*onts,

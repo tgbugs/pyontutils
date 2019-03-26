@@ -163,6 +163,7 @@ paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
 PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
 paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
 WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
+BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
 
 # retired namespaces kept as a record in the even that we need them for some reason
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))

@@ -25,11 +25,6 @@ current_file = Path(__file__).absolute()
 
 # common funcs
 
-def ont_setup(ont):
-    ont.prepare()
-    o = ont()
-    return o
-
 def standard_checks(graph):
     def cardinality(predicate, card=1):
         for subject in sorted(set(graph.subjects())):
@@ -43,16 +38,6 @@ def standard_checks(graph):
 
     cardinality(rdfs.label)
 
-def ont_make(o, fail=False, write=True):
-    o()
-    o.validate()
-    failed = standard_checks(o.graph)
-    o.failed = failed
-    if fail:
-        raise BaseException('Ontology validation failed!')
-    if write:
-        o.write()
-    return o
 
 def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
@@ -63,24 +48,24 @@ def build(*onts, fail=False, n_jobs=9, write=True):
             if ont.__name__ == 'parcBridge':
                 onts = onts[:-1]
                 def tail(o=ont):
-                    return ont_setup(o),
+                    return o.setup(),
                 if i != lonts - 1:
                     raise ValueError('parcBridge should be built last to avoid weird errors!')
     # ont_setup must be run first on all ontologies
     # or we will get weird import errors
-    if n_jobs == 1:
-        return tuple(ont_make(ont, fail=fail, write=write) for ont in
-                     tuple(ont_setup(ont) for ont in onts) + tail())
+    if n_jobs == 1 or True:
+        return tuple(ont.make(fail=fail, write=write) for ont in
+                     tuple(ont.setup() for ont in onts) + tail())
 
     # have to use a listcomp so that all calls to setup()
     # finish before parallel goes to work
-    return Parallel(n_jobs=n_jobs)(delayed(ont_make)(o, fail=fail, write=write)
+    return Parallel(n_jobs=n_jobs)(delayed(o.make)(fail=fail, write=write)
                                    for o in
                                    #[ont_setup(ont) for ont in onts])
-                                   (tuple(Async()(deferred(ont_setup)(ont)
+                                   (tuple(Async()(deferred(ont.setup)()
                                                   for ont in onts)) + tail()
                                     if n_jobs > 1
-                                    else [ont_setup(ont)
+                                    else [ont.setup()
                                           for ont in onts]))
 
 
@@ -732,7 +717,7 @@ class Source(tuple):
     # source_original = None  # FIXME this should probably be defined on the artifact not the source?
     artifact = None
 
-    def __new__(cls):
+    def __new__(cls, dry_run=False):
         from git import Repo
         if not hasattr(cls, '_data'):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
@@ -756,16 +741,18 @@ class Source(tuple):
 
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
-                        file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
-                        commit_path = os.path.join('blob', file_commit, cls.sourceFile)
-                        print(commit_path)
-                        if 'github' in cls.source:
-                            cls.iri_prefix = cls.source.rstrip('.git') + '/'
-                        else:
-                            # using github syntax for now since it is possible to convert out
-                            cls.iri_prefix = cls.source + '::'
-                        cls.iri = rdflib.URIRef(cls.iri_prefix + commit_path)
-                        cls.source = file.as_posix()
+                        if not dry_run:  # dry_run means data may not be present
+                            file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                            commit_path = os.path.join('blob', file_commit, cls.sourceFile)
+                            print(commit_path)
+                            if 'github' in cls.source:
+                                cls.iri_prefix = cls.source.rstrip('.git') + '/'
+                            else:
+                                # using github syntax for now since it is possible to convert out
+                                cls.iri_prefix = cls.source + '::'
+                            cls.iri = rdflib.URIRef(cls.iri_prefix + commit_path)
+
+                        cls.source = file
                     else:
                         # assume the user knows what they are doing
                         #raise ValueError(f'No sourceFile specified for {cls}')
@@ -792,6 +779,8 @@ class Source(tuple):
                             #print(cls, 'already has an iri', cls.iri)
                     else:
                         raise e
+
+                cls.source = Path(cls.source)
             else:
                 cls._type = None
                 print('Unknown source', cls.source)
@@ -799,7 +788,8 @@ class Source(tuple):
             cls.raw = cls.loadData()
             cls._data = cls.validate(*cls.processData())
             cls._triples_for_ontology = []
-            cls.prov()
+            if not dry_run:
+                cls.prov()
         self = super().__new__(cls, cls._data)
         return self
 
@@ -1054,6 +1044,23 @@ class Ont:
             except ValueError as e:
                 print(tc.red('AAAAAAAAAAA'), t)
                 raise e
+        return self
+
+    @classmethod
+    def setup(cls):
+        cls.prepare()
+        o = cls()
+        return o
+
+    def make(self, fail=False, write=True):
+        self()
+        self.validate()
+        failed = standard_checks(self.graph)
+        self.failed = failed
+        if fail:
+            raise BaseException('Ontology validation failed!')
+        if write:
+            self.write()
         return self
 
     def validate(self):
