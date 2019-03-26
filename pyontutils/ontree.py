@@ -34,6 +34,7 @@ from pyontutils.utils import getSourceLine
 from pyontutils.ontload import import_tree
 from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
+from pyontutils.closed_namespaces import rdfs
 from IPython import embed
 
 sgg = scigraph.Graph(cache=False, verbose=True)
@@ -118,13 +119,15 @@ def makeProv(pred, root, wgb):
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master', restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
+def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
+           restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
         github_link = f'https://github.com/SciCrunch/NIF-Ontology/raw/{branch}/{local_filepath}'
         prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{github_link}">')
         g = graphFromGithub(github_link, verbose)
+        labels_index = {g.qname(s):str(o) for s, o in g.g[:rdfs.label:]}
         if pred == 'subClassOf':
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
         elif pred == 'subPropertyOf':
@@ -176,26 +179,34 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
         dematerialize(list(tree.keys())[0], tree)
         if flatten:
-            def safe_find(n):  # FIXME scigraph bug
-                if n.endswith(':'):
-                    n = sgc._curies[n.rstrip(':')]
-                elif '/' in n:
-                    prefix, suffix = n.split(':')
-                    iriprefix = sgc._curies[prefix]
-                    n = iriprefix + suffix
+            if local_filepath is not None:
+                def safe_find(n):
+                    return {'labels':[labels_index[n]],
+                            'deprecated': False  # FIXME inacurate
+                           }
 
-                return sgv.findById(n)
+            else:
+                def safe_find(n):  # FIXME scigraph bug
+                    if n.endswith(':'):
+                        n = sgc._curies[n.rstrip(':')]
+                    elif '/' in n:
+                        prefix, suffix = n.split(':')
+                        iriprefix = sgc._curies[prefix]
+                        n = iriprefix + suffix
+
+                    return sgv.findById(n)
 
             out = set(n for n in flatten_tree(extras.hierarchy))
-            rows = sorted((safe_find(n)['labels'][0] if safe_find(n)['labels'] else '')
-                          + ',' + n for n in out
-                          if not safe_find(n)['deprecated'])  # FIXME so much wrong here ...
+            rows = sorted(((safe_find(n)['labels'][0] if safe_find(n)['labels'] else '')
+                           + ',' + n for n in out
+                           # FIXME so much wrong here ...
+                           if not safe_find(n)['deprecated']), key=lambda lid: lid.lower())
             return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
         else:
             return extras.html
     except (KeyError, TypeError) as e:
         if verbose:
-            print(e)
+            print(type(e), e)
         if sgg.getNode(root):
             message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
         elif 'json' in kwargs:
@@ -355,8 +366,8 @@ def server(api_key=None, verbose=False):
         if maybe_abort is not None:
             return maybe_abort
         if verbose:
-            print(kwargs)
             kwargs['verbose'] = verbose
+            print(kwargs)
         return render(pred, root, **kwargs)
 
     @app.route(f'/{basename}/query/<pred>/http:/<path:iri>', methods=['GET'])  # one / due to nginx
@@ -371,6 +382,7 @@ def server(api_key=None, verbose=False):
         if maybe_abort is not None:
             return maybe_abort
         if verbose:
+            kwargs['verbose'] = verbose
             print(kwargs)
         return render(pred, root, **kwargs)
 
@@ -383,6 +395,7 @@ def server(api_key=None, verbose=False):
         if maybe_abort is not None:
             return maybe_abort
         if verbose:
+            kwargs['verbose'] = verbose
             print(kwargs)
         try:
             return render(pred, root, **kwargs)
