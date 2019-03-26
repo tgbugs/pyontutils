@@ -4,9 +4,10 @@ import collections
 from pathlib import Path
 from bs4 import BeautifulSoup
 from lxml import etree
+import rdflib
 from pyontutils.core import resSource, LabelsBase, Collector
 from pyontutils.config import devconfig
-from pyontutils.parcellation import Atlas, parcCore, LabelRoot
+from pyontutils.parcellation import parcCore, Atlas, LabelRoot, Label
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, BERCAT, nsExact
 from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL, makePrefixes
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
@@ -21,7 +22,7 @@ class Artifacts(Collector):
         label='Berman 1968 cat brain stem atlas',
         shortname='Berman Cat 1968',
         date=1968,
-        hadDerivation=('http://brainmaps.org/index.php?action=metadata&datid=35',),
+        hadDerivation=['http://brainmaps.org/index.php?action=metadata&datid=35'],
         definingCitation=('A. L. Berman (1968) The Brain Stem of the Cat. '
                           'A Cytoarchitectonic Atlas with Stereotaxic Coordinates. '
                           'Madison, University of Wisconsin Press.'),
@@ -137,11 +138,13 @@ class BermanSrc(resSource):
             'mesencephalic trigeminal nucleus (19)': {'SME': '5ME'},
             'motor trigeminal tract': {'SMT': '5MT'},
             'nucleus of the trapezoid body (15)': {'J': 'T'},
+            'posterior interpeduncular nucleus, inner division': {'al': 'IPI'},  # wow ...
             'solitary tract': {'$': 'S'},
             'spinal trigeminal tract': {'SST': '5ST'},
             'statoacoustic nerve': {'BN': 'SN'},
             'superior central nucleus (22)': {'s': 'CS'},
             'trigeminal nerve': {'SN': '5N'},
+            'zona incerta': {'Z1': 'ZI'},
         }
 
         cor_a = {
@@ -151,8 +154,7 @@ class BermanSrc(resSource):
             #'4': {'polymorph layer', 'trochlear nucleus (23)'},
             'KF': {'KollikerFuse nucleus (17)': 'KéllikerFuse nucleus (17)'},
             'SCS': {'superior colliculus, supertficial layer (25)':
-                    'superior colliculus, superficial layer (25)'},
-        }
+                    'superior colliculus, superficial layer (25)'}}
 
         # close layer abbreviation issues
         # this of course means that abbrevs cannot be used as identifiers
@@ -241,25 +243,28 @@ class BermanLabels(LabelsBase):
 
     def _triples(self):
         for source in self.sources:
-            for i, (label, paren_thing, abbrev, index) in source:
-                iri = self.namespace[str(i + 1)]  # TODO load from existing
+            for i, (label, paren_thing, abbrev, index) in enumerate(source):
+                local_identifier = str(i + 1)
+                iri = self.namespace[local_identifier]  # TODO load from existing
                 yield from Label(labelRoot=self.root,
                                 label=label,
                                 #altLabel=None,
                                 #synonyms=extras,
                                 abbrevs=(abbrev,),
                                 iri=iri,)
-                yield iri, ilx['berman/uris/readable/hasWeirdParenValue'], paren_thing
+                if paren_thing:
+                    yield iri, ilx['berman/uris/readable/hasWeirdParenValue'], rdflib.Literal(paren_thing)
 
+                continue
                 # FIXME different file ...
-                region_iri = ilx[f'berman/uris/cat/regions/{i}']
+                region_iri = ilx['berman/uris/cat/regions/' + local_identifier]
                 # FIXME incorporate version in tree or no?
                 # just have it be consecutive? HRM
                 yield region_iri, rdf.type, owl.Class
                 yield region_iri, ilxtr.hasParcellationLabel, iri  # FIXME predicate choice ...
                 yield region_iri, ilxtr.isDefinedBy, BermanSrc.artifact.iri  # FIXME
                 for plate_num in index:
-                    yield region_iri, ilxtr.hasPlateNumber, plate_num  # FIXME generalize ...
+                    yield region_iri, ilxtr.appearsOnPlateNumber, rdflib.Literal(plate_num)  # FIXME generalize ...
 
 
 def main():
