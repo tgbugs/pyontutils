@@ -301,15 +301,19 @@ file_examples = (
 )
 
 def server(api_key=None, verbose=False):
-    f = os.path.realpath(__file__)
-    __file__name = os.path.basename(f)
-    __file__path = os.path.dirname(f)
+    f = Path(__file__).resolve()
+    working_dir = f.parent.parent
+    git_dir = working_dir / '.git'
     try:
-        commit = subprocess.check_output(['git', '-c', f'{__file__path}', 'rev-parse', 'HEAD']).decode().rstrip()
+        commit = subprocess.check_output(['git',
+                                          '--git-dir', git_dir.as_posix(),
+                                          '--work-tree', working_dir.as_posix(),
+                                          'rev-parse', 'HEAD'],
+                                         stderr=subprocess.DEVNULL).decode().rstrip()
     except subprocess.CalledProcessError:
         commit = 'master' # 'NO-REPO-AT-MOST-TODO-GET-LATEST-HASH'
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
-                      f'{commit}/pyontutils/{__file__name}'
+                      f'{commit}/pyontutils/{f.name}'
                       '#L{line}')
     line = getSourceLine(render)
     wgb = wasGeneratedBy.format(line=line)
@@ -455,6 +459,8 @@ def main():
             sgg._basePath = api
             sgv._basePath = api
             sgc._basePath = api
+            # reinit curies state
+            sgc.__init__(cache=sgc._get == sgc._cache_get, verbose=sgc._verbose)
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key
