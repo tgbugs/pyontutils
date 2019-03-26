@@ -238,7 +238,7 @@ class BermanSrc(resSource):
 class BermanLabels(LabelsBase):
     """ Berman Cat labels """
     # sort by label/structure not by abbrev
-    filename = 'berman-cat'
+    filename = 'berman-cat-labels'
     name = 'Berman 1968 cat brain stem labels'
     shortname = 'bercat'
     imports = parcCore,
