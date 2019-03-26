@@ -27,7 +27,7 @@ from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
 import rdflib
-from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort
+from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app
 from docopt import docopt, parse_defaults
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId
@@ -199,7 +199,13 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
                     return sgv.findById(n)
 
             out = set(n for n in flatten_tree(extras.hierarchy))
-            lrecs = Async()(deferred(safe_find)(n) for n in out)
+
+            try:
+                lrecs = Async()(deferred(safe_find)(n) for n in out)
+            except RuntimeError:
+                asyncio.set_event_loop(current_app.config['loop'])
+                lrecs = Async()(deferred(safe_find)(n) for n in out)
+
             rows = sorted(((r['labels'][0] if r['labels'] else '')
                            + ',' + n for r, n in zip(lrecs, out)
                            # FIXME still stuff wrong, but better for non cache case
@@ -326,16 +332,9 @@ def server(api_key=None, verbose=False):
 
     loop = asyncio.get_event_loop()
     app = Flask('ontology tree service')
-    #app.config['loop'] = loop
+    app.config['loop'] = loop
 
     basename = 'trees'
-
-    @app.before_first_request
-    def runonce():
-        # set the eventloop in worker threads so that Async can use it
-        # TODO not sure if this works as expected if there is more than
-        # one worker thread
-        asyncio.set_event_loop(loop)
 
     @app.route(f'/{basename}', methods=['GET'])
     @app.route(f'/{basename}/', methods=['GET'])
