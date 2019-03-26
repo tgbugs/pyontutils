@@ -6,6 +6,7 @@ from rdflib import Graph, URIRef, Literal, BNode, RDF, RDFS, OWL
 from sqlalchemy import create_engine, inspect, Table, Column
 from sqlalchemy.orm.session import sessionmaker
 from pyontutils import utils
+from pyontutils.config import devconfig
 from typing import Dict, Tuple, List, Union
 
 
@@ -13,19 +14,8 @@ db_url = os.environ.get('SCICRUNCH_DB_URL_PRODUCTION')
 ilx_uri_base = 'http://uri.interlex.org/base'
 triple2annotation_bnode = {}
 g = Graph()
-output = '/home/tmsincomb/Dropbox/NIF-Ontology/ttl/generated/neurolex_to_interlex_pmids.ttl'
 
-
-with open('/home/tmsincomb/Dropbox/PMID/pmid-dump.tsv', 'r') as csvFile:
-    reader = csv.reader(csvFile, delimiter='\t')
-    old_text = []
-    for i, row in enumerate(reader):
-        if i == 0:
-            header = {colname: col_indx for col_indx, colname in enumerate(row)}
-            continue
-        old_text.append(row[header['old_text']])
-    csvFile.close()
-
+output = Path(devconfig.ontology_local_repo, 'ttl/generated/neurolex_to_interlex_pmids.ttl')
 
 namespaces = {
     'ILX': 'http://uri.interlex.org/base/ilx_',
@@ -38,6 +28,7 @@ namespaces = {
     'UBERON': 'http://purl.obolibrary.org/obo/UBERON_',
     'PR': 'http://purl.obolibrary.org/obo/PR_',
 }
+
 for prefix, uri in namespaces.items():
     g.bind(prefix, uri)
 
@@ -154,6 +145,15 @@ def add_uri(ID):
 
 
 def main():
+    with open('/home/tmsincomb/Dropbox/PMID/pmid-dump.tsv', 'r') as csvFile:  # FIXME what is this file? where did it come from?
+        reader = csv.reader(csvFile, delimiter='\t')
+        old_text = []
+        for i, row in enumerate(reader):
+            if i == 0:
+                header = {colname: col_indx for col_indx, colname in enumerate(row)}
+                continue
+            old_text.append(row[header['old_text']])
+
     data = [text for text in old_text
         if 'SuperCategory=Resource' not in text and 'Id=\\n' not in text and 'PMID=\\n' not in text]
 
