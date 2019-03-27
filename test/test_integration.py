@@ -96,15 +96,9 @@ def populate_tests(only=tuple(), do_mains=True):
     nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
     zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
     mains = {'methods':None,
-             'nif_cell':None,
              'scigraph':None,
-             'hbp_cells':None,
-             'nif_neuron':None,
              'combinators':None,
              'hierarchies':None,
-             'chebi_bridge':None,
-             'cocomac_uberon':None,
-             'gen_nat_models':None,
              'closed_namespaces':None,
              #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
              'make_catalog':['ont-catalog', '--jobs', '1'],
@@ -133,7 +127,6 @@ def populate_tests(only=tuple(), do_mains=True):
                ],
     'ontree':['ontree', '--test'],
     'overlaps':['overlaps', '--help'],
-    'scr_sync':['registry-sync', '--test'],
     'scigraph_codegen':['scigraph-codegen', '--api', 'https://scicrunch.org/api/1/scigraph'],
     'scigraph_deploy':[
         ['scigraph-deploy', '--help'],
@@ -224,7 +217,8 @@ def populate_tests(only=tuple(), do_mains=True):
                 for j, argv in enumerate(argvs):
                     mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
                     #print('MPATH:  ', module_path)
-                    def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
+                    def test_main(self, module_path=module_path, argv=argv,
+                                  main=stem in mains, test=stem in tests):
                         try:
                             script = self._modules[module_path]
                         except KeyError:
