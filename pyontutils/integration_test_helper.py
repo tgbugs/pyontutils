@@ -84,7 +84,8 @@ class TestScriptsBase(unittest.TestCase):
             npaths = len(paths)
             print(npaths)
             for i, path in enumerate(paths):
-                ppath = Path(path).absolute()
+                print(path)
+                ppath = Path(repo.working_dir, path).absolute()
                 print('PPATH:  ', ppath)
                 pex = ppath.as_posix().replace('/', '_').replace('.', '_')
                 fname = f'test_{i:0>3}_' + pex
