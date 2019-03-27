@@ -4,7 +4,67 @@ import unittest
 from pathlib import Path
 from importlib import import_module
 import git
+from git import Repo as baseRepo
 from pyontutils.utils import TermColors as tc
+from pyontutils.config import devconfig
+
+
+class Repo(baseRepo):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._untracked_start = self.untracked()
+
+    def untracked(self):
+        return set(self.git.ls_files('--others', '--exclude-standard').split('\n'))
+
+    def diff_untracked(self):
+        new_untracked = self.untracked()
+        diff = new_untracked - self._untracked_start
+        return diff
+
+    def remove_diff_untracked(self):
+        wd = Path(self.working_dir)
+        for tail in self.diff_untracked():
+            path = wd / tail
+            print('removing file', path)
+            path.unlink()
+
+
+class Folders:
+    _folders =  ('ttl', 'ttl/generated', 'ttl/generated/parcellation', 'ttl/bridge')
+    def setUp(self):
+        super().setUp()
+        #print('SET UP')
+        #print(devconfig.ontology_local_repo)
+        if devconfig.ontology_local_repo.isDefault:
+            self.fake_local_repo = Path(devconfig.git_local_base, devconfig.ontology_repo)
+            if not self.fake_local_repo.exists():  # do not klobber existing
+                self.folders = [(self.fake_local_repo / folder)
+                                for folder in self._folders]
+                self.addCleanup(self._tearDown)
+                #print(f'CREATING FOLDERS {self.folders}')
+                for folder in self.folders:
+                    folder.mkdir(parents=True)
+                    # if the parent doesn't exist then there should never
+                    # be a case where there is a collision (yes?)
+
+        else:
+            self.folders = []
+
+    def recursive_clean(self, d):
+        for thing in d.iterdir():
+            if thing.is_dir():
+                self.recursive_clean(thing)
+            else:
+                thing.unlink()  # will rm the file
+
+        d.rmdir()
+
+    def _tearDown(self):
+        #print('TEAR DOWN')
+        if self.folders:
+            #print(f'DELETING FOLDERS {self.folders}')
+            self.recursive_clean(self.fake_local_repo)
 
 
 class TestScriptsBase(unittest.TestCase):
@@ -44,8 +104,8 @@ class TestScriptsBase(unittest.TestCase):
 
     @classmethod
     def populate_tests(cls, module_to_test, working_dir, mains=tuple(), tests=tuple(),
-                       skip=tuple(), ci_skip=tuple(), only=tuple(), do_mains=True,
-                       module_parent=None):
+                       lasts=tuple(), skip=tuple(), ci_skip=tuple(), only=tuple(), do_mains=True,
+                       post_load=lambda : None, post_main=lambda : None, module_parent=None):
 
         if module_parent is None:
             module_parent = working_dir
@@ -81,6 +141,12 @@ class TestScriptsBase(unittest.TestCase):
                            '__init__' not in f and
                            (True if not only else any(_ + '.py' in f for _ in only)))
 
+            for last in lasts:
+                # FIXME hack to go last
+                if last in paths:
+                    paths.remove(last)
+                    paths.append(last)
+
             npaths = len(paths)
             print(npaths)
             for i, path in enumerate(paths):
@@ -90,10 +156,12 @@ class TestScriptsBase(unittest.TestCase):
                 pex = ppath.as_posix().replace('/', '_').replace('.', '_')
                 fname = f'test_{i:0>3}_' + pex
                 stem = ppath.stem
+                #rp = ppath.relative_to(Path.cwd())#module_parent)
                 rp = ppath.relative_to(module_parent)
                 module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
+                print(module_path)
                 if stem not in skip:
-                    def test_file(self, module_path=module_path, stem=stem):
+                    def test_file(self, module_path=module_path, stem=stem, fname=fname):
                         try:
                             print(tc.ltyellow('IMPORTING:'), module_path)
                             module = import_module(module_path)  # this returns the submod
@@ -103,7 +171,7 @@ class TestScriptsBase(unittest.TestCase):
                                 setattr(module, '_CHECKOUT_OK', True)
                                 #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
                         finally:
-                            pass
+                            post_load()
 
                     setattr(cls, fname, test_file)
 
@@ -122,8 +190,11 @@ class TestScriptsBase(unittest.TestCase):
                         def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
                             try:
                                 script = self._modules[module_path]
-                            except KeyError:
-                                return print('Import failed for', module_path, 'cannot test main, skipping.')
+                            except KeyError as e:
+                                # we have to raise here becuase we can't delete
+                                # the test mfuncs once pytest has loaded them
+                                raise ModuleNotFoundError(f'Import failed for {module_path}'
+                                                          ' cannot test main, skipping.') from e
 
                             if argv and argv[0] != script:
                                 os.system(' '.join(argv))  # FIXME error on this?
@@ -145,7 +216,7 @@ class TestScriptsBase(unittest.TestCase):
                                     return  # --help
                                 raise e
                             finally:
-                                pass
+                                post_main()
 
                         setattr(cls, mname, test_main)
 
@@ -165,3 +236,20 @@ class TestScriptsBase(unittest.TestCase):
 
         if not hasattr(cls, 'argv_orig'):
             cls.argv_orig = sys.argv
+
+
+class TestCliBase(unittest.TestCase):
+    commands = tuple()
+
+    def test_cli(self):
+        # we still run these tests to make sure that the install process works as expected
+        failed = []
+        for command in self.commands:
+            try:
+                output = subprocess.check_output(command,
+                                                 stderr=subprocess.STDOUT).decode().rstrip()
+            except BaseException as e:
+                failed.append((command, e, e.stdout if hasattr(e, 'stdout') else '', ''))
+
+        msg = '\n'.join('\n'.join(str(e) for e in f) for f in failed)
+        assert not failed, msg

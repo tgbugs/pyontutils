@@ -12,6 +12,7 @@ mains = {'nif_cell':None,
          'chebi_bridge':None,
          'cocomac_uberon':None,
          'gen_nat_models':None,
+         'ontree':['ontree', '--test'],
          'scr_sync':['registry-sync', '--test'], }
 
 module_parent = Path(__file__).resolve().parent.parent.as_posix()
