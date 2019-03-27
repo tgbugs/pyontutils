@@ -35,6 +35,7 @@ import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from pyontutils.utils import readFromStdIn
 from pyontutils import utils_extra  # register plugins
+from .utils import readFromStdIn
 
 profile_me = lambda f:f
 

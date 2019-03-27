@@ -106,18 +106,10 @@ try:
                 'scigraph-codegen=pyontutils.scigraph_codegen:main',
                 'scigraph-deploy=pyontutils.scigraph_deploy:main',
                 'scig=pyontutils.scig:main',
-                'ttlfmt=pyontutils.ttlfmt:main',
             ],
             'rdf.plugins.parser': [
                 'librdfxml = pyontutils.librdf:libRdfxmlParser',
                 'libttl = pyontutils.librdf:libTurtleParser',
-            ],
-            'rdf.plugins.serializer': [
-                'nifttl = pyontutils.ttlser:CustomTurtleSerializer',
-                'detttl = pyontutils.ttlser:CustomTurtleSerializer',
-                'cmpttl = pyontutils.ttlser:CompactTurtleSerializer',
-                'uncmpttl = pyontutils.ttlser:CompactTurtleSerializer',
-                'rktttl = pyontutils.ttlser:CompactTurtleSerializer',
             ],
         },
     )

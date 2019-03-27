@@ -213,14 +213,6 @@ def relative_path(script__file__):
     return rpath
 
 
-def readFromStdIn(stdin=None):
-    from select import select
-    if stdin is None:
-        from sys import stdin
-    if select([stdin], [], [], 0.0)[0]:
-        return stdin
-
-
 def async_getter(function, listOfArgs):
     async def future_loop(future_):
         loop = asyncio.get_event_loop()
