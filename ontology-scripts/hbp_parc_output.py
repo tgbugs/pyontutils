@@ -3,9 +3,9 @@ import subprocess
 from pathlib import Path
 from collections import defaultdict
 import rdflib
+from ttlser import natsort
 from pyontutils.core import qname, makeGraph
 from pyontutils.utils import TermColors as tc
-from pyontutils.ttlser import natsort
 from pyontutils.namespaces import  NIFRID, ilxtr
 from pyontutils.combinators import restriction, annotation
 from pyontutils.closed_namespaces import owl, rdf, rdfs, skos

@@ -8,10 +8,10 @@ from urllib.error import HTTPError
 import rdflib
 from rdflib.extras import infixowl
 from git.repo import Repo
+from ttlser import natsort
 from pyontutils.core import Ont, makeGraph, OntId, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, subclasses, working_dir
-from pyontutils.ttlser import natsort
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes

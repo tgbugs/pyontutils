@@ -26,7 +26,7 @@ from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Colle
 from pyontutils.core import makeGraph, build
 from pyontutils.utils import async_getter, rowParse, getSourceLine, subclasses
 from pyontutils.utils import working_dir, TermColors as tc
-from pyontutils.ttlser import natsort
+from ttlser import natsort
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes, interlex_namespace, nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, FSLATS
