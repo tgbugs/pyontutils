@@ -1,26 +1,9 @@
-"""librdf parser for rdflib
-
-this is not faster for pypy3 but if you want install it
-
-http://download.librdf.org/source/redland-bindings-1.0.17.1.tar.gz
-tar xvzf redland-bindings-1.0.17.1.tar.gz
-cd redland-bindings-1.0.17.1
-./configure --with-python=pypy3 --prefix
-make check  # will fail on storage
-cp python/__pycache__/RDF.* ${site_packages}/__pycache__
-cp python/__pycache__/Redland.* ${site_packages}/__pycache__
-cp python/RDF.py ${site_packages}
-cp python/Redland.py ${site_packages}
-cp python/_Redland.pypy3*.so ${site_packages}
-
-"""
 try:
     import RDF
 except ImportError as e:
     print('WARNING: librdf bindings not found. You will have runtime errors.')
 import rdflib
 from pathlib import Path
-from IPython import embed
 
 
 def Literal(string, language=None, datatype=None):
@@ -56,6 +39,7 @@ def statement_to_triple(statement):
         elif element.type == 4:
             return rdflib.BNode(element.blank_identifier)
         else:
+            from IPython import embed
             embed()
             raise TypeError
 
@@ -125,6 +109,7 @@ def serialize(graph, format='turtle'):
     return string
 
 def modeltest():
+    from IPython import embed
     # this hardlocks 
     ms = RDF.MemoryStorage('test')
     m = RDF.Model(ms)
@@ -134,6 +119,7 @@ def modeltest():
     embed()
 
 def main():
+    from IPython import embed
     """ Python 3.6.6
     ibttl 2.605194091796875
     ttl 3.8316309452056885
@@ -159,9 +145,9 @@ def main():
 
     from time import time
     rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
-                        'pyontutils.librdf', 'libRdfxmlParser')
+                        'librdflib', 'libRdfxmlParser')
     rdflib.plugin.register('libttl', rdflib.parser.Parser,
-                        'pyontutils.librdf', 'libTurtleParser')
+                        'librdflib', 'libTurtleParser')
 
     p1 = Path('~/git/NIF-Ontology/ttl/NIF-Molecule.ttl').expanduser()
     start = time()

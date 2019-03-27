@@ -101,10 +101,6 @@ try:
                 'scigraph-deploy=pyontutils.scigraph_deploy:main',
                 'scig=pyontutils.scig:main',
             ],
-            'rdf.plugins.parser': [
-                'librdfxml = pyontutils.librdf:libRdfxmlParser',
-                'libttl = pyontutils.librdf:libTurtleParser',
-            ],
         },
     )
 
