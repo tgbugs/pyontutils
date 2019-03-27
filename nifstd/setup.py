@@ -21,7 +21,7 @@ setup(
     install_requires=[
         'flask',
         'pymysql',
-        'pyontutils>=0.1.0'
+        'pyontutils>=0.1.0',
         'sqlalchemy',
     ],
     extras_require={'dev':[
