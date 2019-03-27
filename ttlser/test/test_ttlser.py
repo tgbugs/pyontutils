@@ -7,13 +7,15 @@ import unittest
 import subprocess
 from io import BytesIO
 from random import shuffle
+from pathlib import Path
 import rdflib
 
-# trigger registration of rdflib extensions
-import pyontutils.utils
-from pyontutils.ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
-from pyontutils.ttlser import CompactTurtleSerializer, UncompactTurtleSerializer
-from pyontutils.ttlser import RacketTurtleSerializer
+from ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
+from ttlser import CompactTurtleSerializer, UncompactTurtleSerializer
+from ttlser import RacketTurtleSerializer
+
+thisfile = Path(__file__).resolve()
+parent = thisfile.parent.parent
 
 
 def randomize_dict_order(d):
@@ -82,21 +84,23 @@ class TestTtlser(unittest.TestCase):
     actualpath2 = 'test/actual2.ttl'
 
     def setUp(self):
-        with open(self.goodpath, 'rb') as f:
+        with open((parent / self.goodpath), 'rb') as f:
             self.good = f.read()
 
         self.actual = self.serialize()
-        with open(self.actualpath, 'wb') as f:
+        with open((parent / self.actualpath), 'wb') as f:
             f.write(self.actual)
 
     def make_ser(self):
         header = ('import sys\n'
                   'from io import BytesIO\n'
                   'from random import shuffle\n'
+                  'from pathlib import Path\n'
                   'import rdflib\n'
-                  f'from pyontutils.ttlser import {self.serializer.__name__}\n'
+                  f'from ttlser import {self.serializer.__name__}\n'
                   f"rdflib.plugin.register({self.format!r}, rdflib.serializer.Serializer, "
-                  f"'pyontutils.ttlser', {self.serializer.__name__!r})\n"
+                  f"'ttlser', {self.serializer.__name__!r})\n"
+                  f'parent = Path("{parent.as_posix()}")\n'
                   'class Thing:\n'
                   f'    serializer = {self.serializer.__name__}\n'
                   f'    badpath = {self.badpath!r}\n')
@@ -109,7 +113,7 @@ class TestTtlser(unittest.TestCase):
 
     def serialize(self):
         graph = rdflib.Graph()
-        graph.parse(self.badpath, format='turtle')
+        graph.parse((parent / self.badpath).as_posix(), format='turtle')
         randomize_BNode_order(graph)
         randomize_prefix_order(graph)
 
@@ -137,9 +141,13 @@ class TestTtlser(unittest.TestCase):
             code = self.make_ser()
             cmd_line = [sys.executable, '-c', code]
             p = subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, #stderr=subprocess.STDOUT,
+                                 stdout=subprocess.PIPE,
+                                 #stderr=subprocess.DEVNULL,
+                                 stderr=subprocess.PIPE,
                                  env=env)
             out, err = p.communicate()
+            #print(code)
+            #print(err.decode())
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
             #out = out.split(b'\n', 1)[1]  # don't need to remove the rdflib noise if using >=rdflib-5.0.0
             actual2 = out
@@ -153,9 +161,9 @@ class TestTtlser(unittest.TestCase):
                         if hit:
                             print(_1, _2)
                 nofail = False
-                with open(actualpath2, 'wb') as f:
+                with open((parent / actualpath2), 'wb') as f:
                     f.write(actual2)
-                with open(actualpath, 'wb') as f:
+                with open((parent / actualpath), 'wb') as f:
                     f.write(actual)
                 diff = '\n'.join(difflib.unified_diff(actual.decode().split('\n'),
                                                       actual2.decode().split('\n')))

@@ -1,3 +1,5 @@
+import rdflib
+
 rdflib.plugin.register('nifttl', rdflib.serializer.Serializer,
                        'ttlser', 'CustomTurtleSerializer')
 rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer,
