@@ -197,11 +197,11 @@ class DevConfig:
         self._override['secrets_file'] = value
         self.write(self.config_file.as_posix())
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
         return self.config['curies']
 
-    @default((Path(__file__).parent.parent / 'patches' / 'patches.yaml').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'patches' / 'patches.yaml').as_posix())
     def patch_config(self):
         return self.config['patch_config']
 
@@ -331,27 +331,27 @@ class DevConfig:
     def scigraph_api_user(self):
         return self.config['scigraph_api_user']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'graphload.yaml').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
         return self.config['scigraph_graphload']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'services.yaml').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'services.yaml').as_posix())
     def scigraph_services(self):
         return self.config['scigraph_services']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'start.sh').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'start.sh').as_posix())
     def scigraph_start(self):
         return self.config['scigraph_start']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'stop.sh').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'stop.sh').as_posix())
     def scigraph_stop(self):
         return self.config['scigraph_stop']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'scigraph-services.service').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'scigraph-services.service').as_posix())
     def scigraph_systemd(self):
         return self.config['scigraph_systemd']
 
-    @default((Path(__file__).parent.parent / 'scigraph' / 'scigraph-services.conf').as_posix())
+    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'scigraph-services.conf').as_posix())
     def scigraph_java(self):
         return self.config['scigraph_java']
 
