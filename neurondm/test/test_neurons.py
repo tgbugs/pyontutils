@@ -22,7 +22,7 @@ class TestNeurons(unittest.TestCase):
     # TODO make sure this runs after cli test? it should ...
     # but then we need to keep the output of ndl around
     def test_load_existing(self):
-        from pyontutils.neurons.lang import Neuron, Config
+        from neurondm.lang import Neuron, Config
         config = Config('neuron_data_lifted')
         config.load_existing()
         assert len(Neuron.load_graph)
@@ -30,7 +30,7 @@ class TestNeurons(unittest.TestCase):
         assert neurons
 
     def test_adopt(self):
-        from pyontutils.neurons.lang import Neuron, Phenotype, Config
+        from neurondm.lang import Neuron, Phenotype, Config
         ndl_config = Config('neuron_data_lifted')
         ndl_config.load_existing()
         bn_config = Config('basic-neurons')
@@ -48,7 +48,7 @@ class TestNeurons(unittest.TestCase):
 
 
     def test_fail(self):
-        from pyontutils.neurons.lang import Neuron, Phenotype, Config
+        from neurondm.lang import Neuron, Phenotype, Config
         bn_config = Config('basic-neurons')
         # TODO config.activate()? context manager for config ... too ...
         Neuron(Phenotype('ilxtr:test'))
