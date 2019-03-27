@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'docopt',
         'joblib',     # FIXME better if this were optional? or just use a PPE?
-        'neurdflib',  # FIXME rdflib>=5.0.0 if I can get my changes merged
+        'rdflib>=4.99.99',  # really 5.0.0 if my changes go in but dev < 5
     ],
     entry_points={
         'console_scripts': [

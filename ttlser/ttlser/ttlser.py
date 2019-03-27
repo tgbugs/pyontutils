@@ -977,6 +977,6 @@ class SubClassOfTurtleSerializer(CustomTurtleSerializer):
                         key=wrapsort))}
 
 
-__all__ = [CustomTurtleSerializer.__name__] + [
+__all__ = ['natsort', CustomTurtleSerializer.__name__] + [
     c.__name__ for c in subclasses(CustomTurtleSerializer)
 ]

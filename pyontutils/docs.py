@@ -18,11 +18,11 @@ from pathlib import Path
 from importlib import import_module
 import nbformat
 from git import Repo
+from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
 from pyontutils.utils import working_dir, TODAY, noneMembers, TermColors as tc
 from pyontutils.config import devconfig
-from pyontutils.htmlfun import htmldoc, atag
 from pyontutils.ontutils import tokstrip, _bads
 try:
     import hunspell

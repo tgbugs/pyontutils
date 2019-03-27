@@ -29,12 +29,12 @@ from urllib.error import HTTPError
 import rdflib
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app
 from docopt import docopt, parse_defaults
+from htmlfn import htmldoc, titletag, atag
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.utils import getSourceLine
 from pyontutils.utils import Async, deferred
 from pyontutils.ontload import import_tree
-from pyontutils.htmlfun import htmldoc, titletag, atag
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from IPython import embed

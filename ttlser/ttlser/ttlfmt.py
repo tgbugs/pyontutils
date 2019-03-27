@@ -33,7 +33,6 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from pyontutils.utils import readFromStdIn
 from pyontutils import utils_extra  # register plugins
 from .utils import readFromStdIn
 
