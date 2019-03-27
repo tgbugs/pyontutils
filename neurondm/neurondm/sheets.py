@@ -3,11 +3,11 @@ import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
 from pyontutils.core import OntId, OntTerm
 from pyontutils.sheets import update_sheet_values, get_sheet_values, get_note, show_notes
-from pyontutils.neurons import NeuronCUT, Config, Phenotype, LogicalPhenotype
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
 from pyontutils.closed_namespaces import rdfs
-from pyontutils.neurons.models.cuts import make_cut_id, fixname
+from . import NeuronCUT, Config, Phenotype, LogicalPhenotype
+from .models.cuts import make_cut_id, fixname
 
 from IPython import embed
 
@@ -339,12 +339,12 @@ def main():
     config.write()
     #config = Config(config.name)
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
-    from pyontutils.neurons import Config, NeuronCUT
+    from neurondm import Config, NeuronCUT
     release_config = Config('cut-release')
     [NeuronCUT(*n, id_=n.id_, label=n.label, override=True).adopt_meta(n) for n in release]
     release_config.write_python()
     release_config.write()
-    from pyontutils.neurons.models.cuts import export_for_review
+    from neurondm.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
     from pyontutils.utils import byCol
     valuesC = byCol(values, to_index=['label'])

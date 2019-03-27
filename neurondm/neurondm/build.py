@@ -13,7 +13,7 @@ from pyontutils.core import makeGraph, createOntology, OntId as OntId_
 from pyontutils.utils import TODAY, rowParse, refile, working_dir
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig
-from pyontutils.neurons import _NEURON_CLASS
+from neurondm import _NEURON_CLASS
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
@@ -1065,13 +1065,13 @@ def make_bridge():
     from importlib import import_module
     from pyontutils.utils import subclasses
     from pyontutils.core import Ont, build
-    from pyontutils.neurons.lang import Config, NeuronEBM  # need ebm for subclasses to work
-    from pyontutils.neurons.models import __all__
+    from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
+    from neurondm.models import __all__
     print(__all__)
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
-        m = import_module(f'pyontutils.neurons.models.{module}')
+        m = import_module(f'neurondm.models.{module}')
 
 
     class neuronBridge(Ont):

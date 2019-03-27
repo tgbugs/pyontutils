@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from pyontutils.neurons import *
+from neurondm import *
 
 __all__ = ['Test',
            'Layers',

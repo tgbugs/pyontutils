@@ -5,9 +5,9 @@ from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, TEMP
-from pyontutils.neurons import *
-from pyontutils.neurons.lang import *
-from pyontutils.neurons.core import MeasuredNeuron
+from neurondm import *
+from neurondm.lang import *
+from neurondm.core import MeasuredNeuron
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
@@ -36,7 +36,7 @@ def main():
 
     #graphBase.core_graph = EXISTING_GRAPH
     #graphBase.out_graph = rdflib.Graph()
-    graphBase.__import_name__ = 'pyontutils.neurons.lang'
+    graphBase.__import_name__ = 'neurondm.lang'
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)

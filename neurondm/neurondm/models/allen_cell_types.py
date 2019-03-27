@@ -22,7 +22,7 @@ from pyontutils.core import simpleOnt
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
 from pyontutils.combinators import annotation
-from pyontutils.neurons.lang import *
+from neurondm.lang import *
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from docopt import docopt, parse_defaults
 from IPython import embed

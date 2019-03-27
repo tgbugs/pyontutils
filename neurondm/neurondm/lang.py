@@ -3,10 +3,10 @@ import inspect
 from pathlib import Path
 from git.repo import Repo
 from rdflib import Graph, URIRef
-from pyontutils.neurons import *
+from neurondm import *
 from pyontutils.utils import subclasses
 from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
-from pyontutils.neurons.core import NeuronBase  # FIXME temporary until we can rework the config
+from neurondm.core import NeuronBase  # FIXME temporary until we can rework the config
 
 __all__ = [
     'AND',

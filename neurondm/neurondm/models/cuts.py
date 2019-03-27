@@ -12,8 +12,8 @@ from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID
 from pyontutils.closed_namespaces import rdfs
 # import these last so that graphBase resets (sigh)
-from pyontutils.neurons.lang import *
-from pyontutils.neurons import *
+from neurondm.lang import *
+from neurondm import *
 from pyontutils.phenotype_namespaces import BBP, CUT, Layers, Regions
 
 ndl_config = Config('neuron_data_lifted')

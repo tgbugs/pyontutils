@@ -1,9 +1,9 @@
 #!/usr/bin/env python3.6
 
 import inspect
-import pyontutils.neurons
+import neurondm
 from pyontutils.utils import TermColors as tc
-from pyontutils.neurons import *
+from neurondm import *
 from pyontutils import phenotype_namespaces as phns
 from IPython import embed
 

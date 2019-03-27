@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import rdflib
 import ontquery
-from pyontutils.neurons.lang import *
-from pyontutils.neurons import *
+from neurondm.lang import *
+from neurondm import *
 from pyontutils.core import OntId, OntTerm
 from pyontutils.utils import relative_path
 from pyontutils.namespaces import makePrefixes, makeNamespaces, OntCuries
