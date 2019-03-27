@@ -259,7 +259,7 @@ def main():
     elif args['onts']:
         from pathlib import Path
         import rdflib
-        from pyontutils.ontree import ImportChain
+        from nifstd_tools.ontree import ImportChain  # FIXME FIXME FIXME
         from IPython import embed
 
         sgc = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)

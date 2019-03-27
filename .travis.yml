@@ -36,14 +36,14 @@ before_install:
   - popd
 
 install:
-  - pip install pipenv
   - pip install --upgrade pytest pytest-cov
   - pip install coverage coveralls && export HAS_COVERALLS=1
-  - pipenv install --dev --system --skip-lock --deploy
+  - for f in 'htmlfn ttlser pyontutils neurondm nifstd'; do pushd $f; python setup.py develop; popd; done
 
 script:
-  - pipenv run ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
-  - pipenv run pytest --verbose --cov=pyontutils test
+  - ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
+  # TODO check to see which ones have changed and only test those ?? will that break coveralls?
+  - pytest --verbose --cov=ttlser --cov=pyontutils --cov=nifstd_tools --cov=htmlfn ttlser/test test nifstd/test neurondm/test
 
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi

@@ -57,7 +57,7 @@ out = 'OUTGOING'
 both = 'BOTH'
 
 
-class ImportChain:
+class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
         self.sgg = sgg
         self.sgc = sgc
