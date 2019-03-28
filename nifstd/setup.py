@@ -34,6 +34,7 @@ setup(
         'mysql-connector',
         'protobuf',
     ]},
+    scripts=['bin/ttlcmp'],
     entry_points={
         'console_scripts': [
             'ont-docs=nifstd_tools.docs:main',
@@ -42,4 +43,3 @@ setup(
         ],
     },
 )
-

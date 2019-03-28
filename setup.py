@@ -82,7 +82,6 @@ try:
         ]},
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
-        scripts=['bin/ttlcmp'],
         entry_points={
             'console_scripts': [
                 'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
