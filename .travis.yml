@@ -43,6 +43,7 @@ install:
 script:
   - ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
   - export COVERAGE_FILE="$(pwd)/.coverage"
+  - export PYTHONWARNINGS=ignore
   - bin/run-tests
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi

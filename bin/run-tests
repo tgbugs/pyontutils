@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 pushd htmlfn;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=htmlfn test && popd || export DEAD=htmlfn: ; popd
 pushd ttlser;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=ttlser test && popd || export DEAD=${DEAD}ttlser: ; popd
                 pytest --verbose --cov-append                             --cov=pyontutils test && popd || export DEAD=${DEAD}pyontutils:
