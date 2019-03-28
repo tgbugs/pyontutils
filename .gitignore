@@ -1,10 +1,15 @@
 # Local build files
-scigraph/services.yaml*
-scigraph/graphload.yaml*
-scigraph/start.sh*
-scigraph/stop.sh*
-test/actual*.ttl*
-resolver/uri-*-map.conf
+*/scigraph/services.yaml*
+*/scigraph/graphload.yaml*
+*/scigraph/scigraph-services.conf*
+*/scigraph/scigraph-services.service*
+*/scigraph/start.sh*
+*/scigraph/stop.sh*
+*uri-*map.conf
+
+# local testing files
+*actual*.ttl*
+list-act*.ttl*
 
 # local config file
 pyontutils/devconfig.yaml
