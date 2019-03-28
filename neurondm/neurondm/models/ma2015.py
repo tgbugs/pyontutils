@@ -4,7 +4,7 @@ from pathlib import Path
 from pyontutils.utils import rowParse, relative_path
 from pyontutils.namespaces import ilxtr
 from neurondm.lang import *
-from pyontutils.phenotype_namespaces import BBP
+from neurondm.phenotype_namespaces import BBP
 from IPython import embed
 
 class NeuronMarkram2015(NeuronEBM):

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
+import rdflib
 import ontquery
-from neurondm.lang import *
-from neurondm import *
 from pyontutils.core import OntId, OntTerm
 from pyontutils.utils import relative_path
 from pyontutils.namespaces import makePrefixes, makeNamespaces
 from pyontutils.namespaces import NIFRID, ilxtr, hasRole, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl
-from pyontutils.phenotype_namespaces import *
-import rdflib
+from neurondm.lang import *
+from neurondm import *
+from neurondm.phenotype_namespaces import *
 from IPython import embed
 
 Config('huang-2017',

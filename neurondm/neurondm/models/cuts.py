@@ -14,7 +14,7 @@ from pyontutils.closed_namespaces import rdfs
 # import these last so that graphBase resets (sigh)
 from neurondm.lang import *
 from neurondm import *
-from pyontutils.phenotype_namespaces import BBP, CUT, Layers, Regions
+from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
 
 ndl_config = Config('neuron_data_lifted')
 ndl_config.load_existing()

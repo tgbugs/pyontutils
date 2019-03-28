@@ -4,7 +4,7 @@ import inspect
 import neurondm
 from pyontutils.utils import TermColors as tc
 from neurondm import *
-from pyontutils import phenotype_namespaces as phns
+from neurondm import phenotype_namespaces as phns
 from IPython import embed
 
 config = Config('neurons-example-script')

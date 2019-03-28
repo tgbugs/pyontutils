@@ -20,7 +20,7 @@ c = Config('basic-neurons',
                      'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
            source_file=relative_path(__file__))
 
-from pyontutils.phenotype_namespaces import *  # this has to come after reconfig or it will error
+from neurondm.phenotype_namespaces import *  # this has to come after reconfig or it will error
 
 class NeuronSWAN(NeuronEBM):
     owlClass = 'ilxtr:NeuronSWAN'
