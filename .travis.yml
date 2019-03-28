@@ -38,12 +38,17 @@ before_install:
 install:
   - pip install --upgrade pytest pytest-cov
   - pip install coverage coveralls && export HAS_COVERALLS=1
-  - for f in {htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f; python setup.py develop; popd; done
+  - for f in {htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f; python setup.py develop --user; popd; done
 
 script:
   - ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
-  # TODO check to see which ones have changed and only test those ?? will that break coveralls?
-  - pytest --verbose --cov=ttlser --cov=pyontutils --cov=nifstd_tools --cov=htmlfn ttlser/test test nifstd/test neurondm/test
+  - export COVERAGE_FILE="$(pwd)/.coverage"
+  - pushd htmlfn;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=htmlfn test && popd || export DEAD=htmlfn: ; popd
+  - pushd ttlser;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=ttlser test && popd || export DEAD=${DEAD}ttlser: ; popd
+  -                 pytest --verbose --cov-append                             --cov=pyontutils test && popd || export DEAD=${DEAD}pyontutils:
+  - pushd nifstd;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=nifstd_tools test && popd || export DEAD=${DEAD}nifstd: ; popd
+  - pushd neurondm; pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=neurondm test && popd || export DEAD=${DEAD}neurondm: ; popd
+  - $(if [ -n ${DEAD} ]; then (>&2 echo ${DEAD}); exit 1; fi)
 
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
