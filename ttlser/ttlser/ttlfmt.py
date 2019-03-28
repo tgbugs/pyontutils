@@ -33,7 +33,6 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from pyontutils import utils_extra  # register plugins
 from .utils import readFromStdIn
 
 profile_me = lambda f:f
@@ -41,7 +40,7 @@ profile_me = lambda f:f
 def getVersion():
     ttlser = rdflib.plugin.get('nifttl', rdflib.serializer.Serializer)
     ttlser_version = ttlser._CustomTurtleSerializer__version  # FIXME
-    version = f"ttlfmt v0.0.1\nttlser {ttlser_version}"
+    version = "ttlfmt v0.0.1\nttlser {}".format(ttlser_version)
     return version
 
 if __name__ == '__main__':
@@ -110,7 +109,7 @@ def serialize(graph, outpath):
             embed()
     elif args['--profile'] and type(outpath) != type(sys.stdout):
         *_, _out = outpath.rsplit('/', 1)
-        print(f'triple count for {_out}:', len(graph))
+        print('triple count for {_out}:'.format(_out=_out), len(graph))
 
     if outfmt == 'json-ld':
         kwargs = {'auto_compact': True}

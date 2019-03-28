@@ -35,8 +35,8 @@ def make_litsort(sortkey=natsort):
             out = 1, v, str(l)
         elif type(v) == float:
             n = v
-            m, e = f'{n:e}'.split('e')
-            s = f'{m.rstrip("0").rstrip(".")}e{e}'
+            m, e = '{:e}'.format(n).split('e')
+            s = '{}e{}'.format(m.rstrip("0").rstrip("."), e)
             out = 1, n, s
         elif type(v) == datetime:
             # we make no assumptions about the original timestamp so we
@@ -82,7 +82,7 @@ def makeSymbolPrefixes(n):
         if out and out[0] >= most_significant:  # forget math use programming
             continue
         out = ''.join(symbols[d] for d in out)
-        #print(' '.join(f'{_:>3}' for _ in (index, bd, br)), out)
+        #print(' '.join('{:>3}'.format(_) for _ in (index, bd, br)), out)
         yield out
         count += 1
 
@@ -299,7 +299,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                          for s, o in self.store.subject_objects(RDF.type))
 
             sys.stderr.write('\n')
-            [sys.stderr.write(f'{self.store.qname(p):<30} {i}\n')
+            [sys.stderr.write('{:<30} {}\n'.format(self.store.qname(p), i))
              for i, p in enumerate(self.predicateOrder)]
         if DEBUG: debug()
 
@@ -394,7 +394,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         old_norm = None
         while 1:
             if DEBUG:
-                sys.stderr.write(f'\nfixed point iteration {i}')
+                sys.stderr.write('\nfixed point iteration {i}'.format(i=i))
             i += 1
             norm = normalize()
             if old_norm == norm:
@@ -406,17 +406,18 @@ class CustomTurtleSerializer(TurtleSerializer):
 
         out = {n:i + self.max_or for n, i in irank.items()}
         def debug():
-            [sys.stderr.write(f'\n{v:<4}{k}')
+            [sys.stderr.write('\n{v:<4}{k}'.format(v=v, k=k))
              for k, v in sorted(self.object_rank.items(),
                                 key=lambda t:t[1])]
             def sss(l):
-                return ' '.join([f'{str(_):>5}' if _ != [max_worst_case] else '-----'
+                return ' '.join(['{:>5}'.format(str(_))
+                                 if _ != [max_worst_case] else '-----'
                                  for _ in l])
             r = {o:i for i, o in enumerate(list(zip(*sorted(rank().items(), key=lambda t:t[1])))[0])}
             sys.stderr.write('\n' + ' ' * 5 + sss(range(len(self.predicate_rank))) + '\n')
             [sys.stderr.write('\n' +
-                              f'{r[k]:>4} ' + sss(a) + '\n' +
-                              f'{out[k]:>4} ' + sss(b) + '\n' +
+                              '{:>4} '.format(r[k]) + sss(a) + '\n' +
+                              '{:>4} '.format(out[k]) + sss(b) + '\n' +
                               ' ' * 5 + sss(c))
              for k, (a, b, c) in sorted(normalize().items(),
                                      key=lambda t:t[1])]
@@ -466,7 +467,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             except KeyError:
                 # This is what we have to contend with here :/
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
-                sys.stderr.write(f'\nWARNING: some node {bnode} that is an object isnt really an object?\n')
+                sys.stderr.write(('\nWARNING: some node {bnode} that is an object '
+                                 'isnt really an object?\n').format(bnode=bnode))
                 sys.stderr.write(str(e) + '\n')
                 return -1
         else:  # every Literal and URIRef object has a global rank
@@ -478,7 +480,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self._started = True
         ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (self.sortkey(kv[0]), kv[1]))
         for prefix, uri in ns_list:
-            self.write(self.indent() + f'@prefix %s: <%s> .{self._nl}' % (prefix, uri))
+            self.write(self.indent() + '@prefix %s: <%s> .%s' % (prefix, uri, self._nl))
         if ns_list and self._spacious:
             self.write(self._nl)
 
@@ -543,7 +545,8 @@ class CustomTurtleSerializer(TurtleSerializer):
             return
         self.verb(propList[0], newline=newline)
         self.objectList(sorted(sorted(properties[propList[0]])[::-1], key=self._globalSortKey))  # rdf:type
-        whitespace = f'{self._space};{self._nl}' + self.indent(1) if self._newline else ';'
+        whitespace = ('{};{}'.format(self._space, self._nl) + self.indent(1)
+                      if self._newline else ';')
         for predicate in propList[1:]:
             self.write(whitespace)
             self.verb(predicate, newline=self._newline)
@@ -588,7 +591,7 @@ class CustomTurtleSerializer(TurtleSerializer):
             # this is a list
             self.write('(')
             if SDEBUG:
-                self.write(f'{self._nl}# ' + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
+                self.write('{}# '.format(self._nl) + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
             self.depth += 1  # 2
             self.doList(node)
             self.depth -= 1  # 2
@@ -596,10 +599,10 @@ class CustomTurtleSerializer(TurtleSerializer):
         else:
             self.subjectDone(node)
             self.depth += 2
-            # self.write(f'[{self._nl}' + self.indent())
+            # self.write('[{}'.format(self._nl) + self.indent())
             self.write('[')
             if SDEBUG:
-                self.write(f'{self._nl}# ' + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
+                self.write('{}# '.format(self._nl) + str(self._globalSortKey(node)) + self._nl)  # FIXME REMOVE
             self.depth -= 1
             # self.predicateList(node, newline=True)
             if self.predicateList(node, newline=False):
@@ -697,7 +700,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.write(self._nl + self.indent())
         self.path(subject, SUBJECT)
         self.predicateList(subject)
-        self.write(f'{self._space}.')
+        self.write('{}.'.format(self._space))
         return True
 
     def s_squared(self, subject):  # modified to enable whitespace switching
@@ -706,10 +709,10 @@ class CustomTurtleSerializer(TurtleSerializer):
         whitespace = self._nl + self.indent() if self._newline else ''
         self.write(whitespace + '[]')
         if SDEBUG:
-            self.write('{self._nl}#{self._space}' +
+            self.write('{}#{}'.format(self._nl, self._space) +
                        str(self._globalSortKey(subject)) + self._nl)  # FIXME REMOVE
         self.predicateList(subject)
-        self.write(f'{self._space}.')
+        self.write('{}.'.format(self._space))
         return True
 
     def objectList(self, objects):  # modified to use self._nl
@@ -720,7 +723,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         self.depth += depthmod
         self.path(objects[0], OBJECT)
         for obj in objects[1:]:
-            self.write(f',{self._nl}' + self.indent(1))
+            self.write(',{}'.format(self._nl) + self.indent(1))
             self.path(obj, OBJECT, newline=True)
         self.depth -= depthmod
 
@@ -732,7 +735,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         if ' ' in value:
             s = inspect.stack()
             fn = s[1].function
-            super().write(f'%%DEBUG {fn} %%')
+            super().write('%%DEBUG {} %%'.format(fn))
         super().write(value)
 
     def serialize(self, stream, base=None, encoding=None,  # modified to enable section headers
@@ -786,7 +789,7 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
         self._started = True
         ns_list = sorted(sorted(self.namespaces.items()), key=lambda kv: (self.sortkey(kv[0]), kv[1]))
         for prefix, uri in ns_list:
-            self.write(self.indent() + f'@prefix %s: &lt;%s&gt; .{self._nl}' % (prefix, uri))
+            self.write(self.indent() + '@prefix %s: &lt;%s&gt; .%s' % (prefix, uri, self._nl))
         if ns_list and self._spacious:
             self.write(self._nl)
 
@@ -818,7 +821,7 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
 
 class RacketTurtleSerializer(CustomTurtleSerializer):
     def startDocument(self):
-        self.stream.write(f'#lang rdf/turtle{self._nl}'.encode())
+        self.stream.write('#lang rdf/turtle{}'.format(self._nl).encode())
         super().startDocument()
 
 
@@ -858,7 +861,7 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
     def s_default(self, subject):  # modified from TurtleSerializer to remove newlines
         self.path(subject, SUBJECT)
         self.predicateList(subject)
-        self.write(f'{self._space}.')
+        self.write('{}.'.format(self._space))
         return True
 
     def objectList(self, objects):  # modified from TurtleSerializer to remove newlines
