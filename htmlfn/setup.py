@@ -13,7 +13,13 @@ setup(
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',
-    classifiers=[],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+    ],
     keywords='html tags functional',
     packages=['htmlfn'],
+    extras_require={'dev':[]},
 )

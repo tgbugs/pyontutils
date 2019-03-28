@@ -15,7 +15,12 @@ setup(
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',
-    classifiers=[],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+    ],
     keywords='nif nifstd ontology pyontutils neuroscience',
     packages=['nifstd_tools'],
     install_requires=[

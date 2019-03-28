@@ -13,12 +13,17 @@ setup(
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',
-    classifiers=[],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+    ],
     keywords='rdflib librdf rdf parser parsing ttl rdfxml',
     packages=['librdflib'],
     install_requires=[
         'rdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
+    extras_require={'dev':[]},
     entry_points={
         'rdf.plugins.parser': [
             'librdfxml = librdflib:libRdfxmlParser',
