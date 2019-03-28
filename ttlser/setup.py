@@ -22,10 +22,12 @@ setup(
     ],
     keywords='rdflib rdf deterministic turtle ttl',
     packages=['ttlser'],
+    python_requires='>=3.5',
+    tests_require=['pytest', 'pytest-runner'],
     install_requires=[
         'docopt',
         'joblib',     # FIXME better if this were optional? or just use a PPE?
-        'rdflib>=4.99.99',  # really 5.0.0 if my changes go in but dev < 5
+        'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
     extras_require={'dev':[]},
     entry_points={

@@ -21,5 +21,7 @@ setup(
     ],
     keywords='html tags functional',
     packages=['htmlfn'],
+    python_requires='>=3.6',
+    tests_require=['pytest', 'pytest-runner'],
     extras_require={'dev':[]},
 )

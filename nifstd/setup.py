@@ -23,6 +23,8 @@ setup(
     ],
     keywords='nif nifstd ontology pyontutils neuroscience',
     packages=['nifstd_tools'],
+    python_requires='>=3.6',
+    tests_require=['pytest', 'pytest-runner'],
     install_requires=[
         'flask',
         'pymysql',

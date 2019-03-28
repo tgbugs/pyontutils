@@ -56,6 +56,8 @@ try:
         keywords='ontology scigraph rdflib turtle ttl OWL',
         package_dir={'pyontutils':'export'},
         packages=['pyontutils'],
+        python_requires='>=3.6',
+        tests_require=['pytest', 'pytest-runner'],
         install_requires=[
             'docopt',
             'gitpython',
@@ -63,7 +65,7 @@ try:
             'ipython',
             'joblib',
             'lxml',
-            'ontquery>=0.0.4',
+            'ontquery>=0.0.6',
             'psutil',
             'pyyaml',
             'neurdflib',

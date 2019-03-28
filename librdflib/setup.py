@@ -20,6 +20,8 @@ setup(
     ],
     keywords='rdflib librdf rdf parser parsing ttl rdfxml',
     packages=['librdflib'],
+    python_requires='>=3',
+    tests_require=['pytest', 'pytest-runner'],
     install_requires=[
         'rdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],

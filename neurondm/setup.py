@@ -22,8 +22,10 @@ setup(
     keywords=('neuron types NIF ontology neuroscience phenotype '
               'OWL rdf rdflib data model'),
     packages=['neurondm'],  # don't package models due to data resources needs?
+    python_requires='>=3.6',
+    tests_require=['pytest', 'pytest-runner'],
     install_requires=[
-        'pyontutils',
+        'pyontutils>=0.1.0',
     ],
     extras_require={'dev':[]},
     entry_points={
