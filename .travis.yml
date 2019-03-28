@@ -38,7 +38,7 @@ before_install:
 install:
   - pip install --upgrade pytest pytest-cov
   - pip install coverage coveralls && export HAS_COVERALLS=1
-  - for f in {htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f; pip install --pre --editable . ; popd; done  # --user doesn't work in these virtualenvs
+  - for f in {htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --pre --editable . ; popd; done  # --user doesn't work in these virtualenvs
 
 script:
   - ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
