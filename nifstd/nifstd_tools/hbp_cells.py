@@ -7,12 +7,12 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph
+from pyontutils.utils import working_dir
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
 from IPython import embed
 
-current_file = Path(__file__).absolute()
-gitf = current_file.parent.parent.parent
+gitf = working_dir.parent
 
 v = Vocabulary()
 
