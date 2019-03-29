@@ -10,7 +10,7 @@ setup(
     description='functions for generating html',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/tgbugs/pyontutils/htmlfn',
+    url='https://github.com/tgbugs/pyontutils/tree/master/htmlfn',
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',

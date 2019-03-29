@@ -10,7 +10,7 @@ setup(
     description='Deterministic turtle serialization for rdflib.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/tgbugs/pyontutils/ttlser',
+    url='https://github.com/tgbugs/pyontutils/tree/master/ttlser',
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',
@@ -30,8 +30,8 @@ setup(
         'joblib',     # FIXME better if this were optional? or just use a PPE?
         'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
-    extras_require={'dev':[],
-                    'test':tests_require},
+    extras_require={'dev': [],
+                    'test': tests_require},
     entry_points={
         'console_scripts': [
             'ttlfmt=ttlser.ttlfmt:main',

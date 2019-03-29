@@ -10,7 +10,7 @@ setup(
     description='librdf parser for rdflib',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/tgbugs/pyontutils/librdflib',
+    url='https://github.com/tgbugs/pyontutils/tree/master/librdflib',
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',

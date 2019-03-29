@@ -12,7 +12,7 @@ setup(
     description='utilities for working with the NIF ontology',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/tgbugs/pyontutils/nifstd',
+    url='https://github.com/tgbugs/pyontutils/tree/master/nifstd',
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',

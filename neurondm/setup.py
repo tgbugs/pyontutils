@@ -10,7 +10,7 @@ setup(
     description='A data model for neuron types.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/tgbugs/pyontutils/neurondm',
+    url='https://github.com/tgbugs/pyontutils/tree/master/neurondm',
     author='Tom Gillespie',
     author_email='tgbugs@gmail.com',
     license='MIT',
