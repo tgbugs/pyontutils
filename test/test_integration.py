@@ -74,7 +74,7 @@ mains = {'methods':None,
 'ontutils':[['ontutils', '--help'],
             ['ontutils', 'deadlinks', nifttl],
             ['ontutils', 'version-iri', nifttl],
-            ['ontutils', 'spell', ban],
+            #['ontutils', 'spell', ban],  #  FIXME skipping for now due to huspell dependency
             #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
            ],
 'overlaps':['overlaps', '--help'],

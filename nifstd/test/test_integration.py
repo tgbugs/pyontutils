@@ -1,9 +1,9 @@
 import unittest
 from pathlib import Path
-from pyontutils.integration_test_helper import TestScriptsBase
+from pyontutils.integration_test_helper import TestScriptsBase, Folders
 import nifstd_tools
 
-class TestScripts(TestScriptsBase):
+class TestScripts(Folders, TestScriptsBase):
     """ woo! """
 
 mains = {'nif_cell':None,
@@ -18,4 +18,10 @@ mains = {'nif_cell':None,
 module_parent = Path(__file__).resolve().parent.parent.as_posix()
 working_dir = Path(__file__).resolve().parent.parent.parent.as_posix()
 
-TestScripts.populate_tests(nifstd_tools, working_dir, mains, module_parent=module_parent, only=[], do_mains=True)
+ont_repo = Repo(devconfig.ontology_local_repo)
+post_load = ont_repo.remove_diff_untracked
+post_main = ont_repo.remove_diff_untracked
+
+TestScripts.populate_tests(nifstd_tools, working_dir, mains, module_parent=module_parent,
+                           post_load=post_load, post_main=post_main,
+                           only=[], do_mains=True)
