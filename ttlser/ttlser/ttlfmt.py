@@ -33,7 +33,6 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from .utils import readFromStdIn
 
 profile_me = lambda f:f
 
@@ -165,6 +164,7 @@ def main():
     outpath = args['--output']
     files = args['<file>']
     if not files:
+        from ttlfmt.utils import readFromStdIn
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
             convert(stdin, outpath, stream=True)

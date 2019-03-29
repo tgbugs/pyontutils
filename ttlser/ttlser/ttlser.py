@@ -6,7 +6,7 @@ from datetime import datetime
 from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
 from rdflib.namespace import SKOS, DC, Namespace
 from rdflib.plugins.serializers.turtle import TurtleSerializer
-from .utils import subclasses
+from ttlser.utils import subclasses
 
 # XXX WARNING prefixes are not 100% deterministic if there is more than one prefix for namespace
 #     the implementation of IOMemory.bind in rdflib means that the last prefix defined in the list

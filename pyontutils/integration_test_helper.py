@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import subprocess
 from pathlib import Path
 from importlib import import_module
 import git
