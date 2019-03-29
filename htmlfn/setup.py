@@ -3,6 +3,7 @@ from setuptools import setup
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
+tests_require = ['pytest', 'pytest-runner']
 setup(
     name='htmlfn',
     version='0.0.1',
@@ -22,6 +23,8 @@ setup(
     keywords='html tags functional',
     packages=['htmlfn'],
     python_requires='>=3.6',
-    tests_require=['pytest', 'pytest-runner'],
-    extras_require={'dev':[]},
+    tests_require=tests_require,
+    extras_require={'dev': [],
+                    'test': tests_require,
+    },
 )

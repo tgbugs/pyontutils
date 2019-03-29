@@ -5,6 +5,7 @@ from setuptools import setup
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
+tests_require = ['pytest', 'pytest-runner']
 setup(
     name='nifstd-tools',
     version='0.0.1',
@@ -24,7 +25,7 @@ setup(
     keywords='nif nifstd ontology pyontutils neuroscience',
     packages=['nifstd_tools'],
     python_requires='>=3.6',
-    tests_require=['pytest', 'pytest-runner'],
+    tests_require=tests_require,
     install_requires=[
         'flask',
         'nbformat'
@@ -32,11 +33,12 @@ setup(
         'pyontutils>=0.1.0',
         'sqlalchemy',
     ],
-    extras_require={'dev':[
-        'hunspell',
-        'mysql-connector',
-        'protobuf',
-    ]},
+    extras_require={'dev': ['hunspell',
+                            'mysql-connector',
+                            'protobuf',
+    ],
+                    'test': tests_require,
+    },
     scripts=['bin/ttlcmp'],
     entry_points={
         'console_scripts': [

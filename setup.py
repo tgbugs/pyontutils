@@ -37,6 +37,8 @@ try:
     os.mkdir('export/neurons')
     for f in files:
         shutil.copyfile(f, f.replace('pyontutils','export'))
+
+    tests_require = ['pytest', 'pytest-runner']
     setup(
         name='pyontutils',
         version='0.1.0',
@@ -57,7 +59,7 @@ try:
         package_dir={'pyontutils':'export'},
         packages=['pyontutils'],
         python_requires='>=3.6',
-        tests_require=['pytest', 'pytest-runner'],
+        tests_require=tests_require,
         install_requires=[
             'docopt',
             'gitpython',
@@ -75,13 +77,14 @@ try:
             'robobrowser',
             'ttlser',
         ],
-        extras_require={'dev':[
-            'hunspell',
-            'jupyter',
-            'mysql-connector',
-            'protobuf',
-            'psycopg2',
-        ]},
+        extras_require={'dev': ['hunspell',
+                                'jupyter',
+                                'mysql-connector',
+                                'protobuf',
+                                'psycopg2',
+        ],
+                        'test': tests_require,
+        },
         #package_data
         #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
         entry_points={

@@ -3,6 +3,7 @@ from setuptools import setup
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
+tests_require = ['pytest', 'pytest-runner']
 setup(
     name='neurondm',
     version='1.0.0',  # FIXME package vs core serializer
@@ -23,11 +24,13 @@ setup(
               'OWL rdf rdflib data model'),
     packages=['neurondm'],  # don't package models due to data resources needs?
     python_requires='>=3.6',
-    tests_require=['pytest', 'pytest-runner'],
+    tests_require=tests_require,
     install_requires=[
         'pyontutils>=0.1.0',
     ],
-    extras_require={'dev':[]},
+    extras_require={'dev': [],
+                    'test': tests_require,
+    },
     entry_points={
         'console_scripts': [
             'neurondm-example=neurondm.example',
