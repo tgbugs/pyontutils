@@ -164,7 +164,7 @@ def main():
     outpath = args['--output']
     files = args['<file>']
     if not files:
-        from ttlfmt.utils import readFromStdIn
+        from ttlser.utils import readFromStdIn
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
             convert(stdin, outpath, stream=True)
