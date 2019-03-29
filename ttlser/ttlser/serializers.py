@@ -4,6 +4,7 @@ import sys
 from decimal import Decimal
 from datetime import datetime
 from rdflib import RDF, RDFS, OWL, XSD, BNode, URIRef, Literal
+from rdflib.graph import QuotedGraph
 from rdflib.namespace import SKOS, DC, Namespace
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 from ttlser.utils import subclasses
@@ -314,7 +315,9 @@ class CustomTurtleSerializer(TurtleSerializer):
                      [[], []]]
                   for t in self.store
                   for v in t
-                  if isinstance(v, BNode)}
+                  if isinstance(v, BNode)
+                  # FIXME graph ranks ... wew
+                  or isinstance(v, QuotedGraph)}
         max_worst_case = len(bnodes) + self.max_or + 2
         mwc = [max_worst_case]
         mwcm1 = [max_worst_case - 1]
@@ -389,6 +392,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                             rv.append(max_worst_case - 1)
             ranks = rank()
             fixedpoint(ranks)
+
         one_time()
         i = 0
         old_norm = None
@@ -461,7 +465,7 @@ class CustomTurtleSerializer(TurtleSerializer):
         return list_rankers
 
     def _globalSortKey(self, bnode):
-        if isinstance(bnode, BNode):
+        if isinstance(bnode, BNode) or isinstance(bnode, QuotedGraph):
             try:
                 return self.node_rank[bnode]
             except KeyError:
