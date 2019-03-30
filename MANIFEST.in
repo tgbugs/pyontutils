@@ -1,12 +1,20 @@
-recursive-exclude export *
-recursive-exclude complete *
-recursive-exclude ilxutils *
-recursive-exclude development *
-recursive-exclude pyontutils.egg-info *
+recursive-include test *
+exclude bin/run-tests
+exclude .coveragerc
 exclude .gitignore
 exclude .travis.yml
 exclude MANIFEST.in
 exclude *.rkt
 exclude *.csv
 exclude *.json
-
+recursive-exclude ttlser *
+recursive-exclude neurondm *
+recursive-exclude nifstd *
+recursive-exclude htmlfn *
+recursive-exclude librdflib *
+recursive-exclude export *
+recursive-exclude ilxutils *
+recursive-exclude *.egg-info *
+recursive-exclude * *.pyc
+recursive-exclude * *.swp
+recursive-exclude * *.swo

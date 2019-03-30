@@ -26,11 +26,12 @@ setup(
     python_requires='>=3.5',
     tests_require=tests_require,
     install_requires=[
-        'docopt',
-        'joblib',     # FIXME better if this were optional? or just use a PPE?
         'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
     extras_require={'dev': [],
+                    'ttlfmt': ['docopt',
+                               'joblib',     # FIXME better if this were optional? or just use a PPE?
+                              ],
                     'test': tests_require},
     entry_points={
         'console_scripts': [

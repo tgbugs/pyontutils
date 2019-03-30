@@ -1,3 +1,8 @@
-recursive-exclude *.egg-info *
+recursive-include test *
 exclude MANIFEST.in
-
+recursive-exclude complete *
+recursive-exclude development *
+recursive-exclude *.egg-info *
+recursive-exclude * *.pyc
+recursive-exclude * *.swp
+recursive-exclude * *.swo
