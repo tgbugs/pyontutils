@@ -69,7 +69,7 @@ try:
             'joblib',
             'lxml',
             'oauth2client',
-            'ontquery>=0.0.6',
+            'ontquery>=0.0.7',
             'psutil',
             'pyyaml',
             'neurdflib',

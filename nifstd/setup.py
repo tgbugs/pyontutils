@@ -28,7 +28,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'flask',
-        'nbformat'
+        'nbformat',
         'pymysql',
         'pyontutils>=0.1.0',
         'sqlalchemy',
