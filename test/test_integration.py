@@ -37,8 +37,8 @@ skip = ('cocomac_uberon',  # known broken
 ci_skip = ('librdf',)  # getting python3-librdf installed is too much of a pain atm
 
 ont_repo = Repo(devconfig.ontology_local_repo)
-post_load = ont_repo.remove_diff_untracked
-post_main = ont_repo.remove_diff_untracked
+post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 
 ### build mains
 

@@ -9,8 +9,9 @@ class TestScripts(Folders, TestScriptsBase):
 
 
 ont_repo = Repo(devconfig.ontology_local_repo)
-post_load = ont_repo.remove_diff_untracked
-post_main = ont_repo.remove_diff_untracked
+post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+
 ### handle ontology branch behavior
 neurons = ('neurondm/core',
            'neurondm/lang',

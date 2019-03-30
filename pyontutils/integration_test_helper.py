@@ -13,13 +13,32 @@ from pyontutils.config import devconfig
 class Repo(baseRepo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._untracked_start = self.untracked()
+        self._untracked_start = self.untracked
+        self._tracked_start = self.tracked
+        # things
+        self.is_dirty()
 
+    @property
     def untracked(self):
-        return set(self.git.ls_files('--others', '--exclude-standard').split('\n'))
+        return set(self.untracked_files)
+
+    @property
+    def tracked(self):
+        """ get a `git status` like diff of unstaged files """
+        out = set()
+        for diff in self.head.commit.diff(None):
+            if diff.change_type == 'M':
+                out.add(diff.a_path)
+
+        return out
+
+    def diff_tracked(self):
+        new_tracked = self.tracked
+        diff = new_tracked - self._tracked_start
+        return diff
 
     def diff_untracked(self):
-        new_untracked = self.untracked()
+        new_untracked = self.untracked
         diff = new_untracked - self._untracked_start
         return diff
 
@@ -29,6 +48,9 @@ class Repo(baseRepo):
             path = wd / tail
             print('removing file', path)
             path.unlink()
+
+    def checkout_diff_tracked(self):
+        self.git.checkout('--', *self.diff_tracked())
 
 
 class Folders:
@@ -126,6 +148,7 @@ class TestScriptsBase(unittest.TestCase):
 
         if only:
             mains = {k:v for k, v in mains.items() if k in only}
+            print(mains)
 
         if not do_mains:
             mains = {}
@@ -140,7 +163,9 @@ class TestScriptsBase(unittest.TestCase):
                            not print(f) and
                            f.startswith(relpath + module_to_test.__name__) and
                            '__init__' not in f and
-                           (True if not only else any(_ + '.py' in f for _ in only)))
+                           (True if not only else
+                            any(_ + '.py' in f for _ in only) or
+                            any(_ + '/__main__.py' in f for _ in only)))
 
             for last in lasts:
                 # FIXME hack to go last
