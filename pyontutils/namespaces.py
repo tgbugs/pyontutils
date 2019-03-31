@@ -19,7 +19,9 @@ def _loadPrefixes():
     try:
         with open(devconfig.curies, 'rt') as f:
             curie_map = yaml.safe_load(f)
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError) as e:
+        # retrieving stuff over the net is bad
+        # but having stale curies seems worse?
         master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
         raw_path = 'scigraph/nifstd_curie_map.yaml?raw=true'
         curie_map = requests.get(master_blob + raw_path)

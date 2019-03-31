@@ -2,6 +2,10 @@ recursive-include test *
 exclude MANIFEST.in
 recursive-exclude complete *
 recursive-exclude development *
+recursive-exclude patches *
+recursive-exclude resolver *
+recursive-exclude resources *
+recursive-exclude scigraph *
 recursive-exclude *.egg-info *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
