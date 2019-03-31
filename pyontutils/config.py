@@ -5,9 +5,18 @@ from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 from pyontutils.utils import TermColors as tc, makeSimpleLogger
+from pyontutils.utils import get_working_dir
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-default_config = Path(__file__).parent / 'devconfig.yaml'
+config_path = Path(os.environ.get('XDG_CONFIG_HOME', '~/.config')).expanduser()
+working_dir = get_working_dir(__file__)
+if working_dir is None:
+    # we are not in git, we are probably testing or installed by a user
+    default_config = config_path / 'pyontutils' / 'devconfig.yaml'
+    working_dir = Path('/dev/null')
+else:
+    default_config = working_dir / 'pyontutils' / 'devconfig.yaml'
+
 PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
 
 log = makeSimpleLogger('config')
@@ -197,11 +206,11 @@ class DevConfig:
         self._override['secrets_file'] = value
         self.write(self.config_file.as_posix())
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
     def curies(self):
         return self.config['curies']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'patches' / 'patches.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'patches' / 'patches.yaml').as_posix())
     def patch_config(self):
         return self.config['patch_config']
 
@@ -300,7 +309,7 @@ class DevConfig:
 
         return Path('/dev/null/does-not-exist')  # seems reaonsable ...
 
-    @default((Path(__file__).parent / 'resources').as_posix())
+    @default((working_dir / 'nifstd' /'resources').as_posix())
     def resources(self):
         return self.config['resources']
 
@@ -331,27 +340,27 @@ class DevConfig:
     def scigraph_api_user(self):
         return self.config['scigraph_api_user']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix())
     def scigraph_graphload(self):
         return self.config['scigraph_graphload']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'services.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'services.yaml').as_posix())
     def scigraph_services(self):
         return self.config['scigraph_services']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'start.sh').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'start.sh').as_posix())
     def scigraph_start(self):
         return self.config['scigraph_start']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'stop.sh').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'stop.sh').as_posix())
     def scigraph_stop(self):
         return self.config['scigraph_stop']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'scigraph-services.service').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.service').as_posix())
     def scigraph_systemd(self):
         return self.config['scigraph_systemd']
 
-    @default((Path(__file__).parent.parent / 'nifstd' / 'scigraph' / 'scigraph-services.conf').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.conf').as_posix())
     def scigraph_java(self):
         return self.config['scigraph_java']
 

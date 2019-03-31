@@ -5,7 +5,7 @@ from pathlib import Path
 from importlib import import_module
 import git
 import pyontutils
-from pyontutils.utils import working_dir, TermColors as tc
+from pyontutils.utils import TermColors as tc, get_working_dir
 from pyontutils.config import devconfig
 from pyontutils.integration_test_helper import TestScriptsBase, Repo, Folders
 
@@ -36,6 +36,14 @@ skip = ('cocomac_uberon',  # known broken
 )
 ci_skip = ('librdf',)  # getting python3-librdf installed is too much of a pain atm
 
+working_dir = get_working_dir(__file__)
+if working_dir is None:
+    # python setup.py test will run from the module_parent folder
+    # I'm pretty the split was only implemented because I was trying
+    # to run all tests from the working_dir in one shot, but that has
+    # a number of problems with references to local vs installed packages
+    working_dir = module_parent
+
 ont_repo = Repo(devconfig.ontology_local_repo)
 post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
@@ -47,14 +55,12 @@ mba = Path(devconfig.ontology_local_repo, 'ttl/generated/parcellation/mbaslim.tt
 nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
 nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
 zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
-mains = {'methods':None,
-         'scigraph':None,
+mains = {'scigraph':None,
          'combinators':None,
          'hierarchies':None,
          'closed_namespaces':None,
          #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
          'make_catalog':['ont-catalog', '--jobs', '1'],
-         'parcellation':['parcellation', '--jobs', '1'],
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
          'obo_io':['obo-io', '--ttl', nsmethodsobo],

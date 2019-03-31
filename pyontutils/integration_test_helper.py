@@ -133,6 +133,12 @@ class TestScriptsBase(unittest.TestCase):
         if module_parent is None:
             module_parent = working_dir
 
+        if isinstance(working_dir, Path):
+            working_dir = working_dir.as_posix()
+
+        if isinstance(module_parent, Path):
+            module_parent = module_parent.as_posix()
+
         relpath = Path(module_parent).relative_to(Path(working_dir)).as_posix()
         if relpath == '.':
             relpath = ''

@@ -11,10 +11,10 @@ from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, working_dir, getSourceLine
+from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
 from pyontutils.utils import Async, deferred, TermColors as tc
 from pyontutils.utils_extra import check_value
-from pyontutils.config import get_api_key, devconfig
+from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
 from pyontutils import combinators as cmb
