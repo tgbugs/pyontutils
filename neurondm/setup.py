@@ -30,6 +30,7 @@ setup(
     ],
     extras_require={'dev': [],
                     'test': tests_require,
+                    'notebook': ['jupyter'],
     },
     entry_points={
         'console_scripts': [

@@ -28,6 +28,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'flask',
+        'nbconvert',
         'nbformat',
         'pymysql',
         'pyontutils>=0.1.0',
