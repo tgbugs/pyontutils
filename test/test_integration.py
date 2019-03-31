@@ -42,7 +42,7 @@ if working_dir is None:
     # I'm pretty the split was only implemented because I was trying
     # to run all tests from the working_dir in one shot, but that has
     # a number of problems with references to local vs installed packages
-    working_dir = module_parent
+    working_dir = Path(__file__).parent.parent
 
 ont_repo = Repo(devconfig.ontology_local_repo)
 post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
