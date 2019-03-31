@@ -6,7 +6,6 @@ from pyontutils.integration_test_helper import TestCliBase, Folders
 class TestCli(Folders, TestCliBase):
     commands = (
         ['graphml-to-ttl', '--help'],
-        ['ilxcli', '--help'],
         ['necromancy', '--help'],
         ['ontload', '--help'],
         ['overlaps', '--help'],
