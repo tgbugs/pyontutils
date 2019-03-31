@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-pushd htmlfn;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=htmlfn test && popd || export DEAD=htmlfn: ; popd
-pushd ttlser;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=ttlser test && popd || export DEAD=${DEAD}ttlser: ; popd
-                pytest --verbose --cov-append                             --cov=pyontutils --cov=ttlser test && popd || export DEAD=${DEAD}pyontutils:
-pushd nifstd;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=nifstd_tools test && popd || export DEAD=${DEAD}nifstd: ; popd
-pushd neurondm; pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=neurondm test && popd || export DEAD=${DEAD}neurondm: ; popd
+pushd htmlfn;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=htmlfn test || export DEAD=htmlfn: ; popd
+pushd ttlser;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=ttlser test || export DEAD=${DEAD}ttlser: ; popd
+                pytest --verbose --cov-append                             --cov=pyontutils --cov=ttlser test || export DEAD=${DEAD}pyontutils:
+pushd nifstd;   pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=nifstd_tools test || export DEAD=${DEAD}nifstd: ; popd
+pushd neurondm; pytest --verbose --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=neurondm test || export DEAD=${DEAD}neurondm: ; popd
 if [ -n ${DEAD} ]; then
     (>&2 echo ${DEAD});
     exit 1;
