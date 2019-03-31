@@ -1,5 +1,5 @@
 recursive-include test *
-include ../.coveragerc
+include .coveragerc
 exclude MANIFEST.in
 recursive-exclude *.egg-info *
 recursive-exclude * *.pyc
