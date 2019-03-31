@@ -18,7 +18,7 @@ Options:
 import os
 import json
 from docopt import docopt
-from pyontutils import ilx_utils as iu
+from nifstd_tools import ilx_utils as iu
 from IPython import embed
 
 def test(order, recordDict):

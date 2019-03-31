@@ -1153,8 +1153,6 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             self.id_ = self.expand(id_)
         elif phenotypeEdges:
             #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
-            #self.id_ = self.expand(ILXREPLACE(str(tuple(sorted(phenotypeEdges)))))  # XXX beware changing how __str__ works... really need to do this
-            #self.id_ = TEMP[str(tuple(sorted(phenotypeEdges))).replace(' ','_').replace("'","=")]  # XXX beware changing how __str__ works... really need to do this
 
             frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
                                     for pe in phenotypeEdges),

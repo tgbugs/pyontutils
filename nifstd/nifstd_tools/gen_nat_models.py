@@ -6,8 +6,7 @@ import rdflib
 import requests
 from pyontutils.utils import rowParse
 from pyontutils.core import makePrefixes, makeGraph
-from pyontutils.ilx_utils import ILXREPLACE
-from pyontutils.namespaces import makePrefixes
+from pyontutils.namespaces import makePrefixes, TEMP
 from IPython import embed
 
 def main():
@@ -19,17 +18,17 @@ def main():
     rows = [r for r in csv.reader(resp.text.split('\n'), delimiter=delimiter) if r and r[0][0] != '#']
     header = ['Record_ID', 'parent_category', 'name','description', 'required_tags']
 
-    PREFIXES = makePrefixes('owl','skos','ILX','ILXREPLACE','definition')
+    PREFIXES = makePrefixes('owl', 'skos', 'ILX', 'definition')
     graph = makeGraph('measures', prefixes=PREFIXES)
 
     class nat(rowParse):
         def Record_ID(self, value):
             print(value)
             self.old_id = value
-            self._id = ILXREPLACE(value)
+            self._id = TEMP[value]
         def parent_category(self, value):
             self.super_old_id = value
-            self.super_id = ILXREPLACE(value)
+            self.super_id = TEMP[value]
         def name(self, value):
             self.hidden = value
             self.label = value.replace('_', ' ')

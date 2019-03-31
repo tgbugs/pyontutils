@@ -15,7 +15,6 @@ from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.ilx_utils import ILXREPLACE
 from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
@@ -55,7 +54,6 @@ ilx_base = 'ILX:{:0>7}'
 
 PREFIXES = {**makePrefixes('ilxtr',
                            'ILX',
-                           'ILXREPLACE',
                            'skos',
                            'owl',
                            'dc',
@@ -271,14 +269,13 @@ def make_phenotypes():
         'functional':'owl:FunctionalProperty',
     }
     pedges = set()
-    def irn(inp): return ILXREPLACE(__name__ + inp)
     for row in rows[1:]:
         if row[0].startswith('#') or not row[0]:
             if row[0] == '#references':
                 break
             print(row)
             continue
-        id_ = PREFIXES['ilxtr'] + row[0]
+        id_ = ilxtr[row[0]]
         pedges.add(graph.expand('ilxtr:' + row[0]))
         graph.add_trip(id_, rdflib.RDFS.label, row[0])  # FIXME
         graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.ObjectProperty)
@@ -1048,7 +1045,7 @@ def expand_syns(syn_mappings):
 def predicate_disambig(graph):
     # the useful idiot holds 'appriopriate' predicate/phenotype mappings where there may be some ambiguity (e.g. brain region vs layer) it is OK to hardcode these
     # the ui is not an owl:Class
-    ui = ILXREPLACE('phenotype predicate disambiguation')
+    ui = ilxtr.PhenotypePredicateDisambiguation
     def uit(p, o):
         out = (ui, graph.expand(p), graph.expand(o))
         graph.add_trip(*out)

@@ -1,5 +1,7 @@
 recursive-include test *
 exclude MANIFEST.in
+exclude nifstd_tools/ilxcli.py
+exclude nifstd_tools/ilx_utils.py
 recursive-exclude complete *
 recursive-exclude development *
 recursive-exclude patches *

@@ -31,7 +31,6 @@ def main():
                f'{local_prefix}/hbp-special.ttl')
     for file in sources:
             EXISTING_GRAPH.parse(file, format='turtle')
-    EXISTING_GRAPH.namespace_manager.bind('ILXREPLACE', makePrefixes('ILXREPLACE')['ILXREPLACE'])
     #EXISTING_GRAPH.namespace_manager.bind('PR', makePrefixes('PR')['PR'])
 
     #graphBase.core_graph = EXISTING_GRAPH
