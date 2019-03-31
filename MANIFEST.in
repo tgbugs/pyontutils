@@ -7,6 +7,7 @@ exclude MANIFEST.in
 exclude *.rkt
 exclude *.csv
 exclude *.json
+exclude *.yaml
 recursive-exclude ttlser *
 recursive-exclude neurondm *
 recursive-exclude nifstd *
