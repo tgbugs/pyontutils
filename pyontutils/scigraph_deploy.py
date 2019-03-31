@@ -56,7 +56,8 @@ from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import run as ontload_main
-from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, getCuries
+from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError
+from pyontutils.namespaces import getCuries
 from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
@@ -432,7 +433,7 @@ class Builder:
     def build_services_config(self):
         services_config_template = self.locate_config_template(self.services_config)
         curies_location = self.curies
-        curies, _ = getCuries(curies_location)
+        curies = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
             services_config = yaml.safe_load(f)
         services_config['graphConfiguration']['curies'] = curies
