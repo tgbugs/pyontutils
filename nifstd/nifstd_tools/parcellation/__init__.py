@@ -602,11 +602,11 @@ class parcArts(ParcOnt):
     @property
     def _artifacts(self):
         for collector in subclasses(Collector):
-            if collector.__module__ != 'pyontutils.parcellation':  # just run __main__
+            if collector.__module__ != 'nifstd_tools.parcellation':  # just run __main__
                 yield from collector.arts()
 
     def _triples(self):
-        from pyontutils.parcellation import Artifact
+        from nifstd_tools.parcellation import Artifact
         yield from Artifact.class_triples()
         # OH LOOK PYTHON IS BEING AN AWFUL LANGUAGE AGAIN
         for art_type in subclasses(Artifact):  # this is ok because all subclasses are in this file...
@@ -661,7 +661,7 @@ class parcBridge(ParcOnt):
     filename = 'parcellation-bridge'
     name = 'Parcellation Bridge'
     imports = ((g[subclass.__name__]
-                if subclass.__name__ in g and subclass.__module__ == 'pyontutils.parcellation'  # parcellation is insurance for name reuse
+                if subclass.__name__ in g and subclass.__module__ == 'nifstd_tools.parcellation'  # parcellation is insurance for name reuse
                 else subclass)
                for g in (globals(),)
                for subclass in subclasses(LabelsBase)  # XXX wow, well apparently __main__.Class != module.Class
@@ -1800,7 +1800,7 @@ def getOnts():
     return tuple(l for l in subclasses(ParcOnt)
                  if l.__name__ != 'parcBridge'
                  and not hasattr(l, f'_{l.__name__}__pythonOnly')
-                 and (l.__module__ != 'pyontutils.parcellation'
+                 and (l.__module__ != 'nifstd_tools.parcellation'
                       if __name__ == '__main__' or __name__ == '__init__'
                       else l.__module__ != '__main__' and l.__module__ != '__init__'))
 
@@ -1810,10 +1810,10 @@ def main():
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     if not args['--local']:
-        from pyontutils.parcellation.aba import Artifacts as abaArts
-    from pyontutils.parcellation.freesurfer import Artifacts as fsArts
-    from pyontutils.parcellation.whs import Artifacts as whsArts
-    from pyontutils.parcellation.berman import Artifacts as bermArts
+        from nifstd_tools.parcellation.aba import Artifacts as abaArts
+    from nifstd_tools.parcellation.freesurfer import Artifacts as fsArts
+    from nifstd_tools.parcellation.whs import Artifacts as whsArts
+    from nifstd_tools.parcellation.berman import Artifacts as bermArts
     onts = getOnts()
     _ = *(print(ont) for ont in onts),
     out = build(*onts,

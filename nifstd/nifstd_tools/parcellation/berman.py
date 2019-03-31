@@ -7,7 +7,7 @@ from lxml import etree
 import rdflib
 from pyontutils.core import resSource, LabelsBase, Collector
 from pyontutils.config import devconfig
-from pyontutils.parcellation import parcCore, Atlas, LabelRoot, Label
+from nifstd_tools.parcellation import parcCore, Atlas, LabelRoot, Label
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, BERCAT, nsExact
 from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL, makePrefixes
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov

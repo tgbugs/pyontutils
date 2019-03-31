@@ -10,8 +10,8 @@ from pyontutils.combinators import Restriction, EquivalentClass
 from pyontutils.combinators import oc, oc_, olit, oec
 from pyontutils.combinators import Restriction2, POCombinator
 from pyontutils.combinators import annotation, restriction, restrictionN
-from pyontutils.methods.core import methods_core, asp, proc, tech, prot, _t, restN, oECN, branch
-from pyontutils.methods.helper import methods_helper, restHasValue
+from nifstd_tools.methods.core import methods_core, asp, proc, tech, prot, _t, restN, oECN, branch
+from nifstd_tools.methods.helper import methods_helper, restHasValue
 from pyontutils.closed_namespaces import owl, rdf, rdfs, oboInOwl
 
 # NOTE if vim is slow it is probably becuase there are
@@ -3196,8 +3196,8 @@ def extra():
 
 
 def main():
-    from pyontutils.methods import core
-    from pyontutils.methods import helper
+    from nifstd_tools.methods import core
+    from nifstd_tools.methods import helper
     core.main()
     helper.main()
     methods_main()

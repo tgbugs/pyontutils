@@ -9,7 +9,7 @@ from pyontutils.combinators import Restriction
 from pyontutils.combinators import oc, oc_, oop, odp, olit, oec
 from pyontutils.combinators import disjointUnionOf
 from pyontutils.combinators import restrictions, restriction
-from pyontutils.methods.core import methods_core, asp, tech, prot, prov, restN, oECN, branch
+from nifstd_tools.methods.core import methods_core, asp, tech, prot, prov, restN, oECN, branch
 from pyontutils.closed_namespaces import owl, rdf, rdfs
 
 ###
