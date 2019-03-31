@@ -147,8 +147,6 @@ class TestScriptsBase(unittest.TestCase):
             relpath += '/'
 
         skip += Path(__file__).stem,  # prevent this file from accidentally testing itself
-        if 'TRAVIS' in os.environ:
-            skip += ci_skip
 
         if 'CI' not in os.environ:
             pass
@@ -193,76 +191,85 @@ class TestScriptsBase(unittest.TestCase):
                 rp = ppath.relative_to(module_parent)
                 module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
                 print(module_path)
-                if stem not in skip:
-                    def test_file(self, module_path=module_path, stem=stem, fname=fname):
-                        try:
-                            print(tc.ltyellow('IMPORTING:'), module_path)
-                            module = import_module(module_path)  # this returns the submod
-                            self._modules[module_path] = module
-                            if hasattr(module, '_CHECKOUT_OK'):
-                                print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
-                                setattr(module, '_CHECKOUT_OK', True)
-                                #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
-                        #except BaseException as e:
-                            # FIXME this does not work because collected tests cannot be uncollected
-                            #suffix = fname.split('__', 1)[-1]
-                            #for mn in dir(self):
-                                #if suffix in mn:
-                                    #old_func = getattr(self, mn)
-                                    #new_func = pytest.mark.xfail(raises=ModuleNotFoundError)(old_func)
-                                    #setattr(self, mn, new_func)
+                def test_file(self, module_path=module_path, stem=stem, fname=fname):
+                    try:
+                        print(tc.ltyellow('IMPORTING:'), module_path)
+                        module = import_module(module_path)  # this returns the submod
+                        self._modules[module_path] = module
+                        if hasattr(module, '_CHECKOUT_OK'):
+                            print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
+                            setattr(module, '_CHECKOUT_OK', True)
+                            #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                    #except BaseException as e:
+                        # FIXME this does not work because collected tests cannot be uncollected
+                        #suffix = fname.split('__', 1)[-1]
+                        #for mn in dir(self):
+                            #if suffix in mn:
+                                #old_func = getattr(self, mn)
+                                #new_func = pytest.mark.xfail(raises=ModuleNotFoundError)(old_func)
+                                #setattr(self, mn, new_func)
 
-                            #raise e
-                        finally:
-                            post_load()
+                        #raise e
+                    finally:
+                        post_load()
 
-                    setattr(cls, fname, test_file)
+                if stem in skip:
+                    test_file = pytest.mark.skip()(test_file)
+                elif 'CI' in os.environ and stem in ci_skip:
+                    test_file = pytest.mark.skip(reason='Cannot tests this in CI right now.')(test_file)
 
-                    if stem in mains:
-                        argv = mains[stem]
-                        if argv and type(argv[0]) == list:
-                            argvs = argv
-                        else:
-                            argvs = argv,
+                setattr(cls, fname, test_file)
+
+                if stem in mains:
+                    argv = mains[stem]
+                    if argv and type(argv[0]) == list:
+                        argvs = argv
                     else:
-                        argvs = None,
+                        argvs = argv,
+                else:
+                    argvs = None,
 
-                    for j, argv in enumerate(argvs):
-                        mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
-                        #print('MPATH:  ', module_path)
-                        def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
-                            try:
-                                script = self._modules[module_path]
-                            except KeyError as e:
-                                # we have to raise here becuase we can't delete
-                                # the test mfuncs once pytest has loaded them
-                                pytest.skip(f'Import failed for {module_path}'
-                                            ' cannot test main, skipping.')
-                                return
+                for j, argv in enumerate(argvs):
+                    mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
+                    #print('MPATH:  ', module_path)
+                    def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
+                        try:
+                            script = self._modules[module_path]
+                        except KeyError as e:
+                            # we have to raise here becuase we can't delete
+                            # the test mfuncs once pytest has loaded them
+                            pytest.skip(f'Import failed for {module_path}'
+                                        ' cannot test main, skipping.')
+                            return
 
-                            if argv and argv[0] != script:
-                                os.system(' '.join(argv))  # FIXME error on this?
+                        if argv and argv[0] != script:
+                            os.system(' '.join(argv))  # FIXME error on this?
 
-                            try:
-                                if argv is not None:
-                                    sys.argv = argv
-                                else:
-                                    sys.argv = self.argv_orig
+                        try:
+                            if argv is not None:
+                                sys.argv = argv
+                            else:
+                                sys.argv = self.argv_orig
 
-                                if main:
-                                    print(tc.ltyellow('MAINING:'), module_path)
-                                    script.main()
-                                elif test:
-                                    print(tc.ltyellow('TESTING:'), module_path)
-                                    script.test()  # FIXME mutex and confusion
-                            except BaseException as e:
-                                if isinstance(e, SystemExit):
-                                    return  # --help
-                                raise e
-                            finally:
-                                post_main()
+                            if main:
+                                print(tc.ltyellow('MAINING:'), module_path)
+                                script.main()
+                            elif test:
+                                print(tc.ltyellow('TESTING:'), module_path)
+                                script.test()  # FIXME mutex and confusion
+                        except BaseException as e:
+                            if isinstance(e, SystemExit):
+                                return  # --help
+                            raise e
+                        finally:
+                            post_main()
 
-                        setattr(cls, mname, test_main)
+                    if stem in skip:
+                        test_file = pytest.mark.skip()(test_main)
+                    elif 'CI' in os.environ and stem in ci_skip:
+                        test_file = pytest.mark.skip(reason='Cannot tests this in CI right now.')(test_main)
+
+                    setattr(cls, mname, test_main)
 
         except git.exc.InvalidGitRepositoryError:  # testing elsewhere
             import pkgutil

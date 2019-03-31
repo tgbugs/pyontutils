@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+import pytest
 from pyontutils.utils import get_working_dir
 from pyontutils.config import devconfig, checkout_ok
 from pyontutils.integration_test_helper import TestScriptsBase, Folders, Repo
@@ -10,14 +11,9 @@ class TestScripts(Folders, TestScriptsBase):
     """ woo! """
 
 
-ont_repo = Repo(devconfig.ontology_local_repo)
-post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
-post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+lasts = tuple()
 
-### handle ontology branch behavior
-neurons = ('neurondm/core',
-           'neurondm/lang',
-           'neurondm/example',
+neurons = ('neurondm/example',
            'neurondm/phenotype_namespaces',
            'neurondm/models/allen_cell_types',
            'neurondm/models/phenotype_direct',
@@ -26,19 +22,29 @@ neurons = ('neurondm/core',
            'neurondm/models/ma2015',
            'neurondm/models/cuts',
            'neurondm/build',
-           'neurondm/sheets',
-          )
-print('checkout ok:', checkout_ok)
-ont_branch = ont_repo.active_branch.name
+           'neurondm/sheets',)
+
 skip = tuple()
-lasts = tuple()
-if not checkout_ok and ont_branch != 'neurons':
-    skip += tuple(n.split('/')[-1] for n in neurons)  # FIXME don't use stem below
+if Path(devconfig.ontology_local_repo).exists():
+    ont_repo = Repo(devconfig.ontology_local_repo)
+    post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+
+    ### handle ontology branch behavior
+    print('checkout ok:', checkout_ok)
+    ont_branch = ont_repo.active_branch.name
+    if not checkout_ok and ont_branch != 'neurons':
+        skip += tuple(n.split('/')[-1] for n in neurons)
+    else:
+        lasts += tuple(f'neurondm/{s}.py' for s in neurons)
+
 else:
-    lasts += tuple(f'pyontutils/{s}.py' for s in neurons)
+    #  ('neurondm/core', 'neurondm/lang',)  # these two are ok
+    skip += tuple(n.split('/')[-1] for n in neurons)
+
 
 ### build mains
-mains = {}
+mains = {}  # NOTE mains run even if this is empty ? is this desired?
 
 module_parent = Path(__file__).resolve().parent.parent.as_posix()
 working_dir = get_working_dir(__file__)
@@ -52,5 +58,5 @@ if working_dir is None:
 print(module_parent)
 print(working_dir)
 
-TestScripts.populate_tests(neurondm, working_dir, mains, lasts=lasts,
+TestScripts.populate_tests(neurondm, working_dir, mains, skip=skip, lasts=lasts,
                            module_parent=module_parent, only=[], do_mains=True)
