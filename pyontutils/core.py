@@ -933,9 +933,12 @@ class Ont:
         if hasattr(self, '_repo') and not self._repo:
             commit = 'FAKE-COMMIT'
         else:
-            from git import Repo
-            repo = Repo(working_dir.as_posix())
-            commit = next(repo.iter_commits()).hexsha
+            import git
+            try:
+                repo = git.Repo(working_dir.as_posix())
+                commit = next(repo.iter_commits()).hexsha
+            except git.exc.InvalidGitRepositoryError:
+                commit = 'FAKE-COMMIT'
 
         try:
             if self.source_file:
