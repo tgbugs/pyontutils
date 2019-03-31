@@ -5,8 +5,10 @@ from pyontutils.config import devconfig
 from pyontutils.integration_test_helper import TestScriptsBase, Folders, Repo
 import nifstd_tools
 
+
 class TestScripts(Folders, TestScriptsBase):
     """ woo! """
+
 
 mains = {'methods':None,
          'nif_cell':None,

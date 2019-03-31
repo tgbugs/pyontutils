@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from importlib import import_module
 import git
+import pytest
 from git import Repo as baseRepo
 from pyontutils.utils import TermColors as tc
 from pyontutils.config import devconfig
@@ -202,6 +203,16 @@ class TestScriptsBase(unittest.TestCase):
                                 print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
                                 setattr(module, '_CHECKOUT_OK', True)
                                 #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+                        #except BaseException as e:
+                            # FIXME this does not work because collected tests cannot be uncollected
+                            #suffix = fname.split('__', 1)[-1]
+                            #for mn in dir(self):
+                                #if suffix in mn:
+                                    #old_func = getattr(self, mn)
+                                    #new_func = pytest.mark.xfail(raises=ModuleNotFoundError)(old_func)
+                                    #setattr(self, mn, new_func)
+
+                            #raise e
                         finally:
                             post_load()
 
@@ -225,8 +236,9 @@ class TestScriptsBase(unittest.TestCase):
                             except KeyError as e:
                                 # we have to raise here becuase we can't delete
                                 # the test mfuncs once pytest has loaded them
-                                raise ModuleNotFoundError(f'Import failed for {module_path}'
-                                                          ' cannot test main, skipping.') from e
+                                pytest.skip(f'Import failed for {module_path}'
+                                            ' cannot test main, skipping.')
+                                return
 
                             if argv and argv[0] != script:
                                 os.system(' '.join(argv))  # FIXME error on this?
