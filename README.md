@@ -100,12 +100,17 @@ Test sdist packaging
 ``` bash
 for f in {htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; python setup.py sdist; popd; done
 ```
-Build everything.
+Build wheels from the sdist NOT straight from the repo because wheels
+ignore the manifest file. Make sure to clean any previous builds first.
 ``` bash
-for f in {htmlfn,ttlser,.,neurondm,nifstd}; do
-pushd $f;
-python setup.py sdist;
-python setup.py bdist_wheel --universal;
+for f in {htmlfn,ttlser,neurondm,nifstd}; do
+pushd $f/dist;
+tar xvzf *.tar.gz;
+pushd $f*/;
+python setup.py bdist_wheel;
+mv dist/*.whl ../;
+popd;
+rm ./$f*/ -r;
 popd;
 done
 ```
