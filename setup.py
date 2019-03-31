@@ -16,8 +16,6 @@ files = [
     'pyontutils/core.py',
     'pyontutils/graphml_to_ttl.py',
     'pyontutils/hierarchies.py',
-    'pyontutils/ilxcli.py',
-    'pyontutils/ilx_utils.py',
     'pyontutils/namespaces.py',
     'pyontutils/necromancy.py',
     'pyontutils/obo_io.py',
