@@ -503,7 +503,7 @@ class graphBase:
         if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
             if repo.active_branch.name != branch and not checkout_ok:
-                raise self.GitRepoOnWrongBranch(
+                raise graphBase.GitRepoOnWrongBranch(
                     'Local git repo not on %s branch!\n'
                     'Please run `git checkout %s` in %s, '
                     'set NIFSTD_CHECKOUT_OK= via export or '
