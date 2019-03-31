@@ -15,9 +15,12 @@ def nsExact(namespace, slash=True):
         uri = uri[:-1]
     return rdflib.URIRef(uri)
 
-def _loadPrefixes():
+
+def getCuries(curies_location):
+    # FIXME this will 'fail' silently ...
+    # probably need to warn?
     try:
-        with open(devconfig.curies, 'rt') as f:
+        with open(curies_location, 'rt') as f:
             curie_map = yaml.safe_load(f)
     except (FileNotFoundError, NotADirectoryError) as e:
         # retrieving stuff over the net is bad
@@ -27,6 +30,11 @@ def _loadPrefixes():
         curie_map = requests.get(master_blob + raw_path)
         curie_map = yaml.safe_load(curie_map.text)
 
+    return curie_map
+
+
+def _loadPrefixes():
+    curie_map = getCuries(devconfig.curies)
     # holding place for values that are not in the curie map
     full = {
         # interlex predicates  PROVISIONAL

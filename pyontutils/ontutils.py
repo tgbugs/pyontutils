@@ -42,7 +42,8 @@ from joblib import Parallel, delayed
 from git.repo import Repo
 from pyontutils.core import makeGraph, createOntology
 from pyontutils.utils import noneMembers, anyMembers, Async, deferred, TermColors as tc
-from pyontutils.ontload import loadall, getCuries
+from pyontutils.ontload import loadall
+from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 from IPython import embed
@@ -738,8 +739,10 @@ def graph_todo(graph, curie_prefixes, get_values):
     embed()
 
 def main():
-    from docopt import docopt
+    from docopt import docopt, parse_defaults
     args = docopt(__doc__, version='ontutils 0.0.1')
+    defaults = {o.name:o.value if o.argcount else None
+                for o in parse_defaults(__doc__)}
 
     verbose = args['--verbose']
     debug = args['--debug']
@@ -751,7 +754,8 @@ def main():
     epoch = args['--epoch']
 
     curies_location = args['--curies']
-    curies, curie_prefixes = getCuries(curies_location)
+    curies = getCuries(curies_location)
+    curie_prefixes = set(curies.values())
 
     filenames = args['<file>']
     filenames.sort(key=lambda f: os.path.getsize(f), reverse=True)  # make sure the big boys go first
