@@ -4,11 +4,11 @@ import csv
 from os.path import expanduser
 from pathlib import Path
 import rdflib
-from pyontutils.utils import working_dir
+from pyontutils.config import devconfig, working_dir
 from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
 
-current_file = Path(__file__).absolute()
+current_file = Path(__file__).resolve()
 gitf = working_dir.parent
 
 dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
@@ -131,7 +131,7 @@ def main():
                                   format='turtle')
     coco_all = [l for l in ccslim.objects(None, rdflib.RDFS.label)]
 
-    intcon = Path(__file__).parent / 'resources' / 'NIF_conn_allcols_minimal_clean_filtered2.csv'
+    intcon = Path(devconfig.resources, 'NIF_conn_allcols_minimal_clean_filtered2.csv')
     with open(intcon.as_posix(), 'rt') as f:
         ber_rows = [r for r in csv.reader(f)]
 

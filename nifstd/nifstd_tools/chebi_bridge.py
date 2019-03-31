@@ -28,7 +28,7 @@ def main():
                             'skos',
                             'oboInOwl')
     ug = makeGraph('utilgraph', prefixes=PREFIXES)
-    file = Path(__file__).parent / 'resources' / 'chebi-subset-ids.txt'
+    file = Path(devconfig.resources, 'chebi-subset-ids.txt')
     with open(file.as_posix(), 'rt') as f:
         ids_raw = set((_.strip() for _ in f.readlines()))
         ids = sorted(set((ug.expand(_.strip()) for _ in ids_raw)))

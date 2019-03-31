@@ -32,7 +32,7 @@ from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId
-from pyontutils.utils import getSourceLine
+from pyontutils.utils import getSourceLine, get_working_dir
 from pyontutils.utils import Async, deferred
 from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
@@ -311,8 +311,12 @@ file_examples = (
 
 def server(api_key=None, verbose=False):
     f = Path(__file__).resolve()
-    working_dir = f.parent.parent
-    git_dir = working_dir / '.git'
+    working_dir = get_working_dir(__file__)
+    if working_dir:
+        git_dir = working_dir / '.git'
+    else:
+        git_dir = Path('/dev/null')
+
     try:
         commit = subprocess.check_output(['git',
                                           '--git-dir', git_dir.as_posix(),

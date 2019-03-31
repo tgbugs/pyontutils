@@ -10,9 +10,9 @@ from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, createOntology, OntId as OntId_
-from pyontutils.utils import TODAY, rowParse, refile, working_dir
+from pyontutils.utils import TODAY, rowParse, refile
 from pyontutils.obo_io import OboFile
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.ilx_utils import ILXREPLACE

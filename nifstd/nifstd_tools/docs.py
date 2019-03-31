@@ -21,8 +21,8 @@ from git import Repo
 from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import working_dir, TODAY, noneMembers, TermColors as tc
-from pyontutils.config import devconfig
+from pyontutils.utils import TODAY, noneMembers, TermColors as tc
+from pyontutils.config import devconfig, working_dir
 from pyontutils.ontutils import tokstrip, _bads
 try:
     import hunspell

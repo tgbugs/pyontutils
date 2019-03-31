@@ -30,6 +30,7 @@ neurons = ('neurondm/core',
           )
 print('checkout ok:', checkout_ok)
 ont_branch = ont_repo.active_branch.name
+skip = tuple()
 lasts = tuple()
 if not checkout_ok and ont_branch != 'neurons':
     skip += tuple(n.split('/')[-1] for n in neurons)  # FIXME don't use stem below

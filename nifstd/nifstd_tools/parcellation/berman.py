@@ -5,7 +5,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from lxml import etree
 import rdflib
-from pyontutils.core import resSource, LabelsBase, Collector
+from pyontutils.core import resSource, LabelsBase, Collector, relative_resources
 from pyontutils.config import devconfig
 from nifstd_tools.parcellation import parcCore, Atlas, LabelRoot, Label
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, BERCAT, nsExact
@@ -79,7 +79,7 @@ class BermanSrc(resSource):
     run_ocr=False
     source_images=Path('~/files/cropped').expanduser()
     source = 'https://github.com/tgbugs/pyontutils.git'
-    sourceFile = 'pyontutils/resources/berman'
+    sourceFile = relative_resources('berman')
     source_original = False
     artifact = Artifacts.BermanCat
 

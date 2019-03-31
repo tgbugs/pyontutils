@@ -22,11 +22,12 @@ from collections import defaultdict, Counter
 from git import Repo
 from lxml import etree
 from rdflib import Graph, URIRef, Namespace
-from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector
-from pyontutils.core import makeGraph, build
-from pyontutils.utils import async_getter, rowParse, getSourceLine, subclasses
-from pyontutils.utils import working_dir, TermColors as tc
 from ttlser import natsort
+from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector
+from pyontutils.core import makeGraph, build, relative_resources
+from pyontutils.utils import async_getter, rowParse, getSourceLine, subclasses
+from pyontutils.utils import TermColors as tc
+from pyontutils.config import devconfig, working_dir
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes, interlex_namespace, nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, FSLATS
@@ -44,7 +45,7 @@ def swanson():
         NOTE: the defining information up here is now deprecated
         it is kept around to keep the code further down happy """
 
-    source = (working_dir / 'pyontutils/resources/swanson_aligned.txt').as_posix()
+    source = Path(devconfig.resources, 'swanson_aligned.txt').as_posix()
     ONT_PATH = 'http://ontology.neuinfo.org/NIF/ttl/generated/'
     filename = 'swanson_hierarchies'
     ontid = ONT_PATH + filename + '.ttl'
@@ -684,7 +685,7 @@ class LocalSource(Source):
         line = getSourceLine(cls)
         cls.iri_head = URIRef(cls.iri_prefix_hd + Path(__file__).name)
         cls._this_file = Path(__file__).absolute()
-        repobase = cls._this_file.parent.parent.parent.as_posix()
+        repobase = working_dir
         cls.repo = Repo(repobase)
         cls.prov()  # have to call prov here ourselves since Source only calls prov if _data is not defined
         if cls.artifact is None:  # for prov...
@@ -744,7 +745,7 @@ class LocalSource(Source):
 # Source instances  TODO put everything under one class as we do for Artifacts?
 
 class SwansonAppendix(resSource):
-    sourceFile = 'pyontutils/resources/swanson_aligned.txt'
+    sourceFile = relative_resources('swanson_aligned.txt')
     artifact = Artifacts.SwansonAppendix
 
 
@@ -779,7 +780,7 @@ class SwansonLabels(ParcOnt):  # FIXME not labels...
 
 
 class PaxSr_6(resSource):
-    sourceFile = 'pyontutils/resources/paxinos09names.txt'
+    sourceFile = relative_resources('paxinos09names.txt')
     artifact = Artifacts.PaxRat6
 
     @classmethod
@@ -938,22 +939,22 @@ class PaxSrAr(resSource):
 
 
 class PaxSrAr_4(PaxSrAr):
-    sourceFile = 'pyontutils/resources/pax-4th-ed-indexes.txt'
+    sourceFile = relative_resources('pax-4th-ed-indexes.txt')
     artifact = Artifacts.PaxRat4
 
 
 class PaxSrAr_6(PaxSrAr):
-    sourceFile = 'pyontutils/resources/pax-6th-ed-indexes.txt'
+    sourceFile = relative_resources('pax-6th-ed-indexes.txt')
     artifact = Artifacts.PaxRat6
 
 
 class PaxMSrAr_2(PaxSrAr):
-    sourceFile = 'pyontutils/resources/paxm-2nd-ed-indexes.txt'
+    sourceFile = relative_resources('paxm-2nd-ed-indexes.txt')
     artifact = Artifacts.PaxMouse2
 
 
 class PaxMSrAr_3(PaxSrAr):
-    sourceFile = 'pyontutils/resources/paxm-3rd-ed-indexes.txt'
+    sourceFile = relative_resources('paxm-3rd-ed-indexes.txt')
     artifact = Artifacts.PaxMouse3
 
 
@@ -1104,7 +1105,7 @@ class PaxMFix(LocalSource):
 
 
 class HCPMMPSrc(resSource):
-    sourceFile = 'pyontutils/resources/human_connectome_project_2016.csv'
+    sourceFile = relative_resources('human_connectome_project_2016.csv')
     source_original = True
     artifact = Artifacts.HCPMMP
 

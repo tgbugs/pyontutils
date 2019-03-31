@@ -11,8 +11,8 @@ from git.repo import Repo
 from ttlser import natsort
 from pyontutils.core import Ont, makeGraph, OntId, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
-from pyontutils.utils import TermColors as tc, subclasses, working_dir
-from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
+from pyontutils.utils import TermColors as tc, subclasses
+from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
@@ -364,6 +364,9 @@ class graphBase:
     class owlClassMismatch(Exception):
         pass
 
+    class GitRepoOnWrongBranch(Exception):
+        """ Git repo is checked out to the wrong branch. """
+
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -500,11 +503,12 @@ class graphBase:
         if not force_remote and graphBase.local_base.exists():
             repo = Repo(local_base)
             if repo.active_branch.name != branch and not checkout_ok:
-                raise FileNotFoundError('Local git repo not on %s branch!\n'
-                                        'Please run `git checkout %s` in %s, '
-                                        'set NIFSTD_CHECKOUT_OK= via export or '
-                                        'at runtime, or set checkout_ok=True.'
-                                        % (branch, branch, local_base))
+                raise self.GitRepoOnWrongBranch(
+                    'Local git repo not on %s branch!\n'
+                    'Please run `git checkout %s` in %s, '
+                    'set NIFSTD_CHECKOUT_OK= via export or '
+                    'at runtime, or set checkout_ok=True.'
+                    % (branch, branch, local_base))
             elif checkout_ok:
                 graphBase.repo = repo
                 graphBase.working_branch = 'neurons'

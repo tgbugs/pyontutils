@@ -7,7 +7,7 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph
-from pyontutils.utils import working_dir
+from pyontutils.config import working_dir
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
 from IPython import embed

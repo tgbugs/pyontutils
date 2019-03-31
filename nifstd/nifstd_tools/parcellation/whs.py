@@ -1,6 +1,6 @@
 import sys
 from lxml import etree
-from pyontutils.core import Source, LabelsBase, Collector, build
+from pyontutils.core import Source, LabelsBase, Collector, relative_resources
 from pyontutils.utils import Async, deferred
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, WHSSD
 from pyontutils.namespaces import makePrefixes, NCBITaxon, UBERON, nsExact
@@ -38,7 +38,7 @@ class Artifacts(Collector):
                    version='2',)
 
 class WHSSDSrc(resSource):
-    sourceFile = lambda v: f'pyontutils/resources/WHS_SD_rat_atlas_v{v}.label'
+    sourceFile = lambda v: relative_resources(f'WHS_SD_rat_atlas_v{v}.label')
     source_original = True
     artifact = lambda v: getattr(Artifacts, f'WHSSD{v}')
 
@@ -70,7 +70,7 @@ class WHSSDSrc2(WHSSDSrc):
 
 
 class WHSSDilfSrc(resSource):
-    sourceFile = lambda v: f'pyontutils/resources/WHS_SD_rat_atlas_v{v}_labels.ilf'
+    sourceFile = lambda v: relative_resources(f'WHS_SD_rat_atlas_v{v}_labels.ilf')
     source_original = True
     artifact = lambda v: getattr(Artifacts, f'WHSSD{v}')
     predicates = lambda v: {ilxtr.labelPartOf: ilxtr[f'labelPartOf-whssd-{v}']}  # FIXME
@@ -159,6 +159,7 @@ class WHSSDLabels(LabelsBase):
                     yield child, rdfs.subPropertyOf, parent
 
 def main():
+    from pyontutils.core import build
     build(WHSSDLabels)
 
 if __name__ == '__main__':

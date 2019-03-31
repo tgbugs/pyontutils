@@ -25,6 +25,11 @@ current_file = Path(__file__).absolute()
 
 # common funcs
 
+def relative_resources(pathstring):
+    """ relative paths to resources in this repository """
+    return Path(devconfig.resources, pathstring).relative_to(working_dir)
+
+
 def standard_checks(graph):
     def cardinality(predicate, card=1):
         for subject in sorted(set(graph.subjects())):
