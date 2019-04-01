@@ -258,7 +258,6 @@ class Config:
             local_base = Path(local_base).resolve()
             local = local_base
 
-        #log.critical(f'{name} {local_base!r} {ttl_export_dir!r} {compiled_location!r} {file}')
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
@@ -271,7 +270,6 @@ class Config:
         else:
             core_graph_paths = imports
 
-        #log.critical(f'{name} {core_graph_paths}')
         out_graph_path = (out_local_base / f'{name}.ttl')
 
         class lConfig(self.__class__):
@@ -609,7 +607,8 @@ class graphBase:
                     % (branch, branch, repo.working_dir))
             elif checkout_ok:
                 graphBase.repo = repo
-                graphBase.working_branch = 'neurons'
+                graphBase.working_branch = next(h for h in repo.heads
+                                                if h.name == branch)
                 graphBase.original_branch = repo.active_branch
                 graphBase.set_repo_state()
             use_core_paths = local_core_paths
