@@ -1,17 +1,20 @@
 #!/usr/bin/env python3.6
 import os
+import sys
 import atexit
 import inspect
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
+from importlib import import_module
 from urllib.error import HTTPError
+import git
 import rdflib
 from rdflib.extras import infixowl
-from git.repo import Repo
+from git import Repo
 from ttlser import natsort
 from pyontutils.core import Ont, makeGraph, OntId, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
-from pyontutils.utils import TermColors as tc, subclasses
+from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
@@ -183,6 +186,9 @@ class Config:
     class ExistingNeuronsError(Exception):
         pass
 
+    class NotCurrentConifgError(Exception):
+        """ graphBase has moved on! """
+
     def __init__(self,
                  name =                 'test-neurons',
                  prefixes =             tuple(),  # dict or list
@@ -192,7 +198,42 @@ class Config:
                  branch =               devconfig.neurons_branch,
                  sources =              tuple(),
                  source_file =          None,
-                 ignore_existing =      False):
+                 ignore_existing =      False,
+                 py_export_dir=         None,
+                 ttl_export_dir=        Path(devconfig.ontology_local_repo,  # FIXME neurondm.lang for this?
+                                             'ttl/generated/neurons'),  # subclass with defaults from cls?
+                 git_repo=              None,
+                 file =                 None,
+                ):
+
+        if ttl_export_dir is not None:
+            if not isinstance(ttl_export_dir, Path):
+                ttl_export_dir = Path(ttl_export_dir).resolve()
+
+            local_base = get_working_dir(ttl_export_dir)
+            # FIXME there are cases where ttl_export_dir
+            # and local_base will both be None???
+            # reasonable failover?
+        else:
+            local_base = None
+
+        if file is not None:
+            file = Path(file).resolve()
+            compiled_location = file.parent
+            #local_base = get_working_dir(compiled_location)  # FIXME conflates python repo and turtle repo
+        else:
+            # FIXME deal with case where get_working_dir -> None
+            compiled_location = py_export_dir
+
+        if git_repo is not None:
+            git_repo = Path(git_repo).resolve()
+            if local_base is None:
+                local_base = git_repo
+            if ttl_export_dir is None:
+                ttl_export_dir = git_repo
+            elif ttl_export_dir.relative_to(git_repo):
+                pass  # just make sure that if export loc is not in the repo we fail
+
         import os  # FIXME probably should move some of this to neurons.py?
 
         self.__name = name  # TODO allow reload from owl to get the load graph? how to handle this
@@ -202,16 +243,24 @@ class Config:
                                   for c in graphBase.python_subclasses]
 
         imports = list(imports)
-        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/ttl/')
-        imports += [remote.iri + 'phenotype-core.ttl', remote.iri + 'phenotypes.ttl']
-        local = Path(devconfig.ontology_local_repo, 'ttl')
-        out_local_base = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
-        out_remote_base = os.path.join(remote.iri, 'generated/neurons')
-        out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
+        remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+        imports += [remote.iri + 'ttl/phenotype-core.ttl', remote.iri + 'ttl/phenotypes.ttl']
+        remote_path = '' if local_base is None else ttl_export_dir.relative_to(local_base)
+        out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
 
         remote_base = remote.iri.rsplit('/', 2)[0]
-        local_base = local.parent
+
+        if local_base is None:
+            local = Path(devconfig.ontology_local_repo, 'ttl')
+            local_base = local.parent
+        else:
+            local_base = Path(local_base).resolve()
+            local = local_base
+
+        log.critical(f'{name} {local_base!r} {ttl_export_dir!r} {compiled_location!r} {file}')
+        out_local_base = ttl_export_dir
+        out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
         if import_as_local:
             # NOTE: we currently do the translation more ... inelegantly inside of config so we
@@ -245,6 +294,11 @@ class Config:
                       use_local_import_paths = import_as_local,
                       ignore_existing = ignore_existing)
 
+        # don't klobber defaults set below
+        if compiled_location is not None:
+            compiled_location = Path(compiled_location).resolve()
+            kwargs['compiled_location'] = compiled_location
+
         for name, value in kwargs.items():
             # FIXME only works if we do this in __new__
             #@property
@@ -252,6 +306,9 @@ class Config:
                 return v
 
             setattr(self, name, nochangepls)
+            # FIXME need a way to make it clear that changing kwargs values
+            # will only confuse you ...
+            #setattr(self, name, value)
 
         graphBase.configGraphIO(**kwargs)  # FIXME KILL IT WITH FIRE
 
@@ -344,6 +401,35 @@ class Config:
                 if sc is None:
                     raise ImportError(f'Failed to find any neurons to load in {graphBase.ng.filename}')
 
+    def load_python(self):
+        try:
+            next(iter(self.neurons()))
+            raise self.ExistingNeuronsError('Existing neurons detected. Please '
+                                            'load from file before creating neurons!')
+        except StopIteration:
+            pass
+
+        if not graphBase.ignore_existing:
+            # FIXME ideally we want to be able to call self.compiled_location
+            # but so long as THERE CAN BE ONLY ONE graphBase then we are going
+            if self.compiled_location() != graphBase.compiled_location:
+                raise self.NotCurrentConifgError('This config is not the active config!')
+            containing = graphBase.compiled_location.parent.as_posix()
+            if containing not in sys.path:
+                sys.path.append(containing)
+            full_path = graphBase.compiled_location / graphBase.filename_python()
+            module_path = graphBase.compiled_location.name + '.' + full_path.stem
+            module = import_module(module_path)  # this returns the submod
+            # I think the above is all we need because it will
+            # make its own config and overwrite everything here
+            self.out_graph = graphBase.out_graph
+            self.existing_pes = NeuronBase.existing_pes
+            # just have to update these two hard coded bits it think?
+
+            #graphBase.existing_pes = module.config.existing_pes
+            #self.load_graph = module.config.load_graph
+            #graphBase.load_graph = self.load_graph
+
 # the monstrosity
 
 class graphBase:
@@ -397,7 +483,10 @@ class graphBase:
     @staticmethod
     def set_repo_state():
         if not hasattr(graphBase, 'original_branch'):
-            graphBase.original_branch = repo.active_branch
+            graphBase.original_branch = graphBase.repo.active_branch
+
+        if not hasattr(graphBase, 'working_branch'):
+            graphBase.working_branch = graphBase.repo.active_branch
 
         if not graphBase._registered:
             #print(tc.blue('OB:'), graphBase.original_branch)
@@ -412,11 +501,14 @@ class graphBase:
                     #embed()
                     raise e
 
-            atexit.register(reset)
+            if graphBase.original_branch != graphBase.working_branch:
+                atexit.register(reset)
+
             #atexit.register(graphBase.repo.git.checkout, '-f', graphBase.original_branch)
             graphBase._registered = True
 
-        graphBase.repo.git.checkout(graphBase.working_branch)
+        if graphBase.original_branch != graphBase.working_branch:
+            graphBase.repo.git.checkout(graphBase.working_branch)
 
     @staticmethod
     def reset_repo_state():
@@ -440,7 +532,9 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= PPath('/tmp/neurondm/compiled') if working_dir is None else PPath(working_dir, 'neurondm/neurondm/compiled'),
+                      compiled_location= (PPath('/tmp/neurondm/compiled')
+                                          if working_dir is None else
+                                          PPath(working_dir, 'neurondm/neurondm/compiled')),
                       ignore_existing=   False):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
@@ -476,7 +570,7 @@ class graphBase:
 
         if local_base is None:
             local_base = devconfig.ontology_local_repo
-        graphBase.local_base = Path(local_base).expanduser()
+        graphBase.local_base = Path(local_base).expanduser().resolve()
         graphBase.remote_base = remote_base
 
         def makeLocalRemote(suffixes):
@@ -500,15 +594,18 @@ class graphBase:
         remote_out_paths, local_out_paths = makeLocalRemote(out_graph_paths)  # XXX fail w/ tmp
         remote_out_paths = local_out_paths  # can't write to a remote server without magic
 
-        if not force_remote and graphBase.local_base.exists():
-            repo = Repo(local_base)
+        if (not force_remote
+            and graphBase.local_base == Path(devconfig.ontology_local_repo)
+            and graphBase.local_base.exists()):
+
+            repo = Repo(graphBase.local_base.as_posix())
             if repo.active_branch.name != branch and not checkout_ok:
                 raise graphBase.GitRepoOnWrongBranch(
                     'Local git repo not on %s branch!\n'
                     'Please run `git checkout %s` in %s, '
                     'set NIFSTD_CHECKOUT_OK= via export or '
                     'at runtime, or set checkout_ok=True.'
-                    % (branch, branch, local_base))
+                    % (branch, branch, repo.working_dir))
             elif checkout_ok:
                 graphBase.repo = repo
                 graphBase.working_branch = 'neurons'
@@ -517,10 +614,28 @@ class graphBase:
             use_core_paths = local_core_paths
             use_in_paths = local_in_paths
         else:
-            if not force_remote:
+            if not force_remote and not graphBase.local_base.exists():
                 log.warning(f'Warning local ontology path {local_base!r} not found!')
             use_core_paths = remote_core_paths
             use_in_paths = remote_in_paths
+
+            if local_base is not None:
+                log.warning(f'Warning local base has been set manually you are on your own!')
+                try:
+                    repo = Repo(graphBase.local_base.as_posix())
+                except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
+                    local_working_dir = get_working_dir(graphBase.local_base)
+                    if local_working_dir is None:
+                        log.warning(f'{graphBase.local_base} is not a git repository, running `git init` now ...')
+                        repo = Repo.init(graphBase.local_base.as_posix())
+                    else:
+                        msg = (f'{graphBase.local_base} is already contained in a git repository '
+                               'located in {local_working_dir} if you wish to use this repo please '
+                               'set local_base to {local_working_dir}.')
+                        raise git.exc.InvalidGitRepositoryError(msg)
+
+                graphBase.repo = repo
+                graphBase.set_repo_state()
 
         # core graph setup
         if core_graph is None:
@@ -643,16 +758,22 @@ class graphBase:
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         out += subs
 
+        ind = '\n' + ' ' * len('config = Config(')
         _prefixes = {k:str(v) for k, v in cls.ng.namespaces.items()
                      if k not in uPREFIXES and k != 'xml' and k != 'xsd'}  # FIXME don't hardcode xml xsd
         len_thing = len(f'config = Config({cls.ng.name!r}, prefixes={{')
-        prefixes = (f', prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
+        '}}'
+        prefixes = (f',{ind}prefixes={pformat(_prefixes, 0)}'.replace('\n', '\n' + ' ' * len_thing)
                     if _prefixes
                     else '')
+
+        tel = ttl_export_dir = Path(cls.ng.filename).parent.as_posix()
+        ttlexp = f',{ind}ttl_export_dir={tel!r}'
+
         # FIXME prefixes should be separate so they are accessible in the namespace
         # FIXME ilxtr needs to be detected as well
         # FIXME this doesn't trigger when run as an import?
-        out += f'config = Config({cls.ng.name!r}{prefixes})\n\n'  # FIXME this is from neurons.lang
+        out += f'config = Config({cls.ng.name!r},{ind}file=__file__{ttlexp}{prefixes})\n\n'  # FIXME this is from neurons.lang
 
         return out
 
@@ -661,7 +782,7 @@ class graphBase:
         out = cls.python_header()
         #out += '\n\n'.join('\n'.join(('# ' + n.label, '# ' + n._origLabel, str(n))) for n in neurons)
         out += '\n\n'.join(n.python() for n in cls.neurons()) # FIXME this does not reset correctly when a new Controller is created, it probably should...
-        return out
+        return out + '\n'
 
     @classmethod
     def ttl(cls):

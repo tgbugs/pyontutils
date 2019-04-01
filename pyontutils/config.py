@@ -10,7 +10,7 @@ from pyontutils.utils import get_working_dir
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 config_path = Path(os.environ.get('XDG_CONFIG_HOME', '~/.config')).expanduser()
 working_dir = get_working_dir(__file__)
-working_dir = None
+#working_dir = None
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_config = config_path / 'pyontutils' / 'devconfig.yaml'
