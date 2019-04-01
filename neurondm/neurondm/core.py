@@ -1036,10 +1036,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return not self.__lt__(other)
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.p == other.p and self.e == other.e
+        return (type(self) == type(other) and
+                self.p == other.p and
+                self.e == other.e)
 
     def __hash__(self):
-        return hash((self.p, self.e))
+        return hash((type(self), self.p, self.e))
 
     def __expanded__(self):
         if hasattr(self, 'ng'):
@@ -1085,7 +1087,7 @@ class LogicalPhenotype(graphBase):
     def __init__(self, op, *edges):
         super().__init__()
         self.op = op  # TODO more with op
-        self.pes = edges
+        self.pes = tuple(sorted(edges))
         self.labelPostRule = lambda l: l
 
     @property
@@ -1158,16 +1160,12 @@ class LogicalPhenotype(graphBase):
         return not self.__lt__(other)
 
     def __eq__(self, other):
-        if type(other) == type(self):
-            for a, b in zip(sorted(self.pes), sorted(other.pes)):
-                if a != b:
-                    return False
-            return True
-        else:
-            return False
+        return (type(self) == type(other) and
+                self.op == other.op and
+                self.pes == other.pes)
 
     def __hash__(self):
-        return hash(tuple(sorted(self.pes)))
+        return hash((type(self), self.op, *self.pes))
 
     def __repr__(self):
         op = self.local_names[self.op]  # FIXME inefficient but safe
@@ -1303,7 +1301,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
 
-        self.phenotypes = set(pe.p for pe in self.pes)
+        self.phenotypes = set(pe.p for pe in self.pes)  # NOTE the valence is NOT included here
         self.edges = set(pe.e for pe in self.pes)
         self._pesDict = {}
         for pe in self.pes:  # FIXME TODO
@@ -1554,10 +1552,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return asdf
 
     def __hash__(self):
-        return hash((self.__class__.__name__, self.pes))
+        return hash((type(self), *self.pes))  # FIXME bad hashing
 
     def __eq__(self, other):
-        return hash(self) == hash(other)
+        return (type(self) == type(other) and
+                self.pes == other.pes)
+        #return hash(self) == hash(other)
 
     def __lt__(self, other):
         try:
