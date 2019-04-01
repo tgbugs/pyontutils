@@ -33,7 +33,7 @@ setup(
         'joblib',
         'lxml',
         'oauth2client',
-        'ontquery>=0.0.7',
+        'ontquery>=0.0.8',
         'psutil',
         'pyyaml',
         'neurdflib',
