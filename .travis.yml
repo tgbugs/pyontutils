@@ -33,6 +33,12 @@ before_install:
   - git clone https://github.com/tgbugs/orgstrap.git
   - orgstrap/orgstrap
   - git clone --depth=1 https://github.com/BlueBrain/nat.git
+
+  - git clone https://github.com/tgbugs/ontquery.git  # temp fix
+  - pushd ontquery
+  - pip install --editable .
+  - popd
+
   - popd
 
 install:
