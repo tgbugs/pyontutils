@@ -25,9 +25,15 @@ current_file = Path(__file__).absolute()
 
 # common funcs
 
-def relative_resources(pathstring):
-    """ relative paths to resources in this repository """
-    return Path(devconfig.resources, pathstring).relative_to(working_dir)
+def relative_resources(pathstring, failover='nifstd/resources'):
+    """ relative paths to resources in this repository
+        `failover` matches the location relative to the
+        github location (usually for prov purposes) """
+
+    if working_dir is None:
+        return Path(failover, pathstring)
+    else:
+        return Path(devconfig.resources, pathstring).relative_to(working_dir)
 
 
 def standard_checks(graph):
@@ -930,7 +936,7 @@ class Ont:
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
-        if hasattr(self, '_repo') and not self._repo:
+        if hasattr(self, '_repo') and not self._repo or working_dir is None:
             commit = 'FAKE-COMMIT'
         else:
             import git

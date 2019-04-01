@@ -440,7 +440,7 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= PPath(working_dir, 'neurondm/neurondm/compiled'),
+                      compiled_location= PPath('/tmp/neurondm/compiled') if working_dir is None else PPath(working_dir, 'neurondm/neurondm/compiled'),
                       ignore_existing=   False):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't

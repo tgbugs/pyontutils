@@ -7,12 +7,10 @@ from datetime import date
 import rdflib
 from rdflib.extras import infixowl
 from pyontutils.core import makeGraph
-from pyontutils.config import working_dir
+from pyontutils.config import devconfig
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
 from IPython import embed
-
-gitf = working_dir.parent
 
 v = Vocabulary()
 
@@ -28,8 +26,8 @@ def expand(curie):
 
 
 def ilx_get_start():
-    with open((gitf /
-               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
+    with open(Path(devconfig.ontology_local_repo,
+                   'interlex_reserved.txt').as_posix(), 'rt') as f:
         for line in f.readlines()[::-1]:  # go backward to find the first non empty
             new_ilx_id, label = line.strip().split(':')
             if label:
@@ -43,8 +41,8 @@ def ilx_get_start():
 
 
 def ilx_add_ids(ilx_labels):
-    with open((gitf /
-               'NIF-Ontology/interlex_reserved.txt').as_posix(), 'rt') as f:
+    with open(Path(devconfig.ontology_local_repo,
+                   'interlex_reserved.txt').as_posix(), 'rt') as f:
         new_lines = []
         for line in f.readlines():
             ilx_id, label = line.strip().split(':')
@@ -101,8 +99,12 @@ def clean_hbp_cell():
     g = rdflib.Graph()
     if __name__ == '__main__':
         embed()
-    g.parse((gitf /
-             'methodsOntology/ttl/hbp_cell_ontology.ttl').as_posix(), format='turtle')
+    path = Path(devconfig.git_local_base,
+                'methodsOntology/ttl/hbp_cell_ontology.ttl')
+    if not path.exists():
+        raise devconfig.MissingRepoError(f'repo for {path} does not exist')
+
+    g.parse(path.as_posix(), format='turtle')
     g.remove((None, rdflib.OWL.imports, None))
     g.remove((None, rdflib.RDF.type, rdflib.OWL.Ontology))
 
@@ -271,6 +273,8 @@ def clean_hbp_cell():
 
 
 def main():
+    devconfig._check_ontology_local_repo()
+
     mg, rep_map = clean_hbp_cell()
     if __name__ == '__main__':
         with open('hbp_cell_conv.json', 'wt') as f:

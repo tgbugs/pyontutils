@@ -272,6 +272,8 @@ class TestScriptsBase(unittest.TestCase):
                     setattr(cls, mname, test_main)
 
         except git.exc.InvalidGitRepositoryError:  # testing elsewhere
+            # FIXME TODO regularize this so that the same tests can run
+            # when we are not in the repo ...
             import pkgutil
             modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
             modpaths = [module_to_test.__name__ + '.' + modinfo.name

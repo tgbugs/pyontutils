@@ -20,35 +20,20 @@ with [orgstrap](https://github.com/tgbugs/orgstrap). See [.travis.yml](.travis.y
 for an example of how to bootstrap a working dev environment.
 
 ## Installation
-The easiest way to install pyontutils is to use pipenv. It makes it easy to manage
-specific version of packages needed by pyontutils. For example in order to get good
-(deterministic) ttl serialization from these tools you need to use my modified version
-of rdflib (see https://github.com/RDFLib/rdflib/pull/649).
-[Pipenv](https://pipenv.readthedocs.io/en/latest/#install-pipenv-today) makes it easier
-to accomplish this.
+Pyontutils is slowly approaching stability. You can obtain it and other related
+packages from pypi and install them as you see fit (e.g. `pip install --user pyontutils`).
+If you need a bleeding edge version I reccomend installing into whatever environment
+(virtual or otherwise) using `pip install --user --editable .[dev,test]`
+from your local copy of this repo.
 
-1. In your preferred folder `git clone https://github.com/tgbugs/pyontutils.git`
-2. `cd pyontutils`
-3. `pipenv install --skip-lock`. If you want to use pypy3 run `pipenv --python pypy3 install --skip-lock`
-4. `pipenv shell` to enter the virtual environment where everything should work.
-
-### Development Installation
-Note that the optional development packages are not actually required and if you have
-installation issues development can proceed normally without them, some database
-queries will just be slower because they use a pure python mysql connector.
-
-If you are installing a development setup note that `mysql-connector` (aka `mysql-connector-python`)
-often cannot find the files it needs to build.  When installing pass them in as environment variables
-(you may need to adjust exact paths for your system).
-`MYSQLXPB_PROTOBUF_INCLUDE_DIR=/usr/include/google/protobuf MYSQLXPB_PROTOBUF_LIB_DIR=/usr/lib64 MYSQLXPB_PROTOC=/usr/bin/protoc pipenv install --skip-lock`.
-There are some systems on which even this is not sufficient.
-If you encounter this situation add `mysql-connector = "==2.1.6"` to `[dev-packages]` in the Pipfile.
-And then run the command without environment variables.
-
-Alternately, if you manage your packages via another system you can create a
-development setup by adding this folder to your `PYTHONPATH` environment variable
-using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
-If you use a development setup you will need to create symlinks described below.
+## Development Installation
+From the directory that contains this readme run the following.
+Refer to [.travis.yml](.travis.yml) for full details.
+```bash
+for f in {librdflib,htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --user --pre --editable . ; popd; done
+```
+If you need even more information there is fairly exhaustive doccumentation
+located in the sparc curation [setup doc](https://github.com/SciCrunch/sparc-curation/blob/master/docs/setup.org).
 
 ## Utility Scripts
 pyontutils provides a set of scripts that are useful for maintaining and managing ontologies
@@ -69,9 +54,6 @@ For the full list please see the [documentation](http://ontology.doc/pyontutils/
 	Generate a rest client against a SciGraph services endpoint.
 7. [scig](pyontutils/scig.py)
 	Run queries against a SciGraph endpoint from the command line.
-8. [ilxcli](pyontutils/ilxcli.py)
-	Given an ontlogy file with temporary identifiers, get persistent, resolvable identifers
-	for them from InterLex.
 9. [graphml_to_ttl](pyontutils/graphml_to_ttl.py)
 	Convert yEd graphml files to ttl.
 10. [ontree](pyontutils/ontree.py)
@@ -86,14 +68,6 @@ scigraph.py is code geneator for creating a python client library against a
 [SciGraph](https://github.com/SciGraph/SciGraph) REST endpoint.
 scigraph_client.py is the client library generated against the nif development scigraph instance.
 [ontload](pyontutils/ontload.py) can be used to load your ontology into SciGraph for local use.
-
-## Neuron Types
-If you have found your way to this repository because you are interested in using neuron-lang for
-describing neuron types please see [this introduction](http://ontology.neuinfo.org/docs/NIF-Ontology/docs/Neurons.html)
-to the general approach.  To get started all you need to do is follow the installation instructions above and then include
-`from pyontutils.neuron_lang import *` in your import statements. Please see the documentation for how to
-[set up neuron-lang for jupyter notebooks](docs/neurons_notebook.md) and take a look at some
-[examples of how to use neuron-lang to create new neurons](docs/NeuronLangExample.ipynb).
 
 ## Building releases
 Test sdist packaging

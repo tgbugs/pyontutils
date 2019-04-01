@@ -23,11 +23,11 @@ class Artifacts(Collector):
         shortname='Berman Cat 1968',
         date=1968,
         hadDerivation=['http://brainmaps.org/index.php?action=metadata&datid=35'],
-        definingCitation=('A. L. Berman (1968) The Brain Stem of the Cat. '
-                          'A Cytoarchitectonic Atlas with Stereotaxic Coordinates. '
-                          'Madison, University of Wisconsin Press.'),
+        definingCitations=('A. L. Berman (1968) The Brain Stem of the Cat. '
+                           'A Cytoarchitectonic Atlas with Stereotaxic Coordinates. '
+                           'Madison, University of Wisconsin Press.',),  # NOTE this is a tuple
         species=NCBITaxon['9685'],
-        evstage=UBERON['0000113'],  # assumedly
+        devstage=UBERON['0000113'],  # assumedly
         comment = (''),
     )
 
@@ -70,10 +70,13 @@ def get_legends(raw_text):
     return legends
 
 
-with open(Path(devconfig.resources,  'brainmaps-cat-abbrevs.html'), 'rt') as f:
-    dat = f.read()
+if devconfig.resources is not None:
+    # FIXME TODO this is a bad way to handle this ...
+    with open(Path(devconfig.resources,  'brainmaps-cat-abbrevs.html'), 'rt') as f:
+        dat = f.read()
 
-asoup = BeautifulSoup(dat, 'lxml')
+    asoup = BeautifulSoup(dat, 'lxml')
+
 
 class BermanSrc(resSource):
     run_ocr=False

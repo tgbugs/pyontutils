@@ -1807,6 +1807,9 @@ def getOnts():
 
 
 def main():
+    devconfig._check_resources()
+    devconfig._check_ontology_local_repo()
+
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D

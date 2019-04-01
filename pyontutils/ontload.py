@@ -733,6 +733,7 @@ def run(args):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
+    args = {k: None if v == 'None' else v for k, v in args.items()}
     setPS1(__file__)
     if args['--debug']:
         print(args)

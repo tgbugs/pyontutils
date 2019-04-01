@@ -32,6 +32,7 @@ setup(
         'nbformat',
         'pymysql',
         'pyontutils>=0.1.0',
+        'robobrowser',
         'sqlalchemy',
     ],
     extras_require={'dev': ['hunspell',

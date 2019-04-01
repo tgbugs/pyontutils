@@ -1,4 +1,5 @@
 import yaml
+from pathlib import Path
 import rdflib
 import requests
 from ontquery.terms import OntCuries
@@ -62,6 +63,11 @@ def getCuries(curies_location):
 
             else:
                 raise requests.ConnectionError(resp.request, resp)
+        else:
+            raise TypeError(f'{curies_location} does not exist and '
+                            f'is not at the default {devconfig.curies.default} '
+                            'so we will not write to it. You can update it '
+                            'manually if you want to keep it at that location.')
 
 
 def _loadPrefixes():

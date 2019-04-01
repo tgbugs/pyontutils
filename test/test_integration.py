@@ -30,11 +30,11 @@ class TestScripts(Folders, TestScriptsBase):
 
 
 only = tuple()
-skip = ('cocomac_uberon',  # known broken
-        'old_neuron_example',  # known broken
-        'cuts',  # issues with neuron_models.compiled vs load from ontology
-)
-ci_skip = ('librdf',)  # getting python3-librdf installed is too much of a pain atm
+skip = tuple()
+ci_skip = tuple()
+
+if devconfig.scigraph_services is None:
+    skip += ('scigraph_deploy',)  # this will fail # FIXME this should really only skip main not both main and import?
 
 working_dir = get_working_dir(__file__)
 if working_dir is None:
@@ -109,6 +109,7 @@ mains = {'scigraph':None,
 if 'CI' not in os.environ:
     mains['mapnlxilx'] = None  # requires db connection
 
-TestScripts.populate_tests(pyontutils, working_dir, mains,
+print(skip)
+TestScripts.populate_tests(pyontutils, working_dir, mains, skip=skip,
                            post_load=post_load, post_main=post_main,
                            only=only, do_mains=True)

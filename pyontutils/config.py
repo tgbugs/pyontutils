@@ -142,6 +142,14 @@ class Secrets:
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v', 'secrets'
     secrets = None  # prevent AttributeError during bootstrap
+
+    class MissingRepoError(Exception):
+        """ Use this if a repo at a path is missing in a script """
+
+    class NoResourcesError(Exception):
+        """ if devconfig.resources does not exist
+            raise this when exiting a script """
+
     def __init__(self, config_file=PYONTUTILS_DEVCONFIG):
         self._override = {}
         if not isinstance(config_file, Path):
@@ -386,6 +394,16 @@ class DevConfig:
     @default('/tmp')
     def zip_location(self):
         return self.config['zip_location']
+
+    def _check_resources(self):
+        if self.resources is None:
+            raise self.NoResourcesError('devconfig.resources is not set, cannot continue')
+
+    def _check_ontology_local_repo(self):
+        path = Path(self.ontology_local_repo)
+        if not path.exists():
+            raise self.MissingRepoError(f'repo for {path} does not exist')
+
 
     def __repr__(self):
         return (f'DevConfig {self.config_file}\n' +

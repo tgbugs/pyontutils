@@ -19,6 +19,9 @@ sgv = Vocabulary(cache=True)
 
 
 def main():
+    devconfig._check_resources()
+    devconfig._check_ontology_local_repo()
+
     PREFIXES = makePrefixes('definition',
                             'replacedBy',
                             'hasRole',

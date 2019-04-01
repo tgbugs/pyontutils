@@ -34,12 +34,12 @@ if Path(devconfig.ontology_local_repo).exists():
     print('checkout ok:', checkout_ok)
     ont_branch = ont_repo.active_branch.name
     if not checkout_ok and ont_branch != 'neurons':
+        neurons += ('neurondm/core', 'neurondm/lang',)  # FIXME these two are ok for no repo but not wrong branch?!
         skip += tuple(n.split('/')[-1] for n in neurons)
     else:
         lasts += tuple(f'neurondm/{s}.py' for s in neurons)
 
 else:
-    #  ('neurondm/core', 'neurondm/lang',)  # these two are ok
     skip += tuple(n.split('/')[-1] for n in neurons)
 
 
