@@ -1,2 +1,1 @@
-recursive-exclude *.egg-info *
 exclude MANIFEST.in

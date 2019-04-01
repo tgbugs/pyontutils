@@ -8,7 +8,6 @@ recursive-exclude patches *
 recursive-exclude resolver *
 recursive-exclude resources *
 recursive-exclude scigraph *
-recursive-exclude *.egg-info *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
