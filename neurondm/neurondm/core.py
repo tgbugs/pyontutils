@@ -249,7 +249,7 @@ class Config:
         out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
 
-        remote_base = remote.iri.rsplit('/', 2)[0]
+        remote_base = remote.iri.rsplit('/', 2)[0] if branch == 'master' else remote
 
         if local_base is None:
             local = Path(devconfig.ontology_local_repo, 'ttl')
@@ -258,7 +258,7 @@ class Config:
             local_base = Path(local_base).resolve()
             local = local_base
 
-        log.critical(f'{name} {local_base!r} {ttl_export_dir!r} {compiled_location!r} {file}')
+        #log.critical(f'{name} {local_base!r} {ttl_export_dir!r} {compiled_location!r} {file}')
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
@@ -271,6 +271,7 @@ class Config:
         else:
             core_graph_paths = imports
 
+        #log.critical(f'{name} {core_graph_paths}')
         out_graph_path = (out_local_base / f'{name}.ttl')
 
         class lConfig(self.__class__):
