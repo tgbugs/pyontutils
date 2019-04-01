@@ -8,3 +8,15 @@ to the general approach.  To get started all you need to do is follow the instal
 `from neurondm.lang import *` in your import statements. Please see the documentation for how to
 [set up neuron-lang for jupyter notebooks](docs/neurons_notebook.md) and take a look at some
 [examples of how to use neuron-lang to create new neurons](docs/NeuronLangExample.ipynb).
+
+## Use outside the NIF ontology
+It is possible to use neurondm outside the NIF ontology and the pyontutils repository,
+however it has not been fully abstracted to support that use case. The way to do this is
+to set all the relevant values via `neurondm.Config`. See
+[`test_neruons.test_roundtrip_py`](https://github.com/tgbugs/pyontutils/blob/1805879322922b3f5e78d1abcb4b6642e22c204d/neurondm/test/test_neurons.py#L55)
+for an example.
+Some key pieces that need improvement for better repository independent use are listed below.
+1. Untangle the `neurondm.graphBase` code from interaction with various git repos.
+2. Retool everything to work with `ttl_export_dir`, `py_export_dir`,
+and the location of the generating file.
+3. Something like `config.activate()` to switch the i/o for existing neurons.
