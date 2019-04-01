@@ -536,7 +536,7 @@ for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(apiEndpoint=devconfig.scigraph_api, api_key=get_api_key())
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None)
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
 OntTerm.query = ontquery.OntQuery(sgr, ixr)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 #ontquery.QueryResult._OntTerm = OntTerm
