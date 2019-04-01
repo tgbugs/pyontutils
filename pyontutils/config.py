@@ -10,12 +10,15 @@ from pyontutils.utils import get_working_dir
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 config_path = Path(os.environ.get('XDG_CONFIG_HOME', '~/.config')).expanduser()
 working_dir = get_working_dir(__file__)
+working_dir = None
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_config = config_path / 'pyontutils' / 'devconfig.yaml'
-    working_dir = Path('/dev/null')
+    default_curies = config_path / 'pyontutils' / 'curie_map.yaml'
+    #working_dir = Path('/dev/null')  # fail loudly
 else:
     default_config = working_dir / 'pyontutils' / 'devconfig.yaml'
+    default_curies = working_dir / 'nifstd' / 'scigraph' / 'curie_map.yaml'
 
 PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
 
@@ -52,11 +55,18 @@ def default(value):
         @wraps(function)
         def inner(*args, **kwargs):
             try:
-                out = dstr(function(*args, **kwargs))
+                raw_out = function(*args, **kwargs)
+                if raw_out is None:
+                    return
+
+                out = dstr(raw_out)
                 out.default = default_value
                 return out
             except (TypeError, KeyError, FileNotFoundError) as e:
-                return dv
+                if default_value is None:
+                    return
+                else:
+                    return dv
 
         pinner = dproperty(inner)
         pinner.default = default_value
@@ -134,6 +144,9 @@ class DevConfig:
     secrets = None  # prevent AttributeError during bootstrap
     def __init__(self, config_file=PYONTUTILS_DEVCONFIG):
         self._override = {}
+        if not isinstance(config_file, Path):
+            config_file = Path(config_file).expanduser().resolve()
+
         self.config_file = config_file
         olrd = lambda: Path(self.git_local_base, self.ontology_repo).as_posix()
         self.__class__.ontology_local_repo.default = olrd
@@ -206,11 +219,11 @@ class DevConfig:
         self._override['secrets_file'] = value
         self.write(self.config_file.as_posix())
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'nifstd_curie_map.yaml').as_posix())
+    @default(default_curies.as_posix())
     def curies(self):
         return self.config['curies']
 
-    @default((working_dir / 'nifstd' / 'patches' / 'patches.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'patches' / 'patches.yaml').as_posix() if working_dir else None)
     def patch_config(self):
         return self.config['patch_config']
 
@@ -309,7 +322,7 @@ class DevConfig:
 
         return Path('/dev/null/does-not-exist')  # seems reaonsable ...
 
-    @default((working_dir / 'nifstd' /'resources').as_posix())
+    @default((working_dir / 'nifstd' /'resources').as_posix() if working_dir else None)
     def resources(self):
         return self.config['resources']
 
@@ -340,27 +353,33 @@ class DevConfig:
     def scigraph_api_user(self):
         return self.config['scigraph_api_user']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix()
+             if working_dir else None)
     def scigraph_graphload(self):
         return self.config['scigraph_graphload']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'services.yaml').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'services.yaml').as_posix()
+             if working_dir else None)
     def scigraph_services(self):
         return self.config['scigraph_services']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'start.sh').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'start.sh').as_posix()
+             if working_dir else None)
     def scigraph_start(self):
         return self.config['scigraph_start']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'stop.sh').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'stop.sh').as_posix()
+             if working_dir else None)
     def scigraph_stop(self):
         return self.config['scigraph_stop']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.service').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.service').as_posix()
+             if working_dir else None)
     def scigraph_systemd(self):
         return self.config['scigraph_systemd']
 
-    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.conf').as_posix())
+    @default((working_dir / 'nifstd' / 'scigraph' / 'scigraph-services.conf').as_posix()
+             if working_dir else None)
     def scigraph_java(self):
         return self.config['scigraph_java']
 

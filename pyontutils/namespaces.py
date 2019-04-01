@@ -20,17 +20,48 @@ def getCuries(curies_location):
     # FIXME this will 'fail' silently ...
     # probably need to warn?
     try:
+        if curies_location is None:
+            raise TypeError('curies should always fail over to '
+                            '.config/pyontutils/curie_map.yaml '
+                            'what have you done!?')
+
+        # TODO staleness check
         with open(curies_location, 'rt') as f:
             curie_map = yaml.safe_load(f)
+
+        return curie_map
+
     except (FileNotFoundError, NotADirectoryError) as e:
         # retrieving stuff over the net is bad
         # but having stale curies seems worse?
-        master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
-        raw_path = 'scigraph/nifstd_curie_map.yaml?raw=true'
-        curie_map = requests.get(master_blob + raw_path)
-        curie_map = yaml.safe_load(curie_map.text)
 
-    return curie_map
+        # current options for retrieval
+        # github, best, but rate limit problems
+        # ontquery CURIE_MAP
+        # ../nifstd/scigraph/curie_map.yaml
+        # Cypher()
+        # strong coupling between the version
+        # in this repo at this commit is what
+        # causes the issue, github is the best
+        # solution, so write once to a known location
+        if curies_location == devconfig.curies.default:
+            master_blob = 'https://github.com/tgbugs/pyontutils/blob/reorg/'
+            raw_path = '/nifstd/scigraph/curie_map.yaml?raw=true'
+            curies_url = master_blob + raw_path
+            resp = requests.get(curies_url)
+            if resp.ok:
+                clp = Path(curies_location)
+                if not clp.parent.exists():
+                    clp.parent.mkdir()
+
+                with open(clp, 'wt') as f:
+                    f.write(resp.text)
+
+                print(f'Wrote {clp} from {curies_url}')
+                return getCuries(curies_location)
+
+            else:
+                raise requests.ConnectionError(resp.request, resp)
 
 
 def _loadPrefixes():
