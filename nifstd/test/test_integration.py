@@ -30,6 +30,7 @@ if working_dir is None:
     # a number of problems with references to local vs installed packages
     working_dir = module_parent
 
+devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
 ont_repo = Repo(devconfig.ontology_local_repo)
 post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
