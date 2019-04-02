@@ -23,7 +23,6 @@ There are some systems on which even this is not sufficient.
 If you encounter this situation add `mysql-connector = "==2.1.6"` to `[dev-packages]` in the Pipfile.
 And then run the command without environment variables.
 
-Alternately, if you manage your packages via another system you can create a
-development setup by adding this folder to your `PYTHONPATH` environment variable
-using `export PYTHONPATH=PYTHONPATH:"$(pwd)"` from the location of this readme.
-If you use a development setup you will need to create symlinks described below.
+If you don't want to use pipenv (which is probably most people) then the quickest
+way to get up and running with a development install is `pip install --user --editable .`
+from the folder that contains this readme.
