@@ -12,7 +12,6 @@ if get_working_dir(__file__):
 
 class TestCli(Folders, TestCliBase):
     commands = (
-        ['ilxcli', '--help'],
         ['ontree', '--help'],
         ['registry-sync', '--test'],
         *extras)
