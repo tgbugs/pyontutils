@@ -435,7 +435,7 @@ def bootstrap_config():
             if p1 != p2:
                 devconfig.git_local_base = p1
     else:
-        log.info('config already exists at ' + devconfig.config_file)
+        log.info(f'config already exists at {devconfig.config_file}')
 
 
 def main():
