@@ -1,6 +1,7 @@
 import os
 import unittest
 from pathlib import Path
+from git import Repo
 
 testing_base = f'/tmp/.neurons-testing-base-{os.getpid()}'
 pyel = Path(testing_base, 'compiled')
@@ -13,9 +14,8 @@ class TestNeurons(unittest.TestCase):
         if not pyel.exists():
             pyel.mkdir(parents=True)  # recrusive clean is called after every test
             (pyel / '__init__.py').touch()
-        from neurondm import Config
-        # FIXME calling this for the side effect of calling git init is kind of evil
-        Config('dud', git_repo=testing_base, ttl_export_dir=None)
+
+        repo = Repo.init(testing_base)
 
     def tearDown(self):
         def recursive_clean(path):

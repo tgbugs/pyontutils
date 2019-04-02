@@ -627,15 +627,17 @@ class graphBase:
                 except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
                     local_working_dir = get_working_dir(graphBase.local_base)
                     if local_working_dir is None:
-                        log.warning(f'{graphBase.local_base} is not a git repository, running `git init` now ...')
-                        repo = Repo.init(graphBase.local_base.as_posix())
+                        raise e
                     else:
                         msg = (f'{graphBase.local_base} is already contained in a git repository '
                                'located in {local_working_dir} if you wish to use this repo please '
                                'set local_base to {local_working_dir}.')
-                        raise git.exc.InvalidGitRepositoryError(msg)
+                        raise git.exc.InvalidGitRepositoryError(msg) from e
 
                 graphBase.repo = repo
+                # FIXME repo init when branch set still an issue
+                # ideally remove _all_ of this code though because WOW
+                # it is a mess
                 graphBase.set_repo_state()
 
         # core graph setup
