@@ -1,3 +1,7 @@
+"""librdf parser for rdflib"""
+
+__version__ = '0.0.1'
+
 try:
     import RDF
 except ImportError as e:

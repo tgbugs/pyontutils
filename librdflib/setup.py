@@ -1,4 +1,5 @@
 from setuptools import setup
+from librdflib import __version__
 
 with open('README.md', 'rt') as f:
     long_description = f.read()
@@ -6,7 +7,7 @@ with open('README.md', 'rt') as f:
 tests_require = ['pytest', 'pytest-runner']
 setup(
     name='librdflib',
-    version='0.0.1',  # FIXME package vs core serializer
+    version=__version__,
     description='librdf parser for rdflib',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -15,7 +16,7 @@ setup(
     author_email='tgbugs@gmail.com',
     license='MIT',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
     ],

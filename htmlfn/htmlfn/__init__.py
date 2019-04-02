@@ -1,6 +1,8 @@
 """ Light weight functions for generating html
 and working with the rest of the unholy trinity. """
 
+__version__ = '0.0.1'
+
 # html
 
 def tag(_tag, n=False):

@@ -1,4 +1,5 @@
 from setuptools import setup
+from ttlser import __version__
 
 with open('README.md', 'rt') as f:
     long_description = f.read()
@@ -6,7 +7,7 @@ with open('README.md', 'rt') as f:
 tests_require = ['pytest', 'pytest-runner']
 setup(
     name='ttlser',
-    version='1.0.0',  # FIXME package vs core serializer
+    version=__version__,
     description='Deterministic turtle serialization for rdflib.',
     long_description=long_description,
     long_description_content_type='text/markdown',

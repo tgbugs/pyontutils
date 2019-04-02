@@ -1,4 +1,5 @@
 from setuptools import setup
+from htmlfn import __version__
 
 with open('README.md', 'rt') as f:
     long_description = f.read()
@@ -6,7 +7,7 @@ with open('README.md', 'rt') as f:
 tests_require = ['pytest', 'pytest-runner']
 setup(
     name='htmlfn',
-    version='0.0.1',
+    version=__version__,
     description='functions for generating html',
     long_description=long_description,
     long_description_content_type='text/markdown',

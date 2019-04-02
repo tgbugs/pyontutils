@@ -1,4 +1,5 @@
 from setuptools import setup
+from pyontutils import __version__
 
 with open('README.md', 'rt') as f:
     long_description = f.read()
@@ -6,7 +7,7 @@ with open('README.md', 'rt') as f:
 tests_require = ['pytest', 'pytest-runner']
 setup(
     name='pyontutils',
-    version='0.1.0',
+    version=__version__,
     description='utilities for working with the NIF ontology, SciGraph, and turtle',
     long_description=long_description,
     long_description_content_type='text/markdown',

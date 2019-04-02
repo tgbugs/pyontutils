@@ -1,4 +1,5 @@
 from setuptools import setup
+from nifstd_tools import __version__
 
 # since setuptools cannot actually exclude files so just grab the ones we want
 
@@ -8,7 +9,7 @@ with open('README.md', 'rt') as f:
 tests_require = ['pytest', 'pytest-runner']
 setup(
     name='nifstd-tools',
-    version='0.0.1',
+    version=__version__,
     description='utilities for working with the NIF ontology',
     long_description=long_description,
     long_description_content_type='text/markdown',
