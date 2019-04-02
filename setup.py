@@ -1,5 +1,16 @@
+import re
 from setuptools import setup
-from pyontutils import __version__
+
+
+def find_version(filename):
+    _version_re = re.compile(r"__version__ = '(.*)'")
+    for line in open(filename):
+        version_match = _version_re.match(line)
+        if version_match:
+            return version_match.group(1)
+
+
+__version__ = find_version('pyontutils/__init__.py')
 
 with open('README.md', 'rt') as f:
     long_description = f.read()
