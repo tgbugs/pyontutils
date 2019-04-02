@@ -10,16 +10,23 @@ class TestScripts(Folders, TestScriptsBase):
     """ woo! """
 
 
-mains = {'methods':None,
-         'nif_cell':None,
-         'hbp_cells':None,
-         'nif_neuron':None,
-         'chebi_bridge':None,
-         'cocomac_uberon':None,
-         'gen_nat_models':None,
-         'ontree':['ontree', '--test'],
-         'parcellation':['parcellation', '--jobs', '1'],
-         'scr_sync':['registry-sync', '--test'], }
+skip = tuple()
+ci_skip = (
+    'cocomac_uberon',  # lookups too slow when using remote scigraph
+    'chebi_bridge',  # too slow generally
+)
+
+mains = {'methods': None,
+         'nif_cell': None,
+         'hbp_cells': None,
+         'nif_neuron': None,
+         'chebi_bridge': None,
+         'gen_nat_models': None,
+         'cocomac_uberon': None,
+         'ontree': ['ontree', '--test'],
+         'parcellation': ['parcellation', '--jobs', '1'],
+         'scr_sync': ['registry-sync', '--test'],
+        }
 
 module_parent = Path(__file__).resolve().parent.parent
 working_dir = get_working_dir(__file__)
@@ -35,6 +42,8 @@ ont_repo = Repo(devconfig.ontology_local_repo)
 post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 
-TestScripts.populate_tests(nifstd_tools, working_dir, mains, module_parent=module_parent,
+TestScripts.populate_tests(nifstd_tools, working_dir, mains,
+                           skip=skip, ci_skip=ci_skip,
+                           module_parent=module_parent,
                            post_load=post_load, post_main=post_main,
                            only=[], do_mains=True)

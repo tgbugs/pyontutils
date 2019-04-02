@@ -4,6 +4,7 @@ import csv
 from os.path import expanduser
 from pathlib import Path
 import rdflib
+from pyontutils.utils import Async, deferred
 from pyontutils.config import devconfig, working_dir
 from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
@@ -18,8 +19,8 @@ def main():
                    'entity_mapping/mappings/uberon-nervous').as_posix(), 'rt') as f:
         brain_only = set([l.strip() for l in f.readlines()])
 
-    v = Vocabulary(cache=True)
-    sg = Graph(cache=True)
+    sgv = Vocabulary(cache=True)
+    sgg = Graph(cache=True)
 
     g = rdflib.Graph()
     g.parse(Path(devconfig.ontology_local_repo,
@@ -40,10 +41,10 @@ def main():
         s_existing_label = None
         s_existing_fma = ''
 
-        cands = v.findByTerm(o)
+        cands = sgv.findByTerm(o)
         if not cands:
             cands = []
-            scands = v.searchByTerm(o)
+            scands = sgv.searchByTerm(o)
             if not scands:
                 scands = []
         else:
@@ -68,7 +69,7 @@ def main():
                     if existing_id in fma_lookup:
                         existing_fma = fma_lookup[existing_id]
                     else:
-                        meta = sg.getNode(existing_id)['nodes'][0]['meta']
+                        meta = sgg.getNode(existing_id)['nodes'][0]['meta']
                         if dbx in meta:
                             xrefs = meta[dbx]
                             for ref in xrefs:
@@ -97,7 +98,7 @@ def main():
                     if not s_existing_id:
                         print(scand)
                         continue
-                    asdf = sg.getNode(s_existing_id)
+                    asdf = sgg.getNode(s_existing_id)
                     #print(asdf, s_existing_id, s_existing_label)
                     if s_existing_id in fma_lookup:
                         s_existing_fma = fma_lookup[s_existing_id]
