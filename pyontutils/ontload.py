@@ -66,6 +66,7 @@ from joblib import Parallel, delayed
 from pyontutils.core import makeGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
 from pyontutils.utils_extra import memoryCheck
+from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
@@ -590,11 +591,6 @@ def deploy_scp(local_path, remote_spec):
         #os.system(command)
         #os.system(update_latest)
 
-def getCuries(curies_location):
-    with open(curies_location, 'rt') as f:
-        curies = yaml.safe_load(f)
-    curie_prefixes = set(curies.values())
-    return curies, curie_prefixes
 
 def make_post_clone(git_local, repo_name, remote_base):
     local_go = jpth(git_local, repo_name, 'ttl/external/go.owl')
@@ -650,7 +646,8 @@ def run(args):
     if remote_base == 'NIF':
         remote_base = 'http://ontology.neuinfo.org/NIF'
 
-    curies, curie_prefixes = getCuries(curies_location)
+    curies = getCuries(curies_location)
+    curie_prefixes = set(curies.values())
 
     itrips = None
 
@@ -736,6 +733,7 @@ def run(args):
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontload .5')
+    args = {k: None if v == 'None' else v for k, v in args.items()}
     setPS1(__file__)
     if args['--debug']:
         print(args)

@@ -1,0 +1,13 @@
+recursive-include test *
+exclude MANIFEST.in
+exclude nifstd_tools/ilxcli.py
+exclude nifstd_tools/ilx_utils.py
+recursive-exclude complete *
+recursive-exclude development *
+recursive-exclude patches *
+recursive-exclude resolver *
+recursive-exclude resources *
+recursive-exclude scigraph *
+recursive-exclude * *.pyc
+recursive-exclude * *.swp
+recursive-exclude * *.swo

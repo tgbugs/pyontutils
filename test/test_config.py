@@ -1,5 +1,8 @@
 import unittest
-from pyontutils.config import devconfig
+from pyontutils.config import DevConfig
+
+devconfig = DevConfig(config_file='/tmp/fake-devconfig.yaml')
+
 
 class TestConfig(unittest.TestCase):
     def test_set_git_local_base(self):
@@ -39,5 +42,3 @@ class TestConfig(unittest.TestCase):
         assert v1 != v3
         assert v2 == v3
         assert v1 == devconfig.secrets_file
-
-

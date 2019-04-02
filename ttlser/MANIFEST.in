@@ -1,0 +1,5 @@
+recursive-include test *
+exclude MANIFEST.in
+recursive-exclude * *.pyc
+recursive-exclude * *.swp
+recursive-exclude * *.swo

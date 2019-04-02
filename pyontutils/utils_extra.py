@@ -6,19 +6,6 @@ import psutil
 import rdflib
 
 
-rdflib.plugin.register('nifttl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'CustomTurtleSerializer')
-rdflib.plugin.register('cmpttl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'CompactTurtleSerializer')
-rdflib.plugin.register('uncmpttl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'UncompactTurtleSerializer')
-rdflib.plugin.register('scottl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'SubClassOfTurtleSerializer')
-rdflib.plugin.register('rktttl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'RacketTurtleSerializer')
-rdflib.plugin.register('htmlttl', rdflib.serializer.Serializer,
-                       'pyontutils.ttlser', 'HtmlTurtleSerializer')
-
 rdflib.plugin.register('librdfxml', rdflib.parser.Parser,
                        'pyontutils.librdf', 'libRdfxmlParser')
 rdflib.plugin.register('libttl', rdflib.parser.Parser,

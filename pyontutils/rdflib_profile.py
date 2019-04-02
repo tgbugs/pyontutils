@@ -20,7 +20,7 @@ import pstats
 import subprocess
 from ast import literal_eval
 from pathlib import Path
-from pyontutils.ttlser import CustomTurtleSerializer
+from ttlser import CustomTurtleSerializer
 from rdflib.plugins.serializers.turtle import TurtleSerializer
 
 

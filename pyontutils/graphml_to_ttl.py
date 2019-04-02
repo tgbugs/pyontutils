@@ -19,8 +19,7 @@ from lxml import etree
 from docopt import docopt
 from rdflib import URIRef, BNode, Namespace, Graph
 from IPython import embed
-from pyontutils.core import makeGraph
-from pyontutils.qnamefix import cull_prefixes
+from pyontutils.core import makeGraph, cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, PREFIXES as uPREFIXES
 from pyontutils.combinators import restriction, restrictionN, allDifferent, members, unionOf, oneOf
 from pyontutils.closed_namespaces import rdf, rdfs, owl

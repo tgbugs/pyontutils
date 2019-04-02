@@ -11,10 +11,10 @@ from rdflib.extras import infixowl
 from joblib import Parallel, delayed
 import ontquery
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, working_dir, getSourceLine
+from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
 from pyontutils.utils import Async, deferred, TermColors as tc
 from pyontutils.utils_extra import check_value
-from pyontutils.config import get_api_key, devconfig
+from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
 from pyontutils import combinators as cmb
@@ -24,6 +24,17 @@ from IPython import embed
 current_file = Path(__file__).absolute()
 
 # common funcs
+
+def relative_resources(pathstring, failover='nifstd/resources'):
+    """ relative paths to resources in this repository
+        `failover` matches the location relative to the
+        github location (usually for prov purposes) """
+
+    if working_dir is None:
+        return Path(failover, pathstring)
+    else:
+        return Path(devconfig.resources, pathstring).relative_to(working_dir)
+
 
 def standard_checks(graph):
     def cardinality(predicate, card=1):
@@ -525,7 +536,7 @@ for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(apiEndpoint=devconfig.scigraph_api, api_key=get_api_key())
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None)
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
 OntTerm.query = ontquery.OntQuery(sgr, ixr)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 #ontquery.QueryResult._OntTerm = OntTerm
@@ -925,12 +936,15 @@ class Ont:
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
-        if hasattr(self, '_repo') and not self._repo:
+        if hasattr(self, '_repo') and not self._repo or working_dir is None:
             commit = 'FAKE-COMMIT'
         else:
-            from git import Repo
-            repo = Repo(working_dir.as_posix())
-            commit = next(repo.iter_commits()).hexsha
+            import git
+            try:
+                repo = git.Repo(working_dir.as_posix())
+                commit = next(repo.iter_commits()).hexsha
+            except git.exc.InvalidGitRepositoryError:
+                commit = 'FAKE-COMMIT'
 
         try:
             if self.source_file:

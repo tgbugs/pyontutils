@@ -56,7 +56,8 @@ from pyontutils.utils import anyMembers
 from pyontutils.ontload import __doc__ as ontload_docs
 from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import run as ontload_main
-from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError, getCuries
+from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError
+from pyontutils.namespaces import getCuries
 from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
@@ -84,15 +85,20 @@ class Builder:
     """ Build and/or run the SciGraph build and deploy chain. """
     # filenames currently not set by options [default: ]
     scigraph_repo = 'SciGraph'
-    start_script = f'{devconfig.scigraph_start}'
-    stop_script = f'{devconfig.scigraph_stop}'
+    start_script = devconfig.scigraph_start
+    stop_script = devconfig.scigraph_stop
     services_jar = 'scigraph-services.jar'
     heap_dump = 'head.dump'
     garbage_collection_log = 'gc.log'
     services_log = 'sysout.log'
     etc = '/etc/'
     zip_loc_var = 'ZIP_LOC'
+
+    class MissingTemplateError(Exception):
+        """ Could not find template file. """
+
     def __init__(self, args, **kwargs):
+        kwargs = {k: None if v == 'None' else v for k, v in kwargs.items()}
         self.__dict__.update(kwargs)
         self._updated = False
         if self.check_built:
@@ -100,7 +106,7 @@ class Builder:
         self._host = HOST
         self._user = USER
         self.args = args
-        self.ontload_args = {k:v for k, v in args.items()}  # send them all!
+        self.ontload_args = {k: None if v == 'None' else v for k, v in args.items()}  # send them all!
         self.ontload_args['scigraph'] = self.services
         if self.all or self.graph:
             self.ontload_args['graph'] = True
@@ -430,9 +436,12 @@ class Builder:
         return ontload_main(self.ontload_args)
 
     def build_services_config(self):
+        if self.services_config is None:
+            raise self.MissingTemplateError(f'You have not provided a services config!')
+
         services_config_template = self.locate_config_template(self.services_config)
         curies_location = self.curies
-        curies, _ = getCuries(curies_location)
+        curies = getCuries(curies_location)
         with open(services_config_template, 'rt') as f:
             services_config = yaml.safe_load(f)
         services_config['graphConfiguration']['curies'] = curies
@@ -464,6 +473,9 @@ class Builder:
 
         # variable support functions
         def setVars(template_var, config_filename, *var_vals, templates=_templates):
+            if config_filename is None:
+                raise self.MissingTemplateError(f'You have not provided a value for {template_var}!')
+
             pd = ld(config_filename)
             templates[template_var] = pd
             for var, val in var_vals:

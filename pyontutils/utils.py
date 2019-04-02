@@ -16,7 +16,19 @@ from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 
-working_dir = Path(__file__).absolute().resolve().parent.parent
+
+def get_working_dir(script__file__):
+    """ hardcoded sets the 'equivalent' working directory if not in git """
+    start = Path(script__file__).resolve()
+    _root = Path(start.root)
+    working_dir = start
+    while not list(working_dir.glob('.git')):
+        if working_dir == _root:
+            return
+
+        working_dir = working_dir.parent
+
+    return working_dir
 
 
 def TODAY():
@@ -203,22 +215,13 @@ def refile(script__file__, path):
 
 def relative_path(script__file__):
     # FIXME will break outside of subfolders of working_dir neuron_models folder ...
+    working_dir = get_working_dir(script__file__)
     rpath = (Path(script__file__).
              resolve().
-             absolute().
              relative_to(working_dir.
-                         absolute().
                          resolve()).
              as_posix())
     return rpath
-
-
-def readFromStdIn(stdin=None):
-    from select import select
-    if stdin is None:
-        from sys import stdin
-    if select([stdin], [], [], 0.0)[0]:
-        return stdin
 
 
 def async_getter(function, listOfArgs):

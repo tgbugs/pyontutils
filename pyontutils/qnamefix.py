@@ -23,10 +23,10 @@ import sys
 from glob import glob
 import rdflib
 from docopt import docopt
-import pyontutils.ttlfmt
+import ttlser.ttlfmt
 from pyontutils.core import makeGraph, cull_prefixes
-from pyontutils.utils import readFromStdIn
-from pyontutils.ttlfmt import parse, prepare
+from ttlser.utils import readFromStdIn
+from ttlser.ttlfmt import parse, prepare
 from pyontutils.namespaces import PREFIXES as uPREFIXES
 
 PREFIXES = {k:v for k, v in uPREFIXES.items() if k != 'NIFTTL'}
@@ -79,7 +79,7 @@ def main():
     global PREFIXES
     args = docopt(__doc__, version = "qnamefix 0")
     args['--format'] = 'turtle'
-    pyontutils.ttlfmt.args = args
+    ttlser.ttlfmt.args = args
     if args['--exclude'] == ['ALL']:
         for k in list(PREFIXES):
             PREFIXES.pop(k)
