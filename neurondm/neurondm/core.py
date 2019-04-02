@@ -494,7 +494,8 @@ class graphBase:
                 # which can be reset by successive calls to configGraphIO
                 try:
                     # anything that will be overwritten by returning is OK to zap
-                    graphBase.repo.git.checkout('-f', ob)
+                    if Path(graphBase.repo.working_dir).exists():
+                        graphBase.repo.git.checkout('-f', ob)
                 except BaseException as e:
                     #from IPython import embed
                     #embed()
