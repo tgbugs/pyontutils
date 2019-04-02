@@ -15,7 +15,6 @@ recursive-exclude htmlfn *
 recursive-exclude librdflib *
 recursive-exclude export *
 recursive-exclude ilxutils *
-recursive-exclude *.egg-info *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo

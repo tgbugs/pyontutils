@@ -24,21 +24,15 @@ addons:
 
 before_install:
   - pushd "${TRAVIS_BUILD_DIR}/../"
+  - git clone --depth=1 https://github.com/BlueBrain/nat.git
+  - git clone --depth=1 https://github.com/tgbugs/methodsOntology.git
+  - git clone --depth=1 https://github.com/tgbugs/entity_mapping.git
+  - git clone --depth=1 https://github.com/tgbugs/orgstrap.git
   - git clone --depth=1 https://github.com/SciCrunch/NIF-Ontology.git
+  - orgstrap/orgstrap
   - pushd NIF-Ontology
   - git fetch origin neurons:neurons --depth=1
   - popd
-  - git clone --depth=1 https://github.com/tgbugs/methodsOntology.git
-  - git clone --depth=1 https://github.com/tgbugs/entity_mapping.git
-  - git clone https://github.com/tgbugs/orgstrap.git
-  - orgstrap/orgstrap
-  - git clone --depth=1 https://github.com/BlueBrain/nat.git
-
-  - git clone https://github.com/tgbugs/ontquery.git  # temp fix
-  - pushd ontquery
-  - pip install --editable .
-  - popd
-
   - popd
 
 install:
@@ -51,5 +45,6 @@ script:
   - export COVERAGE_FILE="$(pwd)/.coverage"
   - export PYTHONWARNINGS=ignore
   - bin/run-tests
+
 after_success:
   - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
