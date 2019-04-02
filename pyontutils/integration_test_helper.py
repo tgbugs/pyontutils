@@ -300,6 +300,7 @@ class TestCliBase(unittest.TestCase):
         for command in self.commands:
             try:
                 output = subprocess.check_output(command,
+                                                 env=os.environ.copy(),
                                                  stderr=subprocess.STDOUT).decode().rstrip()
             except BaseException as e:
                 failed.append((command, e, e.stdout if hasattr(e, 'stdout') else '', ''))
