@@ -785,7 +785,9 @@ class graphBase:
         out = '#!/usr/bin/env python3.6\n'
         out += f'from {cls.__import_name__} import *\n\n'
 
-        _subs = [inspect.getsource(c) for c in subclasses(NeuronEBM)]  # FIXME are cuts sco ebms?
+        all_types = set(type(n) for n in cls.neurons())
+        _subs = [inspect.getsource(c) for c in subclasses(Neuron)
+                 if type(c) in all_types and Path(inspect.getfile(c)).exists()]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         out += subs
 
