@@ -1,8 +1,8 @@
 import unittest
 from pathlib import Path
-import sys
-import pudb
-sys.breakpointhook = pudb.set_trace
+#import sys
+#import pudb
+#sys.breakpointhook = pudb.set_trace
 
 # TestRoundtrip by itself is not sufficient to induce the cross module version
 from test.test_neurons import TestRoundtrip
