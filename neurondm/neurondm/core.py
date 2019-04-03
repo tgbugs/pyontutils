@@ -468,6 +468,9 @@ class graphBase:
     class GitRepoOnWrongBranch(Exception):
         """ Git repo is checked out to the wrong branch. """
 
+    class ShouldNotHappenError(Exception):
+        """ big oops """
+
     def __init__(self):
         if type(self.core_graph) == str:
             raise TypeError('You must have at least a core_graph')
@@ -1698,6 +1701,7 @@ class Neuron(NeuronBase):
         #if self.ng.qname(self.id_).startswith('TEMP'):
             #raise TypeError('TEMP id, no need to bag')
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
+        embeddedKnownClasses = set()
         for c in self.Class.equivalentClass:
             if isinstance(c.identifier, rdflib.URIRef):
                 # FIXME this is entailment stuff
@@ -1708,25 +1712,26 @@ class Neuron(NeuronBase):
             pe = self._unpackPheno(c)
             if pe:
                 if isinstance(pe, tuple):
-                    embeddedKnownClasses = [_ for _ in pe if _ in self.knownClasses]
-                    if self.owlClass not in embeddedKnownClasses:
-                        cf = [_ for _ in self.Class.graph[:rdf.type:owl.Ontology]
-                              if 'phenotype' not in _]
-                        raise self.owlClassMismatch(f'\nowlClass {embeddedKnownClasses} '
-                                                    f'does not match {self.owlClass} {c}\n'
-                                                    f'the current file is {cf}')
+                    for p in pe:
+                        if p in self.knownClasses:
+                            embeddedKnownClasses.add(p)
+
                     # strip out any known iris
                     out.update([_ for _ in pe if _ not in self.knownClasses])
                 else:
+                    if pe in self.knownClasses:
+                        embeddedKnownClasses.add(pe)
+
                     out.add(pe)
             else:
-                # FIXME the owl.Ontology doesn't work if there are multiple in graphs
-                cf = [_ for _ in self.Class.graph[:rdf.type:owl.Ontology]
-                      if 'phenotype' not in _]
+                raise self.ShouldNotHappenError('bah!')
 
-                raise self.owlClassMismatch(f'\nowlClass {embeddedKnownClasses} '
-                                            f'does not match {self.owlClass} {c}\n'
-                                            f'the current file is {cf}')
+        if not embeddedKnownClasses:
+            cf = [_ for _ in self.Class.graph[:rdf.type:owl.Ontology]
+                  if 'phenotype' not in _]
+            raise self.owlClassMismatch(f'\nowlClass {embeddedKnownClasses} '
+                                        f'does not match {self.owlClass} {c}\n'
+                                        f'the current file is {cf}')
 
         for c in self.Class.disjointWith:  # replaced by complementOf for most use cases
             if isinstance(c.identifier, rdflib.URIRef):
@@ -1780,7 +1785,6 @@ class Neuron(NeuronBase):
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
                             print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
-                            embed()
                             return
                         else:
                             if pr.complementOf:
@@ -1795,8 +1799,8 @@ class Neuron(NeuronBase):
                                 raise BaseException('wat')
                     elif isinstance(pr, infixowl.Restriction):
                         pes.append(restriction_to_phenotype(pr))
-                    elif id_ == self.expand(self.owlClass):  # FIXME SAO: not a namespace
-                        continue
+                    elif id_ == self.owlClass:
+                        pes.append(id_)
                     elif pr is None:
                         print('dangling reference', id_)
                     else:
