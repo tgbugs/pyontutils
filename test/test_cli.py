@@ -1,9 +1,9 @@
 """ Tests for the various cli programs """
 
-from pyontutils.integration_test_helper import TestCliBase, Folders
+from pyontutils.integration_test_helper import _TestCliBase, Folders
 
 
-class TestCli(Folders, TestCliBase):
+class TestCli(Folders, _TestCliBase):
     commands = (
         ['graphml-to-ttl', '--help'],
         ['necromancy', '--help'],

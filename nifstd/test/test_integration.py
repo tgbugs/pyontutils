@@ -2,11 +2,11 @@ import unittest
 from pathlib import Path
 from pyontutils.utils import get_working_dir
 from pyontutils.config import devconfig
-from pyontutils.integration_test_helper import TestScriptsBase, Folders, Repo
+from pyontutils.integration_test_helper import _TestScriptsBase, Folders, Repo
 import nifstd_tools
 
 
-class TestScripts(Folders, TestScriptsBase):
+class TestScripts(Folders, _TestScriptsBase):
     """ woo! """
 
 

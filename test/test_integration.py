@@ -7,7 +7,7 @@ import git
 import pyontutils
 from pyontutils.utils import TermColors as tc, get_working_dir
 from pyontutils.config import devconfig
-from pyontutils.integration_test_helper import TestScriptsBase, Repo, Folders
+from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
 
 
 class TestOntQuery(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestOntQuery(unittest.TestCase):
         self.query('brain')
 
 
-class TestScripts(Folders, TestScriptsBase):
+class TestScripts(Folders, _TestScriptsBase):
     """ woo ! """
 
 
