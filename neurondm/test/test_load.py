@@ -1,0 +1,12 @@
+import unittest
+
+class TestWrite(unittest.TestCase):
+    def test_load_huang(self):
+        from neurondm import Config
+        # FIXME placeholder for loading and roundtripping
+        # neurons with other neurons as asserted equivalent
+        # or disjoint classes
+        config = Config('huang-2017')
+        config.load_existing()
+        from IPython import embed
+        embed()

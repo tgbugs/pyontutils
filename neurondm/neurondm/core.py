@@ -394,6 +394,9 @@ class Config:
                     ebms = []
 
                 sc = None
+                # the loading strategy here is mindblowingly stupid because
+                # it requires you to know the anchoring equivalent class of
+                # a neuron before you call it to load >_<
                 for sc in chain(graphBase.python_subclasses, ebms):
                     if sc._ocTrip in graphBase.load_graph or sc == Neuron:
                         sc._load_existing()
@@ -799,21 +802,48 @@ class graphBase:
         return sorted(NeuronBase.existing_pes)
 
     def disjointWith(self, *others):
+        # FIXME this makes the data model mutable!
+        # TODO symmetry here
+
+        # is it possible in all cases to expand this
+        # to a neuron where you (map neg-phenotype (neuron-phenotypes other-neuron)) ?
         for other in others:
             if isinstance(other, self.__class__):
-                self.out_graph.add((self.id_, owl.disjointWith, other.id_))
+                otherid = other.id_
             else:
-                self.out_graph.add((self.id_, owl.disjointWith, other))
+                otherid = other
+
+            self.out_graph.add((self.id_, owl.disjointWith, otherid))
+            self._disjoint_bags_ids.add(otherid)
 
         return self
 
     def equivalentClass(self, *others):
+        """ as implemented this acts as a permenant bag union operator
+            and therefore should be used with extreme caution since
+            in any given context the computed label/identifier will
+            no longer reflect the entailed/reasoned bag
+
+            In a static context this means that we might want to have
+            an ilxtr:assertedAlwaysImplies -> bag union neuron
+        """
+        # FIXME this makes the data model mutable!
+        # TODO symmetry here
+
+        # serious modelling issue
+        # If you make two bags equivalent to eachother
+        # then in the set theory model it becomes impossible
+        # to have a set that is _just_ one or the other of the bags
+        # which I do not think that we want
         for other in others:
             if isinstance(other, self.__class__):
                 #if isinstance(other, NegPhenotype):  # FIXME maybe this is the issue with neg equivs?
-                self.out_graph.add((self.id_, owl.equivalentClass, other.id_))
+                otherid = other.id_
             else:
-                self.out_graph.add((self.id_, owl.equivalentClass, other))
+                otherid = other
+
+            self.out_graph.add((self.id_, owl.equivalentClass, other))
+            self._equivalent_bags_ids.add(otherid)
 
         return self
 
@@ -1231,7 +1261,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             finally:
                 NeuronBase._loading = False
 
-    def __init__(self, *phenotypeEdges, id_=None, label=None, override=False):
+    def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
+                 equivalentNeurons=tuple(), disjointNeurons=tuple()):
+
+        if id_ and (equivalentNeurons or disjointNeurons):
+            # FIXME does this work!?
+            raise TypeError('Neurons defined by id may not use equivalent or disjoint')
+
         super().__init__()
         self.ORDER = [
             # FIXME it may make more sense to manage this in the NeuronArranger
@@ -1286,6 +1322,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
+        # TODO serialize these
+        self._equivalent_bags_ids = set()
+        self._disjoint_bags_ids = set()
 
         if not phenotypeEdges and id_ is not None and id_ not in self.knownClasses:
             self.Class = infixowl.Class(self.id_, graph=self.in_graph)  # IN
@@ -1295,6 +1334,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                     label, *_extra = self.Class.label
                 except ValueError:
                     pass  # no label in the graph
+
+        else:
+            self.equivalentClass(*equivalentNeurons)
+            self.disjointWith(*disjointNeurons)
 
         self.pes = tuple(sorted(sorted(phenotypeEdges),
                                 key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
@@ -1646,22 +1689,31 @@ class Neuron(NeuronBase):
             #raise TypeError('TEMP id, no need to bag')
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         for c in self.Class.equivalentClass:
+            if isinstance(c.identifier, rdflib.URIRef):
+                # FIXME this is entailment stuff
+                # also prevents potential infinite recursion
+                self._equivalent_bags_ids.add(c.identifier)
+                continue
+
             pe = self._unpackPheno(c)
             if pe:
-                if isinstance(pe, tuple):  # we hit a case where we need to inherit phenos from above
+                if isinstance(pe, tuple):
+                    embeddedKnownClasses = [_ for _ in pe if _ in self.knownClasses]
+                    # strip out any known iris
                     out.update([_ for _ in pe if _ not in self.knownClasses])
                 else:
                     out.add(pe)
             else:
-                print(pe)
                 # FIXME the owl.Ontology doesn't work if there are multiple in graphs
                 raise self.owlClassMismatch(f'owlClass does not match {self.owlClass} {c}\n'
                                             f'the current file is {list(self.Class.graph[:rdf.type:owl.Ontology])}')
 
-        for c in self.Class.disjointWith:  # replaced by complementOf
-            pe = self._unpackPheno(c, NegPhenotype)
-            if pe:
-                out.add(pe)
+        for c in self.Class.disjointWith:  # replaced by complementOf for most use cases
+            if isinstance(c.identifier, rdflib.URIRef):
+                self._disjoint_bags_ids.add(c.identifier)
+            else:
+                # prefer to use complementOf
+                log.warning(f'what is this disjoint thing? {c}')
 
         return tuple(out)
 
@@ -1690,9 +1742,9 @@ class Neuron(NeuronBase):
             return
 
         if isinstance(c.identifier, rdflib.BNode):
-            putativeRestriction = infixowl.CastClass(c, graph=self.in_graph)
-            if isinstance(putativeRestriction, infixowl.BooleanClass):
-                bc = putativeRestriction
+            putativeBooleanClass = infixowl.CastClass(c, graph=self.in_graph)
+            if isinstance(putativeBooleanClass, infixowl.BooleanClass):
+                bc = putativeBooleanClass
                 op = bc._operator
                 pes = []
                 for id_ in bc._rdfList:  # FIXME should be getting the base class before ...
@@ -1700,14 +1752,13 @@ class Neuron(NeuronBase):
                     if isinstance(pr, infixowl.BooleanClass):
                         lpe = self._unpackLogical(pr)
                         pes.append(lpe)
-                        continue
                     elif type(pr) == infixowl.Class:  # restriction is sco class so use type
                         if id_ in self.knownClasses:
                             pes.append(id_)
                         elif id_ == self.ng.expand(self.owlClass):  # this can fail ...
                             # in case we didn't catch it before
                             pes.append(id_)
-                        elif isinstance(id_, rdflib.URIRef):
+                        elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
                             print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
                             embed()
                             return
@@ -1735,13 +1786,13 @@ class Neuron(NeuronBase):
                 return tuple(pes)
             else:
                 print('WHAT')  # FIXME something is wrong for negative phenotypes...
-                pr = putativeRestriction
+                pr = putativeBooleanClass
                 p = pr.someValuesFrom
                 e = pr.onProperty
                 if p and e:
                     return type_(p, e)
                 else:
-                    print(putativeRestriction)
+                    print(putativeBooleanClass)
         else:
             # TODO make sure that Neuron is in there somehwere...
             # objects = sorted(c.graph.transitive_objects(c.identifier, None))

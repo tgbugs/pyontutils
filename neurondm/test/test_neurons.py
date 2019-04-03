@@ -8,7 +8,6 @@ pyel = Path(testing_base, 'compiled')
 tel = Path(testing_base)
 
 
-
 class TestNeurons(unittest.TestCase):
     def setUp(self):
         if not pyel.exists():
@@ -32,6 +31,11 @@ class TestNeurons(unittest.TestCase):
             recursive_clean(path)
 
     def test_roundtrip_ttl(self):
+        # this fails when
+        # test_integration.py is run
+        # AND
+        # test_roundtrip_py is run
+        # but NOT when either is run independently
         from neurondm import Config, Neuron, Phenotype, NegPhenotype
 
         config = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)

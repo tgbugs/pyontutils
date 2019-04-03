@@ -276,23 +276,24 @@ with Huang2017:
 
         fig1a = dict(
         PVBC = Neuron(Basket, PV),
-        CHC = Neuron(Nkx2_1),
+        CHC =  Neuron(Nkx2_1),
         CCKC = Neuron(Basket, VIP, CCK),
-        MNC = Neuron(SST, CR),
-        ISC = Neuron(VIP, CR),
-        LPC = Neuron(SST, NOS1),
+        MNC =  Neuron(SST, CR),
+        ISC =  Neuron(VIP, CR),
+        LPC =  Neuron(SST, NOS1),
         )
 
         f7 = dict(
-        equivs = (PVBCEq, CHCEq, CCKCEq, MNCEq, ISCEq, LPCEq),
-        peptides = (PVBCPep, CHCPep, CCKCPep, MNCPep, ISCPep, LPCPep),
+        equivs =    (PVBCEq, CHCEq, CCKCEq, MNCEq, ISCEq, LPCEq),
+        peptides =  (PVBCPep, CHCPep, CCKCPep, MNCPep, ISCPep, LPCPep),
         signaling = (PVBCSig, CHCSig, CCKCSig, MNCSig, ISCSig, LPCSig),
-        dendrite = (PVBCDend, CHCDend, CCKCDend, MNCDend, ISCDend, LPCDend),
-        axon = (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
-        other = (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
+        dendrite =  (PVBCDend, CHCDend, CCKCDend, MNCDend, ISCDend, LPCDend),
+        axon =      (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
+        other =     (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
         figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
                             label=f'{type} all neuron', override=True)
+                 # the zip below packs all PVBC with PVBC, all CHEC, etc.
                 for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
 
         for k, v in fig1a.items():
