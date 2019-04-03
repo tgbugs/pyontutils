@@ -113,6 +113,25 @@ class TestNeurons(_TestNeuronsBase):
 
 class TestRoundtrip(_TestNeuronsBase):
     # need to test other more complex constructs
+    def test_py_simple(self):
+        from neurondm import Config, Neuron, Phenotype, NegPhenotype
+
+        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        n1 = Neuron(Phenotype('TEMP:python-phenotype'))
+        n2 = Neuron(NegPhenotype('TEMP:python-phenotype'))
+        assert n1 != n2
+        config.write_python()
+
+        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config2.load_python()  # FIXME load existing python ...
+        config2.write()
+
+        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config3.load_existing()
+
+        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
+        assert config.neurons() == config2.neurons() == config3.neurons()
+
     def test_ttl_simple(self):
         # this fails when
         # test_integration.py is run
@@ -132,25 +151,6 @@ class TestRoundtrip(_TestNeuronsBase):
 
         config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
         config3.load_python()
-
-        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
-        assert config.neurons() == config2.neurons() == config3.neurons()
-
-    def test_py_simple(self):
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
-
-        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        n1 = Neuron(Phenotype('TEMP:python-phenotype'))
-        n2 = Neuron(NegPhenotype('TEMP:python-phenotype'))
-        assert n1 != n2
-        config.write_python()
-
-        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_python()  # FIXME load existing python ...
-        config2.write()
-
-        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config3.load_existing()
 
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
         assert config.neurons() == config2.neurons() == config3.neurons()

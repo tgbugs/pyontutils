@@ -29,6 +29,7 @@ neurons = ('neurondm/example',
 skip = tuple()
 if Path(devconfig.ontology_local_repo).exists():
     ont_repo = Repo(devconfig.ontology_local_repo)
+    # FIXME these aren't called?
     post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
     post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 
