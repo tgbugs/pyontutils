@@ -388,6 +388,9 @@ class Config:
                             if isinstance(id_, rdflib.URIRef):
                                 yield id_  # its one of our types
 
+        # bug is that I am not wiping graphBase.knownClasses and swapping it for each config
+        # OR the bug is that self.load_graph is persisting, either way the call to type()
+        # below seems to be the primary suspect for the issue
         if not graphBase.ignore_existing:
             ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
             if ogp.exists():

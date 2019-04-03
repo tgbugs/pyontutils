@@ -1,3 +1,4 @@
+import unittest
 from .common import _TestNeuronsBase, pyel, tel
 
 
@@ -30,28 +31,10 @@ def even_when_transient():
 even_when_transient()
 
 
-class TestDoNothing(_TestNeuronsBase):
-    def test_ttl_simple(self):
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
-        config = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        config.write()
-
-        config2 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_existing()
-        config2.write_python()
-
-        config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        config3.load_python()
-
+class TestDoNothing(unittest.TestCase):
     def test_py_simple(self):
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
-
-        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config.write_python()
-
-        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_python()  # FIXME load existing python ...
-        config2.write()
-
-        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config3.load_existing()
+        from neurondm import Config
+        config = Config('test-madness', py_export_dir='/tmp/')
+        config.write_python()  # this alone will not trigger
+        config.load_python()   # this is required
+        config.write_python()  # BOOM HEADSHOT
