@@ -1,4 +1,4 @@
-from .common import _TestNeuronsBase, pyel, tel
+from test.common import _TestNeuronsBase, pyel, tel
 
 
 class TestNeurons(_TestNeuronsBase):
