@@ -11,6 +11,8 @@ class TestScripts(Folders, _TestScriptsBase):
     """ woo! """
 
 
+only = tuple()
+
 lasts = tuple()
 
 neurons = ('neurondm/example',
@@ -59,4 +61,4 @@ print(module_parent)
 print(working_dir)
 
 TestScripts.populate_tests(neurondm, working_dir, mains, skip=skip, lasts=lasts,
-                           module_parent=module_parent, only=[], do_mains=True)
+                           module_parent=module_parent, only=only, do_mains=True)

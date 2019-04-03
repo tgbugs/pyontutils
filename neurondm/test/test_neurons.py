@@ -8,7 +8,7 @@ pyel = Path(testing_base, 'compiled')
 tel = Path(testing_base)
 
 
-class TestNeurons(unittest.TestCase):
+class _TestNeuronsBase(unittest.TestCase):
     def setUp(self):
         if not pyel.exists():
             pyel.mkdir(parents=True)  # recrusive clean is called after every test
@@ -30,48 +30,8 @@ class TestNeurons(unittest.TestCase):
         if path.exists():
             recursive_clean(path)
 
-    def test_roundtrip_ttl(self):
-        # this fails when
-        # test_integration.py is run
-        # AND
-        # test_roundtrip_py is run
-        # but NOT when either is run independently
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
 
-        config = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        Neuron(Phenotype('TEMP:turtle-phenotype'))
-        Neuron(NegPhenotype('TEMP:turtle-phenotype'))
-        config.write()
-
-        config2 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_existing()
-        config2.write_python()
-
-        config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        config3.load_python()
-
-        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
-        assert config.neurons() == config2.neurons() == config3.neurons()
-
-    def test_roundtrip_py(self):
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
-
-        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        n1 = Neuron(Phenotype('TEMP:python-phenotype'))
-        n2 = Neuron(NegPhenotype('TEMP:python-phenotype'))
-        assert n1 != n2
-        config.write_python()
-
-        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config2.load_python()  # FIXME load existing python ...
-        config2.write()
-
-        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        config3.load_existing()
-
-        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
-        assert config.neurons() == config2.neurons() == config3.neurons()
-
+class TestNeurons(_TestNeuronsBase):
     # TODO make sure this runs after cli test? it should ...
     # but then we need to keep the output of ndl around
     def test_load_existing(self):
@@ -179,3 +139,50 @@ class TestNeurons(unittest.TestCase):
 
         assert NeuronCUT(pp) != NeuronEBM(pp)
         assert hash(NeuronCUT(pp)) != hash(NeuronEBM(pp))
+
+
+class TestRoundtrip(_TestNeuronsBase):
+    # need to test other more complex constructs
+    def test_ttl_simple(self):
+        # this fails when
+        # test_integration.py is run
+        # AND
+        # test_roundtrip_py is run
+        # but NOT when either is run independently
+        from neurondm import Config, Neuron, Phenotype, NegPhenotype
+
+        config = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
+        Neuron(Phenotype('TEMP:turtle-phenotype'))
+        Neuron(NegPhenotype('TEMP:turtle-phenotype'))
+        config.write()
+
+        config2 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
+        config2.load_existing()
+        config2.write_python()
+
+        config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
+        config3.load_python()
+
+        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
+        assert config.neurons() == config2.neurons() == config3.neurons()
+
+    def test_py_simple(self):
+        from neurondm import Config, Neuron, Phenotype, NegPhenotype
+
+        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        n1 = Neuron(Phenotype('TEMP:python-phenotype'))
+        n2 = Neuron(NegPhenotype('TEMP:python-phenotype'))
+        assert n1 != n2
+        config.write_python()
+
+        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config2.load_python()  # FIXME load existing python ...
+        config2.write()
+
+        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config3.load_existing()
+
+        assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
+        assert config.neurons() == config2.neurons() == config3.neurons()
+
+

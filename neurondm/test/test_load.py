@@ -8,5 +8,3 @@ class TestWrite(unittest.TestCase):
         # or disjoint classes
         config = Config('huang-2017')
         config.load_existing()
-        from IPython import embed
-        embed()

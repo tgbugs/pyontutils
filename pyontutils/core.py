@@ -185,6 +185,9 @@ class makeGraph:
                 #print('yes we wrote the first version...', self.name)
 
     def expand(self, curie):
+        if isinstance(curie, rdflib.URIRef):
+            return curie
+
         prefix, suffix = curie.split(':', 1)
         if prefix not in self.namespaces:
             raise KeyError(f'Namespace prefix {prefix} does exist for {curie}' )

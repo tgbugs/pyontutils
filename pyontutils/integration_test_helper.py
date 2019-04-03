@@ -91,7 +91,7 @@ class Folders:
             self.recursive_clean(self.fake_local_repo)
 
 
-class TestScriptsBase(unittest.TestCase):
+class _TestScriptsBase(unittest.TestCase):
     """ Import everything and run main() on a subset of those
         NOTE If you are debugging this. Most of the functions in this
         class are defined dynamically by populate_tests, and you will not
@@ -291,7 +291,7 @@ class TestScriptsBase(unittest.TestCase):
             cls.argv_orig = sys.argv
 
 
-class TestCliBase(unittest.TestCase):
+class _TestCliBase(unittest.TestCase):
     commands = tuple()
 
     def test_cli(self):

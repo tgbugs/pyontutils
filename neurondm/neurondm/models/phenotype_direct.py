@@ -39,8 +39,8 @@ def main():
     graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
-    reg_neurons = list(g.g.subjects(rdfs.subClassOf, g.expand(_NEURON_CLASS)))
-    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % _NEURON_CLASS)]
+    reg_neurons = list(g.g.subjects(rdfs.subClassOf, _NEURON_CLASS))
+    tc_neurons = [_ for (_,) in g.g.query('SELECT DISTINCT ?match WHERE {?match rdfs:subClassOf+ %s}' % g.g.qname(_NEURON_CLASS))]
     def_neurons = g.get_equiv_inter(_NEURON_CLASS)
 
     nodef = sorted(set(tc_neurons) - set(def_neurons))

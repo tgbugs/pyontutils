@@ -58,7 +58,7 @@ AND = owl.intersectionOf
 OR = owl.unionOf
 
 # utility identifiers
-_NEURON_CLASS = 'SAO:1417703748'
+_NEURON_CLASS = OntId('SAO:1417703748').URIRef
 _CUT_CLASS = ilxtr.NeuronCUT
 _EBM_CLASS = ilxtr.NeuronEBM
 PHENO_ROOT = ilxtr.hasPhenotype  # needs to be qname representation
@@ -855,7 +855,7 @@ class graphBase:
             else:
                 otherid = other
 
-            self.out_graph.add((self.id_, owl.equivalentClass, other))
+            self.out_graph.add((self.id_, owl.equivalentClass, otherid))
             self._equivalent_bags_ids.add(otherid)
 
         return self
@@ -1775,7 +1775,7 @@ class Neuron(NeuronBase):
                     elif type(pr) == infixowl.Class:  # restriction is sco class so use type
                         if id_ in self.knownClasses:
                             pes.append(id_)
-                        elif id_ == self.ng.expand(self.owlClass):  # this can fail ...
+                        elif id_ == self.owlClass:  # this can fail ...
                             # in case we didn't catch it before
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
