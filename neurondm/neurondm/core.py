@@ -771,8 +771,14 @@ class graphBase:
 
     @staticmethod
     def write_python():
+        python = graphBase.python()
+        # if you try to read from a source file that already exists
+        # while also writing to that file linecache will be smart and
+        # tell you that there is no source! therefore we generate all
+        # the python before potentially opening (and thus erasing) the
+        # original file from which some of the code was sourced
         with open(graphBase.filename_python(), 'wt') as f:
-            f.write(graphBase.python())
+            f.write(python)
 
     @classmethod
     def python_header(cls):
