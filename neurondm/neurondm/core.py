@@ -377,6 +377,17 @@ class Config:
         except StopIteration:
             pass
 
+        def getClassType(s):
+            graph = self.load_graph
+            Class = infixowl.Class(s, graph=graph)
+            for ec in Class.equivalentClass:
+                if isinstance(ec.identifier, rdflib.BNode):
+                    bc = infixowl.CastClass(ec, graph=graph)
+                    if isinstance(bc, infixowl.BooleanClass):
+                        for id_ in bc._rdfList:
+                            if isinstance(id_, rdflib.URIRef):
+                                yield id_  # its one of our types
+
         if not graphBase.ignore_existing:
             ogp = Path(graphBase.ng.filename)  # FIXME ng.filename <-> out_graph_path property ...
             if ogp.exists():
@@ -393,13 +404,15 @@ class Config:
                 else:
                     ebms = []
 
+                class_types = [(type, s) for s in self.load_graph[:rdf.type:owl.Class]
+                               for type in getClassType(s) if type]
                 sc = None
-                # the loading strategy here is mindblowingly stupid because
-                # it requires you to know the anchoring equivalent class of
-                # a neuron before you call it to load >_<
                 for sc in chain(graphBase.python_subclasses, ebms):
-                    if sc._ocTrip in graphBase.load_graph or sc == Neuron:
-                        sc._load_existing()
+                    sc.owlClass
+                    iris = [s for type, s in class_types if type == sc.owlClass]
+                    if iris:
+                        sc._load_existing(iris)
+
                 if sc is None:
                     raise ImportError(f'Failed to find any neurons to load in {graphBase.ng.filename}')
 
@@ -1237,15 +1250,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return super().__new__(cls)
 
     @classmethod
-    def _load_existing(cls):
+    def _load_existing(cls, iris):
+        # TODO rename pes -> phenotypes
         if not cls._loading:
             NeuronBase._loading = True  # block all other neuron loading
             try:
-                for iri in (s for s in cls.config.load_graph[:rdf.type:owl.Class]
-                            # going through config mitigates risk a mismatch at the graph level
-                            if isinstance(s, rdflib.URIRef)
-                            #and not cls.ng.qname(s).startswith('TEMP')  # TEMP ids are ok when loading only from file
-                            and s not in cls.knownClasses):
+                for iri in iris:
                     try:
                         cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
                         # because we just call Config again an everything resets
@@ -1699,14 +1709,24 @@ class Neuron(NeuronBase):
             if pe:
                 if isinstance(pe, tuple):
                     embeddedKnownClasses = [_ for _ in pe if _ in self.knownClasses]
+                    if self.owlClass not in embeddedKnownClasses:
+                        cf = [_ for _ in self.Class.graph[:rdf.type:owl.Ontology]
+                              if 'phenotype' not in _]
+                        raise self.owlClassMismatch(f'\nowlClass {embeddedKnownClasses} '
+                                                    f'does not match {self.owlClass} {c}\n'
+                                                    f'the current file is {cf}')
                     # strip out any known iris
                     out.update([_ for _ in pe if _ not in self.knownClasses])
                 else:
                     out.add(pe)
             else:
                 # FIXME the owl.Ontology doesn't work if there are multiple in graphs
-                raise self.owlClassMismatch(f'owlClass does not match {self.owlClass} {c}\n'
-                                            f'the current file is {list(self.Class.graph[:rdf.type:owl.Ontology])}')
+                cf = [_ for _ in self.Class.graph[:rdf.type:owl.Ontology]
+                      if 'phenotype' not in _]
+
+                raise self.owlClassMismatch(f'\nowlClass {embeddedKnownClasses} '
+                                            f'does not match {self.owlClass} {c}\n'
+                                            f'the current file is {cf}')
 
         for c in self.Class.disjointWith:  # replaced by complementOf for most use cases
             if isinstance(c.identifier, rdflib.URIRef):
@@ -1745,7 +1765,7 @@ class Neuron(NeuronBase):
             putativeBooleanClass = infixowl.CastClass(c, graph=self.in_graph)
             if isinstance(putativeBooleanClass, infixowl.BooleanClass):
                 bc = putativeBooleanClass
-                op = bc._operator
+                op = bc._operator  # we only use intersection so maybe error on union?
                 pes = []
                 for id_ in bc._rdfList:  # FIXME should be getting the base class before ...
                     pr = infixowl.CastClass(id_, graph=self.in_graph)
