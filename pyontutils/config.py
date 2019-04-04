@@ -15,8 +15,11 @@ working_dir = get_working_dir(__file__)
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_curies = pyontutils_config_path / 'curie_map.yaml'
+    # hardcoding the default api here to avoid importing the scigraph client
+    default_scigraph_api = 'https://scicrunch.org/api/1/scigraph'
 else:
     default_curies = working_dir / 'nifstd' / 'scigraph' / 'curie_map.yaml'
+    default_scigraph_api = 'http://localhost:9000/scigraph'
 
 # needed to override for local testing
 PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
@@ -333,21 +336,7 @@ class DevConfig:
     def resources(self):
         return self.config['resources']
 
-    @default('localhost')
-    def _scigraph_host(self):
-        return self.config['scigraph_host']
-
-    @default(9000)
-    def _scigraph_port(self):
-        port = self.config['scigraph_port']
-        if port is None:
-            return ''
-        elif port == 80:
-            return ''
-        else:
-            return port
-
-    @default('http://localhost:9000/scigraph')
+    @default(default_scigraph_api)
     def scigraph_api(self):
         return self.config['scigraph_api']
 
@@ -410,7 +399,7 @@ class DevConfig:
                           for k, v in {k:getattr(self, k)
                                        for k in dir(self) if
                                        not k.startswith('_') and
-                                       k not in ('config', 'write', 'config_file') and
+                                       k not in ('config', 'write', 'config_file', 'secrets') and
                                        isinstance(getattr(self.__class__, k), property)}.items()))
 
 
