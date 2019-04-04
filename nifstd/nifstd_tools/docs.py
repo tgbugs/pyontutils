@@ -14,6 +14,7 @@ Options:
 import os
 import re
 import ast
+import shutil
 import subprocess
 from pathlib import Path
 from importlib import import_module
@@ -34,7 +35,15 @@ from IPython import embed
 
 suffixFuncs = {}
 
-theme = Path(devconfig.git_local_base, 'org-html-themes', 'setup', 'theme-readtheorg-local.setup')
+theme_repo = Path(devconfig.git_local_base, 'org-html-themes')
+theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
+
+
+def patch_theme_setup(theme):
+    with open(theme, 'rt+') as f:
+        dat = f.read()
+        f.seek(0)
+        f.write(dat.replace('="styles/', '="/docs/styles/'))
 
 
 def makeOrgHeader(title, authors, date, theme=theme):
@@ -354,9 +363,18 @@ def deadlink_check(html_file):
 def main():
     from docopt import docopt
     args = docopt(__doc__)
+
+    patch_theme_setup(theme)
+
     BUILD = working_dir / 'doc_build'
     if not BUILD.exists():
         BUILD.mkdir()
+
+    docs_dir = BUILD / 'docs'
+    if not docs_dir.exists():
+        docs_dir.mkdir()
+
+    shutil.copytree(theme_repo / 'styles', docs_dir / 'styles')
 
     docstring_kwargs = docstrings()
     wd_docs_kwargs = [docstring_kwargs]
