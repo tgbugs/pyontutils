@@ -144,13 +144,17 @@ class TestRoundtrip(_TestNeuronsBase):
         Neuron(Phenotype('TEMP:turtle-phenotype'))
         Neuron(NegPhenotype('TEMP:turtle-phenotype'))
         config.write()
+        a = config.neurons()
 
         config2 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
         config2.load_existing()
         config2.write_python()
+        b = config2.neurons()
 
         config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
         config3.load_python()
+        c = config3.neurons()
 
+        print(a, b, c)
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
-        assert config.neurons() == config2.neurons() == config3.neurons()
+        assert a == b == c
