@@ -1,14 +1,20 @@
 # nifstd-tools
+[![PyPI version](https://badge.fury.io/py/nifstd-tools.svg)](https://pypi.org/project/nifstd-tools/)
+
 Tools for working with the [NIF-Ontology](https://github.com/SciCrunch/NIF-Ontology).
 
-### Installation
-The use of nifstd-tools is highly intertwined with this respository.
-If you have a use case (e.g. `ontree`) where this is useful as a
-stand-alone package you can install it using `pip install --user nifstd-tools`.
+## Installation
+The use of nifstd-tools is highly intertwined with the
+[pyontutils respository](https://github.com/tgbugs/pyontutils).
+If you have a use case (e.g. `ontree`) where `nifstd-tools` works as a
+stand-alone package install it using `pip install --user nifstd-tools`.
 Otherwise see below for the full development installation instructions.
 
-### Development Installation
-Follow the [parent instructions](../README.md#development-installation)
+## Configuration
+See pyontutils [configuration](https://github.com/tgbugs/pyontutils/#configuration).
+
+## Development Installation
+Follow the [parent instructions](https://github.com/tgbugs/pyontutils/#development-installation)
 and refer to the rest of this section if you encounter issues.
 
 Note that the optional development packages are not strictly required and if you have

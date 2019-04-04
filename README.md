@@ -5,6 +5,44 @@
 
 python utilities for working with ontologies
 
+## Installation
+`pyontutils` is slowly approaching stability. You can obtain it and other related
+packages from pypi and install them as you see fit (e.g. `pip install --user pyontutils`).
+If you need a bleeding edge version I reccomend installing it into your environment
+(virtual or otherwise) using `pip install --user --editable .[dev,test]` run from
+from your local copy of this repo.
+
+## Configuration
+`pyontutils` makes use of 3 configuration files:
+1. [~/.config/pyontutils/devconfig.yaml](~/.config/pyontutils/devconfig.yaml)
+which is not installed by default. To created it you should run `ontutils devconfig --write`
+and then edit it to match your system.
+2. [secrets.yaml](~/.config/pyontutils/secrets.yaml) that you can put wherever
+you want by editing the `secrets_file:` entry in [devconfig.yaml](~/.config/pyontutils/devconfig.yaml).
+The file mode needs to be set to `0600` so that only you can read and write it.
+It is also advisable to place it inside a folder with a mode set to `0700` since
+some editors do not preserve file modes. `pyontutils` will fail loudly if this happens.
+3. [./nifstd/scigraph/curie_map.yaml](nifstd/scigraph/curie_map.yaml) or
+[~/.config/pyontutils/curie_map.yaml](~/.config/pyontutils/curie_map.yaml)
+if a `pyontutils` git repository is not found. `pyontutils` will retrieve the
+latest version of this file from github on first run if it cannot find a local copy.  
+
+If you are going to use the SciCrunch SciGraph production instance follow the
+[instructions](https://github.com/SciCrunch/sparc-curation/blob/master/docs/setup.org#scigraph)
+in the sparc curation setup guide to obtain an API key and put it in the right place.
+Alternately you can set the key using the `SCICRUNCH_API_KEY` environment variable
+(e.g., by running `export SCICRUNCH_API_KEY=$(cat path/to/my/apikey)`) or by whatever
+means you prefer for managing your keys.
+
+## Development Installation
+From the directory that contains this readme run the following.
+Refer to [.travis.yml](.travis.yml) for full details.
+```bash
+for f in {librdflib,htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --user --pre --editable . ; popd; done
+```
+If you need even more information there is fairly exhaustive doccumentation
+located in the sparc curation [setup doc](https://github.com/SciCrunch/sparc-curation/blob/master/docs/setup.org).
+
 ## Requirements
 This repo requires PyPy3 or >=Python3.6.
 See and setup.py and Pipfile for additional requirements.
@@ -18,22 +56,6 @@ development packages for `postgresql`, and `protobuf` installed on your system.
 Building the documentation for the ontology requires `pandoc` and `emacs` along
 with [orgstrap](https://github.com/tgbugs/orgstrap). See [.travis.yml](.travis.yml)
 for an example of how to bootstrap a working dev environment.
-
-## Installation
-Pyontutils is slowly approaching stability. You can obtain it and other related
-packages from pypi and install them as you see fit (e.g. `pip install --user pyontutils`).
-If you need a bleeding edge version I reccomend installing into whatever environment
-(virtual or otherwise) using `pip install --user --editable .[dev,test]`
-from your local copy of this repo.
-
-## Development Installation
-From the directory that contains this readme run the following.
-Refer to [.travis.yml](.travis.yml) for full details.
-```bash
-for f in {librdflib,htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --user --pre --editable . ; popd; done
-```
-If you need even more information there is fairly exhaustive doccumentation
-located in the sparc curation [setup doc](https://github.com/SciCrunch/sparc-curation/blob/master/docs/setup.org).
 
 ## Utility Scripts
 pyontutils provides a set of scripts that are useful for maintaining and managing ontologies

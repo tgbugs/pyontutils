@@ -1,11 +1,13 @@
 # ttlser
+[![PyPI version](https://badge.fury.io/py/ttlser.svg)](https://pypi.org/project/ttlser/)
+
 Deterministic turtle serialization for rdflib.
 
 ## Documentation
 See the [docs](./docs/ttlser.md) for the full specification and
 details on the implemention.
 
-ttlser also includes a number of other turtle serializers for
+`ttlser` also includes a number of other turtle serializers for
 specific rendering needs.
 
 ## ttlfmt

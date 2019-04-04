@@ -1,4 +1,6 @@
 # neurondm
+[![PyPI version](https://badge.fury.io/py/neurondm.svg)](https://pypi.org/project/neurondm/)
+
 A data model for neuron types.
 
 ## Neuron Types
@@ -8,6 +10,17 @@ to the general approach.  To get started all you need to do is follow the instal
 `from neurondm.lang import *` in your import statements. Please see the documentation for how to
 [set up neuron-lang for jupyter notebooks](docs/neurons_notebook.md) and take a look at some
 [examples of how to use neuron-lang to create new neurons](docs/NeuronLangExample.ipynb).
+
+## Installation
+`neurondm` has not yet been fully decoupled from the [pyontutils respository](https://github.com/tgbugs/pyontutils).
+You can install it as stand-alone package install it using `pip install --user neurondm`,
+however it is currently more useful to follow the [installation instructions](https://github.com/tgbugs/pyontutils/#installation)
+for pyontutils and work within the git repo.  
+If you want to make use the example notebooks you should install with
+`pip install --user neurondm[notebook]`.
+
+## Configuration
+See pyontutils [configuration](https://github.com/tgbugs/pyontutils/#configuration).
 
 ## Use outside the NIF ontology
 It is possible to use neurondm outside the NIF ontology and the pyontutils repository,

@@ -1,4 +1,6 @@
 # htmlfn
+[![PyPI version](https://badge.fury.io/py/htmlfn.svg)](https://pypi.org/project/htmlfn/)
+
 HTML fun! HTML functions!
 
 An extremely incomplete set of tools for generating html with

@@ -1,8 +1,11 @@
 # librdflib
+[![PyPI version](https://badge.fury.io/py/librdflib.svg)](https://pypi.org/project/librdflib/)
+
 librdf parser for rdflib
 
 Highly experimental.
 
+## Installation
 This is not faster for pypy3 but if you want install it follow these steps (ish).
 
 ``` bash
