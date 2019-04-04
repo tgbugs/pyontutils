@@ -67,7 +67,7 @@ def get__doc__s():
     # TODO figure out how to do relative loads for resolver docs
     docs = []
     #skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
-    skip = tuple()
+    skip = 'ilxcli',
     for i, path in enumerate(paths):
         if any(nope in path for nope in skip):
             continue
@@ -216,7 +216,9 @@ def renderOrg(path, **kwargs):
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
         full_theme = theme.as_posix().encode()
-        org = b'#+SETUPFILE: {full_theme}\n' + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
+        title_author_etc, rest = org_in.split(b'\n\n', 1)
+        org = title_author_etc + b'\n\n#+SETUPFILE: {full_theme}\n' + rest
+        #org =  + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
         #print(org.decode())
         out, err = p.communicate(input=org)
 
