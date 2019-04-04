@@ -438,11 +438,17 @@ class Config:
             full_path = graphBase.compiled_location / graphBase.filename_python()
             module_path = graphBase.compiled_location.name + '.' + full_path.stem
             module = import_module(module_path)  # this returns the submod
-            # I think the above is all we need because it will
-            # make its own config and overwrite everything here
-            self.out_graph = graphBase.out_graph
-            self.existing_pes = NeuronBase.existing_pes
-            # just have to update these two hard coded bits it think?
+
+            # for some reason out_graph and existing_pes do not stick to graphBase
+            # correctly despite the fact that module.graphBase is graphBase -> True
+            # this is a temporary hack fix, the correct fix is to have a single ConjunctiveGraph
+            # input, and a single Graph output, PER CONFIG, and the Neuron classes just dump
+            # their contents into the current out_graph for that config if it switches, or
+            # the current config can populte the current set of python represented neurons
+            # they are too coupled at the moment due to how we use infixowl
+            # basically pes are eternal Class can be whatever it needs to be
+            self.out_graph = graphBase.out_graph = module.config.out_graph
+            self.existing_pes = NeuronBase.existing_pes = module.config.existing_pes
 
             #graphBase.existing_pes = module.config.existing_pes
             #self.load_graph = module.config.load_graph
