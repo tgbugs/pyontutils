@@ -13,6 +13,7 @@ Options:
 """
 import os
 import re
+import ast
 import subprocess
 from pathlib import Path
 from importlib import import_module
@@ -33,7 +34,7 @@ from IPython import embed
 
 suffixFuncs = {}
 
-theme = Path(devconfig.ontology_local_repo, 'docs', 'theme-readtheorg.setup') # TODO can source this directly now?
+theme = Path(devconfig.git_local_base, 'org-html-themes', 'setup', 'theme-readtheorg-local.setup')
 
 
 def makeOrgHeader(title, authors, date, theme=theme):
@@ -51,21 +52,32 @@ def makeOrgHeader(title, authors, date, theme=theme):
 def get__doc__s():
     repo = Repo(working_dir.as_posix())
     paths = sorted(f for f in repo.git.ls_files().split('\n')
-                   if f.endswith('.py') and f.startswith('pyontutils'))
+                   if f.endswith('.py') and
+                   any(f.startswith(n) for n in
+                       ('pyontutils', 'ttlser', 'nifstd', 'neurondm')))
     # TODO figure out how to do relative loads for resolver docs
     docs = []
-    skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
+    #skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
+    skip = tuple()
     for i, path in enumerate(paths):
         if any(nope in path for nope in skip):
             continue
-        ppath = (working_dir / path).absolute()
-        #print(ppath)
+        ppath = (working_dir / path).resolve()
+        print(ppath)
         module_path = ppath.relative_to(working_dir).as_posix()[:-3].replace('/', '.')
         print(module_path)
-        module = import_module(module_path)
-        doc = (module.__doc__
-               if module.__doc__
-               else print(tc.red('WARNING:'), 'no docstring for', module_path))
+
+        with open(ppath, 'rt') as f:
+            tree = ast.parse(f.read())
+
+        doc = ast.get_docstring(tree)
+
+        #module = import_module(module_path)
+        #doc = (module.__doc__
+               #if module.__doc__
+               #else print(tc.red('WARNING:'), 'no docstring for', module_path))
+        if doc is None:
+            print(tc.red('WARNING:'), 'no docstring for', module_path)
 
         if doc and 'Usage:' in doc:
             # get cli program name
@@ -193,11 +205,9 @@ def renderOrg(path, **kwargs):
 
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
-        org = f.read()
-        short_theme = theme.name.encode()
+        org_in = f.read()
         full_theme = theme.as_posix().encode()
-        if full_theme not in org:
-            org = org.replace(short_theme, full_theme)  # TODO just switch the #+SETUPFILE: line
+        org = b'#+SETUPFILE: {full_theme}\n' + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
         #print(org.decode())
         out, err = p.communicate(input=org)
 
@@ -337,6 +347,10 @@ def render_docs(wd_docs_kwargs, BUILD, n_jobs=9):
     return outname_rendered
 
 
+def deadlink_check(html_file):
+    """ TODO """
+
+
 def main():
     from docopt import docopt
     args = docopt(__doc__)
@@ -356,10 +370,17 @@ def main():
 
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()),
-             Repo(Path(devconfig.git_local_base, 'ontquery').as_posix()))
+             *(Repo(Path(devconfig.git_local_base, repo_name).as_posix())
+               for repo_name in ('ontquery', 'sparc-curation')))
 
-    skip_folders = 'notebook-testing',
+    skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
+    rskip = {'pyontutils': ('docs/NeuronLangExample.ipynb',  # exact skip due to moving file
+                            'ilxutils/ilx-playground.ipynb'),
+             'sparc-curation': ('README.md',
+                                'docs/background.org',),
+            }
 
+    et = tuple()
     # TODO move this into run_all
     wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
                         Path(repo.working_dir, f).resolve(),
@@ -367,7 +388,8 @@ def main():
                        for repo in repos
                        for f in repo.git.ls_files().split('\n')
                        if Path(f).suffix in suffixFuncs
-                       and noneMembers(f, *skip_folders)]
+                       and noneMembers(f, *skip_folders)
+                       and f not in rskip.get(Path(repo.working_dir).name, et)]
 
     # doesn't work because read-from-minibuffer cannot block
     #compile_org_forever = ['emacs', '-q', '-l',
@@ -388,34 +410,50 @@ def main():
     titles = {
         'Components':'Components',
         'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  # 
-        'pyontutils/README.html':'Introduction to pyontutils',
         'ontquery/README.html':'Introduction to ontquery',
+        'pyontutils/README.html':'Introduction to pyontutils',
+        'pyontutils/nifstd/README.html':'Introduction to nifstd-tools',
+        'pyontutils/neurondm/README.html':'Introduction to neurondm',
         'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
 
         'Developer docs':'Developer docs',
         'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
         'NIF-Ontology/docs/development setup.html':'Ontology development setup',  # HOWTO
+        'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
         'NIF-Ontology/docs/import chain.html':'Ontology import chain',  # Documentation
-        'pyontutils/resolver/README.html':'Ontology resolver setup',
-        'pyontutils/scigraph/README.html':'Ontology SciGraph setup',
+        'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
+        'pyontutils/nifstd/scigraph/README.html': 'Ontology SciGraph setup',
+        'sparc-curation/resources/scigraph/README.html': 'SPARC SciGraph setup',
         'pyontutils/docstrings.html':'Command line programs',
         'NIF-Ontology/docs/external-sources.html':'External sources for the ontology',  # Other
+        'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
 
         'Contributing':'Contributing',
-        'pyontutils/development/README.html':'Contributing to the ontology',
-        'pyontutils/development/community/README.html':'Contributing term lists to the ontology',
-        'pyontutils/pyontutils/neurons/models/README.html':'Contributing neuron terminology to the ontology',
+        'pyontutils/nifstd/development/README.html':'Contributing to the ontology',
+        'pyontutils/nifstd/development/community/README.html':'Contributing term lists to the ontology',
+        'pyontutils/neurondm/neurondm/models/README.html':'Contributing neuron terminology to the ontology',
 
         'Ontology content':'Ontology content',
         'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
-        'pyontutils/development/methods/README.html':'Methods and techniques',  # Ontology content
+        'pyontutils/nifstd/development/methods/README.html':'Methods and techniques',  # Ontology content
         'NIF-Ontology/docs/Neurons.html':'Neuron Lang overview',
-        'pyontutils/docs/NeuronLangExample.html':'Neuron Lang examples',
-        'pyontutils/docs/neurons_notebook.html':'Neuron Lang setup',
+        'pyontutils/neurondm/docs/NeuronLangExample.html':'Neuron Lang examples',
+        'pyontutils/neurondm/docs/neurons_notebook.html':'Neuron Lang setup',
 
         'Specifications':'Specifications',
         'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
-        'pyontutils/docs/ttlser.html':'Deterministic turtle specification',
+        'pyontutils/ttlser/docs/ttlser.html':'Deterministic turtle specification',
+
+        'Other':'Other',
+        'pyontutils/htmlfn/README.html': 'htmlfn readme',
+        'pyontutils/ttlser/README.html': 'ttlser readme',
+    }
+
+    titles_sparc = {  # TODO abstract this out ...
+        'Background': 'Background',
+        'sparc-curation/docs/background.html': 'SPARC curation background',
+        'Other':'Other',
+        'sparc-curation/README.html': 'sparc-curation readme',
     }
         
     index = [
@@ -424,6 +462,7 @@ def main():
         '<b class="Contributing">Contributing</b>',
         '<b class="Ontology content">Ontology content</b>',
         '<b class="Specifications">Specifications</b>',
+        '<b class="Other">Other</b>',
     ]
     for outname, rendered in outname_rendered:
         apath = outname.relative_to(BUILD / 'docs')
