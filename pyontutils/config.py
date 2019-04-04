@@ -197,15 +197,19 @@ class DevConfig:
 
     def write(self, file=None):
         if file is None:
-            file = (PYONTUTILS_DEVCONFIG).as_posix()
+            file = PYONTUTILS_DEVCONFIG
 
         config = self.config
         new_config = {k:str(v) for k, v in self._config.items()}
         config.update(new_config)  # roundtrip keys that we don't manage in this class
 
         if config:
-            with open(file, 'wt') as f:
+            if not file.parent.exists():  # first time may need to create ~/.config/pyontutils/
+                file.parent.mkdir()
+
+            with open(file.as_posix(), 'wt') as f:
                 yaml.dump(config, f, default_flow_style=False)
+
             if self._override:
                 self._override = {}
         else:
@@ -227,7 +231,7 @@ class DevConfig:
         if isinstance(value, Path):
             value = value.as_posix()
         self._override['secrets_file'] = value
-        self.write(self.config_file.as_posix())
+        self.write(self.config_file)
 
     @default(default_curies.as_posix())
     def curies(self):
@@ -250,7 +254,7 @@ class DevConfig:
         if isinstance(value, Path):
             value = value.as_posix()
         self._override['git_local_base'] = value
-        self.write(self.config_file.as_posix())
+        self.write(self.config_file)
 
     @default('uri.interlex.org')
     def ilx_host(self):
@@ -343,7 +347,7 @@ class DevConfig:
     @scigraph_api.setter
     def scigraph_api(self, value):
         self._override['scigraph_api'] = value
-        self.write(self.config_file.as_posix())
+        self.write(self.config_file)
 
     @default(None)
     def scigraph_api_user(self):
@@ -417,7 +421,7 @@ def bootstrap_config():
             devconfig.scigraph_api = devconfig.scigraph_api.default
 
         # ontology repo
-        p1 = Path(__file__).resolve().absolute().parent.parent.parent
+        p1 = Path(__file__).resolve().parent.parent.parent
         p2 = Path(devconfig.git_local_base).resolve().absolute()
         print(p1, p2)
         if (p1 / devconfig.ontology_repo).exists():
