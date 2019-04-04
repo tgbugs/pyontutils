@@ -37,6 +37,7 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
+        'appdirs',
         'docopt',
         'gitpython',
         'google-api-python-client',
