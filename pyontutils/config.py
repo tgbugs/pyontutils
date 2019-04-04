@@ -4,21 +4,21 @@ import yaml
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
+import appdirs
 from pyontutils.utils import TermColors as tc, makeSimpleLogger
 from pyontutils.utils import get_working_dir
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-config_path = Path(os.environ.get('XDG_CONFIG_HOME', '~/.config')).expanduser()
+pyontutils_config_path = Path(appdirs.user_config_dir('pyontutils'))
+default_config = pyontutils_config_path / 'devconfig.yaml'
 working_dir = get_working_dir(__file__)
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
-    default_config = config_path / 'pyontutils' / 'devconfig.yaml'
-    default_curies = config_path / 'pyontutils' / 'curie_map.yaml'
-    #working_dir = Path('/dev/null')  # fail loudly
+    default_curies = pyontutils_config_path / 'curie_map.yaml'
 else:
-    default_config = working_dir / 'pyontutils' / 'devconfig.yaml'
     default_curies = working_dir / 'nifstd' / 'scigraph' / 'curie_map.yaml'
 
+# needed to override for local testing
 PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
 
 log = makeSimpleLogger('config')
