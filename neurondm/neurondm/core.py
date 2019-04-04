@@ -970,7 +970,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                     except ConnectionError:
                         #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                             #self._sgv._basePath)
-                        log.warning('Phenotype unvalidated. No SciGraph was instance found at ', + self._sgv._basePath)
+                        log.warning(f'Phenotype unvalidated. No SciGraph was instance found at {self._sgv._basePath}')
 
         return subject
 
