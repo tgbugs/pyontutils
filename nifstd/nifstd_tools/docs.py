@@ -215,9 +215,9 @@ def renderOrg(path, **kwargs):
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
-        full_theme = theme.as_posix().encode()
+        full_theme = theme.as_posix()
         title_author_etc, rest = org_in.split(b'\n\n', 1)
-        org = title_author_etc + b'\n\n#+SETUPFILE: {full_theme}\n' + rest
+        org = title_author_etc + f'\n\n#+SETUPFILE: {full_theme}\n'.encode() + rest
         #org =  + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
         #print(org.decode())
         out, err = p.communicate(input=org)
