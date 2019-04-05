@@ -209,7 +209,7 @@ def main():
         for term in args['<term>']:
             print(term)
             limit = args['--limit']
-            out = v.searchByTerm(term, limit=limit) if args['s'] else v.findByTerm(term, limit=limit, **kwargs)
+            out = v.searchByTerm(term, limit=limit, **kwargs) if args['s'] else v.findByTerm(term, limit=limit, **kwargs)
             if out:
                 for resp in sorted(out, key=lambda t: t['labels'][0] if t['labels'] else 'zzzzzzzzz'):
                     try:
