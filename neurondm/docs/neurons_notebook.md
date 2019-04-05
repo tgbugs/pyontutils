@@ -14,8 +14,8 @@ git checkout neurons
 ```
 
 ## The notebook environment for neuron lang support
-1. Install `neurondm` following the [installation](../README.md#installation) and
-[configuration](../README.md#configuration) instructions.
+1. Install `neurondm` following the [installation](./../README.md#installation) and
+[configuration](./../README.md#configuration) instructions.
 2. If you encounter any issues the most detailed instructions can be found in the
 [setup documentation](https://github.com/SciCrunch/sparc-curation/blob/master/docs/setup.org)
 for bootstrapping a full pyontutils/NIF-Ontology/protc development environment.
@@ -28,7 +28,7 @@ cd docs/
 jupyter-notebook
 ```
 At this point your browser should open up with a view of this folder
-and you should be able to select [NeuronLangExample.ipynb](NeuronLangExample.ipynb) and run it.
+and you should be able to select [NeuronLangExample.ipynb](./NeuronLangExample.ipynb) and run it.
 
 # If you want to run this on an existing dedicated notebook server
 [Create an issue](https://github.com/tgbugs/pyontutils/issues/new)

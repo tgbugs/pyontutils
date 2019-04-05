@@ -4,8 +4,9 @@ Any documents related to methodology should go here.
 # Files
 
 ## Python
-* [Core](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods_core.py)
-* [Full](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/methods.py)
+* [Core](https://github.com/tgbugs/pyontutils/blob/master/nifstd/nifstd_tools/methods/core.py)
+* [Helper](https://github.com/tgbugs/pyontutils/blob/master/nifstd/nifstd_tools/methods/helper.py)
+* [Full](https://github.com/tgbugs/pyontutils/blob/master/nifstd/nifstd_tools/methods/__init__.py)
 
 ## turtle
 * [Core](https://github.com/SciCrunch/NIF-Ontology/blob/methods/ttl/methods-core.ttl)
@@ -24,7 +25,7 @@ A full list can be generated using [gen.rkt](https://github.com/tgbugs/protc/blo
 2. Tagging fMRI data
 
 # Collected thoughts/working draft
-My initial work to provide a consistent view of methodology lives in [methods_isa.graphml](methods_isa.graphml).
+My initial work to provide a consistent view of methodology lives in [methods_isa.graphml](./methods_isa.graphml).
 The initial version has a collection of thoughts which need to be refined.
 Some parts of it were developed working directly with curators.
 To obtain a ttl version of the file and generate hierarchies run `graphml_to_ttl methods_isa.graphml`. 
@@ -88,7 +89,7 @@ This could be expanded into the human executor 'role/skillset/responsibility' on
 ## Other
 [OEN](https://github.com/G-Node/OEN)  
 [CNO](https://github.com/INCF/Computational-Neurosciences-Ontology--C.N.O.-)  
-[nat](https://github.com/BlueBrain/nat/blob/master/nat/modelingDictionary.csv)  
+[nat](https://github.com/BlueBrain/nat/blob/master/nat/data/modelingDictionary.csv)  
 [odml](https://github.com/G-Node/odml-terminologies) see also the [main page](http://www.g-node.org/projects/odml/terminologies)  
 [ero.owl](https://www.eagle-i.net/ero/latest/ero.owl) see also the [wiki](https://open.med.harvard.edu/wiki/display/eaglei/Ontology)  
 [efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  

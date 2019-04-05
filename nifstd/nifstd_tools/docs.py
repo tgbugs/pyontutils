@@ -16,6 +16,7 @@ import re
 import ast
 import shutil
 import subprocess
+from urllib.parse import urlparse
 from pathlib import Path
 from importlib import import_module
 import nbformat
@@ -23,9 +24,13 @@ from git import Repo
 from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from pyontutils.utils import TODAY, noneMembers, TermColors as tc
+from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
+from pyontutils.utils import TermColors as tc, get_working_dir
 from pyontutils.config import devconfig, working_dir
 from pyontutils.ontutils import tokstrip, _bads
+
+log = makeSimpleLogger('ont-docs')
+
 try:
     import hunspell
 except ImportError:
@@ -58,6 +63,103 @@ def makeOrgHeader(title, authors, date, theme=theme):
     return header
 
 
+class FixLinks:
+    link_pattern = re.compile(rb'\[\[(.*?)\]\[(.*?)\]\]', flags=re.S)  # non greedy . matches all
+    def __init__(self, current_file):
+        print('========================================')
+        print(current_file)
+        self.current_file = current_file
+        self.working_dir = get_working_dir(self.current_file)
+        self.repo = Repo(self.working_dir)
+        self.remote_url = next(self.repo.remote().urls)
+        if self.remote_url.startswith('git@'):
+            self.remote_url = 'ssh://' + self.remote_url
+
+        duh = urlparse(self.remote_url)
+        self.netloc = duh.netloc
+
+        if self.netloc.startswith('git@github.com'):
+            _, self.group = self.netloc.split(':')
+            self.netloc = 'github.com'
+
+        elif self.netloc == 'github.com':
+            _, self.group, *rest = duh.path.split('/')
+        else:
+            raise NotImplementedError(self.remote_url)
+
+
+
+    def __call__(self, org):
+        if self.current_file.suffix.startswith('.md'):
+            org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
+
+        out = re.sub(self.link_pattern, self.process_matches, org)
+        print(out.decode())
+        return out
+
+    def process_matches(self, match):
+        href, text = match.groups()
+        outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
+
+        #if b'md#' in outlink:
+        if match.group() != outlink:
+            print('MATCH', match.group().decode())
+            print('OUTLN', outlink.decode())
+        return outlink
+
+    def fix_text(self, btext, bhref):
+        if not btext:
+            return bhref
+
+        return btext.replace(b'\n', b' ').replace(b'\r', b' ')  # grrr pandoc with the \r :/
+
+    def fix_href(self, bhref):
+        href = bhref.decode()
+        out = href
+
+        if any(out.startswith(p) for p in ('http', 'img:')):
+            # TODO if there is a full github link to one of our files here swap it out
+            return bhref
+
+        class SubRel:
+            current_file = self.current_file
+            working_dir = self.working_dir
+            def __init__(self, base):
+                self.base = base
+
+            def __call__(self, match):
+                name, ext, rest = match.groups()
+                if rest is None:
+                    rest = ''
+
+                if not any(name.startswith(p) for p in ('$', '#')):
+                    rel = (self.current_file.parent / (name + ext)).resolve().relative_to(self.working_dir)
+                    if ext in ('md', 'org', 'ipynb'):
+                        rel = rel.with_suffix('.html')  # FIXME stem?
+                    rel_path = rel.as_posix() + rest
+                    #print('aaaaaaaaaaa', ext, rel, rel_path)
+                    return self.base  + rel_path
+                else:
+                    #print('bbbbbbbbbbb', match.group())
+                    return match.group()  # rel_path = name + ext + rest
+
+
+        print('----------------------------------------')
+        sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
+        out0 = re.sub(r'^file:(.*\.)(py|ttl|graphml|yml|yaml|spec|LICENSE|\.example|-extras)(\#.+)*$', sub_github, out)
+
+        print('----------------------------------------')
+        # http:/ is correct here not http://
+        sub_docs = SubRel(f'http:/docs/{self.working_dir.name}/')  # FIXME won't work if someone changes the name of the containing folder
+        out1 = re.sub(r'^file:(.*\.)(md|org|ipynb)(\#.+)*$', sub_docs, out0)
+        out = out1
+        print('----------------------------------------')
+
+        if not any(out.startswith(s) for s in ('https:', 'http:', 'file:', 'img:', 'mailto:', '/', '#')):
+            log.warning(f'Potentially relative path {out!r} does not have a known good start in {self.current_file}')
+
+        return out.encode()
+
 def get__doc__s():
     repo = Repo(working_dir.as_posix())
     paths = sorted(f for f in repo.git.ls_files().split('\n')
@@ -72,9 +174,9 @@ def get__doc__s():
         if any(nope in path for nope in skip):
             continue
         ppath = (working_dir / path).resolve()
-        print(ppath)
+        #print(ppath)
         module_path = ppath.relative_to(working_dir).as_posix()[:-3].replace('/', '.')
-        print(module_path)
+        #print(module_path)
 
         with open(ppath, 'rt') as f:
             tree = ast.parse(f.read())
@@ -86,7 +188,8 @@ def get__doc__s():
                #if module.__doc__
                #else print(tc.red('WARNING:'), 'no docstring for', module_path))
         if doc is None:
-            print(tc.red('WARNING:'), 'no docstring for', module_path)
+            #print(tc.red('WARNING:'), 'no docstring for', module_path)
+            pass
 
         if doc and 'Usage:' in doc:
             # get cli program name
@@ -150,7 +253,8 @@ def getMdReadFormat(version):
 
 pdv = pandocVersion()
 md_read_format = getMdReadFormat(pdv)
-pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
+#pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
+pandoc_columns = True  # actually scratch the above, it splits inside links which is really dumb
 
 
 def spell(filenames, debug=False):
@@ -215,9 +319,17 @@ def renderOrg(path, **kwargs):
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
-        full_theme = theme.as_posix()
-        title_author_etc, rest = org_in.split(b'\n\n', 1)
-        org = title_author_etc + f'\n\n#+SETUPFILE: {full_theme}\n'.encode() + rest
+        if b'#+SETUPFILE:' not in org_in:
+            full_theme = theme.as_posix()
+            title_author_etc, rest = org_in.split(b'\n\n', 1)
+            org = title_author_etc + f'\n\n#+SETUPFILE: {full_theme}\n'.encode() + rest
+        else:
+            org = org_in
+
+        # fix links
+        fix_links = FixLinks(path)
+        org = fix_links(org)
+
         #org =  + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
         #print(org.decode())
         out, err = p.communicate(input=org)
@@ -231,7 +343,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     # TODO fix relative links to point to github
 
     if pandoc_columns:
-        pandoc = ['pandoc', '--columns', '300', '-f', md_read_format, '-t', 'org', mdfile]
+        pandoc = ['pandoc', '--columns', '600', '-f', md_read_format, '-t', 'org', mdfile]
     else:
         pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
@@ -251,9 +363,9 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     out, err = s.communicate()
     #print(out.decode())
 
-    org = header.encode() + out.replace(b'\_', b'_').replace(b'[[file:', b'[[./')
+    org = header.encode() + out.replace(b'\_', b'_')  #.replace(b'[[file:', b'[[./')
 
-    org = org.replace(b'=s', b'= s')  # FIXME need proper fix for inline code
+    #org = org.replace(b'=s', b'= s')  # FIXME need proper fix for inline code
 
     ## org = org.replace(b'.md][', b'.html][')  # FIXME fix suffixes for doc paths
 
@@ -264,23 +376,11 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     branch = kwargs['branch']
     dir_ = title.rsplit('/', 1)[0]
     dir_ = '' if dir_ == title else dir_ + '/'
+
+
     # fix links
-    org = (re.sub(br'\[\[\.\/(.*(?:py|ttl|graphml|yml|yaml|LICENSE))\]\[(.+)\]\]', br'[[https://github.com/'
-                                             + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
-                                             + br'\1][\2]]', org))
-    org = (re.sub(br'\[\[\.\/(.*(?:py|ttl|graphml|yml|yaml|LICENSE))\]\]', br'[[https://github.com/'
-                                             + f'{gitorg}/{gitrepo}/blob/{branch}/{dir_}'.encode()
-                                             + br'\1][\1]]', org))
-    org = re.sub(br'\[(.+\.)(?:md|org|ipynb)(#[a-z]+)?\]\[', br'[\1html\2][', org)
-    # manual fixes FIXME this is bad news we need a mini parser for this
-    org = re.sub(b'https://github.com/tgbugs/pyontutils/blob/master/docs/(.+\.html)',
-                 b'/'.join([b'..'] * len(dir_.split('/')))  + br'/pyontutils/docs/\1',
-                 org)
-    org = org.replace(b'https://github.com/tgbugs/pyontutils/blob/master/README.html',
-                      b'/'.join([b'..'] * len(dir_.split('/')))  + b'/pyontutils/README.html')
-    org = org.replace(b'https://github.com/SciCrunch/NIF-Ontology/blob/master/docs/processes.html',
-                      b'/'.join([b'..'] * len(dir_.split('/')))  + b'/NIF-Ontology/docs/processes.html')
-    org = org
+    fix_links = FixLinks(path)
+    org = fix_links(org)
 
     #print(org.decode())
     # debug debug
@@ -396,8 +496,7 @@ def main():
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
     rskip = {'pyontutils': ('docs/NeuronLangExample.ipynb',  # exact skip due to moving file
                             'ilxutils/ilx-playground.ipynb'),
-             'sparc-curation': ('README.md',
-                                'docs/background.org',),
+             'sparc-curation': ('README.md',),
             }
 
     et = tuple()
@@ -408,6 +507,7 @@ def main():
                        for repo in repos
                        for f in repo.git.ls_files().split('\n')
                        if Path(f).suffix in suffixFuncs
+                       #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
                        and noneMembers(f, *skip_folders)
                        and f not in rskip.get(Path(repo.working_dir).name, et)]
 
@@ -467,6 +567,7 @@ def main():
         'Other':'Other',
         'pyontutils/htmlfn/README.html': 'htmlfn readme',
         'pyontutils/ttlser/README.html': 'ttlser readme',
+        'sparc-curation/docs/background.html': '',  # present but not visibly listed
     }
 
     titles_sparc = {  # TODO abstract this out ...

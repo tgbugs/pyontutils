@@ -14,16 +14,16 @@ from your local copy of this repo.
 
 ## Configuration
 `pyontutils` makes use of 3 configuration files:
-1. [~/.config/pyontutils/devconfig.yaml](~/.config/pyontutils/devconfig.yaml)
+1. [~/.config/pyontutils/devconfig.yaml](${HOME}/.config/pyontutils/devconfig.yaml)
 which is not installed by default. To created it you should run `ontutils devconfig --write`
 and then edit it to match your system.
-2. [secrets.yaml](~/.config/pyontutils/secrets.yaml) that you can put wherever
-you want by editing the `secrets_file:` entry in [devconfig.yaml](~/.config/pyontutils/devconfig.yaml).
+2. [secrets.yaml](${HOME}/.config/pyontutils/secrets.yaml) that you can put wherever
+you want by editing the `secrets_file:` entry in [devconfig.yaml](${HOME}/.config/pyontutils/devconfig.yaml).
 The file mode needs to be set to `0600` so that only you can read and write it.
 It is also advisable to place it inside a folder with a mode set to `0700` since
 some editors do not preserve file modes. `pyontutils` will fail loudly if this happens.
 3. [./nifstd/scigraph/curie_map.yaml](nifstd/scigraph/curie_map.yaml) or
-[~/.config/pyontutils/curie_map.yaml](~/.config/pyontutils/curie_map.yaml)
+[~/.config/pyontutils/curie_map.yaml](${HOME}/.config/pyontutils/curie_map.yaml)
 if a `pyontutils` git repository is not found. `pyontutils` will retrieve the
 latest version of this file from github on first run if it cannot find a local copy.  
 
@@ -47,7 +47,7 @@ located in the sparc curation [setup doc](https://github.com/SciCrunch/sparc-cur
 This repo requires PyPy3 or >=Python3.6.
 See and setup.py and Pipfile for additional requirements.
 `ontload` requires Java8 and >=maven3.3 in order to build SciGraph.
-[parcellation.py](pyontutils/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
+[parcellation](./nifstd/nifstd_tools/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
 to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
 some other way. In order to build the packages required by this repo you will need
 gcc (and toolchain) installed and will need to have the development packages for
@@ -62,8 +62,8 @@ pyontutils provides a set of scripts that are useful for maintaining and managin
 using git, and making them available via SciGraph. Note that if you choose the development
 installation option you will need to `ln -sT` the scripts to your preferred bin folder.
 For the full list please see the [documentation](http://ontology.doc/pyontutils/docstrings.html).
-1. [ttlfmt](pyontutils/ttlfmt.py)
-	Reserialize ontology files using deterministic turtle ([spec](docs/ttlser.md)).
+1. [ttlfmt](ttlser/ttlser/ttlfmt.py)
+	Reserialize ontology files using deterministic turtle ([spec](ttlser/docs/ttlser.md)).
 2. [ontutils](pyontutils/ontutils.py)
     Various useful and frequently needed commands for ontology processes as well as less frequent refactorings.
 3. [ontload](pyontutils/ontload.py)
@@ -72,13 +72,13 @@ For the full list please see the [documentation](http://ontology.doc/pyontutils/
     Set qnames based on the curies defined for a given ontology.
 5. [necromancy](pyontutils/necromancy.py)
     Find dead ids in an ontology and raise them to be owl:Classes again.
-6. [scigraph-codegen](pyontutils/scigraph.py)
+6. [scigraph-codegen](pyontutils/scigraph_codegen.py)
 	Generate a rest client against a SciGraph services endpoint.
 7. [scig](pyontutils/scig.py)
 	Run queries against a SciGraph endpoint from the command line.
 9. [graphml_to_ttl](pyontutils/graphml_to_ttl.py)
 	Convert yEd graphml files to ttl.
-10. [ontree](pyontutils/ontree.py)
+10. [ontree](nifstd/nifstd_tools/ontree.py)
 	Run a webserver to query and view hierarchies from the ontology.
 
 ## NIF-Ontology

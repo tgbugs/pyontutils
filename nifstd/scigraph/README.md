@@ -12,7 +12,7 @@ Example build command `ontload graph NIF-Ontology NIF -z /tmp/scigraph-build -l 
 See also [.travis.yml](https://github.com/SciCrunch/NIF-Ontology/blob/master/.travis.yml) for NIF-Ontology.
 
 # RPM builds
-The easiest way to deploy SciGraph to amazon is to build an RPM using [scigraph.spec](./.scigraph.spec).
+The easiest way to deploy SciGraph to amazon is to build an RPM using [scigraph.spec](./scigraph.spec).
 If you have a default rpmbuild setup, and you have the
 [services files](https://github.com/tgbugs/tgbugs-overlay/tree/master/dev-java/scigraph-bin/files/)
 from `tgbugs-overlay` in `rpmbuild/SOURCES`, you should be able to run the following.
