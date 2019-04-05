@@ -47,7 +47,7 @@ located in the sparc curation [setup doc](https://github.com/SciCrunch/sparc-cur
 This repo requires PyPy3 or >=Python3.6.
 See and setup.py and Pipfile for additional requirements.
 `ontload` requires Java8 and >=maven3.3 in order to build SciGraph.
-[parcellation](./nifstd/nifstd_tools/parcellation.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
+[parcellation](./nifstd/nifstd_tools/parcellation/__init__.py) requires [FSL](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/)
 to be installed or you need to obtain the [atlases](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases) in
 some other way. In order to build the packages required by this repo you will need
 gcc (and toolchain) installed and will need to have the development packages for

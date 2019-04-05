@@ -65,6 +65,10 @@ def makeOrgHeader(title, authors, date, theme=theme):
 
 class FixLinks:
     link_pattern = re.compile(rb'\[\[(.*?)\]\[(.*?)\]\]', flags=re.S)  # non greedy . matches all
+
+    class MakeMeAnInlineSrcBlock(Exception):
+        """ EVIL """
+
     def __init__(self, current_file):
         print('========================================')
         print(current_file)
@@ -93,18 +97,22 @@ class FixLinks:
         if self.current_file.suffix.startswith('.md'):
             org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
 
+        #print(org.decode())
         out = re.sub(self.link_pattern, self.process_matches, org)
-        print(out.decode())
+        #print(out.decode())
         return out
 
     def process_matches(self, match):
         href, text = match.groups()
-        outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
+        try:
+            outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
+        except self.MakeMeAnInlineSrcBlock as e:
+            outlink = f'={href.decode().replace("file:", "")}='.encode()
 
         #if b'md#' in outlink:
-        if match.group() != outlink:
-            print('MATCH', match.group().decode())
-            print('OUTLN', outlink.decode())
+        #if match.group() != outlink:
+            #print('MATCH', match.group().decode())
+            #print('OUTLN', outlink.decode())
         return outlink
 
     def fix_text(self, btext, bhref):
@@ -121,39 +129,48 @@ class FixLinks:
             # TODO if there is a full github link to one of our files here swap it out
             return bhref
 
+
         class SubRel:
             current_file = self.current_file
             working_dir = self.working_dir
-            def __init__(self, base):
+            def __init__(self, base, mmaisb=self.MakeMeAnInlineSrcBlock):
                 self.base = base
+                self.MakeMeAnInlineSrcBlock = mmaisb  # lol
 
             def __call__(self, match):
-                name, ext, rest = match.groups()
+                name, suffix, rest = match.groups()
                 if rest is None:
                     rest = ''
 
                 if not any(name.startswith(p) for p in ('$', '#')):
-                    rel = (self.current_file.parent / (name + ext)).resolve().relative_to(self.working_dir)
-                    if ext in ('md', 'org', 'ipynb'):
-                        rel = rel.with_suffix('.html')  # FIXME stem?
+                    rel = (self.current_file.parent / (name + suffix)).resolve().relative_to(self.working_dir)
+                    if suffix in ('.md', '.org', 'ipynb'):
+                        rel = rel.with_suffix('.html')
                     rel_path = rel.as_posix() + rest
-                    #print('aaaaaaaaaaa', ext, rel, rel_path)
+                    #print('aaaaaaaaaaa', suffix, rel, rel_path)
                     return self.base  + rel_path
+                elif name.startswith('$'):
+                    raise self.MakeMeAnInlineSrcBlock(match.group())
                 else:
                     #print('bbbbbbbbbbb', match.group())
                     return match.group()  # rel_path = name + ext + rest
 
 
-        print('----------------------------------------')
+        #print('----------------------------------------')
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
-        out0 = re.sub(r'^file:(.*\.)(py|ttl|graphml|yml|yaml|spec|LICENSE|\.example|-extras)(\#.+)*$', sub_github, out)
+        out0 = re.sub(r'^file:(.*)'
+                      r'(\.(?:py|ttl|graphml|yml|yaml|spec|example)|LICENSE|catalog-extras)'
+                      r'(#.+)*$',
+                      sub_github, out)
 
-        print('----------------------------------------')
+        #print('----------------------------------------')
         # http:/ is correct here not http://
         sub_docs = SubRel(f'http:/docs/{self.working_dir.name}/')  # FIXME won't work if someone changes the name of the containing folder
-        out1 = re.sub(r'^file:(.*\.)(md|org|ipynb)(\#.+)*$', sub_docs, out0)
+        out1 = re.sub(r'^file:(.*)'
+                      r'(\.(?:md|org|ipynb))'
+                      r'(#.+)*$', sub_docs, out0)
         out = out1
-        print('----------------------------------------')
+        #print('----------------------------------------')
 
         if not any(out.startswith(s) for s in ('https:', 'http:', 'file:', 'img:', 'mailto:', '/', '#')):
             log.warning(f'Potentially relative path {out!r} does not have a known good start in {self.current_file}')
@@ -347,11 +364,16 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     else:
         pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
+    ohnosed = ['sed', r's/\]\]\]\]\ \[\[/\]\]\]\]\n\[\[/g']
 
     p = subprocess.Popen(pandoc,
                          stdout=subprocess.PIPE)
+    ohno = subprocess.Popen(ohnosed,
+                            stdin=p.stdout,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     s = subprocess.Popen(sed,
-                         stdin=p.stdout,
+                         stdin=ohno.stdout,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     e = subprocess.Popen(compile_org_file,
@@ -501,6 +523,7 @@ def main():
 
     et = tuple()
     # TODO move this into run_all
+    #wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
     wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
                         Path(repo.working_dir, f).resolve(),
                         makeKwargs(repo, f))
@@ -508,6 +531,8 @@ def main():
                        for f in repo.git.ls_files().split('\n')
                        if Path(f).suffix in suffixFuncs
                        #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
+                       #and Path(repo.working_dir).name == 'pyontutils' and f == 'README.md'  # DEBUG
+                       #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
                        and noneMembers(f, *skip_folders)
                        and f not in rskip.get(Path(repo.working_dir).name, et)]
 

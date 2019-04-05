@@ -9,6 +9,6 @@ Please [fork](https://github.com/SciCrunch/NIF-Ontology#fork-destination-box) an
 Please read [the docs for development processes](https://github.com/SciCrunch/NIF-Ontology/blob/master/docs/processes.md).  
 See the [wiki](https://github.com/SciCrunch/NIF-Ontology/wiki) for more documentation.  
 In short, load [ttl/nif.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/nif.ttl) in your favourite ontology editor,
-and before commit run [ttlfmt](https://github.com/tgbugs/pyontutils/blob/master/pyontutils/ttlfmt.py)
+and before commit run [ttlfmt](https://github.com/tgbugs/pyontutils/blob/master/ttlser/ttlser/ttlfmt.py)
 on any files that you have modified.
 
