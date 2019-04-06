@@ -52,7 +52,7 @@ setup(
         'requests',
         'ttlser',
     ],
-    extras_require={'dev': ['pytest-cov'],
+    extras_require={'dev': ['pytest-cov', 'wheel'],
                     'spell': ['hunspell'],
                     'test': tests_require,
                    },

@@ -38,7 +38,7 @@ setup(
     install_requires=[
         'rdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
-    extras_require={'dev': ['pytest-cov'],
+    extras_require={'dev': ['pytest-cov', 'wheel'],
                     'test': tests_require,
     },
     entry_points={

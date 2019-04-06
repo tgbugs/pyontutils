@@ -40,7 +40,7 @@ setup(
     install_requires=[
         'pyontutils>=0.1.0',
     ],
-    extras_require={'dev': ['pytest-cov'],
+    extras_require={'dev': ['pytest-cov', 'wheel'],
                     'test': tests_require,
                     'notebook': ['jupyter'],
     },

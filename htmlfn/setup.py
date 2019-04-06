@@ -36,7 +36,7 @@ setup(
     packages=['htmlfn'],
     python_requires='>=3.6',
     tests_require=tests_require,
-    extras_require={'dev': ['pytest-cov'],
+    extras_require={'dev': ['pytest-cov', 'wheel'],
                     'test': tests_require,
     },
 )
