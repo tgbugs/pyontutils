@@ -41,7 +41,7 @@ setup(
         'docopt',
         'gitpython',
         'google-api-python-client',
-        'hyputils',
+        'hyputils>=0.0.3',
         'ipython',
         'joblib',
         'lxml',
