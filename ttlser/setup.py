@@ -40,7 +40,7 @@ setup(
     install_requires=[
         'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
-    extras_require={'dev': [],
+    extras_require={'dev': ['pytest-cov'],
                     'ttlfmt': ['docopt',
                                'joblib',     # FIXME better if this were optional? or just use a PPE?
                               ],

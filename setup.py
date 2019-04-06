@@ -53,8 +53,8 @@ setup(
         'requests',
         'ttlser',
     ],
-    extras_require={'dev': ['hunspell',
-                           ],
+    extras_require={'dev': ['pytest-cov'],
+                    'spell': ['hunspell'],
                     'test': tests_require,
                    },
     #package_data
