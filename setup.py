@@ -49,7 +49,6 @@ setup(
         'ontquery>=0.0.8',
         'psutil',
         'pyyaml',
-        'neurdflib',
         'requests',
         'ttlser',
     ],
