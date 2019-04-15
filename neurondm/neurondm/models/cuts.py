@@ -150,6 +150,7 @@ contains_rules.update({  # FIXME still need to get some of the original classes 
     'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').as_phenotype(),
     'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
     'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
+    'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').as_phenotype(),
 
 })
 
@@ -324,7 +325,7 @@ def main():
     snlx_labels = set(nlx_labels)
 
     class SourceCUT(resSource):
-        sourceFile = 'pyontutils/resources/common-usage-types.csv'  # FIXME relative to git workingdir...
+        sourceFile = 'nifstd/resources/common-usage-types.csv'  # FIXME relative to git workingdir...
         source_original = True
 
     sources = SourceCUT(),
