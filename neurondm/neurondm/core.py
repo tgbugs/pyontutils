@@ -245,7 +245,7 @@ class Config:
         imports = list(imports)
         remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
         imports += [remote.iri + 'ttl/phenotype-core.ttl', remote.iri + 'ttl/phenotypes.ttl']
-        remote_path = '' if local_base is None else ttl_export_dir.relative_to(local_base)
+        remote_path = '' if local_base is None else ttl_export_dir.resolve().relative_to(local_base.resolve())
         out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
 
