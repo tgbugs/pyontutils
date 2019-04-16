@@ -15,6 +15,8 @@ from datetime import datetime, date
 from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
+#import coloredlogs
+from colorlog import ColoredFormatter
 
 
 def get_working_dir(script__file__):
@@ -46,15 +48,43 @@ def makeSimpleLogger(name):
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
+    fmt = ('[%(asctime)s] - %(levelname)8s - '
+           '%(name)s - '
+           '%(filename)s:%(lineno)d - '
+           '%(message)s')
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()  # FileHander goes to disk
-    formatter = logging.Formatter('[%(asctime)s] - %(levelname)s - '
-                                  '%(name)s - '
-                                  '%(filename)s:%(lineno)d - '
-                                  '%(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+
+    cfmt = ('%(green)s[%(asctime)s]%(reset)s - '
+            '%(log_color)s%(levelname)8s%(reset)s - '
+            '%(name)s - '
+            '%(blue)s%(filename)s:%(lineno)d%(reset)s - '
+            '%(message)s')
+    formatter = ColoredFormatter(cfmt,
+                                 #"%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s",
+                                 #datefmt=None,
+                                 reset=True,
+                                 log_colors={
+                                     'DEBUG':    'cyan',
+                                     'INFO':     'green',
+                                     'WARNING':  'yellow',
+                                     'ERROR':    'bold_purple',
+                                     'CRITICAL': 'red,bg_white',
+                                 },
+                                 secondary_log_colors={},
+                                 style='%')
+
+    if False:
+        coloredlogs.install(level=logging.DEBUG, logger=logger, fmt=fmt, milliseconds=True)
+    else:
+        if False:
+            formatter = logging.Formatter(fmt)
+
+        ch = logging.StreamHandler()  # FileHander goes to disk
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
+
     return logger
 
 

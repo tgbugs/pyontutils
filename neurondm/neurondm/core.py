@@ -76,6 +76,162 @@ def getPhenotypePredicates(graph):
     phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
     return phenoPreds
 
+# label maker
+
+class order_deco:
+    """ define functions in order to get order! """
+    def __init__(self):
+        self.order = tuple()
+
+    def mark(self, cls):
+        if not hasattr(cls, '_order'):
+            cls._order = self.order
+        else:
+            cls._order += self.order
+
+        return cls
+
+    def __call__(self, function):
+        if function.__name__ not in self.order:
+            self.order += function.__name__,
+        else:
+            raise ValueError(f'Duplicate function name {function.__name__}')
+
+        return function
+
+
+od = order_deco()
+@od.mark
+class LabelMaker:
+    """ disregard existing data acquire raw from identifiers """
+    predicate_namespace = ilxtr
+    field_separator = ' '
+    def __init__(self):
+        (self.functions,
+         self.predicates) = zip(*((getattr(self, function_name),
+                                   self.predicate_namespace[function_name])
+                                  for function_name in self._order))
+
+    def __call__(self, neuron):
+        #from IPython import embed
+        #embed()
+        labels = []
+        for function_name, predicate in zip(self._order, self.predicates):
+            if predicate in neuron._pesDict:
+                phenotypes = neuron._pesDict[predicate]
+                function = getattr(self, function_name)
+                # TODO resolve and warn on duplicate phenotypes in the same hierarchy
+                # TODO negative phenotypes
+                sub_labels = list(function(phenotypes))
+                labels += sub_labels
+
+        if self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict:
+            labels += ['neuron']
+
+        return self.field_separator.join(labels)
+
+    def _default(self, phenotypes):
+        for p in sorted(phenotypes, key=lambda p:p.__humanSortKey__):
+            yield p.__humanSortKey__ 
+
+    @od
+    def hasTaxonRank(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasInstanceInSpecies(self, phenotypes):
+        yield from self._default(phenotypes)
+    # TODO hasDevelopmentalStage   !!!!! FIXME
+    @od
+    def hasLocationPhenotype(self, phenotypes):  # FIXME
+        yield from self._default(phenotypes)
+    @od
+    def hasSomaLocatedIn(self, phenotypes):  # hasSomaLocation?
+        yield from self._default(phenotypes)
+    @od
+    def hasLayerLocationPhenotype(self, phenotypes):  # TODO soma naming...
+        yield from self._default(phenotypes)
+    @od
+    def hasDendriteLocatedIn(self, phenotypes):
+        yield from self._with_thing_located_in('with dendrite{} in', phenotypes)
+
+    @od
+    def hasAxonLocatedIn(self, phenotypes):
+        yield from self._with_thing_located_in('with axon{} in', phenotypes)
+
+    def _with_thing_located_in(self, prefix_template, phenotypes):
+        # TODO consider field separator here as well ... or string quotes ...
+        if phenotypes:
+            yield '('
+            plural = 's' if '{}' in prefix_template and len(phenotypes) > 1 else ''
+            yield prefix_template.format(plural)
+
+        for phenotype in phenotypes:
+            yield phenotype.__humanSortKey__
+
+        if phenotypes:
+            yield ')'
+
+    @od
+    def hasMorphologicalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasDendriteMorphologicalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasSomaPhenotype(self, phenotypes):  # FIXME probably hasSomaMorpohologicalPhenotype
+        yield from self._default(phenotypes)
+    @od
+    def hasElectrophysiologicalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
+    #def hasSpikingPhenotype(self, phenotypes)  # legacy support
+    def _plus_minus(self, phenotypes):
+        for phenotype in phenotypes:
+            if isinstance(phenotype, NegPhenotype):
+                prefix = '-'
+            else:
+                prefix = '+'
+
+            yield prefix + phenotype.__humanSortKey__
+    @od
+    def hasMolecularPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasNeurotransmitterPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
+        yield from self._with_thing_located_in('projecting to', phenotypes)
+    @od
+    def hasConnectionPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasExperimentalPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasClassificationPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasPhenotype(self, phenotypes):  # last
+        yield from self._default(phenotypes)
+    @od
+    def hasCircuitRolePhenotype(self, phenotypes):
+        def suffix(phenotype):
+            if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
+                return  ' neuron'
+            elif phenotype.p == self.predicate_namespace['InterneuronPhenotype']:
+                return ''  # interneuron is already in the label
+            elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
+                return ' neuron'
+            else:  # principle, projection, etc. 
+                return ' neuron'
+            
+        for phenotype in phenotypes:
+            yield phenotype.__humanSortKey__.lower() + suffix(phenotype)
+
 # helper classes
 
 class OntTerm(bOntTerm):
@@ -1015,13 +1171,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         l = tuple(self._pClass.label)
         if not l:  # we don't want to load the whole ontology
             try:
-                l = self._sgv.findById(self.p)['labels'][0]
+                t = OntTerm(self.p)
+                if t.label:
+                    l = t.label
+                else:
+                    l = t.curie
             except ConnectionError as e:
                 log.error(str(e))
-                l = self.ng.qname(self.p)
-            except TypeError:
-                l = self.ng.qname(self.p)
-            except IndexError:
                 l = self.ng.qname(self.p)
         else:
             l = l[0]
@@ -1117,6 +1273,14 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             en = self.in_graph.namespace_manager.qname(self.e)
         lab = self.pLabel
         return "%s('%s', '%s', label='%s')" % (self.__class__.__name__, pn, en, lab)
+
+    @property
+    def __humanSortKey__(self):
+        return (self.pShortName if
+                self.pShortName else
+                (self.pHiddenLabel if
+                 self.pHiddenLabel else
+                 self.pLabel))
 
     def __repr__(self):
         #inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
@@ -1232,6 +1396,14 @@ class LogicalPhenotype(graphBase):
     def __hash__(self):
         return hash((type(self), self.op, *self.pes))
 
+    @property
+    def __humanSortKey__(self):
+        return (self.pShortName if
+                self.pShortName else
+                (self.pHiddenLabel if
+                 self.pHiddenLabel else
+                 self.pLabel))
+
     def __repr__(self):
         op = self.local_names[self.op]  # FIXME inefficient but safe
         pes = ", ".join([_.__repr__() for _ in self.pes])
@@ -1308,12 +1480,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             # TODO hasDevelopmentalStage   !!!!! FIXME
             ilxtr.hasLocationPhenotype,  # FIXME
             ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
-            ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
-            ilxtr.hasDendriteMorphologicalPhenotype,
             ilxtr.hasDendriteLocatedIn,
             ilxtr.hasAxonLocatedIn,
             ilxtr.hasMorphologicalPhenotype,
+            ilxtr.hasDendriteMorphologicalPhenotype,
+            ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
             ilxtr.hasElectrophysiologicalPhenotype,
             #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
             self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
@@ -1490,6 +1662,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
+        return self.genLabel
+
+        # for now we are not going to switch on this, display issues will be display issues
         if self._override and self._origLabel is not None:
             self.Class.label = (rdflib.Literal(self._origLabel),)
             return self._origLabel
@@ -1497,17 +1672,27 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             return self.genLabel
 
     @property
+    def origLabel(self):
+        return self._origLabel
+
+    @property
     def genLabel(self):
         # TODO predicate actions are the right way to implement the transforms here
+        def key(phenotype):
+            return (phenotype.pShortName if
+                    phenotype.pShortName else
+                    (phenotype.pHiddenLabel if
+                     phenotype.pHiddenLabel else
+                     phenotype.pLabel))
+
         def sublab(edge):
             sublabs = []
             if edge in self._pesDict:
-                for pe in self._pesDict[edge]:
-                    l = pe.pShortName
-                    if not l:
-                        l = pe.pHiddenLabel
-                    if not l:
-                        l = pe.pLabel
+                phenotypes = sorted(self._pesDict[edge], key=key)
+                nphenos = len(phenotypes)
+                plural = 's' if nphenos > 1 else ''  # FIXME ick for this whole block
+                for i, pe in enumerate(phenotypes):
+                    l = key(pe)
 
                     if pe.e == self._predicates.hasExpressionPhenotype:
                         if type(pe) == NegPhenotype:
@@ -1515,22 +1700,33 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                         else:
                             l = '+' + l  # this is backward from the 'traditional' placement of the + but it makes this visually much cleaner and eaiser to understand
                     elif pe.e == self._predicates.hasProjectionPhenotype:
-                        l = 'Projecting To ' + l
+                        if not i:
+                            sublabs.append('(')
+                            l = 'Projecting to ' + l
                     elif pe.e == self._predicates.hasDendriteLocatedIn:
-                        l = 'With dendrite in ' + l  # 'Toward' in bbp speak
+                        if not i:
+                            sublabs.append('(')
+                            l = f'With dendrite{plural} in ' + l  # 'Toward' in bbp speak
+                    elif pe.e == self._predicates.hasAxonLocatedIn:
+                        if not i:
+                            sublabs.append('(')
+                            l = f'With axon{plural} in ' + l
                     elif pe.e == self._predicates.hasCircuitRolePhenotype:
                         l = l.lower()
 
                     sublabs.append(l)
 
+            if sublabs and sublabs[0] == '(':
+                sublabs.append(')')
+
             return sublabs
 
         label = []
         for edge in self.ORDER:
-            label += sorted(sublab(edge))
+            label += sublab(edge)
             logical = (edge, edge)
             if logical in self._pesDict:
-                label += sorted(sublab(logical))
+                label += sublab(logical)
 
         # species
         # developmental stage
@@ -1856,8 +2052,12 @@ class Neuron(NeuronBase):
         if graph is None:
             graph = self.out_graph
 
-        if self._origLabel and self._override:
-            graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
+        #if self._origLabel and self._override:
+            #graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
+
+        graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
+        if self.origLabel:
+            graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(self.origLabel)))
 
         members = [self.expand(self.owlClass)]
         for pe in self.pes:
@@ -2118,10 +2318,10 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasTaxonRank',
         'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
         'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
-        'ilxtr:hasDendriteMorphologicalPhenotype',
         'ilxtr:hasDendriteLocatedIn',
         'ilxtr:hasAxonLocatedIn',
         'ilxtr:hasMorphologicalPhenotype',
+        'ilxtr:hasDendriteMorphologicalPhenotype',
         'ilxtr:hasElectrophysiologicalPhenotype',
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
@@ -2223,3 +2423,102 @@ def setLocalContext(*neuron_or_phenotypeEdges):
 
 def getLocalContext():
     return NeuronBase.getContext()
+
+def main():
+    config = Config()
+    # Mammalia Neocortex L5L6 L5L6 ( With axons in Claustrum Superior colliculus ) Pyramidal Glu projection neuron
+    n = NeuronCUT(Phenotype('NCBITaxon:40674',
+                            'ilxtr:hasTaxonRank',
+                            label='Mammalia'),
+                  Phenotype('UBERON:0001950',
+                            'ilxtr:hasLocationPhenotype',
+                            label='neocortex'),
+                  Phenotype('BIRNLEX:1040',
+                            'ilxtr:hasAxonLocatedIn',
+                            label='Superior colliculus'),
+                  Phenotype('BIRNLEX:1522',
+                            'ilxtr:hasAxonLocatedIn',
+                            label='Claustrum'),
+                  Phenotype('ilxtr:PyramidalPhenotype',
+                            'ilxtr:hasMorphologicalPhenotype',
+                            label='Pyramidal Phenotype'),
+                  Phenotype('SAO:1744435799',
+                            'ilxtr:hasNeurotransmitterPhenotype',
+                            label='Glutamate'),
+                  Phenotype('ilxtr:ProjectionPhenotype',
+                            'ilxtr:hasCircuitRolePhenotype',
+                            label='Projection Phenotype'),
+                  LogicalPhenotype(OR,
+                                   Phenotype('UBERON:0005393',
+                                             'ilxtr:hasLayerLocationPhenotype',
+                                             label='cortical layer IV'),
+                                   Phenotype('UBERON:0005394',
+                                             'ilxtr:hasLayerLocationPhenotype',
+                                             label='cortical layer V'),
+                                   Phenotype('UBERON:0005395',
+                                             'ilxtr:hasLayerLocationPhenotype',
+                                             label='cortical layer VI')),
+                  LogicalPhenotype(OR,
+                                   Phenotype('UBERON:0005394',
+                                             'ilxtr:hasLayerLocationPhenotype',
+                                             label='cortical layer V'),
+                                   Phenotype('UBERON:0005395',
+                                             'ilxtr:hasLayerLocationPhenotype',
+                                             label='cortical layer VI')),
+                  label='Neocortex layer 2-3 pyramidal cell')
+
+    m = NeuronEBM(Phenotype('NCBITaxon:10116',
+                            'ilxtr:hasInstanceInSpecies',
+                            label='Rattus norvegicus'),
+                  Phenotype('PAXRAT:794',
+                            'ilxtr:hasSomaLocatedIn',
+                            label='primary somatosensory cortex (paxrat)'),
+                  Phenotype('ilxtr:BipolarPhenotype',
+                            'ilxtr:hasMorphologicalPhenotype',
+                            label='Bipolar Phenotype'),
+                  Phenotype('ilxtr:RegularSpikingNonPyramidalPhenotype',
+                            'ilxtr:hasElectrophysiologicalPhenotype',
+                            label='Regular Spiking Non Pyramidal Phenotype'),
+                  Phenotype('CHEBI:16865',
+                            'ilxtr:hasExpressionPhenotype',
+                            label='gamma-aminobutyric acid'),
+                  Phenotype('PR:000004968',
+                            'ilxtr:hasExpressionPhenotype',
+                            label='calretinin'),
+                  Phenotype('PR:000015665',
+                            'ilxtr:hasExpressionPhenotype',
+                            label='somatostatin'),
+                  Phenotype('PR:000017299',
+                            'ilxtr:hasExpressionPhenotype',
+                            label='VIP peptides'),
+                  NegPhenotype('PR:000004967',
+                               'ilxtr:hasExpressionPhenotype',
+                               label='calbindin'),
+                  NegPhenotype('PR:000011387',
+                               'ilxtr:hasExpressionPhenotype',
+                               label='neuropeptide Y'),
+                  NegPhenotype('PR:000013502',
+                               'ilxtr:hasExpressionPhenotype',
+                               label='parvalbumin alpha'),
+                  Phenotype('ilxtr:InterneuronPhenotype',
+                            'ilxtr:hasCircuitRolePhenotype',
+                            label='Interneuron Phenotype'),
+                  LogicalPhenotype(AND,
+                                   Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype',
+                                             'ilxtr:hasElectrophysiologicalPhenotype',
+                                             label='Petilla Initial Burst Spiking Phenotype'),
+                                   Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype',
+                                             'ilxtr:hasElectrophysiologicalPhenotype',
+                                             label='Petilla Sustained Accomodating Phenotype')))
+
+
+    lm = LabelMaker()
+    for nrn in (n, m):
+        l = lm(nrn)
+        print(repr(l))
+
+    #from IPython import embed
+    #embed()
+
+if __name__ == '__main__':
+    main()

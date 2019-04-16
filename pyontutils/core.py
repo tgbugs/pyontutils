@@ -189,8 +189,10 @@ class makeGraph:
             return curie
 
         prefix, suffix = curie.split(':', 1)
+        if ' ' in prefix:
+            raise ValueError(f'Namespace prefix {prefix!r} is not a valid curie prefix!')
         if prefix not in self.namespaces:
-            raise KeyError(f'Namespace prefix {prefix} does exist for {curie}' )
+            raise KeyError(f'Namespace prefix {prefix} does not exist for {curie}')
         return self.namespaces[prefix][suffix]
 
     def check_thing(self, thing):

@@ -38,6 +38,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'appdirs',
+        'colorlog',
         'docopt',
         'gitpython',
         'google-api-python-client',

@@ -5,7 +5,7 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
-from pyontutils.utils import byCol, relative_path, noneMembers
+from pyontutils.utils import byCol, relative_path, noneMembers, makeSimpleLogger
 from pyontutils.core import resSource, OntId
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
@@ -15,6 +15,8 @@ from pyontutils.closed_namespaces import rdfs
 from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
+
+log = makeSimpleLogger('neurons.cuts')
 
 ndl_config = Config('neuron_data_lifted')
 ndl_config.load_existing()
@@ -151,6 +153,14 @@ contains_rules.update({  # FIXME still need to get some of the original classes 
     'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
     'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
     'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').as_phenotype(),
+    'Bed nucleus of the stria terminalis': OntTerm('UBERON:0001880', label='bed nucleus of stria terminalis').as_phenotype(),
+    'Hypothalamus paraventricular nucleus': OntTerm('UBERON:0001930', label='paraventricular nucleus of hypothalamus').as_phenotype(),
+    'Hypothalamus tuberomammillary nucleus': OntTerm('UBERON:0001936', label='tuberomammillary nucleus').as_phenotype(),
+    'Subthalamic nucleus': OntTerm('UBERON:0001906', label='subthalamic nucleus').as_phenotype(),
+
+    'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').as_phenotype(),
+    'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').as_phenotype(),
+    'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').as_phenotype(),
 
 })
 
@@ -398,23 +408,27 @@ def main():
             maybe_region = None
 
         if maybe_region:
-            try:
-                #t = OntTerm(term=maybe_region)
-                # using query avoids the NoExplicitIdError
-                t = next(OntTerm.query(term=maybe_region)).OntTerm
+            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO')
+            def key(ot):
+                ranked = ot.prefix in prefix_rank
+                return (not ranked,
+                        prefix_rank.index(ot.prefix) if ranked else 0)
+            #t = OntTerm(term=maybe_region)
+            # using query avoids the NoExplicitIdError
+            ots = sorted((qr.OntTerm for qr in OntTerm.query(term=maybe_region)), key=key)
+            if not ots:
+                log.error(f'No match for {maybe_region!r}')
+            else:
+                t = ots[0]
                 if 'oboInOwl:id' in t.predicates:  # uberon replacement
                     t = OntTerm(t.predicates['oboInOwl:id'])
 
                 t.set_next_repr('curie', 'label')
-                print('maybe region', maybe_region, repr(t))
+                log.info(f'Match for {maybe_region!r} was {t!r}')
                 if t.validated:
                     l_rem = rest
                     pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)  # FIXME
                     pes += (pheno,)
-
-            except StopIteration as e:
-                pass
-                #raise e
 
         if pes:
             smatch.add(l)
@@ -451,11 +465,12 @@ def main():
 
     partial = {k:v for k, v in rem.items() if v and v not in terminals}
     print(f'\nPartially mapped (n = {len(partial)}):')
-    mk = max((len(k) for k in partial.keys())) + 2
-    for k, v in sorted(partial.items()):
-        print(f'{k:<{mk}} {v!r}')
-        #print(f'{k!r:<{mk}}{v!r}')
-    #pprint(partial, width=200)
+    if partial:
+        mk = max((len(k) for k in partial.keys())) + 2
+        for k, v in sorted(partial.items()):
+            print(f'{k:<{mk}} {v!r}')
+            #print(f'{k!r:<{mk}}{v!r}')
+        #pprint(partial, width=200)
     unmapped = sorted(labels_set3)
     print(f'\nUnmapped (n = {len(labels_set3)}):')
     _ = [print(l) for l in unmapped]
