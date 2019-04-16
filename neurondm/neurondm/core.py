@@ -1384,8 +1384,6 @@ class LogicalPhenotype(graphBase):
         self.pes = tuple(sorted(edges))
         self._pesDict = {}
         for pe in self.pes:
-            if isinstance(pe, LogicalPhenotype):
-                raise TypeError(f'Cannot nest {self.__class__.__name__} caused by {edges}')
             if pe.e in self._pesDict:
                 self._pesDict[pe.e].append(pe)
             else:
