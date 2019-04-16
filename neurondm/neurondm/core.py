@@ -106,7 +106,19 @@ class LabelMaker:
     """ disregard existing data acquire raw from identifiers """
     predicate_namespace = ilxtr
     field_separator = ' '
-    def __init__(self):
+    def __init__(self, local_conventions=False):
+        """ `local_conventions=True` -> serialize using current LocalNamingConventions """
+        self.local_conventions = local_conventions
+        if self.local_conventions:
+            self._label_property = '__humanSortKey__'
+            self._convention_lookup = {v:k for k, v in graphBase.LocalNames}
+        else:
+            self._label_property = 'pLongName'
+            # FIXME yay circular imports
+            self._convention_lookup = OntologyGlobalConventions.inverted()
+
+        self._key = lambda p:getattr(p, self._label_property)  # NOTE this binds _now_
+
         (self.functions,
          self.predicates) = zip(*((getattr(self, function_name),
                                    self.predicate_namespace[function_name])
@@ -125,14 +137,18 @@ class LabelMaker:
                 sub_labels = list(function(phenotypes))
                 labels += sub_labels
 
-        if self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict:
+        if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
+            self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict):
             labels += ['neuron']
 
         return self.field_separator.join(labels)
 
     def _default(self, phenotypes):
-        for p in sorted(phenotypes, key=lambda p:p.__humanSortKey__):
-            yield p.__humanSortKey__ 
+        for p in sorted(phenotypes, key=self._key):
+            if p in self._convention_lookup:
+                yield self._convention_lookup[p]
+            else:
+                yield getattr(p, self._label_property)
 
     @od
     def hasTaxonRank(self, phenotypes):
@@ -152,24 +168,25 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasDendriteLocatedIn(self, phenotypes):
-        yield from self._with_thing_located_in('with dendrite{} in', phenotypes)
+        yield from self._with_thing_located_in('with-dendrite{}-in', phenotypes)
 
     @od
     def hasAxonLocatedIn(self, phenotypes):
-        yield from self._with_thing_located_in('with axon{} in', phenotypes)
+        yield from self._with_thing_located_in('with-axon{}-in', phenotypes)
 
     def _with_thing_located_in(self, prefix_template, phenotypes):
         # TODO consider field separator here as well ... or string quotes ...
+        lp = len(phenotypes)
         if phenotypes:
-            yield '('
-            plural = 's' if '{}' in prefix_template and len(phenotypes) > 1 else ''
-            yield prefix_template.format(plural)
+            plural = 's' if '{}' in prefix_template and lp > 1 else ''
+            yield '(' + prefix_template.format(plural)
 
-        for phenotype in phenotypes:
-            yield phenotype.__humanSortKey__
+        for i, phenotype in enumerate(phenotypes):
+            l = next(self._default((phenotype,)))
+            if i + 1 == lp:
+                l += ')'
 
-        if phenotypes:
-            yield ')'
+            yield l
 
     @od
     def hasMorphologicalPhenotype(self, phenotypes):
@@ -192,7 +209,7 @@ class LabelMaker:
             else:
                 prefix = '+'
 
-            yield prefix + phenotype.__humanSortKey__
+            yield prefix + next(self._default((phenotype,)))
     @od
     def hasMolecularPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
@@ -230,7 +247,7 @@ class LabelMaker:
                 return ' neuron'
             
         for phenotype in phenotypes:
-            yield phenotype.__humanSortKey__.lower() + suffix(phenotype)
+            yield next(self._default((phenotype,))).lower() + suffix(phenotype)
 
 # helper classes
 
@@ -360,6 +377,7 @@ class Config:
                                              'ttl/generated/neurons'),  # subclass with defaults from cls?
                  git_repo=              None,
                  file =                 None,
+                 local_conventions =    False,
                 ):
 
         if ttl_export_dir is not None:
@@ -447,7 +465,8 @@ class Config:
                       source_file = source_file,
                       # FIXME conflation of import from local and render with local
                       use_local_import_paths = import_as_local,
-                      ignore_existing = ignore_existing)
+                      ignore_existing = ignore_existing,
+                      local_conventions = local_conventions)
 
         # don't klobber defaults set below
         if compiled_location is not None:
@@ -719,7 +738,8 @@ class graphBase:
                       compiled_location= (PPath('/tmp/neurondm/compiled')
                                           if working_dir is None else
                                           PPath(working_dir, 'neurondm/neurondm/compiled')),
-                      ignore_existing=   False):
+                      ignore_existing=   False,
+                      local_conventions= False,):
         # FIXME suffixes seem like a bad way to have done this :/
         """ We set this up to work this way because we can't
             instantiate graphBase, it is a super class that needs
@@ -751,6 +771,8 @@ class graphBase:
                                     force_remote, checkout_ok, scigraph)
 
         """
+
+        graphBase.local_conventions = local_conventions
 
         if local_base is None:
             local_base = devconfig.ontology_local_repo
@@ -1045,6 +1067,15 @@ class graphBase:
 
         return self
 
+    @property
+    def label_maker(self):
+        """ needed to defer loading of local conventions to avoid circular dependency issue """
+        if (not hasattr(graphBase, '_label_maker') or
+            graphBase._label_maker.local_conventions != graphBase.local_conventions):
+            graphBase._label_maker = LabelMaker(graphBase.local_conventions)
+
+        return graphBase._label_maker
+
 # neurons and phenotypes
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
@@ -1225,6 +1256,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return ''
 
     @property
+    def pLongName(self):
+        t = OntTerm(self.p)
+        if t.label:
+            l = t.label
+            return (l
+                    .replace('phenotype', '')
+                    .replace('Phenotype', '')
+                    .strip())
+        else:
+            return t.curie
+
+    @property
     def predicates(self):
         yield self.e
 
@@ -1262,7 +1305,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 self.e == other.e)
 
     def __hash__(self):
-        return hash((type(self), self.p, self.e))
+        return hash((self.__class__.__name__, self.p, self.e))
 
     def __expanded__(self):
         if hasattr(self, 'ng'):
@@ -1307,7 +1350,29 @@ class NegPhenotype(Phenotype):
     """ Class for Negative Phenotypes to simplfy things """
 
 
+class UnionPhenotype(graphBase):  # not ready
+    """ Class for expressing unions of phenotypes.
+        There is no intersection phenotype because the bagging process
+        operates as intersection by default. """
+
+    # TODO can't quite implement this yet because logical phenotypes are
+    # still to tied in to the local naming conventions, allowing
+    # neurons to be input as intersectional phenotypes for other neurons
+    # might be one way around this, however note that it is nice to have
+    # a distinction between the collection of phenotypes and their binding
+    # to a neuron type ...
+    _rank = '9'
+
+
 class LogicalPhenotype(graphBase):
+    # FIXME the interpretation of logical phenotypes is hard
+    # for exampe, Neuron(LP(OR, A, B)) expands into two subgroups
+    # (AND Neuron(P(A)) Neuron(P(B))) at the set level (as expected from basic set theory)
+    # We do want to be able to talk about sets of _neurons_ in addition to sets of phenotypes
+    # Neuron(LP(AND, A, B)) is just Neuron(P(A), P(B)) so we can drop that representation
+
+    # On the other hand logical phenotypes are useful for local naming rules such as bAC
+    # I think it is better to implement that as part of the label generation logic though
     _rank = '2'
     local_names = {
         AND:'AND',
@@ -1317,6 +1382,15 @@ class LogicalPhenotype(graphBase):
         super().__init__()
         self.op = op  # TODO more with op
         self.pes = tuple(sorted(edges))
+        self._pesDict = {}
+        for pe in self.pes:
+            if isinstance(pe, LogicalPhenotype):
+                raise TypeError(f'Cannot nest {self.__class__.__name__} caused by {edges}')
+            if pe.e in self._pesDict:
+                self._pesDict[pe.e].append(pe)
+            else:
+                self._pesDict[pe.e] = [pe]
+
         self.labelPostRule = lambda l: l
 
     @property
@@ -1357,6 +1431,17 @@ class LogicalPhenotype(graphBase):
         return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
 
     @property
+    def pLongName(self):
+        # FIXME this should just be the usual neuron name
+        # amusingly and annoying this reveals the serious need to
+        # be able to construct neurons on the fly without having them
+        # put into the graph (a known issue with the current coupled implementation)
+        l = self.label_maker(self)
+        op = OntId(self.op).suffix
+
+        return f'({op} {l})'
+
+    @property
     def predicates(self):
         for pe in sorted(self.pes):
             yield pe.e
@@ -1394,7 +1479,7 @@ class LogicalPhenotype(graphBase):
                 self.pes == other.pes)
 
     def __hash__(self):
-        return hash((type(self), self.op, *self.pes))
+        return hash((self.__class__.__name__, self.op, *self.pes))
 
     @property
     def __humanSortKey__(self):
@@ -1403,11 +1488,14 @@ class LogicalPhenotype(graphBase):
                 (self.pHiddenLabel if
                  self.pHiddenLabel else
                  self.pLabel))
+    @property
+    def __repr_tuple__(self):
+        op = self.local_names[self.op]  # FIXME inefficient but safe
+        pes = ', '.join([_.__repr__() for _ in self.pes])
+        return f'({op}, {pes})'
 
     def __repr__(self):
-        op = self.local_names[self.op]  # FIXME inefficient but safe
-        pes = ", ".join([_.__repr__() for _ in self.pes])
-        return "%s(%s, %s)" % (self.__class__.__name__, op, pes)
+        return f'{self.__class__.__name__}{self.__repr_tuple__}'
 
     def __str__(self):
         op = self.local_names[self.op]  # FIXME inefficient but safe
@@ -1556,10 +1644,11 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 self._pesDict[pe.e].append(pe)
             else:
                 self._pesDict[pe.e] = [pe]
-            if isinstance(pe, LogicalPhenotype):
+            if isinstance(pe, LogicalPhenotype):  # FIXME
                 for _pe in pe.pes:
-                    if _pe.e in self._pesDict and pe not in self._pesDict[_pe.e]:
-                        self._pesDict[_pe.e].append(pe)
+                    if _pe.e in self._pesDict:
+                        if pe not in self._pesDict[_pe.e]:
+                            self._pesDict[_pe.e].append(pe)
                     else:
                         self._pesDict[_pe.e] = [pe]
 
@@ -1678,6 +1767,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     @property
     def genLabel(self):
         # TODO predicate actions are the right way to implement the transforms here
+        return self.label_maker(self)
+
         def key(phenotype):
             return (phenotype.pShortName if
                     phenotype.pShortName else
@@ -1823,7 +1914,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return asdf
 
     def __hash__(self):
-        return hash((type(self), *self.pes))  # FIXME bad hashing
+        return hash((self.__class__.__name__, *self.pes))  # FIXME bad hashing
 
     def __eq__(self, other):
         return (type(self) == type(other) and
@@ -2076,6 +2167,7 @@ class Neuron(NeuronBase):
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
+
 
 
 class NeuronCUT(Neuron):
@@ -2423,6 +2515,32 @@ def setLocalContext(*neuron_or_phenotypeEdges):
 
 def getLocalContext():
     return NeuronBase.getContext()
+
+
+# FIXME this needs to go in another file when this file gets broken up
+# to solve import issues
+"""
+All work towards a common standard for neuron type naming conventions
+should be implemented here. This is only in the case where the underlying
+rules cannot be implemented in a consistent way in the ontology. The ultimate
+objective for any entry here should be to have it ultimately implemented as
+a rule plus operating from single standard ontology file. """
+Config()  # explicitly load the core graph TODO need a lighter weight way to do this
+OntologyGlobalConventions = _ogc = injective_dict(
+    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasLayerLocationPhenotype'),
+    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasLayerLocationPhenotype'),
+    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasLayerLocationPhenotype'),
+    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype'),
+    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype'),
+    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype'),
+    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies'),
+    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies'),
+    Human = Phenotype('NCBITaxon:9606', 'ilxtr:hasInstanceInSpecies'),
+    Mammalian = Phenotype('NCBITaxon:40674', 'ilxtr:hasTaxonRank'),
+)
+_ogc['L2/3'] = LogicalPhenotype(OR, _ogc['L2'], _ogc['L3'])
+_ogc['L5/6'] = LogicalPhenotype(OR, _ogc['L5'], _ogc['L6'])
+
 
 def main():
     config = Config()
