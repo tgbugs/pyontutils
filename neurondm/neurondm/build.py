@@ -876,7 +876,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                     pass
                 else:
                     ilx_start += 1
-                    id_ = ng.expand(ilx_base.format(ilx_start))
+                    id_ = TEMP[str(ilx_start)]
                     defined_graph.add_trip(id_, rdflib.RDF.type, rdflib.OWL.Class)
                     restriction = infixowl.Restriction(p, graph=defined_graph.g, someValuesFrom=true_id)
                     intersection = infixowl.BooleanClass(members=(defined_graph.expand(NIFCELL_NEURON), restriction), graph=defined_graph.g)
@@ -1044,7 +1044,7 @@ def make_table1(syn_mappings, ilx_start, phenotypes):
     for pheno, disjoints in phenotype_dju_dict.items():
         name = ' '.join(re.findall(r'[A-Z][a-z]*', pheno.split(':')[1])[:-1])  #-1: drops Phenotype
         ilx_start += 1# = make_defined(graph, ilx_start, name + ' neuron type', pheno, 'ilxtr:hasPhenotype')
-        id_ = graph.expand(ilx_base.format(ilx_start))
+        id_ = TEMP[str(ilx_start)]
         typeclass = infixowl.Class(id_, graph=graph.g)
         typeclass.label = rdflib.Literal(name + ' neuron type')
 
@@ -1108,7 +1108,7 @@ def make_bridge():
     skip = 'phenotype_direct',
     __all__ = [a for a in __all__ if a not in skip]
     log.info('building the following\n' + '\n'.join(__all__))
-    models_imports = [a.replace('_', '-') for a in __all__]
+    models_imports = 'allen', 'markram', 'huang', 'common', 'Defined'
 
     # inefficient but thorough way to populate the subset of objects we need.
     terms = set()
@@ -1132,6 +1132,17 @@ def make_bridge():
                      for o in t.predicates['rdfs:subClassOf'])
     terms |= all_supers
 
+    def partOf(term):
+        if 'partOf:' in term('partOf:', as_term=True):
+            for superpart in term.predicates['partOf:']:
+                if superpart.prefix != 'BFO':  # continuant and occurent form a cycle >_<
+                    yield superpart
+                    yield from partOf(superpart)
+
+    all_sparts = set(o for t in terms  # FIXME this is broken ...
+                     for o in partOf(t))
+    terms |= all_sparts
+
     class neuronBridge(Ont):
         """ Main bridge for importing the various files that
             make up the neuron phenotype ontology. """
@@ -1144,11 +1155,12 @@ def make_bridge():
                    if anyMembers(subclass.iri, *models_imports))
 
     nb, *_ = build(neuronBridge, n_jobs=1)
+    #log.critical(f'{nb.imports} {models_imports}')
 
     class neuronUtility(Ont):
         remote_base = neuronBridge.remote_base
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
-        filename = 'neurons-development'
+        filename = 'neuron-development'
         name = 'Utility ontology for neuron development'
         imports = nb.iri,
         prefixes = oq.OntCuries._dict

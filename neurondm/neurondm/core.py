@@ -289,6 +289,11 @@ class OntTerm(bOntTerm):
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
+        if 'partOf:' in self('partOf:', as_term=True):
+            for superpart in self.predicates['partOf:']:
+                yield s, OntId('partOf:').URIRef, superpart.URIRef
+
+
 
 class GraphOpsMixin:
     # TODO this could be populated automatically in a OntComplete case
