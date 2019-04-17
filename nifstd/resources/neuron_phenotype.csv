@@ -89,8 +89,8 @@ ilxtr:PetillaInitialBurstSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,
 ilxtr:PetillaInitialClassicalSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,petilla c,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaInitialDelayedSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,petilla d,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedSpikingPhenotype,ilxtr:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
-ilxtr:PetillaSustainedAccomodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes‚ multiple parent is annoying,hasElectrophysiologicalPhenotype
-ilxtr:PetillaSustainedNonAccomodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla nac,,,,hasElectrophysiologicalPhenotype
+ilxtr:PetillaSustainedAccommodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes‚ multiple parent is annoying,hasElectrophysiologicalPhenotype
+ilxtr:PetillaSustainedNonAccommodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla nac,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedStutteringPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla stut,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedIrregularPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ir,,,,hasElectrophysiologicalPhenotype
 ilxtr:FastSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:RegularSpikingNonPyramidalPhenotype,,hasElectrophysiologicalPhenotype
