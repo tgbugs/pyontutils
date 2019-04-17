@@ -240,12 +240,12 @@ class AllenCellTypes:
 
     def build_neurons(self):
         # have to call Config here because transgenic lines doesn't exist
-        self.predicates = Config(name=self.name,
-                                 imports=[f'NIFRAW:{self.branch}/ttl/generated/allen-transgenic-lines.ttl'],
-                                 prefixes=self.prefixes,
-                                 branch=self.branch,
-                                 sources=tuple(),  # TODO insert the link to the query...
-                                 source_file=relative_path(__file__))
+        self.config = Config(name=self.name,
+                             imports=[f'NIFRAW:{self.branch}/ttl/generated/allen-transgenic-lines.ttl'],
+                             prefixes=self.prefixes,
+                             branch=self.branch,
+                             sources=tuple(),  # TODO insert the link to the query...
+                             source_file=relative_path(__file__))
 
         for cell_line in self.neuron_data:
             NeuronACT(*self.build_phenotypes(cell_line))
@@ -312,10 +312,11 @@ def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
     act = AllenCellTypes(input, args['--output'])
     act.build_transgenic_lines()
     act.build_neurons()
+    return act.config
 
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='0.0.4')
     main(args)
 else:
-    main()
+    config = main()

@@ -11,10 +11,11 @@ from neurondm import *
 from neurondm.phenotype_namespaces import *
 from IPython import embed
 
-Config('huang-2017',
-       imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
-       source_file=relative_path(__file__))
+config = Config('huang-2017',
+                imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
+                source_file=relative_path(__file__))
 OntTerm.query.add(ontquery.plugin.get('rdflib')(Neuron.core_graph, OntId))
+
 
 class NeuronHuang2017(NeuronEBM):
     owlClass = ilxtr.NeuronHuang2017

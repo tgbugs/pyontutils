@@ -350,7 +350,8 @@ def main():
         for pe in pes:
             if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
                           Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
-                          Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),):
+                          Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
                 yield pe
 
     with Neuron(CUT.Mammalia):
@@ -478,8 +479,8 @@ def main():
     if __name__ == '__main__':
         rows = export_for_review(config, unmapped, partial, nlx_missing)
         embed()
-    else:
-        return unmapped, partial, nlx_missing
+
+    return config, unmapped, partial, nlx_missing
 
 
 if __name__ == '__main__':

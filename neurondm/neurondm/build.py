@@ -1,4 +1,12 @@
 #!/usr/bin/env python3.6
+""" run neurondm related exports and conversions
+Usage:
+    neurondm-build [all phenotypes bridge old] [options]
+
+Options:
+    -h --help                   Display this help message
+"""
+
 import io
 import os
 import re
@@ -8,14 +16,15 @@ from pathlib import Path
 from collections import defaultdict
 from urllib.parse import quote
 import rdflib
+import ontquery as oq
 from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntTerm
-from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_
+from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
-from neurondm import _NEURON_CLASS
+from neurondm import _NEURON_CLASS, OntTerm
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
+from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 
@@ -53,6 +62,7 @@ NIFCELL_NEURON = 'SAO:1417703748'  # 'NIFCELL:sao1417703748'
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
 
+oq.OntCuries({'pheno':ilxtr['Phenotype/']})
 PREFIXES = {**makePrefixes('ilxtr',
                            'ILX',
                            'skos',
@@ -68,7 +78,10 @@ PREFIXES = {**makePrefixes('ilxtr',
                            'NLXCELL',
                            'SAO',
                            'UBERON',
-                           'PR',), 'TEMP':str(TEMP)}
+                           'PR',),
+            'TEMP':str(TEMP),
+            'pheno':ilxtr['Phenotype/'],
+}
 
 def replace_object(find, replace, graph):  # note that this is not a sed 's/find/replace/g'
     find = graph.expand(find)
@@ -430,10 +443,10 @@ def make_phenotypes():
     def lsn(word):
         rank = defaultdict(lambda:0)
         rank['PR'] = -100
-        rank['NIFMOL'] = -50
+        rank['NIFEXT'] = -50
         rank['UBERON'] = -10
         rank['NCBITaxon'] = -9
-        rank['NIFCELL'] = -8
+        #rank['NIFCELL'] = -8
         sort_rank = lambda r: rank[r['curie'].split(':')[0]]
         to_add[word] = graph2.expand(sorted(sgv.findByTerm(word), key=sort_rank)[0]['curie'])  # cheating
 
@@ -836,7 +849,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
 
                 if not success:
                     for t in terms:
-                        if t.prefix == 'NIFMOL':
+                        if t.prefix == 'NIFEXT':
                             sgt = t.URIRef
                             ng.add_hierarchy(sgt, p, s)
                             ng.g.remove((s, p, o_lit))
@@ -1091,40 +1104,79 @@ def make_bridge():
     from pyontutils.core import Ont, build
     from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
     from neurondm.models import __all__
-    print(__all__)
+    NIFRAW, = makeNamespaces('NIFRAW')
+    skip = 'phenotype_direct',
+    __all__ = [a for a in __all__ if a not in skip]
+    log.info('building the following\n' + '\n'.join(__all__))
+    models_imports = [a.replace('_', '-') for a in __all__]
+
+    # inefficient but thorough way to populate the subset of objects we need.
+    terms = set()
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
         m = import_module(f'neurondm.models.{module}')
+        if not hasattr(m, 'config') and hasattr(m, 'main'):
+            config, *_ = m.main()  # FIXME cuts hack
+        else:
+            config = m.config
 
+        terms |= set(OntTerm(o) for _, o in config.out_graph[:owl.someValuesFrom:]
+                     if isinstance(o, rdflib.URIRef) and OntId(o).prefix != 'TEMP')
+
+    all_defined_by = set(o for t in terms
+                         if 'rdfs:isDefinedBy' in t('rdfs:isDefinedBy')
+                         for o in t.predicates['rdfs:isDefinedBy'])
+    all_supers = set(o for t in terms
+                     if 'rdfs:subClassOf' in t('rdfs:subClassOf', depth=10, as_term=True)
+                     for o in t.predicates['rdfs:subClassOf'])
+    terms |= all_supers
 
     class neuronBridge(Ont):
         """ Main bridge for importing the various files that
             make up the neuron phenotype ontology. """
 
-        # setup
-
+        remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/bridge/'
         filename = 'neuron-bridge'
         name = 'Neuron Bridge'
-        imports = (subclass.iri for subclass in subclasses(Config))
+        imports = (subclass.iri for subclass in subclasses(Config)
+                   if anyMembers(subclass.iri, *models_imports))
 
-        @property
-        def __imports(self):
-            for subclass in subclasses(Config):
-                if not hasattr(subclass, f'_{subclass.__name__}__pythonOnly'):
-                    yield subclass()
+    nb, *_ = build(neuronBridge, n_jobs=1)
 
+    class neuronUtility(Ont):
+        remote_base = neuronBridge.remote_base
+        path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
+        filename = 'neurons-development'
+        name = 'Utility ontology for neuron development'
+        imports = nb.iri,
+        prefixes = oq.OntCuries._dict
+        def _triples(self):
+            for term in terms:
+                yield from term.triples_simple
 
-    out = build(neuronBridge, n_jobs=1)
+    nu, *_ = build(neuronUtility, n_jobs=1)
+
 
 def main():
-    syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
-    syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
-    expand_syns(syn_mappings)
-    make_bridge()
-    ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
-    #t = make_table1(syn_mappings, ilx_start, phenotypes)
+    from docopt import docopt
+    args = docopt(__doc__)
+    all = args['all']
+    old = args['old'] or all
+    bridge = args['bridge'] or all
+    phenotypes = args['phenotypes'] or all or old
+    if phenotypes:
+        syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
+        syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
+        expand_syns(syn_mappings)
+
+    if bridge:
+        make_bridge()
+
+    if old:
+        ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
+
     if __name__ == '__main__':
         #embed()
         pass

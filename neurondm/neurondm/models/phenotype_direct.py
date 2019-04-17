@@ -56,7 +56,7 @@ def main():
     dns += [Neuron(*m.pes) for m in mns if m.pes]
 
     # reset everything for export
-    Config('phenotype-direct', source_file=relative_path(__file__))
+    config = Config('phenotype-direct', source_file=relative_path(__file__))
     #Neuron.out_graph = graphBase.out_graph  # each subclass of graphBase has a distinct out graph IF it was set manually
     #Neuron.out_graph = rdflib.Graph()
     #ng = makeGraph('', prefixes={}, graph=Neuron.out_graph)
@@ -83,5 +83,6 @@ def main():
     if __name__ == '__main__':
         embed()
 
+    return config
 
-main()
+config = main()

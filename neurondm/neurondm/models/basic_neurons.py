@@ -14,11 +14,11 @@ from IPython import embed
 
 swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
 NIFRAW, = makeNamespaces('NIFRAW')
-c = Config('basic-neurons',
-           prefixes={'swanr':swanr,
-                     'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                     'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
-           source_file=relative_path(__file__))
+config = Config('basic-neurons',
+                prefixes={'swanr':swanr,
+                          'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                          'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
+                source_file=relative_path(__file__))
 
 from neurondm.phenotype_namespaces import *  # this has to come after reconfig or it will error
 
@@ -53,7 +53,6 @@ http://ontology.neuinfo.org/trees/query/swanr:hasPart3/SWAN:1/ttl/generated/swan
 
 surface features, handy to have around
 http://ontology.neuinfo.org/trees/query/swanr:hasPart5/SWAN:629/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING
-
 """
 sgraph = rdflib.Graph().parse((Neuron.local_base / 'ttl/generated/swanson.ttl').as_posix(), format='ttl')
 # restriction.parse(sgraph)  # FIXME this breaks with weird error message

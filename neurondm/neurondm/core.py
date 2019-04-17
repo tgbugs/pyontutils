@@ -47,7 +47,6 @@ __all__ = [
     'NeuronEBM',
     'OntId',
     'OntTerm',
-    #'NeuronArranger',
     'owl',  # FIXME
     'ilxtr',  # FIXME
     '_NEURON_CLASS',
@@ -119,7 +118,7 @@ class LabelMaker:
         self.local_conventions = local_conventions
         if self.local_conventions:
             self._label_property = '__humanSortKey__'
-            self._convention_lookup = {v:k for k, v in graphBase.LocalNames}
+            self._convention_lookup = {v:k for k, v in graphBase.LocalNames.items()}
         else:
             self._label_property = 'pLongName'
             # FIXME yay circular imports
@@ -133,8 +132,8 @@ class LabelMaker:
                                   for function_name in self._order))
 
     def __call__(self, neuron):
-        #from IPython import embed
-        #embed()
+        # FIXME consider creating a new class every time
+        # it will allow state to propagate more easily?
         labels = []
         for function_name, predicate in zip(self._order, self.predicates):
             if predicate in neuron._pesDict:
@@ -148,6 +147,9 @@ class LabelMaker:
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
             self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict):
             labels += ['neuron']
+
+        if isinstance(neuron, NeuronEBM):
+            labels += [neuron._shortname]
 
         return self.field_separator.join(labels)
 
@@ -219,8 +221,10 @@ class LabelMaker:
         for phenotype in phenotypes:
             if isinstance(phenotype, NegPhenotype):
                 prefix = '-'
-            else:
+            elif isinstance(phenotype, Phenotype):
                 prefix = '+'
+            else:  # logical phenotypes aren't phenotypes confusingly enough
+                prefix = ''
 
             yield prefix + next(self._default((phenotype,)))
     @od
@@ -272,6 +276,18 @@ class OntTerm(bOntTerm):
         if self.prefix == 'UBERON':  # FIXME layers
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
+
+    @property
+    def triples_simple(self):
+        s = self.URIRef
+        yield s, rdf.type, owl.Class
+        _label = self.label if self.label else self.suffix
+        label = rdflib.Literal(_label)
+        yield s, rdfs.label, label
+        if 'rdfs:subClassOf' in self('rdfs:subClassOf', as_term=True):
+            for superclass in self.predicates['rdfs:subClassOf']:
+                if superclass.curie != 'owl:Thing':
+                    yield s, rdfs.subClassOf, superclass.URIRef
 
 
 class GraphOpsMixin:
@@ -1642,9 +1658,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             phenotypeEdges = self.bagExisting()  # rebuild the bag from the -class- id
             if label is None:
                 try:
-                    label, *_extra = self.Class.label
-                except ValueError:
-                    pass  # no label in the graph
+                    # FIXME this is a mess, I have too many ways to persist this stuff :/
+                    label =next(self.Class.graph[self.Class.identifier:ilxtr.origLabel:])
+                except StopIteration:
+                    try:
+                        label, *_extra = self.Class.label
+                    except ValueError:
+                        pass  # no label in the graph
 
         else:
             self.equivalentClass(*equivalentNeurons)
@@ -1661,17 +1681,24 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         self.edges = set(pe.e for pe in self.pes)
         self._pesDict = {}
         for pe in self.pes:  # FIXME TODO
-            if pe.e in self._pesDict:
-                self._pesDict[pe.e].append(pe)
-            else:
-                self._pesDict[pe.e] = [pe]
             if isinstance(pe, LogicalPhenotype):  # FIXME
-                for _pe in pe.pes:
-                    if _pe.e in self._pesDict:
-                        if pe not in self._pesDict[_pe.e]:
-                            self._pesDict[_pe.e].append(pe)
-                    else:
-                        self._pesDict[_pe.e] = [pe]
+                # FIXME hpm should actually be an inclusive subclass query on hasPhenotype
+                dimensions = set(_.e for _ in pe.pes if _.e != ilxtr.hasPhenotypeModifier)
+                if len(dimensions) == 1:
+                    dimension = next(iter(dimensions))
+                else:
+                    dimension = tuple(sorted(dimensions))
+
+                if dimension not in self._pesDict:
+                    self._pesDict[dimension] = []
+
+                self._pesDict[dimension].append(pe)
+
+            else:
+                if pe.e not in self._pesDict:
+                    self._pesDict[pe.e] = []
+
+                self._pesDict[pe.e].append(pe)  # don't have to check for dupes here
 
         self._origLabel = label
         self._override = override
@@ -1769,7 +1796,6 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     def _shortname(self):
         return f'({self.shortname})' if self.shortname else ''
 
-
     @property
     def label(self):  # FIXME for some reasons this doesn't always make it to the end?
         return self.genLabel
@@ -1790,6 +1816,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         # TODO predicate actions are the right way to implement the transforms here
         return self.label_maker(self)
 
+    @property
+    def localLabel(self):
+        # TODO predicate actions are the right way to implement the transforms here
+        return LabelMaker(True)(self)
+
+    @property
+    def _genLabelOld(self):
         def key(phenotype):
             return (phenotype.pShortName if
                     phenotype.pShortName else
@@ -1913,7 +1946,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
     def __repr__(self):  # TODO use local_names (since we will bind them in globals, but we do need a rule, and local names do need to be to pairs or full logicals? eg L2L3 issue
         inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        sn = (' (' + self._shortname + ')') if self._shortname else ''  # equiv to override if no shortname
+        sn = self._shortname
+        if sn:
+            sn = ' ' + sn
         lab =  f", label={str(self._origLabel) + sn!r}" if self._origLabel else ''
         args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
@@ -1928,7 +1963,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             else:
                 asdf += str(pe).replace('\n', '\n' + t)
 
-        sn = (' (' + self._shortname + ')') if self._shortname else ''  # equiv to override if no shortname
+        sn = self._shortname
+        if sn:
+            sn = ' ' + sn
         lab =  ',\n' + t + f"label={str(self._origLabel) + sn!r}" if self._origLabel else ''
         asdf += lab
         asdf += ')'
@@ -2164,12 +2201,16 @@ class Neuron(NeuronBase):
         if graph is None:
             graph = self.out_graph
 
-        #if self._origLabel and self._override:
-            #graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
+        ################## LABELS ARE DEFINED HERE ##################
+        gl = self.genLabel
+        ll = self.localLabel
+        ol = self.origLabel
+        graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(gl)))
+        if ll != gl:
+            graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
 
-        graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(self.genLabel)))
-        if self.origLabel:
-            graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(self.origLabel)))
+        if ol and ol != gl:
+            graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
         members = [self.expand(self.owlClass)]
         for pe in self.pes:
@@ -2188,7 +2229,6 @@ class Neuron(NeuronBase):
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class
-
 
 
 class NeuronCUT(Neuron):
