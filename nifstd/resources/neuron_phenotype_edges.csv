@@ -55,6 +55,8 @@ hasExperimentalPhenotype,,,Expresses a relationship between a neuron and an expe
 ,,,,,,,,
 hasInstanceInSpecies,Species/taxa,,Expresses a relationship between a neuron type and a species. This should be used when a neuron type has been observed in a specific species.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasTaxonRank,Species/taxa,,Expresses a relationship between a neuron type and a taxon. This should be used when a neuron type is thought to have been present in the last common ancestor of the taxon.,,isAncestralInTaxon (because convergent evolution is SOOO likely…),hasPhenotype,,"asymmetric, irreflexive"
+hasBiologicalSex,,,Expresses a relationship between a neuron type and a biological sex. This should be used when a neuron type has been observed in a specific sex.,,,hasPhenotype,,"asymmetric, irreflexive"
+hasDevelopmentalStage,,,Expresses a relationship between a neuron type and a developmental stage. This should be used when a neuron type has been observed during a developmental stage.,,,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
 phenotypeObservedInBrainRegion,,Located in?,Expresses a relationship between a phenotype and a brain region. This should be used when a neuron phenotype is observed in specific brain regions.,,existential not universal,,,
 phenotypeCooccuresWith,,,Expresses a relationship between a phenotype and a phenotype. This should be used when two phenotypes commonly cooccure.,,"this is not the right way to pull this off, need something akin to disjointness",,,
