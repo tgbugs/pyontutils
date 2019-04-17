@@ -106,8 +106,8 @@ class Genes(LocalNameManager):
     PVBCDend = LogicalPhenotype(AND, GluA1, GluA4, α1GABAaR, Kv3, α4GABAaR, δGABAaR, Cckbr)
 
     # TODO LOWER
-    Lower = Phenotype('ilxtr:LowerExpression', 'ilxtr:hasExpressionPhenotype')
-    Higher = Phenotype('ilxtr:HigherExpression', 'ilxtr:hasExpressionPhenotype')
+    Lower = Phenotype('ilxtr:LowerExpression', 'ilxtr:hasPhenotypeModifier')
+    Higher = Phenotype('ilxtr:HigherExpression', 'ilxtr:hasPhenotypeModifier')
     CHCDend = LogicalPhenotype(AND,
                                GluA1, GluA4, α1GABAaR, Kv3,
                                α4GABAaR, δGABAaR, Cckbr,
@@ -214,7 +214,7 @@ class Genes(LocalNameManager):
     Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
     Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
     MNCAxon = LogicalPhenotype(AND, Znt3, Zip1)  # FIXME why does he have the names out front?
-    ISCAxon = LogicalPhenotype(AND, *CCKCAxon.pes, Phenotype(ilxtr.similarTo, ilxtr.hasPhenotype))  # FIXME similar
+    ISCAxon = LogicalPhenotype(AND, *CCKCAxon.pes, Phenotype(ilxtr.similarTo, ilxtr.hasPhenotypeModifier))  # FIXME similar
     Syt4 = Phenotype('ilxtr:Syt4', 'ilxtr:hasExpressionPhenotype')
     Syt5 = Phenotype('ilxtr:Syt5', 'ilxtr:hasExpressionPhenotype')
     Syt6 = Phenotype('ilxtr:Syt6', 'ilxtr:hasExpressionPhenotype')
