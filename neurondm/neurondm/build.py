@@ -9,8 +9,8 @@ from collections import defaultdict
 from urllib.parse import quote
 import rdflib
 from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, createOntology, OntId as OntId_
-from pyontutils.utils import TODAY, rowParse, refile
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntTerm
+from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS
@@ -18,6 +18,8 @@ from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.namespaces import makePrefixes, TEMP, ilxtr
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
+
+log = makeSimpleLogger('neurondm.build')
 
 resources = Path(devconfig.resources)
 
@@ -57,6 +59,7 @@ PREFIXES = {**makePrefixes('ilxtr',
                            'owl',
                            'dc',
                            'nsu',
+                           'CHEBI',
                            'NCBIGene',
                            'NCBITaxon',
                            'oboInOwl',
@@ -75,7 +78,7 @@ def replace_object(find, replace, graph):  # note that this is not a sed 's/find
 
 def make_defined(graph, ilx_start, label, phenotype_id, restriction_edge, parent=None):
     ilx_start += 1
-    id_ = ilx_base.format(ilx_start)
+    id_ = TEMP['defined-neuron/' + label]
     id_ = graph.expand(id_)
     restriction = infixowl.Restriction(graph.expand(restriction_edge), graph=graph.g, someValuesFrom=phenotype_id)
     defined = infixowl.Class(id_, graph=graph.g)
@@ -116,7 +119,7 @@ def make_mutually_disjoint(graph, members):
     if len(members) > 1:
         first, rest = members[0], members[1:]
         for r in rest:
-            print(first, r)
+            log.debug(f'{first} {r}')
             graph.add_trip(first, rdflib.OWL.disjointWith, r)
         return make_mutually_disjoint(graph, rest)
     else:
@@ -255,7 +258,7 @@ def make_phenotypes():
                                    prefixes=PREFIXES)
     edg = rdflib.Graph().parse(defined_graph.filename, format='turtle')
     defined_id_lookup = {o.value:s for s, o in edg.subject_objects(rdflib.RDFS.label)}
-    print('AAAAAAAAAAA', defined_id_lookup)
+    log.debug(defined_id_lookup)
 
     # do edges first since we will need them for the phenotypes later
     # TODO real ilx_ids and use prefixes to manage human readability
@@ -273,7 +276,7 @@ def make_phenotypes():
         if row[0].startswith('#') or not row[0]:
             if row[0] == '#references':
                 break
-            print(row)
+            log.debug(row)
             continue
         id_ = ilxtr[row[0]]
         pedges.add(graph.expand('ilxtr:' + row[0]))
@@ -381,10 +384,10 @@ def make_phenotypes():
             defined.label = label
             #defined.label = rdflib.Literal(self._label.rstrip(' Phenotype') + ' neuron')  # the extra space in rstrip removes 'et ' as well WTF!
             #print(self._label)
-            print('_row_post ilx_start', self.ilx_start, id_.rsplit('_')[-1], list(defined.label)[0])
+            log.debug(f'_row_post ilx_start {self.ilx_start} {id_.rsplit("_")[-1]} {list(defined.label)[0]}')
 
             def getPhenotypeEdge(phenotype):
-                print(phenotype)
+                log.debug(phenotype)
                 edge = 'ilxtr:hasPhenotype'  # TODO in neuronManager...
                 return edge
             edge = getPhenotypeEdge(self.id_)
@@ -466,15 +469,27 @@ def make_phenotypes():
     graph2.write()
 
     syn_mappings = {}
-    for sub, syn in [_ for _ in graph.g.subject_objects(graph.expand('NIFRID:synonym'))] + [_ for _ in graph.g.subject_objects(rdflib.RDFS.label)]:
+    for sub, syn in ([_ for _ in graph2.g.subject_objects(graph2.expand('NIFRID:synonym'))] +
+                     [_ for _ in graph2.g.subject_objects(rdflib.RDFS.label)]):
         syn = syn.toPython()
         if syn in syn_mappings:
-            print('ERROR duplicate synonym!', syn, sub)
+            log.error('duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
 
 
-    phenotypes = [s for s, p, o in graph.g.triples((None, None, None)) if ' Phenotype' in o]
-    inc = get_transitive_closure(graph, rdflib.RDFS.subClassOf, graph.expand('ilxtr:NeuronPhenotype'))  # FIXME not very configurable...
+    phenotypes_o = [(s, o) for s, p, o in graph2.g.triples((None, None, None)) if ' Phenotype' in o]
+    extras = {o.replace('Phenotype', '').strip():s for s, o in phenotypes_o}
+    epl = {(o.replace('Petilla', '')
+            .replace('Initial', '')
+            .replace('Sustained', '')
+            .replace('Spiking', '')
+            .strip()):s for o, s in extras.items()}
+    extras.update(epl)
+    el = {o.lower():s for o, s in extras.items()}
+    extras.update(el)
+    syn_mappings.update(extras)
+    phenotypes = [s for s, o in phenotypes_o]
+    inc = get_transitive_closure(graph2, rdflib.RDFS.subClassOf, graph2.expand('ilxtr:NeuronPhenotype'))  # FIXME not very configurable...
 
     return syn_mappings, pedges, ilx_start, inc, defined_graph
 
@@ -695,7 +710,7 @@ def _rest_make_phenotypes():
     for sub, syn in [_ for _ in g.g.subject_objects(g.expand('NIFRID:synonym'))] + [_ for _ in g.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
         if syn in syn_mappings:
-            print('ERROR duplicate synonym!', syn, sub)
+            log.error(f'duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
 
     #embed()
@@ -762,6 +777,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     #defined_graph.add_trip(base + defined_graph.name + '.ttl', rdflib.RDF.type, rdflib.OWL.Ontology)
     defined_graph.add_trip(defined_graph.ontid, rdflib.OWL.imports, base + 'phenotypes.ttl')
 
+    #log.debug(str(list(syn_mappings)))
     done = True#False
     done_ = set()
     for pedge in pedges:
@@ -770,8 +786,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
             success = False
             true_o = None
             true_id = None
+            terms = []
             if o in syn_mappings:
-                id_ = syn_mappings[o]
+                id_ = syn_mappings[o]  # FIXME can this happen more than once?
 
                 ng.add_hierarchy(id_, p, s)
                 ng.g.remove((s, p, o_lit))
@@ -797,19 +814,34 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
             else:
                 if o in cheating:
                     o = cheating[o]
+                    if o is None:
+                        log.debug(f'{o_lit}')
+                        continue
 
-                data = sgv.findByTerm(o)
-                if data:
-                    print('SCIGRAPH', [(d['curie'] if 'curie' in d else d['iri'],
-                                        d['labels'])
-                                        for d in data])
-                    for d in data:
-                        if 'curie' in d and 'PR:' in d['curie']:
-                            sgt = ng.expand(d['curie'])
+                terms = [t.OntTerm for t in OntTerm.query(term=o)]
+                for t in terms:
+                    if t.prefix in ('PR', 'CHEBI'):
+                        sgt = t.URIRef
+                        ng.add_hierarchy(sgt, p, s)
+                        ng.g.remove((s, p, o_lit))
+
+                        label = t.label 
+                        ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
+                        ng.add_trip(sgt, rdflib.RDFS.label, label)
+
+                        success = True
+                        true_o = label
+                        true_id = sgt
+                        break
+
+                if not success:
+                    for t in terms:
+                        if t.prefix == 'NIFMOL':
+                            sgt = t.URIRef
                             ng.add_hierarchy(sgt, p, s)
                             ng.g.remove((s, p, o_lit))
 
-                            label = d['labels'][0]
+                            label = t.label
                             ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
                             ng.add_trip(sgt, rdflib.RDFS.label, label)
 
@@ -818,28 +850,17 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                             true_id = sgt
                             break
 
-                    if not success:
-                        for d in data:
-                            print('HELP', d)
-                            if 'NIFMOL:' in d['curie']:
-                                sgt = ng.expand(d['curie'])
-                                ng.add_hierarchy(sgt, p, s)
-                                ng.g.remove((s, p, o_lit))
-
-                                label = d['labels'][0]
-                                ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
-                                ng.add_trip(sgt, rdflib.RDFS.label, label)
-
-                                success = True
-                                true_o = label
-                                true_id = sgt
-                                break
+                    else:
+                        if terms:
+                            log.warning(f'Did not succeed for {o!r} found\n{terms}')
 
             if o not in done_ and success:
                 done_.add(o)
                 t = tuple(defined_graph.g.triples((None, rdflib.OWL.someValuesFrom, true_id)))
                 if t:
-                    print('ALREADY IN', t)
+                    # these are 1:1 defined neurons from phenotypes so should only show up once
+                    #log.debug(f'ALREADY IN {t}')
+                    pass
                 else:
                     ilx_start += 1
                     id_ = ng.expand(ilx_base.format(ilx_start))
@@ -850,10 +871,13 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                     this.equivalentClass = [intersection]
                     this.subClassOf = [defined_graph.expand(defined_class_parent)]
                     this.label = rdflib.Literal(true_o + ' neuron')
-                    print('make_neurons ilx_start', ilx_start, list(this.label)[0])
+                    log.info(f'make_neurons ilx_start {ilx_start} {list(this.label)[0]}')
                     if not done:
                         embed()
                         done = True
+
+            elif not success:
+                log.warning(f'failures for {o} -> {terms}')
 
     defined_graph.add_class(defined_class_parent, NIFCELL_NEURON, label='defined class neuron')
     defined_graph.add_trip(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
@@ -864,7 +888,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('NIFRID:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
         if syn in syn_mappings:
-            print('ERROR duplicate synonym!', syn, sub)
+            log.error(f'duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
 
     return ilx_start
@@ -1098,7 +1122,7 @@ def main():
     syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
     syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
     expand_syns(syn_mappings)
-    make_bridge()
+    #make_bridge()
     ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
     #t = make_table1(syn_mappings, ilx_start, phenotypes)
     if __name__ == '__main__':

@@ -16,7 +16,7 @@ from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
 
-log = makeSimpleLogger('neurons.cuts')
+log = makeSimpleLogger('neurondm.cuts')
 
 ndl_config = Config('neuron_data_lifted')
 ndl_config.load_existing()

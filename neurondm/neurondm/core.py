@@ -9,6 +9,7 @@ from importlib import import_module
 from urllib.error import HTTPError
 import git
 import rdflib
+import ontquery as oq
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
@@ -23,7 +24,8 @@ from pyontutils.namespaces import makePrefixes, OntCuries
 from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 
-log = makeSimpleLogger('neurons.core')
+log = makeSimpleLogger('neurondm.core')
+RDFL = oq.plugin.get('rdflib')
 
 __all__ = [
     'AND',
@@ -62,13 +64,19 @@ _NEURON_CLASS = OntId('SAO:1417703748').URIRef
 _CUT_CLASS = ilxtr.NeuronCUT
 _EBM_CLASS = ilxtr.NeuronEBM
 PHENO_ROOT = ilxtr.hasPhenotype  # needs to be qname representation
+MOD_ROOT = ilxtr.hasPhenotypeModifier
 
 # utility functions
 
 def getPhenotypePredicates(graph):
     # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
-    qstring = ('SELECT DISTINCT ?prop WHERE '
-               '{ ?prop rdfs:subPropertyOf* %s . }') % graph.qname(PHENO_ROOT)
+    proot = graph.qname(PHENO_ROOT)
+    mroot = graph.qname(MOD_ROOT)
+    qstring = ('SELECT DISTINCT ?prop WHERE {'
+               f'{{ ?prop rdfs:subPropertyOf* {proot} . }}'
+               'UNION'
+               f'{{ ?prop rdfs:subPropertyOf* {mroot} . }}'
+               '}')
     out = [_[0] for _ in graph.query(qstring)]
     literal_map = {uri.rsplit('/',1)[-1]:uri for uri in out}  # FIXME this will change
     classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
@@ -232,7 +240,10 @@ class LabelMaker:
     def hasClassificationPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
     @od
-    def hasPhenotype(self, phenotypes):  # last
+    def hasPhenotype(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasPhenotypeModifier(self, phenotypes):
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
@@ -848,7 +859,7 @@ class graphBase:
 
         # core graph setup
         if core_graph is None:
-            core_graph = rdflib.Graph()
+            core_graph = rdflib.ConjunctiveGraph()
         for cg in use_core_paths:
             try:
                 core_graph.parse(cg, format='turtle')
@@ -857,6 +868,12 @@ class graphBase:
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
                 log.warning(f'no file found for core graph at {cg}')
         graphBase.core_graph = core_graph
+        if RDFL not in [type(s) for s in OntTerm.query.services]:
+            # FIXME ah subtle differences between graphs >_<
+            # need a much more consistent way to handle the local graphs
+            # switching everything out for a single RDFL instance seems
+            # the most attractive ...
+            OntTerm.query.add(RDFL(core_graph, OntId))
 
         # store prefixes
         if isinstance(prefixes, dict):
@@ -971,8 +988,10 @@ class graphBase:
 
         all_types = set(type(n) for n in cls.neurons())
         _subs = [inspect.getsource(c) for c in subclasses(Neuron)
-                 if type(c) in all_types and Path(inspect.getfile(c)).exists()]
+                 if c in all_types and Path(inspect.getfile(c)).exists()]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
+        #log.debug(str(all_types))
+        #log.debug(f'python header for {cls.filename_python()}:\n{subs}')
         out += subs
 
         ind = '\n' + ' ' * len('config = Config(')
@@ -1187,7 +1206,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if op in self._predicates.__dict__.values():
             return op
         else:
-            raise TypeError('WARNING: Unknown ObjectProperty %s' % repr(op))
+            raise TypeError(f'WARNING: Unknown ObjectProperty {op!r}')
             #t = OntTerm(ObjectProperty)  # will fail here?
             #if t.label:
                 #setattr(self._predicates, t.curie.replace(':', '_'), op)
@@ -1538,14 +1557,11 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                         cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
                         # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:
-                        print(e)
+                        log.error(str(e))
                         continue
                     except AttributeError as e:
-                        print('oops', e)
+                        log.critical(str(e))
                         raise e
-                        from IPython import embed
-                        embed()
-                        continue
             finally:
                 NeuronBase._loading = False
 
@@ -1583,7 +1599,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             ilxtr.hasConnectionPhenotype,
             ilxtr.hasExperimentalPhenotype,
             ilxtr.hasClassificationPhenotype,
-            ilxtr.hasPhenotype,  # last
+            ilxtr.hasPhenotype,
+            ilxtr.hasPhenotypeModifier,
         ]
 
         self._localContext = self.__context
@@ -2086,7 +2103,7 @@ class Neuron(NeuronBase):
                             # in case we didn't catch it before
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
-                            print(tc.red('WRONG owl:Class, expected:'), self.id_, 'got', id_)
+                            log.error(f'Wrong owl:Class, expected: {self.id_} got: {id_}')
                             return
                         else:
                             if pr.complementOf:
@@ -2094,31 +2111,31 @@ class Neuron(NeuronBase):
                                 if isinstance(coc, infixowl.Restriction):
                                     pes.append(restriction_to_phenotype(coc, ptype=NegPhenotype))
                                 else:
-                                    print(coc)
+                                    log.critical(str(coc))
                                     raise BaseException('wat')
                             else:
-                                print(pr)
+                                log.critical(str(pr))
                                 raise BaseException('wat')
                     elif isinstance(pr, infixowl.Restriction):
                         pes.append(restriction_to_phenotype(pr))
                     elif id_ == self.owlClass:
                         pes.append(id_)
                     elif pr is None:
-                        print('dangling reference', id_)
+                        log.warning('dangling reference', id_)
                     else:
-                        print(pr)
+                        log.critical(str(pr))
                         raise BaseException('wat')
 
                 return tuple(pes)
             else:
-                print('WHAT')  # FIXME something is wrong for negative phenotypes...
+                log.critical('WHAT')  # FIXME something is wrong for negative phenotypes...
                 pr = putativeBooleanClass
                 p = pr.someValuesFrom
                 e = pr.onProperty
                 if p and e:
                     return type_(p, e)
                 else:
-                    print(putativeBooleanClass)
+                    log.critical(str(putativeBooleanClass))
         else:
             # TODO make sure that Neuron is in there somehwere...
             # objects = sorted(c.graph.transitive_objects(c.identifier, None))
@@ -2276,7 +2293,7 @@ class MeasuredNeuron(NeuronBase):  # XXX DEPRECATED retained for loading from so
         pes = self.in_graph.query(qstring)
         out = tuple(self._tuplesToPes(pes))
         #print('------------------------')
-        print(out)
+        log.debug(str(out))
         #print('------------------------')
         return out
 
@@ -2343,7 +2360,7 @@ class injective(type):
             return False
 
     def __getitem__(self, key):
-        print(key)
+        log.debug(key)
         v = getattr(self, key)
         if any(isinstance(v, t) for t in self.render_types):
             return v
@@ -2633,8 +2650,8 @@ def main():
         l = lm(nrn)
         print(repr(l))
 
-    #from IPython import embed
-    #embed()
+    from IPython import embed
+    embed()
 
 if __name__ == '__main__':
     main()
