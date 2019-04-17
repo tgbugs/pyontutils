@@ -164,7 +164,12 @@ class LabelMaker:
     @od
     def hasInstanceInSpecies(self, phenotypes):
         yield from self._default(phenotypes)
-    # TODO hasDevelopmentalStage   !!!!! FIXME
+    @od
+    def hasBiologicalSex(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasDevelopmentalStage(self, phenotypes):
+        yield from self._default(phenotypes)
     @od
     def hasLocationPhenotype(self, phenotypes):  # FIXME
         yield from self._default(phenotypes)
@@ -1577,9 +1582,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             # FIXME it may make more sense to manage this in the NeuronArranger
             # so that it can interconvert the two representations
             # this is really high overhead to load this here
-            ilxtr.hasInstanceInSpecies,
             ilxtr.hasTaxonRank,
-            # TODO hasDevelopmentalStage   !!!!! FIXME
+            ilxtr.hasInstanceInSpecies,
+            ilxtr.hasBiologicalSex,
+            ilxtr.hasDevelopmentalStage,
             ilxtr.hasLocationPhenotype,  # FIXME
             ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
@@ -2420,7 +2426,7 @@ class LocalNameManager(metaclass=injective):
 
     render_types = Phenotype, LogicalPhenotype
 
-    ORDER = (
+    _ORDER = (
         'ilxtr:hasInstanceInSpecies',
         'ilxtr:hasTaxonRank',
         'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
@@ -2548,10 +2554,6 @@ OntologyGlobalConventions = _ogc = injective_dict(
     L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype'),
     L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype'),
     L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype'),
-    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies'),
-    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies'),
-    Human = Phenotype('NCBITaxon:9606', 'ilxtr:hasInstanceInSpecies'),
-    Mammalian = Phenotype('NCBITaxon:40674', 'ilxtr:hasTaxonRank'),
 )
 _ogc['L2/3'] = LogicalPhenotype(OR, _ogc['L2'], _ogc['L3'])
 _ogc['L5/6'] = LogicalPhenotype(OR, _ogc['L5'], _ogc['L6'])

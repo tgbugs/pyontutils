@@ -133,7 +133,7 @@ class AllenCellTypes:
 
     def donor_phenotypes(self, cell_line):
         donor_mappings = {
-            'sex_full_name': 'ilxtr:hasPhenotype'
+            'sex_full_name': 'ilxtr:hasBiologicalSex'
         }
         phenotypes = []
         for name, value in cell_line['donor'].items():
