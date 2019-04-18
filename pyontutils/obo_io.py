@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """python .obo file parser and writer
 
-    Usage:
-        obo-io <obofile>
-        obo-io --ttl <obofile> [<ttlfile>]
-        obo-io --help
-    Options:
-        -h --help       show this
-        -t --ttl        convert obo file to ttl and exit
+Usage:
+    obo-io [options] <obofile> [<output-name>]
+    obo-io --help
 
-    based on the obo 1.2 spec defined at
-    https://oboformat.googlecode.com/svn/trunk/doc/GO.format.obo-1_2.html
+Options:
+    -h --help             show this
+    -d --debug            embed after parsing
+    -t --out-format=FMT   serialize to this [default: obo]
+    -w --write            write the output
+    -s --strict           fail on missing definitions
 
-    acts as a command line script or as a python module
-    also converts to ttl format but the conversion convetions are ill defined
+based on the obo 1.2 / 1.4 (ish) spec defined at
+https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_2.html
+https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_4.html
+lacks appropraite levels of testing for production use
 
-    ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
+acts as a command line script or as a python module
+also converts to ttl format but the conversion convetions are ill defined
+
+ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
 """
 
 #subsetdef: NAME "desc"
@@ -49,21 +54,27 @@
 # pass tvpairstores to tvpair so that we can walk all the way back up the chain if needs be
 # nlx_qual_ is not getting split correctly to nlx_qual:
 
-__title__ = 'obo_io'
+__title__ = 'obo-io'
 __author__ = 'Tom Gillespie'
 
 import os
+import ast
 import inspect
+from types import MethodType
 from datetime import datetime
 from getpass import getuser
 from collections import OrderedDict
 import rdflib
 from docopt import docopt
-import pyontutils.utils
+from pyontutils.core import OntId
+from pyontutils.utils import makeSimpleLogger
 from pyontutils.qnamefix import cull_prefixes
-from pyontutils.namespaces import makeNamespaces, NIFRID, definition, PREFIXES as uPREFIXES
-from pyontutils.closed_namespaces import rdf, owl
+from pyontutils.namespaces import makeNamespaces, NIFRID, definition
+from pyontutils.namespaces import TEMP, PREFIXES as uPREFIXES
+from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 from IPython import embed
+
+log = makeSimpleLogger('obo-io')
 
 fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')
 
@@ -77,12 +88,13 @@ od.__repr__ = dict.__repr__
 
 # this is our current (horrible) conversion from obo to ttl
 obo_tag_to_ttl = {
-    'id':'%s rdf:type owl:Class ;\n',
-    'name':' ' * TW + 'rdfs:label "%s"@en ;\n',
-    'def':' ' * TW + 'definition: "%s"@en ;\n',
-    'acronym':' ' * TW + 'NIFRID:acronym "%s"@en ;\n',
-    'synonym':' ' * TW + 'NIFRID:synonym "%s"@en ;\n',
-    'is_a':' ' * TW + 'rdfs:subClassOf %s ;\n',
+    #'id': (lambda s, p: rdflib.URIRef(s), rdf.type, owl.Class), '%s rdf:type owl:Class ;\n',
+    'name': rdfs.label,
+    'def': definition,
+    'acronym': NIFRID.acronym,
+    'synonym': NIFRID.synonym,
+    'is_a': rdfs.subClassOf,
+    'xref': oboInOwl.hasDbXref,
     #'xref':
 
 }
@@ -100,7 +112,8 @@ def id_fix(value):
             value = ':'.join(value.split('_'))
         else:
             value = ':' + value
-    return value
+
+    return OntId(value).URIRef
 
 
 class OboFile:
@@ -117,7 +130,7 @@ class OboFile:
         To output to ttl format call str_to_write = obofileinstance.__ttl__()
         and then write str_to_write to file.  TODO implement .writettl()
     """
-    def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None):
+    def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None, strict=False):
         self.filename = filename
         self.Terms = od()
         self.Terms.names = {}
@@ -149,7 +162,13 @@ class OboFile:
 
             missing = {k:v for k, v in self.Terms.items() if isinstance(v, list)}
             if missing:
-                raise ValueError('ERROR: The following identifiers were referenced but have no definition ' + ' '.join(missing))
+                msg = ('The following identifiers were referenced but have no definition\n' +
+                       '\n'.join(sorted(missing)))
+                log.error(msg)
+                if strict:
+                    raise ValueError(msg)
+
+            self.missing = missing
 
         elif header is not None:
             self.header = header
@@ -194,41 +213,51 @@ class OboFile:
 
 
     def __ttl__(self):
-        #stores = [self.header.__ttl__()]
-        stores = []
-        stores += [s.__ttl__() for s in self.Terms.values()]# if not print(s)]
-        stores += [s.__ttl__() for s in self.Typedefs.values()]
-        stores += [s.__ttl__() for s in self.Instances.values()]
-        DNS = self.header.default_namespace.value.upper()
-        ontid = fobo[self.header.ontology.value + '.ttl']
-        iri_prefix = fobo[DNS + '_']
         g = rdflib.Graph()
-        prefixes = [f'@prefix {DNS}: <{iri_prefix}> .']
-        argh = (('owl', owl),
+        DNS = self.header.default_namespace.value.upper()
+        iri_prefix = fobo[DNS + '_']
+        argh = [(DNS, iri_prefix),
+                ('owl', owl),
                 ('definition', definition),
                 ('NIFSTD', NIFSTD),
                 ('NIFRID', NIFRID),
                 ('obo', obo),
-                ('', NOPE),)
-        for prefix, iri in (*g.namespaces(), *argh):
-            prefixes.append(f'@prefix {prefix}: <{iri}> .')
-        for tvp in self.header.idspace:
-            prefix, iri, *comment = tvp.value.split(' ')
-            prefixes.append(f'@prefix {prefix}: <{iri}_> .')
+                ('', NOPE),]
 
-        g.parse(data='\n'.join(prefixes + stores), format='turtle')
-        g.add((ontid, rdf.type, owl.Ontology))
+        if hasattr(self.header, 'idspace'):
+            for tvp in self.header.idspace:
+                prefix, iri, *comment = tvp.value.split(' ')
+                argh.append((prefix, iri))
+        else:
+            argh.append(('TEMP', TEMP))
+ 
+        for prefix, iri in argh:
+            g.bind(prefix, iri)
 
-        og = cull_prefixes(g, prefixes={DNS:iri_prefix, **uPREFIXES})
-        out = og.g.serialize(format='nifttl')
+        [g.add(t) for t in self.triples()]
+         
+        out = g.serialize(format='nifttl')
         return out.decode()
 
+    def triples(self):
+        def ttlify(values):
+            for s in values:
+                if not isinstance(s, list):
+                    yield from s.triples()
+        for thing in ('Terms', 'Typedefs', 'Instances'):
+            yield from ttlify(getattr(self, thing).values())
+
+        ontid = fobo[self.header.ontology.value + '.ttl']
+        yield ontid, rdf.type, owl.Ontology
 
     def __str__(self):
+        def oboify(values):
+            return [str(s) for s in values if not isinstance(s, list)]
+
         stores = [str(self.header)]
-        stores += [str(s) for s in self.Terms.values()]
-        stores += [str(s) for s in self.Typedefs.values()]
-        stores += [str(s) for s in self.Instances.values()]
+        stores += oboify(self.Terms.values())
+        stores += oboify(self.Typedefs.values())
+        stores += oboify(self.Instances.values())
         return '\n'.join(stores) + '\n'
 
     def __repr__(self):
@@ -275,7 +304,7 @@ class TVPair:  #TODO these need to be parented to something!
 
     @staticmethod
     def factory(tag, value=None, modifiers=None, comment=None, dict_=None, parent=None, type_od=None, **kwargs):
-        tvp = TVPair(tag=tag, value=value, modifiers=comment, comment=comment, parent=None, type_od=type_od, **kwargs)
+        tvp = TVPair(tag=tag, value=value, modifiers=modifiers, comment=comment, parent=None, type_od=type_od, **kwargs)
         if dict_:
             dict_[TVPair.esc_(tag)] = tvp
         else:
@@ -305,43 +334,78 @@ class TVPair:  #TODO these need to be parented to something!
 
     def parse(self, line):
         # we will handle extra parse values by sticking them on the tvpair instance
-        try:
-            tag, value = line.split(':',1)
-            self.tag = tag
-            value.strip()
-            comm_split = value.split('\!')
-            try:
-                # comment
-                tail, comment = comm_split[-1].split('!',1)
-                comment = comment.strip()
-                comm_split[-1] = tail
-                value = '\!'.join(comm_split)
-
-            except ValueError:
-                comment = None
-
-            value = value.strip()
-
-            # DEAL WITH TRAILING MODIFIERS
-            trailing_modifiers = None
-
-            if tag in special_children:
-                self._value = special_children[tag].parse(value, self)
-                self.value = self.__value
-                if type(self.value) == DynamicValue:
-                    self._comment = self._value.target.name.value  # LOL
-                    self.comment = self.__comment
-                else:
-                    self.comment = comment
-            else:
-                self.value = value
-                self.comment = comment
-        except BaseException as e:
-            embed()
-            raise
-
+        tag, value = line.split(':',1)
         self.tag = tag
-        self.trailing_modifiers = trailing_modifiers
+        value.strip()
+        comm_split = value.split('\!')
+        try:
+            # comment
+            tail, comment = comm_split[-1].split('!',1)
+            comment = comment.strip()
+            comm_split[-1] = tail
+            value = '\!'.join(comm_split)
+
+        except ValueError:
+            comment = None
+
+        value = value.strip()
+        value, self.trailing_modifiers = self._parse_modifiers(value)  # FIXME make it a class??
+
+        if tag in special_children:
+            self._value = special_children[tag].parse(value, self)
+            self.value = self.__value
+            if type(self.value) == DynamicValue:
+                self._comment = self._value.target.name.value  # LOL
+                self.comment = self.__comment
+            else:
+                self.comment = comment
+        else:
+            self.value = value
+            self.comment = comment
+
+    def _parse_modifiers(self, value):
+        # DEAL WITH TRAILING MODIFIERS
+        stack = [None]
+        inmod = False
+        instring = False
+        _nv = ''
+        modifiers = tuple()
+        for char in value:
+            if char == '{' and not inmod:
+                inmod = True
+                stack.append('IN-MODIFIER')
+                _current_modifier = ''
+                _current_value = ''
+            elif char == '}' and stack[-1] == 'IN-MODIFIER':
+                modifiers += (_current_modifier, _current_value),
+                _current_modifier = ''
+                _current_value = ''
+                stack.pop(-1)
+                inmod = False
+            elif inmod and char == '"' and not instring:
+                instring = True
+                stack.append('"')
+            elif inmod and char == '"' and stack[-1] == '"':
+                stack.pop(-1)
+                instring = False
+            else:
+                if inmod and instring:
+                    _current_value += char
+                elif inmod:
+                    if char == ' ':
+                        pass
+                    elif char == '=':
+                        pass
+                    elif char == ',':
+                        modifiers += (_current_modifier, _current_value),
+                        _current_modifier = ''
+                        _current_value = ''
+                    else:
+                        _current_modifier += char
+                else:
+                    _nv += char
+
+        return _nv.strip(), modifiers
 
     def _comment(self):
         return self.comment
@@ -357,7 +421,7 @@ class TVPair:  #TODO these need to be parented to something!
         if tag in special_children:
             kwargs['tvpair'] = self
             self._value = special_children[tag](**kwargs)
-            self.value = self.__value
+            self.value = self.__value  # this seems dubiously effective?
             if type(self.value) == DynamicValue:
                 self._comment = self._value.target.name.value  # LOL
                 self.comment = self.__comment
@@ -376,11 +440,31 @@ class TVPair:  #TODO these need to be parented to something!
     def __ne__(self, other):
         return not other == self
 
+    def __lt__(self, other):
+        if type(self) == type(other):
+            if not isinstance(self._value, MethodType):
+                return self._value < other._value
+            else:
+                return self.value < other.value
+        else:
+            return False  # pairs themselves don't know anyting about their ordering
+
+    def __gt__(self, other):
+        if type(self) == type(other):
+            return not self < other
+        else:
+            return False  # pairs themselves don't know anyting about their ordering
+
+    @staticmethod
+    def _format_trailing_modifiers(trailing_modifiers):
+        tm = ', '.join([f'{k}="{v}"' for k, v in sorted(set(trailing_modifiers))])
+        return f' {{{tm}}}'
+
     def __str__(self):
         string = '{}: {}'.format(self.tag, self._value())
 
         if self.trailing_modifiers:
-            string += " " + str(self.trailing_modifiers)
+            string += self._format_trailing_modifiers(self.trailing_modifiers)
 
         if self.comment:
             # TODO: autofill is_a comments
@@ -389,30 +473,57 @@ class TVPair:  #TODO these need to be parented to something!
         return string
 
     def __ttl__(self):
+        pass
 
-        if self.tag in obo_tag_to_ttl:
-            if self.tag == 'id':
-                value = id_fix(self.value)
-            elif self.tag == 'def':
-                value = self._value.text.replace('"','\\"')
+    def triples(self, subject=None):
+        if subject is None:
+            subject = rdflib.BNode()
+
+        if self.tag == 'id':
+            yield id_fix(self.value), rdf.type, owl.Class
+
+        elif self.tag in obo_tag_to_ttl:
+            predicate = obo_tag_to_ttl[self.tag]
+            if self.tag == 'def':
+                #value = self._value.text.replace('"','\\"')
+                value = self._value.text
+                object = rdflib.Literal(value)
+
             elif self.tag == 'synonym':
                 value = self._value.text.lower()
+                object = rdflib.Literal(value)
+
             elif self.tag == 'is_a':
-                if type(self._value.target) == str:  # we dangling
+                if self._value.target == self._value.DANGLING:  # we dangling
                     value = self._value.target_id
                 else:
                     value = id_fix(self._value.target.id_.value)
+
+                object = rdflib.URIRef(value)
+
             elif self.tag == 'name':
                 value = self.value.lower()  # capitalize only proper nouns as needed
+                object = rdflib.Literal(value)
+
+            elif self.tag == 'xref':
+                value = self.value
+                if '\:' in value:
+                    value = value.replace('\:', ':')
+                try:
+                    object = OntId(value).URIRef
+                except (OntId.UnknownPrefixError, OntId.BadCurieError) as e:
+                    object = rdflib.Literal(value)  # FIXME
+
             else:
                 value = self.value
+                if '\:' in value:
+                    value = value.replace('\:', ':')
+                object = rdflib.URIRef(value)
 
-            return obo_tag_to_ttl[self.tag] % value
-        else:
-            return ''
+            yield subject, predicate, object
 
     def __repr__(self):
-        return str(self)
+        return self.__class__.__name__ + ' <' + str(self) + '>'
 
     @staticmethod
     def esc(string):
@@ -470,7 +581,6 @@ class TVPairStore:
                 self.add_tvpair(tvpair)
             warn = False
 
-
         #clean up empty tags
         to_pop = []
         for tag, value in self.__dict__.items():
@@ -502,9 +612,9 @@ class TVPairStore:
         if self._tags[tag] == N:
             try:
                 self.__dict__[dict_tag].append(tvpair)
-            except KeyError:
+            except KeyError as e:
                 embed()
-                raise
+                raise e
         else:
             self.__dict__[dict_tag] = tvpair
 
@@ -514,32 +624,42 @@ class TVPairStore:
 
     def _tvpairs(self, source_dict=None):
         index = tuple(self._tags)
-
-        def key_(tvpair):
-            out = index.index(tvpair.tag)
-            if self._tags[tvpair.tag] == N:
-                tosort = []
-                for tvp in self.__dict__[TVPair.esc_(tvpair.tag)]:
-                    tosort.append(tvp._value())
-                sord = sorted(tosort, key=lambda a: a.lower())  # FIXME isn't quit right
-                out += sord.index(tvpair._value()) / (len(sord) + 1)
-            return out
-
-        tosort = []
         if not source_dict:
             source_dict = self.__dict__
-        for tvp in source_dict.values():
+        #_ = [print(a, b) for a, b in zip(sorted(index), sorted(source_dict))]
+
+        def key(value):
+            if isinstance(value, list):
+                value = value[0]
+
+            return index.index(value.tag)
+
+        out = []
+        for tvp in sorted(source_dict.values(), key=key):
             if type(tvp) == list:
-                tosort.extend(tvp)
+                out.extend(sorted(tvp))
             elif type(tvp) == property:
                 embed()
             else:
-                tosort.append(tvp)
-        return sorted(tosort, key=key_)
+                out.append(tvp)
+
+        return out
 
     def __ttl__(self):
-        block = ''.join(tvpair.__ttl__() for tvpair in self.tvpairs)
-        return block.rstrip('\n').rstrip(';') + '.\n'
+        g = rdflib.Graph()
+        [g.add(t) for t in self.triples()]
+        # TODO go peek at how we removed prefixes for neurons
+        return g.serialize(format='nifttl')
+
+    def triples(self):
+        id_pair, *rest = self.tvpairs
+        (subject, predicate, object), = id_pair.triples()
+        yield subject, predicate, object
+        for pair in rest:
+            yield from pair.triples(subject)
+
+    def __iter__(self):
+        yield from self.tvpairs
 
     def __str__(self):
         return '\n'.join(str(tvpair) for tvpair in self.tvpairs) + '\n'
@@ -557,9 +677,9 @@ class TVPairStore:
                 else:
                     try:
                         tags.append(tvp.tag)
-                    except AttributeError:
+                    except AttributeError as e:
                         embed()
-                        raise
+                        raise e
             else:
                 raise AttributeError('Tag %s has no values!' % tag)
 
@@ -577,23 +697,33 @@ class TVPairStore:
 class Header(TVPairStore):
     """ Header class. """
     _r_tags = ('format-version', )
-    _r_defaults = ('1.2',)
+    _r_defaults = ('1.4',)
     _all_tags = (
         ('format-version', 1),
         ('data-version', 1),
         ('date', 1),
         ('saved-by', 1),
         ('auto-generated-by', 1),
-        ('ontology', 1),
         ('import', N),
         ('subsetdef', N),
         ('synonymtypedef', N),
-        ('idspace', N),  # PREFIX http://uri
-        ('id-mapping', N),
-        ('default-relationship-id-previx', 1),
         ('default-namespace', 1),
+        ('namespace-id-rule', N),
+        ('idspace', N),  # PREFIX http://uri
+        ('treat-xrefs-as-equivalent', N),
+        ('treat-xrefs-as-genus-differentia', N),
+        ('treat-xrefs-as-relationship', N),
+        ('treat-xrefs-as-is_a', N),
+        ('treat-xrefs-as-has-subclass', N),
+        ('treat-xrefs-as-reverse-genus-differentia', N),
+        ('id-mapping', N),
+        ('default-relationship-id-prefix', 1),
+        ('relax-unique-identifier-assumption-for-namespace', N),
+        ('relax-unique-label-assumption-for-namespace', N),
         ('remark', N),
+        ('ontology', 1),
     )
+
     _datetime_fmt = '%d:%m:%Y %H:%M'  # WE USE ZULU
 
     def append_to_obofile(self, obofile):
@@ -604,7 +734,7 @@ class Header(TVPairStore):
             also overwriting the original data.
         """
         updated = {k:v for k, v in self.__dict__.items()}
-        print(updated.keys())
+        log.debug(str(tuple(updated.keys())))
         TVPair.factory('date', datetime.strftime(datetime.utcnow(), self._datetime_fmt),dict_=updated)
         TVPair.factory('auto-generated-by', __title__, dict_=updated)
         TVPair.factory('saved-by', getuser(), dict_=updated)
@@ -632,26 +762,39 @@ class Stanza(TVPairStore):
         ('acronym', N),  # i think it is just better to add this
         ('xref', N),
         ('instance_of', 1), ##
+        ('property_value', N), ##
         ('domain', 1), #
         ('range', 1), #
+        ('builtin', 1),
+        ('holds_over_chain', N),
         ('is_anti_symmetric', 1), #
         ('is_cyclic', 1), #
         ('is_reflexive', 1), #
         ('is_symmetric', 1), #
         ('is_transitive', 1), #
+        ('is_functional', 1), #
+        ('is_inverse_functional', 1), #
         ('is_a', N),
-        ('inverse_of', 1), #
-        ('transitive_over', N), #
         ('intersection_of', N),  # no relationships, typedefs
         ('union_of', N),  # min 2, no relationships, typedefs
+        ('equivalent_to', N),  # no relationships, typedefs
         ('disjoint_from', N),  # no relationships, typedefs
+        ('inverse_of', 1), #
+        ('transitive_over', N), #
+        ('equivalent_to_chain', N), #
+        ('disjoint_over', N), #
         ('relationship', N),
-        ('property_value', N), ##
         ('is_obsolete', 1),
-        ('replaced_by', N),
         ('consider', N),
         ('created_by', 1),
         ('creation_date', 1),
+        ('replaced_by', N),
+        ('consider', N),
+        ('expand_assertion_to', 1),  # FIXME cardinality?
+        ('expand_expression_to', 1),  #
+        ('is_metadata_tag', 1),  #
+        ('is_class_level', 1),  #
+
     )
     _typedef_only_tags = [
         'domian',
@@ -663,7 +806,10 @@ class Stanza(TVPairStore):
         'is_symmetric',
         'is_anti_symmetric',
         'is_transitive',
+        'expand_assertion_to',
+        'expand_expression_to',
         'is_metadata_tag',
+        'is_class_level',
     ]
     def __new__(cls, *args, **kwargs):
         cls._all_tags = [tag for tag in cls._all_tags if tag[0] not in cls._bad_tags]
@@ -690,22 +836,25 @@ class Stanza(TVPairStore):
             for callback in callbacks:
                 callback(self)  # fill in is_a
             type_od.pop(self.id_.value)  # reset the order
+
         elif type(callbacks) == type(self):
-            print(self.id_)
+            #log.debug(self.id_)
             if set(self.__dict__) == set(callbacks.__dict__):
                 pass
             else:
                 callbacks.__dict__.update(self.__dict__)  # last one wins
                 #raise ValueError('IT WOULD SEEM WE ALREADY EXIST! PLS HALP')  # TODO
+
         type_od[self.id_.value] = self
         type_od.__dict__[TVPair.esc_(self.id_.value)] = self
-        if self.name.value not in type_od.names:  # add to names
-            type_od.names[self.name.value] = self
-        elif type(type_od.names[self.name.value]) == list:
-            type_od.names[self.name.value].append(self)
-        else:
-            existing = type_od.names.pop(self.name.value)
-            type_od.names[self.name.value] = [existing, self]
+        if hasattr(self, 'name'):
+            if self.name.value not in type_od.names:  # add to names
+                type_od.names[self.name.value] = self
+            elif type(type_od.names[self.name.value]) == list:
+                type_od.names[self.name.value].append(self)
+            else:
+                existing = type_od.names.pop(self.name.value)
+                type_od.names[self.name.value] = [existing, self]
 
     def __str__(self):
         return '['+ self.__class__.__name__ +']\n' + super().__str__()
@@ -724,7 +873,7 @@ class Term(Stanza):
             last_wins = {}
             for s in self.synonym:
                 if type(s._value) == str:
-                    print(s._value)
+                    #log.debug(s._value)
                     key = s.value
                 else:
                     key = s._value.text
@@ -762,16 +911,22 @@ class Value:
         return super().__new__(cls)
 
     def __init__(self, value, *args):
-        self.value = value
+        self.value = value  # FIXME causes heterogenous types
 
     def value(self):
         raise NotImplemented('Impl in subclass pls.')
+
+    def __lt__(self, other):
+        return self.value() < other.value()
+
+    def __gt__(self, other):
+        return not self < other
 
     def __str__(self):
         return str(self.value())
 
     def __repr__(self):
-        return str(self.value())
+        return self.__class__.__name__ + ' <' + str(self) + '>'
 
     def __call__(self):
         return self.value()
@@ -791,19 +946,24 @@ class Value:
 
 class DynamicValue(Value):
     """ callbacks need to be isolated here for relationship, is_a and internal xrefs"""
+
+    class DANGLING:
+        """ Awating a value at the end of parsing. """
+
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
     def get_target(self, tvpair):
-        def callback(target):
-            print(target, 'calling back',self)
-            self.target = target
+        def callback(target, s=self):
+            log.debug(f'{target.id_.value} calling back {self.tag}')
+            s.target = target
 
-        self.target = 'DANGLING'
+        self.target = self.DANGLING
         if tvpair.type_od is None:  # TODO need a way to fill these in on add
             self.target += ' ' + self.target_id
             return
+
         target = tvpair.type_od.get(self.target_id, None)
         if type(target) == list:
             tvpair.type_od[self.target_id].append(callback)
@@ -814,9 +974,15 @@ class DynamicValue(Value):
             self.target = target
 
     def value(self):
-        #for arg, sep in (self.args, self.seps):  # TODO
-            #print(arg, sep)
-        return str(target)
+        if self.target == self.DANGLING:
+            return self.target_id
+
+        elif type(self.target) == str:
+            log.warning('Pretty sure this shouldn\'t happen now?')
+            return self.target
+
+        else:
+            return str(self.target.id_.value)
 
 
 class Is_a(DynamicValue):
@@ -826,12 +992,6 @@ class Is_a(DynamicValue):
         self.target_id = target_id
         self.get_target(tvpair)
         #print('yes i have a target id you lying sack of shit',self.target_id)
-
-    def value(self):
-        if type(self.target) == str:
-            return self.target
-        else:
-            return str(self.target.id_.value)
 
     @classmethod
     def parse(cls, value, tvpair):
@@ -849,10 +1009,7 @@ class Relationship(DynamicValue):
         self.get_target(tvpair)
 
     def value(self):
-        if type(self.target) == str:
-            return self.target
-        else:
-            return str(self.target.id_.value)
+        return self.typedef + ' ' + super().value()
 
     @classmethod
     def parse(cls, value, tvpair):
@@ -945,25 +1102,50 @@ class Property_value(Value):
     seps = ' ', ' ', ' '
     def __init__(self, type_id, val, datatype=None, **kwargs):
         self.type_id = type_id
-        self.val = val
+        self._val = val
         self.datatype = datatype
 
+    def __lt__(self, other):
+        if type(self) == type(other):
+            self.datatype != other.datatype
+        else:
+            return False
+
+    def __gt__(self, other):
+        if type(self) == type(other):
+            return not self < other
+        else:
+            return False
+
+    @property
+    def val(self):
+        if self._val.startswith('"'):
+            return ast.literal_eval(self._val)
+
+        return self._val
+
     def value(self):
-        s = self.seps[0]
-        out = ''
-        out += self.type_id + s + self.val
-        if self.datatype:
-            out += s + self.datatype
-        return out
+        dt = ' ' + self.datatype if self.datatype else ''
+        return f'{self.type_id} {self._val}{dt}'
 
     @classmethod
     def parse(cls, value, *args):
         type_id, val_datatype = value.split(' ', 1)
-        try:
-            val, datatype = val_datatype.split(' ', 1)
-        except ValueError:
-            val = val_datatype
-            datatype = None
+        if val_datatype.startswith('"'):
+            _val, _datatype = val_datatype.rsplit('"', 1)
+            val = _val[1:]
+            val = f'"{val}"'  # string escaping madness
+            datatype = _datatype.strip()
+            if not datatype:
+                datatype = None
+
+        else:
+            try:
+                val, datatype = val_datatype.split(' ', 1)
+            except ValueError:
+                val = val_datatype
+                datatype = None
+
         split = (type_id, val, datatype)
         return super().parse(split)
 
@@ -1012,6 +1194,9 @@ class Synonym(Value):
         out += ', '.join([str(xref) for xref in self.xrefs])
         out += self.brackets[self.seps[3]]
         return out
+
+    def __lt__(self, other):
+        return self.text.lower() < other.text.lower()
 
     @classmethod
     def parse(cls, value, tvpair):
@@ -1087,20 +1272,23 @@ class Xref(Value):  # TODO link internal ids, finalize will require cleanup, lot
             out += self.seps[1]
         return out
 
+    def __lt__(self, other):
+        return self.value().lower() < other.value().lower()
+
     @classmethod
     def parse(cls, value, tvpair):
         value.strip().rstrip()  # in case we get garbage in from a bad split
         try:
             name, description = value.split(' "', 1)
             description = description[:-1]
-        except ValueError:
-            name = value  # TODO dangling stuff?
+        except ValueError as e:
+            name = value.strip()  # TODO dangling stuff?
             description = None
         split = (name, description)
         return super().parse(split)
 
 
-special_children = {sc.tag:sc for sc in (Subsetdef, Synonymtypedef, Idspace, Id_mapping, Def_, Synonym, Xref, Relationship, Is_a)}
+special_children = {sc.tag:sc for sc in (Subsetdef, Synonymtypedef, Idspace, Id_mapping, Def_, Synonym, Xref, Relationship, Is_a, Property_value)}
 
 def deNone(*args):
     for arg in args:
@@ -1109,30 +1297,32 @@ def deNone(*args):
         else:
             yield arg
 
-__all__ = [OboFile.__name__, TVPair.__name__, Header.__name__, Term.__name__, Typedef.__name__, Instance.__name__]
+__all__ = [c.__name__ for c in (OboFile, TVPair, Header, Term, Typedef, Instance)]
 
 def main():
-    args = docopt(__doc__, version='obo_io 0')
-    if args['--ttl']:
-        filename = args['<obofile>']
-        if os.path.exists(filename):
-            of = OboFile(filename)
-            if args['<ttlfile>']:
-                ttlfilename = args['<ttlfile>']
-            else:
-                fname, ext = filename.rsplit('.',1)
-                if ext != 'obo':  # FIXME pretty sure a successful parse should be the measure here?
-                    # TODO TEST ME!
-                    raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
-                ttlfilename = fname + '.ttl'
-            of.__ttl__()
-            of.write(ttlfilename, type_='ttl')
-        else:
-            raise FileNotFoundError('No file named %s exists at that path!' % filename)
+    args = docopt(__doc__, version='obo-io 0')
+    filename = args['<obofile>']
+    fname, ext = filename.rsplit('.',1)
+    if ext != 'obo':  # FIXME pretty sure a successful parse should be the measure here?
+        # TODO TEST ME!
+        raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
+
+    if os.path.exists(filename):
+        of = OboFile(filename=filename, strict=args['--strict'])
+        if args['--out-format'] == 'ttl':
+            ttl = of.__ttl__()
     else:
-        filename = args['<obofile>']
-        of = OboFile(filename=filename)
-        ttl = of.__ttl__()
+        raise FileNotFoundError('No file named %s exists at that path!' % filename)
+
+    if args['<output-name>']:
+        outfilename = args['<output-name>']
+    else:
+        outfilename = fname + '.' + args['--out-format']  # FIXME :/ doesn't play well with mime
+
+    if args['--write']:
+        of.write(outfilename, type_=args['--out-format'])
+
+    if args['--debug']:
         embed()
 
 if __name__ == '__main__':
