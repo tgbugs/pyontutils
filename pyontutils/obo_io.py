@@ -8,7 +8,8 @@ Usage:
 Options:
     -h --help             show this
     -d --debug            embed after parsing
-    -t --out-format=FMT   serialize to this [default: obo]
+    -t --out-format=FMT   output to this format
+                          options are obo or ttl [default: obo]
     -w --write            write the output
     -s --strict           fail on missing definitions
 
@@ -19,6 +20,9 @@ lacks appropraite levels of testing for production use
 
 acts as a command line script or as a python module
 also converts to ttl format but the conversion convetions are ill defined
+
+When writing a file if the filename for the obofile exists it will not
+overwrite what you have but instead will append a number to the end.
 
 ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
 """
@@ -121,14 +125,11 @@ class OboFile:
         pair stanzas the header is currently its own special stanza.
         type_def = ('<header>','<stanza>')
 
-        Usage: To load an obo file from somwhere on disk initialize an OboFile
-        instance with the full path to the obo file you want to load.
-        To write an obofile call obofileinstance.write(). If the filename for
-        the obofile exists it will not overwrite what you have but will append
-        a number to the end.
+        Modifying the content of a loaded OboFile.
 
-        To output to ttl format call str_to_write = obofileinstance.__ttl__()
-        and then write str_to_write to file.  TODO implement .writettl()
+        Find the class that you want to modify using `t = of.Terms['PREFIX:12345467']`
+        You can then access tags as python attributes. For example
+        `t.xref += [TVPair('xref: ASDF:123 ! a new xref')]`.
     """
     def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None, strict=False):
         self.filename = filename
@@ -273,6 +274,10 @@ class TVPair:  #TODO these need to be parented to something!
         special children section.
         _type_ = '<tag-value pair>'
         _type_def = ('<tag>', '<value>', '{<trailing modifiers>}', '<comment>')
+
+        NOTE: This class acts both as a parser and as an internal representation
+        of the TVPair. In the future it will be refactored as has been done with
+        the special_children classes.
     """
     _reserved_ids = ('OBO:TYPE','OBO:TERM','OBO:TERM_OR_TYPE','OBO:INSTANCE')
     _escapes = {
