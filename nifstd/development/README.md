@@ -4,7 +4,7 @@ prior to their conversion into ttl format for inclusion in the NIF-Ontology repo
 
 # Process
 When adding source files (csv, xlsx, ttl, etc.) for review and integration,
-[fork tgbugs/pyontutils](https://github.com/tgbugs/pyontutils#fork-destination-box),
+[fork tgbugs/pyontutils](https://github.com/tgbugs/pyontutils/fork),
 add a folder for your files/notes and submit a pull requests.
 Any additional files related to that particular set of terms or that project
 should be added to that folder as well.
