@@ -36,7 +36,7 @@ means you prefer for managing your keys.
 
 ## Development Installation
 From the directory that contains this readme run the following.
-Refer to [.travis.yml](.travis.yml) for full details.
+Refer to [.travis.yml](./.travis.yml) for full details.
 ```bash
 for f in {librdflib,htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --user --pre --editable . ; popd; done
 ```
@@ -54,7 +54,7 @@ gcc (and toolchain) installed and will need to have the development packages for
 `libxml` installed. To build the development dependencies you will also need the
 development packages for `postgresql`, and `protobuf` installed on your system.
 Building the documentation for the ontology requires `pandoc` and `emacs` along
-with [orgstrap](https://github.com/tgbugs/orgstrap). See [.travis.yml](.travis.yml)
+with [orgstrap](https://github.com/tgbugs/orgstrap). See [.travis.yml](./.travis.yml)
 for an example of how to bootstrap a working dev environment.
 
 ## Utility Scripts
