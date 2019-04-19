@@ -784,7 +784,7 @@ class HtmlTurtleSerializer(CustomTurtleSerializer):
     _space = '\u00A0'
 
     def __init__(self, store, *args, **kwargs):
-        from pyontutils.htmlfun import atag
+        from htmlfn import atag
         self.atag = atag
         self._labels = {s:str(o) for s, o in store[:RDFS.label:]}
         super(HtmlTurtleSerializer, self).__init__(store, *args, **kwargs)
