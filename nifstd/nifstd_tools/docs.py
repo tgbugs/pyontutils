@@ -387,7 +387,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
 
     org = header.encode() + out.replace(b'\_', b'_')  #.replace(b'[[file:', b'[[./')
 
-    #org = org.replace(b'=s', b'= s')  # FIXME need proper fix for inline code
+    org = re.sub(br'(\w)=s', br'\1= s', org)  # the closing = on inline code blocks needs a trailing space
 
     ## org = org.replace(b'.md][', b'.html][')  # FIXME fix suffixes for doc paths
 
@@ -498,7 +498,12 @@ def main():
     if not docs_dir.exists():
         docs_dir.mkdir()
 
-    shutil.copytree(theme_repo / 'styles', docs_dir / 'styles')
+    theme_styles_dir = theme_repo / 'styles'
+    doc_styles_dir = docs_dir / 'styles'
+    if doc_styles_dir.exists():
+        shutil.rmtree(doc_styles_dir)
+
+    shutil.copytree(theme_styles_dir, doc_styles_dir)
 
     docstring_kwargs = docstrings()
     wd_docs_kwargs = [docstring_kwargs]
