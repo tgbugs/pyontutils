@@ -55,7 +55,7 @@ def update_sheet_values(spreadsheet_name, sheet_name, values):
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True):
-    SPREADSHEET_ID = devconfig.secrets(spreadsheet_name)
+    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
     service = get_oauth_service()
     ss = service.spreadsheets()
     if get_notes:
