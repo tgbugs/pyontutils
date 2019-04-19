@@ -121,13 +121,42 @@ class FixLinks:
 
         return btext.replace(b'\n', b' ').replace(b'\r', b' ')  # grrr pandoc with the \r :/
 
+    @staticmethod
+    def fix_github(href):
+        up = urlparse(href)
+        _, user, project, rest = up.path.split('/', 3)
+        if (user not in ('tgbugs', 'SciCrunch') or
+            not (rest.startswith('blob') or rest.startswith('tree'))):
+            return href
+
+        _, branch, rest = rest.split('/', 2)
+        if branch != 'master':
+            return href
+
+        rest, *fragment = rest.rsplit('#', 1)
+        fragment = '#' + fragment if fragment else ''
+        rest, *query = rest.rsplit('?', 1)
+        query = '?' + query if query else ''
+        dir_stem, old_suffix = rest.rsplit('.', 1)
+        local_path = dir_stem + '.html'
+        path = f'/docs/{project}/' + local_path + query + fragment
+        out = 'hrefl:' + path
+        #log.debug(out)
+        return out
+
     def fix_href(self, bhref):
         href = bhref.decode()
         out = href
 
         if any(out.startswith(p) for p in ('http', 'img:')):
             # TODO if there is a full github link to one of our files here swap it out
-            return bhref
+            if (out.startswith('https://github.com') and
+                (any(out.endswith(suffix) or (suffix + '#') in out for suffix in
+                    ('.md', '.org', '.ipynb')))):
+                out = self.fix_github(out)
+                return out.encode()
+            else:
+                return bhref
 
 
         class SubRel:
@@ -143,8 +172,9 @@ class FixLinks:
                     rest = ''
 
                 if not any(name.startswith(p) for p in ('$', '#')):
-                    rel = (self.current_file.parent / (name + suffix)).resolve().relative_to(self.working_dir)
-                    if suffix in ('.md', '.org', 'ipynb'):
+                    rel = (self.current_file.parent /
+                           (name + suffix)).resolve().relative_to(self.working_dir)
+                    if suffix in ('.md', '.org', '.ipynb'):
                         rel = rel.with_suffix('.html')
                     rel_path = rel.as_posix() + rest
                     #print('aaaaaaaaaaa', suffix, rel, rel_path)
@@ -157,6 +187,7 @@ class FixLinks:
 
 
         #print('----------------------------------------')
+        # TODO consider htmlifying these ourselves and serving them directly
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
         out0 = re.sub(r'^file:(.*)'
                       r'(\.(?:py|ttl|graphml|yml|yaml|spec|example)|LICENSE|catalog-extras)'
@@ -164,15 +195,16 @@ class FixLinks:
                       sub_github, out)
 
         #print('----------------------------------------')
-        # http:/ is correct here not http://
-        sub_docs = SubRel(f'http:/docs/{self.working_dir.name}/')  # FIXME won't work if someone changes the name of the containing folder
+        # FIXME won't work if the outer folder does not match the github project name
+        sub_docs = SubRel(f'hrefl:/docs/{self.working_dir.name}/')
         out1 = re.sub(r'^file:(.*)'
                       r'(\.(?:md|org|ipynb))'
                       r'(#.+)*$', sub_docs, out0)
         out = out1
         #print('----------------------------------------')
 
-        if not any(out.startswith(s) for s in ('https:', 'http:', 'file:', 'img:', 'mailto:', '/', '#')):
+        if not any(out.startswith(s) for s in ('https:', 'http:', 'hrefl:',
+                                               'file:', 'img:', 'mailto:', '/', '#')):
             log.warning(f'Potentially relative path {out!r} does not have a known good start in {self.current_file}')
 
         return out.encode()
@@ -186,7 +218,7 @@ def get__doc__s():
     # TODO figure out how to do relative loads for resolver docs
     docs = []
     #skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
-    skip = 'ilxcli',
+    skip = 'ilxcli', 'deploy'
     for i, path in enumerate(paths):
         if any(nope in path for nope in skip):
             continue
@@ -270,8 +302,8 @@ def getMdReadFormat(version):
 
 pdv = pandocVersion()
 md_read_format = getMdReadFormat(pdv)
-#pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
-pandoc_columns = True  # actually scratch the above, it splits inside links which is really dumb
+pandoc_columns = pdv < '2.2.3' # pandoc version >= 2.2.3 vastly improved org export
+#pandoc_columns = True  # I think this was due to the fact that I had a weird version lingering
 
 
 def spell(filenames, debug=False):
@@ -405,6 +437,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     org = fix_links(org)
 
     #print(org.decode())
+
     # debug debug
     #with open(path.with_suffix('.org').as_posix(), 'wb') as f:
         #f.write(org)
