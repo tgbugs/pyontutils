@@ -601,9 +601,9 @@ def main():
 
         'Developer docs':'Developer docs',
         'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
-        'NIF-Ontology/docs/development setup.html':'Ontology development setup',  # HOWTO
+        'NIF-Ontology/docs/development-setup.html':'Ontology development setup',  # HOWTO
         'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
-        'NIF-Ontology/docs/import chain.html':'Ontology import chain',  # Documentation
+        'NIF-Ontology/docs/import-chain.html':'Ontology import chain',  # Documentation
         'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
         'pyontutils/nifstd/scigraph/README.html': 'Ontology SciGraph setup',
         'sparc-curation/resources/scigraph/README.html': 'SPARC SciGraph setup',
