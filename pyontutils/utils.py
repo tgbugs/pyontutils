@@ -10,6 +10,7 @@ import asyncio
 import inspect
 import logging
 from time import time, sleep
+from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, date
 from functools import wraps
@@ -39,6 +40,31 @@ def TODAY():
 
 
 def UTCNOW(): return datetime.utcnow().isoformat()
+
+
+def sysidpath(ignore_options=False):
+    """ get a unique identifier for the machine running this function """
+    # in the event we have to make our own
+    # this should not be passed in a as a parameter
+    # since we need these definitions to be more or less static
+    failover = Path('/tmp/machine-id')
+
+    if not ignore_options:
+        options = (
+            Path('/etc/machine-id'),
+            failover,  # always read to see if we somehow managed to persist this
+        )
+        for option in options:
+            if (option.exists() and
+                os.access(options, os.R_OK) and
+                option.stat().st_size > 0):
+                    return option
+
+    uuid = uuid4()
+    with open(failover, 'wt') as f:
+        f.write(uuid.hex)
+
+    return failover
 
 
 def makeSimpleLogger(name):
