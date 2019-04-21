@@ -56,7 +56,7 @@ def sysidpath(ignore_options=False):
         )
         for option in options:
             if (option.exists() and
-                os.access(options, os.R_OK) and
+                os.access(option, os.R_OK) and
                 option.stat().st_size > 0):
                     return option
 
