@@ -67,7 +67,7 @@ def sysidpath(ignore_options=False):
     return failover
 
 
-def makeSimpleLogger(name):
+def makeSimpleLogger(name, color=True):
     # TODO use extra ...
 
     # remove any logging set by an inadvertent call to basicConfig
@@ -103,7 +103,7 @@ def makeSimpleLogger(name):
     if False:
         coloredlogs.install(level=logging.DEBUG, logger=logger, fmt=fmt, milliseconds=True)
     else:
-        if False:
+        if not color:
             formatter = logging.Formatter(fmt)
 
         ch = logging.StreamHandler()  # FileHander goes to disk
