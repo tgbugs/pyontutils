@@ -256,18 +256,22 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
-        def suffix(phenotype):
+        def suffix(phenotypes):
             if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
-                return  ' neuron'
+                return  'neuron'
             elif phenotype.p == self.predicate_namespace['InterneuronPhenotype']:
-                return ''  # interneuron is already in the label
+                return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
-                return ' neuron'
+                return 'neuron'
             else:  # principle, projection, etc. 
-                return ' neuron'
-            
+                return 'neuron'
+
         for phenotype in phenotypes:
-            yield next(self._default((phenotype,))).lower() + suffix(phenotype)
+            yield next(self._default((phenotype,))).lower()
+
+        suffix = suffix(phenotypes)
+        if suffix:
+            yield suffix
 
 # helper classes
 
@@ -705,6 +709,9 @@ class graphBase:
         self._namespaces = {p:rdflib.Namespace(ns) for p, ns in self.in_graph.namespaces()}
 
     def expand(self, putativeURI):
+        if isinstance(putativeURI, rdflib.URIRef):
+            return putativeURI
+
         if type(putativeURI) == infixowl.Class:
             return putativeURI.identifier
         elif type(putativeURI) == str:
@@ -899,7 +906,7 @@ class graphBase:
             # need a much more consistent way to handle the local graphs
             # switching everything out for a single RDFL instance seems
             # the most attractive ...
-            OntTerm.query.add(RDFL(core_graph, OntId))
+            OntTerm.query.ladd(RDFL(core_graph, OntId))  # ladd for higher priority
 
         # store prefixes
         if isinstance(prefixes, dict):
@@ -1229,6 +1236,14 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     def checkObjectProperty(self, ObjectProperty):  # FIXME this doesn't seem to work
         op = self.expand(ObjectProperty)
+
+        if isinstance(self._predicates, str):
+            if not hasattr(cls, '_first_time'):
+                log.warning('No reference predicates have been set, you are on your own!')
+                self._first_time = False
+
+            return op
+
         if op in self._predicates.__dict__.values():
             return op
         else:
@@ -1825,94 +1840,6 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     def localLabel(self):
         # TODO predicate actions are the right way to implement the transforms here
         return LabelMaker(True)(self)
-
-    @property
-    def _genLabelOld(self):
-        def key(phenotype):
-            return (phenotype.pShortName if
-                    phenotype.pShortName else
-                    (phenotype.pHiddenLabel if
-                     phenotype.pHiddenLabel else
-                     phenotype.pLabel))
-
-        def sublab(edge):
-            sublabs = []
-            if edge in self._pesDict:
-                phenotypes = sorted(self._pesDict[edge], key=key)
-                nphenos = len(phenotypes)
-                plural = 's' if nphenos > 1 else ''  # FIXME ick for this whole block
-                for i, pe in enumerate(phenotypes):
-                    l = key(pe)
-
-                    if pe.e == self._predicates.hasExpressionPhenotype:
-                        if type(pe) == NegPhenotype:
-                            l = '-' + l
-                        else:
-                            l = '+' + l  # this is backward from the 'traditional' placement of the + but it makes this visually much cleaner and eaiser to understand
-                    elif pe.e == self._predicates.hasProjectionPhenotype:
-                        if not i:
-                            sublabs.append('(')
-                            l = 'Projecting to ' + l
-                    elif pe.e == self._predicates.hasDendriteLocatedIn:
-                        if not i:
-                            sublabs.append('(')
-                            l = f'With dendrite{plural} in ' + l  # 'Toward' in bbp speak
-                    elif pe.e == self._predicates.hasAxonLocatedIn:
-                        if not i:
-                            sublabs.append('(')
-                            l = f'With axon{plural} in ' + l
-                    elif pe.e == self._predicates.hasCircuitRolePhenotype:
-                        l = l.lower()
-
-                    sublabs.append(l)
-
-            if sublabs and sublabs[0] == '(':
-                sublabs.append(')')
-
-            return sublabs
-
-        label = []
-        for edge in self.ORDER:
-            label += sublab(edge)
-            logical = (edge, edge)
-            if logical in self._pesDict:
-                label += sublab(logical)
-
-        # species
-        # developmental stage
-        # brain region
-        # morphology
-        # ephys
-        # expression
-        # dendrites
-        # projection
-        # cell type specific connectivity?
-        # circuit role? (principle interneuron...)
-        if not label:
-            label.append('????')
-
-        nin_switch = ('neuron' if
-                       Phenotype('ilxtr:IntrinsicPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                      (None if
-                       Phenotype('ilxtr:InterneuronPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                       ('neuron' if
-                        Phenotype('ilxtr:MotorPhenotype', self._predicates.hasCircuitRolePhenotype) in self.pes else
-                        'neuron')))
-
-        if nin_switch:
-            label.append(nin_switch)
-
-        if self._shortname:
-            label.append(self._shortname)
-
-        new_label = ' '.join(label)
-        if not self._override:
-            self.Class.label = (rdflib.Literal(new_label),)
-        #try:
-            #print(next(self.Class.label))  # FIXME need to set the label once we generate it and overwrite the old one...
-        #except StopIteration:
-            #print(new_label)
-        return new_label
 
     @property
     def HiddenLabel(self):

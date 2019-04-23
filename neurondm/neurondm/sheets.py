@@ -6,8 +6,8 @@ from pyontutils.sheets import update_sheet_values, get_sheet_values, get_note, s
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
 from pyontutils.closed_namespaces import rdfs
-from . import NeuronCUT, Config, Phenotype, LogicalPhenotype
-from .models.cuts import make_cut_id, fixname
+from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
+from neurondm.models.cuts import make_cut_id, fixname
 
 from IPython import embed
 
