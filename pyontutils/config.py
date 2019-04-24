@@ -80,6 +80,48 @@ def default(value):
 tempdir = gettempdir()
 
 
+class QuietTuple(tuple):
+    """ read only doesn't print, repr, reduce etc. """
+    def __add__(self, value):
+        raise TypeError('NOPE')
+
+    def __repr__(self):
+        return '[secure]'
+
+    def __str__(self):
+        return '[secure]'
+
+    def __reduce__(self):
+        return (list, tuple())
+
+
+class QuietDict(dict):
+    """ read only doesn't print, repr, reduce etc. """
+    def copy(self):
+        return None
+
+    def pop(self, key):
+        return None
+
+    def popitem(self, key):
+        return None
+
+    def update(self, value):
+        return None
+
+    def values(self):
+        return QuietTuple(super().values())
+
+    def __repr__(self):
+        return '{secure}'
+
+    def __str__(self):
+        return '{secure}'
+
+    def __reduce__(self):
+        return (dict, {})
+
+
 class Secrets:
     def __init__(self, devconfig):
         self.devconfig = devconfig
@@ -109,7 +151,7 @@ class Secrets:
         # sometimes the easiest solution is just to read from disk every single time
         if self.exists:
             with open(self.filename, 'rt') as f:
-                return yaml.safe_load(f)
+                return QuietDict(yaml.safe_load(f))
 
     def __call__(self, *names):
         if self.exists:
@@ -129,12 +171,33 @@ class Secrets:
 
             av = set(all_values(nidm))
             current = nidm
+            nidm = None
+            del nidm
             for name in names:
                 if name in av:
                     ANGRY = '*' * len(name)
+                    av = None
+                    name = None
+                    names = None
+                    current = None
+                    del av
+                    del name
+                    del names
+                    del current
                     raise ValueError(f'WHY ARE YOU TRYING TO USE A SECRET {ANGRY} AS A NAME!?')
                 else:
-                    current = current[name]
+                    try:
+                        current = current[name]
+                    except KeyError as e:
+                        av = None
+                        name = None
+                        names = None
+                        current = None
+                        del av
+                        del name
+                        del names
+                        del current
+                        raise e
 
             if isinstance(current, dict):
                 raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
