@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+import itertools
 from pathlib import Path
 from googleapiclient.discovery import build
 from httplib2 import Http
@@ -57,7 +58,7 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
     return response
 
 
-def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True, spreasheet_service=None):
+def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True, spreadsheet_service=None):
     SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
@@ -107,7 +108,7 @@ class Sheet:
         if sheet_name is not None:
             self.sheet_name = sheet_name
 
-        self.fetch_notes = notes
+        self.fetch_notes = fetch_notes
 
         self.readonly = readonly
         self._setup()
@@ -135,7 +136,8 @@ class Sheet:
         values, notes_index = get_sheet_values(self.name, self.sheet_name,
                                                spreadsheet_service=self._spreadsheet_service,
                                                get_notes=fetch_notes)
-        self.values = values
+        self.raw_values = values
+        self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
         self.notes_index = notes_index
 
     def update(self, values):
