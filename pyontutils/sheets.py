@@ -27,10 +27,13 @@ def get_oauth_service(readonly=True):
     return service
 
 
-def update_sheet_values(spreadsheet_name, sheet_name, values):
+def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
     SPREADSHEET_ID = devconfig.secrets(spreadsheet_name)
-    service = get_oauth_service(readonly=False)
-    ss = service.spreadsheets()
+    if spreadsheet_service is None:
+        service = get_oauth_service(readonly=False)
+        ss = service.spreadsheets()
+    else:
+        ss = spreadsheet_service
     """
     requests = [
         {'updateCells': {
@@ -54,10 +57,13 @@ def update_sheet_values(spreadsheet_name, sheet_name, values):
     return response
 
 
-def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True):
+def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True, spreasheet_service=None):
     SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
-    service = get_oauth_service()
-    ss = service.spreadsheets()
+    if spreadsheet_service is None:
+        service = get_oauth_service()
+        ss = service.spreadsheets()
+    else:
+        ss = spreadsheet_service
     if get_notes:
         grid = ss.get(spreadsheetId=SPREADSHEET_ID, includeGridData=True).execute()
         notes = get_notes_from_grid(grid, sheet_name)
@@ -80,19 +86,87 @@ def get_notes_from_grid(grid, title):
                             yield i, j, cell['note']
 
 
-def show_notes(values, notes_index):
-    for i, row in enumerate(values):
-        for j, cell in enumerate(row):
-            if (i, j) in notes_index:
-                print(f'========================== {i} {j}',
-                      cell,
-                      '------------------',
-                      notes_index[i, j],
-                      sep='\n')
-
 
 def get_note(row_index, column_index, notes_index):
     try:
         return notes_index[row_index, column_index]
     except KeyError:
         return None
+
+
+class Sheet:
+    """ access a single sheet as a basis for a workflow """
+
+    name = None
+    sheet_name = None
+
+    def __init__(self, name=None, sheet_name=None, fetch_notes=False, readonly=True):
+        """ name to override in case the same pattern is used elsewhere """
+        if name is not None:
+            self.name = name
+        if sheet_name is not None:
+            self.sheet_name = sheet_name
+
+        self.fetch_notes = notes
+
+        self.readonly = readonly
+        self._setup()
+        self.fetch()
+
+    def _setup(self):
+        if self.readonly:
+            if not hasattr(Sheet, '__spreadsheet_service_ro'):
+                service = get_oauth_service(self.readonly)  # I think it is correct to keep this ephimoral
+                Sheet.__spreadsheet_service_ro = service.spreadsheets()
+
+            self._spreadsheet_service = Sheet.__spreadsheet_service_ro
+
+        else:
+            if not hasattr(Sheet, '__spreadsheet_service'):
+                service = get_oauth_service(self.readonly)
+                Sheet.__spreadsheet_service = service.spreadsheets()
+
+            self._spreadsheet_service = Sheet.__spreadsheet_service
+
+    def fetch(self, fetch_notes=None):
+        """ update remote values (called automatically at __init__) """
+        if fetch_notes is None:
+            fetch_notes = self.fetch_notes
+        values, notes_index = get_sheet_values(self.name, self.sheet_name,
+                                               spreadsheet_service=self._spreadsheet_service,
+                                               get_notes=fetch_notes)
+        self.values = values
+        self.notes_index = notes_index
+
+    def update(self, values):
+        if self.readonly:
+            raise PermissionError('sheet was loaded readonly, '
+                                  'if you want to write '
+                                  'reinit with readonly=False')
+
+        update_sheet_values(self.name,
+                            self.sheet_name,
+                            values,
+                            spreadsheet_service=self.spreadsheet_service)
+
+    def show_notes(self):
+        for i, row in enumerate(self.values):
+            for j, cell in enumerate(row):
+                if (i, j) in self.notes_index:
+                    print(f'========================== {i} {j}',
+                        cell,
+                        '------------------',
+                        self.notes_index[i, j],
+                        sep='\n')
+
+    def get_note(row_index, column_index):
+        return get_note(row_index, column_index, self.notes_index)
+
+
+def main():
+    """ setup oauth """
+    service = get_oauth_service()
+    print('sheets main ok')
+
+if __name__ == '__main__':
+    main()

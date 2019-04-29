@@ -2,7 +2,7 @@ import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
 from pyontutils.core import OntId, OntTerm
-from pyontutils.sheets import update_sheet_values, get_sheet_values, get_note, show_notes
+from pyontutils.sheets import update_sheet_values, get_note, show_notes
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
 from pyontutils.closed_namespaces import rdfs
@@ -165,7 +165,7 @@ def sheet_to_neurons(values, notes_index):
         other_notes = {}
         wat = {}
         for j, (header, cell) in enumerate(zip(headers, neuron_row)):
-            notes = list(process_note(get_note(i, j, notes_index)))
+            notes = list(process_note(get_note(i, j, sheet.notes_index)))
             if notes and not header.startswith('has'):
                 _predicate = convert_other(header)
                 if cell:
@@ -332,9 +332,8 @@ def sheet_to_neurons(values, notes_index):
 
 
 def main():
-    values, notes_index = get_sheet_values('neurons-cut', 'CUT V1.0', get_notes=True)
-    #show_notes(values, notes_index)
-    config, errors, new, release = sheet_to_neurons(values, notes_index)
+    sheet = Sheet('neurons-cut', 'CUT V1.0', notes=True)
+    #sheet.show_notes()
     config.write_python()
     config.write()
     #config = Config(config.name)
@@ -347,7 +346,7 @@ def main():
     from neurondm.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
     from pyontutils.utils import byCol
-    valuesC = byCol(values, to_index=['label'])
+    valuesC = byCol(sheet.values, to_index=['label'])
     reviewC = byCol(review_rows, to_index=['label'])
     def grow(r):
         # TODO implement on the object to allow joining on an index?
