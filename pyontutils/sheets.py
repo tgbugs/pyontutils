@@ -4,6 +4,7 @@ from pathlib import Path
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
+from pyontutils.utils import byCol
 from pyontutils.config import devconfig
 
 spath = Path(devconfig.secrets_file).parent
@@ -100,6 +101,7 @@ class Sheet:
 
     name = None
     sheet_name = None
+    index_columns = tuple()
 
     def __init__(self, name=None, sheet_name=None, fetch_notes=False, readonly=True):
         """ name to override in case the same pattern is used elsewhere """
@@ -138,6 +140,7 @@ class Sheet:
                                                get_notes=fetch_notes)
         self.raw_values = values
         self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
+        self.byCol = byCol(self.values, to_index=self.index_columns)
         self.notes_index = notes_index
 
     def update(self, values):
