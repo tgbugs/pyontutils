@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes bridge old] [options]
+    neurondm-build [all phenotypes bridge old dep] [options]
 
 Options:
     -h --help                   Display this help message
@@ -24,9 +24,10 @@ from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr
+from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
+from itertools import chain
 
 log = makeSimpleLogger('neurondm.build')
 
@@ -255,6 +256,12 @@ def add_types(ng):
     )
     [graph.add(t) for t in triples]
 
+
+def phenotype_core_triples():
+    yield ilxtr.labelPartOf, rdfs.subPropertyOf, BFO['0000050']
+    yield ilxtr.delineates, owl.inverseOf, ilxtr.isDelineatedBy
+
+
 def make_phenotypes():
     ilx_start = 50114
     graph = createOntology(filename='phenotype-core',
@@ -269,6 +276,7 @@ def make_phenotypes():
     defined_graph = createOntology(filename='NIF-Neuron-Defined',
                                    path='ttl/',
                                    prefixes=PREFIXES)
+
     edg = rdflib.Graph().parse(defined_graph.filename, format='turtle')
     defined_id_lookup = {o.value:s for s, o in edg.subject_objects(rdflib.RDFS.label)}
     log.debug(defined_id_lookup)
@@ -473,6 +481,7 @@ def make_phenotypes():
     #graph.g.commit()
     #get_defined_classes(graph)  # oops...
     add_types(graph)
+    [graph.g.add(t) for t in phenotype_core_triples()]
     graph.write()  # moved below to incorporate uwotm8
 
     ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
@@ -1104,11 +1113,13 @@ def make_bridge():
     from pyontutils.core import Ont, build
     from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
     from neurondm.models import __all__
+    #from neurondm.compiled import __all__  # XXX
     NIFRAW, = makeNamespaces('NIFRAW')
     skip = 'phenotype_direct',
     __all__ = [a for a in __all__ if a not in skip]
     log.info('building the following\n' + '\n'.join(__all__))
     models_imports = 'allen', 'markram', 'huang', 'common', 'Defined'
+    #models_imports = 'markram', 'huang', 'common', 'Defined'
 
     # inefficient but thorough way to populate the subset of objects we need.
     terms = set()
@@ -1116,24 +1127,25 @@ def make_bridge():
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
         m = import_module(f'neurondm.models.{module}')
+        #m = import_module(f'neurondm.compiled.{module}')  # XXX
         if not hasattr(m, 'config') and hasattr(m, 'main'):
             config, *_ = m.main()  # FIXME cuts hack
         else:
             config = m.config
 
         terms |= set(OntTerm(o) for _, o in config.out_graph[:owl.someValuesFrom:]
-                     if isinstance(o, rdflib.URIRef) and OntId(o).prefix != 'TEMP')
+                     if isinstance(o, rdflib.URIRef) and OntId(o).prefix not in ('TEMP', 'ilxtr'))
 
     all_defined_by = set(o for t in terms
-                         if 'rdfs:isDefinedBy' in t('rdfs:isDefinedBy')
+                         if t('rdfs:isDefinedBy')
                          for o in t.predicates['rdfs:isDefinedBy'])
     all_supers = set(o for t in terms
-                     if 'rdfs:subClassOf' in t('rdfs:subClassOf', depth=10, as_term=True)
+                     if t('rdfs:subClassOf', depth=10, as_term=True)
                      for o in t.predicates['rdfs:subClassOf'])
     terms |= all_supers
 
     def partOf(term):
-        if 'partOf:' in term('partOf:', as_term=True):
+        if term('partOf:', as_term=True):
             for superpart in term.predicates['partOf:']:
                 if superpart.prefix != 'BFO':  # continuant and occurent form a cycle >_<
                     yield superpart
@@ -1151,8 +1163,11 @@ def make_bridge():
         path = 'ttl/bridge/'
         filename = 'neuron-bridge'
         name = 'Neuron Bridge'
-        imports = (subclass.iri for subclass in subclasses(Config)
-                   if anyMembers(subclass.iri, *models_imports))
+        imports = chain((subclass.iri for subclass in subclasses(Config)
+                         if anyMembers(subclass.iri, *models_imports)),
+                        (NIFRAW['neurons/ttl/generated/uberon-parcellation-mappings.ttl'],
+                         NIFRAW['neurons/ttl/generated/neurons/cuts-roundtrip.ttl'],
+                        ))
 
     nb, *_ = build(neuronBridge, n_jobs=1)
     #log.critical(f'{nb.imports} {models_imports}')
@@ -1164,20 +1179,47 @@ def make_bridge():
         name = 'Utility ontology for neuron development'
         imports = nb.iri,
         prefixes = oq.OntCuries._dict
-        def _triples(self):
-            for term in terms:
-                yield from term.triples_simple
+        def _triples(self, terms=terms):
+            done = []
+            while terms:
+                next_terms = []
+                for term in terms:
+                    if term in done:
+                        continue
 
+                    done.append(term)
+                    if not term.label or (not term.label.endswith('neuron') and not term.label.endswith('cell')):
+                        for s, p, o in term.triples_simple:
+                            yield s, p, o
+                            if isinstance(o, rdflib.URIRef):
+                                no = OntTerm(o)
+                                if no not in done:
+                                    next_terms.append(no)
+
+                terms = next_terms
     nu, *_ = build(neuronUtility, n_jobs=1)
 
 
 def main():
     from docopt import docopt
     args = docopt(__doc__)
+    dep = args['dep']
     all = args['all']
     old = args['old'] or all
     bridge = args['bridge'] or all
     phenotypes = args['phenotypes'] or all or old
+
+    if dep:
+        from neurondm.lang import Config
+        from neurondm.compiled.common_usage_types import config as c_config
+        cnrns = c_config.neurons()
+        config = Config('common-usage-types-fixed')
+        nns = [n.asUndeprecated() for n in cnrns]
+        config.write()
+        config.write_python()
+        embed()
+        return
+
     if phenotypes:
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
         syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')

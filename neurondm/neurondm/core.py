@@ -13,18 +13,19 @@ import ontquery as oq
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
+from pyontutils import combinators as comb
 from pyontutils.core import Ont, makeGraph, OntId, OntTerm as bOntTerm
-from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger
+from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
-from pyontutils.namespaces import makePrefixes, OntCuries
-from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID, definition
+from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy
+from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
 
-log = makeSimpleLogger('neurondm.core')
+log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
 
 __all__ = [
@@ -120,11 +121,18 @@ class LabelMaker:
             self._label_property = '__humanSortKey__'
             self._convention_lookup = {v:k for k, v in graphBase.LocalNames.items()}
         else:
-            self._label_property = 'pLongName'
+            #self._label_property = 'pLongName'
+            self._label_property = 'pName'
             # FIXME yay circular imports
             self._convention_lookup = OntologyGlobalConventions.inverted()
 
-        self._key = lambda p:getattr(p, self._label_property)  # NOTE this binds _now_
+        def _key(phen):
+            if phen in self._convention_lookup:
+                return self._convention_lookup[phen]
+            else:
+                return getattr(phen, self._label_property)
+
+        self._key = _key
 
         (self.functions,
          self.predicates) = zip(*((getattr(self, function_name),
@@ -288,15 +296,19 @@ class OntTerm(bOntTerm):
         _label = self.label if self.label else self.suffix
         label = rdflib.Literal(_label)
         yield s, rdfs.label, label
-        if 'rdfs:subClassOf' in self('rdfs:subClassOf', as_term=True):
+        if self('rdfs:subClassOf', as_term=True):
             for superclass in self.predicates['rdfs:subClassOf']:
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
-        if 'partOf:' in self('partOf:', as_term=True):
-            for superpart in self.predicates['partOf:']:
-                yield s, OntId('partOf:').URIRef, superpart.URIRef
-
+        predicates = 'partOf:', 'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
+        done = []
+        for predicate in predicates:
+            if self(predicate, as_term=True):
+                for superpart in self.predicates[predicate]:
+                    if (predicate, superpart) not in done:
+                        yield from comb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
+                        done.append((predicate, superpart))
 
 
 class GraphOpsMixin:
@@ -1132,7 +1144,8 @@ class graphBase:
 
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
-    local_names = {
+    local_names = {}
+    _local_names = {
         'NCBITaxon:10116':'Rat',
         'CHEBI:16865':'GABA',
         'PR:000004967':'CB',
@@ -1197,8 +1210,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 prefix, suffix = phenotype.split(':', 1)
                 if 'swanson' in subject:
                     return subject
-                if prefix not in ('SWAN',):  # known not registered  FIXME abstract this
+                if prefix not in ('SWAN', 'TEMP'):  # known not registered  FIXME abstract this
                     try:
+                        ois = OntId(subject)
+                        if ois.prefix == 'ilxtr':
+                            return subject
+
                         t = OntTerm(subject)
                         #if not self._sgv.findById(subject):
                         if not t.label:
@@ -1262,11 +1279,15 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         l = tuple(self._pClass.label)
         if not l:  # we don't want to load the whole ontology
             try:
-                t = OntTerm(self.p)
-                if t.label:
-                    l = t.label
+                p = OntId(self.p)
+                if p.prefix != 'ilxtr' and p.prefix != 'TEMP' and 'swanson' not in p.iri:
+                    t = OntTerm(p)
+                    if t.label:
+                        l = t.label
+                    else:
+                        l = t.curie
                 else:
-                    l = t.curie
+                    l = p.curie
             except ConnectionError as e:
                 log.error(str(e))
                 l = self.ng.qname(self.p)
@@ -1286,7 +1307,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return self.labelPostRule(l)
 
     @property
+    @cacheout
     def pShortName(self):
+        if hasattr(self, '_cache_pShortName'):
+            return self._cache_pShortName
+
         inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
         if self in inj:
             return inj[self]
@@ -1301,6 +1326,16 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if resp:  # DERP
             abvs = resp['abbreviations']
+            if not abvs:
+                abvs = [s for s in resp['synonyms'] if len(s) < 5]
+                if not abvs and resp['labels']:
+                    try:
+                        t = next(OntTerm.query(term=resp['labels'][0], prefix='NCBIGene'))  # worth a shot
+                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if len(_) < 5]
+                        if abvs:
+                            log.warning(f'found shortnames for {pn} from NCBIGene {abvs}')
+                    except StopIteration:
+                        pass
         else:
             abvs = None
 
@@ -1317,15 +1352,30 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     @property
     def pLongName(self):
-        t = OntTerm(self.p)
-        if t.label:
+        p = OntId(self.p)
+
+        r = OntTerm.query.services[0]  # rdflib local
+        try:
+            l = next(r.query(iri=p.iri)).OntTerm.label
+        except StopIteration:
+            if p.prefix == 'ilxtr' or 'swanson' in p.iri or p.prefix == 'TEMP':
+                return p.curie
+
+            t = OntTerm(p)
             l = t.label
-            return (l
-                    .replace('phenotype', '')
-                    .replace('Phenotype', '')
-                    .strip())
-        else:
+
+        if not l:
             return t.curie
+
+        return (l
+                .replace('phenotype', '')
+                .replace('Phenotype', '')
+                .strip())
+
+    @property
+    def pName(self):
+        name = self.pShortName
+        return name if name else self.pLongName
 
     @property
     def predicates(self):
@@ -1500,6 +1550,11 @@ class LogicalPhenotype(graphBase):
         return f'({op} {l})'
 
     @property
+    def pName(self):
+        name = self.pShortName
+        return name if name else self.pLongName
+
+    @property
     def predicates(self):
         for pe in sorted(self.pes):
             yield pe.e
@@ -1587,6 +1642,56 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         return super().__new__(cls)
 
+    def asUndeprecated(self):
+        replace = {
+            'NIFEXT:5': 'NCBIGene:12308',  # cr
+            'NIFEXT:6': 'NCBIGene:19293',  # pv these are technically incorrect because they are mouse
+            'NIFEXT:5116': 'NCBIGene:20604',  # sst
+
+            #'NIFEXT:6':'PTHR:11653',  #  pv 'NCBIGene:19293'
+            #'NIFEXT:5116': 'PTHR:10558', #  'NCBIGene:20604',
+        }
+        new = []
+        deprecated = False
+        for phenotype in self.pes:
+            if isinstance(phenotype, LogicalPhenotype):
+                new.append(phenotype)  # FIXME recurse
+                continue
+
+
+            t = OntTerm(phenotype.p)
+            if t.curie in replace:
+                np = phenotype.__class__(replace[t.curie], phenotype.e)
+                new.append(np)
+                deprecated = True
+                log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
+                continue
+
+            if t.deprecated:
+                rb = t('replacedBy:', as_term=True)
+                if rb:
+                    nt = rb[0]
+                    np = phenotype.__class__(nt, phenotype.e)
+                    new.append(np)
+                    deprecated = True
+                    log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
+                    continue
+
+            new.append(phenotype)
+
+        id_ = self.id_ if self.id_ != self.temp_id else None
+        nn = self.__class__(*new, id_=id_, label=self.origLabel)
+        nid = nn.Class.identifier
+        oid = self.Class.identifier
+        log.debug(str((id_, nid, oid)))
+        if deprecated and nid != oid:  # FIXME
+            nn.out_graph.add((nid, ilxtr.termReplaces, oid))
+            nn.out_graph.add((oid, replacedBy, nid))
+            nn.out_graph.add((oid, owl.deprecated, rdflib.Literal(True)))
+
+        nn.adopt_meta(self)  # FIXME consider persisting ids?
+        return nn
+
     @classmethod
     def _load_existing(cls, iris):
         # TODO rename pes -> phenotypes
@@ -1649,6 +1754,15 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         self.config = self.__class__.config  # persist the config a neuron was created with
         phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
 
+        if phenotypeEdges:
+            frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
+                                    for pe in phenotypeEdges),
+                                    key=natsort))
+                                        #*(f'p{self.ORDER.index(p)}/{self.ng.qname(o)}'
+                                            #for p, o in sorted(zip(pe.predicates,
+                                                                #pe.objects)))))
+            self.temp_id = TEMP[frag]  # XXX beware changing how __str__ works... really need to do this
+
         if id_ and phenotypeEdges:
             self.id_ = self.expand(id_)
             #print('WARNING: you may be redefining a neuron!')
@@ -1659,13 +1773,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         elif phenotypeEdges:
             #asdf = str(tuple(sorted((_.e, _.p) for _ in phenotypeEdges)))  # works except for logical phenotypes
 
-            frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
-                                    for pe in phenotypeEdges),
-                                   key=natsort))
-                                       #*(f'p{self.ORDER.index(p)}/{self.ng.qname(o)}'
-                                         #for p, o in sorted(zip(pe.predicates,
-                                                                #pe.objects)))))
-            self.id_ = TEMP[frag]  # XXX beware changing how __str__ works... really need to do this
+            self.id_ = self.temp_id
         else:
             raise TypeError('Neither phenotypeEdges nor id_ were supplied!')
 
@@ -1881,8 +1989,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         sn = self._shortname
         if sn:
             sn = ' ' + sn
-        lab =  f", label={str(self._origLabel) + sn!r}" if self._origLabel else ''
-        args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{lab})'
+
+        id_ = f", id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        lab =  f", label={str(self.origLabel) + sn!r}" if self.origLabel else ''
+        args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{id_}{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
         return '%s%s' % (self.__class__.__name__, args)
 
@@ -1898,7 +2008,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         sn = self._shortname
         if sn:
             sn = ' ' + sn
-        lab =  ',\n' + t + f"label={str(self._origLabel) + sn!r}" if self._origLabel else ''
+        id_ = ',\n' + t + f"id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        asdf += id_
+        lab =  ',\n' + t + f"label={str(self.origLabel) + sn!r}" if self._origLabel else ''
         asdf += lab
         asdf += ')'
         return asdf
@@ -2526,6 +2638,41 @@ OntologyGlobalConventions = _ogc = injective_dict(
     L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype'),
     L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype'),
     L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype'),
+
+    CR = Phenotype('PR:000004968', 'ilxtr:hasMolecularPhenotype'),
+    CB = Phenotype('PR:000004967', 'ilxtr:hasMolecularPhenotype'),
+    NPY = Phenotype('PR:000011387', 'ilxtr:hasMolecularPhenotype'),
+    SOM = Phenotype('PR:000015665', 'ilxtr:hasMolecularPhenotype'),
+    PV = Phenotype('PR:000013502', 'ilxtr:hasMolecularPhenotype'),
+    VIP = Phenotype('PR:000017299', 'ilxtr:hasMolecularPhenotype'),
+    CCK = Phenotype('PR:000005110', 'ilxtr:hasMolecularPhenotype'),
+    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype'),
+
+    AC = Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    NAC = Phenotype('ilxtr:PetillaSustainedNonAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    c = Phenotype('ilxtr:PetillaInitialClassicalSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    d = Phenotype('ilxtr:PetillaInitialDelayedSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+
 )
+{
+        #Rat = Phenotype('NCBITaxon:10116', _PHEN),
+
+
+        #PV = Phenotype('NIFMOL:nifext_6', 'ilxtr:hasMolecularPhenotype'),
+        'UBERON:0005390':'L1',
+        'UBERON:0005391':'L2',
+        'UBERON:0005392':'L3',
+        'UBERON:0005393':'L4',
+        'UBERON:0005394':'L5',
+        'UBERON:0005395':'L6',
+        'UBERON:0003881':'CA1',
+        'UBERON:0003882':'CA2',
+        'UBERON:0003883':'CA3',
+        'UBERON:0001950':'Neocortex',
+        'UBERON:0008933':'S1',
+    }
 _ogc['L2/3'] = LogicalPhenotype(OR, _ogc['L2'], _ogc['L3'])
 _ogc['L5/6'] = LogicalPhenotype(OR, _ogc['L5'], _ogc['L6'])

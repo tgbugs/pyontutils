@@ -221,7 +221,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
     def neuron_to_review_row(neuron, cols=predicates):  # TODO column names
         _curie = neuron.ng.qname(neuron.id_)
         curie = None if 'TEMP:' in _curie else _curie
-        row = [curie, neuron.label]
+        row = [curie, neuron.origLabel]
         for pdim in cols:  # pdim -> phenotypic dimension
             if pdim in neuron:
                 #print('>>>>>>>>>>>>>', pdim, neuron)
@@ -268,7 +268,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
             row.append(','.join(n.config.out_graph[n.id_:NIFRID.synonym:]))  # syn
             row.append(','.join(n.config.out_graph[n.id_:definition:]))  # def
 
-    rows = sorted(rows, key=lambda r:r[1])
+    rows = sorted(rows, key=lambda r:(1 if r[1] is None else 0, str(r[1])))
     incomplete = [[None, u] + [None] * (len(rows[0]) - 2) + ['Unmapped', None, None] for u in unmapped]
     incomplete = sorted(incomplete, key=lambda r:r[1])
     rows += incomplete
@@ -340,7 +340,7 @@ def main():
 
     sources = SourceCUT(),
     swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
-    config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
+    config = Config('common-usage-types-raw', sources=sources, source_file=relative_path(__file__),
                     prefixes={'swanr':swanr,
                               'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
                               'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
@@ -444,7 +444,15 @@ def main():
     # TODO preserve the names from neuronlex on import ...
     Neuron.write()
     Neuron.write_python()
-
+    raw_neurons = config.neurons()
+    config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
+                    prefixes={'swanr':swanr,
+                              'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
+                              'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+    ids_updated_neurons = [n.asUndeprecated() for n in raw_neurons]
+    assert len(ids_updated_neurons) == len(raw_neurons)
+    Neuron.write()
+    Neuron.write_python()
     progress = len(labels_set0), len(sns), len(sans), len(smatch), len(labels_set1), len(labels_set2), len(labels_set3)
     print('\nProgress:\n'
           f'total:            {progress[0]}\n'

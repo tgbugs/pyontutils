@@ -162,6 +162,7 @@ def _loadPrefixes():
         'chebi2':'http://purl.obolibrary.org/obo/chebi#',
         'chebi3':'http://purl.obolibrary.org/obo/chebi#3',
         'JAX':'http://jaxmice.jax.org/strain/',
+        'PTHR': 'http://www.pantherdb.org/panther/family.do?clsAccession=PTHR',  # FIXME evil just like the SAO issue, why do people put dead prefixes with no sep ;_;
     }
     #extras = {**{k:rdflib.URIRef(v) for k, v in full.items()}, **normal}
     extras = {**full, **normal}

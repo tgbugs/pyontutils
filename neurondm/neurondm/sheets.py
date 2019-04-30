@@ -2,12 +2,13 @@ import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
 from pyontutils.core import OntId, OntTerm
-from pyontutils.sheets import update_sheet_values, get_note, show_notes
+from pyontutils.sheets import update_sheet_values, get_note, Sheet
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
-from pyontutils.closed_namespaces import rdfs
+from pyontutils.closed_namespaces import rdfs, rdf
 from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
+from neurondm.core import log
 
 from IPython import embed
 
@@ -66,7 +67,7 @@ def sheet_to_neurons(values, notes_index):
     e_config = Config('common-usage-types')
     e_config.load_existing()
     query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph))
-    existing = {str(n.label):n for n in e_config.neurons()}
+    existing = {str(n.origLabel):n for n in e_config.neurons()}
     def convert_header(header):
         if header.startswith('has'):  # FIXME use a closed namespace
             return ilxtr[header]
@@ -81,6 +82,7 @@ def sheet_to_neurons(values, notes_index):
         elif header == 'definition':
             return definition
         else:
+            header = header.replace(' ', '_')
             return TEMP[header]  # FIXME
 
     def mapCell(cell, syns=False):
@@ -165,7 +167,7 @@ def sheet_to_neurons(values, notes_index):
         other_notes = {}
         wat = {}
         for j, (header, cell) in enumerate(zip(headers, neuron_row)):
-            notes = list(process_note(get_note(i, j, sheet.notes_index)))
+            notes = list(process_note(get_note(i, j, notes_index)))
             if notes and not header.startswith('has'):
                 _predicate = convert_other(header)
                 if cell:
@@ -297,7 +299,7 @@ def sheet_to_neurons(values, notes_index):
             # FIXME occasionally this will error?!
         else:
             fn = fixname(label_neuron)
-            if not phenotypes:
+            if not phenotypes and i:  # i skips header
                 errors.append((i, neuron_row))  # TODO special review for phenos but not current
                 phenotypes = Phenotype('TEMP:phenotype/' + fn),
 
@@ -332,7 +334,8 @@ def sheet_to_neurons(values, notes_index):
 
 
 def main():
-    sheet = Sheet('neurons-cut', 'CUT V1.0', notes=True)
+    sheet = Sheet('neurons-cut', 'CUT V1.0', fetch_notes=True)
+    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.notes_index)
     #sheet.show_notes()
     config.write_python()
     config.write()
@@ -340,15 +343,18 @@ def main():
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
     from neurondm import Config, NeuronCUT
     release_config = Config('cut-release')
-    [NeuronCUT(*n, id_=n.id_, label=n.label, override=True).adopt_meta(n) for n in release]
+    [NeuronCUT(*n, id_=n.id_, label=n.origLabel, override=True).adopt_meta(n) for n in release]
     release_config.write_python()
     release_config.write()
     from neurondm.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
     from pyontutils.utils import byCol
-    valuesC = byCol(sheet.values, to_index=['label'])
-    reviewC = byCol(review_rows, to_index=['label'])
+    valuesC = byCol(sheet.values[1:],
+                    header=[v.replace(' ', '_') for v in sheet.values[0]],
+                    to_index=['label'])
+    reviewC = byCol(review_rows[1:], header=[v.replace(' ', '_') for v in review_rows[0]], to_index=['label'])
     def grow(r):
+        log.debug(r)
         # TODO implement on the object to allow joining on an index?
         # man this would be easier with sql >_< probably pandas too
         # but so many dependencies ... also diffing issues etc
@@ -356,7 +362,11 @@ def main():
 
     def key(field_value):
         field, value = field_value
-        return valuesC.header._fields.index(field)  # TODO warn on field mismatch
+        try:
+            return valuesC.header._fields.index(field)  # TODO warn on field mismatch
+        except ValueError as e:
+            print('ERROR!!!!!!!!!!!', field, value)
+            return None
 
     def replace(r, *cols):
         """ replace and reorder """

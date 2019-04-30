@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+import socket
 import itertools
 from pathlib import Path
 from googleapiclient.discovery import build
@@ -30,7 +31,7 @@ def get_oauth_service(readonly=True):
 
 
 def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
-    SPREADSHEET_ID = devconfig.secrets(spreadsheet_name)
+    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
         ss = service.spreadsheets()
