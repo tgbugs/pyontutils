@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes bridge old dep] [options]
+    neurondm-build [all phenotypes bridge old dep dev] [options]
 
 Options:
     -h --help                   Display this help message
@@ -32,6 +32,8 @@ from itertools import chain
 log = makeSimpleLogger('neurondm.build')
 
 resources = Path(devconfig.resources)
+
+NIFRAW, = makeNamespaces('NIFRAW')
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -1114,46 +1116,11 @@ def make_bridge():
     from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
     from neurondm.models import __all__
     #from neurondm.compiled import __all__  # XXX
-    NIFRAW, = makeNamespaces('NIFRAW')
     skip = 'phenotype_direct',
     __all__ = [a for a in __all__ if a not in skip]
     log.info('building the following\n' + '\n'.join(__all__))
     models_imports = 'allen', 'markram', 'huang', 'common', 'Defined'
     #models_imports = 'markram', 'huang', 'common', 'Defined'
-
-    # inefficient but thorough way to populate the subset of objects we need.
-    terms = set()
-    for module in __all__:
-        if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
-            continue
-        m = import_module(f'neurondm.models.{module}')
-        #m = import_module(f'neurondm.compiled.{module}')  # XXX
-        if not hasattr(m, 'config') and hasattr(m, 'main'):
-            config, *_ = m.main()  # FIXME cuts hack
-        else:
-            config = m.config
-
-        terms |= set(OntTerm(o) for _, o in config.out_graph[:owl.someValuesFrom:]
-                     if isinstance(o, rdflib.URIRef) and OntId(o).prefix not in ('TEMP', 'ilxtr'))
-
-    all_defined_by = set(o for t in terms
-                         if t('rdfs:isDefinedBy')
-                         for o in t.predicates['rdfs:isDefinedBy'])
-    all_supers = set(o for t in terms
-                     if t('rdfs:subClassOf', depth=10, as_term=True)
-                     for o in t.predicates['rdfs:subClassOf'])
-    terms |= all_supers
-
-    def partOf(term):
-        if term('partOf:', as_term=True):
-            for superpart in term.predicates['partOf:']:
-                if superpart.prefix != 'BFO':  # continuant and occurent form a cycle >_<
-                    yield superpart
-                    yield from partOf(superpart)
-
-    all_sparts = set(o for t in terms  # FIXME this is broken ...
-                     for o in partOf(t))
-    terms |= all_sparts
 
     class neuronBridge(Ont):
         """ Main bridge for importing the various files that
@@ -1166,18 +1133,66 @@ def make_bridge():
         imports = chain((subclass.iri for subclass in subclasses(Config)
                          if anyMembers(subclass.iri, *models_imports)),
                         (NIFRAW['neurons/ttl/generated/uberon-parcellation-mappings.ttl'],
-                         NIFRAW['neurons/ttl/generated/neurons/cuts-roundtrip.ttl'],
+                         NIFRAW['neurons/ttl/generated/neurons/cut-roundtrip.ttl'],
                         ))
 
     nb, *_ = build(neuronBridge, n_jobs=1)
     #log.critical(f'{nb.imports} {models_imports}')
 
+def make_devel():
+    from pyontutils.core import Ont, build
+    from pyontutils.utils import Async, deferred
+    # inefficient but thorough way to populate the subset of objects we need.
+    terms = set()
+
+    n = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+    fns =('allen-cell-types.ttl',
+          'common-usage-types.ttl',
+          'cut-roundtrip.ttl',
+          'huang-2017.ttl',
+          'markram-2015.ttl',)
+    g = rdflib.ConjunctiveGraph()
+    for fn in fns:
+        fp = n / fn
+        g.parse(fp.as_posix(), format='ttl')
+
+    ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
+                                g.predicates(),)
+               if isinstance(e, rdflib.URIRef) and not isinstance(e, rdflib.BNode)
+               and OntId(e).prefix not in ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov'))
+
+    #terms |= set(Async()(deferred(OntTerm)(e) for e in ents))
+    terms |= set(OntTerm(e) for e in ents)
+
+    all_defined_by = set(o for t in terms
+                         if t('rdfs:isDefinedBy')
+                         for o in t.predicates['rdfs:isDefinedBy'])
+
+    all_supers = set(o for t in terms
+                     if t('rdfs:subClassOf', depth=10, as_term=True)
+                     for o in t.predicates['rdfs:subClassOf'])
+
+    terms |= all_supers
+
+    def partOf(term):
+        if term('partOf:', as_term=True):
+            for superpart in term.predicates['partOf:']:
+                if superpart.prefix != 'BFO':  # continuant and occurent form a cycle >_<
+                    yield superpart
+                    yield from partOf(superpart)
+
+    all_sparts = set(o for t in terms  # FIXME this is broken ...
+                     for o in partOf(t))
+
+    terms |= all_sparts
+
+
     class neuronUtility(Ont):
-        remote_base = neuronBridge.remote_base
+        remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
         filename = 'neuron-development'
         name = 'Utility ontology for neuron development'
-        imports = nb.iri,
+        imports = NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
             done = []
@@ -1197,6 +1212,7 @@ def make_bridge():
                                     next_terms.append(no)
 
                 terms = next_terms
+
     nu, *_ = build(neuronUtility, n_jobs=1)
 
 
@@ -1209,6 +1225,9 @@ def main():
     bridge = args['bridge'] or all
     phenotypes = args['phenotypes'] or all or old
 
+    if args['dev']:
+        make_devel()
+        return
     if dep:
         from neurondm.lang import Config
         from neurondm.compiled.common_usage_types import config as c_config
