@@ -289,26 +289,51 @@ class OntTerm(bOntTerm):
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
+    def triples(self, predicate):
+        if predicate not in self.predicates:
+            objects = self(predicate)
+        else:
+            objects = self.predicates[predicate]
+
+        s = self.u
+        p = OntId(predicate).u
+        for o in objects:
+            o = OntId(o)  # FIXME the parent OntId sneaks in and sews madness :/
+            yield s, p, o.u
+
     @property
     def triples_simple(self):
+        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP',
+                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo')
         s = self.URIRef
         yield s, rdf.type, owl.Class
         _label = self.label if self.label else self.suffix
         label = rdflib.Literal(_label)
         yield s, rdfs.label, label
+        if self.synonyms is not None:  # FIXME this should never happen :/
+            for syn in self.synonyms:
+                yield s, NIFRID.synonym, rdflib.Literal(syn)
+
         if self('rdfs:subClassOf', as_term=True):
             for superclass in self.predicates['rdfs:subClassOf']:
+                if superclass.prefix in bads:
+                    continue
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
-        predicates = 'partOf:', 'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
+        predicates = 'partOf:', #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
         for predicate in predicates:
             if self(predicate, as_term=True):
                 for superpart in self.predicates[predicate]:
+                    if superpart.prefix in bads:
+                        continue
                     if (predicate, superpart) not in done:
                         yield from comb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
                         done.append((predicate, superpart))
+
+
+OntTerm.bindQueryResult()
 
 
 class GraphOpsMixin:
@@ -1647,6 +1672,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             'NIFEXT:5': 'NCBIGene:12308',  # cr
             'NIFEXT:6': 'NCBIGene:19293',  # pv these are technically incorrect because they are mouse
             'NIFEXT:5116': 'NCBIGene:20604',  # sst
+            'NLX:69833': 'PR:000008235',  # GluR3
+            'NLX:70371': 'UBERON:0002567',  # basal pons is not a synonym in ubron wat
 
             #'NIFEXT:6':'PTHR:11653',  #  pv 'NCBIGene:19293'
             #'NIFEXT:5116': 'PTHR:10558', #  'NCBIGene:20604',

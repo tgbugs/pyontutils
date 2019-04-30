@@ -2,7 +2,6 @@
     Reused utilties that depend on packages outside the python standard library.
 """
 import hashlib
-import psutil
 import rdflib
 
 
@@ -69,12 +68,14 @@ class OrderInvariantHash:
 
 
 def currentVMSKb():
+    import psutil
     p = psutil.Process(os.getpid())
     return p.memory_info().vms
 
 
 def memoryCheck(vms_max_kb):
     """ Lookup vms_max using getCurrentVMSKb """
+    import psutil
     safety_factor = 1.2
     vms_max = vms_max_kb
     vms_gigs = vms_max / 1024 ** 2

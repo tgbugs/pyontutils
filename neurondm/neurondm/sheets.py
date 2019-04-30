@@ -298,6 +298,7 @@ def sheet_to_neurons(values, notes_index):
             neuron.adopt_meta(current_neuron)
             # FIXME occasionally this will error?!
         else:
+            continue  # FIXME this polutes everything ???
             fn = fixname(label_neuron)
             if not phenotypes and i:  # i skips header
                 errors.append((i, neuron_row))  # TODO special review for phenos but not current

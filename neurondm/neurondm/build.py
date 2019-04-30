@@ -65,7 +65,8 @@ NIFCELL_NEURON = 'SAO:1417703748'  # 'NIFCELL:sao1417703748'
 syntax = '{region}{layer_or_subregion}{expression}{ephys}{molecular}{morph}{cellOrNeuron}'
 ilx_base = 'ILX:{:0>7}'
 
-oq.OntCuries({'pheno':ilxtr['Phenotype/']})
+oq.OntCuries({'pheno': ilxtr['Phenotype/'],
+              'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id='})
 PREFIXES = {**makePrefixes('ilxtr',
                            'ILX',
                            'skos',
@@ -474,7 +475,8 @@ def make_phenotypes():
 
     #syn_mappings['calbindin'] = graph.expand('PR:000004967')  # cheating
     #syn_mappings['calretinin'] = graph.expand('PR:000004968')  # cheating
-    ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
+    #ontid = 'http://ontology.neuinfo.org/NIF/ttl/' + graph.name + '.ttl'
+    ontid = NIFRAW['neurons/ttl/' + graph.name + '.ttl']
     graph.add_ont(ontid, 'NIF Phenotype core', comment= 'This is the core set of predicates used to model phenotypes and the parent class for phenotypes.')
     graph.add_class('ilxtr:Phenotype', label='Phenotype')
     graph.add_trip('ilxtr:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possible. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental conditions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxiliary variable that we think accounts for the difference.')
@@ -486,7 +488,8 @@ def make_phenotypes():
     [graph.g.add(t) for t in phenotype_core_triples()]
     graph.write()  # moved below to incorporate uwotm8
 
-    ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
+    #ontid2 = 'http://ontology.neuinfo.org/NIF/ttl/' + graph2.name + '.ttl'
+    ontid2 = NIFRAW['neurons/ttl/' + graph2.name + '.ttl']
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_trip(ontid2, 'owl:imports', ontid)
     add_helpers(graph2)
@@ -1156,35 +1159,49 @@ def make_devel():
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
 
+    bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP',
+            'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
+                                (o for _, o in g[:rdfs.subClassOf:]),
                                 g.predicates(),)
                if isinstance(e, rdflib.URIRef) and not isinstance(e, rdflib.BNode)
-               and OntId(e).prefix not in ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov'))
+               and (OntId(e).prefix not in bads or OntId(e).prefix in ('BIRNLEX', 'NIFEXT', 'NLX')))
 
     #terms |= set(Async()(deferred(OntTerm)(e) for e in ents))
     terms |= set(OntTerm(e) for e in ents)
 
     all_defined_by = set(o for t in terms
                          if t('rdfs:isDefinedBy')
-                         for o in t.predicates['rdfs:isDefinedBy'])
+                         for o in t.predicates['rdfs:isDefinedBy']
+                         if o.prefix not in bads)
 
     all_supers = set(o for t in terms
                      if t('rdfs:subClassOf', depth=10, as_term=True)
-                     for o in t.predicates['rdfs:subClassOf'])
+                     for o in t.predicates['rdfs:subClassOf']
+                         if o.prefix not in bads)
 
     terms |= all_supers
 
     def partOf(term):
         if term('partOf:', as_term=True):
             for superpart in term.predicates['partOf:']:
-                if superpart.prefix != 'BFO':  # continuant and occurent form a cycle >_<
+                if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
                     yield superpart
                     yield from partOf(superpart)
 
     all_sparts = set(o for t in terms  # FIXME this is broken ...
-                     for o in partOf(t))
+                     for o in partOf(t)
+                     if o.prefix not in bads)
 
     terms |= all_sparts
+
+    terms |= {OntTerm('UBERON:2301'),  # cortical layer
+    }
+
+    #sctrips = (t for T in sorted(set(asdf for t in terms for
+                                     #asdf in (t, *t('rdfs:subClassOf', depth=1, as_term=True))
+                                     #if asdf.prefix not in bads), key=lambda t: (not t.label, t.label))
+               #for t in T.triples('rdfs:subClassOf'))
 
 
     class neuronUtility(Ont):
@@ -1192,10 +1209,20 @@ def make_devel():
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
         filename = 'neuron-development'
         name = 'Utility ontology for neuron development'
-        imports = NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
+        imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
+                   NIFRAW['neurons/ttl/generated/allen-transgenic-lines.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation/mbaslim.ttl'],
+                   rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owl'),
+
+        )
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
             done = []
+            yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+            cortical_layer = OntTerm('UBERON:2301')
+            #yield from cortical_layer.triples_simple
+            #yield from cortical_layer('hasPart:')
+
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1209,6 +1236,18 @@ def make_devel():
                             if isinstance(o, rdflib.URIRef):
                                 no = OntTerm(o)
                                 if no not in done:
+                                    if no.prefix in bads:
+                                        if not no.label:
+                                            continue
+                                        try:
+                                            noo = next(OntTerm.query(term=no.label)).OntTerm
+                                            if noo != no and noo.prefix not in bads:
+                                                no = noo
+                                            else:
+                                                continue
+                                        except StopIteration:
+                                            continue
+
                                     next_terms.append(no)
 
                 terms = next_terms
@@ -1221,13 +1260,12 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
+    dev = args['dev'] or all
     old = args['old'] or all
     bridge = args['bridge'] or all
     phenotypes = args['phenotypes'] or all or old
 
-    if args['dev']:
-        make_devel()
-        return
+
     if dep:
         from neurondm.lang import Config
         from neurondm.compiled.common_usage_types import config as c_config
@@ -1249,6 +1287,9 @@ def main():
 
     if old:
         ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
+
+    if dev:
+        make_devel()
 
     if __name__ == '__main__':
         #embed()
