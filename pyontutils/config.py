@@ -296,6 +296,14 @@ class DevConfig:
         self._override['secrets_file'] = value
         self.write(self.config_file)
 
+    @default(None)
+    def hypothesis_api_user(self):
+        return self.config['hypothesis_api_user']
+
+    @default(None)
+    def scigraph_api_user(self):
+        return self.config['scigraph_api_user']
+
     @default(default_curies.as_posix())
     def curies(self):
         return self.config['curies']
@@ -411,10 +419,6 @@ class DevConfig:
     def scigraph_api(self, value):
         self._override['scigraph_api'] = value
         self.write(self.config_file)
-
-    @default(None)
-    def scigraph_api_user(self):
-        return self.config['scigraph_api_user']
 
     @default((working_dir / 'nifstd' / 'scigraph' / 'graphload.yaml').as_posix()
              if working_dir else None)
