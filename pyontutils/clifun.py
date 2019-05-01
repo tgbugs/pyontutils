@@ -4,7 +4,29 @@ Usage:
 
 Options:
     -o --optional      an optional argument
+    -d --debug
 """
+
+from terminaltables import AsciiTable
+
+
+def python_identifier(string):
+    """ pythonify docopt args keywords for use as identifiers """
+    ident = (string.strip()
+             .replace('<', '')
+             .replace('>', '')
+             .replace('.','_')
+             .replace(',','_')
+             .replace('/', '_')
+             .replace('?', '_')
+             .replace('-', '_')
+             .replace(':', '_')
+             .lower()  # sigh
+                )
+    if ident[0].isdigit():
+        ident = 'n_' + ident
+
+    return ident
 
 
 class Options:
@@ -50,7 +72,7 @@ class Options:
                                     if v or k.startswith('-')
                 ], key=key)
         ]
-        atable = AsciiTable([['arg', '']] + rows, title='spc args')
+        atable = AsciiTable([['arg', '']] + rows, title='docopt args')
         atable.justify_columns[1] = 'center'
         return atable.table
 
