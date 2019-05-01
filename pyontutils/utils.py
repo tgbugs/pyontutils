@@ -547,6 +547,32 @@ class rowParse:
         pass
 
 
+def python_identifier(string):
+    """ pythonify a string for use as an identifier """
+    ident = (string.strip()
+             .replace('<', '')
+             .replace('>', '')
+             .replace('(', '')
+             .replace(')', '')
+             .replace(' ', '_')
+             .replace('+', '')
+             .replace('…','')
+             .replace('.','_')
+             .replace(',','_')
+             .replace('/', '_')
+             .replace('?', '_')
+             .replace('#', 'number')
+             .replace('-', '_')
+             .replace(':', '_')
+             .replace('\x83', '')  # FIXME should be stripped beforehand during format norm?
+             .lower()  # sigh
+                )
+    if ident[0].isdigit():
+        ident = 'n_' + ident
+
+    return ident
+
+
 class byCol:
     def __new__(cls, rows, header=None, to_index=tuple()):
         """ to_index should be a list of normalized column
@@ -554,8 +580,7 @@ class byCol:
 
         if header is None:  # FIXME non None header might have bad names?
             orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
-            header = [c.split('(')[0].strip().replace(' ', '_').replace('+', '')
-                      for i, c in enumerate(orig_header)]
+            header = [python_identifier(c) for i, c in enumerate(orig_header)]
             #changes = {new:old for old, new in zip(rows[0], header) if old != new}
             rows = rows[1:]
         else:
