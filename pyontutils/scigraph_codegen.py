@@ -23,7 +23,7 @@ from  IPython import embed
 class restService:
     """ Base class for SciGraph rest services. """
 
-    api_key = None
+    _api_key = None
 
     def __init__(self, cache=False, key=None):
         self._session = requests.Session()
@@ -37,8 +37,15 @@ class restService:
         else:
             self._get = self._normal_get
 
-        if key is not None:
-            self.api_key = key
+        self.api_key = key
+
+    @property
+    def api_key(self):
+        return self._api_key
+
+    @api_key.setter
+    def api_key(self, value):
+        self._api_key = value
 
     def __del__(self):
         self._session.close()
@@ -171,8 +178,24 @@ class Cypher(SUBCLASS):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._curies = self.getCuries()
+        self._setCuries()
+
+    def _setCuries(self):
+        try:
+            self._curies = self.getCuries()
+        except ConnectionError:
+            self._curies = {}
+
         self._inv = {v:k for k, v in self._curies.items()}
+
+    api_key = restService.api_key
+
+    @api_key.setter
+    def api_key(self, value):
+        old_key = self.api_key
+        self._api_key = value
+        if old_key is None and value is not None:
+            self._setCuries()
 
     def qname(self, iri):
         for prefix, curie in self._inv.items():
@@ -630,7 +653,10 @@ class State2(State):
 
         paths = dict_['paths']
         for path, path_dict in paths.items():
-            if self.path_prefix and self.path_prefix not in path:
+            if path.startswith('/dynamic'):
+                path_dict['path'] = path
+                continue
+            elif self.path_prefix and self.path_prefix not in path:
                 continue
             path_dict['operations'] = []
             for method, method_dict in sorted(path_dict.items()):
