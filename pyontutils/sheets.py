@@ -5,9 +5,10 @@ from pathlib import Path
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
-from pyontutils.utils import byCol
+from pyontutils.utils import byCol, makeSimpleLogger
 from pyontutils.config import devconfig
 
+log = makeSimpleLogger('pyontutils.sheets')
 spath = Path(devconfig.secrets_file).parent
 
 
@@ -141,7 +142,11 @@ class Sheet:
                                                get_notes=fetch_notes)
         self.raw_values = values
         self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
-        self.byCol = byCol(self.values, to_index=self.index_columns)
+        try:
+            self.byCol = byCol(self.values, to_index=self.index_columns)
+        except ValueError as e:
+            log.warning('Sheet has malformed header, not setting byCol')
+
         self.notes_index = notes_index
 
     def update(self, values):
