@@ -567,7 +567,7 @@ def python_identifier(string):
              .replace('\x83', '')  # FIXME should be stripped beforehand during format norm?
              .lower()  # sigh
                 )
-    if ident[0].isdigit():
+    if ident and ident[0].isdigit():
         ident = 'n_' + ident
 
     return ident
