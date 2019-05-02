@@ -16,7 +16,6 @@ from datetime import datetime, date
 from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
-#import coloredlogs
 from colorlog import ColoredFormatter
 
 
@@ -177,6 +176,23 @@ def getSourceLine(cls):
         print(tc.red('WARNING:'),
               tc.yellow(f'No source found for {cls} are you in a debugger?'))
         return 'NO-SOURCE-FOUND'
+
+
+def cacheout(function):
+    # only runs the first time
+    # expects a class
+    name = '_cache_' + function.__name__
+    cacheout_done_name = '_cacheout_' + function.__name__
+    first = [True]
+    @wraps(function)
+    def inner(self, *args, **kwargs):
+        out = function(self, *args, **kwargs)
+        if not hasattr(self, cacheout_done_name):
+            setattr(self, name, out)
+
+        return out
+
+    return inner
 
 
 class injective_dict(MutableMapping):
