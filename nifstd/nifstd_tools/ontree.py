@@ -75,7 +75,7 @@ PARCELLATION_BRAINSTEM_BERMAN_CAT = PARCELLATION_BRAINSTEM + '-berman-cat'
 PARCELLATION_BRAINSTEM_NIEUWENHUYS = PARCELLATION_BRAINSTEM + '-nieuwenhuys'
 
 def convert_view_text_to_dict():
-    with open('view.txt', 'r') as infile:
+    with open('../resources/view.txt', 'r') as infile:
         rawr_yaml = ''
         for line in infile.readlines():
             rawr_yaml += line.replace('\n', '').replace('\t', '    ') + ':\n'
@@ -694,7 +694,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/view-all', methods=['GET'])
     @app.route(f'/{basename}/view-all/', methods=['GET'])
     def route_view_all():
-        with open('view.txt') as infile:
+        with open('../resources/view.txt') as infile:
             lines = infile.readlines()
             p = [f"<p>{line}</p>" for line in [line.replace('\n', '').replace('    ', '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp') for line in lines]]
         return htmldoc('\n'.join(p), title='Complete Sparc', styles=["p {margin: 0px; padding: 0px;}"])
