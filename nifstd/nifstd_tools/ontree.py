@@ -671,7 +671,7 @@ def server(api_key=None, verbose=False):
         else:
             journey = view[tier1][tier2]
         # return yaml.dump(journey).replace('{', '\n').replace(': null,', '\n').replace(': null}', '')
-        return yaml.dump(journey)
+        return yaml.dump(journey, default_flow_style=False).replace(': null', '')
 
     @app.route(f'/{basename}/view', methods=['GET'])
     @app.route(f'/{basename}/view/', methods=['GET'])
