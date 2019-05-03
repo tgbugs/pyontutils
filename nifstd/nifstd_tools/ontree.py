@@ -109,7 +109,7 @@ class SpinalTerminology1(Sheet):
         terms_list = []
         headers_index = 0
         headers_column_start = 1 # 1 header doesnt have a value
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:], headers_column_start):
             terms_list.append((SPINAL_TERMINOLOGY_1, term, i))
         return terms_list
 
