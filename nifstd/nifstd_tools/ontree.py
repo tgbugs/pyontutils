@@ -30,16 +30,17 @@ from urllib.error import HTTPError
 import rdflib
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app
 from docopt import docopt, parse_defaults
-from htmlfn import htmldoc, titletag, atag
+from htmlfn import htmldoc, titletag, atag, ptag, nbsp
+from htmlfn import render_table, table_style
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId
 from pyontutils.utils import getSourceLine, get_working_dir
 from pyontutils.utils import Async, deferred
+from pyontutils.config import devconfig
 from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.sheets import Sheet
-from htmlfn import render_table, table_style
 from IPython import embed
 import yaml
 
@@ -75,10 +76,10 @@ PARCELLATION_BRAINSTEM_BERMAN_CAT = PARCELLATION_BRAINSTEM + '-berman-cat'
 PARCELLATION_BRAINSTEM_NIEUWENHUYS = PARCELLATION_BRAINSTEM + '-nieuwenhuys'
 
 def convert_view_text_to_dict():
-    with open('../resources/view.txt', 'r') as infile:
+    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
         rawr_yaml = ''
         for line in infile.readlines():
-            rawr_yaml += line.replace('\n', '').replace('\t', '    ') + ':\n'
+            rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
     return yaml.load(rawr_yaml)
 
 
@@ -267,6 +268,7 @@ class GoogleSheets:
     def get_term_list(self, source, column):
         return self.sheets[source].get_term_list(column)
 
+
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
         self.sgg = sgg
@@ -326,10 +328,12 @@ def graphFromGithub(link, verbose=False):
         print(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
 
+
 def makeProv(pred, root, wgb):
     return [titletag(f'Transitive closure of {root} under {pred}'),
             f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
+
 
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
            restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
@@ -440,8 +444,10 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
 
         return abort(422, message)
 
+
 class fakeRequest:
     args = {}
+
 
 def getArgs(request):
     want = {'direction':inc,  # INCOMING OUTGOING BOTH
@@ -550,6 +556,9 @@ def server(api_key=None, verbose=False):
 
     # gsheets = GoogleSheets()
     view = convert_view_text_to_dict()
+    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
+        _lines = infile.readlines()
+        view_lines = [ptag(line) for line in [line.replace('\n', '').replace(' ' * 4, nbsp * 8) for line in _lines]]
 
     basename = 'trees'
 
@@ -661,43 +670,80 @@ def server(api_key=None, verbose=False):
     #         styles = [table_style],
     #     )
 
-    @app.route(f'/{basename}/view/<tier1>', methods=['GET'])
-    @app.route(f'/{basename}/view/<tier1>/', methods=['GET'])
-    @app.route(f'/{basename}/view/<tier1>/<tier2>', methods=['GET'])
-    @app.route(f'/{basename}/view/<tier1>/<tier2>/', methods=['GET'])
-    def route_view_query(tier1, tier2=None):
-        if not tier2:
-            journey = view[tier1]
+    def normt(term, prefix=''):
+        term, *curie = term.split('\u1F4A9')
+        #print(repr(term))
+        if curie:
+            curie, = curie
+            oid = OntId(curie)
+            curie = atag(oid.iri, oid.curie)
         else:
-            journey = view[tier1][tier2]
-        # return yaml.dump(journey).replace('{', '\n').replace(': null,', '\n').replace(': null}', '')
-        return yaml.dump(journey, default_flow_style=False).replace(': null', '')
+            curie = ''
 
-    @app.route(f'/{basename}/view', methods=['GET'])
-    @app.route(f'/{basename}/view/', methods=['GET'])
-    def route_view():
+        return prefix + term, curie
+
+    @app.route(f'/{basename}/sparc/view/<tier1>', methods=['GET'])
+    @app.route(f'/{basename}/sparc/view/<tier1>/', methods=['GET'])
+    @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>', methods=['GET'])
+    @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>/', methods=['GET'])
+    def route_sparc_view_query(tier1, tier2=None):
+        journey = view
+        if tier1 not in journey:
+            return abort(404)
+
+        journey = journey[tier1]
+        if tier2 is not None:
+            if tier2 not in journey:
+                return abort(404)
+
+            journey = journey[tier2]
+
+        if all([_ is None for _ in journey.values()]):
+            elements = render_table((normt(k) for k in journey), '', ''),
+        else:
+            elements = [' '.join(normt(k)) + '<br>\n' +
+                        (render_table((normt(_, nbsp * 4) for _ in v), '', '')
+                          if v else '')
+                        #((nbsp * 4) + ('<br>\n' +
+                        #(nbsp * 4)).join((normt(_) for _ in v)) +
+                        #'<br>\n' if v else '')
+                         for k, v in journey.items()]
+        return htmldoc(*elements,
+                       title = 'Terms for ' + (tier2 if tier2 is not None else tier1)
+        )
+
+    @app.route(f'/{basename}/sparc/view', methods=['GET'])
+    @app.route(f'/{basename}/sparc/view/', methods=['GET'])
+    def route_sparc_view():
         hyp_rows = []
-        spaces = '&nbsp'*8
+        spaces = nbsp * 8
         for tier1, tier2_on in view.items():
             # add tier1
             hyp_rows.append(
-                f'<p><a href="/{basename}/view/{tier1}"</a>{tier1}</p>'
+                ptag(atag(url_for('route_sparc_view_query', tier1=tier1), tier1))
+                #f'<p><a href="/{basename}/view/{tier1}"</a>{tier1}</p>'
             )
             # possibly add tier 2
             if len(tier2_on.keys()) < 5:
                 for tier2 in tier2_on.keys():
                     hyp_rows.append(
-                        f'<a href="/{basename}/view/{tier1}/{tier2}"</a>|{spaces}{tier2}</p>'
+                        ptag(spaces + atag(url_for('route_sparc_view_query', tier1=tier1, tier2=tier2), tier2))
+                        #f'<a href="/{basename}/view/{tier1}/{tier2}"</a>|{spaces}{tier2}</p>'
                     )
-        return htmldoc('\n'.join(hyp_rows), title='Main Page Sparc', styles=["p {margin: 0px; padding: 0px;}"])
+        return htmldoc(*hyp_rows, title='Main Page Sparc', styles=["p {margin: 0px; padding: 0px;}"])
 
-    @app.route(f'/{basename}/view-all', methods=['GET'])
-    @app.route(f'/{basename}/view-all/', methods=['GET'])
-    def route_view_all():
-        with open('../resources/view.txt') as infile:
-            lines = infile.readlines()
-            p = [f"<p>{line}</p>" for line in [line.replace('\n', '').replace('    ', '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp') for line in lines]]
-        return htmldoc('\n'.join(p), title='Complete Sparc', styles=["p {margin: 0px; padding: 0px;}"])
+    @app.route(f'/{basename}/sparc/index', methods=['GET'])
+    @app.route(f'/{basename}/sparc/index/', methods=['GET'])
+    def route_sparc_index():
+        return htmldoc(*view_lines, title='SPARC Anatomical terms index', styles=["p {margin: 0px; padding: 0px;}"])
+
+    @app.route(f'/{basename}/sparc', methods=['GET'])
+    @app.route(f'/{basename}/sparc/', methods=['GET'])
+    def route_sparc():
+        return htmldoc(atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
+                       atag(url_for('route_sparc_index'), 'Index'),
+                       title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"])
+
 
     return app
 
