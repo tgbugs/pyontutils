@@ -1,7 +1,11 @@
 """ Light weight functions for generating html
 and working with the rest of the unholy trinity. """
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
+
+# chars
+
+nbsp = '\xA0'
 
 # html
 
@@ -54,6 +58,7 @@ bodytag = tag('body', n=True)
 h1tag = tag('h1')
 h2tag = tag('h2')
 btag = tag('b')
+ptag = tag('p')
 
 def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()):
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
