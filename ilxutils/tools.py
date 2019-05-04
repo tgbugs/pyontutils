@@ -3,12 +3,93 @@ import pickle
 import re
 import pandas as pd
 from pathlib import Path as p
+import pprint
 from subprocess import call
 from sys import exit
 import csv
+from typing import Union, Dict, List
 
-''' Custom encoder to allow json to convert any sets in nested data to become lists '''
+
+def clean(self, string, clean_scale:int=0):
+    if clean_scale == 0:
+        return string
+    elif clean_scale == 1:
+        return string.lower().strip()
+    elif clean_scale == 2:
+        return ' '.join(string_profiler(string))
+    elif clean_scale == 3:
+        return ' '.join(string_profiler(string)).replace('obsolete', '').strip()
+
+
+def string_profiler(string:str, start_delimiter:str='(', end_delimiter:str=')', remove:bool=True) -> List[str]:
+    ''' Seperates strings fragements into list based on the start and end delimiters
+        Args:
+            string: complete string you want to be broken up based on start and stop delimiters given
+            start_delimiter: delimiter element to start
+            end_delimiter: delimiter elemtent to end
+            remove: decide whether or not to keep strings inside the delimiters
+        Returns:
+            List[str]: list of strings that are split at start and end delimiters given and whether
+                or not you want to remove the string inside the delimiters
+        Tests:
+            long = '(life is is good) love world "(blah) blah" "here I am" once again "yes" blah '
+            print(string_profiler(long))
+            null = ''
+            print(string_profiler(null))
+            short = '(life love) yes(and much more)'
+            print(string_profiler(short))
+            short = 'yes "life love"'
+            print(string_profiler(short))
+    '''
+    outer_index  = 0  # stepper for outer delimier string elements
+    inner_index  = 0  # stepper for inner delimier string elements
+    curr_index   = 0  # actual index of the current element in the string
+    string_list  = [] # string broken up into individual elements whenever a start and end delimiter is hit
+    outer_string = '' # string tracked while outside the delimiters
+    inner_string = '' # string tracked while inside the delimiters
+
+    for outer_index in range(len(string)):
+        # Actual pointer position (inner delimiter counter + outer delimiter counter)
+        curr_index = inner_index + outer_index
+        # Close once acutal index is at the end
+        # NOTE: outer_index will keep going till end regardless of hitting a delimiter and adding to inner stepper.
+        if curr_index == len(string): break
+        ### DELIMITER HIT ###
+        if string[curr_index] == start_delimiter:
+            # If we his a delimiter, collect the string previous to that as an element; flush
+            if outer_string:
+                # Option: .extend(outer_string.strip().split()) | If you want every word seperate. Maybe an option?
+                string_list.append(outer_string.strip())
+                outer_string = ''
+            for j in range(curr_index+1, len(string)):
+                # Stepper that is pushed while in inner delimiter string.
+                inner_index += 1
+                # Once we his the end delimiter, stop iterating through the inner delimiter string
+                if string[j] == end_delimiter: break
+                # String inside delimiters
+                inner_string += string[j]
+            # If you want the string inside the delimiters
+            if not remove: string_list.append(inner_string)
+            # inner delimiter string restart
+            inner_string = ''
+        # String outside of the delimiters
+        else: outer_string += string[curr_index]
+        # End delimiter is either nested or not the real target; should ignore
+        if string[curr_index] == end_delimiter:
+            if string_list and outer_string:
+                string_list[-1] += outer_string
+                outer_string = ''
+    # In case of not hiting a delimiter at the end of the string, collect the remaining outer delimiter string
+    # Option: .extend(outer_string.strip().split()) | If you want every word seperate. Maybe an option?
+    if outer_string: string_list.append(outer_string.strip())
+    return string_list
+
+
+pp = pprint.PrettyPrinter(indent=4).pprint
+
+
 class SetEncoder(json.JSONEncoder):
+    ''' Custom encoder to allow json to convert any sets in nested data to become lists '''
     def default(self, obj):
         if isinstance(obj, set):
             return sorted(list(obj))

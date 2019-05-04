@@ -40,8 +40,14 @@ class OntoPandas:
                   ?pred ?obj .
         } """
 
-    def __init__(self, obj: Union[rdflib.graph.Graph, str], query:str=defaultquery) -> None:
+    def __init__(self,
+                 obj: Union[rdflib.graph.Graph, str],
+                 query:str=defaultquery,
+                 qnamed:bool=False,
+                 str_vals:bool=False,) -> None:
         self.query = query
+        self.qnamed = qnamed
+        self.str_vals = str_vals
         self.g = obj  # could be path
         self.path = obj  # could be graph
         self.df = self.Graph2Pandas_converter()
@@ -183,7 +189,7 @@ class OntoPandas:
             obj_binding  = binding[rdflib.term.Variable('obj')]
 
             subj = subj_binding
-            pred = pred_binding # self.qname(pred_binding) if self.predicate_as_qname else pred_binding
+            pred = pred_binding
             obj  = obj_binding
 
             # stops at BNodes; could be exanded here
@@ -193,10 +199,14 @@ class OntoPandas:
                 continue
             elif isinstance(obj, BNode) and obj:
                 continue
-            # else:
-            #     subj = str(subj)
-            #     pred = str(pred)
-            #     obj  = str(obj)
+
+            if self.qnamed:
+                pred = self.qname(pred_binding)
+
+            if self.str_vals:
+                subj = str(subj)
+                pred = str(pred)
+                obj  = str(obj)
 
             cols.add(pred)
             indx.add(subj)
@@ -212,7 +222,7 @@ class OntoPandas:
             obj_binding  = binding[rdflib.term.Variable('obj')]
 
             subj = subj_binding
-            pred = pred_binding # self.qname(pred_binding) if self.qname_predicates else pred_binding
+            pred = pred_binding
             obj  = obj_binding
 
             # stops at BNodes; could be exanded here
@@ -222,10 +232,14 @@ class OntoPandas:
                 continue
             elif isinstance(obj, BNode) and obj:
                 continue
-            # elif self.value_type:
-            #     subj = str(subj)
-            #     pred = str(pred)
-            #     obj  = str(obj)
+
+            if self.qnamed:
+                pred = self.qname(pred_binding)
+
+            if self.str_vals:
+                subj = str(subj)
+                pred = str(pred)
+                obj  = str(obj)
 
             if curr_subj == None:
                 curr_subj = subj
@@ -255,26 +269,9 @@ class OntoPandas:
             df.loc[data_subj] = pd.Series(data_pred_objs)
 
         df = df.where((pd.notnull(df)), None) # default Null is fricken Float NaN
-
+        df = df.reset_index().rename(columns={'index':'iri'})
         return df
 
-    def df(self, qname_predicates:bool=False, keep_variable_type:bool=True) -> pd.DataFrame:
-        ''' Multi funcitonal DataFrame with settings '''
-        local_df = self.df.copy()
-        if qname_predicates:
-            for col in self.columns:
-                local_df.rename({col: self.g.qname(col)})
-        if not keep_variable_type:
-            pass
-            # convert all to strings, watch out for lists
-        return local_df
-
-    def rows(self, qname_predicates:bool=False, keep_variable_type:bool=True) -> list:
-        header = ['Index'] + list(self.df.columns)
-        rows = []
-        for row in self.df(qname_predicates=qname_predicates, keep_variable_type=keep_variable_type).itertuples():
-            rows.append({header[i]:val for i, val in enumerate(row)})
-        return rows
 
 def command_line():
     ''' If you want to use the command line '''

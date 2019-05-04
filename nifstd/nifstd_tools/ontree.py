@@ -19,6 +19,7 @@ Options:
 
 """
 
+from collections import defaultdict
 import os
 import re
 import asyncio
@@ -37,7 +38,10 @@ from pyontutils.utils import Async, deferred
 from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
+from pyontutils.sheets import Sheet
+from htmlfn import render_table, table_style
 from IPython import embed
+import yaml
 
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
@@ -56,6 +60,212 @@ inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
 
+UBERON_TERMS = 'uberon-terms'
+
+SPINAL_TERMINOLOGY = 'spinal-terminology'
+SPINAL_TERMINOLOGY_1 = SPINAL_TERMINOLOGY + '-sheet1'
+SPINAL_TERMINOLOGY_2 = SPINAL_TERMINOLOGY + '-sheet2'
+
+PARCELLATION_BRAINSTEM = 'parcellation-brainstem'
+PARCELLATION_BRAINSTEM_MAPPINGS = PARCELLATION_BRAINSTEM + '-mappings'
+PARCELLATION_BRAINSTEM_UBERON = PARCELLATION_BRAINSTEM + '-uberon'
+PARCELLATION_BRAINSTEM_ALLEN_MOUSE = PARCELLATION_BRAINSTEM + '-allen-mouse'
+PARCELLATION_BRAINSTEM_PAXINOS_RAT = PARCELLATION_BRAINSTEM + '-paxinos-rat'
+PARCELLATION_BRAINSTEM_BERMAN_CAT = PARCELLATION_BRAINSTEM + '-berman-cat'
+PARCELLATION_BRAINSTEM_NIEUWENHUYS = PARCELLATION_BRAINSTEM + '-nieuwenhuys'
+
+def convert_view_text_to_dict():
+    with open('../resources/view.txt', 'r') as infile:
+        rawr_yaml = ''
+        for line in infile.readlines():
+            rawr_yaml += line.replace('\n', '').replace('\t', '    ') + ':\n'
+    return yaml.load(rawr_yaml)
+
+
+class UberonTerms(Sheet):
+    name = UBERON_TERMS
+    sheet_name = 'Sheet1'
+
+    def get_terms(self):
+        ''' Uberon has trailing empty cells in the sheet assuming its the value of the most recent
+            left cell with a value '''
+        terms_list = []
+        terms_index = 1
+        sub_terms_index = 2
+        last_value_index = 0
+        terms_dict = defaultdict(list)
+        records = []
+        for i, term in enumerate(self.raw_values[terms_index]):
+            sub_term = self.values[sub_terms_index][i]
+            if term:
+                records.append(
+                    (self.name, term, i)
+                )
+                last_term = term
+            if sub_term:
+                records.append(
+                    (self.name, '|_____ '+sub_term, i)
+                )
+        return records
+
+    def get_term_list(self, colummn):
+        start_index = 3
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class SpinalTerminology1(Sheet):
+    name = SPINAL_TERMINOLOGY
+    sheet_name = 'Sheet1'
+
+    def get_terms(self):
+        terms_list = []
+        headers_index = 0
+        headers_column_start = 1 # 1 header doesnt have a value
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:], headers_column_start):
+            terms_list.append((SPINAL_TERMINOLOGY_1, term, i))
+        return terms_list
+
+    def get_term_list(self, colummn):
+        start_index = 1
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class SpinalTerminology2(Sheet):
+    name = SPINAL_TERMINOLOGY
+    sheet_name = 'Sheet2'
+
+    def get_terms(self):
+        terms_list = []
+        headers_index = 0
+        headers_column_start = 0
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
+            terms_list.append((SPINAL_TERMINOLOGY_1, term, i))
+        return terms_list
+
+    def get_term_list(self, colummn):
+        start_index = 1
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class ParcellationBrainstemMappings(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'Mappings'
+
+    def get_terms(self):
+        terms_list = []
+        headers_index = 0
+        headers_column_start = 0
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
+            term = f'{term} (Mappings)'
+            terms_list.append((PARCELLATION_BRAINSTEM_MAPPINGS, term, i))
+        return terms_list
+
+    def get_term_list(self, colummn):
+        start_index = 1
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class ParcellationBrainstemUberon(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'UBERON'
+
+    def get_terms(self):
+        terms_list = []
+        headers_index = 0
+        headers_column_start = 0
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
+            terms_list.append((PARCELLATION_BRAINSTEM_UBERON, term, i))
+        return terms_list
+
+    def get_term_list(self, colummn):
+        start_index = 1
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class ParcellationBrainstemAllenMouse(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'Allen Mouse'
+
+    def get_terms(self):
+        return [(PARCELLATION_BRAINSTEM_ALLEN_MOUSE, 'Allen Mouse Sheet', 0)]
+
+    def get_term_list(self, colummn):
+        start_index = 0
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class ParcellationBrainstemPaxinosRat(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'Paxinos Rat'
+
+    def get_terms(self):
+        return [(PARCELLATION_BRAINSTEM_PAXINOS_RAT, 'Paxinos Rat Sheet', 0)]
+
+    def get_term_list(self, colummn):
+        start_index = 0
+        return [row[1:3] for row in self.values[start_index:]]
+
+
+class ParcellationBrainstemBermanCat(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'Berman Cat'
+
+    def get_terms(self):
+        return [(PARCELLATION_BRAINSTEM_BERMAN_CAT, 'Berman Cat Sheet', 0)]
+
+    def get_term_list(self, colummn):
+        start_index = 0
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class ParcellationBrainstemNieuwenhuys(Sheet):
+    name = PARCELLATION_BRAINSTEM
+    sheet_name = 'Nieuwenhuys'
+
+    def get_terms(self):
+        terms_list = []
+        headers_index = 0
+        headers_column_start = 0
+        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
+            terms_list.append((PARCELLATION_BRAINSTEM_NIEUWENHUYS, term, i))
+        return terms_list
+
+    def get_term_list(self, colummn):
+        start_index = 1
+        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
+
+
+class GoogleSheets:
+
+    def __init__(self):
+        self.sheets = {}
+        self.sheets[UBERON_TERMS] = UberonTerms()
+        self.sheets[SPINAL_TERMINOLOGY_1] = SpinalTerminology1()
+        self.sheets[SPINAL_TERMINOLOGY_2] = SpinalTerminology2()
+        # Mappings not needed at the moment
+        # self.sheets[PARCELLATION_BRAINSTEM_MAPPINGS] = ParcellationBrainstemMappings()
+        self.sheets[PARCELLATION_BRAINSTEM_UBERON] = ParcellationBrainstemUberon()
+        self.sheets[PARCELLATION_BRAINSTEM_ALLEN_MOUSE] = ParcellationBrainstemAllenMouse()
+        self.sheets[PARCELLATION_BRAINSTEM_PAXINOS_RAT] = ParcellationBrainstemPaxinosRat()
+        self.sheets[PARCELLATION_BRAINSTEM_BERMAN_CAT] = ParcellationBrainstemBermanCat()
+        self.sheets[PARCELLATION_BRAINSTEM_NIEUWENHUYS] = ParcellationBrainstemNieuwenhuys()
+
+    def get_terms(self):
+        terms = []
+        terms += self.sheets[UBERON_TERMS].get_terms()
+        terms += self.sheets[SPINAL_TERMINOLOGY_1].get_terms()
+        terms += self.sheets[SPINAL_TERMINOLOGY_2].get_terms()
+        # Mappings not needed at the moment
+        # terms += self.sheets[PARCELLATION_BRAINSTEM_MAPPINGS].get_terms()
+        terms += self.sheets[PARCELLATION_BRAINSTEM_UBERON].get_terms()
+        terms += self.sheets[PARCELLATION_BRAINSTEM_ALLEN_MOUSE].get_terms()
+        terms += self.sheets[PARCELLATION_BRAINSTEM_PAXINOS_RAT].get_terms()
+        terms += self.sheets[PARCELLATION_BRAINSTEM_BERMAN_CAT].get_terms()
+        terms += self.sheets[PARCELLATION_BRAINSTEM_NIEUWENHUYS].get_terms()
+        return terms
+
+    def get_term_list(self, source, column):
+        return self.sheets[source].get_term_list(column)
 
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
@@ -220,9 +430,9 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
         elif 'json' in kwargs:
             message = 'Unknown root.'
-            r = g.expand(root) 
+            r = g.expand(root)
             for s in g.g.subjects():
-                if r == s: 
+                if r == s:
                     message = "No results. You are querying a ttl file directly, did you remember to set ?restriction=true?"
                     break
         else:
@@ -338,6 +548,9 @@ def server(api_key=None, verbose=False):
     app = Flask('ontology tree service')
     app.config['loop'] = loop
 
+    # gsheets = GoogleSheets()
+    view = convert_view_text_to_dict()
+
     basename = 'trees'
 
     @app.route(f'/{basename}', methods=['GET'])
@@ -421,6 +634,70 @@ def server(api_key=None, verbose=False):
             return render(pred, root, **kwargs)
         except HTTPError:
             return abort(404, 'Unknown ontology file.')  # TODO 'Unknown git branch.'
+
+    # @app.route(f'/{basename}/sparc', methods=['GET'])
+    # @app.route(f'/{basename}/sparc/', methods=['GET'])
+    # def route_terms():
+    #     terms_tups = gsheets.get_terms()
+    #     # terms_tups = map(lambda t: (t[0], t[1].title(), t[2]), gsheets.get_terms())
+    #     # Dont need sorting at the moment but might be useful
+    #     # terms_tups = sorted(terms_tups, key=lambda t: t[1])
+    #     hyp_rows = [
+    #         [f'<a href="/{basename}/sparc/{src}/{term}/{index}">{term}</a>',]
+    #         for src, term, index in terms_tups
+    #     ]
+    #     return htmldoc(
+    #         render_table([['-'*20]]+hyp_rows, 'SPARC TERM LIST'),
+    #         title = 'SPARC TERMS LIST',
+    #         styles = [table_style],
+    #     )
+    #
+    # @app.route(f'/{basename}/sparc/<source>/<term>/<column>', methods=['GET'])
+    # def route_term_list(source, term, column):
+    #     terms_list = gsheets.get_term_list(source, column)
+    #     return htmldoc(
+    #         render_table([['-'*20]]+[[t] for t in terms_list], term),
+    #         title = 'SPARC TERM LIST',
+    #         styles = [table_style],
+    #     )
+
+    @app.route(f'/{basename}/view/<tier1>', methods=['GET'])
+    @app.route(f'/{basename}/view/<tier1>/', methods=['GET'])
+    @app.route(f'/{basename}/view/<tier1>/<tier2>', methods=['GET'])
+    @app.route(f'/{basename}/view/<tier1>/<tier2>/', methods=['GET'])
+    def route_view_query(tier1, tier2=None):
+        if not tier2:
+            journey = view[tier1]
+        else:
+            journey = view[tier1][tier2]
+        # return yaml.dump(journey).replace('{', '\n').replace(': null,', '\n').replace(': null}', '')
+        return yaml.dump(journey, default_flow_style=False).replace(': null', '')
+
+    @app.route(f'/{basename}/view', methods=['GET'])
+    @app.route(f'/{basename}/view/', methods=['GET'])
+    def route_view():
+        hyp_rows = []
+        spaces = '&nbsp'*8
+        for tier1, tier2_on in view.items():
+            # add tier1
+            hyp_rows.append(
+                f'<p><a href="/{basename}/view/{tier1}"</a>{tier1}</p>'
+            )
+            # possibly add tier 2
+            if len(tier2_on.keys()) < 5:
+                for tier2 in tier2_on.keys():
+                    hyp_rows.append(
+                        f'<a href="/{basename}/view/{tier1}/{tier2}"</a>|{spaces}{tier2}</p>'
+                    )
+        return htmldoc('\n'.join(hyp_rows), title='Main Page Sparc', styles=["p {margin: 0px; padding: 0px;}"])
+
+    @app.route(f'/{basename}/view-all', methods=['GET'])
+    @app.route(f'/{basename}/view-all/', methods=['GET'])
+    def route_view_all():
+        with open('../resources/view.txt') as infile:
+            lines = infile.readlines()
+            p = [f"<p>{line}</p>" for line in [line.replace('\n', '').replace('    ', '&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp') for line in lines]]
+        return htmldoc('\n'.join(p), title='Complete Sparc', styles=["p {margin: 0px; padding: 0px;}"])
 
     return app
 
