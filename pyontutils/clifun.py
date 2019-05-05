@@ -7,6 +7,7 @@ Options:
     -d --debug
 """
 
+from types import GeneratorType
 from terminaltables import AsciiTable
 
 
@@ -114,7 +115,10 @@ class Dispatcher:
                 # FIXME this only works for 1 level
                 continue  # skip the parent argument which we know will be true
 
-            getattr(self, command)()
+            value = getattr(self, command)()
+            if isinstance(value, GeneratorType):
+                list(value)
+
             return
 
         else:
