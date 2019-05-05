@@ -90,7 +90,17 @@ class Dispatcher:
 
             all_attrs = set(parent.child_port_attrs) | set(port_attrs)
             for attr in all_attrs:
-                setattr(self, attr, getattr(parent, attr))  # fail if any are missing
+                if attr in parent.child_port_attrs:
+                    # ok to skip if parent doesn't have
+                    # what it wants to give
+                    value = getattr(parent, attr, None)
+                    if value is None:
+                        continue
+                else:
+                    # fail if any required by child are missing
+                    value = getattr(parent, attr)
+
+                setattr(self, attr, value)
 
         else:
             self.options = options_or_parent
