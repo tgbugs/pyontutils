@@ -74,16 +74,16 @@ def makeSimpleLogger(name, color=True):
         logging.root.removeHandler(handler)
 
     fmt = ('[%(asctime)s] - %(levelname)8s - '
-           '%(name)s - '
-           '%(filename)s:%(lineno)d - '
+           '%(name)14s - '
+           '%(filename)16s:%(lineno)-4d - '
            '%(message)s')
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
     cfmt = ('%(green)s[%(asctime)s]%(reset)s - '
             '%(log_color)s%(levelname)8s%(reset)s - '
-            '%(name)s - '
-            '%(blue)s%(filename)s:%(lineno)d%(reset)s - '
+            '%(name)14s - '
+            '%(blue)s%(filename)16s:%(lineno)-4d%(reset)s - '
             '%(message)s')
     formatter = ColoredFormatter(cfmt,
                                  #"%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s",
