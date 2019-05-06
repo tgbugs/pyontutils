@@ -1,0 +1,34 @@
+"UBERON Terms" SHEET:
+    - index 2 are the topics
+    - index 3 are the sub topics
+    - "Spinal Cord" topic contains external sub topics from sheet "Spinal Cord Terminology":
+        - "Spinal cord subsegments"
+        - "Dorsal root gangla of spinal segments"
+        - "Spinal cord internal structures per segment"
+        - "Lamina of spinal cord"
+    - "Ganglia" column put into created, top tier entity, "Peripheral Nervous System"
+    NOT USED:
+        - "Nerves (also includes Cranial)"
+
+"Spinal Cord Terminology" SHEET:
+    - Sheet1 column A are the same at the moment
+    - column B "Spinal cord segments" seems to be just a summary of what to come
+    - columns C-F have multiple sub topics within the same column *Bolded indication*
+
+
+"Parcellation Mapping for Brainstem" SHEET:
+    IGNORED:
+        - "Parcellation Mapping for Brainstem"."Mappings"
+        - "Parcellation Mapping for Brainstem"."Nieuwenhuys"
+    NAME CHANGES:
+        - "Allen Mouse" -> "Allen Mouse Brainstem"
+        - "Paxinos Rat" -> "Paxinos Rat Brainstem"
+        - "Berman Cat" -> "Berman Cat Brainstem"
+    - "Paxios Rat" has their curie split into the right adjacent column
+
+
+QUESTIONS:
+    - In "Spinal Cord Terminology" where should the column "Nerve roots of spinal cord segments" go?
+    - The "Nieuwenhuys" was ignored, but should this be just considered 1 table to be displayed?
+    - Should "Cranial Nerves" from sheet "UBERON Terms" be under "Peripheral Nervous System"?
+    - Should "Nerves (also includes Cranial)" from sheet "UBERON Terms" also be under "Peripheral Nervous System"?
