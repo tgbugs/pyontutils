@@ -644,32 +644,6 @@ def server(api_key=None, verbose=False):
         except HTTPError:
             return abort(404, 'Unknown ontology file.')  # TODO 'Unknown git branch.'
 
-    # @app.route(f'/{basename}/sparc', methods=['GET'])
-    # @app.route(f'/{basename}/sparc/', methods=['GET'])
-    # def route_terms():
-    #     terms_tups = gsheets.get_terms()
-    #     # terms_tups = map(lambda t: (t[0], t[1].title(), t[2]), gsheets.get_terms())
-    #     # Dont need sorting at the moment but might be useful
-    #     # terms_tups = sorted(terms_tups, key=lambda t: t[1])
-    #     hyp_rows = [
-    #         [f'<a href="/{basename}/sparc/{src}/{term}/{index}">{term}</a>',]
-    #         for src, term, index in terms_tups
-    #     ]
-    #     return htmldoc(
-    #         render_table([['-'*20]]+hyp_rows, 'SPARC TERM LIST'),
-    #         title = 'SPARC TERMS LIST',
-    #         styles = [table_style],
-    #     )
-    #
-    # @app.route(f'/{basename}/sparc/<source>/<term>/<column>', methods=['GET'])
-    # def route_term_list(source, term, column):
-    #     terms_list = gsheets.get_term_list(source, column)
-    #     return htmldoc(
-    #         render_table([['-'*20]]+[[t] for t in terms_list], term),
-    #         title = 'SPARC TERM LIST',
-    #         styles = [table_style],
-    #     )
-
     def normt(term, prefix=''):
         term, *curie = term.split('\u1F4A9')
         #print(repr(term))
@@ -700,17 +674,38 @@ def server(api_key=None, verbose=False):
 
         if all([_ is None for _ in journey.values()]):
             elements = render_table((normt(k) for k in journey), '', ''),
+            return htmldoc(*elements,
+                           title = 'Terms for ' + (tier2 if tier2 is not None else tier1)
+            )
+
         else:
-            elements = [' '.join(normt(k)) + '<br>\n' +
-                        (render_table((normt(_, nbsp * 4) for _ in v), '', '')
-                          if v else '')
-                        #((nbsp * 4) + ('<br>\n' +
-                        #(nbsp * 4)).join((normt(_) for _ in v)) +
-                        #'<br>\n' if v else '')
-                         for k, v in journey.items()]
-        return htmldoc(*elements,
-                       title = 'Terms for ' + (tier2 if tier2 is not None else tier1)
-        )
+            def render_rows(dict_, tier_level = 0):
+                """ Recursively pull nested dictionaries out of print order"""
+                for key, value in dict_.items():
+                    yield ('    '.join(normt(str(key))), tier_level)
+                    # yield ['']*tier_level+[string, curie]
+                    if isinstance(value, dict):
+                        yield from render_rows(value, tier_level + 1)
+
+            return htmldoc(
+                # render(list(render_rows(journey))), # This created giant spaces 
+                '\n'.join([
+                    '<p>' + (tier_level*nbsp*8) + value + '</p>'
+                    for value, tier_level in render_rows(journey)
+                ]),
+                title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
+            )
+
+        # elements = [' '.join(normt(k)) + '<br>\n' +
+        #             (render_table((normt(_, nbsp * 4) for _ in v), '', '')
+        #               if v else '')
+        #             #((nbsp * 4) + ('<br>\n' +
+        #             #(nbsp * 4)).join((normt(_) for _ in v)) +
+        #             #'<br>\n' if v else '')
+        #              for k, v in journey.items()]
+        # return htmldoc(*elements,
+        #                title = 'Terms for ' + (tier2 if tier2 is not None else tier1)
+        # )
 
     @app.route(f'/{basename}/sparc/view', methods=['GET'])
     @app.route(f'/{basename}/sparc/view/', methods=['GET'])
