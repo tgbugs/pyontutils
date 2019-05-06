@@ -33,7 +33,7 @@ from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId
+from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.utils import getSourceLine, get_working_dir
 from pyontutils.utils import Async, deferred
 from pyontutils.config import devconfig
@@ -644,31 +644,27 @@ def server(api_key=None, verbose=False):
         except HTTPError:
             return abort(404, 'Unknown ontology file.')  # TODO 'Unknown git branch.'
 
-    # @app.route(f'/{basename}/sparc', methods=['GET'])
-    # @app.route(f'/{basename}/sparc/', methods=['GET'])
-    # def route_terms():
-    #     terms_tups = gsheets.get_terms()
-    #     # terms_tups = map(lambda t: (t[0], t[1].title(), t[2]), gsheets.get_terms())
-    #     # Dont need sorting at the moment but might be useful
-    #     # terms_tups = sorted(terms_tups, key=lambda t: t[1])
-    #     hyp_rows = [
-    #         [f'<a href="/{basename}/sparc/{src}/{term}/{index}">{term}</a>',]
-    #         for src, term, index in terms_tups
-    #     ]
-    #     return htmldoc(
-    #         render_table([['-'*20]]+hyp_rows, 'SPARC TERM LIST'),
-    #         title = 'SPARC TERMS LIST',
-    #         styles = [table_style],
-    #     )
-    #
-    # @app.route(f'/{basename}/sparc/<source>/<term>/<column>', methods=['GET'])
-    # def route_term_list(source, term, column):
-    #     terms_list = gsheets.get_term_list(source, column)
-    #     return htmldoc(
-    #         render_table([['-'*20]]+[[t] for t in terms_list], term),
-    #         title = 'SPARC TERM LIST',
-    #         styles = [table_style],
-    #     )
+    def get_atag_from_scigraph_label_query(label, prefixes=['UBERON', 'ILX']) -> atag:
+        atags = []
+        for prefix in prefixes:
+            # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
+            neighbors = [v.OntTerm for v in OntTerm.query(label=label.strip(), prefix=prefix)]
+            if not neighbors:
+                continue
+            for neighbor in neighbors:
+                oid = OntId(neighbor)
+                atags += [atag(oid.iri, oid.curie)]
+        # neighbors = OntTerm.query(label)
+        # if not neighbors:
+        #     return []
+        # for neighbor in neighbors:
+        #     for prefix in prefixes:
+        #         # TODO: this might bug-out if there is a curie with multiple prefixes
+        #         if prefix in neighbor.curie:
+        #             oid = OntId(neighbor.iri)
+        #             atags.append(atag(oid.iri, oid.curie))
+
+        return atags
 
     def normt(term, prefix=''):
         term, *curie = term.split('\u1F4A9')
@@ -677,10 +673,20 @@ def server(api_key=None, verbose=False):
             curie, = curie
             oid = OntId(curie)
             curie = atag(oid.iri, oid.curie)
+            row = [prefix + term, curie]
         else:
-            curie = ''
+            # TODO: slow via endpoint, but might be fast enought for live server
+            curies = get_atag_from_scigraph_label_query(term)
+            row = [prefix + term] + curies
+        return row
 
-        return prefix + term, curie
+    def linearize_graph(dict_, tier_level = 0) -> tuple:
+        """ Recursively pull nested dictionaries out of print order"""
+        for key, value in dict_.items():
+            label, *curies = normt(key)
+            yield (label, curies, tier_level)
+            if isinstance(value, dict):
+                yield from linearize_graph(value, tier_level + 1)
 
     @app.route(f'/{basename}/sparc/view/<tier1>', methods=['GET'])
     @app.route(f'/{basename}/sparc/view/<tier1>/', methods=['GET'])
@@ -698,18 +704,13 @@ def server(api_key=None, verbose=False):
 
             journey = journey[tier2]
 
-        if all([_ is None for _ in journey.values()]):
-            elements = render_table((normt(k) for k in journey), '', ''),
-        else:
-            elements = [' '.join(normt(k)) + '<br>\n' +
-                        (render_table((normt(_, nbsp * 4) for _ in v), '', '')
-                          if v else '')
-                        #((nbsp * 4) + ('<br>\n' +
-                        #(nbsp * 4)).join((normt(_) for _ in v)) +
-                        #'<br>\n' if v else '')
-                         for k, v in journey.items()]
-        return htmldoc(*elements,
-                       title = 'Terms for ' + (tier2 if tier2 is not None else tier1)
+        rows = [
+            [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
+            for label, curies, tier_level  in linearize_graph(journey)
+        ]
+        return htmldoc(
+            render_table(rows),
+            title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
         )
 
     @app.route(f'/{basename}/sparc/view', methods=['GET'])
@@ -735,6 +736,14 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
+        rows = [
+            [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
+            for label, curies, tier_level  in linearize_graph(view)
+        ]
+        return htmldoc(
+            render_table(rows),
+            title = 'SPARC Anatomical terms index',
+        )
         return htmldoc(*view_lines, title='SPARC Anatomical terms index', styles=["p {margin: 0px; padding: 0px;}"])
 
     @app.route(f'/{basename}/sparc', methods=['GET'])
