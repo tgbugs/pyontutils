@@ -81,7 +81,7 @@ def convert_view_text_to_dict():
         rawr_yaml = ''
         for line in infile.readlines():
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
-    return yaml.load(rawr_yaml)
+    return yaml.safe_load(rawr_yaml)
 
 
 def get_atag_from_scigraph_label_query(label, prefixes=['UBERON', 'ILX']) -> atag:
