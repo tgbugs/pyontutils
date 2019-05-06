@@ -679,20 +679,20 @@ def server(api_key=None, verbose=False):
             )
 
         else:
-            def render_rows(dict_, tier_level = 0):
+            def linearize_graph(dict_, tier_level = 0) -> tuple:
                 """ Recursively pull nested dictionaries out of print order"""
                 for key, value in dict_.items():
-                    yield ('    '.join(normt(str(key))), tier_level)
-                    # yield ['']*tier_level+[string, curie]
+                    label, curie = normt(key)
+                    yield (label, curie, tier_level)
                     if isinstance(value, dict):
-                        yield from render_rows(value, tier_level + 1)
+                        yield from linearize_graph(value, tier_level + 1)
 
+            rows = [
+                [(8 * nbsp * tier_level) + label + (nbsp*8), curie]
+                for label, curie, tier_level  in linearize_graph(journey)
+            ]
             return htmldoc(
-                # render(list(render_rows(journey))), # This created giant spaces 
-                '\n'.join([
-                    '<p>' + (tier_level*nbsp*8) + value + '</p>'
-                    for value, tier_level in render_rows(journey)
-                ]),
+                render_table(rows),
                 title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
             )
 
