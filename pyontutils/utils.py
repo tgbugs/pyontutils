@@ -349,7 +349,7 @@ def Async(rate=None, debug=False, collector=None):  # ah conclib
         if rate:
             funclist = list(generator)
             if not funclist:
-                return
+                return tuple()  # make sure the result is always iterable
 
             # divide by workers not rate, time_per_job will compensate
             size = math.ceil(len(funclist) / workers) if rate >= 1 else 1
