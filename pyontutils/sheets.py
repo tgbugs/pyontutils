@@ -61,23 +61,24 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
     return response
 
 
-def get_sheet_values(spreadsheet_name, sheet_name, get_notes=True, spreadsheet_service=None):
+def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None):
     SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
         ss = service.spreadsheets()
     else:
         ss = spreadsheet_service
-    if get_notes:
+    if fetch_grid:
         grid = ss.get(spreadsheetId=SPREADSHEET_ID, includeGridData=True).execute()
         notes = get_notes_from_grid(grid, sheet_name)
         notes_index = {(i, j):v for i, j, v in notes}
     else:
+        grid = {}
         notes_index = {}
 
     result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
     values = result.get('values', [])
-    return values, notes_index
+    return values, grid, notes_index
 
 
 def get_notes_from_grid(grid, title):
@@ -88,7 +89,6 @@ def get_notes_from_grid(grid, title):
                     for j, cell in enumerate(row['values']):
                         if 'note' in cell:
                             yield i, j, cell['note']
-
 
 
 def get_note(row_index, column_index, notes_index):
@@ -103,16 +103,18 @@ class Sheet:
 
     name = None
     sheet_name = None
+    fetch_grid = False
     index_columns = tuple()
 
-    def __init__(self, name=None, sheet_name=None, fetch_notes=False, readonly=True):
+    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True):
         """ name to override in case the same pattern is used elsewhere """
         if name is not None:
             self.name = name
         if sheet_name is not None:
             self.sheet_name = sheet_name
 
-        self.fetch_notes = fetch_notes
+        if fetch_grid is not None:
+            self.fetch_grid = fetch_grid
 
         self.readonly = readonly
         self._setup()
@@ -133,13 +135,15 @@ class Sheet:
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
 
-    def fetch(self, fetch_notes=None):
+    def fetch(self, fetch_grid=None):
         """ update remote values (called automatically at __init__) """
-        if fetch_notes is None:
-            fetch_notes = self.fetch_notes
-        values, notes_index = get_sheet_values(self.name, self.sheet_name,
-                                               spreadsheet_service=self._spreadsheet_service,
-                                               get_notes=fetch_notes)
+        if fetch_grid is None:
+            fetch_grid = self.fetch_grid
+
+        values, grid, notes_index = get_sheet_values(self.name, self.sheet_name,
+                                                     spreadsheet_service=self._spreadsheet_service,
+                                                     fetch_grid=fetch_grid)
+
         self.raw_values = values
         self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
         try:
@@ -147,6 +151,7 @@ class Sheet:
         except ValueError as e:
             log.warning('Sheet has malformed header, not setting byCol')
 
+        self.grid = grid
         self.notes_index = notes_index
 
     def update(self, values):
