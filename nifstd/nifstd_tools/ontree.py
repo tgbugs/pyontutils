@@ -810,10 +810,8 @@ def main():
             sgv.api_key = api_key
             sgc.api_key = api_key
             scs = OntTerm.query.services[0]
+            scs.api_key = api_key
             scs.setup()
-            scs.sgg.api_key = api_key
-            scs.sgv.api_key = api_key
-            scs.sgc.api_key = api_key
 
         app = server(verbose=verbose)
         app.debug = False
