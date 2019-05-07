@@ -53,6 +53,7 @@ __all__ = [
     '_NEURON_CLASS',
     '_CUT_CLASS',
     '_EBM_CLASS',
+    'log',
 ]
 
 # language constructes

@@ -334,8 +334,17 @@ def sheet_to_neurons(values, notes_index):
     return config, errors, new, release
 
 
+class Cuts(Sheet):
+    name = 'neurons-cut'
+
+
+class CutsV1(Cuts):
+    sheet_name = 'CUT V1.0'
+    fetch_grid = True
+
+
 def main():
-    sheet = Sheet('neurons-cut', 'CUT V1.0', fetch_notes=True)
+    sheet = CutsV1()
     config, errors, new, release = sheet_to_neurons(sheet.values, sheet.notes_index)
     #sheet.show_notes()
     config.write_python()
