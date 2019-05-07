@@ -803,11 +803,18 @@ def main():
             sgc._basePath = api
             # reinit curies state
             sgc.__init__(cache=sgc._get == sgc._cache_get, verbose=sgc._verbose)
+
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
             sgc.api_key = api_key
+            scs = OntTerm.query.services[0]
+            scs.setup()
+            scs.sgg.api_key = api_key
+            scs.sgv.api_key = api_key
+            scs.sgc.api_key = api_key
+
         app = server(verbose=verbose)
         app.debug = False
         app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
