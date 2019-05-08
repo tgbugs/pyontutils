@@ -41,6 +41,7 @@ from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.sheets import Sheet
+from typing import Union, Dict, List
 from IPython import embed
 import yaml
 
@@ -62,7 +63,6 @@ out = 'OUTGOING'
 both = 'BOTH'
 
 UBERON_TERMS = 'uberon-terms'
-
 SPINAL_TERMINOLOGY = 'spinal-terminology'
 SPINAL_TERMINOLOGY_1 = SPINAL_TERMINOLOGY + '-sheet1'
 SPINAL_TERMINOLOGY_2 = SPINAL_TERMINOLOGY + '-sheet2'
@@ -76,15 +76,15 @@ PARCELLATION_BRAINSTEM_BERMAN_CAT = PARCELLATION_BRAINSTEM + '-berman-cat'
 PARCELLATION_BRAINSTEM_NIEUWENHUYS = PARCELLATION_BRAINSTEM + '-nieuwenhuys'
 
 
-def convert_view_text_to_dict():
-    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
+def convert_view_text_to_dict() -> dict:
+    with open(Path(devconfig.resources, 'view_populated.txt'), 'rt') as infile:
         rawr_yaml = ''
         for line in infile.readlines():
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
     return yaml.load(rawr_yaml)
 
 
-def get_atag_from_scigraph_label_query(label, prefixes=['UBERON', 'ILX']) -> atag:
+def get_atag_from_scigraph_label_query(label: str, prefixes:List[str] = ['UBERON', 'ILX']) -> atag:
     atags = []
     for prefix in prefixes:
         # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
@@ -111,8 +111,15 @@ def normt(term, prefix=''):
         row = [prefix + term] + curies
     return row
 
+def tag_curies(curies):
+    tagged_curies = []
+    for curie in curies:
+        oid = OntId(curie)
+        tagged_curie = atag(oid.iri, oid.curie)
+        tagged_curies.append(tagged_curie)
+    return tagged_curies
 
-def linearize_graph(dict_, tier_level = 0) -> tuple:
+def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
     """ Recursively pull nested dictionaries out of print order"""
     for key, value in dict_.items():
         label, *curies = normt(key)
@@ -598,9 +605,9 @@ def server(api_key=None, verbose=False):
         [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
         for label, curies, tier_level  in linearize_graph(view)
     ]
-    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
-        _lines = infile.readlines()
-        view_lines = [ptag(line) for line in [line.replace('\n', '').replace(' ' * 4, nbsp * 8) for line in _lines]]
+    # with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
+    #     _lines = infile.readlines()
+    #     view_lines = [ptag(line) for line in [line.replace('\n', '').replace(' ' * 4, nbsp * 8) for line in _lines]]
 
     basename = 'trees'
 
@@ -709,6 +716,7 @@ def server(api_key=None, verbose=False):
         return htmldoc(
             render_table(rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
+            meta=f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
         )
 
     @app.route(f'/{basename}/sparc/view', methods=['GET'])
@@ -717,19 +725,23 @@ def server(api_key=None, verbose=False):
         hyp_rows = []
         spaces = nbsp * 8
         for tier1, tier2_on in view.items():
-            # add tier1
-            hyp_rows.append(
-                ptag(atag(url_for('route_sparc_view_query', tier1=tier1), tier1))
-                #f'<p><a href="/{basename}/view/{tier1}"</a>{tier1}</p>'
-            )
-            # possibly add tier 2
-            if len(tier2_on.keys()) < 5:
-                for tier2 in tier2_on.keys():
-                    hyp_rows.append(
-                        ptag(spaces + atag(url_for('route_sparc_view_query', tier1=tier1, tier2=tier2), tier2))
-                        #f'<a href="/{basename}/view/{tier1}/{tier2}"</a>|{spaces}{tier2}</p>'
-                    )
-        return htmldoc(*hyp_rows, title='Main Page Sparc', styles=["p {margin: 0px; padding: 0px;}"])
+            url = url_for('route_sparc_view_query', tier1=tier1)
+            tier1_label, *curies = tier1.split('\u1F4A9')
+            hyp_rows.append([ptag(atag(url, tier1_label))] + tag_curies(curies))
+            # TODO: May change so headers need to be established to avoiding a problem here
+            # with values being over 10 but it's just > 10 sub topics
+            if len(tier2_on.keys()) > 10:
+                continue
+            for tier2 in tier2_on.keys():
+                url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
+                tier2_label, *curies = tier2.split('\u1F4A9')
+                hyp_rows.append([ptag(spaces + atag(url, tier2_label))] + tag_curies(curies))
+        return htmldoc(
+            render_table(hyp_rows),
+            title = 'Main Page Sparc',
+            styles = ["p {margin: 0px; padding: 0px;}"],
+            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+        )
 
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
@@ -737,15 +749,18 @@ def server(api_key=None, verbose=False):
         return htmldoc(
             render_table(view_rows),
             title = 'SPARC Anatomical terms index',
+            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
         )
-        return htmldoc(*view_lines, title='SPARC Anatomical terms index', styles=["p {margin: 0px; padding: 0px;}"])
 
     @app.route(f'/{basename}/sparc', methods=['GET'])
     @app.route(f'/{basename}/sparc/', methods=['GET'])
     def route_sparc():
-        return htmldoc(atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
-                       atag(url_for('route_sparc_index'), 'Index'),
-                       title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"])
+        return htmldoc(
+            atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
+            atag(url_for('route_sparc_index'), 'Index'),
+            title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
+            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+        )
 
 
     return app
