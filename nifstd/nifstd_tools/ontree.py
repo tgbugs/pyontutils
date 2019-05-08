@@ -34,7 +34,7 @@ from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
-from pyontutils.utils import getSourceLine, get_working_dir
+from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred
 from pyontutils.config import devconfig
 from pyontutils.ontload import import_tree
@@ -44,6 +44,8 @@ from pyontutils.sheets import Sheet
 from typing import Union, Dict, List
 from IPython import embed
 import yaml
+
+log = makeSimpleLogger('ontree')
 
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
@@ -81,7 +83,7 @@ def convert_view_text_to_dict() -> dict:
         rawr_yaml = ''
         for line in infile.readlines():
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
-    return yaml.load(rawr_yaml)
+    return yaml.safe_load(rawr_yaml)
 
 
 def get_atag_from_scigraph_label_query(label: str, prefixes:List[str] = ['UBERON', 'ILX']) -> atag:
@@ -370,7 +372,7 @@ def graphFromGithub(link, verbose=False):
     # mmmm no validation
     # also caching probably
     if verbose:
-        print(link)
+        log.info(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
 
 
@@ -398,7 +400,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}
         except KeyError as e:
             if verbose:
-                print(e)
+                log.error(str(e))
             return abort(422, 'Unknown predicate.')
     else:
         kwargs['graph'] = sgg
@@ -474,7 +476,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return extras.html
     except (KeyError, TypeError) as e:
         if verbose:
-            print(type(e), e)
+            log.error(f'{type(e)} {e}')
         if sgg.getNode(root):
             message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
         elif 'json' in kwargs:
@@ -601,6 +603,7 @@ def server(api_key=None, verbose=False):
 
     # gsheets = GoogleSheets()
     view = convert_view_text_to_dict()
+    log.info('starting index load')
     view_rows = [
         [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
         for label, curies, tier_level  in linearize_graph(view)
@@ -658,7 +661,7 @@ def server(api_key=None, verbose=False):
             return maybe_abort
         if verbose:
             kwargs['verbose'] = verbose
-            print(kwargs)
+            log.debug(str(kwargs))
         return render(pred, root, **kwargs)
 
     @app.route(f'/{basename}/query/<pred>/http:/<path:iri>', methods=['GET'])  # one / due to nginx
@@ -666,7 +669,7 @@ def server(api_key=None, verbose=False):
     def route_iriquery(pred, iri):  # TODO maybe in the future
         root = 'http://' + iri  # for now we have to normalize down can check request in future
         if verbose:
-            print('ROOOOT', root)
+            log.debug(f'ROOOOT {root}')
         kwargs = getArgs(request)
         kwargs['wgb'] = wgb
         maybe_abort = sanitize(pred, kwargs)
@@ -674,7 +677,7 @@ def server(api_key=None, verbose=False):
             return maybe_abort
         if verbose:
             kwargs['verbose'] = verbose
-            print(kwargs)
+            log.debug(str(kwargs))
         return render(pred, root, **kwargs)
 
     @app.route(f'/{basename}/query/<pred>/<root>/<path:file>', methods=['GET'])
@@ -687,7 +690,7 @@ def server(api_key=None, verbose=False):
             return maybe_abort
         if verbose:
             kwargs['verbose'] = verbose
-            print(kwargs)
+            log.debug(str(kwargs))
         try:
             return render(pred, root, **kwargs)
         except HTTPError:
@@ -781,7 +784,7 @@ def test():
         if root == 'PAXRAT:':
             continue  # not an official curie yet
 
-        print('ontree testing', predicate, root)
+        log.info('ontree testing {predicate} {root}')
         if root.startswith('http'):
             root = root.split('://')[-1]  # FIXME nginx behavior...
             resp = route_iriquery(predicate, root)
@@ -789,7 +792,7 @@ def test():
             resp = route_query(predicate, root)
 
     for _, predicate, root, file, *args in file_examples:
-        print('ontree testing', predicate, root, file)
+        log.info('ontree testing {predicate} {root} {file}')
         if args and 'restriction' in args[0]:
             request.args['restriction'] = 'true'
 
@@ -818,11 +821,16 @@ def main():
             sgc._basePath = api
             # reinit curies state
             sgc.__init__(cache=sgc._get == sgc._cache_get, verbose=sgc._verbose)
+
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
             sgc.api_key = api_key
+            scs = OntTerm.query.services[0]
+            scs.api_key = api_key
+            scs.setup()
+
         app = server(verbose=verbose)
         app.debug = False
         app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
