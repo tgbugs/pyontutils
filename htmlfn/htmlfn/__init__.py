@@ -20,6 +20,7 @@ def tag(_tag, n=False):
         return s.format(extra=extra) + nl.join(value) + e
     return tagwrap
 
+
 def atag(href, value=None, new_tab=False, uriconv=None,
          cls=None, title=None, id=None):
     target = ' target="_blank"' if new_tab else ''
@@ -35,19 +36,29 @@ def atag(href, value=None, new_tab=False, uriconv=None,
 
     return f'{tstart}<a href="{href}"{target}{class_}{id_}{title}>{value}</a>{title_tip}'
 
+
 def divtag(*values, cls=None):
     class_ = f'class="{cls}"' if cls else ''
     vals = '\n'.join(values)
     return f'<div {class_}>\n{vals}\n</div>'
 
+
 def deltag(text):
     return f'<del>{text}</del>'
+
+
+def metatag(**kwargs):
+    content = ' '.join(f'{key}="{value}"' for key, value in kwargs.items())
+    return f'<meta {content}>'
+
 
 def zerotag(text):
     return f'<span class="zero">{text}</span>'
 
+
 def zeronotetag(text):
     return f'<span class="zeronote">{text}</span>'
+
 
 htmltag = tag('html', n=True)
 headtag = tag('head', n=True)
@@ -60,13 +71,17 @@ h2tag = tag('h2')
 btag = tag('b')
 ptag = tag('p')
 
-def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()):
+
+def htmldoc(*body, title='Spooky Nameless Page', metas=tuple(), styles=tuple(), scripts=tuple()):
+    """ metas is a tuple of dicts """
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
               '"http://www.w3.org/TR/html4/loose.dtd">\n')
     styles = '\n'.join((styletag(s) for s in styles))
-    scripts = '\n'.join((scripts(s) for s in scripts))
-    head = headtag('\n'.join((titletag(title), '<meta charset="UTF-8">', styles, scripts)))
+    scripts = '\n'.join((scripttag(s) for s in scripts))
+    metas = (dict(charset='UTF-8'),) + metas
+    head = headtag('\n'.join((titletag(title), *(metatag(**md) for md in metas), styles, scripts)))
     return header + htmltag('\n'.join((head, bodytag(*body))))
+
 
 def render_table(rows, *headers):
     output = []
