@@ -60,12 +60,12 @@ h2tag = tag('h2')
 btag = tag('b')
 ptag = tag('p')
 
-def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple()):
+def htmldoc(*body, title='Spooky Nameless Page', styles=tuple(), scripts=tuple(), meta='<meta charset="UTF-8">'):
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
               '"http://www.w3.org/TR/html4/loose.dtd">\n')
     styles = '\n'.join((styletag(s) for s in styles))
     scripts = '\n'.join((scripts(s) for s in scripts))
-    head = headtag('\n'.join((titletag(title), '<meta charset="UTF-8">', styles, scripts)))
+    head = headtag('\n'.join((titletag(title), meta, styles, scripts)))
     return header + htmltag('\n'.join((head, bodytag(*body))))
 
 def render_table(rows, *headers):
