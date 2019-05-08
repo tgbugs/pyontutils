@@ -16,20 +16,10 @@ from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
 
-log = makeSimpleLogger('neurondm.cuts')
-
-ndl_config = Config('neuron_data_lifted')
-ndl_config.load_existing()
-ndl_neurons = ndl_config.neurons()
-bn_config = Config('basic-neurons')
-bn_config.load_existing()
-bn_neurons = bn_config.neurons()
-
 # TODO
 # 1. inheritance for owlClass from python classes
 # 2. add ttl serialization for subclasses of EBM
 # 3. pv superclass for query example
-
 
 class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_init__ is a __ method
     __firsts = OntTerm._OntTerm__firsts
@@ -62,113 +52,117 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
 }
 
 
-contains_rules = dict(GABAergic=BBP.GABA,
-                      cholinergic=CUT.Ach,
-                      glutamatergic=CUT.Glu,
-                      serotonergic=CUT.Ser,
-                      #principle=CUT.proj,  # NOTE this was a spelling error
-                      projection=CUT.proj,
-                      intrinsic=CUT.inter,
-                      interneuron=CUT.inter,
-                      Striatum=Phenotype('UBERON:0002435', ilxtr.hasSomaLocatedIn),
-                      #CA1=Regions.CA1,
-                      #CA2=Regions.CA2,
-                      #CA3=Regions.CA3,
-                      trilaminar=BBP.TRI,
-                      neurogliaform=BBP.NGC,  # FIXME
-                      parvalbumin=BBP.PV,  # FIXME
-                      calbindin=BBP.CB,
-                      calretinin=BBP.CR,
-                      cholecystokinin=BBP.CCK,
-                      somatostatin=BBP.SOM,
-                      orexin=Phenotype('PR:000008476', ilxtr.hasExpressionPhenotype),
-                      oxytocin=Phenotype('CHEBI:7872', ilxtr.hasExpressionPhenotype),
-                      bitufted=BBP.BTC,
-                      radiatum=Layers.SR,
+def make_contains_rules():
+    contains_rules = dict(GABAergic=BBP.GABA,
+                        cholinergic=CUT.Ach,
+                        glutamatergic=CUT.Glu,
+                        serotonergic=CUT.Ser,
+                        #principle=CUT.proj,  # NOTE this was a spelling error
+                        projection=CUT.proj,
+                        intrinsic=CUT.inter,
+                        interneuron=CUT.inter,
+                        Striatum=Phenotype('UBERON:0002435', ilxtr.hasSomaLocatedIn),
+                        #CA1=Regions.CA1,
+                        #CA2=Regions.CA2,
+                        #CA3=Regions.CA3,
+                        trilaminar=BBP.TRI,
+                        neurogliaform=BBP.NGC,  # FIXME
+                        parvalbumin=BBP.PV,  # FIXME
+                        calbindin=BBP.CB,
+                        calretinin=BBP.CR,
+                        cholecystokinin=BBP.CCK,
+                        somatostatin=BBP.SOM,
+                        orexin=Phenotype('PR:000008476', ilxtr.hasExpressionPhenotype),
+                        oxytocin=Phenotype('CHEBI:7872', ilxtr.hasExpressionPhenotype),
+                        bitufted=BBP.BTC,
+                        radiatum=Layers.SR,
 
-                      #motor=Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype),
-)
+                        #motor=Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype),
+    )
 
-contains_rules.update({  # FIXME still need to get some of the original classes from neurolex
-    'TH+': CUT.TH,
-    'Thalamic reticular nucleus': CUT.TRN,  # FIXME disambiguate with reticular nucleus
-    'Midbrain reticular nucleus': CUT.MRN,
-    'Ambiguous nucleus': Phenotype('UBERON:0001719', ilxtr.hasSomaLocatedIn),
-    'Accumbens nucleus': Phenotype('UBERON:0001882', ilxtr.hasSomaLocatedIn),
-    'Neocortex layer I': Layers.L1, # FIXME consistency in naming?
-    'Neocortex layer 2': Layers.L2,
-    'Neocortex layer 3': Layers.L3,
-    'Neocortex layer 4': Layers.L4,
-    'Neocortex layer 5': Layers.L5,
-    'Neocortex layer 6': Layers.L6,
-    'cortex layer III': Layers.L3,  # probably needs the cortex to still be attached
-    'cortex layer II': Layers.L2,  # FIXME medial entorhinal ...
-    'neuropeptide Y': BBP.NPY,
-    'vasoactive intestinal peptide': BBP.VIP,
-    'Pedunculopontine nucleus': Phenotype('UBERON:0002142', ilxtr.hasSomaLocatedIn),
-    #'Incertus nucleus': OntTerm,
-    'Raphe nucleus medial': OntTerm,
-    'double bouquet': BBP.DBC,
-    'Neocortex  ': Regions.CTX,
-    'Cuneate nucleus  ': Phenotype('UBERON:0002045', ilxtr.hasSomaLocatedIn),
-    'Interstitial nucleus of Cajal  ': Phenotype('UBERON:0002551', ilxtr.hasSomaLocatedIn),
-    'Suprachiasmatic nucleus  ': Phenotype('UBERON:0002034', ilxtr.hasSomaLocatedIn),
-    'Darkshevich nucleus  ': Phenotype('UBERON:0002711', ilxtr.hasSomaLocatedIn),
-    'Spinal cord ventral horn  ': Phenotype('UBERON:0002257', ilxtr.hasSomaLocatedIn),  # FIXME ??? II just hanging out!?
-    'Area postrema  ': Phenotype('UBERON:0002162', ilxtr.hasSomaLocatedIn),
-    'Sublingual nucleus  ': Phenotype('UBERON:0002881', ilxtr.hasSomaLocatedIn),
-    'Arcuate nucleus medulla  ': Phenotype('UBERON:0002865', ilxtr.hasSomaLocatedIn),
-    'Hippocampus CA1': Regions.CA1,
-    'Hippocampus CA2': Regions.CA2,
-    'Hippocampus CA3': Regions.CA3,
-    'Hippocampus  ': Phenotype('UBERON:0001954', ilxtr.hasSomaLocatedIn),  # FIXME clarity here
-    'Retrotrapezoid nucleus  ': Phenotype('UBERON:0009918', ilxtr.hasSomaLocatedIn),
-    'Salivatory nucleus  ': Phenotype('UBERON:0004133', ilxtr.hasSomaLocatedIn),
-    'Gracile nucleus  ': Phenotype('UBERON:0002161', ilxtr.hasSomaLocatedIn),
-    'Laterodorsal tegmental nucleus  ': Phenotype('UBERON:0002267', ilxtr.hasSomaLocatedIn),
-    'Medial entorhinal  ': Phenotype('UBERON:0007224', ilxtr.hasSomaLocatedIn),
-    'Vagus dorsal motor nucleus': Phenotype('UBERON:0002870', ilxtr.hasSomaLocatedIn),
-    'Bed nuclei of terminal stria': Phenotype('UBERON:0001880', ilxtr.hasSomaLocatedIn, label='bed nucleus of stria terminalis'),
-    'Olfactory cortex': Phenotype('UBERON:0002894', ilxtr.hasSomaLocatedIn, label='olfactory cortex'),
-    'Globus pallidus external segment': Phenotype('UBERON:0002476', ilxtr.hasSomaLocatedIn,  label='lateral globus pallidus'),
-    'Globus pallidus internal segment': Phenotype('UBERON:0002477', ilxtr.hasSomaLocatedIn,  label='medial globus pallidus'),
-    'Septal complex lateral': Phenotype('UBERON:0007628', ilxtr.hasSomaLocatedIn, label='lateral septal complex'),  # FIXME missing synonym in uberon
-    'Septal complex medial': Phenotype('UBERON:0007629', ilxtr.hasSomaLocatedIn, label='medial septal complex'),  # FIXME missing synonym in uberon
-    'Premammillary nucleus dorsal': OntTerm('UBERON:0007767', label='dorsal premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-    'Premammillary nucleus ventral': OntTerm('UBERON:0007768', label='ventral premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-    'Raphe nucleus dorsal': OntTerm('UBERON:0002043', label='dorsal raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-    'Raphe nucleus medial': OntTerm('UBERON:0003004', label='median raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-    'Periventricular hypothalamic zone': OntTerm('UBERON:0002271', label='periventricular zone of hypothalamus').as_phenotype(),  # FIXME missing synonym in uberon
-    'Lateral lemniscus nuclear complex': OntTerm('UBERON:0006840', label='nucleus of lateral lemniscus').as_phenotype(),  # FIXME wow this was hard to find :/ may synonyms needed
-    # 'nuclear complex of lateral lemniscus'
-    # 'lateral lemniscus nucleus'
-    'Medial hypothalamic zone': OntTerm('UBERON:0002272', label='medial zone of hypothalamus').as_phenotype(),  # SciGraph default search is really bad >_<
-    'Incertus nucleus': OntTerm('UBERON:0035973', label='nucleus incertus').as_phenotype(),  # WOW ... that was bad
-    'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').as_phenotype(),  # spelling ...
-    'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').as_phenotype(),  # had to cook up my search function to find this
-    'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').as_phenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
-    'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').as_phenotype(),  # oof
-    'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').as_phenotype(),  # conclusion: scigraph cannot handle reordering
-    'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').as_phenotype(),
-    'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
-    'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
-    'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').as_phenotype(),
-    'Bed nucleus of the stria terminalis': OntTerm('UBERON:0001880', label='bed nucleus of stria terminalis').as_phenotype(),
-    'Hypothalamus paraventricular nucleus': OntTerm('UBERON:0001930', label='paraventricular nucleus of hypothalamus').as_phenotype(),
-    'Hypothalamus tuberomammillary nucleus': OntTerm('UBERON:0001936', label='tuberomammillary nucleus').as_phenotype(),
-    'Subthalamic nucleus': OntTerm('UBERON:0001906', label='subthalamic nucleus').as_phenotype(),
+    contains_rules.update({  # FIXME still need to get some of the original classes from neurolex
+        'TH+': CUT.TH,
+        'Thalamic reticular nucleus': CUT.TRN,  # FIXME disambiguate with reticular nucleus
+        'Midbrain reticular nucleus': CUT.MRN,
+        'Ambiguous nucleus': Phenotype('UBERON:0001719', ilxtr.hasSomaLocatedIn),
+        'Accumbens nucleus': Phenotype('UBERON:0001882', ilxtr.hasSomaLocatedIn),
+        'Neocortex layer I': Layers.L1, # FIXME consistency in naming?
+        'Neocortex layer 2': Layers.L2,
+        'Neocortex layer 3': Layers.L3,
+        'Neocortex layer 4': Layers.L4,
+        'Neocortex layer 5': Layers.L5,
+        'Neocortex layer 6': Layers.L6,
+        'cortex layer III': Layers.L3,  # probably needs the cortex to still be attached
+        'cortex layer II': Layers.L2,  # FIXME medial entorhinal ...
+        'neuropeptide Y': BBP.NPY,
+        'vasoactive intestinal peptide': BBP.VIP,
+        'Pedunculopontine nucleus': Phenotype('UBERON:0002142', ilxtr.hasSomaLocatedIn),
+        #'Incertus nucleus': OntTerm,
+        'Raphe nucleus medial': OntTerm,
+        'double bouquet': BBP.DBC,
+        'Neocortex  ': Regions.CTX,
+        'Cuneate nucleus  ': Phenotype('UBERON:0002045', ilxtr.hasSomaLocatedIn),
+        'Interstitial nucleus of Cajal  ': Phenotype('UBERON:0002551', ilxtr.hasSomaLocatedIn),
+        'Suprachiasmatic nucleus  ': Phenotype('UBERON:0002034', ilxtr.hasSomaLocatedIn),
+        'Darkshevich nucleus  ': Phenotype('UBERON:0002711', ilxtr.hasSomaLocatedIn),
+        'Spinal cord ventral horn  ': Phenotype('UBERON:0002257', ilxtr.hasSomaLocatedIn),  # FIXME ??? II just hanging out!?
+        'Area postrema  ': Phenotype('UBERON:0002162', ilxtr.hasSomaLocatedIn),
+        'Sublingual nucleus  ': Phenotype('UBERON:0002881', ilxtr.hasSomaLocatedIn),
+        'Arcuate nucleus medulla  ': Phenotype('UBERON:0002865', ilxtr.hasSomaLocatedIn),
+        'Hippocampus CA1': Regions.CA1,
+        'Hippocampus CA2': Regions.CA2,
+        'Hippocampus CA3': Regions.CA3,
+        'Hippocampus  ': Phenotype('UBERON:0001954', ilxtr.hasSomaLocatedIn),  # FIXME clarity here
+        'Retrotrapezoid nucleus  ': Phenotype('UBERON:0009918', ilxtr.hasSomaLocatedIn),
+        'Salivatory nucleus  ': Phenotype('UBERON:0004133', ilxtr.hasSomaLocatedIn),
+        'Gracile nucleus  ': Phenotype('UBERON:0002161', ilxtr.hasSomaLocatedIn),
+        'Laterodorsal tegmental nucleus  ': Phenotype('UBERON:0002267', ilxtr.hasSomaLocatedIn),
+        'Medial entorhinal  ': Phenotype('UBERON:0007224', ilxtr.hasSomaLocatedIn),
+        'Vagus dorsal motor nucleus': Phenotype('UBERON:0002870', ilxtr.hasSomaLocatedIn),
+        'Bed nuclei of terminal stria': Phenotype('UBERON:0001880', ilxtr.hasSomaLocatedIn, label='bed nucleus of stria terminalis'),
+        'Olfactory cortex': Phenotype('UBERON:0002894', ilxtr.hasSomaLocatedIn, label='olfactory cortex'),
+        'Globus pallidus external segment': Phenotype('UBERON:0002476', ilxtr.hasSomaLocatedIn,  label='lateral globus pallidus'),
+        'Globus pallidus internal segment': Phenotype('UBERON:0002477', ilxtr.hasSomaLocatedIn,  label='medial globus pallidus'),
+        'Septal complex lateral': Phenotype('UBERON:0007628', ilxtr.hasSomaLocatedIn, label='lateral septal complex'),  # FIXME missing synonym in uberon
+        'Septal complex medial': Phenotype('UBERON:0007629', ilxtr.hasSomaLocatedIn, label='medial septal complex'),  # FIXME missing synonym in uberon
+        'Premammillary nucleus dorsal': OntTerm('UBERON:0007767', label='dorsal premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+        'Premammillary nucleus ventral': OntTerm('UBERON:0007768', label='ventral premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+        'Raphe nucleus dorsal': OntTerm('UBERON:0002043', label='dorsal raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+        'Raphe nucleus medial': OntTerm('UBERON:0003004', label='median raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
+        'Periventricular hypothalamic zone': OntTerm('UBERON:0002271', label='periventricular zone of hypothalamus').as_phenotype(),  # FIXME missing synonym in uberon
+        'Lateral lemniscus nuclear complex': OntTerm('UBERON:0006840', label='nucleus of lateral lemniscus').as_phenotype(),  # FIXME wow this was hard to find :/ may synonyms needed
+        # 'nuclear complex of lateral lemniscus'
+        # 'lateral lemniscus nucleus'
+        'Medial hypothalamic zone': OntTerm('UBERON:0002272', label='medial zone of hypothalamus').as_phenotype(),  # SciGraph default search is really bad >_<
+        'Incertus nucleus': OntTerm('UBERON:0035973', label='nucleus incertus').as_phenotype(),  # WOW ... that was bad
+        'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').as_phenotype(),  # spelling ...
+        'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').as_phenotype(),  # had to cook up my search function to find this
+        'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').as_phenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
+        'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').as_phenotype(),  # oof
+        'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').as_phenotype(),  # conclusion: scigraph cannot handle reordering
+        'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').as_phenotype(),
+        'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
+        'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
+        'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').as_phenotype(),
+        'Bed nucleus of the stria terminalis': OntTerm('UBERON:0001880', label='bed nucleus of stria terminalis').as_phenotype(),
+        'Hypothalamus paraventricular nucleus': OntTerm('UBERON:0001930', label='paraventricular nucleus of hypothalamus').as_phenotype(),
+        'Hypothalamus tuberomammillary nucleus': OntTerm('UBERON:0001936', label='tuberomammillary nucleus').as_phenotype(),
+        'Subthalamic nucleus': OntTerm('UBERON:0001906', label='subthalamic nucleus').as_phenotype(),
 
-    'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').as_phenotype(),
-    'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').as_phenotype(),
-    'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').as_phenotype(),
+        'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').as_phenotype(),
+        'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').as_phenotype(),
+        'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').as_phenotype(),
 
-})
+    })
 
-for k, v in contains_rules.items():  # ah lack of types
-    if v == OntTerm:
-        continue
-    if not isinstance(v, graphBase):
-        raise TypeError(f'{k!r}: {v!r}  # is not a Phenotype or some such')
+    for k, v in contains_rules.items():  # ah lack of types
+        if v == OntTerm:
+            continue
+        if not isinstance(v, graphBase):
+            raise TypeError(f'{k!r}: {v!r}  # is not a Phenotype or some such')
+
+    return contains_rules
+
 
 exact_rules = {'pyramidal cell': BBP.PC,
                'Neocortex': Regions.CTX,
@@ -280,6 +274,13 @@ def export_for_review(config, unmapped, partial, nlx_missing,
     return [header] + rows
 
 def main():
+    ndl_config = Config('neuron_data_lifted')
+    ndl_config.load_existing()
+    ndl_neurons = ndl_config.neurons()
+    bn_config = Config('basic-neurons')
+    bn_config.load_existing()
+    bn_neurons = bn_config.neurons()
+
     resources = Path(devconfig.resources)
     cutcsv = resources / 'common-usage-types.csv'
     with open(cutcsv.as_posix(), 'rt') as f:
@@ -357,6 +358,9 @@ def main():
     with Neuron(CUT.Mammalia):
         _ = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
              for i, n in zip(ins + ians, ns + ans)]
+
+    contains_rules = make_contains_rules()
+
     skip = set()
     smatch = set()
     rem = {}
