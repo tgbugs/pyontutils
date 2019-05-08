@@ -52,6 +52,18 @@ def metatag(**kwargs):
     return f'<meta {content}>'
 
 
+def spancmb(class_=None, **kwargs):
+    """ span combinator
+        because class is a reserved keyword in python, class_ is the first arg
+        kwargs keys may be any html global attribute """
+    cdict = {'class': class_}  # put class first (sign the siren song or python preserving key order)
+    cdict.update(kwargs)
+    content = ' '.join(f'{key}="{value}"' for key, value in cdict.items() if value is not None)
+    def spantag(text):
+        return f'<span {content}>{text}</span>'
+
+    return spantag
+
 def zerotag(text):
     return f'<span class="zero">{text}</span>'
 
