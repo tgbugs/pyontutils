@@ -1,14 +1,16 @@
+from argparse import Namespace
+import json
 from pathlib import Path
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.config import devconfig
 from typing import Union, Dict, List
 import yaml
-
+from IPython import embed
 
 def  convert_view_text_to_dict() -> dict:
     with open(Path(devconfig.resources, 'sparc_terms.txt'), 'rt') as infile:
         rawr_yaml = ''
-        for line in infile.readlines():
+        for line in infile.readlines()[:]:
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
     return yaml.load(rawr_yaml)
 
@@ -42,16 +44,30 @@ def normalize_term(term, prefix=''):
 def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
     """ Recursively pull nested dictionaries out of print order"""
     for key, value in dict_.items():
-        label, *curies = normalize_term(key)
-        yield (label, curies, tier_level)
+        term, *curies = key.split('\u1F4A9')
+        yield Namespace(**dict(label=term, curies=curies, tier_level=tier_level))
         if isinstance(value, dict):
             yield from linearize_graph(value, tier_level + 1)
 
 
-def main():
-    view = convert_view_text_to_dict()
-    view_rows = linearize_graph(view)
+def pair_terms(terms):
+    new_terms = []
+    for term in terms:
+        label = term.label
+        curies = term.curies
+        if not term.curies:
+            label, *curies = normalize_term(term.label)
+        new_terms.append(Namespace(**dict(label=label, curies=curies, tier_level=term.tier_level)))
+    return new_terms
 
+
+def main():
+    sparc_terms = convert_view_text_to_dict()
+    print('Linearizing graph')
+    sparc_terms_unpaired = list(linearize_graph(sparc_terms))
+    print('Adding ids to terms list')
+    sparc_terms_paired = pair_terms(sparc_terms_unpaired)
+    # embed()
     avoid_in_bl = [
         'Gross anatomy',
         'Internal anatomy',
@@ -69,27 +85,42 @@ def main():
         'PAXRAT',
     ]
 
-    view_text, view_text_bl = '', []
-    for label, curies, tier_level in view_rows:
-        view_text += ' ' * 4 * tier_level + '\t'.join([label] + curies) + '\n'
-        if not curies and label.strip() not in avoid_in_bl:
-            view_text_bl.append(label)
+    print('Building sparc terms list txt')
+    sparc_terms_text, sparc_terms_bl = '', []
+    for term in sparc_terms_paired:
+        sparc_terms_text += ' ' * 4 * term.tier_level + '\t'.join([term.label] + term.curies) + '\n'
+        if not term.curies and term.label.strip() not in avoid_in_bl:
+            sparc_terms_bl.append(term.label)
 
     # Labels with no ID
-    for i, bl_term in enumerate(view_text_bl):
+    # Slow as heck
+    print(f'Building list for terms with no IDs with len:{len(sparc_terms_bl)}')
+    for i, bl_term in enumerate(sparc_terms_bl):
         neighbors = OntTerm.search(bl_term.split(' ')[0])
         for neighbor in neighbors:
             if set(neighbor.split(' ')) == set(bl_term.split(' ')):
                 # if neighbor.curie.split(':')[0] in accepted_prefixes_for_bl:
                 view_text_bl[i] += '\t' + neighbor.curie
 
-    # IDs with wrong label
+    # Original IDs with wrong label
+    print('Building list for terms with wrong IDs')
+    sparc_terms_with_bad_ids = []
+    for term in sparc_terms_unpaired:
+        for curie in term.curies:
+            onts = OntTerm.query(curie=curie)
+            if not onts:
+                continue
+            for ont in onts:
+                if term.label.lower().strip() != ont.label.lower().strip():
+                    sparc_terms_with_bad_ids.append({**vars(term), 'searched_label':ont.label})
 
-    with open(Path(devconfig.resources, 'sparc_terms_populated.txt', 'w'), 'w') as outfile:
-        outfile.write(view_text)
+    # embed()
+    with open(Path(devconfig.resources, 'sparc_terms_populated.txt'), 'w') as outfile:
+        outfile.write(sparc_terms_text)
     with open(Path(devconfig.resources, 'sparc_terms_unpopulated_terms.txt'), 'w') as outfile:
-        outfile.write('\n'.join(sorted(view_text_bl)))
-
+        outfile.write('\n'.join(sorted(sparc_terms_bl)))
+    with open(Path(devconfig.resources, 'sparc_terms_with_bad_ids.json'), 'w') as outfile:
+        json.dump(sparc_terms_with_bad_ids, outfile, indent=4)
 
 if __name__ == '__main__':
     main()
