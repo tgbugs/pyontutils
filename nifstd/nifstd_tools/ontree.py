@@ -46,6 +46,7 @@ from IPython import embed
 import yaml
 
 log = makeSimpleLogger('ontree')
+time = str(datetime.utcnow().isoformat()).replace('.', ',')
 
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
@@ -368,7 +369,7 @@ def graphFromGithub(link, verbose=False):
 
 def makeProv(pred, root, wgb):
     return [titletag(f'Transitive closure of {root} under {pred}'),
-            f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            f'<meta name="date" content="{time}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
 
@@ -709,7 +710,7 @@ def server(api_key=None, verbose=False):
         return htmldoc(
             render_table(rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
-            meta=f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            meta=f'<meta name="date" content="{time}">',
         )
 
     @app.route(f'/{basename}/sparc/view', methods=['GET'])
@@ -733,7 +734,7 @@ def server(api_key=None, verbose=False):
             render_table(hyp_rows),
             title = 'Main Page Sparc',
             styles = ["p {margin: 0px; padding: 0px;}"],
-            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            meta = f'<meta name="date" content="{time}">',
         )
 
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
@@ -742,7 +743,7 @@ def server(api_key=None, verbose=False):
         return htmldoc(
             render_table(view_rows),
             title = 'SPARC Anatomical terms index',
-            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            meta = f'<meta name="date" content="{time}">',
         )
 
     @app.route(f'/{basename}/sparc', methods=['GET'])
@@ -752,7 +753,7 @@ def server(api_key=None, verbose=False):
             atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
             atag(url_for('route_sparc_index'), 'Index'),
             title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
-            meta = f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            meta = f'<meta name="date" content="{time}">',
         )
 
 
