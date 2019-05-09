@@ -1362,7 +1362,7 @@ triples = (
        # to allow them to include techniques where locally the
        # primary participant is something like food, instead of the organism HRM
        (ilxtr.hasPrimaryInputOutput,  # vs primary participant
-        OntTerm('NCBITaxon:1', label='ncbitaxon')
+        OntTerm('NCBITaxon:1', label='root')
        ),
        synonyms=('culture technique', 'husbandry', 'culture'),
       ),
