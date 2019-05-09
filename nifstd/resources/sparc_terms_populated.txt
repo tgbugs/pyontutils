@@ -181,7 +181,74 @@ Spinal Cord	UBERON:0002240
         tract of spinal cord	UBERON:0007699
         urophysis	UBERON:0011359
         white matter of spinal cord	UBERON:0002318
-    Internal anatomy
+    Internal Anatomy
+        accessory nerve fiber bundle	UBERON:0006117
+        Accessory nucleus	NLX:39810
+        ampulla caudalis	UBERON:0011360
+        apex of lumbar spinal cord dorsal horn	UBERON:0014632
+        apex of thoracic spinal cord dorsal horn	UBERON:0014611
+        caudal segment of spinal cord	UBERON:0005845
+        central canal of spinal cord:UBERON:0002291
+        Clarke's nucleus	UBERON:0002246
+        conus medullaris	UBERON:0005437
+        cuneate fasciculus of spinal cord	UBERON:0005832
+        dorsal commissural nucleus of spinal cord	UBERON:0011776
+        dorsomedial sulcus
+        fasciculus of spinal cord	UBERON:0005837
+        filum terminale externum	UBERON:0010270
+        filum terminale internum	UBERON:0010269
+        filum terminale:UBERON:0005443
+        floor plate spinal cord region	UBERON:0005723
+        funiculus of spinal cord:UBERON:0006127
+        Ganglion part of peripheral nervous system	UBERON:0024940
+        gracile fasciculus of spinal cord	UBERON:0005826
+        intermediolateral nucleus	UBERON:0002175
+        intermediomedial cell column
+        lamina of gray matter of spinal cord	UBERON:0016570
+        lateral cervical nucleus	FMA:73921
+        lateral corticospinal tract	FMA:72635
+        lateral spinal nucleus	UBERON:0035024
+        meninx of spinal cord	UBERON:0003292
+        nucleus of phrenic nerve:UBERON:0016850
+        nucleus of pudendal nerve:UBERON:0022278
+        nucleus of the bulbocavernosus	UBERON:0018545
+        nucleus proprius of spinal cord	UBERON:0016610
+        Parasympathetic ganglion	FMA:5894
+        regional part of spinal cord	UBERON:0001948
+        Regional part of vestibular ganglion
+        roof plate spinal cord region	UBERON:0005724
+        root of lumbar spinal nerve	FMA:16421
+        root of sacral nerve	FMA:18028
+        root of thoracic nerve	FMA:14064
+        Segment of spinal cord	FMA:62420
+        spinal cord	FMA:7647
+        spinal cord dorsal column	UBERON:0005373
+        spinal cord dorsal horn	UBERON:0002256
+        spinal cord dorsal white commissure	UBERON:0007840
+        spinal cord ependyma	UBERON:0005359
+        spinal cord gray commissure	UBERON:0004677
+        spinal cord gray matter	UBERON:0002315
+        spinal cord lateral columns	UBERON:0005374
+        spinal cord lateral horn	UBERON:0004676
+        spinal cord lateral wall	UBERON:0009582
+        spinal cord reticular nucleus	UBERON:0006319
+        spinal cord ventral commissure	UBERON:0004170
+        spinal cord ventral horn	UBERON:0002257
+        spinal cord white commissure	UBERON:0007838
+        Spinal ganglion part of peripheral nervous system
+        subdivision of spinal cord central canal	UBERON:0014538
+        substantia gelatinosa	FMA:74019
+        Superior part of vestibular ganglion	UBERON:0002825
+        tract of spinal cord	FMA:75683
+        urophysis	UBERON:0011359
+        ventral commissural nucleus of spinal cord	UBERON:0034771
+        ventral corticospinal tract	UBERON:0002760
+        ventral gray commissure of spinal cord	FMA:77038
+        ventral nerve root of lumbar spinal cord	UBERON:0024382
+        ventral nerve root of sacral spinal cord	UBERON:0023623
+        vestibular ganglion	FMA:53435
+        white matter of spinal cord	UBERON:0002318
+    General spinal cord anatomy
         C1 segment of cervical spinal cord	UBERON:0006469
         C4 segment of cervical spinal cord	UBERON:0006490
         C7 segment of cervical spinal cord	UBERON:0006493
@@ -643,7 +710,7 @@ Atlas Nomenclature
         Agranular insular area, ventral part, layer 5 (mba)	MBA:800
         Agranular insular area, ventral part, layer 6a (mba)	MBA:675
         Agranular insular area, ventral part, layer 6b (mba)	MBA:699
-        Allen Mouse Brain Atlas parcellation label root	http://uri.interlex.org/aibs/uris/mouse/labels/
+        Allen Mouse Brain Atlas parcellation label root	ilx:aibs/uris/mouse/labels/
         Ammon's horn (mba)	MBA:375
         Ansiform lobule (mba)	MBA:1017
         Anterior amygdalar area (mba)	MBA:23
@@ -1949,7 +2016,7 @@ Atlas Nomenclature
         2b cerebellar lobule (paxrat)	PAXRAT:2
         2nd and 3rd cerebellar lobules (paxrat)	PAXRAT:3
         2nd cerebellar lobule (paxrat)	PAXRAT:4
-        3rd and 4th cerebellar lobules (paxrat)	PAXRAT:5
+        3rd and 4th cerebellar lobules (paxrat)	PAXRAT:5`
         3rd cerebellar lobule (paxrat)	PAXRAT:6
         3rd ventricle (paxrat)	PAXRAT:7
         4th and 5th cerebellar lobules (paxrat)	PAXRAT:8
