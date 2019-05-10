@@ -82,6 +82,7 @@ def htmldoc(*body, title='Spooky Nameless Page', metas=tuple(), styles=tuple(), 
     head = headtag('\n'.join((titletag(title), *(metatag(**md) for md in metas), styles, scripts)))
     return header + htmltag('\n'.join((head, bodytag(*body))))
 
+
 def render_table(rows, *headers):
     output = []
     output.append('<tr><th>' + '</th><th>'.join(headers) + '</th></tr>')
