@@ -189,7 +189,7 @@ def graphFromGithub(link, verbose=False):
 
 def makeProv(pred, root, wgb):
     return [titletag(f'Transitive closure of {root} under {pred}'),
-            f'<meta name="date" content="{time}">',
+            f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
 
@@ -520,13 +520,13 @@ def server(api_key=None, verbose=False):
         if tier2 is not None:
             if tier2 not in journey:
                 return abort(404)
-
             journey = journey[tier2]
 
         rows = [
             [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
             for label, curies, tier_level  in linearize_graph(journey)
         ]
+
         return htmldoc(
             render_table(rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
