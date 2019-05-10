@@ -87,11 +87,10 @@ def get_notes_from_grid(grid, title):
             for datum in sheet['data']:
                 for i, row in enumerate(datum['rowData']):
                     # if cell is blank it might not have values
-                    if row.get('values'):
+                    if 'values' in row:
                         for j, cell in enumerate(row['values']):
                             if 'note' in cell:
                                 yield i, j, cell['note']
-
 
 def get_note(row_index, column_index, notes_index):
     try:
