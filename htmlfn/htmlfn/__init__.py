@@ -21,6 +21,29 @@ def tag(_tag, n=False):
     return tagwrap
 
 
+def cmb(_tag, n=False):
+    nl = '\n' if n else ''
+    _s = f'<{_tag}{{extra}}>{nl}'
+    e = f'{nl}</{_tag}>'
+    def asdf(**kwargs):
+        extra = (' ' + ' '.join(f'{k}="{v}"'
+                                for k, v in kwargs.items())
+                 if kwargs else '')
+        s = _s.format(extra=extra)
+        def inner(*args):
+            return s + nl.join(args) + e
+        return inner
+    return asdf
+
+
+def stag(tag_):
+    """ single tags """
+    def inner(**kwargs):
+        content = ' '.join(f'{key}="{value}"' for key, value in kwargs.items())
+        return f'<{tag_} {content}>'
+    return inner
+
+
 def atag(href, value=None, new_tab=False, uriconv=None,
          cls=None, title=None, id=None):
     target = ' target="_blank"' if new_tab else ''
@@ -37,6 +60,18 @@ def atag(href, value=None, new_tab=False, uriconv=None,
     return f'{tstart}<a href="{href}"{target}{class_}{id_}{title}>{value}</a>{title_tip}'
 
 
+def atagpost(target, value=None, **data):
+    # TODO
+    if value is None:
+        value = target
+
+    formcmb = cmb('form', n=True)
+    return formcmb(method='post', action='??', **{'class':'inline'})(
+        inputtag(type='hidden', name='hrm', **data),
+        buttontag(value, type='submit', name='submit-thing',
+                  value='submit-value', **{'class':'link-button'}))
+
+
 def divtag(*values, cls=None):
     class_ = f'class="{cls}"' if cls else ''
     vals = '\n'.join(values)
@@ -45,19 +80,6 @@ def divtag(*values, cls=None):
 
 def deltag(text):
     return f'<del>{text}</del>'
-
-
-def metatag(**kwargs):
-    content = ' '.join(f'{key}="{value}"' for key, value in kwargs.items())
-    return f'<meta {content}>'
-
-
-def zerotag(text):
-    return f'<span class="zero">{text}</span>'
-
-
-def zeronotetag(text):
-    return f'<span class="zeronote">{text}</span>'
 
 
 htmltag = tag('html', n=True)
@@ -70,6 +92,37 @@ h1tag = tag('h1')
 h2tag = tag('h2')
 btag = tag('b')
 ptag = tag('p')
+
+buttontag = tag('button')
+
+
+def metatag(**kwargs):
+    content = ' '.join(f'{key}="{value}"' for key, value in kwargs.items())
+    return f'<meta {content}>'
+
+
+def spancmb(class_=None, **kwargs):
+    """ span combinator
+        because class is a reserved keyword in python, class_ is the first arg
+        kwargs keys may be any html global attribute """
+    cdict = {'class': class_}  # put class first (sign the siren song or python preserving key order)
+    cdict.update(kwargs)
+    content = ' '.join(f'{key}="{value}"' for key, value in cdict.items() if value is not None)
+    def spantag(text):
+        return f'<span {content}>{text}</span>'
+
+    return spantag
+
+
+def zerotag(text):
+    return f'<span class="zero">{text}</span>'
+
+
+def zeronotetag(text):
+    return f'<span class="zeronote">{text}</span>'
+
+
+inputtag = stag('input')
 
 
 def htmldoc(*body, title='Spooky Nameless Page', metas=tuple(), styles=tuple(), scripts=tuple()):
@@ -342,4 +395,26 @@ span.paren9 { color: #4d4d4d ;
     background-color: none;
     }
 .default:hover { background-color: none; color: #00ff00; }
+'''
+
+atagpost_style = '''
+.inline {
+  display: inline;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 1em;
+  font-family: serif;
+}
+.link-button:focus {
+  outline: none;
+}
+.link-button:active {
+  color:red;
+}
 '''

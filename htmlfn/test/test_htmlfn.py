@@ -36,3 +36,10 @@ class TestHtmlFn(unittest.TestCase):
                           scripts=('console.log("lol")',))
 
         assert doc == doc_expect
+
+    def test_spancmb(self):
+        out = hfn.spancmb('class', id='hah')('some text')
+        assert out == '<span class="class" id="hah">some text</span>'
+
+    def test_apostag(self):
+        out = hfn.atagpost('lol', 'something to search', form_value='hahaha')

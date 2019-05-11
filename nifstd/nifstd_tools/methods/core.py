@@ -73,6 +73,8 @@ prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
 tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
+dim = rdflib.Namespace(asp[''] + 'dimension/')
+unit = rdflib.Namespace(asp[''] + 'unit/')
 
 obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'

@@ -341,7 +341,7 @@ triples += (  # material entities
         intersectionOf(restN(hasPart, ilxtr.singleElectrode),
                        restN(hasPart, ilxtr.sharpMicroPipette))),
 
-    oc(ilxtr.contrastAgen, ilxtr.materialEntity),
+    oc(ilxtr.contrastAgent, ilxtr.materialEntity),
 
     oc(ilxtr.inductionFactor, ilxtr.materialEntity),
 
