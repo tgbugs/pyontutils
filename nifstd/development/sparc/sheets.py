@@ -16,7 +16,7 @@ class SheetPlus(Sheet):
 
     def get_html_rows(self, dict_={}):
         if not dict_:
-            dict_ = self.graph
+            dict_ = self.tree
         rows = [
             [(8 * nbsp * tier_level) + label + (nbsp * 8)] # + curies
             for label, curies, tier_level  in self.linearize_graph(dict_)
@@ -25,7 +25,7 @@ class SheetPlus(Sheet):
 
     def get_rows(self, dict_={}):
         if not dict_:
-            dict_ = self.graph
+            dict_ = self.tree
         rows = []
         for label, curies, tier_level in self.linearize_graph(dict_):
             if curies:
@@ -174,7 +174,7 @@ class UberonTermsSheet1Schema(SheetPlus):
         # BUG: this is the wrong name and hasnt changed yet -_-
         self.values[2][4] = 'General spinal cord anatomy'
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
@@ -203,13 +203,13 @@ class UberonTermsSheet1Schema(SheetPlus):
                     start_index = sub_terms_index + 1,
                     column = column,
                 )
-                self.graph[self.name][self.sheet_name][last_term][sub_term] = terms_list
+                self.tree[self.name][self.sheet_name][last_term][sub_term] = terms_list
             elif term:
                 terms_list = self.get_sub_column(
                     start_index = terms_index + 1,
                     column = column,
                 )
-                self.graph[self.name][self.sheet_name][term] = terms_list
+                self.tree[self.name][self.sheet_name][term] = terms_list
 
 
 class SpinalTerminalogySheet1Schema(SheetPlus):
@@ -220,7 +220,7 @@ class SpinalTerminalogySheet1Schema(SheetPlus):
         self.values[0][0] = 'Internal Anatomy'
 
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
@@ -247,7 +247,7 @@ class SpinalTerminalogySheet1Schema(SheetPlus):
                     start_index = headers_index + 1,
                     column = column,
                 )
-                self.graph[self.name][self.sheet_name][header] = terms_list
+                self.tree[self.name][self.sheet_name][header] = terms_list
             else:
                 for index, row in enumerate(self.values[headers_index + 1:]):
                     sub_header = row[column]
@@ -268,42 +268,42 @@ class SpinalTerminalogySheet1Schema(SheetPlus):
                             end_index =  end_index,
                             column = column,
                         )
-                        self.graph[self.name][self.sheet_name][header][sub_header] = sub_terms_list
+                        self.tree[self.name][self.sheet_name][header][sub_header] = sub_terms_list
 
 
 class ParcellationUberonSchema(SheetPlus):
 
     def build(self):
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
 
     def populate_graph(self):
         ### NOT HEADER
-        self.graph[self.name][self.sheet_name]['UBERON'] = self.get_sub_column(start_index=2, column=0)
+        self.tree[self.name][self.sheet_name]['UBERON'] = self.get_sub_column(start_index=2, column=0)
 
 
 class ParcellationAllenSchema(SheetPlus):
 
     def build(self):
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
 
     def populate_graph(self):
         ### NOT HEADER
-        self.graph[self.name][self.sheet_name]['Allen Mouse Brainstem'] = self.get_sub_column(0, 0)
+        self.tree[self.name][self.sheet_name]['Allen Mouse Brainstem'] = self.get_sub_column(0, 0)
 
 
 class ParcellationPaxinosSchema(SheetPlus):
 
     def build(self):
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
@@ -314,28 +314,28 @@ class ParcellationPaxinosSchema(SheetPlus):
             row = [cell for cell in row if cell]
             lable_curie = '-'.join(row)
             term_dict[lable_curie] = None
-        self.graph[self.name][self.sheet_name]['Paxinos Rat Brainstem'] = term_dict
+        self.tree[self.name][self.sheet_name]['Paxinos Rat Brainstem'] = term_dict
 
 
 class ParcellationBermanSchema(SheetPlus):
 
     def build(self):
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
 
     def populate_graph(self):
         ### NOT HEADER
-        self.graph[self.name][self.sheet_name]['Berman Cat Brainstem'] = self.get_sub_column(0, 0)
+        self.tree[self.name][self.sheet_name]['Berman Cat Brainstem'] = self.get_sub_column(0, 0)
 
 
 class ParcellationNieuwenhuysSchema(SheetPlus):
 
     def build(self):
         rec_dd = lambda: defaultdict(rec_dd)
-        self.graph = rec_dd()
+        self.tree = rec_dd()
         self.location_grid = rec_dd()
         self.populate_location_grid()
         self.populate_graph()
@@ -346,7 +346,7 @@ class ParcellationNieuwenhuysSchema(SheetPlus):
             row = [cell for cell in row if cell]
             lable_curie = ' - '.join(row)
             term_dict[lable_curie] = None
-        self.graph[self.name][self.sheet_name]['Nieuwenhuys'] = term_dict
+        self.tree[self.name][self.sheet_name]['Nieuwenhuys'] = term_dict
 
 
 class UberonTermsSheet1(UberonTermsSheet1Schema):
@@ -427,10 +427,10 @@ class GoogleSheets(SheetPlus):
         ]
 
         # combine graphs
-        self.graph = {}
+        self.tree = {}
         self.location_grid = {}
         for sheet in self.sheets:
-            self.graph = {**sheet.graph[sheet.name][sheet.sheet_name], **self.graph}
+            self.tree = {**sheet.graph[sheet.name][sheet.sheet_name], **self.tree}
             self.location_grid = {**sheet.location_grid, **self.location_grid}
 
         # use grid location to relocate headers/sub_headers
@@ -439,29 +439,29 @@ class GoogleSheets(SheetPlus):
             bname, bsheet_name, bcolumn, bindex = bottom
             top_header = self.location_grid[tname][tsheet_name][(tcolumn, tindex)]
             bot_header = self.location_grid[bname][bsheet_name][(bcolumn, bindex)]
-            term_nested_dict = self.graph.pop(bot_header)
-            self.graph[top_header][bot_header] = term_nested_dict
+            term_nested_dict = self.tree.pop(bot_header)
+            self.tree[top_header][bot_header] = term_nested_dict
 
     def hardcode_graph_paths(self):
         # displacements and creations
-        self.graph['Atlas Nomenclature'] = {}
-        self.graph['Atlas Nomenclature']['Allen Mouse Brainstem'] = self.graph.pop('Allen Mouse Brainstem')
-        self.graph['Atlas Nomenclature']['Paxinos Rat Brainstem'] = self.graph.pop('Paxinos Rat Brainstem')
-        self.graph['Atlas Nomenclature']['Berman Cat Brainstem'] = self.graph.pop('Berman Cat Brainstem')
-        self.graph['Peripheral Nervous System'] = {}
-        self.graph['Peripheral Nervous System']['Ganglia'] = self.graph.pop('Ganglia')
-        self.graph['Spinal Cord']['Segment Anatomy'] = {}
-        self.graph['Spinal Cord']['Segment Anatomy']['Lamina Of Spinal Cord'] = self.graph['Spinal Cord'].pop('Lamina Of Spinal Cord')
-        self.graph['Spinal Cord']['Segment Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.graph['Spinal Cord'].pop('Spinal Cord Internal Structures Per Segment')
-        self.graph['Spinal Cord']['Segment Anatomy']['Spinal Cord Segments'] = self.graph['Spinal Cord'].pop('Spinal Cord Segments')
-        self.graph['Spinal Cord']['Segment Anatomy']['Spinal Cord Subsegments'] = self.graph['Spinal Cord'].pop('Spinal Cord Subsegments')
+        self.tree['Atlas Nomenclature'] = {}
+        self.tree['Atlas Nomenclature']['Allen Mouse Brainstem'] = self.tree.pop('Allen Mouse Brainstem')
+        self.tree['Atlas Nomenclature']['Paxinos Rat Brainstem'] = self.tree.pop('Paxinos Rat Brainstem')
+        self.tree['Atlas Nomenclature']['Berman Cat Brainstem'] = self.tree.pop('Berman Cat Brainstem')
+        self.tree['Peripheral Nervous System'] = {}
+        self.tree['Peripheral Nervous System']['Ganglia'] = self.tree.pop('Ganglia')
+        self.tree['Spinal Cord']['Segment Anatomy'] = {}
+        self.tree['Spinal Cord']['Segment Anatomy']['Lamina Of Spinal Cord'] = self.tree['Spinal Cord'].pop('Lamina Of Spinal Cord')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.tree['Spinal Cord'].pop('Spinal Cord Internal Structures Per Segment')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Segments'] = self.tree['Spinal Cord'].pop('Spinal Cord Segments')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Subsegments'] = self.tree['Spinal Cord'].pop('Spinal Cord Subsegments')
 
         # Remove empty columns
         headers_to_pop = []
-        for header, sub_header_on in self.graph.items():
-            if len(self.graph[header].keys()) == 0:
+        for header, sub_header_on in self.tree.items():
+            if len(self.tree[header].keys()) == 0:
                 headers_to_pop.append(header)
-        [self.graph.pop(header) for header in headers_to_pop]
+        [self.tree.pop(header) for header in headers_to_pop]
 
 
 def main():
