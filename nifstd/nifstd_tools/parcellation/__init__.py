@@ -97,7 +97,7 @@ def swanson():
             data.append(d)
     results = async_getter(sgv.findByTerm, [(d[1],) for d in data])
     #results = [None] * len(data)
-    curies = [[r['curie'] for r in _ if 'UBERON' in r['curie']] if _ else [] for _ in results]
+    curies = [[r['curie'] for r in _ if 'curie' in r and 'UBERON' in r['curie']] if _ else [] for _ in results]
     output = [_[0] if _ else None for _ in curies]
 
     header = ['Depth', 'Name', 'Citation', 'NextSyn', 'Uberon']

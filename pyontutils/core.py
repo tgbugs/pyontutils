@@ -582,9 +582,9 @@ class Class:
         class_definition=skos.definition,
     )
     lift = dict(
-        species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
-        devstage=owl.allValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
-        definingArtifacts=owl.allValuesFrom,
+        species=owl.someValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
+        devstage=owl.someValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
+        definingArtifacts=owl.someValuesFrom,  # TODO we do need the closure axioms
         definingArtifactsS=owl.someValuesFrom,  # HRM
     )
     _kwargs = tuple()  # but really a dict
