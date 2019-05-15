@@ -64,17 +64,13 @@ inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
 
-UBERON_TERMS = 'uberon-terms'
-SPINAL_TERMINOLOGY = 'spinal-terminology'
-PARCELLATION_BRAINSTEM = 'parcellation-brainstem'
-
 
 def time():
     return str(datetime.utcnow().isoformat()).replace('.', ',')
 
 
 def convert_view_text_to_dict() -> dict:
-    with open(Path(devconfig.resources, 'sparc_terms_populated.txt'), 'rt') as infile:
+    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
         rawr_yaml = ''
         for line in infile.readlines():
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
@@ -413,15 +409,12 @@ def server(api_key=None, verbose=False):
     app.config['loop'] = loop
 
     # gsheets = GoogleSheets()
-    view = convert_view_text_to_dict()
+    sparc_view = convert_view_text_to_dict()
     log.info('starting index load')
-    view_rows = [
+    sparc_view_rows = [
         [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-        for label, curies, tier_level  in linearize_graph(view)
+        for label, curies, tier_level  in linearize_graph(sparc_view)
     ]
-    # with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
-    #     _lines = infile.readlines()
-    #     view_lines = [ptag(line) for line in [line.replace('\n', '').replace(' ' * 4, nbsp * 8) for line in _lines]]
 
     basename = 'trees'
 
@@ -512,7 +505,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>', methods=['GET'])
     @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>/', methods=['GET'])
     def route_sparc_view_query(tier1, tier2=None):
-        journey = view
+        journey = sparc_view
         if tier1 not in journey:
             return abort(404)
 
@@ -538,13 +531,15 @@ def server(api_key=None, verbose=False):
     def route_sparc_view():
         hyp_rows = []
         spaces = nbsp * 8
-        for tier1, tier2_on in view.items():
+        for tier1, tier2_on in sparc_view.items():
             url = url_for('route_sparc_view_query', tier1=tier1)
             tier1_label, *curies = tier1.split('\u1F4A9')
             hyp_rows.append([ptag(atag(url, tier1_label))] + tag_curies(curies))
             # TODO: May change so headers need to be established to avoiding a problem here
             # with values being over 10 but it's just > 10 sub topics
-            if len(tier2_on.keys()) > 10:
+            if not tier2_on:
+                continue
+            if len(tier2_on.keys()) > 5:
                 continue
             for tier2 in tier2_on.keys():
                 url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
@@ -561,7 +556,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
         return htmldoc(
-            render_table(view_rows),
+            render_table(sparc_view_rows),
             title = 'SPARC Anatomical terms index',
             metas = ({'name':'date', 'content':time()},),
         )
