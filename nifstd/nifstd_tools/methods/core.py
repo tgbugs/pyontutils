@@ -4,6 +4,7 @@ from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.namespaces import partOf, definition
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
+from pyontutils.namespaces import prot, proc, tech, asp, dim, unit
 from pyontutils.combinators import oc, oc_, odp, oop, olit, oec
 from pyontutils.combinators import POCombinator, ObjectCombinator
 from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
@@ -68,13 +69,6 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
 
     if comment:
         yield from olit(subject, rdfs.comment, comment)
-
-prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
-proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
-tech = rdflib.Namespace(ilxtr[''] + 'technique/')
-asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
-dim = rdflib.Namespace(asp[''] + 'dimension/')
-unit = rdflib.Namespace(asp[''] + 'unit/')
 
 obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'

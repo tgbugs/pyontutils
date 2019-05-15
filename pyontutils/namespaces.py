@@ -213,6 +213,16 @@ paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
 WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
 
+# development namespaces
+prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
+proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
+tech = rdflib.Namespace(ilxtr[''] + 'technique/')
+asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
+dim = rdflib.Namespace(asp[''] + 'dimension/')
+unit = rdflib.Namespace(asp[''] + 'unit/')
+sparc = rdflib.Namespace(ilxtr[''] + 'sparc/')
+
+
 OntCuries({'BERCAT': str(BERCAT)})
 
 # retired namespaces kept as a record in the even that we need them for some reason
