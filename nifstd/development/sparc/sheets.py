@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import zip_longest
 from pathlib import Path
 from pyontutils.config import devconfig
@@ -24,12 +24,13 @@ class SheetPlus(Sheet):
         return rows
 
     def get_rows(self, dict_={}):
+        spaces = ' ' * 4
         if not dict_:
             dict_ = self.tree
         rows = []
         for label, curies, tier_level in self.linearize_graph(dict_):
             if curies:
-                rows.append((4 * ' ' * tier_level) + label + '\t' + '\t'.join(curies))
+                rows.append((4 * ' ' * tier_level) + label + spaces + spaces.join(curies))
             else:
                 rows.append((4 * ' ' * tier_level) + label)
         return rows
@@ -41,8 +42,9 @@ class SheetPlus(Sheet):
         return curie
 
     def linearize_graph(self, dict_: dict, tier_level: int = 0) -> tuple:
+        # TODO: need to put the {str:None,} -> [str,]
         """ Recursively pull nested dictionaries out of print order"""
-        for key, value in sorted(dict_.items()):
+        for key, value in dict_.items():
             label, curie = self.curie_splitter(key) # self.normt(key)
             if curie:
                 curies = [self.fix_curie(curie)]
@@ -52,7 +54,7 @@ class SheetPlus(Sheet):
                 else:
                     continue
             yield (label, curies, tier_level)
-            if isinstance(value, dict):
+            if isinstance(value, dict) or isinstance(value, OrderedDict):
                 yield from self.linearize_graph(value, tier_level + 1)
 
     def curie_splitter(self, string):
@@ -147,7 +149,13 @@ class SheetPlus(Sheet):
                 self.location_grid[self.name][self.sheet_name][(x, y)] = self.clean(value)
 
     def get_sub_column(self, start_index, column, end_index=None):
-        return {self.clean(row[column]):None for row in self.values[start_index:end_index] if row[column]}
+        od = OrderedDict()
+        [
+            od.update({self.clean(row[column]):None})
+            for row in self.values[start_index:end_index]
+            if row[column]
+        ]
+        return od
 
     def get_sub_header_indexes(self, start_index, column):
         ''' Parse for bold text and returns its coordinates '''
@@ -341,13 +349,13 @@ class ParcellationNieuwenhuysSchema(SheetPlus):
         self.populate_graph()
 
     def populate_graph(self):
-        term_dict = {}
-        for row in self.values[:]:
+        term_dict = OrderedDict()
+        spaces = ' ' * 4
+        for row in self.raw_values[:]:
             row = [cell for cell in row if cell]
-            lable_curie = ' - '.join(row)
+            lable_curie = spaces.join(row)
             term_dict[lable_curie] = None
         self.tree[self.name][self.sheet_name]['Nieuwenhuys'] = term_dict
-
 
 class UberonTermsSheet1(UberonTermsSheet1Schema):
     name = 'uberon-terms'
@@ -427,10 +435,11 @@ class GoogleSheets(SheetPlus):
         ]
 
         # combine graphs
-        self.tree = {}
+        self.tree = OrderedDict()
         self.location_grid = {}
         for sheet in self.sheets:
-            self.tree = {**sheet.graph[sheet.name][sheet.sheet_name], **self.tree}
+            self.tree.update(sheet.tree[sheet.name][sheet.sheet_name])
+            # self.tree = {**sheet.tree[sheet.name][sheet.sheet_name], **self.tree}
             self.location_grid = {**sheet.location_grid, **self.location_grid}
 
         # use grid location to relocate headers/sub_headers
@@ -459,7 +468,7 @@ class GoogleSheets(SheetPlus):
         # Remove empty columns
         headers_to_pop = []
         for header, sub_header_on in self.tree.items():
-            if len(self.tree[header].keys()) == 0:
+            if len(self.tree[header]) == 0:
                 headers_to_pop.append(header)
         [self.tree.pop(header) for header in headers_to_pop]
 
