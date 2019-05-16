@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from pyontutils.core import devconfig
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
 Remote imports are replaced with local imports.
@@ -83,6 +83,15 @@ Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 class NotBuiltError(FileNotFoundError):
     pass
 
+
+def make_catalog(itrips):
+    return '\n'.join(("""<?xml version="1.0" encoding="UTF-8" standalone="no"?>""",
+                      """<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">""",
+                      *[f"""    <uri id="User Entered Import Resolution" name="{s}" uri="{o}"/>""" for s, p, o in itrips
+                        if p == owl.sameAs],
+                      """</catalog>"""))
+
+
 @contextmanager
 def execute_regardless(function, only_exception=False):
     try:
@@ -157,6 +166,11 @@ class ReproLoader:
         load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
         print(load_command)
 
+
+        # replace raw github imports with ontology.neuinfor iris to simplify import chain
+        fix_imports = "find " + local_base + " -name '*.ttl' -exec sed -i 's/<http.\+\/ttl\//<http:\/\/ontology.neuinfo.org\/NIF\/ttl\//' {} \;"
+        os.system(fix_imports)
+
         def reset_state(original_branch=nob):
             repo.git.checkout('--', local_base)
             original_branch.checkout()
@@ -171,6 +185,10 @@ class ReproLoader:
             else:
                 local_versions = tuple()
             itrips = local_imports(remote_base, local_base, ontologies, local_versions=local_versions)  # SciGraph doesn't support catalog.xml
+            catalog = make_catalog(itrips)
+            with open(Path(local_base, 'catalog.xml'), 'wt') as f:
+                f.write(catalog)
+
             maybe_zip_path = glob(wild_zip_path)
             if not maybe_zip_path:
                 if check_built:
