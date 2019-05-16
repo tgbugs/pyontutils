@@ -19,7 +19,7 @@ Options:
 
 """
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import os
 import re
 import asyncio
@@ -77,6 +77,62 @@ def convert_view_text_to_dict() -> dict:
     return yaml.safe_load(rawr_yaml)
 
 
+def open_custom_sparc_view_yml():
+
+    def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
+        class OrderedLoader(Loader):
+            pass
+        def construct_mapping(loader, node):
+            loader.flatten_mapping(node)
+            return object_pairs_hook(loader.construct_pairs(node))
+        OrderedLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+            construct_mapping)
+        return yaml.load(stream, OrderedLoader)
+
+    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
+        rawr_yaml = ''
+        for line in infile.readlines()[:]:
+            # last line doesnt have newline so we cant just replace it
+            rawr_yaml += line.replace('\n', '') + ':\n'
+        sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
+
+    return sparc_view
+
+
+def tag_row(row: list, url: url_for = None, tier_level: int = 0) -> list:
+    ''' Tag each element in the row; atag the curies & ptag everything else '''
+
+    tagged_row = []
+    spaces = nbsp * 8 * tier_level
+
+    if not row:
+        return row
+    if not isinstance(row, list):
+        row = [row]
+    for i, element in enumerate(row):
+        if i > 0:
+            spaces = ''
+        try:
+            oid = OntId(element)
+            # TODO: should this have spaces?
+            tagged_curie = atag(oid.iri, oid.curie)
+            tagged_row.append(tagged_curie)
+        except:
+            if url:
+                tagged_row.append(ptag(spaces + atag(url, element)))
+            else:
+                tagged_row.append(spaces + element)
+    return tagged_row
+
+
+def hyperlink_tree(tree: dict) -> list:
+    hyp_rows = []
+    for row, tier_level in linearize_graph(tree):
+        tagged_row = tag_row(row=row, tier_level=tier_level)
+        hyp_rows.append(tagged_row)
+    return hyp_rows
+
 def get_atag_from_scigraph_label_query(label: str, prefixes:List[str] = ['UBERON', 'ILX']) -> atag:
     atags = []
     for prefix in prefixes:
@@ -117,8 +173,10 @@ def tag_curies(curies):
 def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
     """ Recursively pull nested dictionaries out of print order"""
     for key, value in dict_.items():
-        label, *curies = normt(key)
-        yield (label, curies, tier_level)
+        # label, *curies = normt(key)
+        # yield (label, curies, tier_level)
+        row = key.split('    ')
+        yield (row, tier_level)
         if isinstance(value, dict):
             yield from linearize_graph(value, tier_level + 1)
 
@@ -409,12 +467,13 @@ def server(api_key=None, verbose=False):
     app.config['loop'] = loop
 
     # gsheets = GoogleSheets()
-    sparc_view = convert_view_text_to_dict()
+    # sparc_view = convert_view_text_to_dict()
+    sparc_view = open_custom_sparc_view_yml()
     log.info('starting index load')
-    sparc_view_rows = [
-        [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-        for label, curies, tier_level  in linearize_graph(sparc_view)
-    ]
+    # sparc_view_rows = [
+    #     [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
+    #     for label, curies, tier_level  in linearize_graph(sparc_view)
+    # ]
 
     basename = 'trees'
 
@@ -515,13 +574,14 @@ def server(api_key=None, verbose=False):
                 return abort(404)
             journey = journey[tier2]
 
-        rows = [
-            [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-            for label, curies, tier_level  in linearize_graph(journey)
-        ]
+        # rows = [
+        #     [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
+        #     for label, curies, tier_level  in linearize_graph(journey)
+        # ]
+        hyp_rows = hyperlink_tree(journey)
 
         return htmldoc(
-            render_table(rows),
+            render_table(hyp_rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
             metas = ({'name':'date', 'content':time()},),
         )
@@ -531,20 +591,20 @@ def server(api_key=None, verbose=False):
     def route_sparc_view():
         hyp_rows = []
         spaces = nbsp * 8
-        for tier1, tier2_on in sparc_view.items():
+        for tier1, tier2_on in sorted(sparc_view.items()):
             url = url_for('route_sparc_view_query', tier1=tier1)
-            tier1_label, *curies = tier1.split('\u1F4A9')
-            hyp_rows.append([ptag(atag(url, tier1_label))] + tag_curies(curies))
-            # TODO: May change so headers need to be established to avoiding a problem here
-            # with values being over 10 but it's just > 10 sub topics
+            tier1_row = tier1.split('    ')
+            tagged_tier1_row = tag_row(tier1_row, url)
+            hyp_rows.append(tagged_tier1_row)
             if not tier2_on:
-                continue
+                 continue
             if len(tier2_on.keys()) > 5:
-                continue
+                 continue
             for tier2 in tier2_on.keys():
-                url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
-                tier2_label, *curies = tier2.split('\u1F4A9')
-                hyp_rows.append([ptag(spaces + atag(url, tier2_label))] + tag_curies(curies))
+                 url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
+                 tier2_row = tier2.split('    ')
+                 tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
+                 hyp_rows.append(tagged_tier2_row)
         return htmldoc(
             render_table(hyp_rows),
             title = 'Main Page Sparc',
@@ -555,8 +615,9 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
+        hyp_rows = hyperlink_tree(sparc_view)
         return htmldoc(
-            render_table(sparc_view_rows),
+            render_table(hyp_rows),
             title = 'SPARC Anatomical terms index',
             metas = ({'name':'date', 'content':time()},),
         )
@@ -570,7 +631,6 @@ def server(api_key=None, verbose=False):
             title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
             metas = ({'name':'date', 'content':time()},),
         )
-
 
     return app
 
