@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
-from pyontutils.utils import Async, deferred, TermColors as tc
+from pyontutils.utils import Async, deferred, TermColors as tc, makeSimpleLogger
 from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
@@ -23,6 +23,7 @@ from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
 from IPython import embed
 
 current_file = Path(__file__).absolute()
+log = makeSimpleLogger('pyontutils')
 
 # common funcs
 
@@ -117,6 +118,37 @@ class OntRes:
         raise NotImplementedError
 
     @property
+    def headers(self):
+        # if you are sending a file the populate all the info
+        # needed by the server to set up the stream (even if that seems a bit low level)
+        raise NotImplementedError
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+        raise NotImplementedError('If you override self.headers in the child '
+                                  'you need to reimplement this too.')
+
+    @property
+    def data(self):
+        raise NotImplementedError
+
+    def _populate(self, graph, gen):
+        raise NotImplementedError('too many differences between header/data and xml/all the rest')
+
+    def populate(self, graph):
+        # TODO if self.header ...
+        self._populate(graph, self.data)
+
+    @property
+    def graph(self):
+        if not hasattr(self, '_graph'):
+            self._graph = rdflib.Graph()
+            self.populate(self._graph)
+
+        return self._graph
+
+    @property
     def identifier_bound(self):
         return next(self.graph[:rdf.type:owl.Ontology])
 
@@ -129,111 +161,40 @@ class OntRes:
         return next(self.graph[self.identifier_bound:owl.versionIRI])
 
     @property
-    def data(self):
-        raise NotImplementedError
+    def imports(self):
+        for object in self.graph[self.identifier_bound:owl.imports]:
+            # TODO switch this for _res_remote_class to abstract beyond just owl
+            yield OntResIri(object)  # this is ok since files will be file:///
 
     @property
-    def header(self):
-        """ ontology header """
-        # FIXME the nomenclature here is inconsistent with interlex
-        # interlex would call this metadata, or even bound_metadata
-        # depending on how it was retrieved
+    def import_chain(self):
+        yield from self._import_chain({OntResIri(self.identifier_bound)})
+
+    def _import_chain(self, done):
+        imps = list(self.imports)
+        Async()(deferred(lambda r: r.header.graph)(_) for _ in imps)
+        for resource in imps:
+            if resource in done:
+                continue
+
+            done.add(resource)
+            yield resource
+            yield from resource.header._import_chain(done)
+
+    def __eq__(self, other):
         raise NotImplementedError
-        if not hasattr(self, '_header'):
-            self._header = OntologyHeader(self.identifier)  # TODO dispatch for this
 
-        return self._header
-
-    @property
-    def headers(self):
-        # if you are sending a file the populate all the info
-        # needed by the server to set up the stream (even if that seems a bit low level)
+    def __hash__(self):
         raise NotImplementedError
-
-    @headers.setter
-    def headers(self, value):
-        self._headers = value
-        raise NotImplementedError('If you override self.headers in the child '
-                                  'you need to reimplement this too.')
-
-    def _populate(self, graph, gen):
-        raise NotImplementedError('too many differences between header/data and xml/all the rest')
-
-    @property
-    def graph(self):
-        if not hasattr(self, '_graph'):
-            self._graph = rdflib.Graph()
-            self.populate(self._graph)
-
-        return self._graph
 
     def __repr__(self):
         return self.__class__.__name__ + f'({self.identifier!r})'
 
 
-class OntResIri(OntRes):
-
-    def __init__(self, iri):
-        self.iri = iri
-        # TODO version iris etc.
-
-    @property
-    def identifier(self):
-        return self.iri
-
-    @property
-    def data(self):
-        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
-        self.headers = resp.headers
-        self.format = format
-        # TODO populate header graph? not sure this is actually possible
-        # maybe need to double wrap so that the header chunks always get
-        # consumbed by the header object ?
-        return chain(header_chunks, gen)
-
-    @property
-    def header(self):
-        if not hasattr(self, '_header'):
-            self._header = OntHeaderIri(self.iri)
-
-        return self._header
-
-    @property
-    def headers(self):
-        """ request headers """
-        if not hasattr(self, '_headers'):
-            resp = requests.head(self.iri)  # TODO status handling for all these
-            self._headers = resp.headers
-
-        return self._headers
-
-    @headers.setter
-    def headers(self, value):
-        self._headers = value
-
-    def _populate(self, graph, gen):
-        # we don't pop request headers or file metadata off in here 
-        # because different loading processes may use that information
-        # to dispatch different loading processes
-
-        if self.format == 'application/rdf+xml':
-            # rdflib xml parsing uses and incremental parser that
-            # constructs its own file object and byte stream
-            graph.parse(self.identifier)
-
-        else:
-            itio = IterIO(gen)
-            itio.name = self.identifier
-            graph.parse(file=itio, format=self.format)
-
-    def populate(self, graph):
-        # TODO if self.header ...
-        self._populate(graph, self.data)
-
-
 class OntHeader(OntRes):
+    """ only the header of an ontology, e.g. the owl:Ontology section for OWL2 """
 
-    header = None  # headers all the way down data -> ontology header -> response header -> iri
+    # headers all the way down data -> ontology header -> response header -> iri
 
     def _graph_sideload(self, data):
         # this will overwrite any existing graph
@@ -250,13 +211,72 @@ class OntHeader(OntRes):
             data = b''.join(gen)
             graph.parse(data=data)
 
+        elif self.format == 'text/owl-functional':  # FIXME TODO
+            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+
         else:
             itio = IterIO(gen)
-            #itio.name = self.identifier  # some rdflib parses need a name
+            itio.name = self.identifier  # some rdflib parses need a name
             graph.parse(file=itio, format=self.format)
 
+    def __eq__(self, other):
+        # FIXME this is ... complicated
+        return self.identifier_bound == other.identifier_bound
 
-class OntHeaderIri(OntHeader, OntResIri):
+    def __hash__(self):
+        return hash((self.__class__, self.identifier_bound))
+
+
+class OntResOnt(OntRes):
+    """ full ontology files """
+
+    _header_class = None  # FIXME can we do this by dispatching OntHeader like Path?
+
+    @property
+    def header(self):
+        """ ontology header """
+        # FIXME the nomenclature here is inconsistent with interlex
+        # interlex would call this metadata, or even bound_metadata
+        # depending on how it was retrieved
+        if not hasattr(self, '_header'):
+            self._header = self._header_class(self.iri)
+
+        return self._header
+
+    def __eq__(self, other):
+        return self.header.identifier_bound == other.header.identifier_bound
+
+    def __hash__(self):
+        return hash((self.__class__, self.header.identifier_bound))
+
+
+class OntIdIri(OntRes):
+    def __init__(self, iri):
+        self.iri = iri
+        # TODO version iris etc.
+
+    def get(self):
+        return requests.get(self.iri, stream=True, headers={'Accept': 'text/turtle'})  # worth a shot ...
+
+    @property
+    def identifier(self):
+        return self.iri
+
+    @property
+    def headers(self):
+        """ request headers """
+        if not hasattr(self, '_headers'):
+            resp = requests.head(self.iri)  # TODO status handling for all these
+            self._headers = resp.headers
+
+        return self._headers
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+
+
+class OntHeaderIri(OntHeader, OntIdIri):
 
     @property
     def data(self):
@@ -273,7 +293,7 @@ class OntHeaderIri(OntHeader, OntResIri):
             # as well ...
             pass
 
-        resp = requests.get(self.iri, stream=True)
+        resp = self.get()
         self.headers = resp.headers
         # TODO consider yielding headers here as well?
         gen = resp.iter_content(chunk_size=4096)
@@ -290,8 +310,13 @@ class OntHeaderIri(OntHeader, OntResIri):
             stop = b' .\n'  # FIXME can be fooled by strings
             self.format = 'text/turtle'
 
+        elif first.startswith(b'Prefix(:='):
+            start = b'\nOntology'
+            stop = b')\n\n'  # FIXME I don't think owl functional syntax actually has a proper header :/
+            self.format = 'text/owl-functional'
         else:
-            raise ValueError(first)
+            'text/owl-manchester'
+            raise ValueError(first.decode())
 
         yield self.format  # we do this because self.format needs to be accessible before loading the graph
 
@@ -338,8 +363,40 @@ class OntHeaderIri(OntHeader, OntResIri):
                 yield chunk
 
 
-class OntResPath(OntRes):
-    """ ontology resource coming from a file """
+class OntResIri(OntIdIri, OntResOnt):
+
+    _header_class = OntHeaderIri
+
+    @property
+    def data(self):
+        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
+        self.headers = resp.headers
+        self.format = format
+        # TODO populate header graph? not sure this is actually possible
+        # maybe need to double wrap so that the header chunks always get
+        # consumbed by the header object ?
+        return chain(header_chunks, gen)
+
+    def _populate(self, graph, gen):
+        # we don't pop request headers or file metadata off in here 
+        # because different loading processes may use that information
+        # to dispatch different loading processes
+
+        if self.format == 'application/rdf+xml':
+            # rdflib xml parsing uses and incremental parser that
+            # constructs its own file object and byte stream
+            graph.parse(self.identifier)
+
+        elif self.format == 'text/owl-functional':  # FIXME TODO
+            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+
+        else:
+            itio = IterIO(gen)
+            itio.name = self.identifier
+            graph.parse(file=itio, format=self.format)
+
+
+class OntIdPath(OntRes):
     def __init__(self, path):
         self.path = path
 
@@ -347,16 +404,37 @@ class OntResPath(OntRes):
     def identifier(self):
         return self.path
 
-    def populate(self, graph):
-        #graph.parse(file=file)
-        pass
-
-    def populate_header(self, graph):
-        pass
+    @property
+    def headers(self):
+        raise NotImplementedError('TODO source this from local info')
 
 
-class OntResInterlex(OntRes):
+class OntHeaderPath(OntIdPath, OntHeader):
+    pass
+
+
+class OntResPath(OntIdPath, OntResOnt):
+    """ ontology resource coming from a file """
+
+    _header_class = OntHeaderPath
+
+
+class OntHeaderInterLex(OntHeader):
+    pass
+
+
+class OntResInterLex(OntResOnt):
     """ ontology resource backed by interlex """
+
+    _header_class = OntHeaderInterLex
+
+
+# TODO bind _ont_class for headers
+
+
+def nif_import_chain():
+    test = OntResIri('http://ontology.neuinfo.org/NIF/ttl/nif.ttl')
+    return list(test.import_chain)
 
 
 #
