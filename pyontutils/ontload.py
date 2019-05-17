@@ -184,7 +184,8 @@ class ReproLoader:
                 local_versions = tuple(do_patch(patch_config, local_base))
             else:
                 local_versions = tuple()
-            itrips = local_imports(remote_base, local_base, ontologies, local_versions=local_versions)  # SciGraph doesn't support catalog.xml
+            itrips = local_imports(remote_base, local_base, ontologies,
+                                   local_versions=local_versions, dobig=True)  # SciGraph doesn't support catalog.xml
             catalog = make_catalog(itrips)
             with open(Path(local_base, 'catalog.xml'), 'wt') as f:
                 f.write(catalog)
@@ -484,7 +485,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
         inner(start)
     return sorted(triples)
 
-def loadall(git_local, repo_name, local=False):
+def loadall(git_local, repo_name, local=False, dobig=False):
     memoryCheck(2665488384)
     local_base = jpth(git_local, repo_name)
     lb_ttl = os.path.realpath(jpth(local_base, 'ttl'))
@@ -503,7 +504,7 @@ def loadall(git_local, repo_name, local=False):
         #if match in graph:
             #raise BaseException('Evil file found %s' % f)
 
-    def repeat(dobig=False):  # we don't really know when to stop, so just adjust
+    def repeat(dobig=dobig):  # we don't really know when to stop, so just adjust
         for s, o in graph.subject_objects(owl.imports):
             if os.path.basename(o) not in done and o not in done:
             #if (o, rdf.type, owl.Ontology) not in graph:
