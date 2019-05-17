@@ -3,13 +3,14 @@ import yaml
 import types
 import subprocess
 import rdflib
-import requests
 from pathlib import Path
+from itertools import chain
 from collections import namedtuple
 from inspect import getsourcefile
-from rdflib.extras import infixowl
-from joblib import Parallel, delayed
 import ontquery
+import requests
+from joblib import Parallel, delayed
+from rdflib.extras import infixowl
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
 from pyontutils.utils import Async, deferred, TermColors as tc
@@ -86,6 +87,277 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
     if isinstance(new_s, rdflib.BNode):
         for p, o in source_graph.predicate_objects(new_s):
             yield from yield_recursive(new_s, p, o, source_graph)
+
+
+# ontology resource object
+from werkzeug.contrib.iterio import IterIO
+
+
+class OntRes:
+    """ Message manager for serialized ontology resource.
+        There are plenty of tools that already deal effectively
+        with a triplified store, but we need something that does
+        a better job at managing the interchange, esp in and out
+        of git. Sort of a better backend for ontquery services back by
+        serialized sources. May ultimately move this code there. """
+
+    #def __new__(cls, iri_or_path):
+        # TODO return an iri wrapper or a path wrapper
+        #pass
+
+    def __init__(self, identifier, repo=None):
+        self.identifier = identifier  # the potential attribute error here is intentional
+        self.repo = repo  # I have a repo augmented path in my thesis stats code
+
+    @property
+    def identifier(self):
+        # FIXME interlex naming conventions call this a reference_name
+        # in order to give it a bit more lexical distance from identity
+        # which implies some hash function
+        raise NotImplementedError
+
+    @property
+    def identifier_bound(self):
+        return next(self.graph[:rdf.type:owl.Ontology])
+
+    @property
+    def identifier_version(self):
+        """ implicitly identifier_bound_version since we won't maniuplate a
+            version iri supplied as the identifi
+            the id to get
+        """
+        return next(self.graph[self.identifier_bound:owl.versionIRI])
+
+    @property
+    def data(self):
+        raise NotImplementedError
+
+    @property
+    def header(self):
+        """ ontology header """
+        # FIXME the nomenclature here is inconsistent with interlex
+        # interlex would call this metadata, or even bound_metadata
+        # depending on how it was retrieved
+        raise NotImplementedError
+        if not hasattr(self, '_header'):
+            self._header = OntologyHeader(self.identifier)  # TODO dispatch for this
+
+        return self._header
+
+    @property
+    def headers(self):
+        # if you are sending a file the populate all the info
+        # needed by the server to set up the stream (even if that seems a bit low level)
+        raise NotImplementedError
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+        raise NotImplementedError('If you override self.headers in the child '
+                                  'you need to reimplement this too.')
+
+    def _populate(self, graph, gen):
+        raise NotImplementedError('too many differences between header/data and xml/all the rest')
+
+    @property
+    def graph(self):
+        if not hasattr(self, '_graph'):
+            self._graph = rdflib.Graph()
+            self.populate(self._graph)
+
+        return self._graph
+
+    def __repr__(self):
+        return self.__class__.__name__ + f'({self.identifier!r})'
+
+
+class OntResIri(OntRes):
+
+    def __init__(self, iri):
+        self.iri = iri
+        # TODO version iris etc.
+
+    @property
+    def identifier(self):
+        return self.iri
+
+    @property
+    def data(self):
+        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
+        self.headers = resp.headers
+        self.format = format
+        # TODO populate header graph? not sure this is actually possible
+        # maybe need to double wrap so that the header chunks always get
+        # consumbed by the header object ?
+        return chain(header_chunks, gen)
+
+    @property
+    def header(self):
+        if not hasattr(self, '_header'):
+            self._header = OntHeaderIri(self.iri)
+
+        return self._header
+
+    @property
+    def headers(self):
+        """ request headers """
+        if not hasattr(self, '_headers'):
+            resp = requests.head(self.iri)  # TODO status handling for all these
+            self._headers = resp.headers
+
+        return self._headers
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+
+    def _populate(self, graph, gen):
+        # we don't pop request headers or file metadata off in here 
+        # because different loading processes may use that information
+        # to dispatch different loading processes
+
+        if self.format == 'application/rdf+xml':
+            # rdflib xml parsing uses and incremental parser that
+            # constructs its own file object and byte stream
+            graph.parse(self.identifier)
+
+        else:
+            itio = IterIO(gen)
+            itio.name = self.identifier
+            graph.parse(file=itio, format=self.format)
+
+    def populate(self, graph):
+        # TODO if self.header ...
+        self._populate(graph, self.data)
+
+
+class OntHeader(OntRes):
+
+    header = None  # headers all the way down data -> ontology header -> response header -> iri
+
+    def _graph_sideload(self, data):
+        # this will overwrite any existing graph
+        self._graph = rdflib.Graph().parse(data=data, format=self.format)
+
+    def _populate(self, graph, gen):
+        # we don't pop request headers or file metadata off in here 
+        # because different loading processes may use that information
+        # to dispatch different loading processes
+
+        if self.format == 'application/rdf+xml':
+            # rdflib xml parsing uses an incremental parser that
+            # constructs its own file object and byte stream
+            data = b''.join(gen)
+            graph.parse(data=data)
+
+        else:
+            itio = IterIO(gen)
+            #itio.name = self.identifier  # some rdflib parses need a name
+            graph.parse(file=itio, format=self.format)
+
+
+class OntHeaderIri(OntHeader, OntResIri):
+
+    @property
+    def data(self):
+        gen = self._data()
+        format = next(gen)  # advance to set self.format in _data
+        return gen
+
+    def _data(self, yield_response_gen=False):
+        if self.iri.endswith('.zip'):
+            # TODO use Content-Range to retrieve only the central directory
+            # after we get the header here
+            # https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+            # this could be another way to handle the filesystem issues for bf
+            # as well ...
+            pass
+
+        resp = requests.get(self.iri, stream=True)
+        self.headers = resp.headers
+        # TODO consider yielding headers here as well?
+        gen = resp.iter_content(chunk_size=4096)
+        first = next(gen)
+        # TODO better type detection
+
+        if first.startswith(b'<?xml'):
+            start = b'<owl:Ontology'
+            stop = b'</owl:Ontology>'
+            self.format = 'application/rdf+xml'
+
+        elif first.startswith(b'@prefix'):
+            start = b' owl:Ontology'  # FIXME this is not standard
+            stop = b' .\n'  # FIXME can be fooled by strings
+            self.format = 'text/turtle'
+
+        else:
+            raise ValueError(first)
+
+        yield self.format  # we do this because self.format needs to be accessible before loading the graph
+
+        searching = False
+        header_data = b''
+        for chunk in chain((first,), gen):
+            if start in chunk:
+                searching = True
+                # yield content prior to start since it may include a stop
+                # that we don't actually want to stop at
+                start_end_index = chunk.index(start) + len(start)
+                header_first_chunk = chunk[:start_end_index]
+                if yield_response_gen:
+                    header_data += header_first_chunk
+
+                yield header_first_chunk
+                chunk = chunk[start_end_index:]
+                
+            if searching and stop in chunk:
+                stop_end_index = chunk.index(stop) + len(stop)
+                header_last_chunk = chunk[:stop_end_index]
+                if yield_response_gen:
+                    header_data += header_last_chunk
+
+                yield header_last_chunk
+                if yield_response_gen:
+                    self._graph_sideload(header_data)
+                    chunk = chunk[stop_end_index:]
+                    yield resp, chain((chunk,), gen)
+
+                else:
+                    # if we are not continuing then close the xml tags
+                    if self.format == 'application/rdf+xml':
+                        yield b'\n</rdf:RDF>\n'
+
+                    resp.close()
+
+                return
+
+            else:
+                if yield_response_gen:
+                    header_data += chunk
+
+                yield chunk
+
+
+class OntResPath(OntRes):
+    """ ontology resource coming from a file """
+    def __init__(self, path):
+        self.path = path
+
+    @property
+    def identifier(self):
+        return self.path
+
+    def populate(self, graph):
+        #graph.parse(file=file)
+        pass
+
+    def populate_header(self, graph):
+        pass
+
+
+class OntResInterlex(OntRes):
+    """ ontology resource backed by interlex """
+
 
 #
 # old impl
