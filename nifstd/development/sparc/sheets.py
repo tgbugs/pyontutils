@@ -1,4 +1,5 @@
 from collections import defaultdict, OrderedDict
+import csv
 from itertools import zip_longest
 from pathlib import Path
 from pyontutils.config import devconfig
@@ -8,11 +9,80 @@ from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from typing import Union, Dict, List
 from IPython import embed
 from sys import exit
+import yaml
 VERSION = '0.0.1'
 
 
 class SheetPlus(Sheet):
     ''' Appending to Sheet functionality '''
+
+    def create_master_csv_rows(self):
+        ''' structure matches UBERON google sheet '''
+
+        def _open_custom_sparc_view_yml():
+            ''' Custom yaml is a normal yaml without colons and curies delimited by 4 spaces
+                This causes last list elements to be a dictionary of None values which is fine bc
+                labels should not be repeating '''
+
+            def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
+                class OrderedLoader(Loader):
+                    pass
+                def construct_mapping(loader, node):
+                    loader.flatten_mapping(node)
+                    return object_pairs_hook(loader.construct_pairs(node))
+                OrderedLoader.add_constructor(
+                    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                    construct_mapping)
+                return yaml.load(stream, OrderedLoader)
+
+            with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
+                rawr_yaml = ''
+                for line in infile.readlines()[:]:
+                    # last line doesnt have newline so we cant just replace it
+                    rawr_yaml += line.replace('\n', '') + ':\n'
+                sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
+
+            return sparc_view
+
+        def _linearize_graph(dict_: dict, index: int = 0) -> tuple:
+            """ Recursively pull nested dictionaries out of print order"""
+            for key, value in dict_.items():
+                # row = key.split('    ')
+                yield (key, index)
+                if not value:
+                    index += 1
+                if isinstance(value, dict):
+                    yield from _linearize_graph(value, index + 1)
+
+        # Reason beind taking the already made yaml instead of using the tree is not having to wait
+        # ~40 seconds to reload queried curies
+        sparc = _open_custom_sparc_view_yml()
+        rows = []
+        for entity, index in list(_linearize_graph(sparc))[:]:
+            if len(rows) - 1 < index:
+                rows += [[]]
+            # Dealing with lower entities list being smaller than the upper entities list
+            try:
+                while True:
+                    # print(rows)
+                    if len(rows[index-1]) - 1 > len(rows[index]):
+                        rows[index] += ['']
+                    else:
+                        break
+            except:
+                pass
+            rows[index] += [entity]
+            # Dealing with upper entities list being smaller than the lower entities list
+            try:
+                if len(rows[index-1]) < len(rows[index]):
+                    seed = index
+                    while seed:
+                        rows[seed-1] += ['']
+                        seed -= 1
+            except:
+                pass
+
+        return rows
 
     def get_html_rows(self, dict_={}):
         if not dict_:
@@ -477,6 +547,12 @@ def main():
     gsheets = GoogleSheets()
     with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'w') as outfile:
         outfile.write('\n'.join(gsheets.get_rows()))
+
+    with open(Path(devconfig.resources, 'sparc_terms2.csv'), "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        csv_rows = gsheets.create_master_csv_rows()
+        for line in csv_rows:
+            writer.writerow(line)
 
 
 if __name__ == '__main__':
