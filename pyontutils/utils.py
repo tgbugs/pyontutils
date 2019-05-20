@@ -33,6 +33,8 @@ def get_working_dir(script__file__):
     return working_dir
 
 
+# time functions TODO object version? use case not well understood enough yet
+
 def TZLOCAL():
     return datetime.now(timezone.utc).astimezone().tzinfo
 
@@ -45,18 +47,37 @@ def TODAY():
 def UTCNOW(): return datetime.utcnow().isoformat()
 
 
-def NOWISO(timespec='auto'):
-    return (datetime.now(tz=TZLOCAL())
+def utcnowtz(): return datetime.now(tz=timezone.utc)
+
+
+def isoformat(datetime_instance, timespec='auto'):
+    return (datetime_instance
             .isoformat(timespec=timespec)
-            .replace('.', ','))
+            .replace('.', ',')
+            .replace('+00:00', 'Z'))
+
+
+def NOWDANGER(*, implicit_tz=None, timespec='auto'):
+    """ now without a timezone, if you use this you WILL encounter
+        a problem at some point in the future because the actual
+        timezone is implicit and if you ever have to move a server
+        you will want to record the original timezone to preserve
+        the sequntial nature of the sequence
+
+        the implicit_tz field is not used by the function but
+        is there to document the original expectation of the
+        programmer in the event that it changes in the future """
+
+    return isoformat(datetime.now(), timespec=timespec)
+
+
+def NOWISO(timespec='auto'):
+    return isoformat(datetime.now(tz=TZLOCAL()), timespec=timespec)
 
 
 def UTCNOWISO(timespec='auto'):
     """ timespec is the smallest level of percision rendered """
-    return (datetime.now(tz=timezone.utc)
-            .isoformat(timespec=timespec)
-            .replace('.', ',')
-            .replace('+00:00', 'Z'))
+    return isoformat(utcnowtz(), timespec=timespec)
 
 
 def sysidpath(ignore_options=False):
