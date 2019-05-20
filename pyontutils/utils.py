@@ -12,7 +12,7 @@ import logging
 from time import time, sleep
 from uuid import uuid4
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
@@ -33,12 +33,30 @@ def get_working_dir(script__file__):
     return working_dir
 
 
+def TZLOCAL():
+    return datetime.now(timezone.utc).astimezone().tzinfo
+
+
 def TODAY():
     """ This needs to be a function for long running programs. """
     return date.today().isoformat()
 
 
 def UTCNOW(): return datetime.utcnow().isoformat()
+
+
+def NOWISO(timespec='auto'):
+    return (datetime.now(tz=TZLOCAL())
+            .isoformat(timespec=timespec)
+            .replace('.', ','))
+
+
+def UTCNOWISO(timespec='auto'):
+    """ timespec is the smallest level of percision rendered """
+    return (datetime.now(tz=timezone.utc)
+            .isoformat(timespec=timespec)
+            .replace('.', ',')
+            .replace('+00:00', 'Z'))
 
 
 def sysidpath(ignore_options=False):
