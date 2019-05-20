@@ -69,14 +69,6 @@ def time():
     return str(datetime.utcnow().isoformat()).replace('.', ',')
 
 
-def convert_view_text_to_dict() -> dict:
-    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
-        rawr_yaml = ''
-        for line in infile.readlines():
-            rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
-    return yaml.safe_load(rawr_yaml)
-
-
 def open_custom_sparc_view_yml():
 
     def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
@@ -123,6 +115,7 @@ def tag_row(row: list, url: url_for = None, tier_level: int = 0) -> list:
                 tagged_row.append(ptag(spaces + atag(url, element)))
             else:
                 tagged_row.append(spaces + element)
+
     return tagged_row
 
 
@@ -131,50 +124,13 @@ def hyperlink_tree(tree: dict) -> list:
     for row, tier_level in linearize_graph(tree):
         tagged_row = tag_row(row=row, tier_level=tier_level)
         hyp_rows.append(tagged_row)
+
     return hyp_rows
-
-def get_atag_from_scigraph_label_query(label: str, prefixes:List[str] = ['UBERON', 'ILX']) -> atag:
-    atags = []
-    for prefix in prefixes:
-        # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
-        neighbors = [v.OntTerm for v in OntTerm.query(label=label.strip(), prefix=prefix)]
-        if not neighbors:
-            continue
-        for neighbor in neighbors:
-            oid = OntId(neighbor)
-            atags += [atag(oid.iri, oid.curie)]
-    atags = list(set(atags))
-    return atags
-
-
-def normt(term, prefix=''):
-    term, *curie = term.split('\u1F4A9')
-    #print(repr(term))
-    if curie:
-        curie, = curie
-        oid = OntId(curie)
-        curie = atag(oid.iri, oid.curie)
-        row = [prefix + term, curie]
-    else:
-        curies = get_atag_from_scigraph_label_query(term)
-        row = [prefix + term] + curies
-    return row
-
-
-def tag_curies(curies):
-    tagged_curies = []
-    for curie in curies:
-        oid = OntId(curie)
-        tagged_curie = atag(oid.iri, oid.curie)
-        tagged_curies.append(tagged_curie)
-    return tagged_curies
 
 
 def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
     """ Recursively pull nested dictionaries out of print order"""
     for key, value in dict_.items():
-        # label, *curies = normt(key)
-        # yield (label, curies, tier_level)
         row = key.split('    ')
         yield (row, tier_level)
         if isinstance(value, dict):
@@ -467,13 +423,8 @@ def server(api_key=None, verbose=False):
     app.config['loop'] = loop
 
     # gsheets = GoogleSheets()
-    # sparc_view = convert_view_text_to_dict()
     sparc_view = open_custom_sparc_view_yml()
     log.info('starting index load')
-    # sparc_view_rows = [
-    #     [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-    #     for label, curies, tier_level  in linearize_graph(sparc_view)
-    # ]
 
     basename = 'trees'
 
@@ -574,10 +525,6 @@ def server(api_key=None, verbose=False):
                 return abort(404)
             journey = journey[tier2]
 
-        # rows = [
-        #     [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-        #     for label, curies, tier_level  in linearize_graph(journey)
-        # ]
         hyp_rows = hyperlink_tree(journey)
 
         return htmldoc(
@@ -598,6 +545,7 @@ def server(api_key=None, verbose=False):
             hyp_rows.append(tagged_tier1_row)
             if not tier2_on:
                  continue
+            # BUG: Will break what we want if more is added to spinal cord
             if len(tier2_on.keys()) > 5:
                  continue
             for tier2 in tier2_on.keys():
