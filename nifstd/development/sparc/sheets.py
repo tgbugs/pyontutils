@@ -232,7 +232,7 @@ class SheetPlus(Sheet):
                 oid = OntId(neighbor)
                 curies.append(oid.curie)
         return curies
-        
+
     def clean(self, string):
         if not string:
             return string
@@ -574,7 +574,7 @@ def main():
         outfile.write('\n'.join(gsheets.get_rows()))
 
     with open(Path(devconfig.resources, 'sparc_terms2.csv'), "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=',')
+        writer = csv.writer(csv_file, delimiter=',', lineterminator='\n')
         csv_rows = gsheets.create_master_csv_rows()
         for line in csv_rows:
             writer.writerow(line)
