@@ -19,24 +19,25 @@ from `tgbugs-overlay` in `rpmbuild/SOURCES`, you should be able to run the follo
 `TODO` CI for this via the SciGraph repo?
 ``` bash
 rpmbuild --nodeps -ba scigraph.spec &&
-scp ~/rpmbuild/RPMS/scigraph*.rpm ${scigraph_host}:
-ssh ${scigraph_host} "sudo yum -y install scigraph*.rpm""
+scp ~/rpmbuild/RPMS/scigraph*.rpm ${scigraph_host_admin}:
+ssh ${scigraph_host_admin} "sudo yum -y install scigraph*.rpm""
 
 scp services.yaml ${scigraph_host}:
-ssh ${scigraph_host} "sudo chown scigraph:scigraph services.yaml;
-                      sudo mv services.yaml ~scigraph/;"
 
 scp NIF-Ontology*.zip ${scigraph_host}:
-ssh ${scigraph_host} "sudo unzip NIF-Ontology-*-graph-*.zip
-                      export GRAPH_NAME=$(echo NIF-Ontology-*-graph-*/)
-                      sudo chown -R scigraph:scigraph $GRAPH_NAME
-                      sudo mv ${GRAPH_NAME} ~scigraph/
+ssh ${scigraph_host} 'unzip $(ls -t NIF-Ontology-*-graph-*.zip | head -n 1)'
 
-                      sudo systemctl stop scigraph
-                      sudo unlink /var/lib/scigraph/graph
-                      sudo ln -sT /var/lib/scigraph/${GRAPH_NAME} /var/lib/scigraph/graph
-                      sudo systemctl start scigraph"
+ssh ${scigraph_host_admin} "sudo systemctl stop scigraph"
+
+ssh ${scigraph_host} 'unlink /var/lib/scigraph/graph
+                      export GRAPH_NAME=$(ls -dt NIF-Ontology-*-graph-* | grep -v zip | head -n 1)
+                      ln -sT /var/lib/scigraph/${GRAPH_NAME} /var/lib/scigraph/graph'
+
+ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
 ```
+
+Post graph install stress testing is suggested to make sure that java is awake an alert.
+`ontutils scigraph-stress -r 0` with devconfig.scigraph_api pointing to `${scigraph_host}`.
 
 Later installs from the 9999 version require the use of `reinstall`
 instead of `install`. If you want to have more than one service
