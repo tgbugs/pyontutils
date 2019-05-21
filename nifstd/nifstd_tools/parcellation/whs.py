@@ -9,6 +9,7 @@ from nifstd_tools.parcellation import parcCore, resSource, LabelRoot, Label, Ter
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
 from IPython import embed
 
+
 class Artifacts(Collector):
     collects = Terminology
 
@@ -16,14 +17,14 @@ class Artifacts(Collector):
         """Parent class for versions of the WHSSD terminology."""
         iri = ilx['waxholm/uris/sd/']
         class_label = 'Waxholm Space Sprague Dawley Terminology'
-        citation = 'https://www.ncbi.nlm.nih.gov/pubmed/24726336'
-        species=NCBITaxon['10116']
-        devstage=UBERON['0000113']
-        comment = ('Versions of the .label file add and remove entries and '
-                   'sometimes slightly modify the label, but indexes are never '
-                   'reused and retain their meaning.')
 
-    #whssd = WHSSD()  # FIXME need to clean up how this works wrt subclassing
+    WHSSDTerm = Terminology(iri=WHSSD.iri,
+                            citation='https://www.ncbi.nlm.nih.gov/pubmed/24726336',
+                            species=NCBITaxon['10116'],
+                            devstage=UBERON['0000113'],
+                            comment=('Versions of the .label file add and remove entries and '
+                                     'sometimes slightly modify the label, but indexes are never '
+                                     'reused and retain their meaning.'),)
 
     WHSSD1 = WHSSD(iri=ilx['waxholm/uris/sd/versions/1'],
                    rdfs_label='Waxholm Space Sprague Dawley Terminology v1',
@@ -36,6 +37,7 @@ class Artifacts(Collector):
                    shortname='WHSSD2',
                    date='2015-02-02',
                    version='2',)
+
 
 class WHSSDSrc(resSource):
     sourceFile = lambda v: relative_resources(f'WHS_SD_rat_atlas_v{v}.label')

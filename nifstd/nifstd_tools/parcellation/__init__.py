@@ -473,9 +473,9 @@ class Artifacts(Collector):
         iri = ilx['paxinos/uris/mouse']  # ilxtr.paxinosMouseAtlas
         class_label = 'Paxinos Mouse Atlas'
 
-    _PaxMouseShared = dict(species=NCBITaxon['10090'],
-                           devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
-                           citation=('INTERNAL SCREAMING'),
+    PaxMouseAtlas = Atlas(iri=PaxMouseAt.iri,
+                          species=NCBITaxon['10090'],
+                          devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
                           )
 
     PaxMouse2 = PaxMouseAt(iri=paxmusver['2'],  # ilxtr.paxm2,
@@ -485,7 +485,7 @@ class Artifacts(Collector):
                            shortname='PAXMOUSE2',  # TODO upper for atlas lower for label?
                            copyrighted='2001',
                            version='2nd Edition',  # FIXME ??? delux edition??? what is this
-                           **_PaxMouseShared)
+                           citation='???????',)
 
     PaxMouse3 = PaxMouseAt(iri=paxmusver['3'],  # ilxtr.paxm3,
                            label='The Mouse Brain in Stereotaxic Coordinates 3rd Edition',
@@ -494,7 +494,7 @@ class Artifacts(Collector):
                            shortname='PAXMOUSE3',  # TODO upper for atlas lower for label?
                            copyrighted='2008',
                            version='3rd Edition',
-                           **_PaxMouseShared)
+                           citation='???????',)
 
     PaxMouse4 = PaxMouseAt(iri=paxmusver['4'],  # ilxtr.paxm4,
                            label='The Mouse Brain in Stereotaxic Coordinates 4th Edition',
@@ -503,20 +503,20 @@ class Artifacts(Collector):
                            shortname='PAXMOUSE4',  # TODO upper for atlas lower for label?
                            copyrighted='2012',
                            version='4th Edition',
-                           **_PaxMouseShared)
+                           citation='???????',)
 
     class PaxRatAt(Atlas):
         """ Any atlas artifact with Paxinos as an author for the adult rat. """
         iri = ilx['paxinos/uris/rat']  # ilxtr.paxinosRatAtlas
         class_label = 'Paxinos Rat Atlas'
 
-    _PaxRatShared = dict(species=NCBITaxon['10116'],
-                         devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
-                         citation=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
-                                   '"AChE-stained horizontal sections of the rat brain '
-                                   'in stereotaxic coordinates." Journal of neuroscience '
-                                   'methods 3, no. 2 (1980): 129-149.'),
-                       )
+    PaxRatAtlas = Atlas(iri=PaxRatAt.iri,
+                        species=NCBITaxon['10116'],
+                        devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
+                        citation=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
+                                  '"AChE-stained horizontal sections of the rat brain '
+                                  'in stereotaxic coordinates." Journal of neuroscience '
+                                  'methods 3, no. 2 (1980): 129-149.'),)
 
     PaxRat4 = PaxRatAt(iri=ilx['paxinos/uris/rat/versions/4'],  # ilxtr.paxr4,
                        label='The Rat Brain in Stereotaxic Coordinates 4th Edition',
@@ -524,9 +524,7 @@ class Artifacts(Collector):
                        abbrevs=tuple(),
                        shortname='PAXRAT4',  # TODO upper for atlas lower for label?
                        copyrighted='1998',
-                       version='4th Edition',
-                       **_PaxRatShared
-                      )
+                       version='4th Edition',)
 
     PaxRat6 = PaxRatAt(iri=ilx['paxinos/uris/rat/versions/6'],  # ilxtr.paxr6,
                        label='The Rat Brain in Stereotaxic Coordinates 6th Edition',
@@ -534,9 +532,7 @@ class Artifacts(Collector):
                        abbrevs=tuple(),
                        shortname='PAXRAT6',  # TODO upper for atlas lower for label?
                        copyrighted='2007',
-                       version='6th Edition',
-                       **_PaxRatShared
-                      )
+                       version='6th Edition',)
 
     PaxRat7 = PaxRatAt(iri=ilx['paxinos/uris/rat/versions/7'],  # ilxtr.paxr7,
                        label='The Rat Brain in Stereotaxic Coordinates 7th Edition',
@@ -546,9 +542,7 @@ class Artifacts(Collector):
                        abbrevs=tuple(),
                        shortname='PAXRAT7',  # TODO upper for atlas lower for label?
                        copyrighted='2014',
-                       version='7th Edition',
-                       **_PaxRatShared
-                      )
+                       version='7th Edition',)
 
     HCPMMP = Terminology(iri=ilx['hcp/uris/mmp/versions/1.0'],  # ilxtr.hcpmmpv1,
                          rdfs_label='Human Connectome Project Multi-Modal human cortical parcellation',
