@@ -41,6 +41,7 @@ from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.sheets import Sheet
+from nifstd.development.sparc.sheets import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
 from typing import Union, Dict, List
 from IPython import embed
 import yaml
@@ -67,74 +68,6 @@ both = 'BOTH'
 
 def time():
     return str(datetime.utcnow().isoformat()).replace('.', ',')
-
-
-def open_custom_sparc_view_yml():
-
-    def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
-        class OrderedLoader(Loader):
-            pass
-        def construct_mapping(loader, node):
-            loader.flatten_mapping(node)
-            return object_pairs_hook(loader.construct_pairs(node))
-        OrderedLoader.add_constructor(
-            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-            construct_mapping)
-        return yaml.load(stream, OrderedLoader)
-
-    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
-        rawr_yaml = ''
-        for line in infile.readlines()[:]:
-            # last line doesnt have newline so we cant just replace it
-            rawr_yaml += line.replace('\n', '') + ':\n'
-        sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
-
-    return sparc_view
-
-
-def tag_row(row: list, url: url_for = None, tier_level: int = 0) -> list:
-    ''' Tag each element in the row; atag the curies & ptag everything else '''
-
-    tagged_row = []
-    spaces = nbsp * 8 * tier_level
-
-    if not row:
-        return row
-    if not isinstance(row, list):
-        row = [row]
-    for i, element in enumerate(row):
-        if i > 0:
-            spaces = ''
-        try:
-            oid = OntId(element)
-            # TODO: should this have spaces?
-            tagged_curie = atag(oid.iri, oid.curie)
-            tagged_row.append(tagged_curie)
-        except:
-            if url:
-                tagged_row.append(ptag(spaces + atag(url, element)))
-            else:
-                tagged_row.append(spaces + element)
-
-    return tagged_row
-
-
-def hyperlink_tree(tree: dict) -> list:
-    hyp_rows = []
-    for row, tier_level in linearize_graph(tree):
-        tagged_row = tag_row(row=row, tier_level=tier_level)
-        hyp_rows.append(tagged_row)
-
-    return hyp_rows
-
-
-def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
-    """ Recursively pull nested dictionaries out of print order"""
-    for key, value in dict_.items():
-        row = key.split('    ')
-        yield (row, tier_level)
-        if isinstance(value, dict):
-            yield from linearize_graph(value, tier_level + 1)
 
 
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
@@ -540,7 +473,7 @@ def server(api_key=None, verbose=False):
         spaces = nbsp * 8
         for tier1, tier2_on in sorted(sparc_view.items()):
             url = url_for('route_sparc_view_query', tier1=tier1)
-            tier1_row = tier1.split('    ')
+            tier1_row = tier1.split(YML_DELIMITER)
             tagged_tier1_row = tag_row(tier1_row, url)
             hyp_rows.append(tagged_tier1_row)
             if not tier2_on:
@@ -550,7 +483,7 @@ def server(api_key=None, verbose=False):
                  continue
             for tier2 in tier2_on.keys():
                  url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
-                 tier2_row = tier2.split('    ')
+                 tier2_row = tier2.split(YML_DELIMITER)
                  tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
                  hyp_rows.append(tagged_tier2_row)
         return htmldoc(
