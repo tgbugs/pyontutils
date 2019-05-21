@@ -1,5 +1,6 @@
 from collections import defaultdict, OrderedDict
 import csv
+from flask import url_for
 from itertools import zip_longest
 from pathlib import Path
 from pyontutils.config import devconfig
@@ -11,6 +12,80 @@ from IPython import embed
 from sys import exit
 import yaml
 VERSION = '0.0.1'
+YML_DELIMITER = '\u1F4A9'
+# condense to once shema for generic ones.. GenericSchema?
+# put build in SheetPlus and call super() when you need to hardcode the
+
+
+def open_custom_sparc_view_yml():
+    ''' Custom yaml is a normal yaml without colons and curies delimited by 4 spaces
+        This causes last list elements to be a dictionary of None values which is fine bc
+        labels should not be repeating '''
+
+    def ordered_load(stream, Loader=yaml.SafeLoader, object_pairs_hook=OrderedDict):
+        class OrderedLoader(Loader):
+            pass
+        def construct_mapping(loader, node):
+            loader.flatten_mapping(node)
+            return object_pairs_hook(loader.construct_pairs(node))
+        OrderedLoader.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+            construct_mapping)
+        return yaml.load(stream, OrderedLoader)
+
+    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
+        rawr_yaml = ''
+        for line in infile.readlines()[1:]:
+            # last line doesnt have newline so we cant just replace it
+            rawr_yaml += line.replace('\n', '') + ':\n'
+        sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
+
+    return sparc_view
+
+
+def tag_row(row: list, url: url_for = None, tier_level: int = 0) -> list:
+    ''' Tag each element in the row; atag the curies & ptag everything else '''
+
+    tagged_row = []
+    spaces = nbsp * 8 * tier_level
+
+    if not row:
+        return row
+    if not isinstance(row, list):
+        row = [row]
+    for i, element in enumerate(row):
+        if i > 0:
+            spaces = ''
+        try:
+            oid = OntId(element)
+            # TODO: should this have spaces?
+            tagged_curie = atag(oid.iri, oid.curie)
+            tagged_row.append(tagged_curie)
+        except:
+            if url:
+                tagged_row.append(ptag(spaces + atag(url, element)))
+            else:
+                tagged_row.append(spaces + element)
+
+    return tagged_row
+
+
+def hyperlink_tree(tree: dict) -> list:
+
+    def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
+        """ Recursively pull nested dictionaries out of print order"""
+        for key, value in dict_.items():
+            row = key.split(YML_DELIMITER)
+            yield (row, tier_level)
+            if isinstance(value, dict):
+                yield from linearize_graph(value, tier_level + 1)
+
+    hyp_rows = []
+    for row, tier_level in linearize_graph(tree):
+        tagged_row = tag_row(row=row, tier_level=tier_level)
+        hyp_rows.append(tagged_row)
+
+    return hyp_rows
 
 
 class SheetPlus(Sheet):
@@ -19,32 +94,7 @@ class SheetPlus(Sheet):
     def create_master_csv_rows(self):
         ''' structure matches UBERON google sheet '''
 
-        def _open_custom_sparc_view_yml():
-            ''' Custom yaml is a normal yaml without colons and curies delimited by 4 spaces
-                This causes last list elements to be a dictionary of None values which is fine bc
-                labels should not be repeating '''
-
-            def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
-                class OrderedLoader(Loader):
-                    pass
-                def construct_mapping(loader, node):
-                    loader.flatten_mapping(node)
-                    return object_pairs_hook(loader.construct_pairs(node))
-                OrderedLoader.add_constructor(
-                    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
-                    construct_mapping)
-                return yaml.load(stream, OrderedLoader)
-
-            with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
-                rawr_yaml = ''
-                for line in infile.readlines()[:]:
-                    # last line doesnt have newline so we cant just replace it
-                    rawr_yaml += line.replace('\n', '') + ':\n'
-                sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
-
-            return sparc_view
-
-        def _linearize_graph(dict_: dict, index: int = 0) -> tuple:
+        def linearize_graph(dict_: dict, index: int = 0) -> tuple:
             """ Recursively pull nested dictionaries out of print order"""
             for key, value in dict_.items():
                 # row = key.split('    ')
@@ -52,13 +102,13 @@ class SheetPlus(Sheet):
                 if not value:
                     index += 1
                 if isinstance(value, dict):
-                    yield from _linearize_graph(value, index + 1)
+                    yield from linearize_graph(value, index + 1)
 
         # Reason beind taking the already made yaml instead of using the tree is not having to wait
         # ~40 seconds to reload queried curies
-        sparc = _open_custom_sparc_view_yml()
+        sparc = open_custom_sparc_view_yml()
         rows = []
-        for entity, index in list(_linearize_graph(sparc))[:]:
+        for entity, index in list(linearize_graph(sparc))[:]:
             if len(rows) - 1 < index:
                 rows += [[]]
             # Dealing with lower entities list being smaller than the upper entities list
@@ -100,9 +150,9 @@ class SheetPlus(Sheet):
         rows = []
         for label, curies, tier_level in self.linearize_graph(dict_):
             if curies:
-                rows.append((4 * ' ' * tier_level) + label + spaces + spaces.join(curies))
+                rows.append((spaces * tier_level) + label + YML_DELIMITER + YML_DELIMITER.join(curies))
             else:
-                rows.append((4 * ' ' * tier_level) + label)
+                rows.append((spaces * tier_level) + label)
         return rows
 
     def fix_curie(self, curie):
@@ -169,37 +219,12 @@ class SheetPlus(Sheet):
         curie = (prefix + ':' + id_).strip()
         return label, curie
 
-    def normalize_term(self, term, prefix=''):
-        # TODO: this wont work, need to do multiple rsplit()s
-        # common splits are: ",", ":", " - "
-        term, *curie = term.split('\u1F4A9')
-        if curie:
-            curie, = curie
-            oid = OntId(curie)
-            curie = atag(oid.iri, oid.curie)
-            row = [prefix + term, curie]
-        else:
-            curies = self.get_atag_from_scigraph_label_query(term)
-            row = [prefix + term] + curies
-        return row
-
-    def get_atag_from_scigraph_label_query(self, label: str, prefixes:List[str] = ['UBERON', 'ILX', 'MBA', 'PAXRAT', 'BERCAT']) -> atag:
-        atags = []
-        for prefix in prefixes:
-            # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
-            neighbors = [v.OntTerm for v in OntTerm.query(label=label.strip(), prefix=prefix)]
-            if not neighbors:
-                continue
-            for neighbor in neighbors:
-                oid = OntId(neighbor)
-                atags += [atag(oid.iri, oid.curie)]
-        atags = list(set(atags))
-        return atags
-
     def query_scigraph_for_curies(self, label: str, prefixes:List[str] = ['UBERON', 'ILX']) -> list:
         curies = []
+        # return []
+        # for prefix in prefixes:
+        # BUG: prefixes cant be used because it gives random errors if the prefix isn't exact
         for prefix in prefixes:
-            # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
             neighbors = [v.OntTerm for v in OntTerm.query(label=label.strip(), prefix=prefix)]
             if not neighbors:
                 continue
@@ -207,7 +232,7 @@ class SheetPlus(Sheet):
                 oid = OntId(neighbor)
                 curies.append(oid.curie)
         return curies
-
+        
     def clean(self, string):
         if not string:
             return string
@@ -420,10 +445,9 @@ class ParcellationNieuwenhuysSchema(SheetPlus):
 
     def populate_graph(self):
         term_dict = OrderedDict()
-        spaces = ' ' * 4
         for row in self.raw_values[:]:
             row = [cell for cell in row if cell]
-            lable_curie = spaces.join(row)
+            lable_curie = YML_DELIMITER.join(row)
             term_dict[lable_curie] = None
         self.tree[self.name][self.sheet_name]['Nieuwenhuys'] = term_dict
 
@@ -509,7 +533,6 @@ class GoogleSheets(SheetPlus):
         self.location_grid = {}
         for sheet in self.sheets:
             self.tree.update(sheet.tree[sheet.name][sheet.sheet_name])
-            # self.tree = {**sheet.tree[sheet.name][sheet.sheet_name], **self.tree}
             self.location_grid = {**sheet.location_grid, **self.location_grid}
 
         # use grid location to relocate headers/sub_headers
@@ -546,6 +569,8 @@ class GoogleSheets(SheetPlus):
 def main():
     gsheets = GoogleSheets()
     with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'w') as outfile:
+        outfile.write(f'### YAML DELIMITER  ==  {YML_DELIMITER} ###')
+        outfile.write('\n')
         outfile.write('\n'.join(gsheets.get_rows()))
 
     with open(Path(devconfig.resources, 'sparc_terms2.csv'), "w") as csv_file:
