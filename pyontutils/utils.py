@@ -94,7 +94,7 @@ def sysidpath(ignore_options=False):
         )
         for option in options:
             if (option.exists() and
-                os.access(option, os.R_OK) and
+                os.access(option.as_posix(), os.R_OK) and  # pypy3 3.6 still needs as_poxix here :/
                 option.stat().st_size > 0):
                     return option
 
