@@ -148,6 +148,7 @@ OBJECT = 2
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
+    roundtrip_prefixes = True
     short_name = 'nifttl'
     _name = 'pyontutils deterministic'
     __version = 'v1.2.0'
