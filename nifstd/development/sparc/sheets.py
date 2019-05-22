@@ -1,4 +1,5 @@
 from collections import defaultdict, OrderedDict
+from copy import deepcopy
 import csv
 from flask import url_for
 from itertools import zip_longest
@@ -13,8 +14,7 @@ from sys import exit
 import yaml
 VERSION = '0.0.1'
 YML_DELIMITER = '\u1F4A9'
-# condense to once shema for generic ones.. GenericSchema?
-# put build in SheetPlus and call super() when you need to hardcode the
+REC_DD = lambda: defaultdict(REC_DD)
 
 
 def open_custom_sparc_view_yml():
@@ -33,12 +33,30 @@ def open_custom_sparc_view_yml():
             construct_mapping)
         return yaml.load(stream, OrderedLoader)
 
+    def sep_curies(src_graph, delimiter=YML_DELIMITER):
+        graph = deepcopy(src_graph)
+        visited, stack = set(), [graph]
+        while stack:
+            dict_ = stack.pop()
+            for key, value in dict_.copy().items():
+                label, *curies = key.split(delimiter)
+                if label == 'CURIES':
+                    continue
+                dict_[label] = dict_.pop(key)
+                if isinstance(value, dict):
+                    dict_[label].update({'CURIES': curies})
+                    stack.append(value)
+                else:
+                    dict_[label] = {'CURIES': curies}
+
+        return graph
+
     with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
         rawr_yaml = ''
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
             rawr_yaml += line.replace('\n', '') + ':\n'
-        sparc_view = ordered_load(rawr_yaml, yaml.SafeLoader)
+        sparc_view = sep_curies(ordered_load(rawr_yaml, yaml.SafeLoader))
 
     return sparc_view
 
@@ -75,7 +93,9 @@ def hyperlink_tree(tree: dict) -> list:
     def linearize_graph(dict_: dict, tier_level: int = 0) -> tuple:
         """ Recursively pull nested dictionaries out of print order"""
         for key, value in dict_.items():
-            row = key.split(YML_DELIMITER)
+            if key == 'CURIES':
+                continue
+            row = [key] + dict_[key]['CURIES']
             yield (row, tier_level)
             if isinstance(value, dict):
                 yield from linearize_graph(value, tier_level + 1)
@@ -97,9 +117,10 @@ class SheetPlus(Sheet):
         def linearize_graph(dict_: dict, index: int = 0) -> tuple:
             """ Recursively pull nested dictionaries out of print order"""
             for key, value in dict_.items():
-                # row = key.split('    ')
+                if key == 'CURIES':
+                    continue
                 yield (key, index)
-                if not value:
+                if list(value.keys()) == ['CURIES']:
                     index += 1
                 if isinstance(value, dict):
                     yield from linearize_graph(value, index + 1)
@@ -114,7 +135,6 @@ class SheetPlus(Sheet):
             # Dealing with lower entities list being smaller than the upper entities list
             try:
                 while True:
-                    # print(rows)
                     if len(rows[index-1]) - 1 > len(rows[index]):
                         rows[index] += ['']
                     else:
@@ -131,6 +151,16 @@ class SheetPlus(Sheet):
                         seed -= 1
             except:
                 pass
+
+        # Dealing with new columns being shorter than previous columns
+        row_length = max([len(row) for row in rows])
+
+        for index in range(len(rows)):
+            while True:
+                if len(rows[index]) < row_length:
+                    rows[index] += ['']
+                else:
+                    break
 
         return rows
 
@@ -236,7 +266,7 @@ class SheetPlus(Sheet):
     def clean(self, string):
         if not string:
             return string
-        return string.strip().title()
+        return string.strip()
 
     def populate_location_grid(self):
         for y, row in enumerate(self.raw_values):
@@ -270,17 +300,20 @@ class SheetPlus(Sheet):
                                             if cell['userEnteredValue'].get('stringValue'):
                                                 yield i
 
-
-class UberonTermsSheet1Schema(SheetPlus):
-
     def build(self):
-        # BUG: this is the wrong name and hasnt changed yet -_-
-        self.values[2][4] = 'General spinal cord anatomy'
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
+        self.tree = REC_DD()
+        self.location_grid = REC_DD()
         self.populate_location_grid()
         self.populate_graph()
+
+    def populate_graph(self, colname, start_index=0, column=0):
+        ''' Example for a single column sheet with no header '''
+        ### NOT HEADER
+        self.tree[self.name][self.sheet_name][colname] = self.get_sub_column(
+            start_index = start_index, column = column)
+
+
+class UberonTermsSheet1Schema(SheetPlus):
 
     def populate_graph(self):
         ''' Uberon has trailing empty cells in the sheet assuming its the value of the most recent
@@ -295,8 +328,8 @@ class UberonTermsSheet1Schema(SheetPlus):
 
         # Build graph
         for column, term in enumerate(self.raw_values[terms_index]):
-            term = self.clean(term)
-            sub_term = self.clean(self.values[sub_terms_index][column])
+            term = self.clean(term).title()
+            sub_term = self.clean(self.values[sub_terms_index][column]).title()
             # iterative terms could be blank
             if term:
                 last_term = term
@@ -316,17 +349,6 @@ class UberonTermsSheet1Schema(SheetPlus):
 
 
 class SpinalTerminalogySheet1Schema(SheetPlus):
-
-    def build(self):
-        # BUG: They haven't named it in the table yet so it is left blank.
-        self.raw_values[0][0] = 'Internal Anatomy'
-        self.values[0][0] = 'Internal Anatomy'
-
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
 
     def populate_graph(self):
         ''' Will have to use grid to find headers and nest headers if anywhere in the column.
@@ -376,40 +398,23 @@ class SpinalTerminalogySheet1Schema(SheetPlus):
 
 class ParcellationUberonSchema(SheetPlus):
 
-    def build(self):
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
-
     def populate_graph(self):
         ### NOT HEADER
-        self.tree[self.name][self.sheet_name]['UBERON'] = self.get_sub_column(start_index=2, column=0)
+        self.tree[self.name][self.sheet_name]['UBERON'] = self.get_sub_column(
+            start_index = 2,
+            column = 0)
 
 
 class ParcellationAllenSchema(SheetPlus):
 
-    def build(self):
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
-
     def populate_graph(self):
         ### NOT HEADER
-        self.tree[self.name][self.sheet_name]['Allen Mouse Brainstem'] = self.get_sub_column(0, 0)
+        self.tree[self.name][self.sheet_name]['Allen Mouse Brainstem'] = self.get_sub_column(
+            start_index = 0,
+            column = 0)
 
 
 class ParcellationPaxinosSchema(SheetPlus):
-
-    def build(self):
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
 
     def populate_graph(self):
         term_dict = {}
@@ -422,26 +427,14 @@ class ParcellationPaxinosSchema(SheetPlus):
 
 class ParcellationBermanSchema(SheetPlus):
 
-    def build(self):
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
-
     def populate_graph(self):
         ### NOT HEADER
-        self.tree[self.name][self.sheet_name]['Berman Cat Brainstem'] = self.get_sub_column(0, 0)
+        self.tree[self.name][self.sheet_name]['Berman Cat Brainstem'] = self.get_sub_column(
+            start_index = 0,
+            column = 0)
 
 
 class ParcellationNieuwenhuysSchema(SheetPlus):
-
-    def build(self):
-        rec_dd = lambda: defaultdict(rec_dd)
-        self.tree = rec_dd()
-        self.location_grid = rec_dd()
-        self.populate_location_grid()
-        self.populate_graph()
 
     def populate_graph(self):
         term_dict = OrderedDict()
@@ -450,6 +443,7 @@ class ParcellationNieuwenhuysSchema(SheetPlus):
             lable_curie = YML_DELIMITER.join(row)
             term_dict[lable_curie] = None
         self.tree[self.name][self.sheet_name]['Nieuwenhuys'] = term_dict
+
 
 class UberonTermsSheet1(UberonTermsSheet1Schema):
     name = 'uberon-terms'
@@ -541,7 +535,10 @@ class GoogleSheets(SheetPlus):
             bname, bsheet_name, bcolumn, bindex = bottom
             top_header = self.location_grid[tname][tsheet_name][(tcolumn, tindex)]
             bot_header = self.location_grid[bname][bsheet_name][(bcolumn, bindex)]
-            term_nested_dict = self.tree.pop(bot_header)
+            try:
+                term_nested_dict = self.tree.pop(bot_header)
+            except:
+                term_nested_dict = self.tree.pop(self.clean(bot_header))
             self.tree[top_header][bot_header] = term_nested_dict
 
     def hardcode_graph_paths(self):
@@ -553,10 +550,10 @@ class GoogleSheets(SheetPlus):
         self.tree['Peripheral Nervous System'] = {}
         self.tree['Peripheral Nervous System']['Ganglia'] = self.tree.pop('Ganglia')
         self.tree['Spinal Cord']['Segment Anatomy'] = {}
-        self.tree['Spinal Cord']['Segment Anatomy']['Lamina Of Spinal Cord'] = self.tree['Spinal Cord'].pop('Lamina Of Spinal Cord')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.tree['Spinal Cord'].pop('Spinal Cord Internal Structures Per Segment')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Segments'] = self.tree['Spinal Cord'].pop('Spinal Cord Segments')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Subsegments'] = self.tree['Spinal Cord'].pop('Spinal Cord Subsegments')
+        self.tree['Spinal Cord']['Segment Anatomy']['Lamina Of Spinal Cord'] = self.tree['Spinal Cord'].pop('Lamina of spinal cord')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.tree['Spinal Cord'].pop('Spinal cord internal structures per segment')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Segments'] = self.tree['Spinal Cord'].pop('Spinal cord segments')
+        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Subsegments'] = self.tree['Spinal Cord'].pop('Spinal cord subsegments')
 
         # Remove empty columns
         headers_to_pop = []
