@@ -474,18 +474,22 @@ def server(api_key=None, verbose=False):
         for tier1, tier2_on in sorted(sparc_view.items()):
             url = url_for('route_sparc_view_query', tier1=tier1)
             tier1_row = tier1.split(YML_DELIMITER)
+            tier1_row += tier2_on['CURIES']
             tagged_tier1_row = tag_row(tier1_row, url)
             hyp_rows.append(tagged_tier1_row)
             if not tier2_on:
-                 continue
+                continue
             # BUG: Will break what we want if more is added to spinal cord
-            if len(tier2_on.keys()) > 5:
-                 continue
-            for tier2 in tier2_on.keys():
-                 url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
-                 tier2_row = tier2.split(YML_DELIMITER)
-                 tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
-                 hyp_rows.append(tagged_tier2_row)
+            if len(tier2_on.keys()) > 6:
+                continue
+            for tier2, tier3_on in tier2_on.items():
+                if tier2 == 'CURIES':
+                    continue
+                url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
+                tier2_row = tier2.split(YML_DELIMITER)
+                tier2_row += tier3_on['CURIES']
+                tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
+                hyp_rows.append(tagged_tier2_row)
         return htmldoc(
             render_table(hyp_rows),
             title = 'Main Page Sparc',
