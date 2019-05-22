@@ -5,11 +5,14 @@ from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 import appdirs
-from pyontutils.utils import TermColors as tc, makeSimpleLogger
+from pyontutils.utils import TermColors as tc, log
 from pyontutils.utils import get_working_dir
 
 checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
 pyontutils_config_path = Path(appdirs.user_config_dir('pyontutils'))
+if not pyontutils_config_path.parent.exists():
+    log.warning(f'config path does not exist! Errors incoming! {pyontutils_config_path.parent}')
+
 default_config = pyontutils_config_path / 'devconfig.yaml'
 working_dir = get_working_dir(__file__)
 if working_dir is None:
@@ -23,8 +26,6 @@ else:
 
 # needed to override for local testing
 PYONTUTILS_DEVCONFIG = Path(os.environ.get('PYONTUTILS_DEVCONFIG', default_config))
-
-log = makeSimpleLogger('config')
 
 
 def get_api_key():

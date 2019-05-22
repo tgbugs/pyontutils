@@ -152,6 +152,9 @@ def makeSimpleLogger(name, color=True):
     return logger
 
 
+log = makeSimpleLogger('pyontutils')
+
+
 def test_notebook():  # also tests ipython
     try:
         config = get_ipython().config
