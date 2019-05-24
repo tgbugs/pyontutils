@@ -429,6 +429,77 @@ class OntResInterLex(OntResOnt):
     _header_class = OntHeaderInterLex
 
 
+class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
+    def __call__(self, **kwargs):
+        """ set prefixes """
+        raise NotImplementedError
+
+    def __iter__(self):
+        yield from self.namespaces()
+
+    def qname(self, iri):
+        prefix, namespace, name = self.compute_qname(uri, generate=False)
+        if prefix == "":
+            return name
+        else:
+            return ":".join((prefix, name))
+
+    def populate(self, graph):
+        [graph.bind(k, v) for k, v in self.namespaces()]
+
+
+class OntGraph(rdflib.Graph):
+    """ A 5th try at making one of these. ConjunctiveGraph version? """
+
+    def __init__(self, *args, filename=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bind('owl', owl)
+        self.filename = filename
+
+    # TODO id for graphs like this ... use InterLex IdentityBNode?
+
+    def _get_namespace_manager(self):
+        if self.__namespace_manager is None:
+            self.__namespace_manager = BetterNamespaceManager(self)
+        return self.__namespace_manager
+
+    @property
+    def prefixes(self):
+        """ the prefix/curie/qname section of an rdf file """
+        # a new OntCuries-like object that wraps NamespaceManager
+        # and can leverage its trie
+        self.namespace_manager
+        raise NotImplementedError('yet')
+
+    @property
+    def metadata(self):
+        """ the header/metadata/ontology section of an rdf file """
+        raise NotImplementedError('yet')
+        return OntGraphMetadata(self)
+
+    @property
+    def data(self):
+        """ everything else """
+        raise NotImplementedError('yet')
+
+    def write(self, filename=None, format='nifttl'):
+        if filename is None:
+            filename = self.filename
+
+        with open(filename, 'wb') as f:
+            f.write(self.serialize(format=format))
+
+
+class OntGraphMetadata(OntGraph):
+    """ header """
+    # TODO given some OntGraphData that doesn't already have some meta
+    # attache this meta to that data in prep to run all the hashing etc.
+
+
+class OntGraphData(OntGraph):
+    """ the homogenous everything else """
+
+
 # TODO bind _ont_class for headers
 
 
@@ -451,18 +522,7 @@ def getNamespace(prefix, namespace):
         return rdflib.Namespace(namespace)
 
 
-class mGraph(rdflib.Graph):
-    def __init__(self, *args, filename='/tmp/test.ttl', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.bind('owl', owl)
-        self.filename = filename
-
-    def write(self, filename=None):
-        if filename is None:
-            filename = self.filename
-
-        with open(filename, 'wb') as f:
-            f.write(self.serialize(format='nifttl'))
+mGraph = OntGraph
 
 
 class makeGraph:
