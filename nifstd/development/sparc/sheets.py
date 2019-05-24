@@ -13,6 +13,7 @@ from IPython import embed
 from sys import exit
 import yaml
 VERSION = '0.0.1'
+YML_DISPLAY_DELIMITER = '\t'
 YML_DELIMITER = '\u1F4A9'
 REC_DD = lambda: defaultdict(REC_DD)
 
@@ -55,7 +56,7 @@ def open_custom_sparc_view_yml():
         rawr_yaml = ''
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
-            rawr_yaml += line.replace('\n', '') + ':\n'
+            rawr_yaml += line.replace('\n', '').replace(YML_DISPLAY_DELIMITER, YML_DELIMITER) + ':\n'
         sparc_view = sep_curies(ordered_load(rawr_yaml, yaml.SafeLoader))
 
     return sparc_view
@@ -180,7 +181,10 @@ class SheetPlus(Sheet):
         rows = []
         for label, curies, tier_level in self.linearize_graph(dict_):
             if curies:
-                rows.append((spaces * tier_level) + label + YML_DELIMITER + YML_DELIMITER.join(curies))
+                rows.append(
+                    (spaces * tier_level) + label +
+                    YML_DISPLAY_DELIMITER +
+                    YML_DISPLAY_DELIMITER.join(curies))
             else:
                 rows.append((spaces * tier_level) + label)
         return rows
