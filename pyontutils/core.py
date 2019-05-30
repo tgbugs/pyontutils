@@ -3,14 +3,15 @@ import yaml
 import types
 import subprocess
 import rdflib
+from inspect import getsourcefile
 from pathlib import Path
 from itertools import chain
 from collections import namedtuple
-from inspect import getsourcefile
 import ontquery
 import requests
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
+from ttlser import CustomTurtleSerializer
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
 from pyontutils.utils import Async, deferred, TermColors as tc, makeSimpleLogger
@@ -487,7 +488,21 @@ class OntGraph(rdflib.Graph):
             filename = self.filename
 
         with open(filename, 'wb') as f:
-            f.write(self.serialize(format=format))
+            self.serialize(f, format=format)
+
+    @property
+    def ttl(self):
+        CustomTurtleSerializer.roundtrip_prefixes = False
+        out = self.serialize(format='nifttl').decode()
+        CustomTurtleSerializer.roundtrip_prefixes = True
+        return out
+
+    @property
+    def ttl_html(self):
+        CustomTurtleSerializer.roundtrip_prefixes = False
+        out = self.serialize(format='htmlttl').decode()
+        CustomTurtleSerializer.roundtrip_prefixes = True
+        return out
 
 
 class OntGraphMetadata(OntGraph):
