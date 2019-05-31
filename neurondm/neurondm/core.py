@@ -337,6 +337,15 @@ class OntTerm(bOntTerm):
 OntTerm.bindQueryResult()
 
 
+class OntTermOntologyOnly(OntTerm):
+    __firsts = ('curie', 'label')  # FIXME why do I need this here but didn't for OntTerm ??
+
+
+IXR = oq.plugin.get('InterLex')
+OntTermOntologyOnly.query = oq.OntQuery(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
+OntTermOntologyOnly.bindQueryResult()
+
+
 class GraphOpsMixin:
     # TODO this could be populated automatically in a OntComplete case
     # given a graph and an id and possibly the set of all possible
@@ -1352,7 +1361,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if resp:  # DERP
             abvs = resp['abbreviations']
-            if not abvs:
+            if not abvs or 'Pva' in abvs:  # FIXME hardcoded
                 abvs = [s for s in resp['synonyms'] if len(s) < 5]
                 if not abvs and resp['labels']:
                     try:
@@ -1707,7 +1716,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
             new.append(phenotype)
 
-        id_ = self.id_ if self.id_ != self.temp_id else None
+        id_ = (self.id_ if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else None)
         nn = self.__class__(*new, id_=id_, label=self.origLabel)
         nid = nn.Class.identifier
         oid = self.Class.identifier

@@ -86,25 +86,30 @@ def sheet_to_neurons(values, notes_index):
             return TEMP[header]  # FIXME
 
     def mapCell(cell, syns=False):
+        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBITaxon', 'NCBIGene', 'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL',
+                           'BIRNLEX',)
+
         if ':' in cell and ' ' not in cell:
-            printD(cell)
+            log.debug(cell)
             if 'http' in cell:
                 if cell.startswith('http'):
                     t = OntTerm(iri=cell)
                 else:
                     return None, None  # garbage with http inline
             else:
-                t = OntTerm(cell)  # FIXME need better error message in ontquery
-            return t.iri, t.label
+                t = OntTerm(cell, exclude_prefix=('FMA',))  # FIXME need better error message in ontquery
 
-        result = [r for r in sgv.findByTerm(cell, searchSynonyms=syns)
+            return t.u, t.label
+
+        result = [r for r in sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
                   if not r['deprecated']]
         #printD(cell, result)
         if not result:
-            maybe = list(query(label=cell))
+            log.debug(f'{cell}')
+            maybe = list(query(label=cell, exclude_prefix=('FMA',)))
             if maybe:
                 qr = maybe[0]
-                return qr.iri, qr.label
+                return qr.OntTerm.u, qr.label
             elif not syns:
                 return mapCell(cell, syns=True)
             else:
@@ -115,7 +120,7 @@ def sheet_to_neurons(values, notes_index):
         else:
             result = result[0]
 
-        return result['iri'], result['labels'][0]
+        return rdflib.URIRef(result['iri']), result['labels'][0]
 
     def lower_check(label, cell):
         return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
@@ -167,11 +172,11 @@ def sheet_to_neurons(values, notes_index):
         other_notes = {}
         wat = {}
         for j, (header, cell) in enumerate(zip(headers, neuron_row)):
-            notes = list(process_note(get_note(i, j, notes_index)))
+            notes = list(process_note(get_note(i + 1, j, notes_index)))  # + 1 since headers is removed
             if notes and not header.startswith('has'):
                 _predicate = convert_other(header)
                 if cell:
-                    _object = rdflib.Literal(object)  # FIXME curies etc.
+                    _object = rdflib.Literal(cell)  # FIXME curies etc.
                 else:
                     _object = rdf.nil
                 other_notes[_predicate, _object] = notes
@@ -212,13 +217,20 @@ def sheet_to_neurons(values, notes_index):
             elif header == 'Other label':
                 # TODO
                 continue
-            elif header == 'Description':
-                definition_neuron = rdflib.Literal(cell)
+            elif header == 'definition':
+                continue  # FIXME single space differences between the spreadsheet and the source
+
+                if cell:
+                    definition_neuron = rdflib.Literal(cell)
+
                 continue
+
             elif header == 'synonyms':
-                synonyms_neuron = [rdflib.Literal(s.strip())
-                                   # FIXME bare comma is extremely dangerous
-                                   for s in cell.split(',')]
+                if cell:
+                    synonyms_neuron = [rdflib.Literal(s.strip())
+                                    # FIXME bare comma is extremely dangerous
+                                    for s in cell.split(',')]
+
                 continue
             elif header in skip:
                 continue
@@ -227,7 +239,8 @@ def sheet_to_neurons(values, notes_index):
             if cell:
                 predicate = convert_header(header)
                 if predicate is None:
-                    printD(header, cell, notes)
+                    log.debug(f'{(header, cell, notes)}')
+
                 for object, label in convert_cell(cell):
                     if isinstance(label, tuple):  # LogicalPhenotype case
                         _err = []
@@ -288,9 +301,10 @@ def sheet_to_neurons(values, notes_index):
         if current_neuron and phenotypes:
             # TODO merge current with changes
             # or maybe we just replace since all the phenotypes should be there?
-            printD(phenotypes)
+            log.debug(phenotypes)
             if id is not None:
-                printD(id, bool(id))
+                log.debug(f'{(id, bool(id))}')
+
             elif label_neuron:
                 id = make_cut_id(label_neuron)
             neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron,
@@ -320,7 +334,7 @@ def sheet_to_neurons(values, notes_index):
             neuron.batchAnnotate(other_notes)
         except AttributeError as e:
             #embed()
-            printD('something very strage has happened\n', e)
+            log.exception(e) #'something very strage has happened\n', e)
             pass  # FIXME FIXME FIXME
 
         #neuron.batchAnnotateByPredicate(predicate_notes)  # TODO

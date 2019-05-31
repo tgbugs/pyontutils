@@ -956,8 +956,10 @@ class OntId(ontquery.OntId, rdflib.URIRef):
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
+
 class OntTerm(ontquery.OntTerm, OntId):
     pass
+
 
 SGR = ontquery.plugin.get('SciGraph')
 IXR = ontquery.plugin.get('InterLex')

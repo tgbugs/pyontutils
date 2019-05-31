@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes bridge old dep dev] [options]
+    neurondm-build [all phenotypes models bridge old dep dev] [options]
 
 Options:
     -h --help                   Display this help message
@@ -23,6 +23,7 @@ from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembe
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
+from neurondm.core import OntTermOntologyOnly
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
 from pyontutils.closed_namespaces import rdf, rdfs, owl
@@ -33,7 +34,7 @@ log = makeSimpleLogger('neurondm.build')
 
 resources = Path(devconfig.resources)
 
-NIFRAW, = makeNamespaces('NIFRAW')
+NIFRAW, NIFTTL = makeNamespaces('NIFRAW', 'NIFTTL')
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -500,9 +501,8 @@ def make_phenotypes():
                      [_ for _ in graph2.g.subject_objects(rdflib.RDFS.label)]):
         syn = syn.toPython()
         if syn in syn_mappings:
-            log.error('duplicate synonym! {syn} {sub}')
+            log.error(f'duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
-
 
     phenotypes_o = [(s, o) for s, p, o in graph2.g.triples((None, None, None)) if ' Phenotype' in o]
     extras = {o.replace('Phenotype', '').strip():s for s, o in phenotypes_o}
@@ -1112,8 +1112,24 @@ def predicate_disambig(graph):
     uit('ilxtr:hasLayerLocation', 'UBERON:0005394')
     uit('ilxtr:hasLayerLocation', 'UBERON:0005395')
 
-def make_bridge():
+
+def make_models():
     from importlib import import_module
+    from neurondm.models import __all__
+    skip = 'phenotype_direct',
+    __all__ = [a for a in __all__ if a not in skip]
+    for module in __all__:
+        if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
+            continue
+        m = import_module(f'neurondm.models.{module}')
+        #m = import_module(f'neurondm.compiled.{module}')  # XXX
+        if not hasattr(m, 'config') and hasattr(m, 'main'):
+            config, *_ = m.main()  # FIXME cuts hack
+        else:
+            config = m.config
+
+
+def make_bridge():
     from pyontutils.utils import subclasses
     from pyontutils.core import Ont, build
     from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
@@ -1143,8 +1159,11 @@ def make_bridge():
     #log.critical(f'{nb.imports} {models_imports}')
 
 def make_devel():
+    from ttlser import CustomTurtleSerializer
     from pyontutils.core import Ont, build
     from pyontutils.utils import Async, deferred
+
+    OntTerm = OntTermOntologyOnly
     # inefficient but thorough way to populate the subset of objects we need.
     terms = set()
 
@@ -1230,7 +1249,8 @@ def make_devel():
                         continue
 
                     done.append(term)
-                    if not term.label or (not term.label.endswith('neuron') and not term.label.endswith('cell')):
+                    if not term.label or (not term.label.endswith('neuron') and
+                                          not term.label.endswith('cell')):
                         for s, p, o in term.triples_simple:
                             yield s, p, o
                             if isinstance(o, rdflib.URIRef):
@@ -1252,7 +1272,27 @@ def make_devel():
 
                 terms = next_terms
 
-    nu, *_ = build(neuronUtility, n_jobs=1)
+
+    class neuronUtilityBig(Ont):
+        remote_base = str(NIFRAW['neurons/'])
+        path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
+        filename = 'neuron-development-big'
+        name = 'Utility ontology for neuron development'
+        imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
+                   NIFRAW['neurons/ttl/bridge/chemical-bridge.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation-artifacts.ttl'],
+                   NIFRAW['neurons/ttl/generated/uberon-parcellation-mappings.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation/mbaslim.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation/paxinos-rat-labels.ttl'],
+                   rdflib.URIRef('http://purl.obolibrary.org/obo/uberon.owl'),
+        )
+        prefixes = oq.OntCuries._dict
+
+
+    CustomTurtleSerializer.roundtrip_prefixes = ('',)
+    nu, nub, *_ = build(neuronUtility, neuronUtilityBig, n_jobs=1)
+    CustomTurtleSerializer.roundtrip_prefixes = True
 
 
 def main():
@@ -1260,6 +1300,7 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
+    models = args['models'] or all
     dev = args['dev'] or all
     old = args['old'] or all
     bridge = args['bridge'] or all
@@ -1281,6 +1322,9 @@ def main():
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
         syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
         expand_syns(syn_mappings)
+
+    if models:
+        make_models()
 
     if bridge:
         make_bridge()
