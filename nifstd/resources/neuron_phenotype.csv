@@ -49,8 +49,8 @@ ilxtr:EarlyBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPh
 ilxtr:LateBifurcatingThickTuftedPyramidalPhenotype,ilxtr:ThickTuftedPyramidalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:BistratifiedPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:GranulePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-,,,,,,,
-,,,,,,,
+ilxtr:ConeMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:RodMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
 ,,,,,,,
 ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
