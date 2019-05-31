@@ -1737,6 +1737,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             NeuronBase._loading = True  # block all other neuron loading
             try:
                 for iri in iris:
+                    #if iri.endswith('4164') or iri.endswith('100212'):
+                        # rod/cone issue
+                        #breakpoint()
                     try:
                         cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
                         # because we just call Config again an everything resets
@@ -2028,7 +2031,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if sn:
             sn = ' ' + sn
 
-        id_ = f", id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        id_ = (f", id_={str(self.id_)!r}" if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else '')
         lab =  f", label={str(self.origLabel) + sn!r}" if self.origLabel else ''
         args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{id_}{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma

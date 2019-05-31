@@ -31,8 +31,10 @@ class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_i
 
 OntTerm.repr_level(verbose=False)
 
+
 class NeuronSWAN(NeuronEBM):
-    owlClass = 'ilxtr:NeuronSWAN'
+    owlClass = OntId('ilxtr:NeuronSWAN').u
+
 
 rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 'Colliculus superior': 'Superior colliculus',
@@ -212,6 +214,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
               [col_labels[p] for p in predicates] +
               ['Status', 'PMID', 'synonyms', 'definition'] +
               [OntId(p).suffix for p in extra_predicates if not skip_pred(p)])
+
     def neuron_to_review_row(neuron, cols=predicates):  # TODO column names
         _curie = neuron.ng.qname(neuron.id_)
         curie = None if 'TEMP:' in _curie else _curie
@@ -319,6 +322,7 @@ def main():
                             '').replace('Intrinsic',
                                         'intrinsic').replace('Projection',
                                                              'projection')
+
         for replace, match in rename_rules.items():  # HEH
             l = l.replace(match, replace)
 
@@ -326,6 +330,7 @@ def main():
             n._origLabel = l
             ans.append(n)
             sans.add(l)
+
         else:
             missed.add(l)
 
@@ -356,8 +361,8 @@ def main():
                 yield pe
 
     with Neuron(CUT.Mammalia):
-        _ = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
-             for i, n in zip(ins + ians, ns + ans)]
+        mamns = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
+                 for i, n in zip(ins + ians, ns + ans)]
 
     contains_rules = make_contains_rules()
 
