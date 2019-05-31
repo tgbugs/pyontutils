@@ -1736,15 +1736,18 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if not cls._loading:
             NeuronBase._loading = True  # block all other neuron loading
             try:
+                log.debug(str([i for i in iris if '4164' in i or '100212' in i]))
                 for iri in iris:
-                    #if iri.endswith('4164') or iri.endswith('100212'):
                         # rod/cone issue
                         #breakpoint()
                     try:
-                        cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
+                        n = cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
+                        if iri.endswith('4164') or iri.endswith('100212'):
+                            log.debug(f'{iri} -> {n}')
+
                         # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:
-                        log.error(str(e))
+                        log.exception(e)
                         continue
                     except AttributeError as e:
                         log.critical(str(e))
@@ -2050,7 +2053,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         sn = self._shortname
         if sn:
             sn = ' ' + sn
-        id_ = ',\n' + t + f"id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        id_ = (',\n' + t + f"id_={str(self.id_)!r}"
+               if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else '')
         asdf += id_
         lab =  ',\n' + t + f"label={str(self.origLabel) + sn!r}" if self._origLabel else ''
         asdf += lab

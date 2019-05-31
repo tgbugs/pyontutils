@@ -304,7 +304,7 @@ def main():
             n._origLabel = l
             ns.append(n)
 
-    sns = set(n._origLabel for n in ns)
+    sns = set(n.origLabel for n in ns)
 
     labels_set1 = labels_set0 - sns
 
