@@ -124,14 +124,14 @@ class Genes(LocalNameManager):
 
     # high level diverse iGluRs
     # low level few types GABAaRs
-    GLUR = Phenotype('ilxtr:glutamateReceptor', 'ilxtr:hasExpressionPhenotype')
-    GABAR = Phenotype('ilxtr:GABAReceptor', 'ilxtr:hasExpressionPhenotype')
+    _GLUR = Phenotype('ilxtr:glutamateReceptor', 'ilxtr:hasExpressionPhenotype')
+    _GABAR = Phenotype('ilxtr:GABAReceptor', 'ilxtr:hasExpressionPhenotype')
     # need a clear statement for how to handle cases like this
     # can the current python implementation handle this?
     MNCDend = LogicalPhenotype(AND,
-                     LogicalPhenotype(AND, GABAR, Lower),
+                     LogicalPhenotype(AND, _GABAR, Lower),
                      # intersectionOf(ilxtr.GABAReceptor, ilxtr.LowerExpression)
-                     LogicalPhenotype(AND, GLUR, Higher))
+                     LogicalPhenotype(AND, _GLUR, Higher))
     Chrna4 = Phenotype('ilxtr:Chrna4', 'ilxtr:hasExpressionPhenotype')
     Adra1b = Phenotype('ilxtr:Adra1b', 'ilxtr:hasExpressionPhenotype')
     Npy2r = Phenotype('ilxtr:Npy2r', 'ilxtr:hasExpressionPhenotype')
@@ -320,7 +320,7 @@ with Huang2017:
 
 #embed()
 for n, p in Huang2017.items():
-    if isinstance(p, Phenotype):
+    if isinstance(p, Phenotype) and not n.startswith('_'):
         # FIXME rdflib allows instances but tests type so OntId can go in, but won't ever match
         ident = OntId(p.p)
         if n in Genes.__dict__:

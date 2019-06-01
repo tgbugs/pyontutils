@@ -315,21 +315,33 @@ class OntTerm(bOntTerm):
 
     @property
     def triples_simple(self):
-        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP',
-                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo')
+        skips = 'pheno:parvalbumin',
+        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
+                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
         s = self.URIRef
-        yield s, rdf.type, owl.Class
-        _label = self.label if self.label else self.suffix
-        label = rdflib.Literal(_label)
-        yield s, rdfs.label, label
+        if self.type is None:
+            yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
+        else:
+            yield s, rdf.type, self.type.u
+        if self.label:
+            _label = self.label 
+            label = rdflib.Literal(_label)
+            yield s, rdfs.label, label
+
         if self.synonyms is not None:  # FIXME this should never happen :/
             for syn in self.synonyms:
                 yield s, NIFRID.synonym, rdflib.Literal(syn)
 
         if self('rdfs:subClassOf', as_term=True):
             for superclass in self.predicates['rdfs:subClassOf']:
-                if superclass.prefix in bads:
+                if superclass.curie in skips:
                     continue
+                elif superclass.prefix in bads:
+                    if superclass.prefix == 'BFO' or self.prefix in bads or 'interlex' in self.iri:
+                        yield s, rdfs.subClassOf, superclass.URIRef
+                        break
+                    else:
+                        continue
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
@@ -1392,6 +1404,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abv = abvs[0]
             if abv == 'Glu,':
                 return 'Glu'  # FIXME tempfix for bad glutamate abv
+            elif abv == '4Abu':  # sigh
+                return 'GABA'
             else:
                 return abv
 
@@ -1576,14 +1590,28 @@ class LogicalPhenotype(graphBase):
 
         return OpClass((self.op, *(p._pClass for p in self.pes)))
 
+    def _lkey(self, attr):
+        def key(pe):
+            try:
+                # FIXME this is dumb should be using OntId internally
+                # the convert to URIRef only for the graph ...
+                return self.label_maker._order.index(OntId(pe.e).suffix), getattr(pe, attr)
+            except ValueError as e:
+                log.error(pe)
+                raise e
+
+        return key
+
     @property
     def pLabel(self):
+        spes = sorted(self.pes, key=self._lkey('pLabel'))
         #return f'({self.local_names[self.op]} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
-        return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in self.pes) + ')'
+        return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in spes) + ')'
 
     @property
     def pHiddenLabel(self):
-        label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
+        spes = sorted(self.pes, key=self._lkey('pHiddenLabel'))
+        label = ' '.join([pe.pHiddenLabel for pe in spes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
         return self.labelPostRule(f'({op} {label})')
 
@@ -1593,7 +1621,9 @@ class LogicalPhenotype(graphBase):
         if self in inj:
             return inj[self]
 
-        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName for pe in self.pes])
+        spes = sorted(self.pes, key=self._lkey('pShortName'))
+        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName
+                          for pe in spes])
         op = OntId(self.op).suffix
         return self.labelPostRule(f'({op} {label})')
 
@@ -1712,7 +1742,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             'NIFEXT:5090': 'PR:000011387',  # npy
             'NLXMOL:1006001': 'ilxtr:GABAReceptor',  # gaba receptor role -> gaba receptor itself
             'SAO:1164727693': 'ilxtr:glutamateReceptor',
-
+            'NLXMOL:20090301': 'CHEBI:132943',  # aspartate
+            'NLXORG:110506': 'BIRNLEX:2',  # organism, except with actual lexical information attached to it  # FIXME automate this?
             #'NIFEXT:6':'PTHR:11653',  #  pv 'NCBIGene:19293'
             #'NIFEXT:5116': 'PTHR:10558', #  'NCBIGene:20604',
         }

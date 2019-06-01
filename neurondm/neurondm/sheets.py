@@ -61,7 +61,7 @@ def process_note(raw_note):
             yield p, rdflib.Literal(bit)  # FIXME cull editorial notes
 
 
-def sheet_to_neurons(values, notes_index):
+def sheet_to_neurons(values, notes_index, expect_pes):
     # TODO import existing ids to register by label
     sgv = Vocabulary()
     e_config = Config('common-usage-types')
@@ -307,6 +307,15 @@ def sheet_to_neurons(values, notes_index):
 
             elif label_neuron:
                 id = make_cut_id(label_neuron)
+
+            if id not in expect_pes:
+                log.error(f'{id!r} not in cuts!?')
+                continue
+
+            if expect_pes[id] != len(phenotypes):
+                log.error(f'{id!r} failed roundtrip {len(phenotypes)} != {expect_pes[id]}')
+                continue
+
             neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron,
                                override=bool(id) or bool(label_neuron))
             neuron.adopt_meta(current_neuron)
@@ -358,8 +367,14 @@ class CutsV1(Cuts):
 
 
 def main():
+    #from neurondm.models.cuts import main as cuts_main
+    #cuts_config, *_ = cuts_main()
+    from neurondm.compiled.common_usage_types import config as cuts_config
+    cuts_neurons = cuts_config.neurons()
+    expect_pes = {n.id_:len(n.pes) for n in cuts_neurons}
+
     sheet = CutsV1()
-    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.notes_index)
+    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.notes_index, expect_pes)
     #sheet.show_notes()
     config.write_python()
     config.write()
