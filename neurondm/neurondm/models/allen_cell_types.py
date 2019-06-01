@@ -165,41 +165,61 @@ class AllenCellTypes:
             suffix = tl['stock_number'] if tl['stock_number'] else str(tl['id'])
             name = self.avoid_url_conversion(tl['name'])
             _type = tl['transgenic_line_type_name']
+            if _type == 'driver':
+                pred = 'ilxtr:hasDriverExpressionPhenotype'
+            elif _type == 'reporter':
+                pred = 'ilxtr:hasReporterExpressionPhenotype'
+            else:
+                pred = 'ilxtr:hasExpressionPhenotype'
+
             line_names = []
             if prefix and suffix and prefix in ['AIBS', 'MMRRC', 'JAX']:
                 if prefix == 'AIBS':
                     prefix = 'AllenTL'
                 iri = self.ns[prefix][suffix]
-                phenotypes.append(Phenotype(iri, 'ilxtr:hasExpressionPhenotype'))
+                phenotypes.append(Phenotype(iri, pred))
         return phenotypes
 
     # TODO: search if description exists
     # TODO: Create mapping for all possible types
     # TODO: Fork negatives to NegPhenotype
     def specimen_tags_phenotypes(self, cell_line):
+        pred = 'ilxtr:hasDendriteMorphologicalPhenotype'
         specimen_tag_mappings = {
-            # 'spiny':'+',
-            # 'aspiny':'-'
+            'spiny': Phenotype('ilxtr:SpinyPhenotype', pred),
+            'aspiny': NegPhenotype('ilxtr:SpinyPhenotype', pred),
+            'sparsely spiny': LogicalPhenotype(AND,
+                                               Phenotype('ilxtr:SpinyPhenotype', pred),
+                                               Phenotype('PATO:0001609', 'ilxtr:hasPhenotypeModifier')),
+            'apicalIntact': Phenotype('ilxtr:ApicalDendritePhenotype', 'ilxtr:hasMorphologicalPhenotype'),
+            'apicalTruncated': LogicalPhenotype(AND,
+                                                Phenotype('ilxtr:ApicalDendritePhenotype', 'ilxtr:hasMorphologicalPhenotype'),
+                                                Phenotype('PATO:0000936', 'ilxtr:hasPhenotypeModifier')),
+            'apicalNa': NegPhenotype('ilxtr:ApicalDendritePhenotype', 'ilxtr:hasMorphologicalPhenotype'),  # NA means there was no apical dendrite
         }
         phenotypes = []
         for tag in cell_line['specimen_tags']:
             if 'dendrite type' in tag['name']:
                 one_two = tag['name'].split(' - ')[1]
-                if ' ' in one_two:
-                    one, two = one_two.split(' ')
-                    name = one + two.capitalize()
-                else:
-                    name = one_two
+                #if ' ' in one_two:
+                    #one, two = one_two.split(' ')
+                    #name = one + two.capitalize()
+                #else:
+                name = one_two
             else:
                 one, two = tag['name'].split(' - ')
-                if two == 'NA':
-                    continue
+                #if two == 'NA':  # apical - NA
+                    #continue
                 name = one + two.capitalize()
+
             self.tag_names.add(tag['name'])
             # if phenotype == '+':
-            phenotypes.append(
-                Phenotype('ilxtr:' + name,
-                          'ilxtr:hasDendriteMorphologicalPhenotype'))
+            if name not in specimen_tag_mappings:
+                raise ValueError(name)
+
+            phenotypes.append(specimen_tag_mappings[name]
+                              if name in specimen_tag_mappings else
+                              Phenotype('ilxtr:' + name, pred))
             # elif phenotype == '-': phenotypes.append(NegPhenotype(...))
 
         return phenotypes

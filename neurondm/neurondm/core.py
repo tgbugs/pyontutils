@@ -164,10 +164,15 @@ class LabelMaker:
 
     def _default(self, phenotypes):
         for p in sorted(phenotypes, key=self._key):
-            if p in self._convention_lookup:
-                yield self._convention_lookup[p]
+            if isinstance(p, NegPhenotype):
+                prefix = '-'
             else:
-                yield getattr(p, self._label_property)
+                prefix = ''
+
+            if p in self._convention_lookup:
+                yield prefix + self._convention_lookup[p]
+            else:
+                yield prefix + getattr(p, self._label_property)
 
     @od
     def hasTaxonRank(self, phenotypes):
@@ -229,7 +234,7 @@ class LabelMaker:
     def _plus_minus(self, phenotypes):
         for phenotype in phenotypes:
             if isinstance(phenotype, NegPhenotype):
-                prefix = '-'
+                prefix = ''  # now handled in _default
             elif isinstance(phenotype, Phenotype):
                 prefix = '+'
             else:  # logical phenotypes aren't phenotypes confusingly enough
@@ -244,6 +249,12 @@ class LabelMaker:
         yield from self._plus_minus(phenotypes)
     @od
     def hasExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasDriverExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasReporterExpressionPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
@@ -342,8 +353,8 @@ class OntTermOntologyOnly(OntTerm):
 
 
 IXR = oq.plugin.get('InterLex')
-OntTermOntologyOnly.query = oq.OntQuery(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
-OntTermOntologyOnly.bindQueryResult()
+OntTermOntologyOnly.query = oq.OntQuery(*(s for s in OntTerm.query.services if not isinstance(s, IXR)),
+                                        OntTerm=OntTermOntologyOnly)
 
 
 class GraphOpsMixin:
@@ -1359,14 +1370,17 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
 
+        if pn.startswith('NCBITaxon'):
+            return resp['labels'][0]
+
         if resp:  # DERP
             abvs = resp['abbreviations']
-            if not abvs or 'Pva' in abvs:  # FIXME hardcoded
-                abvs = [s for s in resp['synonyms'] if len(s) < 5]
-                if not abvs and resp['labels']:
+            if not abvs:
+                abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
+                if (not abvs or 'Pva' in abvs) and resp['labels']:
                     try:
                         t = next(OntTerm.query(term=resp['labels'][0], prefix='NCBIGene'))  # worth a shot
-                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if len(_) < 5]
+                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if 1 < len(_) < 5]
                         if abvs:
                             log.warning(f'found shortnames for {pn} from NCBIGene {abvs}')
                     except StopIteration:
@@ -1380,10 +1394,17 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 return 'Glu'  # FIXME tempfix for bad glutamate abv
             else:
                 return abv
+
         elif pn in self.local_names:
             return self.local_names[pn]
+
+        elif self in OntologyGlobalConventions.inverted():
+            # layer issues
+            return OntologyGlobalConventions.inverted()[self]
+
         else:
-            return ''
+            #log.error(f'No short name for {pn}')
+            return None  # self.pLongName
 
     @property
     def pLongName(self):
@@ -1571,7 +1592,10 @@ class LogicalPhenotype(graphBase):
         inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
         if self in inj:
             return inj[self]
-        return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
+
+        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName for pe in self.pes])
+        op = OntId(self.op).suffix
+        return self.labelPostRule(f'({op} {label})')
 
     @property
     def pLongName(self):
@@ -1684,6 +1708,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             'NIFEXT:5116': 'NCBIGene:20604',  # sst
             'NLX:69833': 'PR:000008235',  # GluR3
             'NLX:70371': 'UBERON:0002567',  # basal pons is not a synonym in ubron wat
+            'NIFEXT:5068': 'PR:000005110',  # cholecysokinin
+            'NIFEXT:5090': 'PR:000011387',  # npy
+            'NLXMOL:1006001': 'ilxtr:GABAReceptor',  # gaba receptor role -> gaba receptor itself
+            'SAO:1164727693': 'ilxtr:glutamateReceptor',
 
             #'NIFEXT:6':'PTHR:11653',  #  pv 'NCBIGene:19293'
             #'NIFEXT:5116': 'PTHR:10558', #  'NCBIGene:20604',
@@ -1704,7 +1732,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
                 continue
 
-            if t.deprecated:
+            if hasattr(t, 'deprecated') and t.deprecated:  # FIXME why do we not have cases without?
                 rb = t('replacedBy:', as_term=True)
                 if rb:
                     nt = rb[0]
@@ -1713,6 +1741,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                     deprecated = True
                     log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
                     continue
+
+            elif not hasattr(t, 'deprecated'):
+                log.error(f'{t.source}')
 
             new.append(phenotype)
 
@@ -1785,6 +1816,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             ilxtr.hasMolecularPhenotype,
             ilxtr.hasNeurotransmitterPhenotype,
             ilxtr.hasExpressionPhenotype,
+            ilxtr.hasDriverExpressionPhenotype,
+            ilxtr.hasReporterExpressionPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
             ilxtr.hasConnectionPhenotype,
@@ -2569,6 +2602,8 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasElectrophysiologicalPhenotype',
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
+        'ilxtr:hasDriverExpressionPhenotype',
+        'ilxtr:hasReporterExpressionPhenotype',
         'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
         ilxtr.hasConnectionPhenotype,
         ilxtr.hasExperimentalPhenotype,

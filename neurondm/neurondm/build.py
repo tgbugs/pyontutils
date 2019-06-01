@@ -25,7 +25,7 @@ from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
 from neurondm.core import OntTermOntologyOnly
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
+from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO, NIFRID
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 from itertools import chain
@@ -337,6 +337,8 @@ def make_phenotypes():
             self.id_ = graph2.expand(value)
             self.Class = infixowl.Class(self.id_, graph=graph2.g)
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
+            if 'Cone' in label or 'Rod' in label:  # sigh hard coding
+                label = label.replace(' Morphological', '')
             self._label = label
 
         def subClassOf(self, value):
@@ -394,7 +396,11 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
+            hl = self._label.rsplit(' Phenotype')[0]
+            if hl.endswith('Morphological'):
+                hl = hl.rsplit(' Morphological')[0]
+
+            graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, hl)
 
             label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
 
@@ -505,7 +511,8 @@ def make_phenotypes():
         syn_mappings[syn] = sub
 
     phenotypes_o = [(s, o) for s, p, o in graph2.g.triples((None, None, None)) if ' Phenotype' in o]
-    extras = {o.replace('Phenotype', '').strip():s for s, o in phenotypes_o}
+    extras = {o.replace('Phenotype', '').strip():s
+              for s, o in phenotypes_o}
     epl = {(o.replace('Petilla', '')
             .replace('Initial', '')
             .replace('Sustained', '')
@@ -1160,6 +1167,7 @@ def make_bridge():
 
 def make_devel():
     from ttlser import CustomTurtleSerializer
+    from pyontutils import combinators as cmb
     from pyontutils.core import Ont, build
     from pyontutils.utils import Async, deferred
 
@@ -1214,7 +1222,7 @@ def make_devel():
 
     terms |= all_sparts
 
-    terms |= {OntTerm('UBERON:2301'),  # cortical layer
+    terms |= {OntTerm('UBERON:0002301'),  # cortical layer
     }
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
@@ -1222,6 +1230,28 @@ def make_devel():
                                      #if asdf.prefix not in bads), key=lambda t: (not t.label, t.label))
                #for t in T.triples('rdfs:subClassOf'))
 
+    a = rdf.type
+    def helper_triples():
+        yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+        gar = ilxtr.GABAReceptor
+        garole = OntId('NLXMOL:1006001').u
+        yield gar, a, owl.Class
+        yield gar, rdfs.label, rdflib.Literal('GABA receptor')
+        yield gar, NIFRID.synonym, rdflib.Literal('GABAR')
+        b0 = rdflib.BNode()
+        yield gar, owl.equivalentClass, b0
+        yield b0, a, owl.Class
+        yield from cmb.restriction(OntId('hasRole:').u, garole)(b0)
+
+        glr = ilxtr.glutamateReceptor
+        glrole = OntId('SAO:1164727693').u
+        yield glr, a, owl.Class
+        yield glr, rdfs.label, rdflib.Literal('Glutamate receptor')
+        yield glr, NIFRID.synonym, rdflib.Literal('GluR')
+        b0 = rdflib.BNode()
+        yield glr, owl.equivalentClass, b0
+        yield b0, a, owl.Class
+        yield from cmb.restriction(OntId('hasRole:').u, glrole)(b0)  # FIXME equivalentClass ...
 
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
@@ -1236,9 +1266,9 @@ def make_devel():
         )
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
+            yield from helper_triples()
             done = []
-            yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
-            cortical_layer = OntTerm('UBERON:2301')
+            cortical_layer = OntTerm('UBERON:0002301')
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
 
@@ -1288,6 +1318,10 @@ def make_devel():
                    rdflib.URIRef('http://purl.obolibrary.org/obo/uberon.owl'),
         )
         prefixes = oq.OntCuries._dict
+
+
+        def _triples(self):
+            yield from helper_triples()
 
 
     CustomTurtleSerializer.roundtrip_prefixes = ('',)

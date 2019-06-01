@@ -1,6 +1,7 @@
 ilx_id,subClassOf,label,synonyms,xrefs,rules,notes,use_edge
 ilxtr:AxonPhenotype,ilxtr:Phenotype,,,,,,hasAxonPhenotype
 ilxtr:DendritePhenotype,ilxtr:Phenotype,,,,,,hasDendriteMorphologicalPhenotype
+ilxtr:ApicalDendritePhenotype,ilxtr:DendritePhenotype,,,,,"When used directly indicates the presence or absense of an apical dendrite. Rather than subclassing directly, could be combined with general dendrite phenotypes to allow specificity.",hasDendriteMorphologicalPhenotype
 ilxtr:BranchingPhenotype,ilxtr:DendritePhenotype,,,,subClassesDisjoint,,hasDendriteMorphologicalPhenotype
 ilxtr:EarlyBifurcatingPhenotype,ilxtr:BranchingPhenotype,,,,,,hasDendriteMorphologicalPhenotype
 ilxtr:LateBifurcatingPhenotype,ilxtr:BranchingPhenotype,,,,,,hasDendriteMorphologicalPhenotype
@@ -12,7 +13,6 @@ ilxtr:ThickPhenotype,ilxtr:TrunkPhenotype,,,,,,hasDendriteMorphologicalPhenotype
 ilxtr:TuftedPhenotype,ilxtr:DendritePhenotype,,,,,to get Untufted use the negative phenotype of this and add a naming rule,hasDendriteMorphologicalPhenotype
 ,,,,,,,
 ilxtr:SpinyPhenotype,ilxtr:DendritePhenotype,,,,,"Aspiny can be modelled as (not ilxtr:SpinyPhenotype), this will be needed for Allen's scheme",hasDendriteMorphologicalPhenotype
-,,,,,,,
 ,,,,,,,
 ilxtr:SomaPhenotype,ilxtr:Phenotype,,,,,,
 ilxtr:CellPhenotype,ilxtr:Phenotype,,,,,,

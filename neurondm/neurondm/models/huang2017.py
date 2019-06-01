@@ -34,23 +34,23 @@ class Genes(LocalNameManager):
     #PV = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')
 
     # cre lines
-    VIP = Phenotype('ilxtr:VIP-flp', 'ilxtr:hasExpressionPhenotype')
-    CCK = Phenotype('ilxtr:CCK-cre', 'ilxtr:hasExpressionPhenotype')
-    SST = Phenotype('ilxtr:SST-flp', 'ilxtr:hasExpressionPhenotype')
-    CR = Phenotype('ilxtr:CR-cre', 'ilxtr:hasExpressionPhenotype')
-    PV = Phenotype('ilxtr:PV-cre', 'ilxtr:hasExpressionPhenotype')
-    NOS1 = Phenotype('ilxtr:NOS1-creER', 'ilxtr:hasExpressionPhenotype')
-    Nkx2_1 = Phenotype('ilxtr:Nkx2.1-creER', 'ilxtr:hasExpressionPhenotype')
-    Nkx2_1flp = Phenotype('ilxtr:Nkx2.1-flp', 'ilxtr:hasExpressionPhenotype')
+    VIP = Phenotype('ilxtr:VIP-flp', 'ilxtr:hasDriverExpressionPhenotype', label='VIP-flp')
+    CCK = Phenotype('ilxtr:CCK-cre', 'ilxtr:hasDriverExpressionPhenotype', label='CCK-cre')
+    SST = Phenotype('ilxtr:SST-flp', 'ilxtr:hasDriverExpressionPhenotype', label='SST-flp')
+    CR = Phenotype('ilxtr:CR-cre', 'ilxtr:hasDriverExpressionPhenotype', label='CR-cre')
+    PV = Phenotype('ilxtr:PV-cre', 'ilxtr:hasDriverExpressionPhenotype', label='PV-cre')
+    NOS1 = Phenotype('ilxtr:NOS1-creER', 'ilxtr:hasDriverExpressionPhenotype', label='NOS1-creER')
+    Nkx2_1 = Phenotype('ilxtr:Nkx2.1-creER', 'ilxtr:hasDriverExpressionPhenotype', label='Nkx2.1-creER')
+    Nkx2_1flp = Phenotype('ilxtr:Nkx2.1-flp', 'ilxtr:hasDriverExpressionPhenotype', label='Nxk2.1-flp')
 
     # Actual genes
 
-    Vip = Phenotype(ilxtr.Vip, ilxtr.hasExpressionPhenotype)
-    Cck = Phenotype(ilxtr.Cck, ilxtr.hasExpressionPhenotype)
-    Sst = Phenotype(ilxtr.Sst, ilxtr.hasExpressionPhenotype)
-    Calb2 = Phenotype(ilxtr.Calb2, ilxtr.hasExpressionPhenotype)
-    Pvalb = Phenotype(ilxtr.Pvalb, ilxtr.hasExpressionPhenotype)
-    Nos1 = Phenotype('ilxtr:Nos1', 'ilxtr:hasExpressionPhenotype')
+    Vip = Phenotype('NCBIGene:22353', ilxtr.hasExpressionPhenotype)
+    Cck = Phenotype('NCBIGene:12424', ilxtr.hasExpressionPhenotype)
+    Sst = Phenotype('NCBIGene:20604', ilxtr.hasExpressionPhenotype)
+    Calb2 = Phenotype('NCBIGene:12308', ilxtr.hasExpressionPhenotype)
+    Pvalb = Phenotype('NCBIGene:19293', ilxtr.hasExpressionPhenotype)
+    Nos1 = Phenotype('NCBIGene:18125', 'ilxtr:hasExpressionPhenotype')
 
     # cre equivalents where appropriate
     PVBCEq = LogicalPhenotype(AND, Pvalb)
@@ -336,6 +336,7 @@ for n, p in Huang2017.items():
             Neuron.core_graph.add(lt)
             Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
 
+Neuron.out_graph.add((ilxtr.gene, owl.equivalentClass, OntId('SO:0000704').u))
 Neuron.write()
 Neuron.write_python()
 res = [r for s, l in Neuron.out_graph[:rdfs.label:] if

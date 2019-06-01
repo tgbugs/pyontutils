@@ -154,6 +154,7 @@ def make_contains_rules():
         'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').as_phenotype(),
         'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').as_phenotype(),
         'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').as_phenotype(),
+        'Medial amygdalar nucleus': OntTerm('UBERON:0002892', label='medial amygdaloid nucleus').as_phenotype(),  # a creeping madness issue
 
     })
 
@@ -418,7 +419,7 @@ def main():
             maybe_region = None
 
         if maybe_region:
-            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO')
+            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT')
             def key(ot):
                 ranked = ot.prefix in prefix_rank
                 arg = ot._query_result._QueryResult__query_args['term'].lower()
