@@ -7,7 +7,7 @@ from inspect import getsourcefile
 from pathlib import Path
 from itertools import chain
 from collections import namedtuple
-import ontquery
+import ontquery as oq
 import requests
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
@@ -107,15 +107,23 @@ class OntRes:
         # TODO return an iri wrapper or a path wrapper
         #pass
 
-    def __init__(self, identifier, repo=None):
+    def __init__(self, identifier, repo=None, Graph=None):
         self.identifier = identifier  # the potential attribute error here is intentional
         self.repo = repo  # I have a repo augmented path in my thesis stats code
+        if Graph == None:
+            Graph = OntGraph
+
+        self.Graph = graph
 
     @property
     def identifier(self):
         # FIXME interlex naming conventions call this a reference_name
         # in order to give it a bit more lexical distance from identity
         # which implies some hash function
+        raise NotImplementedError
+
+    @identifier.setter
+    def identifier(self, value):
         raise NotImplementedError
 
     @property
@@ -144,7 +152,7 @@ class OntRes:
     @property
     def graph(self):
         if not hasattr(self, '_graph'):
-            self._graph = rdflib.Graph()
+            self._graph = self.Graph()
             self.populate(self._graph)
 
         return self._graph
@@ -199,7 +207,7 @@ class OntHeader(OntRes):
 
     def _graph_sideload(self, data):
         # this will overwrite any existing graph
-        self._graph = rdflib.Graph().parse(data=data, format=self.format)
+        self._graph = self.Graph().parse(data=data, format=self.format)
 
     def _populate(self, graph, gen):
         # we don't pop request headers or file metadata off in here 
@@ -321,6 +329,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
         yield self.format  # we do this because self.format needs to be accessible before loading the graph
 
+        close_rdf = b'\n</rdf:RDF>\n'
         searching = False
         header_data = b''
         for chunk in chain((first,), gen):
@@ -344,6 +353,9 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
                 yield header_last_chunk
                 if yield_response_gen:
+                    if self.format == 'application/rdf+xml':
+                        header_data += close_rdf
+
                     self._graph_sideload(header_data)
                     chunk = chunk[stop_end_index:]
                     yield resp, chain((chunk,), gen)
@@ -351,7 +363,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
                 else:
                     # if we are not continuing then close the xml tags
                     if self.format == 'application/rdf+xml':
-                        yield b'\n</rdf:RDF>\n'
+                        yield close_rdf
 
                     resp.close()
 
@@ -376,6 +388,10 @@ class OntResIri(OntIdIri, OntResOnt):
         # TODO populate header graph? not sure this is actually possible
         # maybe need to double wrap so that the header chunks always get
         # consumbed by the header object ?
+        if self.format == 'application/rdf+xml':
+            resp.close()
+            return None
+
         return chain(header_chunks, gen)
 
     def _populate(self, graph, gen):
@@ -386,7 +402,7 @@ class OntResIri(OntIdIri, OntResOnt):
         if self.format == 'application/rdf+xml':
             # rdflib xml parsing uses and incremental parser that
             # constructs its own file object and byte stream
-            graph.parse(self.identifier)
+            graph.parse(self.identifier, format=self.format)
 
         elif self.format == 'text/owl-functional':  # FIXME TODO
             log.error(f'TODO cannot parse owl functional syntax yet {self}')
@@ -939,9 +955,9 @@ def createOntology(filename=    'temp-graph',
 #
 # query
 
-# ontquery.SciGraphRemote.verbose = True
+# oq.SciGraphRemote.verbose = True
 
-class OntId(ontquery.OntId, rdflib.URIRef):
+class OntId(oq.OntId, rdflib.URIRef):
     #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
         #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
 
@@ -957,23 +973,29 @@ class OntId(ontquery.OntId, rdflib.URIRef):
         return rdflib.URIRef.__str__(self)
 
 
-class OntTerm(ontquery.OntTerm, OntId):
+class OntTerm(oq.OntTerm, OntId):
     pass
 
 
-SGR = ontquery.plugin.get('SciGraph')
-IXR = ontquery.plugin.get('InterLex')
+SGR = oq.plugin.get('SciGraph')
+IXR = oq.plugin.get('InterLex')
 #sgr.verbose = True
 for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(apiEndpoint=devconfig.scigraph_api, api_key=get_api_key())
 ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
-OntTerm.query = ontquery.OntQuery(sgr, ixr)
+OntTerm.query = oq.OntQuery(sgr, ixr, OntTerm=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
-#ontquery.QueryResult._OntTerm = OntTerm
+#oq.QueryResult._OntTerm = OntTerm
 OntTerm.bindQueryResult()
-query = ontquery.OntQueryCli(query=OntTerm.query)
+query = oq.OntQueryCli(query=OntTerm.query)
+
+
+class IlxTerm(OntTerm):
+    __firsts = 'curie', 'label'
+
+IlxTerm.query = oq.OntQuery(ixr, OntTerm=OntTerm)
 
 #
 # classes
