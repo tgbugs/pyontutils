@@ -1,18 +1,14 @@
 import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
-from pyontutils.core import OntId, OntTerm
 from pyontutils.sheets import update_sheet_values, get_note, Sheet
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition
 from pyontutils.closed_namespaces import rdfs, rdf
 from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
-from neurondm.core import log
+from neurondm.core import log, OntId, OntTerm
 
-from IPython import embed
-
-printD = print
 
 def normalizeDoi(doi):
     if 'http' in doi:
@@ -66,7 +62,9 @@ def sheet_to_neurons(values, notes_index, expect_pes):
     sgv = Vocabulary()
     e_config = Config('common-usage-types')
     e_config.load_existing()
-    query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph))
+    query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
+    # FIXME clear use case for the remaining bound to whatever query produced it rather
+    # than the other way around ... how to support this use case ...
     existing = {str(n.origLabel):n for n in e_config.neurons()}
     def convert_header(header):
         if header.startswith('has'):  # FIXME use a closed namespace
@@ -369,6 +367,7 @@ class CutsV1(Cuts):
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
+    from IPython import embed
     from neurondm.compiled.common_usage_types import config as cuts_config
     cuts_neurons = cuts_config.neurons()
     expect_pes = {n.id_:len(n.pes) for n in cuts_neurons}
