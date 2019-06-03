@@ -86,37 +86,101 @@ class Genes(LocalNameManager):
     Trpc6 = Phenotype('NCBIGene:22068', 'ilxtr:hasExpressionPhenotype', label='Trpc6')
     Wnt5a = Phenotype('NCBIGene:22418', 'ilxtr:hasExpressionPhenotype', label='Wnt5a')
 
+    # batch 2
+    Adcy1 = Phenotype('NCBIGene:432530', 'ilxtr:hasExpressionPhenotype', label='Adcy1', override=True)
+    Adcy2 = Phenotype('NCBIGene:210044', 'ilxtr:hasExpressionPhenotype', label='Adcy2', override=True)
+    Adcy8 = Phenotype('NCBIGene:11514', 'ilxtr:hasExpressionPhenotype', label='Adcy8', override=True)
+    Adcy9 = Phenotype('NCBIGene:11515', 'ilxtr:hasExpressionPhenotype', label='Adcy9', override=True)
+    Adra1b = Phenotype('NCBIGene:11548', 'ilxtr:hasExpressionPhenotype', label='Adra1b', override=True)
+    Arhgef10 = Phenotype('NCBIGene:234094', 'ilxtr:hasExpressionPhenotype', label='Arhgef10', override=True)
+    Cckbr = Phenotype('NCBIGene:12426', 'ilxtr:hasExpressionPhenotype', label='Cckbr', override=True)
+    Chrm3 = Phenotype('NCBIGene:12671', 'ilxtr:hasExpressionPhenotype', label='Chrm3', override=True)
+    Chrna4 = Phenotype('NCBIGene:11438', 'ilxtr:hasExpressionPhenotype', label='Chrna4', override=True)
+    Chst1 = Phenotype('NCBIGene:76969', 'ilxtr:hasExpressionPhenotype', label='Chst1', override=True)
+    Cox6c = Phenotype('NCBIGene:12864', 'ilxtr:hasExpressionPhenotype', label='Cox6c', override=True)
+    Cplx1 = Phenotype('NCBIGene:12889', 'ilxtr:hasExpressionPhenotype', label='Cplx1', override=True)
+    Cplx2 = Phenotype('NCBIGene:12890', 'ilxtr:hasExpressionPhenotype', label='Cplx2', override=True)
+    Esrrg = Phenotype('NCBIGene:26381', 'ilxtr:hasExpressionPhenotype', label='Esrrg', override=True)
+    Fgf9 = Phenotype('NCBIGene:14180', 'ilxtr:hasExpressionPhenotype', label='Fgf9', override=True)
+    Gpr88 = Phenotype('NCBIGene:64378', 'ilxtr:hasExpressionPhenotype', label='Gpr88', override=True)
+    Grin3a = Phenotype('NCBIGene:242443', 'ilxtr:hasExpressionPhenotype', label='Grin3a', override=True)
+    Hcrtr1 = Phenotype('NCBIGene:230777', 'ilxtr:hasExpressionPhenotype', label='Hcrtr1', override=True)
+    Hs3st4 = Phenotype('NCBIGene:628779', 'ilxtr:hasExpressionPhenotype', label='Hs3st4', override=True)
+    Hs6st3 = Phenotype('NCBIGene:50787', 'ilxtr:hasExpressionPhenotype', label='Hs6st3', override=True)
+    Htr2c = Phenotype('NCBIGene:15560', 'ilxtr:hasExpressionPhenotype', label='Htr2c', override=True)
+    Inhbb = Phenotype('NCBIGene:16324', 'ilxtr:hasExpressionPhenotype', label='Inhbb', override=True)
+    Kcnmb4 = Phenotype('NCBIGene:58802', 'ilxtr:hasExpressionPhenotype', label='Kcnmb4', override=True)
+    Mef2c = Phenotype('NCBIGene:17260', 'ilxtr:hasExpressionPhenotype', label='Mef2c', override=True)
+    Npy1r = Phenotype('NCBIGene:18166', 'ilxtr:hasExpressionPhenotype', label='Npy1r', override=True)
+    Npy2r = Phenotype('NCBIGene:18167', 'ilxtr:hasExpressionPhenotype', label='Npy2r', override=True)
+    Nrtn = Phenotype('NCBIGene:18188', 'ilxtr:hasExpressionPhenotype', label='Nrtn', override=True)
+    Opn3 = Phenotype('NCBIGene:13603', 'ilxtr:hasExpressionPhenotype', label='Opn3', override=True)
+    Pde1a = Phenotype('NCBIGene:18573', 'ilxtr:hasExpressionPhenotype', label='Pde1a', override=True)
+    Pde2a = Phenotype('NCBIGene:207728', 'ilxtr:hasExpressionPhenotype', label='Pde2a', override=True)
+    Pde4b = Phenotype('NCBIGene:18578', 'ilxtr:hasExpressionPhenotype', label='Pde4b', override=True)
+    Pde5a = Phenotype('NCBIGene:242202', 'ilxtr:hasExpressionPhenotype', label='Pde5a', override=True)
+    Pde7b = Phenotype('NCBIGene:29863', 'ilxtr:hasExpressionPhenotype', label='Pde7b', override=True)
+    Pde11a = Phenotype('NCBIGene:241489', 'ilxtr:hasExpressionPhenotype', label='Pde11a', override=True)
+    Pparg = Phenotype('NCBIGene:19016', 'ilxtr:hasExpressionPhenotype', label='Pparg', override=True)
+    Prkg1 = Phenotype('NCBIGene:19091', 'ilxtr:hasExpressionPhenotype', label='Prkg1', override=True)
+    Prkg2 = Phenotype('NCBIGene:19092', 'ilxtr:hasExpressionPhenotype', label='Prkg2', override=True)
+    Prok2 = Phenotype('NCBIGene:50501', 'ilxtr:hasExpressionPhenotype', label='Prok2', override=True)
+    Pthlh = Phenotype('NCBIGene:19227', 'ilxtr:hasExpressionPhenotype', label='Pthlh', override=True)
+    Ptn = Phenotype('NCBIGene:19242', 'ilxtr:hasExpressionPhenotype', label='Ptn', override=True)
+    Rgs10 = Phenotype('NCBIGene:67865', 'ilxtr:hasExpressionPhenotype', label='Rgs10', override=True)
+    Rgs12 = Phenotype('NCBIGene:71729', 'ilxtr:hasExpressionPhenotype', label='Rgs12', override=True)
+    Rgs16 = Phenotype('NCBIGene:19734', 'ilxtr:hasExpressionPhenotype', label='Rgs16', override=True)
+    Rgs8 = Phenotype('NCBIGene:67792', 'ilxtr:hasExpressionPhenotype', label='Rgs8', override=True)
+    Rln1 = Phenotype('NCBIGene:19773', 'ilxtr:hasExpressionPhenotype', label='Rln1', override=True)
+    Rspo1 = Phenotype('NCBIGene:192199', 'ilxtr:hasExpressionPhenotype', label='Rspo1', override=True)
+    Slc7a3 = Phenotype('NCBIGene:11989', 'ilxtr:hasExpressionPhenotype', label='Slc7a3', override=True)
+    Slit2 = Phenotype('NCBIGene:20563', 'ilxtr:hasExpressionPhenotype', label='Slit2', override=True)
+    Slit3 = Phenotype('NCBIGene:20564', 'ilxtr:hasExpressionPhenotype', label='Slit3', override=True)
+    Syt10 = Phenotype('NCBIGene:54526', 'ilxtr:hasExpressionPhenotype', label='Syt10', override=True)
+    Syt2 = Phenotype('NCBIGene:20980', 'ilxtr:hasExpressionPhenotype', label='Syt2', override=True)
+    Syt4 = Phenotype('NCBIGene:20983', 'ilxtr:hasExpressionPhenotype', label='Syt4', override=True)
+    Syt5 = Phenotype('NCBIGene:53420', 'ilxtr:hasExpressionPhenotype', label='Syt5', override=True)
+    Syt7 = Phenotype('NCBIGene:54525', 'ilxtr:hasExpressionPhenotype', label='Syt7', override=True)
+    Tgfb3 = Phenotype('NCBIGene:21809', 'ilxtr:hasExpressionPhenotype', label='Tgfb3', override=True)
+    Trpc5 = Phenotype('NCBIGene:22067', 'ilxtr:hasExpressionPhenotype', label='Trpc5', override=True)
+    Unc5a = Phenotype('NCBIGene:107448', 'ilxtr:hasExpressionPhenotype', label='Unc5a', override=True)
+    Unc5b = Phenotype('NCBIGene:107449', 'ilxtr:hasExpressionPhenotype', label='Unc5b', override=True)
+    Unc5d = Phenotype('NCBIGene:210801', 'ilxtr:hasExpressionPhenotype', label='Unc5d', override=True)
+    Vamp1 = Phenotype('NCBIGene:22317', 'ilxtr:hasExpressionPhenotype', label='Vamp1', override=True)
+    Vipr1 = Phenotype('NCBIGene:22354', 'ilxtr:hasExpressionPhenotype', label='Vipr1', override=True)
+    Wnt2 = Phenotype('NCBIGene:22413', 'ilxtr:hasExpressionPhenotype', label='Wnt2', override=True)
+
     # peptides
     #Tac1 = Phenotype('ilxtr:Tac1', 'ilxtr:hasExpressionPhenotype')
     #Adm = Phenotype('ilxtr:Adm', 'ilxtr:hasExpressionPhenotype')
     Rspn = Phenotype('ilxtr:Rspn', 'ilxtr:hasExpressionPhenotype')
     PVBCPep = LogicalPhenotype(AND, Tac1, Adm, Rspn)
 
-    Pthlh = Phenotype('ilxtr:Pthlh', 'ilxtr:hasExpressionPhenotype')
-    Tgfb3 = Phenotype('ilxtr:Tgfb3', 'ilxtr:hasExpressionPhenotype')
-    Fgf9 = Phenotype('ilxtr:Fgf91', 'ilxtr:hasExpressionPhenotype')
+    #Pthlh = Phenotype('ilxtr:Pthlh', 'ilxtr:hasExpressionPhenotype')
+    #Tgfb3 = Phenotype('ilxtr:Tgfb3', 'ilxtr:hasExpressionPhenotype')
+    #Fgf9 = Phenotype('ilxtr:Fgf91', 'ilxtr:hasExpressionPhenotype')
     CHCPep = LogicalPhenotype(AND, Pthlh, Tgfb3, Fgf9) 
 
     #Igf1 = Phenotype('ilxtr:Igf1', 'ilxtr:hasExpressionPhenotype')
     #Edn3 = Phenotype('ilxtr:Edn3', 'ilxtr:hasExpressionPhenotype')
-    Prok2 = Phenotype('ilxtr:Prok2', 'ilxtr:hasExpressionPhenotype')
+    #Prok2 = Phenotype('ilxtr:Prok2', 'ilxtr:hasExpressionPhenotype')
     #Pnoc = Phenotype('ilxtr:Pnoc', 'ilxtr:hasExpressionPhenotype')
     #Crh = Phenotype('ilxtr:Crh', 'ilxtr:hasExpressionPhenotype')
     #Tac2 = Phenotype('ilxtr:Tac2', 'ilxtr:hasExpressionPhenotype')
     CCKCPep = LogicalPhenotype(AND, Vip, Cck, Igf1, Edn3, Prok2, Pnoc, Crh, Tac2)
 
-    Inhbb = Phenotype('ilxtr:Inhbb', 'ilxtr:hasExpressionPhenotype')
+    #Inhbb = Phenotype('ilxtr:Inhbb', 'ilxtr:hasExpressionPhenotype')
     #Nppc = Phenotype('ilxtr:Nppc', 'ilxtr:hasExpressionPhenotype')
     MNCPep = LogicalPhenotype(AND, Sst, Inhbb, Nppc)
 
-    Rspo1 = Phenotype('ilxtr:Rspo1', 'ilxtr:hasExpressionPhenotype')
+    #Rspo1 = Phenotype('ilxtr:Rspo1', 'ilxtr:hasExpressionPhenotype')
     #Wnt5a = Phenotype('ilxtr:Wnt5aae1', 'ilxtr:hasExpressionPhenotype')
-    Nrtn = Phenotype('ilxtr:Nrtn', 'ilxtr:hasExpressionPhenotype')
+    #Nrtn = Phenotype('ilxtr:Nrtn', 'ilxtr:hasExpressionPhenotype')
     ISCPep = LogicalPhenotype(AND, Vip, Cck, Rspo1, Wnt5a, Nrtn)
 
-    Ptn = Phenotype('ilxtr:Ptn', 'ilxtr:hasExpressionPhenotype')
-    Wnt2 = Phenotype('ilxtr:Wnt2', 'ilxtr:hasExpressionPhenotype')
-    Rln1 = Phenotype('ilxtr:Rln1', 'ilxtr:hasExpressionPhenotype')
+    #Ptn = Phenotype('ilxtr:Ptn', 'ilxtr:hasExpressionPhenotype')
+    #Wnt2 = Phenotype('ilxtr:Wnt2', 'ilxtr:hasExpressionPhenotype')
+    #Rln1 = Phenotype('ilxtr:Rln1', 'ilxtr:hasExpressionPhenotype')
     #Penk = Phenotype('ilxtr:Penk', 'ilxtr:hasExpressionPhenotype')
     #Calca = Phenotype('ilxtr:Calca', 'ilxtr:hasExpressionPhenotype')
     #Cort = Phenotype('ilxtr:Cort', 'ilxtr:hasExpressionPhenotype')
@@ -129,7 +193,7 @@ class Genes(LocalNameManager):
     Kv3 = Phenotype('ilxtr:Kv3', 'ilxtr:hasExpressionPhenotype')
     α4GABAaR = Phenotype('ilxtr:α4GABAaR', 'ilxtr:hasExpressionPhenotype')
     δGABAaR = Phenotype('ilxtr:δGABAaR', 'ilxtr:hasExpressionPhenotype')
-    Cckbr = Phenotype('ilxtr:Cckbr', 'ilxtr:hasExpressionPhenotype')
+    #Cckbr = Phenotype('ilxtr:Cckbr', 'ilxtr:hasExpressionPhenotype')
     PVBCDend = LogicalPhenotype(AND, GluA1, GluA4, α1GABAaR, Kv3, α4GABAaR, δGABAaR, Cckbr)
 
     # TODO LOWER
@@ -141,11 +205,11 @@ class Genes(LocalNameManager):
                                Lower) # FIXME bad model
 
     #Cnr1 = Phenotype('ilxtr:Cnr1', 'ilxtr:hasExpressionPhenotype')
-    Htr2c = Phenotype('ilxtr:Htr2c', 'ilxtr:hasExpressionPhenotype')
+    #Htr2c = Phenotype('ilxtr:Htr2c', 'ilxtr:hasExpressionPhenotype')
     #Htr3a = Phenotype('ilxtr:Htr3a', 'ilxtr:hasExpressionPhenotype')
-    Chrm3 = Phenotype('ilxtr:Chrm3', 'ilxtr:hasExpressionPhenotype')
-    Npy1r = Phenotype('ilxtr:Npy1r', 'ilxtr:hasExpressionPhenotype')
-    Vipr1 = Phenotype('ilxtr:Vipr1', 'ilxtr:hasExpressionPhenotype')
+    #Chrm3 = Phenotype('ilxtr:Chrm3', 'ilxtr:hasExpressionPhenotype')
+    #Npy1r = Phenotype('ilxtr:Npy1r', 'ilxtr:hasExpressionPhenotype')
+    #Vipr1 = Phenotype('ilxtr:Vipr1', 'ilxtr:hasExpressionPhenotype')
     CCKCDend = LogicalPhenotype(AND, Cnr1, Htr2c, Htr3a, Chrm3, Npy1r, Vipr1)
 
     # high level diverse iGluRs
@@ -158,17 +222,17 @@ class Genes(LocalNameManager):
                      LogicalPhenotype(AND, _GABAR, Lower),
                      # intersectionOf(ilxtr.GABAReceptor, ilxtr.LowerExpression)
                      LogicalPhenotype(AND, _GLUR, Higher))
-    Chrna4 = Phenotype('ilxtr:Chrna4', 'ilxtr:hasExpressionPhenotype')
-    Adra1b = Phenotype('ilxtr:Adra1b', 'ilxtr:hasExpressionPhenotype')
-    Npy2r = Phenotype('ilxtr:Npy2r', 'ilxtr:hasExpressionPhenotype')
+    #Chrna4 = Phenotype('ilxtr:Chrna4', 'ilxtr:hasExpressionPhenotype')
+    #Adra1b = Phenotype('ilxtr:Adra1b', 'ilxtr:hasExpressionPhenotype')
+    #Npy2r = Phenotype('ilxtr:Npy2r', 'ilxtr:hasExpressionPhenotype')
     ISCDend = LogicalPhenotype(AND, Htr2c, Htr3a, Chrm3, Chrna4, Adra1b, Npy2r)
 
     #Chrm2 = Phenotype('ilxtr:Chrm2', 'ilxtr:hasExpressionPhenotype')
-    Gpr88 = Phenotype('ilxtr:Gpr88', 'ilxtr:hasExpressionPhenotype')
+    #Gpr88 = Phenotype('ilxtr:Gpr88', 'ilxtr:hasExpressionPhenotype')
     #Oxtr = Phenotype('ilxtr:Oxtr', 'ilxtr:hasExpressionPhenotype')
     #Tacr1 = Phenotype('ilxtr:Tacr1', 'ilxtr:hasExpressionPhenotype')
-    Hcrtr1 = Phenotype('ilxtr:Hcrtr1', 'ilxtr:hasExpressionPhenotype')
-    Opn3 = Phenotype('ilxtr:Opn3', 'ilxtr:hasExpressionPhenotype')
+    #Hcrtr1 = Phenotype('ilxtr:Hcrtr1', 'ilxtr:hasExpressionPhenotype')
+    #Opn3 = Phenotype('ilxtr:Opn3', 'ilxtr:hasExpressionPhenotype')
     # low unusual ??? check 4 H and enumerate all the instances of 'unusual'
     LPCDend = LogicalPhenotype(AND, Chrm2, Gpr88, Oxtr, Tacr1, Hcrtr1, Opn3)
 
@@ -180,51 +244,51 @@ class Genes(LocalNameManager):
 
     # signaling
     RGS4 = Phenotype('ilxtr:RGS4', 'ilxtr:hasExpressionPhenotype')
-    Adcy8 = Phenotype('ilxtr:Adcy8', 'ilxtr:hasExpressionPhenotype')
-    Adcy1 = Phenotype('ilxtr:Adcy1', 'ilxtr:hasExpressionPhenotype')
+    #Adcy8 = Phenotype('ilxtr:Adcy8', 'ilxtr:hasExpressionPhenotype')
+    #Adcy1 = Phenotype('ilxtr:Adcy1', 'ilxtr:hasExpressionPhenotype')
     Ras111b = Phenotype('ilxtr:Ras111b', 'ilxtr:hasExpressionPhenotype')
-    Arhgef10 = Phenotype('ilxtr:Arhgef10', 'ilxtr:hasExpressionPhenotype')
+    #Arhgef10 = Phenotype('ilxtr:Arhgef10', 'ilxtr:hasExpressionPhenotype')
     PVBCSig = LogicalPhenotype(AND, RGS4, Adcy8, Adcy1, Ras111b, Arhgef10)
     Gucy1a3 = Phenotype('ilxtr:Gucy1a3', 'ilxtr:hasExpressionPhenotype')
     Gucy1b3 = Phenotype('ilxtr:Gucy1b3', 'ilxtr:hasExpressionPhenotype')
-    Prkg1 = Phenotype('ilxtr:Prkg1', 'ilxtr:hasExpressionPhenotype')
-    Pde11a = Phenotype('ilxtr:Pde11a', 'ilxtr:hasExpressionPhenotype')
-    Pde5a = Phenotype('ilxtr:Pde5a', 'ilxtr:hasExpressionPhenotype')
-    Trpc5 = Phenotype('ilxtr:Trpc5', 'ilxtr:hasExpressionPhenotype')
+    #Prkg1 = Phenotype('ilxtr:Prkg1', 'ilxtr:hasExpressionPhenotype')
+    #Pde11a = Phenotype('ilxtr:Pde11a', 'ilxtr:hasExpressionPhenotype')
+    #Pde5a = Phenotype('ilxtr:Pde5a', 'ilxtr:hasExpressionPhenotype')
+    #Trpc5 = Phenotype('ilxtr:Trpc5', 'ilxtr:hasExpressionPhenotype')
     #Kcnmb2 = Phenotype('ilxtr:Kcnmb2', 'ilxtr:hasExpressionPhenotype')
     CHCSig = LogicalPhenotype(AND, Gucy1a3, Gucy1b3, Prkg1, Pde11a, Pde5a, Trpc5, Kcnmb2)
-    Rgs12 = Phenotype('ilxtr:Rgs12', 'ilxtr:hasExpressionPhenotype')
-    Adcy9 = Phenotype('ilxtr:Adcy9', 'ilxtr:hasExpressionPhenotype')
-    Pde7b = Phenotype('ilxtr:Pde7b', 'ilxtr:hasExpressionPhenotype')
+    #Rgs12 = Phenotype('ilxtr:Rgs12', 'ilxtr:hasExpressionPhenotype')
+    #Adcy9 = Phenotype('ilxtr:Adcy9', 'ilxtr:hasExpressionPhenotype')
+    #Pde7b = Phenotype('ilxtr:Pde7b', 'ilxtr:hasExpressionPhenotype')
     CCKCSig = LogicalPhenotype(AND, Rgs12, Adcy9, Pde7b)
     RGS6 = Phenotype('ilxtr:RGS6', 'ilxtr:hasExpressionPhenotype')
     RGS7 = Phenotype('ilxtr:RGS7', 'ilxtr:hasExpressionPhenotype')
-    Adcy2 = Phenotype('ilxtr:Adcy2', 'ilxtr:hasExpressionPhenotype')
-    Pde2a = Phenotype('ilxtr:Pde2a', 'ilxtr:hasExpressionPhenotype')
+    #Adcy2 = Phenotype('ilxtr:Adcy2', 'ilxtr:hasExpressionPhenotype')
+    #Pde2a = Phenotype('ilxtr:Pde2a', 'ilxtr:hasExpressionPhenotype')
     MNCSig = LogicalPhenotype(AND, RGS6, RGS7, Adcy2, Pde2a)
-    Rgs16 = Phenotype('ilxtr:Rgs16', 'ilxtr:hasExpressionPhenotype')
-    Rgs10 = Phenotype('ilxtr:Rgs10', 'ilxtr:hasExpressionPhenotype')
-    Rgs8 = Phenotype('ilxtr:Rgs8', 'ilxtr:hasExpressionPhenotype')
-    Pde4b = Phenotype('ilxtr:Pde4b', 'ilxtr:hasExpressionPhenotype')
+    #Rgs16 = Phenotype('ilxtr:Rgs16', 'ilxtr:hasExpressionPhenotype')
+    #Rgs10 = Phenotype('ilxtr:Rgs10', 'ilxtr:hasExpressionPhenotype')
+    #Rgs8 = Phenotype('ilxtr:Rgs8', 'ilxtr:hasExpressionPhenotype')
+    #Pde4b = Phenotype('ilxtr:Pde4b', 'ilxtr:hasExpressionPhenotype')
     ISCSig = LogicalPhenotype(AND, Rgs16, Rgs10, Rgs8, Pde4b)
-    Slc7a3 = Phenotype('ilxtr:Slc7a3', 'ilxtr:hasExpressionPhenotype')
+    #Slc7a3 = Phenotype('ilxtr:Slc7a3', 'ilxtr:hasExpressionPhenotype')
     #Gucy1a3 = Phenotype('ilxtr:Gucy1a3', 'ilxtr:hasExpressionPhenotype')
     #Gucy1b3 = Phenotype('ilxtr:Gucy1b3', 'ilxtr:hasExpressionPhenotype')
-    Prkg2 = Phenotype('ilxtr:Prkg2', 'ilxtr:hasExpressionPhenotype')
-    Ped1a = Phenotype('ilxtr:Ped1a', 'ilxtr:hasExpressionPhenotype')
+    #Prkg2 = Phenotype('ilxtr:Prkg2', 'ilxtr:hasExpressionPhenotype')
+    #Pde1a = Phenotype('ilxtr:Pde1a', 'ilxtr:hasExpressionPhenotype')
     #Trpc6 = Phenotype('ilxtr:Trpc6', 'ilxtr:hasExpressionPhenotype')
-    Kcnmb4 = Phenotype('ilxtr:Kcnmb4', 'ilxtr:hasExpressionPhenotype')
-    LPCSig = LogicalPhenotype(AND, Slc7a3, Nos1, Gucy1a3, Gucy1b3, Prkg2, Ped1a, Trpc6, Kcnmb4)
+    #Kcnmb4 = Phenotype('ilxtr:Kcnmb4', 'ilxtr:hasExpressionPhenotype')
+    LPCSig = LogicalPhenotype(AND, Slc7a3, Nos1, Gucy1a3, Gucy1b3, Prkg2, Pde1a, Trpc6, Kcnmb4)
 
     # axons
     Nav1_1 = Phenotype('ilxtr:Nav1_1', 'ilxtr:hasExpressionPhenotype')
     Nav1_6 = Phenotype('ilxtr:Nav1_6', 'ilxtr:hasExpressionPhenotype')
     Nav1_7 = Phenotype('ilxtr:Nav1_7', 'ilxtr:hasExpressionPhenotype')
     Cav2_1_P_Q = Phenotype('ilxtr:Cav2_1_P_Q', 'ilxtr:hasExpressionPhenotype')
-    Syt2 = Phenotype('ilxtr:Syt2', 'ilxtr:hasExpressionPhenotype')
-    Syt7 = Phenotype('ilxtr:Syt7', 'ilxtr:hasExpressionPhenotype')
-    Vamp1 = Phenotype('ilxtr:Vamp1', 'ilxtr:hasExpressionPhenotype')
-    Cplx1 = Phenotype('ilxtr:Cplx1', 'ilxtr:hasExpressionPhenotype')
+    #Syt2 = Phenotype('ilxtr:Syt2', 'ilxtr:hasExpressionPhenotype')
+    #Syt7 = Phenotype('ilxtr:Syt7', 'ilxtr:hasExpressionPhenotype')
+    #Vamp1 = Phenotype('ilxtr:Vamp1', 'ilxtr:hasExpressionPhenotype')
+    #Cplx1 = Phenotype('ilxtr:Cplx1', 'ilxtr:hasExpressionPhenotype')
     # FIXME listed as PV but probably means Pvalb?
     #high Snap25, Rab3a, NSF
     PVBCAxon = LogicalPhenotype(AND, Nav1_1, Nav1_6, Nav1_7, Cav2_1_P_Q, Pvalb, Syt2, Syt7, Vamp1, Cplx1)
@@ -233,42 +297,42 @@ class Genes(LocalNameManager):
     # high Snap25, Rab3a, NSF
     TODO = Phenotype(ilxtr.to, ilxtr.hasPhenotype)
     CHCAxon = LogicalPhenotype(AND, TODO)
-    Cplx2 = Phenotype('ilxtr:Cplx2', 'ilxtr:hasExpressionPhenotype')
+    #Cplx2 = Phenotype('ilxtr:Cplx2', 'ilxtr:hasExpressionPhenotype')
     #Cplx3 = Phenotype('ilxtr:Cplx3', 'ilxtr:hasExpressionPhenotype')
     LDCV = Phenotype('ilxtr:LDCV', 'ilxtr:hasExpressionPhenotype')
-    Syt10 = Phenotype('ilxtr:Syt10', 'ilxtr:hasExpressionPhenotype')
+    #Syt10 = Phenotype('ilxtr:Syt10', 'ilxtr:hasExpressionPhenotype')
     CCKCAxon = LogicalPhenotype(AND, Cplx2, Cplx3, LDCV, Syt10)  # FIXME LDCV release?
     Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
     Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
     MNCAxon = LogicalPhenotype(AND, Znt3, Zip1)  # FIXME why does he have the names out front?
     ISCAxon = LogicalPhenotype(AND, *CCKCAxon.pes, Phenotype(ilxtr.similarTo, ilxtr.hasPhenotypeModifier))  # FIXME similar
-    Syt4 = Phenotype('ilxtr:Syt4', 'ilxtr:hasExpressionPhenotype')
-    Syt5 = Phenotype('ilxtr:Syt5', 'ilxtr:hasExpressionPhenotype')
+    #Syt4 = Phenotype('ilxtr:Syt4', 'ilxtr:hasExpressionPhenotype')
+    #Syt5 = Phenotype('ilxtr:Syt5', 'ilxtr:hasExpressionPhenotype')
     #Syt6 = Phenotype('ilxtr:Syt6', 'ilxtr:hasExpressionPhenotype')
     LPCAxon = LogicalPhenotype(AND, Syt4, Syt5, Syt6)
 
     # other
     PGC1α = Phenotype('ilxtr:PGC1α', 'ilxtr:hasExpressionPhenotype')
-    Esrrg = Phenotype('ilxtr:Esrrg', 'ilxtr:hasExpressionPhenotype')
-    Mef2c = Phenotype('ilxtr:Mef2c', 'ilxtr:hasExpressionPhenotype')
-    Pparg = Phenotype('ilxtr:Pparg', 'ilxtr:hasExpressionPhenotype')
-    Cox6c = Phenotype('ilxtr:Cox6c', 'ilxtr:hasExpressionPhenotype')
+    #Esrrg = Phenotype('ilxtr:Esrrg', 'ilxtr:hasExpressionPhenotype')
+    #Mef2c = Phenotype('ilxtr:Mef2c', 'ilxtr:hasExpressionPhenotype')
+    #Pparg = Phenotype('ilxtr:Pparg', 'ilxtr:hasExpressionPhenotype')
+    #Cox6c = Phenotype('ilxtr:Cox6c', 'ilxtr:hasExpressionPhenotype')
     #Nefh = Phenotype('ilxtr:Nefh', 'ilxtr:hasExpressionPhenotype')
-    Slit2 = Phenotype('ilxtr:Slit2', 'ilxtr:hasExpressionPhenotype')
-    Slit3 = Phenotype('ilxtr:Slit3', 'ilxtr:hasExpressionPhenotype')
+    #Slit2 = Phenotype('ilxtr:Slit2', 'ilxtr:hasExpressionPhenotype')
+    #Slit3 = Phenotype('ilxtr:Slit3', 'ilxtr:hasExpressionPhenotype')
     PVBCOther = LogicalPhenotype(AND, PGC1α, Esrrg, Mef2c, Pparg, Cox6c, Nefh, Slit2, Slit3)
-    Unc5b = Phenotype('ilxtr:Unc5b', 'ilxtr:hasExpressionPhenotype')
-    Hs3st4 = Phenotype('ilxtr:Hs3st4', 'ilxtr:hasExpressionPhenotype')
+    #Unc5b = Phenotype('ilxtr:Unc5b', 'ilxtr:hasExpressionPhenotype')
+    #Hs3st4 = Phenotype('ilxtr:Hs3st4', 'ilxtr:hasExpressionPhenotype')
     CHCOther = LogicalPhenotype(AND, Unc5b, Hs3st4)
-    Hs6st3 = Phenotype('ilxtr:Hs6st3', 'ilxtr:hasExpressionPhenotype')
+    #Hs6st3 = Phenotype('ilxtr:Hs6st3', 'ilxtr:hasExpressionPhenotype')
     CCKCOther = LogicalPhenotype(AND, Hs6st3)
-    Grin3a = Phenotype('ilxtr:Grin3a', 'ilxtr:hasExpressionPhenotype')
+    #Grin3a = Phenotype('ilxtr:Grin3a', 'ilxtr:hasExpressionPhenotype')
     MNCOther = LogicalPhenotype(AND, Grin3a)
-    Unc5a = Phenotype('ilxtr:Unc5a', 'ilxtr:hasExpressionPhenotype')
-    Chst1 = Phenotype('ilxtr:Chst1', 'ilxtr:hasExpressionPhenotype')
+    #Unc5a = Phenotype('ilxtr:Unc5a', 'ilxtr:hasExpressionPhenotype')
+    #Chst1 = Phenotype('ilxtr:Chst1', 'ilxtr:hasExpressionPhenotype')
     ISCOther = LogicalPhenotype(AND, Unc5a, Chst1)
     #Ptn = Phenotype('ilxtr:Ptn', 'ilxtr:hasExpressionPhenotype')
-    Unc5d = Phenotype('ilxtr:Unc5d', 'ilxtr:hasExpressionPhenotype')
+    #Unc5d = Phenotype('ilxtr:Unc5d', 'ilxtr:hasExpressionPhenotype')
     LPCOther = LogicalPhenotype(AND, Ptn, Unc5d)
 
 
@@ -374,16 +438,76 @@ mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
           for r in OntTerm.query(label=l.toPython()) if
           not r.curie.startswith('ilxtr:')]
 
-def main():
+def ncbigenemapping():
+    from pyontutils.config import devconfig
+    from pathlib import Path
+    import requests
+    from bs4 import BeautifulSoup
+    from lxml import etree
     asdf = {n:[qr.OntTerm.as_phenotype()
                for qr in OntTerm.query(term=n, prefix='NCBIGene')]
             for n, p in Genes.items()
-            if not isinstance(p, LogicalPhenotype) and OntId(p.p).prefix != 'NCBIGene'
-    }           
+            if not isinstance(p, LogicalPhenotype) and OntId(p.p).prefix != 'NCBIGene'}           
     may_need_ncbigene_added = [n for n, p in asdf.items() if not p]
+    #urlbase = 'https://www.ncbi.nlm.nih.gov/gene/?term=Mus+musculus+'
+    urlbase = ('https://www.ncbi.nlm.nih.gov/gene?term='
+               '({gene_name}[Gene%20Name])%20AND%20{taxon_suffix}[Taxonomy%20ID]&'
+               'report=xml')
+    urls = [urlbase.format(gene_name=n, taxon_suffix=10090) for n in may_need_ncbigene_added]
+    done2 = {}
+    for u in urls:
+        if u not in done2:
+            print(u)
+            done2[u] = requests.get(u)
+
+    base = Path(devconfig.resources, 'genesearch')
+    if not base.exists():
+        base.mkdir()
+
+    for resp in done2.values():
+        fn = OntId(resp.url).quoted
+        with open(base / fn, 'wb') as f:
+            f.write(resp.content)
+
+    so_much_soup = [BeautifulSoup(resp.content, 'lxml') for resp in done2.values()]
+
+    trees = []
+    for i, soup in enumerate(so_much_soup):
+        pre = soup.find_all('pre')
+        if pre:
+            for p in pre[0].text.split('\n\n'):
+                if p:
+                    tree = etree.fromstring(p)
+                    trees.append(tree)
+        else:
+            print('WAT', urls[i])
+
+    dimension = 'ilxtr:hasExpressionPhenotype'
+    errors = []
+    to_add = []
+    for tree in trees:
+        taxon = tree.xpath('//Org-ref//Object-id_id/text()')[0]
+        geneid = tree.xpath('//Gene-track_geneid/text()')[0]
+        genename = tree.xpath('//Gene-ref_locus/text()')[0]
+        if genename in may_need_ncbigene_added and taxon == '10090':
+            print(f'{genename} = Phenotype(\'NCBIGene:{geneid}\', {dimension!r}, label={genename!r}, override=True)')
+            to_add.append(geneid)
+        else:
+            errors.append((geneid, genename, taxon))
+
+    print(errors)
+    _ = [print('NCBIGene:' + ta) for ta in to_add]
+
+    #wat.find_all('div', **{'class':'rprt-header'})
+    #wat.find_all('div', **{'class':'ncbi-docsum'})
+
     replace = [print(n, '=', repr(p[0])) for n, p in asdf.items()
                if p and p[0].pLabel.toPython() == n]
 
+    embed()
+
+
+def main():
     embed()
 
 
