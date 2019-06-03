@@ -1212,7 +1212,21 @@ def make_devel():
 
     a = rdf.type
     def helper_triples():
+        # model
+        yield ilxtr.labelPartOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
+        yield ilxtr.Phenotype, rdfs.subClassOf, OntId('BFO:0000016').u
+
+        # part of for markram
+        paxS1 = OntId('PAXRAT:794').u
+        uS1 = OntId('UBERON:0008933').u
+        yield paxS1, rdfs.subClassOf, uS1
+        yield from cmb.restriction(paxS1, ilxtr.delineates)(uS1)
+        yield from cmb.restriction(uS1, ilxtr.isDelineatedBy)(paxS1)
+
+        # missing labels
         yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+
+        # receptor roles
         gar = ilxtr.GABAReceptor
         garole = OntId('NLXMOL:1006001').u
         yield gar, a, owl.Class
@@ -1312,6 +1326,13 @@ def make_devel():
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
             yield from helper_triples()
+            yield OntId('BFO:0000050').u, a, owl.ObjectProperty
+            yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
+            yield OntId('BFO:0000050').u, owl.inverseOf, OntId('BFO:0000051').u
+            yield OntId('BFO:0000051').u, a, owl.ObjectProperty
+            yield OntId('BFO:0000051').u, a, owl.TransitiveProperty
+            yield OntId('BFO:0000051').u, rdfs.label, rdflib.Literal('has part')
+
             done = []
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')
             #yield from cortical_layer.triples_simple
