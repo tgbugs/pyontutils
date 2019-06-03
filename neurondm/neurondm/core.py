@@ -1393,6 +1393,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
 
+        if hasattr(self, '_label'):
+            return self._label
+
         if pn.startswith('NCBITaxon'):
             return resp['labels'][0]
 

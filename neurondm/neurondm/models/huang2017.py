@@ -214,8 +214,9 @@ class Genes(LocalNameManager):
 
     # high level diverse iGluRs
     # low level few types GABAaRs
-    _GLUR = Phenotype('ilxtr:glutamateReceptor', 'ilxtr:hasExpressionPhenotype')
-    _GABAR = Phenotype('ilxtr:GABAReceptor', 'ilxtr:hasExpressionPhenotype')
+    # FIXME the helper graph is not included for query at the moment so label gen has bad values
+    _GLUR = Phenotype('ilxtr:glutamateReceptor', 'ilxtr:hasExpressionPhenotype', label='GluR', override=True)
+    _GABAR = Phenotype('ilxtr:GABAReceptor', 'ilxtr:hasExpressionPhenotype', label='GABAR', override=True)
     # need a clear statement for how to handle cases like this
     # can the current python implementation handle this?
     MNCDend = LogicalPhenotype(AND,
