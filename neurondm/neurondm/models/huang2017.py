@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rdflib
 import ontquery
-from pyontutils.core import OntId, OntTerm
+#from pyontutils.core import OntId, OntTerm
 from pyontutils.utils import relative_path
 from pyontutils.namespaces import makePrefixes, makeNamespaces
 from pyontutils.namespaces import NIFRID, ilxtr, hasRole, definition
@@ -23,6 +23,8 @@ class NeuronHuang2017(NeuronEBM):
 
 
 Neuron, Neuron_ = NeuronHuang2017, Neuron
+dex = 'ilxtr:hasDriverExpressionPhenotype'
+
 
 class Genes(LocalNameManager):
 
@@ -34,14 +36,14 @@ class Genes(LocalNameManager):
     #PV = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')
 
     # cre lines
-    VIP = Phenotype('ilxtr:VIP-flp', 'ilxtr:hasDriverExpressionPhenotype', label='VIP-flp')
-    CCK = Phenotype('ilxtr:CCK-cre', 'ilxtr:hasDriverExpressionPhenotype', label='CCK-cre')
-    SST = Phenotype('ilxtr:SST-flp', 'ilxtr:hasDriverExpressionPhenotype', label='SST-flp')
-    CR = Phenotype('ilxtr:CR-cre', 'ilxtr:hasDriverExpressionPhenotype', label='CR-cre')
-    PV = Phenotype('ilxtr:PV-cre', 'ilxtr:hasDriverExpressionPhenotype', label='PV-cre')
-    NOS1 = Phenotype('ilxtr:NOS1-creER', 'ilxtr:hasDriverExpressionPhenotype', label='NOS1-creER')
-    Nkx2_1 = Phenotype('ilxtr:Nkx2.1-creER', 'ilxtr:hasDriverExpressionPhenotype', label='Nkx2.1-creER')
-    Nkx2_1flp = Phenotype('ilxtr:Nkx2.1-flp', 'ilxtr:hasDriverExpressionPhenotype', label='Nxk2.1-flp')
+    VIP = Phenotype('ilxtr:VIP-flp', dex, label='VIP-flp', override=True)
+    CCK = Phenotype('ilxtr:CCK-cre', dex, label='CCK-cre', override=True)
+    SST = Phenotype('ilxtr:SST-flp', dex, label='SST-flp', override=True)
+    CR = Phenotype('ilxtr:CR-cre', dex, label='CR-cre', override=True)
+    PV = Phenotype('ilxtr:PV-cre', dex, label='PV-cre', override=True)
+    NOS1 = Phenotype('ilxtr:NOS1-creER', dex, label='NOS1-creER', override=True)
+    Nkx2_1 = Phenotype('ilxtr:Nkx2.1-creER', dex, label='Nkx2.1-creER', override=True)
+    Nkx2_1flp = Phenotype('ilxtr:Nkx2.1-flp', dex, label='Nxk2.1-flp', override=True)
 
     # Actual genes
 

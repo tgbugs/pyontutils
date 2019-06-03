@@ -25,6 +25,8 @@ from IPython import embed
 
 current_file = Path(__file__).absolute()
 log = makeSimpleLogger('pyontutils')
+oq.utils.log.removeHandler(oq.utils.log.handlers[0])
+oq.utils.log.addHandler(log.handlers[0])
 
 # common funcs
 
@@ -983,19 +985,18 @@ IXR = oq.plugin.get('InterLex')
 for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
-sgr = SGR(apiEndpoint=devconfig.scigraph_api, api_key=get_api_key())
+sgr = SGR(apiEndpoint=devconfig.scigraph_api)
+sgr.api_key = get_api_key()
 ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
-OntTerm.query = oq.OntQuery(sgr, ixr, OntTerm=OntTerm)
+OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
-#oq.QueryResult._OntTerm = OntTerm
-OntTerm.bindQueryResult()
 query = oq.OntQueryCli(query=OntTerm.query)
 
 
 class IlxTerm(OntTerm):
     __firsts = 'curie', 'label'
 
-IlxTerm.query = oq.OntQuery(ixr, OntTerm=OntTerm)
+IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 
 #
 # classes

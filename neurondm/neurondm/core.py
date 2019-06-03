@@ -357,7 +357,11 @@ class OntTerm(bOntTerm):
                         done.append((predicate, superpart))
 
 
-OntTerm.bindQueryResult()
+OntTerm.query_init(*bOntTerm.query.services)
+# initializing this way leads to a race condition on calling
+# service.setup since the first OntTerm to call setup on a shared
+# service is the one that will be attached to the query result
+# fortunately in some cases we cache at a level below this
 
 
 class OntTermOntologyOnly(OntTerm):
@@ -365,8 +369,7 @@ class OntTermOntologyOnly(OntTerm):
 
 
 IXR = oq.plugin.get('InterLex')
-OntTermOntologyOnly.query = oq.OntQuery(*(s for s in OntTerm.query.services if not isinstance(s, IXR)),
-                                        OntTerm=OntTermOntologyOnly)
+OntTermOntologyOnly.query_init(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
 
 
 class GraphOpsMixin:
@@ -1370,9 +1373,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if hasattr(self, '_cache_pShortName'):
             return self._cache_pShortName
 
-        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        if self in inj:
-            return inj[self]
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if self in inj:
+                return inj[self]
 
         pn = self.in_graph.namespace_manager.qname(self.p)
         try:
@@ -1617,9 +1621,10 @@ class LogicalPhenotype(graphBase):
 
     @property
     def pShortName(self):
-        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        if self in inj:
-            return inj[self]
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if self in inj:
+                return inj[self]
 
         spes = sorted(self.pes, key=self._lkey('pShortName'))
         label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName

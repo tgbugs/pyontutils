@@ -1218,18 +1218,14 @@ def make_devel():
         yield gar, a, owl.Class
         yield gar, rdfs.label, rdflib.Literal('GABA receptor')
         yield gar, NIFRID.synonym, rdflib.Literal('GABAR')
-        b0 = rdflib.BNode()
-        yield gar, owl.equivalentClass, b0
-        yield from cmb.restriction(OntId('hasRole:').u, garole)(b0)
+        yield from cmb.Restriction(owl.equivalentClass)(OntId('hasRole:').u, garole)(gar)
 
         glr = ilxtr.glutamateReceptor
         glrole = OntId('SAO:1164727693').u
         yield glr, a, owl.Class
         yield glr, rdfs.label, rdflib.Literal('Glutamate receptor')
         yield glr, NIFRID.synonym, rdflib.Literal('GluR')
-        b0 = rdflib.BNode()
-        yield glr, owl.equivalentClass, b0
-        yield from cmb.restriction(OntId('hasRole:').u, glrole)(b0)  # FIXME equivalentClass ...
+        yield from cmb.Restriction(owl.equivalentClass)(OntId('hasRole:').u, glrole)(glr)
 
         yield ilxtr.parcellationLabel, rdfs.subClassOf, OntId('UBERON:0001062').u
 
