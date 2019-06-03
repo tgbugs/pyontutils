@@ -1,5 +1,5 @@
 edge,neurolex names,existing equiv,definition,label,notes,subPropertyOf,inverse,types
-hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive, functional"
+hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive"
 phenotypeOf,,,,,"of course this can never be universal, so is mostly useful for the python representation",,,"asymmetric, irreflexive"
 hasPhenotypeModifier,,,"Expresses a restriction that modifies all phenotypes associated with a neuron type or a logical phenotype, only meaningful when used inside of owl:intersectionOf",,,,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
@@ -20,8 +20,8 @@ hasAxonMorphologicalPhenotype,,,,,,,,"asymmetric, irreflexive"
 hasDendriteMorphologicalPhenotype,,,Expresses a relationship between a neuron and a dendrite phenotype. This should be used when a neuron type is described by the morphology of its dendrites.,,,hasMorphologicalPhenotype,,"asymmetric, irreflexive"
 hasElectrophysiologicalPhenotype,,,Expresses a relationship between a neuron type and an electrophysiological phenotype concept. This should be used when a neuron type is described using a high level electrophysiological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
 #hasSpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype,,"asymmetric, irreflexive"
-#hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
-#hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive, functional"
+#hasInitialSpikingPhenotype,,,,,ilx:hasInitialFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive"
+#hasSustainedSpikingPhenotype,,,,,ilx:hasSustainedFiringPhenotype,hasSpikingPhenotype,,"asymmetric, irreflexive"
 hasDevelopmentalStructure,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental anatomical entity.,,needs work,hasPhenotype,,
 hasDevelopmentalType,,,Expresses a relationship between a neuron type and a developmental cell population. This should be used when a neuron develops from an identified developmental cell type.,,,,,
 #intrinsic/extrinsic phenotypes,,,,,,,,
