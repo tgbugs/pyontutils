@@ -1220,8 +1220,8 @@ def make_devel():
         paxS1 = OntId('PAXRAT:794').u
         uS1 = OntId('UBERON:0008933').u
         yield paxS1, rdfs.subClassOf, uS1
-        yield from cmb.restriction(paxS1, ilxtr.delineates)(uS1)
-        yield from cmb.restriction(uS1, ilxtr.isDelineatedBy)(paxS1)
+        yield from cmb.restriction(ilxtr.delineates, paxS1)(uS1)
+        yield from cmb.restriction(ilxtr.isDelineatedBy, uS1)(paxS1)
 
         # missing labels
         yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
