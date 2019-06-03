@@ -414,10 +414,14 @@ for n, p in Huang2017.items():
         # FIXME rdflib allows instances but tests type so OntId can go in, but won't ever match
         ident = OntId(p.p)
         if n in Genes.__dict__:
-            lt = (rdflib.URIRef(ident), rdfs.label, rdflib.Literal(n))
+            o = rdflib.Literal(n) if not hasattr(p, '_label') else rdflib.Literal(p._label)
+            lt = (rdflib.URIRef(ident), rdfs.label, o)
             Neuron.core_graph.add(lt)
             Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
-            if ident.curie.startswith('ilxtr:'):
+
+            if ident.prefix == 'ilxtr' or ident.prefix == 'NCBIGene':  # FIXME NCBIGene temp fix ...
+                if ident.suffix in ('LowerExpression', 'HigherExpression', 'to'):
+                    continue
                 sct = (rdflib.URIRef(ident), rdfs.subClassOf, ilxtr.gene)
                 Neuron.core_graph.add(sct)
                 Neuron.out_graph.add(sct)

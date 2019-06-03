@@ -1263,6 +1263,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
         if label is not None and override:
+            self._label = label  # I cannot wait to get rid of this premature graph integration >_<
             self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
         # use this specify consistent patterns for modifying labels
@@ -1432,6 +1433,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
     @property
     def pLongName(self):
+        if hasattr(self, '_label'):
+            return self._label
+
         p = OntId(self.p)
 
         r = OntTerm.query.services[0]  # rdflib local
