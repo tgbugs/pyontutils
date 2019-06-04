@@ -93,6 +93,7 @@ This could be expanded into the human executor 'role/skillset/responsibility' on
 [odml](https://github.com/G-Node/odml-terminologies) see also the [main page](http://www.g-node.org/projects/odml/terminologies)  
 [ero.owl](https://www.eagle-i.net/ero/latest/ero.owl) see also the [wiki](https://open.med.harvard.edu/wiki/display/eaglei/Ontology)  
 [efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  
+[CHMO](https://github.com/rsc-ontologies/rsc-cmo) (note the cc-by license)
 
 ## Related github issues
 https://github.com/SciCrunch/NIF-Ontology/issues/100  
