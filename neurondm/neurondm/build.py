@@ -23,14 +23,14 @@ from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembe
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
-from neurondm.core import OntTermOntologyOnly
+from neurondm.core import OntTermOntologyOnly, log as _log
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 from itertools import chain
 
-log = makeSimpleLogger('neurondm.build')
+log = _log.getChild('build')
 
 resources = Path(devconfig.resources)
 

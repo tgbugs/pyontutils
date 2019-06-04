@@ -5,10 +5,10 @@ from pathlib import Path
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
-from pyontutils.utils import byCol, makeSimpleLogger
+from pyontutils.utils import byCol, log as _log
 from pyontutils.config import devconfig
 
-log = makeSimpleLogger('pyontutils.sheets')
+log = _log.getChild('sheets')
 spath = Path(devconfig.secrets_file).parent
 
 

@@ -14,7 +14,7 @@ from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
-from pyontutils.utils import Async, deferred, TermColors as tc, makeSimpleLogger
+from pyontutils.utils import Async, deferred, TermColors as tc, log
 from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
@@ -24,7 +24,6 @@ from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
 from IPython import embed
 
 current_file = Path(__file__).absolute()
-log = makeSimpleLogger('pyontutils')
 oq.utils.log.removeHandler(oq.utils.log.handlers[0])
 oq.utils.log.addHandler(log.handlers[0])
 
