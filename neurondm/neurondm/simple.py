@@ -43,6 +43,7 @@ roots = Roots()
 
 class OntTerm(OntTermBase):
     """ ask things about a term! """
+    skip_for_instrumentation = True
 
     def isSubPropertyOf(self, property):
         return OntId(property) in self('rdfs:subPropertyOf',
@@ -63,6 +64,7 @@ class OntTerm(OntTermBase):
 
 
 class PredicateTerm(OntTermBase):
+    skip_for_instrumentation = True
     __firsts = tuple()
     def _isType(self, name):
         return self.isSubPropertyOf(getattr(dimensions, name))
@@ -72,6 +74,7 @@ class PredicateTerm(OntTermBase):
 
 
 class ObjectTerm(OntTermBase):
+    skip_for_instrumentation = True
     __firsts = tuple()
     def _isType(self, name):
         return (self.prefix in getattr(prefixes, name)
@@ -85,9 +88,6 @@ class ObjectTerm(OntTermBase):
 
     def localName(self, predicate):
         global current_conventions
-
-
-OntTerm.bindQueryResult()
 
 
 class PhenotypeBase(tuple):
@@ -208,13 +208,17 @@ class Neuron(AndNeuron):
 
 
 class QueryNeuron(OrNeuron):
+    # FIXME not quite an OrNeuron because it is the intersection of
+    # a QueryNeuron and the union of its phenotypes
     """ Parent class for all neurons that are used
         for bridging queries. """
 
 
 class NeuronCollection:
     """ Heed the warnings of your ancestors!
-        Just make another object. It will simplify your life! """
+        Just make another object. It will simplify your life!
+        But do not do so needlessly! -- Ockham
+    """
 
     def __init__(self,  # TODO the best parts from config ... (hah)
                  name=None,
