@@ -146,14 +146,14 @@ class Sheet:
     def _setup(self):
         if self.readonly:
             if not hasattr(Sheet, '__spreadsheet_service_ro'):
-                service = get_oauth_service(self.readonly)  # I think it is correct to keep this ephimoral
+                service = get_oauth_service(readonly=self.readonly)  # I think it is correct to keep this ephimoral
                 Sheet.__spreadsheet_service_ro = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service_ro
 
         else:
             if not hasattr(Sheet, '__spreadsheet_service'):
-                service = get_oauth_service(self.readonly)
+                service = get_oauth_service(readonly=self.readonly)
                 Sheet.__spreadsheet_service = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
