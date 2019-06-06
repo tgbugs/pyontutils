@@ -77,6 +77,7 @@ class Options:
         atable.justify_columns[1] = 'center'
         return atable.table
 
+
 class Dispatcher:
     port_attrs = tuple()  # request from above
     child_port_attrs = tuple()  # force on below
