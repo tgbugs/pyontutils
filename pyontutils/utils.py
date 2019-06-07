@@ -80,26 +80,32 @@ def UTCNOWISO(timespec='auto'):
     return isoformat(utcnowtz(), timespec=timespec)
 
 
-def sysidpath(ignore_options=False):
+def sysidpath(ignore_options=False, path_class=Path):
     """ get a unique identifier for the machine running this function """
     # in the event we have to make our own
     # this should not be passed in a as a parameter
     # since we need these definitions to be more or less static
-    failover = Path('/tmp/machine-id')
+    failover = path_class('/var/tmp/machine-id')  # /var/tmp is more persistent than /tmp/
+
+    if hasattr(path_class, 'access'):
+        accessf = lambda p: p.access(os.R_OK)
+    else:
+        # pypy3 3.6 still needs as_poxix here :/
+        accessf = lambda p: os.access(p.as_posix(), os.R_OK)
 
     if not ignore_options:
         options = (
-            Path('/etc/machine-id'),
+            path_class('/etc/machine-id'),
             failover,  # always read to see if we somehow managed to persist this
         )
         for option in options:
             if (option.exists() and
-                os.access(option.as_posix(), os.R_OK) and  # pypy3 3.6 still needs as_poxix here :/
+                accessf(option) and
                 option.stat().st_size > 0):
                     return option
 
     uuid = uuid4()
-    with open(failover, 'wt') as f:
+    with failover.open('wt') as f:
         f.write(uuid.hex)
 
     return failover
