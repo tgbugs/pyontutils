@@ -56,6 +56,12 @@ def isoformat(datetime_instance, timespec='auto'):
             .replace('.', ',')
             .replace('+00:00', 'Z'))
 
+def isoformat_safe(datetime_instance, timespec='auto'):
+    """ portable file system safe iso format (sigh) """
+    # FIXME this is super inefficient implement from scratch
+    #'%Y%m%dT%H%M%S{}%z'
+    unsafe = isoformat(datetime_instance, timespec)
+    return unsafe.replace('-', '').replace(':', '')
 
 def NOWDANGER(*, implicit_tz=None, timespec='auto'):
     """ now without a timezone, if you use this you WILL encounter
