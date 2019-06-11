@@ -1,2 +1,20 @@
 #+TITLE: SPARC Anatomy Working Group
-* Introduction
+# [[./sawg.html][local development]]
+# [[http://ontology.olympiangods.org/trees/sparc][testing]]
+# [[http://ontology.neuinfo.org/trees/sparc][production]]
+
+* Developer notes                                                 :noexport:
+  This is a self publishing document!
+  TODO import code from thesis.org to automate publishing.
+
+* Overview
+* Terminology
+  | region | tabular      | tree        | raw |
+  |--------+--------------+-------------+-----|
+  | brain  | google sheet | trees/query | ttl |
+** Terminology review
+   If you are here to provide expert review of terminology for SPARC
+   here is a table!
+* Terminology services
+* Connectivity
+* Expertise
