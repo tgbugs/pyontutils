@@ -19,7 +19,7 @@ Options:
 
 """
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import os
 import re
 import asyncio
@@ -41,6 +41,8 @@ from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.sheets import Sheet
+from nifstd.development.sparc.sheets import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
+from typing import Union, Dict, List
 from IPython import embed
 import yaml
 
@@ -63,250 +65,9 @@ inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
 
-UBERON_TERMS = 'uberon-terms'
 
-SPINAL_TERMINOLOGY = 'spinal-terminology'
-SPINAL_TERMINOLOGY_1 = SPINAL_TERMINOLOGY + '-sheet1'
-SPINAL_TERMINOLOGY_2 = SPINAL_TERMINOLOGY + '-sheet2'
-
-PARCELLATION_BRAINSTEM = 'parcellation-brainstem'
-PARCELLATION_BRAINSTEM_MAPPINGS = PARCELLATION_BRAINSTEM + '-mappings'
-PARCELLATION_BRAINSTEM_UBERON = PARCELLATION_BRAINSTEM + '-uberon'
-PARCELLATION_BRAINSTEM_ALLEN_MOUSE = PARCELLATION_BRAINSTEM + '-allen-mouse'
-PARCELLATION_BRAINSTEM_PAXINOS_RAT = PARCELLATION_BRAINSTEM + '-paxinos-rat'
-PARCELLATION_BRAINSTEM_BERMAN_CAT = PARCELLATION_BRAINSTEM + '-berman-cat'
-PARCELLATION_BRAINSTEM_NIEUWENHUYS = PARCELLATION_BRAINSTEM + '-nieuwenhuys'
-
-
-def convert_view_text_to_dict():
-    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
-        rawr_yaml = ''
-        for line in infile.readlines():
-            rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
-    return yaml.safe_load(rawr_yaml)
-
-
-def get_atag_from_scigraph_label_query(label, prefixes=['UBERON', 'ILX']) -> atag:
-    atags = []
-    for prefix in prefixes:
-        # TODO: if not stipped the label will return nothing. Seems to be trailing spaces
-        neighbors = [v.OntTerm for v in OntTerm.query(label=label.strip(), prefix=prefix)]
-        if not neighbors:
-            continue
-        for neighbor in neighbors:
-            oid = OntId(neighbor)
-            atags += [atag(oid.iri, oid.curie)]
-    atags = list(set(atags))
-    return atags
-
-
-def normt(term, prefix=''):
-    term, *curie = term.split('\u1F4A9')
-    #print(repr(term))
-    if curie:
-        curie, = curie
-        oid = OntId(curie)
-        curie = atag(oid.iri, oid.curie)
-        row = [prefix + term, curie]
-    else:
-        curies = get_atag_from_scigraph_label_query(term)
-        row = [prefix + term] + curies
-    return row
-
-
-def linearize_graph(dict_, tier_level = 0) -> tuple:
-    """ Recursively pull nested dictionaries out of print order"""
-    for key, value in dict_.items():
-        label, *curies = normt(key)
-        yield (label, curies, tier_level)
-        if isinstance(value, dict):
-            yield from linearize_graph(value, tier_level + 1)
-
-
-class UberonTerms(Sheet):
-    name = UBERON_TERMS
-    sheet_name = 'Sheet1'
-
-    def get_terms(self):
-        ''' Uberon has trailing empty cells in the sheet assuming its the value of the most recent
-            left cell with a value '''
-        terms_list = []
-        terms_index = 1
-        sub_terms_index = 2
-        last_value_index = 0
-        terms_dict = defaultdict(list)
-        records = []
-        for i, term in enumerate(self.raw_values[terms_index]):
-            sub_term = self.values[sub_terms_index][i]
-            if term:
-                records.append(
-                    (self.name, term, i)
-                )
-                last_term = term
-            if sub_term:
-                records.append(
-                    (self.name, '|_____ '+sub_term, i)
-                )
-        return records
-
-    def get_term_list(self, colummn):
-        start_index = 3
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class SpinalTerminology1(Sheet):
-    name = SPINAL_TERMINOLOGY
-    sheet_name = 'Sheet1'
-
-    def get_terms(self):
-        terms_list = []
-        headers_index = 0
-        headers_column_start = 1 # 1 header doesnt have a value
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:], headers_column_start):
-            terms_list.append((SPINAL_TERMINOLOGY_1, term, i))
-        return terms_list
-
-    def get_term_list(self, colummn):
-        start_index = 1
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class SpinalTerminology2(Sheet):
-    name = SPINAL_TERMINOLOGY
-    sheet_name = 'Sheet2'
-
-    def get_terms(self):
-        terms_list = []
-        headers_index = 0
-        headers_column_start = 0
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
-            terms_list.append((SPINAL_TERMINOLOGY_1, term, i))
-        return terms_list
-
-    def get_term_list(self, colummn):
-        start_index = 1
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class ParcellationBrainstemMappings(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'Mappings'
-
-    def get_terms(self):
-        terms_list = []
-        headers_index = 0
-        headers_column_start = 0
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
-            term = f'{term} (Mappings)'
-            terms_list.append((PARCELLATION_BRAINSTEM_MAPPINGS, term, i))
-        return terms_list
-
-    def get_term_list(self, colummn):
-        start_index = 1
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class ParcellationBrainstemUberon(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'UBERON'
-
-    def get_terms(self):
-        terms_list = []
-        headers_index = 0
-        headers_column_start = 0
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
-            terms_list.append((PARCELLATION_BRAINSTEM_UBERON, term, i))
-        return terms_list
-
-    def get_term_list(self, colummn):
-        start_index = 1
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class ParcellationBrainstemAllenMouse(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'Allen Mouse'
-
-    def get_terms(self):
-        return [(PARCELLATION_BRAINSTEM_ALLEN_MOUSE, 'Allen Mouse Sheet', 0)]
-
-    def get_term_list(self, colummn):
-        start_index = 0
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class ParcellationBrainstemPaxinosRat(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'Paxinos Rat'
-
-    def get_terms(self):
-        return [(PARCELLATION_BRAINSTEM_PAXINOS_RAT, 'Paxinos Rat Sheet', 0)]
-
-    def get_term_list(self, colummn):
-        start_index = 0
-        return [row[1:3] for row in self.values[start_index:]]
-
-
-class ParcellationBrainstemBermanCat(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'Berman Cat'
-
-    def get_terms(self):
-        return [(PARCELLATION_BRAINSTEM_BERMAN_CAT, 'Berman Cat Sheet', 0)]
-
-    def get_term_list(self, colummn):
-        start_index = 0
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class ParcellationBrainstemNieuwenhuys(Sheet):
-    name = PARCELLATION_BRAINSTEM
-    sheet_name = 'Nieuwenhuys'
-
-    def get_terms(self):
-        terms_list = []
-        headers_index = 0
-        headers_column_start = 0
-        for i, term in enumerate(self.raw_values[headers_index][headers_column_start:]):
-            terms_list.append((PARCELLATION_BRAINSTEM_NIEUWENHUYS, term, i))
-        return terms_list
-
-    def get_term_list(self, colummn):
-        start_index = 1
-        return [row[int(colummn)] for row in self.values[start_index:] if row[int(colummn)]]
-
-
-class GoogleSheets:
-
-    def __init__(self):
-        self.sheets = {}
-        self.sheets[UBERON_TERMS] = UberonTerms()
-        self.sheets[SPINAL_TERMINOLOGY_1] = SpinalTerminology1()
-        self.sheets[SPINAL_TERMINOLOGY_2] = SpinalTerminology2()
-        # Mappings not needed at the moment
-        # self.sheets[PARCELLATION_BRAINSTEM_MAPPINGS] = ParcellationBrainstemMappings()
-        self.sheets[PARCELLATION_BRAINSTEM_UBERON] = ParcellationBrainstemUberon()
-        self.sheets[PARCELLATION_BRAINSTEM_ALLEN_MOUSE] = ParcellationBrainstemAllenMouse()
-        self.sheets[PARCELLATION_BRAINSTEM_PAXINOS_RAT] = ParcellationBrainstemPaxinosRat()
-        self.sheets[PARCELLATION_BRAINSTEM_BERMAN_CAT] = ParcellationBrainstemBermanCat()
-        self.sheets[PARCELLATION_BRAINSTEM_NIEUWENHUYS] = ParcellationBrainstemNieuwenhuys()
-
-    def get_terms(self):
-        terms = []
-        terms += self.sheets[UBERON_TERMS].get_terms()
-        terms += self.sheets[SPINAL_TERMINOLOGY_1].get_terms()
-        terms += self.sheets[SPINAL_TERMINOLOGY_2].get_terms()
-        # Mappings not needed at the moment
-        # terms += self.sheets[PARCELLATION_BRAINSTEM_MAPPINGS].get_terms()
-        terms += self.sheets[PARCELLATION_BRAINSTEM_UBERON].get_terms()
-        terms += self.sheets[PARCELLATION_BRAINSTEM_ALLEN_MOUSE].get_terms()
-        terms += self.sheets[PARCELLATION_BRAINSTEM_PAXINOS_RAT].get_terms()
-        terms += self.sheets[PARCELLATION_BRAINSTEM_BERMAN_CAT].get_terms()
-        terms += self.sheets[PARCELLATION_BRAINSTEM_NIEUWENHUYS].get_terms()
-        return terms
-
-    def get_term_list(self, source, column):
-        return self.sheets[source].get_term_list(column)
+def time():
+    return str(datetime.utcnow().isoformat()).replace('.', ',')
 
 
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
@@ -595,15 +356,8 @@ def server(api_key=None, verbose=False):
     app.config['loop'] = loop
 
     # gsheets = GoogleSheets()
-    view = convert_view_text_to_dict()
+    sparc_view = open_custom_sparc_view_yml()
     log.info('starting index load')
-    view_rows = [
-        [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-        for label, curies, tier_level  in linearize_graph(view)
-    ]
-    with open(Path(devconfig.resources, 'view.txt'), 'rt') as infile:
-        _lines = infile.readlines()
-        view_lines = [ptag(line) for line in [line.replace('\n', '').replace(' ' * 4, nbsp * 8) for line in _lines]]
 
     basename = 'trees'
 
@@ -694,7 +448,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>', methods=['GET'])
     @app.route(f'/{basename}/sparc/view/<tier1>/<tier2>/', methods=['GET'])
     def route_sparc_view_query(tier1, tier2=None):
-        journey = view
+        journey = sparc_view
         if tier1 not in journey:
             return abort(404)
 
@@ -702,16 +456,14 @@ def server(api_key=None, verbose=False):
         if tier2 is not None:
             if tier2 not in journey:
                 return abort(404)
-
             journey = journey[tier2]
 
-        rows = [
-            [(8 * nbsp * tier_level) + label + (nbsp*8)] + curies
-            for label, curies, tier_level  in linearize_graph(journey)
-        ]
+        hyp_rows = hyperlink_tree(journey)
+
         return htmldoc(
-            render_table(rows),
+            render_table(hyp_rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
+            metas = ({'name':'date', 'content':time()},),
         )
 
     @app.route(f'/{basename}/sparc/view', methods=['GET'])
@@ -719,37 +471,51 @@ def server(api_key=None, verbose=False):
     def route_sparc_view():
         hyp_rows = []
         spaces = nbsp * 8
-        for tier1, tier2_on in view.items():
-            # add tier1
-            hyp_rows.append(
-                ptag(atag(url_for('route_sparc_view_query', tier1=tier1), tier1))
-                #f'<p><a href="/{basename}/view/{tier1}"</a>{tier1}</p>'
-            )
-            # possibly add tier 2
-            if len(tier2_on.keys()) < 5:
-                for tier2 in tier2_on.keys():
-                    hyp_rows.append(
-                        ptag(spaces + atag(url_for('route_sparc_view_query', tier1=tier1, tier2=tier2), tier2))
-                        #f'<a href="/{basename}/view/{tier1}/{tier2}"</a>|{spaces}{tier2}</p>'
-                    )
-        return htmldoc(*hyp_rows, title='Main Page Sparc', styles=["p {margin: 0px; padding: 0px;}"])
+        for tier1, tier2_on in sorted(sparc_view.items()):
+            url = url_for('route_sparc_view_query', tier1=tier1)
+            tier1_row = tier1.split(YML_DELIMITER)
+            tier1_row += tier2_on['CURIES']
+            tagged_tier1_row = tag_row(tier1_row, url)
+            hyp_rows.append(tagged_tier1_row)
+            if not tier2_on:
+                continue
+            # BUG: Will break what we want if more is added to spinal cord
+            if len(tier2_on.keys()) > 6:
+                continue
+            for tier2, tier3_on in tier2_on.items():
+                if tier2 == 'CURIES':
+                    continue
+                url = url_for('route_sparc_view_query', tier1=tier1, tier2=tier2)
+                tier2_row = tier2.split(YML_DELIMITER)
+                tier2_row += tier3_on['CURIES']
+                tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
+                hyp_rows.append(tagged_tier2_row)
+        return htmldoc(
+            render_table(hyp_rows),
+            title = 'Main Page Sparc',
+            styles = ["p {margin: 0px; padding: 0px;}"],
+            metas = ({'name':'date', 'content':time()},),
+        )
 
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
+        hyp_rows = hyperlink_tree(sparc_view)
         return htmldoc(
-            render_table(view_rows),
+            render_table(hyp_rows),
             title = 'SPARC Anatomical terms index',
+            metas = ({'name':'date', 'content':time()},),
         )
-        return htmldoc(*view_lines, title='SPARC Anatomical terms index', styles=["p {margin: 0px; padding: 0px;}"])
 
     @app.route(f'/{basename}/sparc', methods=['GET'])
     @app.route(f'/{basename}/sparc/', methods=['GET'])
     def route_sparc():
-        return htmldoc(atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
-                       atag(url_for('route_sparc_index'), 'Index'),
-                       title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"])
-
+        return htmldoc(
+            atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
+            atag(url_for('route_sparc_index'), 'Index'),
+            title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
+            metas = ({'name':'date', 'content':time()},),
+        )
 
     return app
 

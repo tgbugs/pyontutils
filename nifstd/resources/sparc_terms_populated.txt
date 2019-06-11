@@ -1,326 +1,388 @@
-brainstem
-    midbrain
-        retrorubral area of midbrain reticular nucleus
-        cerebral peduncle
-        oculomotor nerve root
-        midbrain tegmentum
-        dorsal tegmental decussation
-        lateral pes lemniscus
-        linear nucleus
-        dorsal longitudinal fasciculus of midbrain
-        nucleus of posterior commissure
-        rostral interstitial nucleus of medial longitudinal fasciculus
-        oculomotor nuclear complex
-        dorsal oculomotor nucleus
-        central oculomotor nucleus
-        medial oculomotor nucleus
-        parvocellular oculomotor nucleus
-        ventral oculomotor nucleus
-        caudal central oculomotor nucleus
-        anterior median oculomotor nucleus
-        intermediate oculomotor nucleus
-        dentatothalamic tract
-        oculomotor nerve root
-        interstitial nucleus of Cajal
-        midbrain reticular formation
-        pedunculopontine tegmental nucleus
-        subcuneiform nucleus
-        cuneiform nucleus
-        central tegmental tract of midbrain
-        midbrain raphe nuclei
-        pallidotegmental fasciculus
-        dorsal tegmental nucleus
-        red nucleus
-        parvocellular part of red nucleus
-        magnocellular part of red nucleus
-        central gray substance of midbrain
-        root of trochlear nerve
-        mesencephalic nucleus of trigeminal nerve
-        peripeduncular nucleus
-        spinothalamic tract of midbrain
-        decussation of superior cerebellar peduncle
-        medial lemniscus of midbrain
-        habenulo-interpeduncular tract of midbrain
-        dorsal raphe nucleus
-        ventral nucleus of posterior commissure
-        ventral tegmental area
-        ventral tegmental decussation
-        medial pes lemniscus
-        ventral tegmental nucleus
-        medial longitudinal fasciculus of midbrain
-        mesencephalic tract of trigeminal nerve
-        interpeduncular nucleus
-        trochlear nucleus
-        substantia nigra
-        substantia nigra pars compacta
-        substantia nigra pars reticulata
-        substantia nigra pars lateralis
-        cerebral crus
-        midbrain tectum
-        posterior commissure
-        corticotectal tract
-        inferior colliculus
-        root of trochlear nerve
-        subcommissural organ
-        parabigeminal nucleus
-        pretectal region
-        olivary pretectal nucleus
-        nucleus of optic tract
-        principal pretectal nucleus
-        sublentiform nucleus
-        anterior pretectal nucleus
-        superior colliculus
-    pons
-        root of abducens nerve
-        basal part of pons
-        middle cerebellar peduncle
-        longitudinal pontine fibers
-        transverse pontine fibers
-        pontine nuclear group
-        vestibulocochlear nerve root
-        pontine tegmentum
-        oral part of spinal trigeminal nucleus
-        central tegmental tract of pons
-        intermediate acoustic stria
-        decussation of trochlear nerve
-        vestibulocerebellar tract
-        abducens nucleus
-        trapezoid body
-        medial parabrachial nucleus
-        spinothalamic tract of pons
-        motor root of trigeminal nerve
-        dorsal trigeminal tract
-        dorsal longitudinal fasciculus of pons
-        nucleus subceruleus
-        lateral parabrachial nucleus
-        dorsal nucleus of lateral lemniscus
-        medial longitudinal fasciculus of pons
-        tectopontine tract
-        principal sensory nucleus of trigeminal nerve
-        medial lemniscus of pons
-        facial motor nucleus
-        dorsal acoustic stria
-        ventral acoustic stria
-        pontine reticular formation
-        uncinate fasciculus
-        lateral lemniscus
-        spinal trigeminal tract of pons
-        superior salivatory nucleus
-        pontine raphe nucleus
-        superior medullary velum
-        locus ceruleus
-        root of abducens nerve
-        motor nucleus of trigeminal nerve
-        superior olivary complex
-        ventral trigeminal tract
-        ventral nucleus of lateral lemniscus
-        trigeminal nerve root
-        facial nerve root
-    medulla oblongata
-        inferior olivary complex
-        medullary raphe nuclear complex
-        accessory nerve root
-        nucleus of solitary tract
-        hypoglossal nerve root
-        vestibular nuclear complex
-        medullary reticular formation
-        root of vagus nerve
-        white matter of medulla oblongata
-        cochlear nuclear complex
-        glossopharyngeal nerve root
-        accessory XI nerve nucleus
-        accessory cuneate nucleus
-        accessory nerve fiber bundle
-        anterior spinocerebellar tract
-        anteroventral cochlear nucleus
-        area postrema
-        caudal part of spinal trigeminal nucleus
-        central gray substance of medulla
-        central medullary reticular nuclear complex
-        cochlear nuclear complex
-        cochlear nucleus
-        commissural nucleus of vagus nerve
-        cuneate fasciculus of medulla
-        cuneate nucleus
-        cuneocerebellar tract
-        decussation of medial lemniscus
-        dorsal cap of Kooy
-        dorsal cochlear nucleus pyramidal cell layer
-        dorsal cochlear nucleus
-        dorsal external arcuate fiber bundle
-        dorsal longitudinal fasciculus of medulla
-        dorsal motor nucleus of vagus nerve
-        dorsal paramedian reticular nucleus
-        dorsolateral fasciculus of medulla
-        dorsolateral subnucleus of solitary tract
-        dorsomedial subnucleus of solitary tract
-        floor plate of medulla oblongata
-        glossopharyngeal lobe
-        glossopharyngeal nerve fiber bundle
-        glossopharyngeal nerve root
-        gracile fasciculus of medulla
-        granular cell layer of dorsal cochlear nucleus
-        hilum of inferior olivary complex
-Spinal Cord
+brainstem	UBERON:0002298
+    midbrain	UBERON:0001891
+        retrorubral area of midbrain reticular nucleus	UBERON:0011172
+        cerebral peduncle	UBERON:0002623
+        oculomotor nerve root	UBERON:0002668
+        midbrain tegmentum	UBERON:0001943
+        dorsal tegmental decussation	UBERON:0003009
+        lateral pes lemniscus	UBERON:0003010
+        linear nucleus	UBERON:0002557
+        dorsal longitudinal fasciculus of midbrain	UBERON:0003005
+        nucleus of posterior commissure	UBERON:0002711
+        rostral interstitial nucleus of medial longitudinal fasciculus	UBERON:0002717
+        oculomotor nuclear complex	UBERON:0001715
+        dorsal oculomotor nucleus	UBERON:0002964
+        central oculomotor nucleus	UBERON:0002960
+        medial oculomotor nucleus	UBERON:0002975
+        parvocellular oculomotor nucleus	UBERON:0002141
+        ventral oculomotor nucleus	UBERON:0002934
+        caudal central oculomotor nucleus	UBERON:0002957
+        anterior median oculomotor nucleus	UBERON:0002701
+        intermediate oculomotor nucleus	UBERON:0002970
+        dentatothalamic tract	UBERON:0002594
+        interstitial nucleus of Cajal	UBERON:0002551
+        midbrain reticular formation	UBERON:0002639
+        pedunculopontine tegmental nucleus	UBERON:0002142
+        subcuneiform nucleus	UBERON:0002700
+        cuneiform nucleus	UBERON:0002696
+        central tegmental tract of midbrain	UBERON:0002585
+        midbrain raphe nuclei	UBERON:0007412
+        pallidotegmental fasciculus	UBERON:0002671
+        dorsal tegmental nucleus	UBERON:0002143
+        red nucleus	UBERON:0001947
+        parvocellular part of red nucleus	UBERON:0002938
+        magnocellular part of red nucleus	UBERON:0002936
+        central gray substance of midbrain	UBERON:0003040
+        root of trochlear nerve	UBERON:0002618
+        mesencephalic nucleus of trigeminal nerve	UBERON:0001718
+        peripeduncular nucleus	UBERON:0002144
+        spinothalamic tract of midbrain	UBERON:0002609
+        decussation of superior cerebellar peduncle	UBERON:0002588
+        medial lemniscus of midbrain	UBERON:0002658
+        habenulo-interpeduncular tract of midbrain	UBERON:0023740
+        dorsal raphe nucleus	UBERON:0002043
+        ventral nucleus of posterior commissure	UBERON:0002044
+        ventral tegmental area	UBERON:0002691
+        ventral tegmental decussation	UBERON:0002615
+        medial pes lemniscus	UBERON:0002662
+        ventral tegmental nucleus	UBERON:0002438
+        medial longitudinal fasciculus of midbrain	UBERON:0002660
+        mesencephalic tract of trigeminal nerve	UBERON:0002666
+        interpeduncular nucleus	UBERON:0002145
+        trochlear nucleus	UBERON:0002722
+        substantia nigra	UBERON:0002038
+        substantia nigra pars compacta	UBERON:0001965
+        substantia nigra pars reticulata	UBERON:0001966
+        substantia nigra pars lateralis	UBERON:0002995
+        cerebral crus	UBERON:0002631
+        midbrain tectum	UBERON:0002314
+        posterior commissure	UBERON:0000936
+        corticotectal tract	UBERON:0002556
+        inferior colliculus	UBERON:0001946
+        subcommissural organ	UBERON:0002139
+        parabigeminal nucleus	UBERON:0002140
+        pretectal region	UBERON:0001944
+        olivary pretectal nucleus	UBERON:0002565
+        nucleus of optic tract	UBERON:0002996
+        principal pretectal nucleus	UBERON:0002572
+        sublentiform nucleus	UBERON:0002578
+        anterior pretectal nucleus	UBERON:0034918
+        superior colliculus	UBERON:0001945
+    pons	UBERON:0000988
+        root of abducens nerve	UBERON:0002786
+        basal part of pons	UBERON:0002567
+        middle cerebellar peduncle	UBERON:0002152
+        longitudinal pontine fibers	UBERON:0002732
+        transverse pontine fibers	UBERON:0002735
+        pontine nuclear group	UBERON:0002151
+        vestibulocochlear nerve root	UBERON:0002731
+        pontine tegmentum	UBERON:0003023
+        oral part of spinal trigeminal nucleus	UBERON:0002591
+        central tegmental tract of pons	UBERON:0002783
+        intermediate acoustic stria	UBERON:0002952
+        decussation of trochlear nerve	UBERON:0002787
+        vestibulocerebellar tract	UBERON:0002552
+        abducens nucleus	UBERON:0002682
+        trapezoid body	UBERON:0002932
+        medial parabrachial nucleus	UBERON:0002918
+        spinothalamic tract of pons	UBERON:0002798
+        motor root of trigeminal nerve	UBERON:0002796
+        dorsal trigeminal tract	UBERON:0002797
+        dorsal longitudinal fasciculus of pons	UBERON:0002793
+        nucleus subceruleus	UBERON:0002587
+        lateral parabrachial nucleus	UBERON:0003007
+        dorsal nucleus of lateral lemniscus	UBERON:0003006
+        medial longitudinal fasciculus of pons	UBERON:0002794
+        tectopontine tract	UBERON:0002930
+        principal sensory nucleus of trigeminal nerve	UBERON:0002597
+        medial lemniscus of pons	UBERON:0002958
+        facial motor nucleus	UBERON:0003011
+        dorsal acoustic stria	UBERON:0002790
+        ventral acoustic stria	UBERON:0003046
+        pontine reticular formation	UBERON:0002573
+        uncinate fasciculus	UBERON:0003044
+        lateral lemniscus	UBERON:0002953
+        spinal trigeminal tract of pons	UBERON:0002800
+        superior salivatory nucleus	UBERON:0002149
+        pontine raphe nucleus	UBERON:0002047
+        superior medullary velum	UBERON:0002659
+        locus ceruleus	UBERON:0002148
+        motor nucleus of trigeminal nerve	UBERON:0002633
+        superior olivary complex	UBERON:0002128
+        ventral trigeminal tract	UBERON:0002549
+        ventral nucleus of lateral lemniscus	UBERON:0002604
+        trigeminal nerve root	UBERON:0004673
+        facial nerve root	UBERON:0004674
+    medulla oblongata	UBERON:0001896
+        inferior olivary complex	UBERON:0002127
+        medullary raphe nuclear complex	UBERON:0002692
+        accessory nerve root	UBERON:0014615
+        nucleus of solitary tract	UBERON:0009050
+        hypoglossal nerve root	UBERON:0004675
+        vestibular nuclear complex	UBERON:0002673
+        medullary reticular formation	UBERON:0002559
+        root of vagus nerve	UBERON:0011213
+        white matter of medulla oblongata	UBERON:0014649
+        cochlear nuclear complex	UBERON:0002610
+        glossopharyngeal nerve root	UBERON:0019310
+        accessory XI nerve nucleus	UBERON:0020358
+        accessory cuneate nucleus	UBERON:0002864
+        accessory nerve fiber bundle	UBERON:0006117
+        anterior spinocerebellar tract	UBERON:0002987
+        anteroventral cochlear nucleus	UBERON:0002830
+        area postrema	UBERON:0002162
+        caudal part of spinal trigeminal nucleus	UBERON:0002866
+        central gray substance of medulla	UBERON:0002867
+        central medullary reticular nuclear complex	UBERON:0035940
+        cochlear nucleus	UBERON:0001720
+        commissural nucleus of vagus nerve	UBERON:0002868
+        cuneate fasciculus of medulla	UBERON:0002642
+        cuneate nucleus	UBERON:0002045
+        cuneocerebellar tract	UBERON:0002640
+        decussation of medial lemniscus	UBERON:0002643
+        dorsal cap of Kooy	UBERON:0014286
+        dorsal cochlear nucleus pyramidal cell layer	UBERON:0022320
+        dorsal cochlear nucleus	UBERON:0002829
+        dorsal external arcuate fiber bundle	UBERON:0006089
+        dorsal longitudinal fasciculus of medulla	UBERON:0002646
+        dorsal motor nucleus of vagus nerve	UBERON:0002870
+        dorsal paramedian reticular nucleus	UBERON:0016827
+        dorsolateral fasciculus of medulla	UBERON:0002649
+        dorsolateral subnucleus of solitary tract	UBERON:0026663
+        dorsomedial subnucleus of solitary tract	UBERON:0026541
+        floor plate of medulla oblongata	UBERON:0003311
+        glossopharyngeal lobe	UBERON:2000517
+        glossopharyngeal nerve fiber bundle	UBERON:0006090
+        gracile fasciculus of medulla	UBERON:0002653
+        granular cell layer of dorsal cochlear nucleus	UBERON:0029009
+        hilum of inferior olivary complex	UBERON:0008333
+Spinal Cord	UBERON:0002240
     Gross anatomy
-        ampulla caudalis
-        central canal of spinal cord
-        fasciculus of spinal cord
-        filum terminale externum
-        filum terminale internum
-        filum terminale
-        funiculus of spinal cord
-        gracile fasciculus of spinal cord
-        gray matter of spinal cord
-        lamina of gray matter of spinal cord
-        meninx of spinal cord
-        nucleus of spinal cord
-        regional part of spinal cord
-        roof plate spinal cord region
-        spinal cord column
-        spinal cord ependyma
-        spinal cord lateral horn
-        spinal cord lateral wall
-        spinal cord
-        subdivision of spinal cord central canal
-        tract of spinal cord
-        urophysis
-        white matter of spinal cord
-    Internal anatomy
-        C1 segment of cervical spinal cord
-        C4 segment of cervical spinal cord
-        C7 segment of cervical spinal cord
-        C8 segment of cervical spinal cord
-        accessory nerve fiber bundle
-        apex of lumbar spinal cord dorsal horn
-        apex of spinal cord dorsal horn
-        apex of thoracic spinal cord dorsal horn
-        caudal segment of spinal cord
-        central canal of spinal cord
-        cervical spinal cord dorsal column
-        cervical spinal cord dorsal horn
-        cervical spinal cord gray commissure
-        cervical spinal cord gray matter
-        cervical spinal cord lateral column
-        cervical spinal cord lateral horn
-        cervical spinal cord ventral column
-        cervical spinal cord ventral commissure
-        cervical spinal cord ventral horn
-        cervical spinal cord white matter
-        cervical spinal cord
-        cervical subsegment of spinal cord
-        conus medullaris
-        cuneate fasciculus of spinal cord
-        dorsal commissural nucleus of spinal cord
-        dorsal gray commissure of spinal cord
-        dorsal horn of spinal cord
-        dorsal nerve root of lumbar spinal cord
-        dorsal nerve root of sacral spinal cord
-        dorsal nerve root of thoracic spinal cord
-        dorsal thoracic nucleus
-        dorsolateral fasciculus of medulla
-        eighth thoracic spinal cord segment
-        eleventh thoracic spinal cord segment
-        fasciculus of spinal cord
+        ampulla caudalis	UBERON:0011360
+        central canal of spinal cord	UBERON:0002291
+        fasciculus of spinal cord	UBERON:0005837
+        filum terminale externum	UBERON:0010270
+        filum terminale internum	UBERON:0010269
+        filum terminale	UBERON:0005443
+        funiculus of spinal cord	UBERON:0006127
+        gracile fasciculus of spinal cord	UBERON:0005826
+        gray matter of spinal cord	UBERON:0002315
+        lamina of gray matter of spinal cord	UBERON:0016570
+        meninx of spinal cord	UBERON:0003292
+        nucleus of spinal cord	UBERON:0011777
+        regional part of spinal cord	UBERON:0001948
+        roof plate spinal cord region	UBERON:0005724
+        spinal cord column	UBERON:0016550
+        spinal cord ependyma	UBERON:0005359
+        spinal cord lateral horn	UBERON:0004676
+        spinal cord lateral wall	UBERON:0009582
+        spinal cord	UBERON:0002240
+        subdivision of spinal cord central canal	UBERON:0014538
+        tract of spinal cord	UBERON:0007699
+        urophysis	UBERON:0011359
+        white matter of spinal cord	UBERON:0002318
+    Internal Anatomy
+        accessory nerve fiber bundle	UBERON:0006117
+        Accessory nucleus	NLX:39810
+        ampulla caudalis	UBERON:0011360
+        apex of lumbar spinal cord dorsal horn	UBERON:0014632
+        apex of thoracic spinal cord dorsal horn	UBERON:0014611
+        caudal segment of spinal cord	UBERON:0005845
+        central canal of spinal cord:UBERON:0002291
+        Clarke's nucleus	UBERON:0002246
+        conus medullaris	UBERON:0005437
+        cuneate fasciculus of spinal cord	UBERON:0005832
+        dorsal commissural nucleus of spinal cord	UBERON:0011776
+        dorsomedial sulcus
+        fasciculus of spinal cord	UBERON:0005837
+        filum terminale externum	UBERON:0010270
+        filum terminale internum	UBERON:0010269
+        filum terminale:UBERON:0005443
+        floor plate spinal cord region	UBERON:0005723
+        funiculus of spinal cord:UBERON:0006127
+        Ganglion part of peripheral nervous system	UBERON:0024940
+        gracile fasciculus of spinal cord	UBERON:0005826
+        intermediolateral nucleus	UBERON:0002175
+        intermediomedial cell column
+        lamina of gray matter of spinal cord	UBERON:0016570
+        lateral cervical nucleus	FMA:73921
+        lateral corticospinal tract	FMA:72635
+        lateral spinal nucleus	UBERON:0035024
+        meninx of spinal cord	UBERON:0003292
+        nucleus of phrenic nerve:UBERON:0016850
+        nucleus of pudendal nerve:UBERON:0022278
+        nucleus of the bulbocavernosus	UBERON:0018545
+        nucleus proprius of spinal cord	UBERON:0016610
+        Parasympathetic ganglion	FMA:5894
+        regional part of spinal cord	UBERON:0001948
+        Regional part of vestibular ganglion
+        roof plate spinal cord region	UBERON:0005724
+        root of lumbar spinal nerve	FMA:16421
+        root of sacral nerve	FMA:18028
+        root of thoracic nerve	FMA:14064
+        Segment of spinal cord	FMA:62420
+        spinal cord	FMA:7647
+        spinal cord dorsal column	UBERON:0005373
+        spinal cord dorsal horn	UBERON:0002256
+        spinal cord dorsal white commissure	UBERON:0007840
+        spinal cord ependyma	UBERON:0005359
+        spinal cord gray commissure	UBERON:0004677
+        spinal cord gray matter	UBERON:0002315
+        spinal cord lateral columns	UBERON:0005374
+        spinal cord lateral horn	UBERON:0004676
+        spinal cord lateral wall	UBERON:0009582
+        spinal cord reticular nucleus	UBERON:0006319
+        spinal cord ventral commissure	UBERON:0004170
+        spinal cord ventral horn	UBERON:0002257
+        spinal cord white commissure	UBERON:0007838
+        Spinal ganglion part of peripheral nervous system
+        subdivision of spinal cord central canal	UBERON:0014538
+        substantia gelatinosa	FMA:74019
+        Superior part of vestibular ganglion	UBERON:0002825
+        tract of spinal cord	FMA:75683
+        urophysis	UBERON:0011359
+        ventral commissural nucleus of spinal cord	UBERON:0034771
+        ventral corticospinal tract	UBERON:0002760
+        ventral gray commissure of spinal cord	FMA:77038
+        ventral nerve root of lumbar spinal cord	UBERON:0024382
+        ventral nerve root of sacral spinal cord	UBERON:0023623
+        vestibular ganglion	FMA:53435
+        white matter of spinal cord	UBERON:0002318
+    General spinal cord anatomy
+        C1 segment of cervical spinal cord	UBERON:0006469
+        C4 segment of cervical spinal cord	UBERON:0006490
+        C7 segment of cervical spinal cord	UBERON:0006493
+        C8 segment of cervical spinal cord	UBERON:0006470
+        accessory nerve fiber bundle	UBERON:0006117
+        apex of lumbar spinal cord dorsal horn	UBERON:0014632
+        apex of spinal cord dorsal horn	UBERON:0004678
+        apex of thoracic spinal cord dorsal horn	UBERON:0014611
+        caudal segment of spinal cord	UBERON:0005845
+        central canal of spinal cord	UBERON:0002291
+        cervical spinal cord dorsal column	UBERON:0005841
+        cervical spinal cord dorsal horn	UBERON:0014620
+        cervical spinal cord gray commissure	UBERON:0029626
+        cervical spinal cord gray matter	UBERON:0014613
+        cervical spinal cord lateral column	UBERON:0005849
+        cervical spinal cord lateral horn	UBERON:0014619
+        cervical spinal cord ventral column	UBERON:0005854
+        cervical spinal cord ventral commissure	UBERON:0007836
+        cervical spinal cord ventral horn	UBERON:0014621
+        cervical spinal cord white matter	UBERON:0014614
+        cervical spinal cord	UBERON:0002726
+        cervical subsegment of spinal cord	UBERON:0007714
+        conus medullaris	UBERON:0005437
+        cuneate fasciculus of spinal cord	UBERON:0005835
+        dorsal commissural nucleus of spinal cord	UBERON:0011776
+        dorsal gray commissure of spinal cord	UBERON:0014631
+        dorsal horn of spinal cord	UBERON:0002256
+        dorsal nerve root of lumbar spinal cord	UBERON:0026006
+        dorsal nerve root of sacral spinal cord	UBERON:0022941
+        dorsal nerve root of thoracic spinal cord	UBERON:0014616
+        dorsal thoracic nucleus	UBERON:0002246
+        dorsolateral fasciculus of medulla	UBERON:0002649
+        eighth thoracic spinal cord segment	UBERON:0006456
+        eleventh thoracic spinal cord segment	UBERON:0006467
+        fasciculus of spinal cord	UBERON:0005837
         fifth cervical spinal cord segment
-        fifth lumbar spinal cord segment
-        fifth sacral spinal cord segment
-        fifth thoracic spinal cord segment
-        first lumbar spinal cord segment
-        first sacral spinal cord segment
-        first thoracic spinal cord segment
-        floor plate spinal cord region
-        fourth lumbar spinal cord segment
-        fourth sacral spinal cord segment
-        fourth thoracic spinal cord segment
-        gracile fasciculus of spinal cord
-        gray matter of spinal cord
-        intermediolateral nucleus
-        lamina I of gray matter of spinal cord
-        lateral cervical nucleus
-        lateral corticospinal tract
-        lateral spinal nucleus
-        lumbar spinal cord dorsal column
-        lumbar spinal cord dorsal horn
-        lumbar spinal cord gray commissure
-        lumbar spinal cord gray matter
-        lumbar spinal cord lateral column
-        lumbar spinal cord lateral horn
-        lumbar spinal cord ventral column
-        lumbar spinal cord ventral commissure
-        lumbar spinal cord ventral horn
-        lumbar spinal cord white matter
-        lumbar spinal cord
-        lumbar subsegment of spinal cord
-        ninth thoracic spinal cord segment
-        nucleus of phrenic nerve
-        nucleus of pudendal nerve
-        nucleus of spinal cord
-        nucleus of the bulbocavernosus
-        nucleus proprius of spinal cord
-        regional part of spinal cord
-        root of lumbar spinal nerve
-        root of sacral nerve
-        root of thoracic nerve
-        sacral division of spinal cord central canal
-        sacral spinal cord dorsal column
-        sacral spinal cord dorsal horn
-        sacral spinal cord gray commissure
-        sacral spinal cord gray matter
-        sacral spinal cord lateral column
-        sacral spinal cord lateral horn
-        sacral spinal cord ventral column
-        sacral spinal cord ventral commissure
-        sacral spinal cord ventral horn
-        sacral spinal cord white matter
-        sacral spinal cord
-        sacral subsegment of spinal cord
+        fifth lumbar spinal cord segment	UBERON:0006447
+        fifth sacral spinal cord segment	UBERON:0006464
+        fifth thoracic spinal cord segment	UBERON:0006453
+        first lumbar spinal cord segment	UBERON:0006448
+        first sacral spinal cord segment	UBERON:0006460
+        first thoracic spinal cord segment	UBERON:0006457
+        floor plate spinal cord region	UBERON:0005723
+        fourth lumbar spinal cord segment	UBERON:0006451
+        fourth sacral spinal cord segment	UBERON:0006463
+        fourth thoracic spinal cord segment	UBERON:0006452
+        gracile fasciculus of spinal cord	UBERON:0005826
+        gray matter of spinal cord	UBERON:0002315
+        intermediolateral nucleus	UBERON:0002175
+        lamina I of gray matter of spinal cord	UBERON:0006118
+        lateral cervical nucleus	UBERON:0002176
+        lateral corticospinal tract	UBERON:0002589
+        lateral spinal nucleus	UBERON:0035024
+        lumbar spinal cord dorsal column	UBERON:0005842
+        lumbar spinal cord dorsal horn	UBERON:0014638
+        lumbar spinal cord gray commissure	UBERON:0033483
+        lumbar spinal cord gray matter	UBERON:0029636
+        lumbar spinal cord lateral column	UBERON:0005850
+        lumbar spinal cord lateral horn	UBERON:0031906
+        lumbar spinal cord ventral column	UBERON:0005855
+        lumbar spinal cord ventral commissure	UBERON:0007834
+        lumbar spinal cord ventral horn	UBERON:0030276
+        lumbar spinal cord white matter	UBERON:0026386
+        lumbar spinal cord	UBERON:0002792
+        lumbar subsegment of spinal cord	UBERON:0007716
+        ninth thoracic spinal cord segment	UBERON:0006465
+        nucleus of phrenic nerve	UBERON:0016850
+        nucleus of pudendal nerve	UBERON:0022278
+        nucleus of spinal cord	UBERON:0011777
+        nucleus of the bulbocavernosus	UBERON:0018545
+        nucleus proprius of spinal cord	UBERON:0016610
+        regional part of spinal cord	UBERON:0001948
+        root of lumbar spinal nerve	UBERON:0009631
+        root of sacral nerve	UBERON:0009633
+        root of thoracic nerve	UBERON:0009630
+        sacral division of spinal cord central canal	UBERON:0014547
+        sacral spinal cord dorsal column	UBERON:0005840
+        sacral spinal cord dorsal horn	UBERON:0033939
+        sacral spinal cord gray commissure	UBERON:0031111
+        sacral spinal cord gray matter	UBERON:0029503
+        sacral spinal cord lateral column	UBERON:0005848
+        sacral spinal cord lateral horn	UBERON:0029538
+        sacral spinal cord ventral column	UBERON:0005853
+        sacral spinal cord ventral commissure	UBERON:0007835
+        sacral spinal cord ventral horn	UBERON:0032748
+        sacral spinal cord white matter	UBERON:0026246
+        sacral spinal cord	UBERON:0005843
+        sacral subsegment of spinal cord	UBERON:0007717
         second cervical spinal cord segment
-        second lumbar spinal cord segment
-        second sacral spinal cord segment
-        second thoracic spinal cord segment
-        seventh thoracic spinal cord segment
+        second lumbar spinal cord segment	UBERON:0006450
+        second sacral spinal cord segment	UBERON:0006461
+        second thoracic spinal cord segment	UBERON:0006458
+        seventh thoracic spinal cord segment	UBERON:0006455
         sixth cervical spinal cord segment
-        sixth thoracic spinal cord segment
-        spinal cord commissure
-        spinal cord dorsal white commissure
-        spinal cord gray commissure
-        spinal cord lateral horn
-        spinal cord reticular nucleus
-        spinal cord segment
-        spinal cord ventral commissure
-        spinal cord white commissure
-        substantia gelatinosa of cervical spinal cord dorsal horn
-        substantia gelatinosa of lumbar spinal cord dorsal horn
-        substantia gelatinosa of thoracic spinal cord dorsal horn
-        substantia gelatinosa
-        tenth thoracic spinal cord segment
+        sixth thoracic spinal cord segment	UBERON:0006454
+        spinal cord commissure	UBERON:0008882
+        spinal cord dorsal white commissure	UBERON:0007840
+        spinal cord gray commissure	UBERON:0004677
+        spinal cord lateral horn	UBERON:0004676
+        spinal cord reticular nucleus	UBERON:0006319
+        spinal cord segment	UBERON:0005844
+        spinal cord ventral commissure	UBERON:0004170
+        spinal cord white commissure	UBERON:0007838
+        substantia gelatinosa of cervical spinal cord dorsal horn	UBERON:0014623
+        substantia gelatinosa of lumbar spinal cord dorsal horn	UBERON:0014633
+        substantia gelatinosa of thoracic spinal cord dorsal horn	UBERON:0014612
+        substantia gelatinosa	UBERON:0002181
+        tenth thoracic spinal cord segment	UBERON:0006466
         third cervical spinal cord segment
-        third lumbar spinal cord segment
-        third sacral spinal cord segment
-        third thoracic spinal cord segment
-        thoracic spinal cord dorsal column
-        thoracic spinal cord dorsal horn
-        thoracic spinal cord gray commissure
-        thoracic spinal cord gray matter
-        thoracic spinal cord lateral column
-        thoracic spinal cord lateral horn
-        thoracic spinal cord ventral column
-        thoracic spinal cord ventral commissure
-        thoracic spinal cord ventral horn
-        thoracic spinal cord white matter
-        thoracic spinal cord
-        thoracic subsegment of spinal cord
-        tract of spinal cord
-        twelfth thoracic spinal cord segment
-        ventral commissural nucleus of spinal cord
-        ventral corticospinal tract
-        ventral gray commissure of spinal cord
-        ventral horn of spinal cord
-        ventral nerve root of lumbar spinal cord
-        ventral nerve root of sacral spinal cord
-        ventral nerve root of thoracic spinal cord
-        white matter of spinal cord
+        third lumbar spinal cord segment	UBERON:0006449
+        third sacral spinal cord segment	UBERON:0006462
+        third thoracic spinal cord segment	UBERON:0006459
+        thoracic spinal cord dorsal column	UBERON:0005839
+        thoracic spinal cord dorsal horn	UBERON:0014609
+        thoracic spinal cord gray commissure	UBERON:0026293
+        thoracic spinal cord gray matter	UBERON:0014636
+        thoracic spinal cord lateral column	UBERON:0005847
+        thoracic spinal cord lateral horn	UBERON:0014607
+        thoracic spinal cord ventral column	UBERON:0005852
+        thoracic spinal cord ventral commissure	UBERON:0007837
+        thoracic spinal cord ventral horn	UBERON:0014610
+        thoracic spinal cord white matter	UBERON:0014637
+        thoracic spinal cord	UBERON:0003038
+        thoracic subsegment of spinal cord	UBERON:0007715
+        tract of spinal cord	UBERON:0007699
+        twelfth thoracic spinal cord segment	UBERON:0006468
+        ventral commissural nucleus of spinal cord	UBERON:0034771
+        ventral corticospinal tract	UBERON:0002760
+        ventral gray commissure of spinal cord	UBERON:0014630
+        ventral horn of spinal cord	UBERON:0002257
+        ventral nerve root of lumbar spinal cord	UBERON:0024382
+        ventral nerve root of sacral spinal cord	UBERON:0023623
+        ventral nerve root of thoracic spinal cord	UBERON:0014617
+        white matter of spinal cord	UBERON:0002318
         lamina I of gray matter of spinal cord	UBERON:0006118
         lamina III of gray matter of spinal cord	UBERON:0016574
         lamina IV of gray matter of spinal cord	UBERON:0016575
@@ -337,7 +399,7 @@ Spinal Cord
         substantia gelatinosa	UBERON:0002181
     Segmental Anatomy
         Spinal cord subsegments
-            Cervical Spinal Cord
+            Cervical Spinal Cord	UBERON:0002726
                 C1 segment of cervical spinal cord	UBERON:0006469
                 C2 segment of cervical spinal cord	UBERON:0006489
                 C3 segment of cervical spinal cord	UBERON:0006488
@@ -346,7 +408,7 @@ Spinal Cord
                 C6 segment of cervical spinal cord	UBERON:0006492
                 C7 segment of cervical spinal cord	UBERON:0006493
                 C8 segment of cervical spinal cord	UBERON:0006470
-            Thoracic spinal cord
+            Thoracic spinal cord	UBERON:0003038
                 first thoracic spinal cord segment	UBERON:0006457
                 second thoracic spinal cord segment	UBERON:0006458
                 third thoracic spinal cord segment	UBERON:0006459
@@ -359,13 +421,13 @@ Spinal Cord
                 tenth thoracic spinal cord segment	UBERON:0006466
                 eleventh thoracic spinal cord segment	UBERON:0006467
                 twelfth thoracic spinal cord segment	UBERON:0006468
-            Lumbar spinal cord
+            Lumbar spinal cord	UBERON:0002792
                 first lumbar spinal cord segment	UBERON:0006448
                 second lumbar spinal cord segment	UBERON:0006450
                 third lumbar spinal cord segment	UBERON:0006449
                 fourth lumbar spinal cord segment	UBERON:0006451
                 fifth lumbar spinal cord segment	UBERON:0006447
-            Sacral spinal cord
+            Sacral spinal cord	UBERON:0005843
                 first sacral spinal cord segment	UBERON:0006460
                 second sacral spinal cord segment	UBERON:0006461
                 third sacral spinal cord segment	UBERON:0006462
@@ -435,7 +497,7 @@ Spinal Cord
             sixth cervical dorsal root ganglion	UBERON:0007711
             seventh cervical dorsal root ganglion	UBERON:0002843
             eighth cervical dorsal root ganglion	UBERON:0002844
-        Thoracic Dorsal root ganglia
+        Thoracic Dorsal root ganglia	UBERON:0002835
             first thoracic dorsal root ganglion	UBERON:0002845
             second thoracic dorsal root ganglion	UBERON:0002846
             third thoracic dorsal root ganglion	UBERON:0002847
@@ -448,176 +510,176 @@ Spinal Cord
             tenth thoracic dorsal root ganglion	UBERON:0002853
             eleventh thoracic dorsal root ganglion	UBERON:0002854
             twelfth thoracic dorsal root ganglion	UBERON:0002855
-        Lumbar Dorsal root ganglia
+        Lumbar Dorsal root ganglia	UBERON:0002836
             first lumbar dorsal root ganglion	UBERON:0002857
             second lumbar dorsal root ganglion	UBERON:0002856
             third lumbar dorsal root ganglion	UBERON:0002858
             fourth lumbar dorsal root ganglion	UBERON:0003943
             fifth lumbar dorsal root ganglion	UBERON:0002859
-        Sacral Dorsal root ganglia
+        Sacral Dorsal root ganglia	UBERON:0002837
             first sacral dorsal root ganglion	UBERON:0002860
             second sacral dorsal root ganglion	UBERON:0002861
             third sacral dorsal root ganglion	UBERON:0002862
             Fourth sacral dorsal root ganglion
             fifth sacral dorsal root ganglion	UBERON:0002863
-Peripheral Nervous System
-    Ganglia
+Peripheral Nervous System	UBERON:0000010
+    Ganglia	UBERON:0000045
         Auditory ganglion
-        Cervical dorsal root ganglion
-        Ciliary ganglion
+        Cervical dorsal root ganglion	UBERON:0002834
+        Ciliary ganglion	UBERON:0002058
         Cranial ganglion part of peripheral nervous system
-        Dorsal root ganglion
-        Eighth cervical dorsal root ganglion
-        Eighth thoracic dorsal root ganglion
-        Eleventh thoracic dorsal root ganglion
-        Fifth cervical dorsal root ganglion
-        Fifth lumbar dorsal root ganglion
-        Fifth sacral dorsal root ganglion
-        Fifth thoracic dorsal root ganglion
-        First cervical dorsal root ganglion
-        First lumbar dorsal root ganglion
-        First sacral dorsal root ganglion
-        First thoracic dorsal root ganglion
+        Dorsal root ganglion	UBERON:0000044
+        Eighth cervical dorsal root ganglion	UBERON:0002844
+        Eighth thoracic dorsal root ganglion	UBERON:0002851
+        Eleventh thoracic dorsal root ganglion	UBERON:0002854
+        Fifth cervical dorsal root ganglion	UBERON:0002842
+        Fifth lumbar dorsal root ganglion	UBERON:0002859
+        Fifth sacral dorsal root ganglion	UBERON:0002863
+        Fifth thoracic dorsal root ganglion	UBERON:0002848
+        First cervical dorsal root ganglion	UBERON:0002838
+        First lumbar dorsal root ganglion	UBERON:0002857
+        First sacral dorsal root ganglion	UBERON:0002860
+        First thoracic dorsal root ganglion	UBERON:0002845
         Forth lumbar dorsal root ganglion
         Fourth sacral dorsal root ganglion
-        Fourth cervical dorsal root ganglion
+        Fourth cervical dorsal root ganglion	UBERON:0002841
         Fourth thoracic dorsal root ganglion
-        Ganglion part of peripheral nervous system
-        Grueneberg ganglion
-        Inferior part of vestibular ganglion
-        Lumbar dorsal root ganglion
-        Ninth thoracic dorsal root ganglion
-        Parasympathetic ganglion
+        Ganglion part of peripheral nervous system	UBERON:0024940
+        Grueneberg ganglion	UBERON:0013208
+        Inferior part of vestibular ganglion	UBERON:0002826
+        Lumbar dorsal root ganglion	UBERON:0002836
+        Ninth thoracic dorsal root ganglion	UBERON:0002852
+        Parasympathetic ganglion	UBERON:0001808
         Regional part of vestibular ganglion
-        Sacral dorsal root ganglion
-        Second cervical dorsal root ganglion
-        Second lumbar dorsal root ganglion
-        Second sacral dorsal root ganglion
-        Second thoracic dorsal root ganglion
-        Seventh cervical dorsal root ganglion
-        Seventh thoracic dorsal root ganglion
-        Sixth cervical dorsal root ganglion
-        Sixth thoracic dorsal root ganglion
+        Sacral dorsal root ganglion	UBERON:0002837
+        Second cervical dorsal root ganglion	UBERON:0002839
+        Second lumbar dorsal root ganglion	UBERON:0002856
+        Second sacral dorsal root ganglion	UBERON:0002861
+        Second thoracic dorsal root ganglion	UBERON:0002846
+        Seventh cervical dorsal root ganglion	UBERON:0002843
+        Seventh thoracic dorsal root ganglion	UBERON:0002850
+        Sixth cervical dorsal root ganglion	UBERON:0007711
+        Sixth thoracic dorsal root ganglion	UBERON:0002849
         Spinal ganglion part of peripheral nervous system
-        Superior part of vestibular ganglion
-        Tenth thoracic dorsal root ganglion
-        Third cervical dorsal root ganglion
-        Third lumbar dorsal root ganglion
-        Third sacral dorsal root ganglion
-        Third thoracic dorsal root ganglion
-        Thoracic dorsal root ganglion
-        Twelfth thoracic dorsal root ganglion
-        Vestibular ganglion
-        abdominal ganglion of visceral hump
-        abdominal ganglion
-        accessory ciliary ganglion
-        acoustico-facial VII-VIII ganglion complex
-        adult cerebral ganglion
-        anterior lateral line ganglion
-        autonomic ganglion
-        cardiac ganglion
-        celiac ganglion
-        cervical dorsal root ganglion
-        cervical ganglion
-        cervicothoracic ganglion
-        ciliary ganglion
-        cochlear ganglion
-        cranial ganglion
-        cranial sensory ganglion
-        dorsal anterior lateral line ganglion
-        dorsal root ganglion
-        eighth cervical dorsal root ganglion
-        eighth thoracic dorsal root ganglion
-        eleventh thoracic dorsal root ganglion
-        enteric ganglion
-        epibranchial ganglion
-        fifth cervical dorsal root ganglion
-        fifth lumbar dorsal root ganglion
-        fifth sacral dorsal root ganglion
-        fifth thoracic dorsal root ganglion
-        first cervical dorsal root ganglion
-        first lumbar dorsal root ganglion
-        first sacral dorsal root ganglion
-        first thoracic dorsal root ganglion
-        fourth cervical dorsal root ganglion
-        fourth lumbar dorsal root ganglion
-        fourth sacral spinal ganglion
-        fourth thoracic spinal ganglion
-        future pterygopalatine ganglion
-        ganglion of central nervous system
-        ganglion of ciliary nerve
-        ganglion of peripheral nervous system
-        ganglion part of peripheral nervous system
-        ganglion
-        gasserian ganglion
-        gastropod cerebral ganglion
-        geniculate ganglion
-        glossopharyngeal ganglion
-        glossopharyngeal-vagus IX-X ganglion complex
-        inferior cervical ganglion
-        inferior glossopharyngeal IX ganglion
-        inferior mesenteric ganglion
-        inferior part of vestibular ganglion
-        inferior vagus X ganglion
+        Superior part of vestibular ganglion	UBERON:0002825
+        Tenth thoracic dorsal root ganglion	UBERON:0002853
+        Third cervical dorsal root ganglion	UBERON:0002840
+        Third lumbar dorsal root ganglion	UBERON:0002858
+        Third sacral dorsal root ganglion	UBERON:0002862
+        Third thoracic dorsal root ganglion	UBERON:0002847
+        Thoracic dorsal root ganglion	UBERON:0002835
+        Twelfth thoracic dorsal root ganglion	UBERON:0002855
+        Vestibular ganglion	UBERON:0002827
+        abdominal ganglion of visceral hump	UBERON:0008964
+        abdominal ganglion	UBERON:0009758
+        accessory ciliary ganglion	UBERON:0035776
+        acoustico-facial VII-VIII ganglion complex	UBERON:0012175
+        adult cerebral ganglion	UBERON:6110636
+        anterior lateral line ganglion	UBERON:2001391
+        autonomic ganglion	UBERON:0001805
+        cardiac ganglion	UBERON:0014463
+        celiac ganglion	UBERON:0002262
+        cervical dorsal root ganglion	UBERON:0002834
+        cervical ganglion	UBERON:0001991
+        cervicothoracic ganglion	UBERON:0002441
+        ciliary ganglion	UBERON:0002058
+        cochlear ganglion	UBERON:0000395
+        cranial ganglion	UBERON:0001714
+        cranial sensory ganglion	UBERON:0009992
+        dorsal anterior lateral line ganglion	UBERON:2001312
+        dorsal root ganglion	UBERON:0000044
+        eighth cervical dorsal root ganglion	UBERON:0002844
+        eighth thoracic dorsal root ganglion	UBERON:0002851
+        eleventh thoracic dorsal root ganglion	UBERON:0002854
+        enteric ganglion	UBERON:0001809
+        epibranchial ganglion	UBERON:0009127
+        fifth cervical dorsal root ganglion	UBERON:0002842
+        fifth lumbar dorsal root ganglion	UBERON:0002859
+        fifth sacral dorsal root ganglion	UBERON:0002863
+        fifth thoracic dorsal root ganglion	UBERON:0002848
+        first cervical dorsal root ganglion	UBERON:0002838
+        first lumbar dorsal root ganglion	UBERON:0002857
+        first sacral dorsal root ganglion	UBERON:0002860
+        first thoracic dorsal root ganglion	UBERON:0002845
+        fourth cervical dorsal root ganglion	UBERON:0002841
+        fourth lumbar dorsal root ganglion	UBERON:0003943
+        fourth sacral spinal ganglion	UBERON:0007713
+        fourth thoracic spinal ganglion	UBERON:0007712
+        future pterygopalatine ganglion	UBERON:0010128
+        ganglion of central nervous system	UBERON:0003339
+        ganglion of ciliary nerve	UBERON:0035783
+        ganglion of peripheral nervous system	UBERON:0003338
+        ganglion part of peripheral nervous system	UBERON:0024940
+        ganglion	UBERON:0000045
+        gasserian ganglion	UBERON:3011045
+        gastropod cerebral ganglion	UBERON:0008942
+        geniculate ganglion	UBERON:0001700
+        glossopharyngeal ganglion	UBERON:0001701
+        glossopharyngeal-vagus IX-X ganglion complex	UBERON:0013500
+        inferior cervical ganglion	UBERON:0002440
+        inferior glossopharyngeal IX ganglion	UBERON:0005360
+        inferior mesenteric ganglion	UBERON:0005453
+        inferior part of vestibular ganglion	UBERON:0002826
+        inferior vagus X ganglion	UBERON:0005363
         insect embryonic/larval brain
-        lateral line ganglion
-        lumbar dorsal root ganglion
-        maxillomandibular part of trigeminal ganglion complex
-        mesenteric ganglion
-        middle cervical ganglion
-        middle lateral line ganglion
-        ninth thoracic dorsal root ganglion
-        otic ganglion
-        parasympathetic ganglion
-        paravertebral ganglion
-        parietal ganglion
-        pedal ganglion
-        pelvic ganglion
-        pleural ganglion
-        posterior lateral line ganglion
-        prevertebral ganglion
-        profundal part of trigeminal ganglion complex
-        pterygopalatine ganglion
-        sacral dorsal root ganglion
-        second cervical dorsal root ganglion
-        second lumbar dorsal root ganglion
-        second sacral dorsal root ganglion
-        second thoracic dorsal root ganglion
-        sensory ganglion
-        seventh cervical dorsal root ganglion
-        seventh thoracic dorsal root ganglion
-        sixth cervical dorsal root ganglion
-        sixth thoracic dorsal root ganglion
+        lateral line ganglion	UBERON:2000120
+        lumbar dorsal root ganglion	UBERON:0002836
+        maxillomandibular part of trigeminal ganglion complex	UBERON:0035601
+        mesenteric ganglion	UBERON:0035769
+        middle cervical ganglion	UBERON:0001990
+        middle lateral line ganglion	UBERON:2001483
+        ninth thoracic dorsal root ganglion	UBERON:0002852
+        otic ganglion	UBERON:0003963
+        parasympathetic ganglion	UBERON:0001808
+        paravertebral ganglion	UBERON:0001807
+        parietal ganglion	UBERON:0008940
+        pedal ganglion	UBERON:0008939
+        pelvic ganglion	UBERON:0016508
+        pleural ganglion	UBERON:0008941
+        posterior lateral line ganglion	UBERON:2001314
+        prevertebral ganglion	UBERON:0003964
+        profundal part of trigeminal ganglion complex	UBERON:0035599
+        pterygopalatine ganglion	UBERON:0003962
+        sacral dorsal root ganglion	UBERON:0002837
+        second cervical dorsal root ganglion	UBERON:0002839
+        second lumbar dorsal root ganglion	UBERON:0002856
+        second sacral dorsal root ganglion	UBERON:0002861
+        second thoracic dorsal root ganglion	UBERON:0002846
+        sensory ganglion	UBERON:0001800
+        seventh cervical dorsal root ganglion	UBERON:0002843
+        seventh thoracic dorsal root ganglion	UBERON:0002850
+        sixth cervical dorsal root ganglion	UBERON:0007711
+        sixth thoracic dorsal root ganglion	UBERON:0002849
         spinal ganglion part of peripheral nervous system
-        sublingual ganglion
-        submandibular ganglion
-        superior cervical ganglion
-        superior glossopharyngeal IX ganglion
-        superior mesenteric ganglion
-        superior part of vestibular ganglion
-        superior vagus X ganglion
-        supraesophageal ganglion
-        sympathetic ganglion
-        tenth thoracic dorsal root ganglion
-        third cervical dorsal root ganglion
-        third lumbar dorsal root ganglion
-        third sacral dorsal root ganglion
-        third thoracic dorsal root ganglion
-        thoracic dorsal root ganglion
-        thoracic ganglion
-        trigeminal ganglion
-        trunk ganglion
-        twelfth thoracic dorsal root ganglion
-        vagal ganglion 1
-        vagal ganglion 2
-        vagal ganglion 3
-        vagal ganglion 4
-        vagus X ganglion
-        ventral anterior lateral line ganglion
-        vertebral ganglion
-        vestibular ganglion
-        vestibulo-cochlear VIII ganglion complex
-        vestibulocochlear ganglion
+        sublingual ganglion	UBERON:0005407
+        submandibular ganglion	UBERON:0002059
+        superior cervical ganglion	UBERON:0001989
+        superior glossopharyngeal IX ganglion	UBERON:0005361
+        superior mesenteric ganglion	UBERON:0005479
+        superior part of vestibular ganglion	UBERON:0002825
+        superior vagus X ganglion	UBERON:0005364
+        supraesophageal ganglion	UBERON:6003626
+        sympathetic ganglion	UBERON:0001806
+        tenth thoracic dorsal root ganglion	UBERON:0002853
+        third cervical dorsal root ganglion	UBERON:0002840
+        third lumbar dorsal root ganglion	UBERON:0002858
+        third sacral dorsal root ganglion	UBERON:0002862
+        third thoracic dorsal root ganglion	UBERON:0002847
+        thoracic dorsal root ganglion	UBERON:0002835
+        thoracic ganglion	UBERON:0000961
+        trigeminal ganglion	UBERON:0001675
+        trunk ganglion	UBERON:0007134
+        twelfth thoracic dorsal root ganglion	UBERON:0002855
+        vagal ganglion 1	UBERON:2001302
+        vagal ganglion 2	UBERON:2001303
+        vagal ganglion 3	UBERON:2001304
+        vagal ganglion 4	UBERON:2001305
+        vagus X ganglion	UBERON:0005362
+        ventral anterior lateral line ganglion	UBERON:2001313
+        vertebral ganglion	UBERON:0000408
+        vestibular ganglion	UBERON:0002827
+        vestibulo-cochlear VIII ganglion complex	UBERON:0013498
+        vestibulocochlear ganglion	UBERON:0002827
 Atlas Nomenclature
     Allen Mouse Brainstem
         Abducens nucleus (mba)	MBA:653
@@ -1954,7 +2016,7 @@ Atlas Nomenclature
         2b cerebellar lobule (paxrat)	PAXRAT:2
         2nd and 3rd cerebellar lobules (paxrat)	PAXRAT:3
         2nd cerebellar lobule (paxrat)	PAXRAT:4
-        3rd and 4th cerebellar lobules (paxrat)	PAXRAT:5
+        3rd and 4th cerebellar lobules (paxrat)	PAXRAT:5`
         3rd cerebellar lobule (paxrat)	PAXRAT:6
         3rd ventricle (paxrat)	PAXRAT:7
         4th and 5th cerebellar lobules (paxrat)	PAXRAT:8
@@ -2018,13 +2080,13 @@ Atlas Nomenclature
         alar nucleus (paxrat)	PAXRAT:53
         alveus of the hippocampus (paxrat)	PAXRAT:54
         ambiguus nucleus (paxrat)	PAXRAT:55
-        ambiguus nucleus, compact part (paxrat)
-        ambiguus nucleus, loose part (paxrat)
-        ambiguus nucleus, subcompact part (paxrat)
+        ambiguus nucleus, compact part (paxrat)	PAXRAT:56
+        ambiguus nucleus, loose part (paxrat)	PAXRAT:57
+        ambiguus nucleus, subcompact part (paxrat)	PAXRAT:58
         amygdalohippocampal area (paxrat)	PAXRAT:59
-        amygdalohippocampal area, anterolateral part (paxrat)
-        amygdalohippocampal area, posterolateral (paxrat)
-        amygdalohippocampal area, posteromedial part (paxrat)
+        amygdalohippocampal area, anterolateral part (paxrat)	PAXRAT:60
+        amygdalohippocampal area, posterolateral (paxrat)	PAXRAT:61
+        amygdalohippocampal area, posteromedial part (paxrat)	PAXRAT:62
         amygdaloid fissure (paxrat)	PAXRAT:63
         amygdaloid intramedullary gray (paxrat)	PAXRAT:64
         amygdalopiriform transition area (paxrat)	PAXRAT:65
@@ -2033,87 +2095,75 @@ Atlas Nomenclature
         ansa lenticularis (paxrat)	PAXRAT:68
         ansoparamedian fissure (paxrat)	PAXRAT:69
         anterior amygdaloid area (paxrat)	PAXRAT:70
-        anterior amygdaloid area, dorsal part (paxrat)
-        anterior amygdaloid area, ventral part (paxrat)
+        anterior amygdaloid area, dorsal part (paxrat)	PAXRAT:71
+        anterior amygdaloid area, ventral part (paxrat)	PAXRAT:72
         anterior cerebral artery (paxrat)	PAXRAT:73
         anterior commissural nucleus (paxrat)	PAXRAT:74
         anterior commissure (paxrat)	PAXRAT:75
-        anterior commissure, anterior part (paxrat)
-        anterior commissure, intrabulbar part (paxrat)
-        anterior commissure, posterior part (paxrat)
+        anterior commissure, anterior part (paxrat)	PAXRAT:76
+        anterior commissure, intrabulbar part (paxrat)	PAXRAT:77
+        anterior commissure, posterior part (paxrat)	PAXRAT:78
         anterior cortical amygdaloid nucleus (paxrat)	PAXRAT:79
         anterior hypothalamic area (paxrat)	PAXRAT:80
-        anterior hypothalamic area, anterior part (paxrat)
-        anterior hypothalamic area, central part (paxrat)
-        anterior hypothalamic area, posterior part (paxrat)
+        anterior hypothalamic area, anterior part (paxrat)	PAXRAT:81
+        anterior hypothalamic area, central part (paxrat)	PAXRAT:82
+        anterior hypothalamic area, posterior part (paxrat)	PAXRAT:83
         anterior lobe of pituitary (paxrat)	PAXRAT:84
-        anterior olfactory nucleus, dorsal part (paxrat)
-        anterior olfactory nucleus, external part (paxrat)
-        anterior olfactory nucleus, lateral part (paxrat)
-        anterior olfactory nucleus, medial part (paxrat)
-        anterior olfactory nucleus, posterior part (paxrat)
-        anterior olfactory nucleus, ventral part (paxrat)
-        anterior olfactory nucleus, ventroposterior part (paxrat)
+        anterior olfactory nucleus, dorsal part (paxrat)	PAXRAT:85
+        anterior olfactory nucleus, external part (paxrat)	PAXRAT:86
+        anterior olfactory nucleus, lateral part (paxrat)	PAXRAT:87
+        anterior olfactory nucleus, medial part (paxrat)	PAXRAT:88
+        anterior olfactory nucleus, posterior part (paxrat)	PAXRAT:89
+        anterior olfactory nucleus, ventral part (paxrat)	PAXRAT:90
+        anterior olfactory nucleus, ventroposterior part (paxrat)	PAXRAT:91
         anterior perifornical nucleus (paxrat)	PAXRAT:92
         anterior pretectal nucleus (paxrat)	PAXRAT:93
-        anterior pretectal nucleus, dorsal part (paxrat)
-        anterior pretectal nucleus, ventral part (paxrat)
+        anterior pretectal nucleus, dorsal part (paxrat)	PAXRAT:94
+        anterior pretectal nucleus, ventral part (paxrat)	PAXRAT:95
         anterior spinal artery (paxrat)	PAXRAT:96
         anterior tegmental nucleus (paxrat)	PAXRAT:97
         anterodorsal preoptic nucleus (paxrat)	PAXRAT:98
         anterodorsal thalamic nucleus (paxrat)	PAXRAT:99
         anteromedial thalamic nucleus (paxrat)	PAXRAT:100
-        anteromedial thalamic nucleus, ventral part (paxrat)
-        anterovent thalamic nucleus, dorsomedial part (paxrat)
+        anteromedial thalamic nucleus, ventral part (paxrat)	PAXRAT:101
+        anterovent thalamic nucleus, dorsomedial part (paxrat)	PAXRAT:102
         anteroventral periventricular nucleus (paxrat)	PAXRAT:103
         anteroventral thalamic nucleus (paxrat)	PAXRAT:104
-        anteroventral thalamic nucleus, ventrolateral part (paxrat)
+        anteroventral thalamic nucleus, ventrolateral part (paxrat)	PAXRAT:105
         aqueduct (paxrat)	PAXRAT:106
         arcuate hypothalamic nucleus (paxrat)	PAXRAT:107
-        arcuate hypothalamic nucleus, dorsal part (paxrat)
-        arcuate hypothalamic nucleus, lateral part (paxrat)
-        arcuate hypothalamic nucleus, lateroposterior part (paxrat)
-        arcuate hypothalamic nucleus, medial part (paxrat)
-        arcuate hypothalamic nucleus, medial posterior part (paxrat)
+        arcuate hypothalamic nucleus, dorsal part (paxrat)	PAXRAT:108
+        arcuate hypothalamic nucleus, lateral part (paxrat)	PAXRAT:109
+        arcuate hypothalamic nucleus, lateroposterior part (paxrat)	PAXRAT:110
+        arcuate hypothalamic nucleus, medial part (paxrat)	PAXRAT:111
+        arcuate hypothalamic nucleus, medial posterior part (paxrat)	PAXRAT:112
         area postrema (paxrat)	PAXRAT:113
         artery (paxrat)	PAXRAT:114
         ascending fibers of the facial nerve (paxrat)	PAXRAT:115
         azygous anterior cerebral artery (paxrat)	PAXRAT:116
         azygous pericallosal artery (paxrat)	PAXRAT:117
         basal nucleus (Meynert) (paxrat)	PAXRAT:121
-        basal nucleus, compact part (paxrat)
+        basal nucleus, compact part (paxrat)	PAXRAT:122
         basilar artery (paxrat)	PAXRAT:123
         basolateral amygdaloid nucleus (paxrat)	PAXRAT:124
-        basolateral amygdaloid nucleus, anterior part (paxrat)
-        basolateral amygdaloid nucleus, posterior part (paxrat)
-        basolateral amygdaloid nucleus, ventral part (paxrat)
+        basolateral amygdaloid nucleus, anterior part (paxrat)	PAXRAT:125
+        basolateral amygdaloid nucleus, posterior part (paxrat)	PAXRAT:126
+        basolateral amygdaloid nucleus, ventral part (paxrat)	PAXRAT:127
         basomedial amygdaloid nucleus (paxrat)	PAXRAT:128
-        basomedial amygdaloid nucleus, anterior part (paxrat)
-        basomedial amygdaloid nucleus, posterior part (paxrat)
-        bed nucleus of stria terminalis, fusiform part (paxrat)
-        bed nucleus of stria terminalis, supracapsular division (paxrat)
+        basomedial amygdaloid nucleus, anterior part (paxrat)	PAXRAT:129
+        basomedial amygdaloid nucleus, posterior part (paxrat)	PAXRAT:130
+        bed nucleus of stria terminalis, fusiform part (paxrat)	PAXRAT:131
+        bed nucleus of stria terminalis, supracapsular division (paxrat)	PAXRAT:132
         bed nucleus of stria terminalis, supracapsular division
-        bed nucleus of stria terminalis, supracapsular division
-        bed nucleus of stria terminalis, supracapsular part (paxrat)
+        bed nucleus of stria terminalis, supracapsular part (paxrat)	PAXRAT:135
         bed nucleus of the accessory olfactory tract (paxrat)	PAXRAT:136
         bed nucleus of the anterior commissure (paxrat)	PAXRAT:137
         bed nucleus of the stria terminalis (paxrat)	PAXRAT:138
-        bed nucleus of the stria terminalis, intermediate division (paxrat)
-        bed nucleus of the stria terminalis, intraamygdaloid division (paxrat)
-        bed nucleus of the stria terminalis, lateral division (paxrat)
+        bed nucleus of the stria terminalis, intermediate division (paxrat)	PAXRAT:139
+        bed nucleus of the stria terminalis, intraamygdaloid division (paxrat)	PAXRAT:140
+        bed nucleus of the stria terminalis, lateral division (paxrat)	PAXRAT:141
         bed nucleus of the stria terminalis, lateral division
-        bed nucleus of the stria terminalis, lateral division
-        bed nucleus of the stria terminalis, lateral division
-        bed nucleus of the stria terminalis, lateral division
-        bed nucleus of the stria terminalis, lateral division
-        bed nucleus of the stria terminalis, medial division (paxrat)
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
-        bed nucleus of the stria terminalis, medial division
+        bed nucleus of the stria terminalis, medial division (paxrat)	PAXRAT:147
         bed nucleus of the stria terminalis, medial division
         blood vessel (paxrat)	PAXRAT:156
         brachium of the inferior colliculus (paxrat)	PAXRAT:158
@@ -2128,17 +2178,17 @@ Atlas Nomenclature
         caudoventrolateral reticular nucleus (paxrat)	PAXRAT:171
         cell bridges of the ventral striatum (paxrat)	PAXRAT:172
         central amygdaloid nucleus (paxrat)	PAXRAT:173
-        central amygdaloid nucleus, capsular part (paxrat)
-        central amygdaloid nucleus, lateral division (paxrat)
-        central amygdaloid nucleus, medial division (paxrat)
+        central amygdaloid nucleus, capsular part (paxrat)	PAXRAT:174
+        central amygdaloid nucleus, lateral division (paxrat)	PAXRAT:175
+        central amygdaloid nucleus, medial division (paxrat)	PAXRAT:176
         central canal (paxrat)	PAXRAT:177
         central cervical nucleus of the spinal cord (paxrat)	PAXRAT:178
         central gray (paxrat)	PAXRAT:179
         central gray of the pons (paxrat)	PAXRAT:180
-        central gray, alpha part (paxrat)
-        central gray, beta part (paxrat)
-        central gray, gamma part (paxrat)
-        central gray, nucleus O (paxrat)
+        central gray, alpha part (paxrat)	PAXRAT:181
+        central gray, beta part (paxrat)	PAXRAT:182
+        central gray, gamma part (paxrat)	PAXRAT:183
+        central gray, nucleus O (paxrat)	PAXRAT:184
         central medial thalamic nucleus (paxrat)	PAXRAT:185
         central nucleus of the inferior colliculus (paxrat)	PAXRAT:186
         central tegmental tract (paxrat)	PAXRAT:187
@@ -2149,8 +2199,8 @@ Atlas Nomenclature
         cerebral cortex (paxrat)	PAXRAT:192
         cerebral peduncle (paxrat)	PAXRAT:193
         choroid plexus (paxrat)	PAXRAT:194
-        cingulate cortex, area 1 (paxrat)
-        cingulate cortex, area 2 (paxrat)
+        cingulate cortex, area 1 (paxrat)	PAXRAT:195
+        cingulate cortex, area 2 (paxrat)	PAXRAT:196
         cingulum (paxrat)	PAXRAT:197
         circular nucleus (paxrat)	PAXRAT:198
         claustrum (paxrat)	PAXRAT:199
@@ -2164,15 +2214,15 @@ Atlas Nomenclature
         copula of the pyramis (paxrat)	PAXRAT:207
         corpus callosum (paxrat)	PAXRAT:208
         cortex-amygdala transition zone (paxrat)	PAXRAT:209
-        cortex-amygdala transition zone, layer 1 (paxrat)
+        cortex-amygdala transition zone, layer 1 (paxrat)	PAXRAT:210
         crus 1 of the ansiform lobule (paxrat)	PAXRAT:211
         crus 2 of the ansiform lobule (paxrat)	PAXRAT:212
         cuneate fasciculus (paxrat)	PAXRAT:213
         cuneate nucleus (paxrat)	PAXRAT:214
-        cuneate nucleus, rotundus part (paxrat)
+        cuneate nucleus, rotundus part (paxrat)	PAXRAT:215
         cuneiform nucleus (paxrat)	PAXRAT:216
-        cuneiform nucleus, dorsal part (paxrat)
-        cuneiform nucleus, intermediate part (paxrat)
+        cuneiform nucleus, dorsal part (paxrat)	PAXRAT:217
+        cuneiform nucleus, intermediate part (paxrat)	PAXRAT:218
         int(colummn), ventral part (paxrat)
         decussation of the superior cerebellar peduncle (paxrat)	PAXRAT:220
         decussation of the trapezoid body (paxrat)	PAXRAT:221
@@ -2184,10 +2234,10 @@ Atlas Nomenclature
         dorsal 3rd ventricle (paxrat)	PAXRAT:227
         dorsal acoustic stria (paxrat)	PAXRAT:228
         dorsal cochlear nucleus (paxrat)	PAXRAT:229
-        dorsal cochlear nucleus, deep core (paxrat)
-        dorsal cochlear nucleus, fusiform layer (paxrat)
-        dorsal cochlear nucleus, granular layer (paxrat)
-        dorsal cochlear nucleus, molecular layer (paxrat)
+        dorsal cochlear nucleus, deep core (paxrat)	PAXRAT:230
+        dorsal cochlear nucleus, fusiform layer (paxrat)	PAXRAT:231
+        dorsal cochlear nucleus, granular layer (paxrat)	PAXRAT:232
+        dorsal cochlear nucleus, molecular layer (paxrat)	PAXRAT:233
         dorsal cortex of the inferior colliculus (paxrat)	PAXRAT:234
         dorsal corticospinal tract (paxrat)	PAXRAT:235
         dorsal endopiriform nucleus (paxrat)	PAXRAT:236
@@ -2208,20 +2258,20 @@ Atlas Nomenclature
         dorsal peduncular pontine nucleus (paxrat)	PAXRAT:251
         dorsal periolivary region (paxrat)	PAXRAT:252
         dorsal raphe nucleus (paxrat)	PAXRAT:253
-        dorsal raphe nucleus, caudal part (paxrat)
-        dorsal raphe nucleus, dorsal part (paxrat)
-        dorsal raphe nucleus, interfascicular part (paxrat)
-        dorsal raphe nucleus, lateral part (paxrat)
-        dorsal raphe nucleus, ventral part (paxrat)
-        dorsal raphe nucleus, ventrolateral part (paxrat)
+        dorsal raphe nucleus, caudal part (paxrat)	PAXRAT:254
+        dorsal raphe nucleus, dorsal part (paxrat)	PAXRAT:255
+        dorsal raphe nucleus, interfascicular part (paxrat)	PAXRAT:256
+        dorsal raphe nucleus, lateral part (paxrat)	PAXRAT:257
+        dorsal raphe nucleus, ventral part (paxrat)	PAXRAT:258
+        dorsal raphe nucleus, ventrolateral part (paxrat)	PAXRAT:259
         dorsal spinocerebellar tract (paxrat)	PAXRAT:260
         dorsal spinocerebellar tract and olivocerebellar tract (paxrat)	PAXRAT:261
         dorsal subiculum (paxrat)	PAXRAT:262
         dorsal tegmental bundle (paxrat)	PAXRAT:263
         dorsal tegmental decussation (paxrat)	PAXRAT:264
         dorsal tegmental nucleus (paxrat)	PAXRAT:265
-        dorsal tegmental nucleus, central part (paxrat)
-        dorsal tegmental nucleus, pericentral part (paxrat)
+        dorsal tegmental nucleus, central part (paxrat)	PAXRAT:266
+        dorsal tegmental nucleus, pericentral part (paxrat)	PAXRAT:267
         dorsal tenia tecta (paxrat)	PAXRAT:268
         dorsal tenia tecta layer 1 (paxrat)	PAXRAT:269
         dorsal terminal nucleus of the accessory optic tract (paxrat)	PAXRAT:270
@@ -2233,14 +2283,14 @@ Atlas Nomenclature
         dorsolateral periaqueductal gray (paxrat)	PAXRAT:276
         dorsolateral pontine nucleus (paxrat)	PAXRAT:277
         dorsomedial hypothalamic nucleus (paxrat)	PAXRAT:278
-        dorsomedial hypothalamic nucleus, compact part (paxrat)
-        dorsomedial hypothalamic nucleus, dorsal part (paxrat)
-        dorsomedial hypothalamic nucleus, ventral part (paxrat)
+        dorsomedial hypothalamic nucleus, compact part (paxrat)	PAXRAT:279
+        dorsomedial hypothalamic nucleus, dorsal part (paxrat)	PAXRAT:280
+        dorsomedial hypothalamic nucleus, ventral part (paxrat)	PAXRAT:281
         dorsomedial periaqueductal gray (paxrat)	PAXRAT:282
         dorsomedial pontine nucleus (paxrat)	PAXRAT:283
         dorsomedial spinal trigeminal nucleus (paxrat)	PAXRAT:284
-        dorsomedial spinal trigeminal nucleus, dorsal part (paxrat)
-        dorsomedial spinal trigeminal nucleus, ventral part (paxrat)
+        dorsomedial spinal trigeminal nucleus, dorsal part (paxrat)	PAXRAT:285
+        dorsomedial spinal trigeminal nucleus, ventral part (paxrat)	PAXRAT:286
         dorsomedial tegmental area (paxrat)	PAXRAT:287
         dysgranular insular cortex (paxrat)	PAXRAT:288
         ectorhinal cortex (paxrat)	PAXRAT:289
@@ -2257,7 +2307,7 @@ Atlas Nomenclature
         ethmoid thalamic nucleus (paxrat)	PAXRAT:301
         external capsule (paxrat)	PAXRAT:302
         external cortex of the inferior colliculus (paxrat)	PAXRAT:303
-        external cortex of the inferior colliculus, layer 1 (paxrat)
+        external cortex of the inferior colliculus, layer 1 (paxrat)	PAXRAT:304
         external cuneate nucleus (paxrat)	PAXRAT:305
         external medullary lamina (paxrat)	PAXRAT:306
         external plexiform layer of the accessory olfactory bulb (paxrat)	PAXRAT:307
@@ -2265,13 +2315,13 @@ Atlas Nomenclature
         extreme capsule (paxrat)	PAXRAT:309
         facial nerve (paxrat)	PAXRAT:311
         facial nucleus (paxrat)	PAXRAT:312
-        facial nucleus, dorsal intermediate subnucleus (paxrat)
-        facial nucleus, dorsolateral subnucleus (paxrat)
-        facial nucleus, dorsomedial subnucleus (paxrat)
-        facial nucleus, lateral subnucleus (paxrat)
-        facial nucleus, stylohyoid part (paxrat)
-        facial nucleus, ventral intermediate subnucleus (paxrat)
-        facial nucleus, ventromedial subnucleus (paxrat)
+        facial nucleus, dorsal intermediate subnucleus (paxrat)	PAXRAT:313
+        facial nucleus, dorsolateral subnucleus (paxrat)	PAXRAT:314
+        facial nucleus, dorsomedial subnucleus (paxrat)	PAXRAT:315
+        facial nucleus, lateral subnucleus (paxrat)	PAXRAT:316
+        facial nucleus, stylohyoid part (paxrat)	PAXRAT:317
+        facial nucleus, ventral intermediate subnucleus (paxrat)	PAXRAT:318
+        facial nucleus, ventromedial subnucleus (paxrat)	PAXRAT:319
         fasciculus retroflexus (paxrat)	PAXRAT:320
         fasciola cinereum (paxrat)	PAXRAT:321
         field CA1 of the hippocampus (paxrat)	PAXRAT:322
@@ -2283,14 +2333,14 @@ Atlas Nomenclature
         forceps minor of the corpus callosum (paxrat)	PAXRAT:328
         fornix (paxrat)	PAXRAT:329
         frontal assocn cortex (paxrat)	PAXRAT:330
-        frontal cortex, area 3 (paxrat)
+        frontal cortex, area 3 (paxrat)	PAXRAT:331
         gelatinous layer of the caudal spinal trigeminal nucleus (paxrat)	PAXRAT:332
         gemini hypothalamic nucleus (paxrat)	PAXRAT:333
         genu of the corpus callosum (paxrat)	PAXRAT:334
         genu of the facial nerve (paxrat)	PAXRAT:335
         gigantocellular reticular nucleus (paxrat)	PAXRAT:336
-        gigantocellular reticular nucleus, alpha part (paxrat)
-        gigantocellular reticular nucleus, ventral part (paxrat)
+        gigantocellular reticular nucleus, alpha part (paxrat)	PAXRAT:337
+        gigantocellular reticular nucleus, ventral part (paxrat)	PAXRAT:338
         globus pallidus (paxrat)	PAXRAT:339
         glomerular layer of the accessory olfactory bulb (paxrat)	PAXRAT:340
         glomerular layer of the olfactory bulb (paxrat)	PAXRAT:341
@@ -2307,22 +2357,22 @@ Atlas Nomenclature
         hilus of the dentate gyrus (paxrat)	PAXRAT:352
         hippocampal fissure (paxrat)	PAXRAT:353
         hypoglossal nucleus (paxrat)	PAXRAT:354
-        hypoglossal nucleus, geniohyoid part (paxrat)
+        hypoglossal nucleus, geniohyoid part (paxrat)	PAXRAT:355
         indusium griseum (paxrat)	PAXRAT:356
         inferior cerebellar peduncle (restiform body) (paxrat)	PAXRAT:357
         inferior cerebellar peduncle decussation (paxrat)	PAXRAT:358
         inferior colliculus (paxrat)	PAXRAT:359
         inferior olive (paxrat)	PAXRAT:360
-        inferior olive, beta subnucleus (paxrat)
-        inferior olive, cap of Kooy of the medial nucleus (paxrat)
-        inferior olive, dorsal nucleus (paxrat)
-        inferior olive, dorsomedial cell group (paxrat)
-        inferior olive, medial nucleus (paxrat)
-        inferior olive, principal nucleus (paxrat)
-        inferior olive, subnucleus A of medial nucleus (paxrat)
-        inferior olive, subnucleus B of medial nucleus (paxrat)
-        inferior olive, subnucleus C of medial nucleus (paxrat)
-        inferior olive, ventrolateral protrusion (paxrat)
+        inferior olive, beta subnucleus (paxrat)	PAXRAT:361
+        inferior olive, cap of Kooy of the medial nucleus (paxrat)	PAXRAT:362
+        inferior olive, dorsal nucleus (paxrat)	PAXRAT:363
+        inferior olive, dorsomedial cell group (paxrat)	PAXRAT:364
+        inferior olive, medial nucleus (paxrat)	PAXRAT:365
+        inferior olive, principal nucleus (paxrat)	PAXRAT:366
+        inferior olive, subnucleus A of medial nucleus (paxrat)	PAXRAT:367
+        inferior olive, subnucleus B of medial nucleus (paxrat)	PAXRAT:368
+        inferior olive, subnucleus C of medial nucleus (paxrat)	PAXRAT:369
+        inferior olive, ventrolateral protrusion (paxrat)	PAXRAT:370
         inferior salivatory nucleus (paxrat)	PAXRAT:371
         infracerebellar nucleus (paxrat)	PAXRAT:372
         infralimbic cortex (paxrat)	PAXRAT:373
@@ -2331,7 +2381,7 @@ Atlas Nomenclature
         inner blade of the dentate gyrus (paxrat)	PAXRAT:376
         interanterodorsal thalamic nucleus (paxrat)	PAXRAT:377
         interanteromedial thalamic nucleus (paxrat)	PAXRAT:378
-        intercalated amygdaloid nucleus, main part (paxrat)
+        intercalated amygdaloid nucleus, main part (paxrat)	PAXRAT:379
         intercalated nuclei of the amygdala (paxrat)	PAXRAT:380
         intercalated nucleus of the medulla (paxrat)	PAXRAT:381
         intercollicular nucleus (paxrat)	PAXRAT:382
@@ -2344,7 +2394,7 @@ Atlas Nomenclature
         intermediate lobe of pituitary (paxrat)	PAXRAT:389
         intermediate nucleus of the lateral lemniscus (paxrat)	PAXRAT:390
         intermediate reticular nucleus (paxrat)	PAXRAT:391
-        intermediate reticular nucleus, alpha part (paxrat)
+        intermediate reticular nucleus, alpha part (paxrat)	PAXRAT:392
         intermediate white layer of the superior colliculus (paxrat)	PAXRAT:393
         intermediodorsal thalamic nucleus (paxrat)	PAXRAT:394
         intermediolateral cell column of the spinal cord (paxrat)	PAXRAT:395
@@ -2359,35 +2409,35 @@ Atlas Nomenclature
         interoculomotor nucleus (paxrat)	PAXRAT:404
         interpeduncular fossa (paxrat)	PAXRAT:405
         interpeduncular nucleus (paxrat)	PAXRAT:406
-        interpeduncular nucleus, apical subnucleus (paxrat)
-        interpeduncular nucleus, caudal subnucleus (paxrat)
-        interpeduncular nucleus, dorsolateral subnucleus (paxrat)
-        interpeduncular nucleus, dorsomedial subnucleus (paxrat)
-        interpeduncular nucleus, intermediate subnucleus (paxrat)
-        interpeduncular nucleus, lateral subnucleus (paxrat)
-        interpeduncular nucleus, rostral subnucleus (paxrat)
-        interpeduncular nucleus, rostrolateral subnucleus (paxrat)
+        interpeduncular nucleus, apical subnucleus (paxrat)	PAXRAT:407
+        interpeduncular nucleus, caudal subnucleus (paxrat)	PAXRAT:408
+        interpeduncular nucleus, dorsolateral subnucleus (paxrat)	PAXRAT:409
+        interpeduncular nucleus, dorsomedial subnucleus (paxrat)	PAXRAT:410
+        interpeduncular nucleus, intermediate subnucleus (paxrat)	PAXRAT:411
+        interpeduncular nucleus, lateral subnucleus (paxrat)	PAXRAT:412
+        interpeduncular nucleus, rostral subnucleus (paxrat)	PAXRAT:413
+        interpeduncular nucleus, rostrolateral subnucleus (paxrat)	PAXRAT:414
         interpedunculotegmental tract (paxrat)	PAXRAT:415
-        interposed cerebellar nucleus, anterior part (paxrat)
-        interposed cerebellar nucleus, dorsolateral hump (paxrat)
-        interposed cerebellar nucleus, dorsomedial crest (paxrat)
-        interposed cerebellar nucleus, posterior part (paxrat)
-        interposed cerebellar nucleus, posterior parvicellular part (paxrat)
+        interposed cerebellar nucleus, anterior part (paxrat)	PAXRAT:416
+        interposed cerebellar nucleus, dorsolateral hump (paxrat)	PAXRAT:417
+        interposed cerebellar nucleus, dorsomedial crest (paxrat)	PAXRAT:418
+        interposed cerebellar nucleus, posterior part (paxrat)	PAXRAT:419
+        interposed cerebellar nucleus, posterior parvicellular part (paxrat)	PAXRAT:420
         interstitial nucleus of Cajal (paxrat)	PAXRAT:421
-        interstitial nucleus of Cajal, shell region (paxrat)
-        interstitial nucleus of medial longitudinal fasciculus, greater part (paxrat)
+        interstitial nucleus of Cajal, shell region (paxrat)	PAXRAT:422
+        interstitial nucleus of medial longitudinal fasciculus, greater part (paxrat)	PAXRAT:423
         interstitial nucleus of the decussation of the superior cerebellar peduncle (paxrat)	PAXRAT:424
         interstitial nucleus of the medial longitudinal fasciculus (paxrat)	PAXRAT:425
         interstitial nucleus of the medulla (paxrat)	PAXRAT:426
         interstitial nucleus of the posterior limb of the anterior commissure (paxrat)	PAXRAT:427
-        interstitial nucleus of the posterior limb of the anterior commissure, lateral part (paxrat)
-        interstitial nucleus of the posterior limb of the anterior commissure, medial part (paxrat)
+        interstitial nucleus of the posterior limb of the anterior commissure, lateral part (paxrat)	PAXRAT:428
+        interstitial nucleus of the posterior limb of the anterior commissure, medial part (paxrat)	PAXRAT:429
         interstitial nucleus of the vestibulocochlear nerve (paxrat)	PAXRAT:430
         intertrigeminal nucleus (paxrat)	PAXRAT:431
         interventricular foramen (paxrat)	PAXRAT:432
         intramedullary thalamic area (paxrat)	PAXRAT:433
         islands of Calleja (paxrat)	PAXRAT:434
-        islands of Calleja, major island (paxrat)
+        islands of Calleja, major island (paxrat)	PAXRAT:435
         isthmic periaqueductal gray (paxrat)	PAXRAT:436
         isthmic reticular formation (paxrat)	PAXRAT:437
         juxtaolivary nucleus (paxrat)	PAXRAT:438
@@ -2400,16 +2450,16 @@ Atlas Nomenclature
         lat amygdaloid nucleus (paxrat)	PAXRAT:446
         lateral (dentate) cerebellar nucleus (paxrat)	PAXRAT:447
         lateral accumbens shell (paxrat)	PAXRAT:448
-        lateral amygdaloid nucleus, dorsolateral part (paxrat)
-        lateral amygdaloid nucleus, ventrolateral part (paxrat)
-        lateral amygdaloid nucleus, ventromedial part (paxrat)
-        lateral cerebellar nucleus, parvicellular part (paxrat)
+        lateral amygdaloid nucleus, dorsolateral part (paxrat)	PAXRAT:449
+        lateral amygdaloid nucleus, ventrolateral part (paxrat)	PAXRAT:450
+        lateral amygdaloid nucleus, ventromedial part (paxrat)	PAXRAT:451
+        lateral cerebellar nucleus, parvicellular part (paxrat)	PAXRAT:452
         lateral cervical nucleus of the spinal cord (paxrat)	PAXRAT:453
         lateral entorhinal cortex (paxrat)	PAXRAT:454
         lateral globus pallidus (paxrat)	PAXRAT:455
         lateral habenular nucleus (paxrat)	PAXRAT:456
-        lateral habenular nucleus, lateral part (paxrat)
-        lateral habenular nucleus, medial part (paxrat)
+        lateral habenular nucleus, lateral part (paxrat)	PAXRAT:457
+        lateral habenular nucleus, medial part (paxrat)	PAXRAT:458
         lateral hypothalamic area (paxrat)	PAXRAT:459
         lateral lemniscus (paxrat)	PAXRAT:460
         lateral mammillary nucleus (paxrat)	PAXRAT:461
@@ -2417,34 +2467,34 @@ Atlas Nomenclature
         lateral orbital cortex (paxrat)	PAXRAT:463
         lateral orbitofrontal artery (paxrat)	PAXRAT:464
         lateral parabrachial nucleus (paxrat)	PAXRAT:465
-        lateral parabrachial nucleus, central part (paxrat)
-        lateral parabrachial nucleus, crescent part (paxrat)
-        lateral parabrachial nucleus, dorsal part (paxrat)
-        lateral parabrachial nucleus, external part (paxrat)
-        lateral parabrachial nucleus, internal part (paxrat)
-        lateral parabrachial nucleus, medial part (paxrat)
-        lateral parabrachial nucleus, superior part (paxrat)
-        lateral parabrachial nucleus, ventral part (paxrat)
+        lateral parabrachial nucleus, central part (paxrat)	PAXRAT:466
+        lateral parabrachial nucleus, crescent part (paxrat)	PAXRAT:467
+        lateral parabrachial nucleus, dorsal part (paxrat)	PAXRAT:468
+        lateral parabrachial nucleus, external part (paxrat)	PAXRAT:469
+        lateral parabrachial nucleus, internal part (paxrat)	PAXRAT:470
+        lateral parabrachial nucleus, medial part (paxrat)	PAXRAT:471
+        lateral parabrachial nucleus, superior part (paxrat)	PAXRAT:472
+        lateral parabrachial nucleus, ventral part (paxrat)	PAXRAT:473
         lateral paragigantocellular nucleus (paxrat)	PAXRAT:474
-        lateral paragigantocellular nucleus, alpha part (paxrat)
-        lateral paragigantocellular nucleus, external part (paxrat)
+        lateral paragigantocellular nucleus, alpha part (paxrat)	PAXRAT:475
+        lateral paragigantocellular nucleus, external part (paxrat)	PAXRAT:476
         lateral parietal association cortex (paxrat)	PAXRAT:477
         lateral periaqueductal gray (paxrat)	PAXRAT:478
         lateral pontine nucleus (paxrat)	PAXRAT:479
         lateral posterior thalamic nucleus (paxrat)	PAXRAT:480
-        lateral posterior thalamic nucleus, laterocaudal part (paxrat)
-        lateral posterior thalamic nucleus, laterorostral part (paxrat)
-        lateral posterior thalamic nucleus, mediocaudal part (paxrat)
-        lateral posterior thalamic nucleus, mediorostral part (paxrat)
+        lateral posterior thalamic nucleus, laterocaudal part (paxrat)	PAXRAT:481
+        lateral posterior thalamic nucleus, laterorostral part (paxrat)	PAXRAT:482
+        lateral posterior thalamic nucleus, mediocaudal part (paxrat)	PAXRAT:483
+        lateral posterior thalamic nucleus, mediorostral part (paxrat)	PAXRAT:484
         lateral preoptic area (paxrat)	PAXRAT:485
         lateral recess of the 4th ventricle (paxrat)	PAXRAT:486
         lateral reticular nucleus (paxrat)	PAXRAT:487
-        lateral reticular nucleus, parvicellular part (paxrat)
-        lateral reticular nucleus, subtrigeminal part (paxrat)
+        lateral reticular nucleus, parvicellular part (paxrat)	PAXRAT:488
+        lateral reticular nucleus, subtrigeminal part (paxrat)	PAXRAT:489
         lateral septal nucleus (paxrat)	PAXRAT:490
-        lateral septal nucleus, dorsal part (paxrat)
-        lateral septal nucleus, intermediate part (paxrat)
-        lateral septal nucleus, ventral part (paxrat)
+        lateral septal nucleus, dorsal part (paxrat)	PAXRAT:491
+        lateral septal nucleus, intermediate part (paxrat)	PAXRAT:492
+        lateral septal nucleus, ventral part (paxrat)	PAXRAT:493
         lateral spinal nucleus (paxrat)	PAXRAT:494
         lateral stripe of the striatum (paxrat)	PAXRAT:495
         lateral superior olive (paxrat)	PAXRAT:496
@@ -2455,10 +2505,10 @@ Atlas Nomenclature
         lateral vestibulospinal tract (paxrat)	PAXRAT:501
         lateroanterior hypothalamic nucleus (paxrat)	PAXRAT:502
         laterodorsal tegmental nucleus (paxrat)	PAXRAT:503
-        laterodorsal tegmental nucleus, ventral part (paxrat)
+        laterodorsal tegmental nucleus, ventral part (paxrat)	PAXRAT:504
         laterodorsal thalamic nucleus (paxrat)	PAXRAT:505
-        laterodorsal thalamic nucleus, dorsomedial part (paxrat)
-        laterodorsal thalamic nucleus, ventrolateral part (paxrat)
+        laterodorsal thalamic nucleus, dorsomedial part (paxrat)	PAXRAT:506
+        laterodorsal thalamic nucleus, ventrolateral part (paxrat)	PAXRAT:507
         lateroventral periolivary nucleus (paxrat)	PAXRAT:508
         layer 1 (paxrat)	PAXRAT:509
         layer 1a (paxrat)	PAXRAT:510
@@ -2491,34 +2541,34 @@ Atlas Nomenclature
         medial (fastigial) cerebellar nucleus (paxrat)	PAXRAT:537
         medial accessory oculomotor nucleus (paxrat)	PAXRAT:538
         medial amygdaloid nucleus (paxrat)	PAXRAT:539
-        medial amygdaloid nucleus, ant dorsal (paxrat)
-        medial amygdaloid nucleus, anterior part (paxrat)
-        medial amygdaloid nucleus, anteroventral part (paxrat)
-        medial amygdaloid nucleus, posterodorsal part (paxrat)
-        medial amygdaloid nucleus, posteroventral part (paxrat)
-        medial cerebellar nucleus, caudomedial part (paxrat)
-        medial cerebellar nucleus, dorsolateral protuberance (paxrat)
-        medial cerebellar nucleus, lateral part (paxrat)
+        medial amygdaloid nucleus, ant dorsal (paxrat)	PAXRAT:540
+        medial amygdaloid nucleus, anterior part (paxrat)	PAXRAT:541
+        medial amygdaloid nucleus, anteroventral part (paxrat)	PAXRAT:542
+        medial amygdaloid nucleus, posterodorsal part (paxrat)	PAXRAT:543
+        medial amygdaloid nucleus, posteroventral part (paxrat)	PAXRAT:544
+        medial cerebellar nucleus, caudomedial part (paxrat)	PAXRAT:545
+        medial cerebellar nucleus, dorsolateral protuberance (paxrat)	PAXRAT:546
+        medial cerebellar nucleus, lateral part (paxrat)	PAXRAT:547
         medial corticohypothalamic tract (paxrat)	PAXRAT:548
-        medial eminence, external layer (paxrat)
-        medial eminence, internal layer (paxrat)
+        medial eminence, external layer (paxrat)	PAXRAT:549
+        medial eminence, internal layer (paxrat)	PAXRAT:550
         medial entorhinal cortex (paxrat)	PAXRAT:551
-        medial entorhinal cortex, ventral part (paxrat)
+        medial entorhinal cortex, ventral part (paxrat)	PAXRAT:552
         medial forebrain bundle (paxrat)	PAXRAT:553
-        medial forebrain bundle, ‘a’ component (paxrat)
-        medial forebrain bundle, ‘b’ component (paxrat)
+        medial forebrain bundle, ‘a’ component (paxrat)	PAXRAT:554
+        medial forebrain bundle, ‘b’ component (paxrat)	PAXRAT:555
         medial geniculate nucleus (paxrat)	PAXRAT:556
-        medial geniculate nucleus, dorsal part (paxrat)
-        medial geniculate nucleus, medial part (paxrat)
-        medial geniculate nucleus, ventral part (paxrat)
+        medial geniculate nucleus, dorsal part (paxrat)	PAXRAT:557
+        medial geniculate nucleus, medial part (paxrat)	PAXRAT:558
+        medial geniculate nucleus, ventral part (paxrat)	PAXRAT:559
         medial globus pallidus (paxrat)	PAXRAT:560
         medial habenular nucleus (paxrat)	PAXRAT:561
         medial lemniscus (paxrat)	PAXRAT:562
         medial lemniscus decussation (paxrat)	PAXRAT:563
         medial longitudinal fasciculus (paxrat)	PAXRAT:564
-        medial mammillary nucleus, lateral part (paxrat)
-        medial mammillary nucleus, medial part (paxrat)
-        medial mammillary nucleus, median part (paxrat)
+        medial mammillary nucleus, lateral part (paxrat)	PAXRAT:565
+        medial mammillary nucleus, medial part (paxrat)	PAXRAT:566
+        medial mammillary nucleus, median part (paxrat)	PAXRAT:567
         medial orbital cortex (paxrat)	PAXRAT:568
         medial orbitofrontal artery (paxrat)	PAXRAT:569
         medial parabrachial nucleus (paxrat)	PAXRAT:570
@@ -2528,9 +2578,9 @@ Atlas Nomenclature
         medial pontine nucleus (paxrat)	PAXRAT:574
         medial preoptic area (paxrat)	PAXRAT:575
         medial preoptic nucleus (paxrat)	PAXRAT:576
-        medial preoptic nucleus, central part (paxrat)
-        medial preoptic nucleus, lateral part (paxrat)
-        medial preoptic nucleus, medial part (paxrat)
+        medial preoptic nucleus, central part (paxrat)	PAXRAT:577
+        medial preoptic nucleus, lateral part (paxrat)	PAXRAT:578
+        medial preoptic nucleus, medial part (paxrat)	PAXRAT:579
         medial pretectal nucleus (paxrat)	PAXRAT:580
         medial rostroventrolateral medulla (paxrat)	PAXRAT:581
         medial septal nucleus (paxrat)	PAXRAT:582
@@ -2538,20 +2588,20 @@ Atlas Nomenclature
         medial terminal nucleus of the accessory optic tract (paxrat)	PAXRAT:584
         medial tuberal nucleus (paxrat)	PAXRAT:585
         medial vestibular nucleus (paxrat)	PAXRAT:586
-        medial vestibular nucleus, magnocellular part (paxrat)
-        medial vestibular nucleus, parvicellular part (paxrat)
+        medial vestibular nucleus, magnocellular part (paxrat)	PAXRAT:587
+        medial vestibular nucleus, parvicellular part (paxrat)	PAXRAT:588
         median accessory nucleus of the medulla (paxrat)	PAXRAT:589
         median eminence (paxrat)	PAXRAT:590
         median preoptic nucleus (paxrat)	PAXRAT:591
         median raphe nucleus (paxrat)	PAXRAT:592
         mediodorsal thalamic nucleus (paxrat)	PAXRAT:593
-        mediodorsal thalamic nucleus, central part (paxrat)
-        mediodorsal thalamic nucleus, lateral part (paxrat)
-        mediodorsal thalamic nucleus, medial part (paxrat)
-        mediodorsal thalamic nucleus, paralaminar part (paxrat)
+        mediodorsal thalamic nucleus, central part (paxrat)	PAXRAT:594
+        mediodorsal thalamic nucleus, lateral part (paxrat)	PAXRAT:595
+        mediodorsal thalamic nucleus, medial part (paxrat)	PAXRAT:596
+        mediodorsal thalamic nucleus, paralaminar part (paxrat)	PAXRAT:597
         medioventral periolivary nucleus (paxrat)	PAXRAT:598
-        medullary reticular nucleus, dorsal part (paxrat)
-        medullary reticular nucleus, ventral part (paxrat)
+        medullary reticular nucleus, dorsal part (paxrat)	PAXRAT:599
+        medullary reticular nucleus, ventral part (paxrat)	PAXRAT:600
         mesencephalic reticular formation (paxrat)	PAXRAT:601
         mesencephalic trigeminal nucleus (paxrat)	PAXRAT:602
         mesencephalic trigeminal tract (paxrat)	PAXRAT:603
@@ -2566,13 +2616,13 @@ Atlas Nomenclature
         molecular layer of the subiculum (paxrat)	PAXRAT:612
         motor root of the trigeminal nerve (paxrat)	PAXRAT:613
         motor trigeminal nucleus (paxrat)	PAXRAT:614
-        motor trigeminal nucleus, anterior digastric part (paxrat)
-        motor trigeminal nucleus, dorsolateral part (paxrat)
-        motor trigeminal nucleus, masseter part (paxrat)
-        motor trigeminal nucleus, mylohyoid part (paxrat)
-        motor trigeminal nucleus, temporalis part (paxrat)
-        motor trigeminal nucleus, tensor tympani part (paxrat)
-        motor trigeminal nucleus, ventromedial part (paxrat)
+        motor trigeminal nucleus, anterior digastric part (paxrat)	PAXRAT:615
+        motor trigeminal nucleus, dorsolateral part (paxrat)	PAXRAT:616
+        motor trigeminal nucleus, masseter part (paxrat)	PAXRAT:617
+        motor trigeminal nucleus, mylohyoid part (paxrat)	PAXRAT:618
+        motor trigeminal nucleus, temporalis part (paxrat)	PAXRAT:619
+        motor trigeminal nucleus, tensor tympani part (paxrat)	PAXRAT:620
+        motor trigeminal nucleus, ventromedial part (paxrat)	PAXRAT:621
         navicular nucleus of the basal forebrain (paxrat)	PAXRAT:622
         nervus intermedius component of the facial nerve (paxrat)	PAXRAT:623
         nigrostriatal bundle (paxrat)	PAXRAT:624
@@ -2591,27 +2641,27 @@ Atlas Nomenclature
         nucleus of the fields of Forel (paxrat)	PAXRAT:634
         nucleus of the horizontal limb of the diagonal band (paxrat)	PAXRAT:635
         nucleus of the lateral olfactory tract (paxrat)	PAXRAT:636
-        nucleus of the lateral olfactory tract, layer 1 (paxrat)
+        nucleus of the lateral olfactory tract, layer 1 (paxrat)	PAXRAT:637
         nucleus of the optic tract (paxrat)	PAXRAT:638
         nucleus of the posterior commissure (paxrat)	PAXRAT:639
         nucleus of the solitary tract (paxrat)	PAXRAT:640
-        nucleus of the solitary tract, central part (paxrat)
-        nucleus of the solitary tract, commissural part (paxrat)
-        nucleus of the solitary tract, dorsomedial part (paxrat)
-        nucleus of the solitary tract, gelatinous part (paxrat)
-        nucleus of the solitary tract, intermediate part (paxrat)
-        nucleus of the solitary tract, interstitial part (paxrat)
-        nucleus of the solitary tract, lateral part (paxrat)
-        nucleus of the solitary tract, medial part (paxrat)
-        nucleus of the solitary tract, rostrolateral part (paxrat)
-        nucleus of the solitary tract, ventrolateral part (paxrat)
+        nucleus of the solitary tract, central part (paxrat)	PAXRAT:641
+        nucleus of the solitary tract, commissural part (paxrat)	PAXRAT:642
+        nucleus of the solitary tract, dorsomedial part (paxrat)	PAXRAT:643
+        nucleus of the solitary tract, gelatinous part (paxrat)	PAXRAT:644
+        nucleus of the solitary tract, intermediate part (paxrat)	PAXRAT:645
+        nucleus of the solitary tract, interstitial part (paxrat)	PAXRAT:646
+        nucleus of the solitary tract, lateral part (paxrat)	PAXRAT:647
+        nucleus of the solitary tract, medial part (paxrat)	PAXRAT:648
+        nucleus of the solitary tract, rostrolateral part (paxrat)	PAXRAT:649
+        nucleus of the solitary tract, ventrolateral part (paxrat)	PAXRAT:650
         nucleus of the stria medullaris (paxrat)	PAXRAT:651
         nucleus of the trapezoid body (paxrat)	PAXRAT:652
         nucleus of the vertical limb of the diagonal band (paxrat)	PAXRAT:653
         obex (paxrat)	PAXRAT:657
         oculomotor nerve (paxrat)	PAXRAT:658
         oculomotor nucleus (paxrat)	PAXRAT:659
-        oculomotor nucleus, parvicellular part (paxrat)
+        oculomotor nucleus, parvicellular part (paxrat)	PAXRAT:660
         olfactory bulb (paxrat)	PAXRAT:661
         olfactory nerve layer (paxrat)	PAXRAT:662
         olfactory tubercle (paxrat)	PAXRAT:663
@@ -2633,7 +2683,7 @@ Atlas Nomenclature
         paraabducens nucleus (paxrat)	PAXRAT:679
         parabigeminal nucleus (paxrat)	PAXRAT:680
         parabrachial nucleus (paxrat)	PAXRAT:681
-        parabrachial nucleus, waist part (paxrat)
+        parabrachial nucleus, waist part (paxrat)	PAXRAT:682
         parabrachial pigmented nucleus of the VTA (paxrat)	PAXRAT:683
         paracentral thalamic nucleus (paxrat)	PAXRAT:684
         paracochlear glial substance (paxrat)	PAXRAT:685
@@ -2661,32 +2711,30 @@ Atlas Nomenclature
         paratrigeminal nucleus (paxrat)	PAXRAT:707
         paratrochlear nucleus (paxrat)	PAXRAT:708
         paraventricular hypoth nucleus (paxrat)	PAXRAT:709
-        paraventricular hypothalamic nucleus, anterior magnocellular part (paxrat)
-        paraventricular hypothalamic nucleus, anterior parvicellular part (paxrat)
-        paraventricular hypothalamic nucleus, dorsal cap (paxrat)
-        paraventricular hypothalamic nucleus, lateral magnocellular part (paxrat)
-        paraventricular hypothalamic nucleus, medial magnocellular part (paxrat)
-        paraventricular hypothalamic nucleus, medial parvicellular part (paxrat)
-        paraventricular hypothalamic nucleus, posterior part (paxrat)
-        paraventricular hypothalamic nucleus, ventral part (paxrat)
+        paraventricular hypothalamic nucleus, anterior magnocellular part (paxrat)	PAXRAT:710
+        paraventricular hypothalamic nucleus, anterior parvicellular part (paxrat)	PAXRAT:711
+        paraventricular hypothalamic nucleus, dorsal cap (paxrat)	PAXRAT:712
+        paraventricular hypothalamic nucleus, lateral magnocellular part (paxrat)	PAXRAT:713
+        paraventricular hypothalamic nucleus, medial magnocellular part (paxrat)	PAXRAT:714
+        paraventricular hypothalamic nucleus, medial parvicellular part (paxrat)	PAXRAT:715
+        paraventricular hypothalamic nucleus, posterior part (paxrat)	PAXRAT:716
+        paraventricular hypothalamic nucleus, ventral part (paxrat)	PAXRAT:717
         paraventricular thalamic nucleus (paxrat)	PAXRAT:718
-        paraventricular thalamic nucleus, anterior part (paxrat)
-        paraventricular thalamic nucleus, posterior part (paxrat)
+        paraventricular thalamic nucleus, anterior part (paxrat)	PAXRAT:719
+        paraventricular thalamic nucleus, posterior part (paxrat)	PAXRAT:720
         paraxiphoid nucleus of thalamus (paxrat)	PAXRAT:721
         parietal association cortex (paxrat)	PAXRAT:722
         parietal cortex, posterior area
-        parietal cortex, posterior area
-        parietal cortex, posterior area
         parvicellular motor trigeminal nucleus (paxrat)	PAXRAT:726
         parvicellular reticular nucleus (paxrat)	PAXRAT:727
-        parvicellular reticular nucleus, alpha part (paxrat)
+        parvicellular reticular nucleus, alpha part (paxrat)	PAXRAT:728
         peduncular part of lateral hypothalamus (paxrat)	PAXRAT:729
         pedunculopontine tegmental nucleus (paxrat)	PAXRAT:730
         periaqueductal gray (paxrat)	PAXRAT:731
         perifacial zone (paxrat)	PAXRAT:732
         perifornical nucleus (paxrat)	PAXRAT:733
         perifornical part of lateral hypothalamus (paxrat)	PAXRAT:734
-        perilemniscal nucleus, ventral part (paxrat)
+        perilemniscal nucleus, ventral part (paxrat)	PAXRAT:735
         periolivary horn (paxrat)	PAXRAT:736
         peripeduncular nucleus (paxrat)	PAXRAT:737
         perirhinal cortex (paxrat)	PAXRAT:738
@@ -2694,23 +2742,23 @@ Atlas Nomenclature
         periventricular fiber system (paxrat)	PAXRAT:740
         periventricular gray (paxrat)	PAXRAT:741
         periventricular hypothalamic nucleus (paxrat)	PAXRAT:742
-        periventricular hypothalamic nucleus, anterior parvicellular part (paxrat)
+        periventricular hypothalamic nucleus, anterior parvicellular part (paxrat)	PAXRAT:743
         pineal gland (paxrat)	PAXRAT:744
         pineal recess (paxrat)	PAXRAT:745
         pineal stalk (paxrat)	PAXRAT:746
         piriform cortex (paxrat)	PAXRAT:747
-        piriform cortex, layer 1 (paxrat)
+        piriform cortex, layer 1 (paxrat)	PAXRAT:748
         pleomorphic part of periaqueductai gray (paxrat)	PAXRAT:749
         polymorph layer of the dentate gyrus (paxrat)	PAXRAT:750
         pontine nuclei (paxrat)	PAXRAT:751
         pontine raphe nucleus (paxrat)	PAXRAT:752
-        pontine reticular nucleus, caudal part (paxrat)
-        pontine reticular nucleus, oral part (paxrat)
-        pontine reticular nucleus, ventral part (paxrat)
+        pontine reticular nucleus, caudal part (paxrat)	PAXRAT:753
+        pontine reticular nucleus, oral part (paxrat)	PAXRAT:754
+        pontine reticular nucleus, ventral part (paxrat)	PAXRAT:755
         posterior cerebral artery (paxrat)	PAXRAT:756
         posterior commissure (paxrat)	PAXRAT:757
         posterior hypothalamic area (paxrat)	PAXRAT:758
-        posterior hypothalamic area, dorsal part (paxrat)
+        posterior hypothalamic area, dorsal part (paxrat)	PAXRAT:759
         posterior hypothalamic nucleus (paxrat)	PAXRAT:760
         posterior intralaminar thalamic nucleus (paxrat)	PAXRAT:761
         posterior limitans thalamic nucleus (paxrat)	PAXRAT:762
@@ -2718,7 +2766,7 @@ Atlas Nomenclature
         posterior pretectal nucleus (paxrat)	PAXRAT:764
         posterior superior fissure (paxrat)	PAXRAT:765
         posterior thalamic nuclear group (paxrat)	PAXRAT:766
-        posterior thalamic nuclear group, triangular part (paxrat)
+        posterior thalamic nuclear group, triangular part (paxrat)	PAXRAT:767
         posterodorsal preoptic nucleus (paxrat)	PAXRAT:768
         posterodorsal raphe nucleus (paxrat)	PAXRAT:769
         posterodorsal tegmental nucleus (paxrat)	PAXRAT:770
@@ -2735,8 +2783,8 @@ Atlas Nomenclature
         precuneiform area (paxrat)	PAXRAT:781
         predorsal bundle (paxrat)	PAXRAT:782
         prelimbic cortex (paxrat)	PAXRAT:783
-        premammillary nucleus, dorsal part (paxrat)
-        premammillary nucleus, ventral part (paxrat)
+        premammillary nucleus, dorsal part (paxrat)	PAXRAT:784
+        premammillary nucleus, ventral part (paxrat)	PAXRAT:785
         preoptic recess of the 3rd ventricle (paxrat)	PAXRAT:786
         prepositus nucleus (paxrat)	PAXRAT:787
         prepyramidal fissure (paxrat)	PAXRAT:788
@@ -2746,23 +2794,23 @@ Atlas Nomenclature
         primary fissure (paxrat)	PAXRAT:792
         primary motor cortex (paxrat)	PAXRAT:793
         primary somatosensory cortex (paxrat)	PAXRAT:794
-        primary somatosensory cortex, barrel field (paxrat)
-        primary somatosensory cortex, dysgranular zone (paxrat)
-        primary somatosensory cortex, forelimb region (paxrat)
-        primary somatosensory cortex, hindlimb region (paxrat)
-        primary somatosensory cortex, jaw region (paxrat)
+        primary somatosensory cortex, barrel field (paxrat)	PAXRAT:795
+        primary somatosensory cortex, dysgranular zone (paxrat)	PAXRAT:796
+        primary somatosensory cortex, forelimb region (paxrat)	PAXRAT:797
+        primary somatosensory cortex, hindlimb region (paxrat)	PAXRAT:798
+        primary somatosensory cortex, jaw region (paxrat)	PAXRAT:799
         primary somatosensory cortex, jaw region
-        primary somatosensory cortex, oral dysgranular zone (paxrat)
-        primary somatosensory cortex, shoulder region (paxrat)
-        primary somatosensory cortex, trunk region (paxrat)
-        primary somatosensory cortex, upper lip region (paxrat)
+        primary somatosensory cortex, oral dysgranular zone (paxrat)	PAXRAT:801
+        primary somatosensory cortex, shoulder region (paxrat)	PAXRAT:802
+        primary somatosensory cortex, trunk region (paxrat)	PAXRAT:803
+        primary somatosensory cortex, upper lip region (paxrat)	PAXRAT:804
         primary visual cortex (paxrat)	PAXRAT:805
-        primary visual cortex, binocular area (paxrat)
-        primary visual cortex, monocular area (paxrat)
+        primary visual cortex, binocular area (paxrat)	PAXRAT:806
+        primary visual cortex, monocular area (paxrat)	PAXRAT:807
         principal mammillary tract (paxrat)	PAXRAT:808
         principal sensory trigeminal nucleus (paxrat)	PAXRAT:809
-        principal sensory trigeminal nucleus, dorsomedial part (paxrat)
-        principal sensory trigeminal nucleus, ventrolateral part (paxrat)
+        principal sensory trigeminal nucleus, dorsomedial part (paxrat)	PAXRAT:810
+        principal sensory trigeminal nucleus, ventrolateral part (paxrat)	PAXRAT:811
         prosubiculum (paxrat)	PAXRAT:813
         pyramidal cell layer of the hippocampus (paxrat)	PAXRAT:815
         pyramidal decussation (paxrat)	PAXRAT:816
@@ -2778,18 +2826,18 @@ Atlas Nomenclature
         raphe pallidus nucleus (paxrat)	PAXRAT:826
         recess of the inferior colliculus (paxrat)	PAXRAT:827
         red nucleus (paxrat)	PAXRAT:828
-        red nucleus, lateral horn (paxrat)
-        red nucleus, magnocellular part (paxrat)
-        red nucleus, parvicellular part (paxrat)
+        red nucleus, lateral horn (paxrat)	PAXRAT:829
+        red nucleus, magnocellular part (paxrat)	PAXRAT:830
+        red nucleus, parvicellular part (paxrat)	PAXRAT:831
         region where VA and VL overlap (paxrat)	PAXRAT:832
         reticluostrial nucleus (paxrat)	PAXRAT:833
         reticular thalamic nucleus (paxrat)	PAXRAT:834
         reticulotegmental nucleus of the pons (paxrat)	PAXRAT:835
-        reticulotegmental nucleus of the pons, lateral part (paxrat)
-        reticulotegmental nucleus of the pons, pericentral part (paxrat)
+        reticulotegmental nucleus of the pons, lateral part (paxrat)	PAXRAT:836
+        reticulotegmental nucleus of the pons, pericentral part (paxrat)	PAXRAT:837
         retroambiguus nucleus (paxrat)	PAXRAT:838
         retrochiasmatic area (paxrat)	PAXRAT:839
-        retrochiasmatic area, lateral part (paxrat)
+        retrochiasmatic area, lateral part (paxrat)	PAXRAT:840
         retroendopiriform nucleus (paxrat)	PAXRAT:841
         retroethmoid nucleus (paxrat)	PAXRAT:842
         retrolemniscal nucleus (paxrat)	PAXRAT:843
@@ -2799,9 +2847,9 @@ Atlas Nomenclature
         retrosplenial agranular cortex (paxrat)	PAXRAT:847
         retrosplenial dysgranular cortex (paxrat)	PAXRAT:848
         retrosplenial granular cortex (paxrat)	PAXRAT:849
-        retrosplenial granular cortex, a region (paxrat)
-        retrosplenial granular cortex, b region (paxrat)
-        retrosplenial granular cortex, c region (paxrat)
+        retrosplenial granular cortex, a region (paxrat)	PAXRAT:850
+        retrosplenial granular cortex, b region (paxrat)	PAXRAT:851
+        retrosplenial granular cortex, c region (paxrat)	PAXRAT:852
         retrouniens area (paxrat)	PAXRAT:853
         reuniens thalamic nucleus (paxrat)	PAXRAT:854
         rhabdoid nucleus (paxrat)	PAXRAT:855
@@ -2838,13 +2886,13 @@ Atlas Nomenclature
         simple lobule A (paxrat)	PAXRAT:886
         simple lobule B (paxrat)	PAXRAT:887
         simplex fissure (paxrat)	PAXRAT:888
-        solitary nucleus, dorsolateral part (paxrat)
-        solitary nucleus, ventral part (paxrat)
+        solitary nucleus, dorsolateral part (paxrat)	PAXRAT:889
+        solitary nucleus, ventral part (paxrat)	PAXRAT:890
         solitary tract (paxrat)	PAXRAT:891
         sphenoid nucleus (paxrat)	PAXRAT:892
-        spinal trigeminal nucleus, caudal part (paxrat)
-        spinal trigeminal nucleus, interpolar part (paxrat)
-        spinal trigeminal nucleus, oral part (paxrat)
+        spinal trigeminal nucleus, caudal part (paxrat)	PAXRAT:893
+        spinal trigeminal nucleus, interpolar part (paxrat)	PAXRAT:894
+        spinal trigeminal nucleus, oral part (paxrat)	PAXRAT:895
         spinal trigeminal tract (paxrat)	PAXRAT:896
         spinal vestibular nucleus (paxrat)	PAXRAT:897
         spinocerebellar tract (paxrat)	PAXRAT:898
@@ -2857,47 +2905,46 @@ Atlas Nomenclature
         striohypothalamic nucleus (paxrat)	PAXRAT:905
         subbrachial nucleus (paxrat)	PAXRAT:906
         subcoeruleus nucleus (paxrat)	PAXRAT:907
-        subcoeruleus nucleus, alpha part (paxrat)
-        subcoeruleus nucleus, dorsal part (paxrat)
-        subcoeruleus nucleus, ventral part (paxrat)
+        subcoeruleus nucleus, alpha part (paxrat)	PAXRAT:908
+        subcoeruleus nucleus, dorsal part (paxrat)	PAXRAT:909
+        subcoeruleus nucleus, ventral part (paxrat)	PAXRAT:910
         subcommissural nucleus (paxrat)	PAXRAT:911
         subcommissural organ (paxrat)	PAXRAT:912
         subfornical organ (paxrat)	PAXRAT:913
         subgeniculate nucleus (paxrat)	PAXRAT:914
         subiculum (paxrat)	PAXRAT:915
-        subiculum, transition area (paxrat)
+        subiculum, transition area (paxrat)	PAXRAT:916
         subincertal nucleus (paxrat)	PAXRAT:917
         sublenticular extended amygdala (paxrat)	PAXRAT:918
-        sublenticular extended amygdala, central part (paxrat)
-        sublenticular extended amygdala, medial part (paxrat)
+        sublenticular extended amygdala, central part (paxrat)	PAXRAT:919
+        sublenticular extended amygdala, medial part (paxrat)	PAXRAT:920
         submammillothalamic nucleus (paxrat)	PAXRAT:921
         submedius thalamic nucleus (paxrat)	PAXRAT:922
-        submedius thalamic nucleus, dorsal part (paxrat)
-        submedius thalamic nucleus, ventral part (paxrat)
+        submedius thalamic nucleus, dorsal part (paxrat)	PAXRAT:923
+        submedius thalamic nucleus, ventral part (paxrat)	PAXRAT:924
         subparafascicular thalamic nucleus (paxrat)	PAXRAT:925
-        subparafascicular thalamic nucleus, parvicellular part (paxrat)
+        subparafascicular thalamic nucleus, parvicellular part (paxrat)	PAXRAT:926
         subparaventricular zone of the hypothalamus (paxrat)	PAXRAT:927
         subpeduncular tegmental nucleus (paxrat)	PAXRAT:928
         subpostrema area (paxrat)	PAXRAT:929
         substantia innominata (paxrat)	PAXRAT:930
-        substantia innominata, basal part (paxrat)
-        substantia innominata, dorsal part (paxrat)
-        substantia innominata, ventral part (paxrat)
+        substantia innominata, basal part (paxrat)	PAXRAT:931
+        substantia innominata, dorsal part (paxrat)	PAXRAT:932
+        substantia innominata, ventral part (paxrat)	PAXRAT:933
         substantia nigra compact part (paxrat)	PAXRAT:934
         substantia nigra compact part dorsal tier (paxrat)	PAXRAT:935
         substantia nigra, compact part
         substantia nigra, compacta part
-        substantia nigra, lateral part (paxrat)
-        substantia nigra, medial part (paxrat)
-        substantia nigra, reticular part (paxrat)
-        substantia nigra, reticular part
+        substantia nigra, lateral part (paxrat)	PAXRAT:938
+        substantia nigra, medial part (paxrat)	PAXRAT:939
+        substantia nigra, reticular part (paxrat)	PAXRAT:940
         substantia nigra, reticular part
         subthalamic nucleus (paxrat)	PAXRAT:943
         sulcus limitans (paxrat)	PAXRAT:944
         superficial glial zone of the cochlear nuclei (paxrat)	PAXRAT:945
         superficial gray layer of the superior colliculus (paxrat)	PAXRAT:946
         superior cerebellar peduncle (brachium con, cochlear nucleijunctivum) (paxrat)	PAXRAT:947
-        superior cerebellar peduncle, descending limb (paxrat)
+        superior cerebellar peduncle, descending limb (paxrat)	PAXRAT:948
         superior colliculus (paxrat)	PAXRAT:949
         superior medullary velum (paxrat)	PAXRAT:950
         superior paraolivary nucleus (paxrat)	PAXRAT:951
@@ -2905,26 +2952,26 @@ Atlas Nomenclature
         superior thalamic radiation (paxrat)	PAXRAT:953
         superior vestibular nucleus (paxrat)	PAXRAT:954
         suprachiasmatic nucleus (paxrat)	PAXRAT:955
-        suprachiasmatic nucleus, dorsolateral part (paxrat)
-        suprachiasmatic nucleus, ventromedial part (paxrat)
+        suprachiasmatic nucleus, dorsolateral part (paxrat)	PAXRAT:956
+        suprachiasmatic nucleus, ventromedial part (paxrat)	PAXRAT:957
         suprageniculate thalamic nucleus (paxrat)	PAXRAT:958
         supragenual nucleus (paxrat)	PAXRAT:959
         supramammillary decussation (paxrat)	PAXRAT:960
         supramammillary nucleus (paxrat)	PAXRAT:961
-        supramammillary nucleus, lateral part (paxrat)
-        supramammillary nucleus, medial part (paxrat)
+        supramammillary nucleus, lateral part (paxrat)	PAXRAT:962
+        supramammillary nucleus, medial part (paxrat)	PAXRAT:963
         supraoculomotor cap (paxrat)	PAXRAT:964
         supraoculomotor periaqueductal gray (paxrat)	PAXRAT:965
         supraoptic decussation (paxrat)	PAXRAT:966
         supraoptic nucleus (paxrat)	PAXRAT:967
-        supraoptic nucleus, retrochiasmatic part (paxrat)
+        supraoptic nucleus, retrochiasmatic part (paxrat)	PAXRAT:968
         supratrigeminal nucleus (paxrat)	PAXRAT:969
         tectospinal tract (paxrat)	PAXRAT:970
         temporal associatin cortex (paxrat)	PAXRAT:971
         terete hypothalamic nucleus (paxrat)	PAXRAT:972
         transverse fibers of the pons (paxrat)	PAXRAT:973
         trapezoid body (paxrat)	PAXRAT:974
-        triangular nucleus, lateral lemniscus (paxrat)
+        triangular nucleus, lateral lemniscus (paxrat)	PAXRAT:975
         triangular septal nucleus (paxrat)	PAXRAT:976
         trigeminal ganglion (paxrat)	PAXRAT:977
         trigeminal transition zone (paxrat)	PAXRAT:978
@@ -2947,25 +2994,25 @@ Atlas Nomenclature
         ventral amygdalofugal pathway (paxrat)	PAXRAT:995
         ventral anterior thalamic nucleus (paxrat)	PAXRAT:996
         ventral cochlear nucleus (paxrat)	PAXRAT:997
-        ventral cochlear nucleus, anterior part (paxrat)
-        ventral cochlear nucleus, capsular part (paxrat)
-        ventral cochlear nucleus, granule cell layer (paxrat)
-        ventral cochlear nucleus, posterior part (paxrat)
+        ventral cochlear nucleus, anterior part (paxrat)	PAXRAT:998
+        ventral cochlear nucleus, capsular part (paxrat)	PAXRAT:999
+        ventral cochlear nucleus, granule cell layer (paxrat)	PAXRAT:1000
+        ventral cochlear nucleus, posterior part (paxrat)	PAXRAT:1001
         ventral cochlear nucleus, posterior part
         ventral endopiriform nucleus (paxrat)	PAXRAT:1003
         ventral geniculate nucleus (paxrat)	PAXRAT:1004
         ventral hippocampal commissure (paxrat)	PAXRAT:1005
         ventral intermediate entorhinal cortex (paxrat)	PAXRAT:1006
         ventral lateral geniculate nucleus (paxrat)	PAXRAT:1007
-        ventral lateral geniculate nucleus, magnocellular part (paxrat)
-        ventral lateral geniculate nucleus, parvicellular part (paxrat)
+        ventral lateral geniculate nucleus, magnocellular part (paxrat)	PAXRAT:1008
+        ventral lateral geniculate nucleus, parvicellular part (paxrat)	PAXRAT:1009
         ventral linear nucleus of the thalamus (paxrat)	PAXRAT:1010
         ventral nucleus of the lat lemniscus (paxrat)	PAXRAT:1011
         ventral orbital cortex (paxrat)	PAXRAT:1012
         ventral pallidum (paxrat)	PAXRAT:1013
         ventral part of claustrum (paxrat)	PAXRAT:1014
         ventral peduncular pontine nucleus (paxrat)	PAXRAT:1015
-        ventral posterior nucleus of the thalamus, parvicellular part (paxrat)
+        ventral posterior nucleus of the thalamus, parvicellular part (paxrat)	PAXRAT:1016
         ventral posterolateral thalamic nucleus (paxrat)	PAXRAT:1017
         ventral posteromedial thalamic nucleus (paxrat)	PAXRAT:1018
         ventral reuniens thalamic nucleus (paxrat)	PAXRAT:1019
@@ -2973,11 +3020,11 @@ Atlas Nomenclature
         ventral spinocerebellar tract decussation (paxrat)	PAXRAT:1021
         ventral subiculum (paxrat)	PAXRAT:1022
         ventral tegmental area (paxrat)	PAXRAT:1023
-        ventral tegmental area, rostral part (paxrat)
+        ventral tegmental area, rostral part (paxrat)	PAXRAT:1024
         ventral tegmental decussation (paxrat)	PAXRAT:1025
         ventral tegmental nucleus (paxrat)	PAXRAT:1026
         ventral tenia tecta (paxrat)	PAXRAT:1027
-        ventral tenia tecta, layer 1 (paxrat)
+        ventral tenia tecta, layer 1 (paxrat)	PAXRAT:1028
         ventral tuberomammillary nucleus (paxrat)	PAXRAT:1029
         ventrolateral hypothalamic nucleus (paxrat)	PAXRAT:1030
         ventrolateral hypothalamic tract (paxrat)	PAXRAT:1031
@@ -2986,10 +3033,10 @@ Atlas Nomenclature
         ventrolateral tegmental area (paxrat)	PAXRAT:1034
         ventrolateral thalamic nucleus (paxrat)	PAXRAT:1035
         ventromedial hypothalamic nucleus (paxrat)	PAXRAT:1036
-        ventromedial hypothalamic nucleus, anterior part (paxrat)
-        ventromedial hypothalamic nucleus, central part (paxrat)
-        ventromedial hypothalamic nucleus, dorsomedial part (paxrat)
-        ventromedial hypothalamic nucleus, ventrolateral part (paxrat)
+        ventromedial hypothalamic nucleus, anterior part (paxrat)	PAXRAT:1037
+        ventromedial hypothalamic nucleus, central part (paxrat)	PAXRAT:1038
+        ventromedial hypothalamic nucleus, dorsomedial part (paxrat)	PAXRAT:1039
+        ventromedial hypothalamic nucleus, ventrolateral part (paxrat)	PAXRAT:1040
         ventromedial nucleus of the hypothalamus shell (paxrat)	PAXRAT:1041
         ventromedial pontine nucleus (paxrat)	PAXRAT:1042
         ventromedial preoptic nucleus (paxrat)	PAXRAT:1043
@@ -3006,10 +3053,10 @@ Atlas Nomenclature
         vomeronasal nerve layer (paxrat)	PAXRAT:1054
         xiphoid thalamic nucleus (paxrat)	PAXRAT:1055
         zona incerta (paxrat)	PAXRAT:1056
-        zona incerta, caudal part (paxrat)
-        zona incerta, dorsal part (paxrat)
-        zona incerta, rostral part (paxrat)
-        zona incerta, ventral part (paxrat)
+        zona incerta, caudal part (paxrat)	PAXRAT:1057
+        zona incerta, dorsal part (paxrat)	PAXRAT:1058
+        zona incerta, rostral part (paxrat)	PAXRAT:1059
+        zona incerta, ventral part (paxrat)	PAXRAT:1060
         zona limitans (paxrat)	PAXRAT:1061
         zonal layer of the superior colliculus (paxrat)	PAXRAT:1062
     Berman Cat Brainstem
@@ -3216,487 +3263,471 @@ Atlas Nomenclature
         ventral tegmental nucleus (bercat)	BERCAT:200
         ventrobasal complex (bercat)	BERCAT:201
         zona incerta (bercat)	BERCAT:202
-Cranial nerves
-    Abducens nerve
+Cranial nerves	UBERON:0001785
+    Abducens nerve	UBERON:0001646
     Accessory nerve
-    Facial nerve
-    Glossopharyngeal nerve
-    Hypoglossal nerve
-    Oculomotor nerve
-    Olfactory nerve
-    Terminal nerve
-    Trigeminal nerve
-    Trochlear nerve
-    Vagus nerve
-    Vestibulocochlear nerve
-    Vomeronasal nerve
-    abducens nerve
-    accessory XI nerve cranial component
-    accessory XI nerve
-    anterior lateral line nerve
-    anterodorsal lateral line nerve (ADLLN)
-    anteroventral lateral line nerve (AVLLN)
-    chorda tympani branch of facial nerve
-    cranial nerve
-    dorsal anterior lateral line nerve
-    facial nerve
-    glossopharyngeal nerve
-    hypoglossal nerve
-    jugal ramule
-    lateral line nerve
-    middle lateral line nerve (MLLN)
-    middle lateral line nerve
-    oculomotor nerve
-    olfactory nerve
-    oral ramule
-    posterior lateral line nerve (PLLN)
-    posterior lateral line nerve
-    preopercular ramule
-    ramulus suprabranchialis anterior
-    ramulus suprabranchialis posterior
-    ramus auricularis of the vagus nerve
-    ramus buccal
-    ramus lateral
-    ramus mandibularis externus
-    ramus palatinus
-    ramus superficial ophthalmic
-    ramus supraotic
-    ramus ventral
-    terminal nerve
-    trigeminal nerve
-    trochlear nerve
-    vagus nerve
-    ventral anterior lateral line nerve
-    vestibulocochlear nerve
-    vomeronasal nerve
+    Facial nerve	UBERON:0001647
+    Glossopharyngeal nerve	UBERON:0001649
+    Hypoglossal nerve	UBERON:0001650
+    Oculomotor nerve	UBERON:0001643
+    Olfactory nerve	UBERON:0001579
+    Terminal nerve	UBERON:0002924
+    Trigeminal nerve	UBERON:0001645
+    Trochlear nerve	UBERON:0001644
+    Vagus nerve	UBERON:0001759
+    Vestibulocochlear nerve	UBERON:0001648
+    Vomeronasal nerve	UBERON:0009121
+    abducens nerve	UBERON:0001646
+    accessory XI nerve cranial component	UBERON:0009673
+    accessory XI nerve	UBERON:0002019
+    anterior lateral line nerve	UBERON:2000425
+    anterodorsal lateral line nerve (ADLLN)	UBERON:3010105
+    anteroventral lateral line nerve (AVLLN)	UBERON:3010109
+    chorda tympani branch of facial nerve	UBERON:0009675
+    cranial nerve	UBERON:0001785
+    dorsal anterior lateral line nerve	UBERON:2001480
+    facial nerve	UBERON:0001647
+    glossopharyngeal nerve	UBERON:0001649
+    hypoglossal nerve	UBERON:0001650
+    jugal ramule	UBERON:3010778
+    lateral line nerve	UBERON:0008906
+    middle lateral line nerve (MLLN)	UBERON:3010126
+    middle lateral line nerve	UBERON:2001482
+    oculomotor nerve	UBERON:0001643
+    olfactory nerve	UBERON:0001579
+    oral ramule	UBERON:3010794
+    posterior lateral line nerve (PLLN)	UBERON:3010115
+    posterior lateral line nerve	UBERON:2000175
+    preopercular ramule	UBERON:3010795
+    ramulus suprabranchialis anterior	UBERON:3010798
+    ramulus suprabranchialis posterior	UBERON:3010799
+    ramus auricularis of the vagus nerve	UBERON:3010740
+    ramus buccal	UBERON:3010759
+    ramus lateral	UBERON:3010801
+    ramus mandibularis externus	UBERON:3010765
+    ramus palatinus	UBERON:3010722
+    ramus superficial ophthalmic	UBERON:3010757
+    ramus supraotic	UBERON:3010796
+    ramus ventral	UBERON:3010804
+    terminal nerve	UBERON:0002924
+    trigeminal nerve	UBERON:0001645
+    trochlear nerve	UBERON:0001644
+    vagus nerve	UBERON:0001759
+    ventral anterior lateral line nerve	UBERON:2001481
+    vestibulocochlear nerve	UBERON:0001648
+    vomeronasal nerve	UBERON:0009121
 Nerves (also includes Cranial)
-    abdomen nerve
-    abducens nerve
-    accessory XI nerve cranial component
-    accessory XI nerve spinal component
-    accessory XI nerve
-    ampullary nerve
-    ankle nerve
-    ansa cervicalis
-    anterior lateral line nerve
-    anterior superior alveolar nerve
-    anterodorsal lateral line nerve (ADLLN)
-    anteroventral lateral line nerve (AVLLN)
-    arm nerve
-    autonomic nerve
-    axillary nerve
-    back nerve
-    buccal nerve
-    carotid sinus nerve
-    chest nerve
-    cholinergic enteric nerve
-    chorda tympani branch of facial nerve
-    coccygeal nerve
-    cochlear nerve
-    common fibular nerve
-    communicating branch of spinal nerve
-    cranial nerve
-    deep fibular nerve
-    deep temporal nerve
-    digastric branch of facial nerve
-    digit nerve of manus
-    dorsal anterior lateral line nerve
-    dorsal nerve of clitoris
-    dorsal nerve of penis
-    dorsal nerve root of cervical spinal cord
-    dorsal ramus of spinal nerve
-    dorsal root of spinal cord
-    efferent nerve
-    enteric nerve
-    eyelid nerve
-    facial nerve
-    femoral nerve
-    fibular nerve
-    forelimb nerve
-    frontal nerve (branch of ophthalmic)
-    glossopharyngeal nerve
-    great auricular nerve
-    greater splanchnic nerve
-    hindlimb nerve
-    hyoideomandibular nerve
-    hypoglossal nerve
-    inferior alveolar nerve
-    inferior branch of oculomotor nerve
-    inferior palpebral branch of infra-orbital nerve
-    infra-orbital nerve
-    intercostal nerve
-    iris nerve
-    jugal ramule
-    lacrimal nerve
-    laryngeal nerve
-    laryngeus ventralis
-    lateral line nerve
-    lateral plantar nerve
-    lateral pterygoid nerve
-    least splanchnic nerve
-    left recurrent laryngeal nerve
-    leg nerve
-    lesser splanchnic nerve
-    limb nerve
-    lingual nerve
-    long ciliary nerve
-    lower arm nerve
-    lower eyelid nerve
-    lower leg nerve
-    lumbar nerve
-    lumbar splanchnic nerve
-    mandibular nerve
-    manus nerve
-    masseteric nerve
-    maxillary nerve
-    medial plantar nerve
-    median nerve
-    meningeal branch of mandibular nerve
-    meningeal branch of spinal nerve
-    mental nerve
-    middle lateral line nerve (MLLN)
-    middle lateral line nerve
-    musculocutaneous nerve
-    mylohyoid nerve
-    nasociliary nerve
-    nasopalatine nerve
-    neck nerve
-    nerve innervating pinna
-    nerve of abdominal segment
-    nerve of cervical vertebra
-    nerve of clitoris
-    nerve of head region
-    nerve of penis
-    nerve of thoracic segment
-    nerve of trunk region
-    nerve of tympanic cavity
-    nerve to quadratus femoris
-    nerve to stylohyoid from facial nerve
-    nerve to stylopharyngeus from glossopharyngeal nerve
-    nerve
-    obturator nerve
-    oculomotor nerve
-    olfactory nerve
-    ophthalmic nerve
-    oral ramule
-    palmar branch of median nerve
-    palpebral branch of infra-orbital nerve
-    parasympathetic nerve
-    pedal digit nerve
-    pelvic splanchnic nerve
-    pelvis nerve
-    perineal nerve
-    pes nerve
-    pharyngeal branch of vagus nerve
-    phrenic nerve
-    plantar nerve
-    posterior auricular nerve
-    posterior lateral line nerve (PLLN)
-    posterior lateral line nerve
-    posterior superior alveolar nerve
-    preopercular ramule
-    pterygopalatine nerve
-    pudendal nerve
-    radial nerve
-    ramule palatinus
-    ramules cutaneous
-    ramules nasalis lateralis
-    ramulus suprabranchialis anterior
-    ramulus suprabranchialis posterior
-    ramus auricularis of the vagus nerve
-    ramus buccal
-    ramus lateral
-    ramus mandibularis externus
-    ramus nasalis internus
-    ramus palatinus
-    ramus superficial ophthalmic
-    ramus supraotic
-    ramus ventral
-    recurrent laryngeal nerve
-    right recurrent laryngeal nerve
-    sacral nerve
-    sacral splanchnic nerve
-    saphenous nerve
-    sciatic nerve
-    segmental spinal nerve
-    sensory nerve
-    short ciliary nerve
-    shoulder nerve
-    spinal nerve
-    splanchnic nerve
-    superficial fibular nerve
-    superior alveolar nerve
-    superior branch of oculomotor nerve
-    superior laryngeal nerve
-    sural nerve
-    sympathetic nerve
-    terminal nerve
-    thoracic cavity nerve
-    thoracic nerve
-    thoracic splanchnic nerve
-    tibial nerve
-    trigeminal nerve
-    trochlear nerve
-    trunk maxillary-mandibularis
-    tympanic nerve
-    ulnar nerve
-    upper arm nerve
-    upper eyelid nerve
-    upper leg nerve
-    vagus nerve
-    ventral anterior lateral line nerve
-    ventral nerve root of cervical spinal cord
-    ventral ramus of spinal nerve
-    ventral root of spinal cord
-    vestibular nerve
-    vestibulocochlear nerve
-    vidian nerve
-    vomeronasal nerve
-    wrist nerve
-    zygomaticotemporal nerve
+    abdomen nerve	UBERON:0003429
+    abducens nerve	UBERON:0001646
+    accessory XI nerve cranial component	UBERON:0009673
+    accessory XI nerve spinal component	UBERON:0009674
+    accessory XI nerve	UBERON:0002019
+    ampullary nerve	UBERON:2005144
+    ankle nerve	UBERON:0003446
+    ansa cervicalis	UBERON:0005430
+    anterior lateral line nerve	UBERON:2000425
+    anterior superior alveolar nerve	UBERON:0035646
+    anterodorsal lateral line nerve (ADLLN)	UBERON:3010105
+    anteroventral lateral line nerve (AVLLN)	UBERON:3010109
+    arm nerve	UBERON:0003433
+    autonomic nerve	UBERON:0034728
+    axillary nerve	UBERON:0001493
+    back nerve	UBERON:0004215
+    buccal nerve	UBERON:0013646
+    carotid sinus nerve	UBERON:0009009
+    chest nerve	UBERON:0003432
+    cholinergic enteric nerve	UBERON:0010406
+    chorda tympani branch of facial nerve	UBERON:0009675
+    coccygeal nerve	UBERON:0009629
+    cochlear nerve	UBERON:0004727
+    common fibular nerve	UBERON:0001324
+    communicating branch of spinal nerve	UBERON:0017642
+    cranial nerve	UBERON:0001785
+    deep fibular nerve	UBERON:0035207
+    deep temporal nerve	UBERON:0011327
+    digastric branch of facial nerve	UBERON:0011315
+    digit nerve of manus	UBERON:0003447
+    dorsal anterior lateral line nerve	UBERON:2001480
+    dorsal nerve of clitoris	UBERON:0019198
+    dorsal nerve of penis	UBERON:0019197
+    dorsal nerve root of cervical spinal cord	UBERON:0014635
+    dorsal ramus of spinal nerve	UBERON:0006839
+    dorsal root of spinal cord	UBERON:0002261
+    efferent nerve	UBERON:0006798
+    enteric nerve	UBERON:0010380
+    eyelid nerve	UBERON:0003437
+    facial nerve	UBERON:0001647
+    femoral nerve	UBERON:0001267
+    fibular nerve	UBERON:0035652
+    forelimb nerve	UBERON:0003441
+    frontal nerve (branch of ophthalmic)	UBERON:0000942
+    glossopharyngeal nerve	UBERON:0001649
+    great auricular nerve	UBERON:0008833
+    greater splanchnic nerve	UBERON:0018680
+    hindlimb nerve	UBERON:0003442
+    hyoideomandibular nerve	UBERON:2002010
+    hypoglossal nerve	UBERON:0001650
+    inferior alveolar nerve	UBERON:0018405
+    inferior branch of oculomotor nerve	UBERON:0015161
+    inferior palpebral branch of infra-orbital nerve	UBERON:0022296
+    infra-orbital nerve	UBERON:0018408
+    intercostal nerve	UBERON:0003727
+    iris nerve	UBERON:0003438
+    jugal ramule	UBERON:3010778
+    lacrimal nerve	UBERON:0011096
+    laryngeal nerve	UBERON:0035642
+    laryngeus ventralis	UBERON:3010764
+    lateral line nerve	UBERON:0008906
+    lateral plantar nerve	UBERON:0035110
+    lateral pterygoid nerve	UBERON:0013647
+    least splanchnic nerve	UBERON:0001964
+    left recurrent laryngeal nerve	UBERON:0011766
+    leg nerve	UBERON:0003431
+    lesser splanchnic nerve	UBERON:0018681
+    limb nerve	UBERON:0003440
+    lingual nerve	UBERON:0003721
+    long ciliary nerve	UBERON:0022301
+    lower arm nerve	UBERON:0004216
+    lower eyelid nerve	UBERON:0022298
+    lower leg nerve	UBERON:0004218
+    lumbar nerve	UBERON:0009624
+    lumbar splanchnic nerve	UBERON:0018683
+    mandibular nerve	UBERON:0000375
+    manus nerve	UBERON:0003448
+    masseteric nerve	UBERON:0011321
+    maxillary nerve	UBERON:0000377
+    medial plantar nerve	UBERON:0035111
+    median nerve	UBERON:0001148
+    meningeal branch of mandibular nerve	UBERON:0036143
+    meningeal branch of spinal nerve	UBERON:0017641
+    mental nerve	UBERON:0018406
+    middle lateral line nerve (MLLN)	UBERON:3010126
+    middle lateral line nerve	UBERON:2001482
+    musculocutaneous nerve	UBERON:0003724
+    mylohyoid nerve	UBERON:0011322
+    nasociliary nerve	UBERON:0022300
+    nasopalatine nerve	UBERON:0008810
+    neck nerve	UBERON:0003430
+    nerve innervating pinna	UBERON:0035648
+    nerve of abdominal segment	UBERON:0003825
+    nerve of cervical vertebra	UBERON:0000962
+    nerve of clitoris	UBERON:0035650
+    nerve of head region	UBERON:0011779
+    nerve of penis	UBERON:0035649
+    nerve of thoracic segment	UBERON:0003824
+    nerve of trunk region	UBERON:0003439
+    nerve of tympanic cavity	UBERON:0004116
+    nerve to quadratus femoris	UBERON:0034984
+    nerve to stylohyoid from facial nerve	UBERON:0011316
+    nerve to stylopharyngeus from glossopharyngeal nerve	UBERON:0011317
+    nerve	UBERON:0001021
+    obturator nerve	UBERON:0005465
+    oculomotor nerve	UBERON:0001643
+    olfactory nerve	UBERON:0001579
+    ophthalmic nerve	UBERON:0000348
+    oral ramule	UBERON:3010794
+    palmar branch of median nerve	UBERON:0016430
+    palpebral branch of infra-orbital nerve	UBERON:0022297
+    parasympathetic nerve	UBERON:0004293
+    pedal digit nerve	UBERON:0003435
+    pelvic splanchnic nerve	UBERON:0018675
+    pelvis nerve	UBERON:0003444
+    perineal nerve	UBERON:0011391
+    pes nerve	UBERON:0003445
+    pharyngeal branch of vagus nerve	UBERON:0000929
+    phrenic nerve	UBERON:0001884
+    plantar nerve	UBERON:0035109
+    posterior auricular nerve	UBERON:0035647
+    posterior lateral line nerve (PLLN)	UBERON:3010115
+    posterior lateral line nerve	UBERON:2000175
+    posterior superior alveolar nerve	UBERON:0018401
+    preopercular ramule	UBERON:3010795
+    pterygopalatine nerve	UBERON:0034725
+    pudendal nerve	UBERON:0011390
+    radial nerve	UBERON:0001492
+    ramule palatinus	UBERON:3010665
+    ramules cutaneous	UBERON:3010668
+    ramules nasalis lateralis	UBERON:3010652
+    ramulus suprabranchialis anterior	UBERON:3010798
+    ramulus suprabranchialis posterior	UBERON:3010799
+    ramus auricularis of the vagus nerve	UBERON:3010740
+    ramus buccal	UBERON:3010759
+    ramus lateral	UBERON:3010801
+    ramus mandibularis externus	UBERON:3010765
+    ramus nasalis internus	UBERON:3010661
+    ramus palatinus	UBERON:3010722
+    ramus superficial ophthalmic	UBERON:3010757
+    ramus supraotic	UBERON:3010796
+    ramus ventral	UBERON:3010804
+    recurrent laryngeal nerve	UBERON:0003716
+    right recurrent laryngeal nerve	UBERON:0011766
+    sacral nerve	UBERON:0009625
+    sacral splanchnic nerve	UBERON:0018684
+    saphenous nerve	UBERON:0002475
+    sciatic nerve	UBERON:0001322
+    segmental spinal nerve	UBERON:0005197
+    sensory nerve	UBERON:0001027
+    short ciliary nerve	UBERON:0022302
+    shoulder nerve	UBERON:0003436
+    spinal nerve	UBERON:0001780
+    splanchnic nerve	UBERON:0003715
+    superficial fibular nerve	UBERON:0035526
+    superior alveolar nerve	UBERON:0018398
+    superior branch of oculomotor nerve	UBERON:0015162
+    superior laryngeal nerve	UBERON:0011326
+    sural nerve	UBERON:0015488
+    sympathetic nerve	UBERON:0034729
+    terminal nerve	UBERON:0002924
+    thoracic cavity nerve	UBERON:0003443
+    thoracic nerve	UBERON:0003726
+    thoracic splanchnic nerve	UBERON:0018679
+    tibial nerve	UBERON:0001323
+    trigeminal nerve	UBERON:0001645
+    trochlear nerve	UBERON:0001644
+    trunk maxillary-mandibularis	UBERON:3010669
+    tympanic nerve	UBERON:0036216
+    ulnar nerve	UBERON:0001494
+    upper arm nerve	UBERON:0004217
+    upper eyelid nerve	UBERON:0022299
+    upper leg nerve	UBERON:0004214
+    vagus nerve	UBERON:0001759
+    ventral anterior lateral line nerve	UBERON:2001481
+    ventral nerve root of cervical spinal cord	UBERON:0014634
+    ventral ramus of spinal nerve	UBERON:0006838
+    ventral root of spinal cord	UBERON:0002260
+    vestibular nerve	UBERON:0001648
+    vestibulocochlear nerve	UBERON:0001648
+    vidian nerve	UBERON:0018412
+    vomeronasal nerve	UBERON:0009121
+    wrist nerve	UBERON:0003434
+    zygomaticotemporal nerve	UBERON:0036264
 UBERON
-    retrorubral area of midbrain reticular nucleus
-    cerebral peduncle
-    oculomotor nerve root
-    midbrain tegmentum
-    dorsal tegmental decussation
-    lateral pes lemniscus
-    linear nucleus
-    dorsal longitudinal fasciculus of midbrain
-    nucleus of posterior commissure
-    rostral interstitial nucleus of medial longitudinal fasciculus
-    oculomotor nuclear complex
-    dorsal oculomotor nucleus
-    central oculomotor nucleus
-    medial oculomotor nucleus
-    parvocellular oculomotor nucleus
-    ventral oculomotor nucleus
-    caudal central oculomotor nucleus
-    anterior median oculomotor nucleus
-    intermediate oculomotor nucleus
-    dentatothalamic tract
-    oculomotor nerve root
-    interstitial nucleus of Cajal
-    midbrain reticular formation
-    pedunculopontine tegmental nucleus
-    subcuneiform nucleus
-    cuneiform nucleus
-    central tegmental tract of midbrain
-    midbrain raphe nuclei
-    pallidotegmental fasciculus
-    dorsal tegmental nucleus
-    red nucleus
-    parvocellular part of red nucleus
-    magnocellular part of red nucleus
-    central gray substance of midbrain
-    root of trochlear nerve
-    mesencephalic nucleus of trigeminal nerve
-    peripeduncular nucleus
-    spinothalamic tract of midbrain
-    decussation of superior cerebellar peduncle
-    medial lemniscus of midbrain
-    habenulo-interpeduncular tract of midbrain
-    dorsal raphe nucleus
-    ventral nucleus of posterior commissure
-    ventral tegmental area
-    ventral tegmental decussation
-    medial pes lemniscus
-    ventral tegmental nucleus
-    medial longitudinal fasciculus of midbrain
-    mesencephalic tract of trigeminal nerve
-    interpeduncular nucleus
-    trochlear nucleus
-    substantia nigra
-    substantia nigra pars compacta
-    substantia nigra pars reticulata
-    substantia nigra pars lateralis
-    cerebral crus
-    midbrain tectum
-    posterior commissure
-    corticotectal tract
-    inferior colliculus
-    root of trochlear nerve
-    subcommissural organ
-    parabigeminal nucleus
-    pretectal region
-    olivary pretectal nucleus
-    nucleus of optic tract
-    principal pretectal nucleus
-    sublentiform nucleus
-    anterior pretectal nucleus
-    superior colliculus
-    pons
-    root of abducens nerve
-    basal part of pons
-    middle cerebellar peduncle
-    longitudinal pontine fibers
-    transverse pontine fibers
-    pontine nuclear group
-    vestibulocochlear nerve root
-    pontine tegmentum
-    oral part of spinal trigeminal nucleus
-    central tegmental tract of pons
-    intermediate acoustic stria
-    decussation of trochlear nerve
-    vestibulocerebellar tract
-    abducens nucleus
-    trapezoid body
-    medial parabrachial nucleus
-    spinothalamic tract of pons
-    motor root of trigeminal nerve
-    dorsal trigeminal tract
-    dorsal longitudinal fasciculus of pons
-    nucleus subceruleus
-    lateral parabrachial nucleus
-    dorsal nucleus of lateral lemniscus
-    medial longitudinal fasciculus of pons
-    tectopontine tract
-    principal sensory nucleus of trigeminal nerve
-    medial lemniscus of pons
-    facial motor nucleus
-    dorsal acoustic stria
-    ventral acoustic stria
-    pontine reticular formation
-    uncinate fasciculus
-    lateral lemniscus
-    spinal trigeminal tract of pons
-    superior salivatory nucleus
-    pontine raphe nucleus
-    superior medullary velum
-    locus ceruleus
-    root of abducens nerve
-    motor nucleus of trigeminal nerve
-    superior olivary complex
-    ventral trigeminal tract
-    ventral nucleus of lateral lemniscus
-    trigeminal nerve root
-    facial nerve root
-    medulla oblongata
-    inferior olivary complex
-    medullary raphe nuclear complex
-    accessory nerve root
-    nucleus of solitary tract
-    hypoglossal nerve root
-    vestibular nuclear complex
-    medullary reticular formation
-    root of vagus nerve
-    white matter of medulla oblongata
-    cochlear nuclear complex
-    glossopharyngeal nerve root
-    accessory XI nerve nucleus
-    accessory cuneate nucleus
-    accessory nerve fiber bundle
-    anterior spinocerebellar tract
-    anteroventral cochlear nucleus
-    area postrema
-    caudal part of spinal trigeminal nucleus
-    central gray substance of medulla
-    central medullary reticular nuclear complex
-    cochlear nuclear complex
-    cochlear nucleus
-    commissural nucleus of vagus nerve
-    cuneate fasciculus of medulla
-    cuneate nucleus
-    cuneocerebellar tract
-    decussation of medial lemniscus
-    dorsal cap of Kooy
-    dorsal cochlear nucleus pyramidal cell layer
-    dorsal cochlear nucleus
-    dorsal external arcuate fiber bundle
-    dorsal longitudinal fasciculus of medulla
-    dorsal motor nucleus of vagus nerve
-    dorsal paramedian reticular nucleus
-    dorsolateral fasciculus of medulla
-    dorsolateral subnucleus of solitary tract
-    dorsomedial subnucleus of solitary tract
-    floor plate of medulla oblongata
-    glossopharyngeal lobe
-    glossopharyngeal nerve fiber bundle
-    glossopharyngeal nerve root
-    gracile fasciculus of medulla
-    granular cell layer of dorsal cochlear nucleus
-    hilum of inferior olivary complex
-    hypoglossal nerve root
-    inferior cerebellar peduncle
-    inferior olivary commissure
-    inferior olivary complex
-    inferior olivary nucleus
-    inferior olive beta nucleus
-    inferior reticular formation
-    inferior salivatory nucleus
-    intermediate reticular formation
-    intermediate reticular nucleus
-    internal arcuate fiber bundle
-    interpolar part of spinal trigeminal nucleus
-    juxtarestiform body
-    lateral corticospinal tract
-    lateral medullary reticular complex
-    lateral pericuneate nucleus
-    lateral reticular nucleus
-    medial accessory olive
-    medial column
-    medial lemniscus of medulla
-    medial longitudinal fasciculus of medulla
-    medial pericuneate nucleus
-    medial subnucleus of solitary tract
-    medulla oblongata anterior median fissure
-    medulla oblongata sulcus limitans
-    medulla oblongata
-    medullary anterior horn
-    medullary raphe nuclear complex
-    medullary reticular formation
-    midline column
-    molecular layer of dorsal cochlear nucleus
-    nucleus ambiguus
-    nucleus intercalatus
-    nucleus lateralis valvulae
-    nucleus of medial longitudinal fasciculus of medulla
-    nucleus of medulla oblongata
-    nucleus of solitary tract
-    nucleus prepositus
-    nucleus raphe magnus
-    nucleus raphe obscurus
-    nucleus raphe pallidus
-    olivary body
-    olivocerebellar tract
-    oral part of spinal trigeminal nucleus
-    paramedian medullary reticular complex
-    parasolitary nucleus
-    paratrigeminal nucleus
-    parvicellular subnucleus of solitary tract
-    parvocellular reticular nucleus
-    peritrigeminal nucleus
-    pontobulbar nucleus
-    posteroventral cochlear nucleus
-    pre-Botzinger complex
-    predorsal bundle
-    pyramid of medulla oblongata
-    pyramidal decussation
-    retrotrapezoid nucleus
-    roof plate of medulla oblongata
-    root of abducens nerve
-    rostral portion of the medial accessory olive
-    rostral ventrolateral medulla
-    rubrospinal tract
-    sensory root of facial nerve
-    solitary tract nuclear complex
-    solitary tract
-    spinal nucleus of trigeminal nerve
-    spinal trigeminal tract of medulla
-    spino-olivary tract
-    spinothalamic tract of medulla
-    sublingual nucleus
-    superior reticular formation medial column
-    superior reticular formation
-    superior salivatory nucleus
-    supraspinal nucleus
-    tectobulbar tract
-    vagal nerve fiber bundle
-    vallecula of cerebellum
-    ventral cochlear nucleus
-    ventral external arcuate fiber bundle
-    ventrolateral sulcus of medulla oblongata
-    vestibular nuclear complex
-    vestibular nucleus
-    visceromotor column
-    white matter of medulla oblongata
+    retrorubral area of midbrain reticular nucleus	UBERON:0011172
+    cerebral peduncle	UBERON:0002623
+    oculomotor nerve root	UBERON:0002668
+    midbrain tegmentum	UBERON:0001943
+    dorsal tegmental decussation	UBERON:0003009
+    lateral pes lemniscus	UBERON:0003010
+    linear nucleus	UBERON:0002557
+    dorsal longitudinal fasciculus of midbrain	UBERON:0003005
+    nucleus of posterior commissure	UBERON:0002711
+    rostral interstitial nucleus of medial longitudinal fasciculus	UBERON:0002717
+    oculomotor nuclear complex	UBERON:0001715
+    dorsal oculomotor nucleus	UBERON:0002964
+    central oculomotor nucleus	UBERON:0002960
+    medial oculomotor nucleus	UBERON:0002975
+    parvocellular oculomotor nucleus	UBERON:0002141
+    ventral oculomotor nucleus	UBERON:0002934
+    caudal central oculomotor nucleus	UBERON:0002957
+    anterior median oculomotor nucleus	UBERON:0002701
+    intermediate oculomotor nucleus	UBERON:0002970
+    dentatothalamic tract	UBERON:0002594
+    interstitial nucleus of Cajal	UBERON:0002551
+    midbrain reticular formation	UBERON:0002639
+    pedunculopontine tegmental nucleus	UBERON:0002142
+    subcuneiform nucleus	UBERON:0002700
+    cuneiform nucleus	UBERON:0002696
+    central tegmental tract of midbrain	UBERON:0002585
+    midbrain raphe nuclei	UBERON:0007412
+    pallidotegmental fasciculus	UBERON:0002671
+    dorsal tegmental nucleus	UBERON:0002143
+    red nucleus	UBERON:0001947
+    parvocellular part of red nucleus	UBERON:0002938
+    magnocellular part of red nucleus	UBERON:0002936
+    central gray substance of midbrain	UBERON:0003040
+    root of trochlear nerve	UBERON:0002618
+    mesencephalic nucleus of trigeminal nerve	UBERON:0001718
+    peripeduncular nucleus	UBERON:0002144
+    spinothalamic tract of midbrain	UBERON:0002609
+    decussation of superior cerebellar peduncle	UBERON:0002588
+    medial lemniscus of midbrain	UBERON:0002658
+    habenulo-interpeduncular tract of midbrain	UBERON:0023740
+    dorsal raphe nucleus	UBERON:0002043
+    ventral nucleus of posterior commissure	UBERON:0002044
+    ventral tegmental area	UBERON:0002691
+    ventral tegmental decussation	UBERON:0002615
+    medial pes lemniscus	UBERON:0002662
+    ventral tegmental nucleus	UBERON:0002438
+    medial longitudinal fasciculus of midbrain	UBERON:0002660
+    mesencephalic tract of trigeminal nerve	UBERON:0002666
+    interpeduncular nucleus	UBERON:0002145
+    trochlear nucleus	UBERON:0002722
+    substantia nigra	UBERON:0002038
+    substantia nigra pars compacta	UBERON:0001965
+    substantia nigra pars reticulata	UBERON:0001966
+    substantia nigra pars lateralis	UBERON:0002995
+    cerebral crus	UBERON:0002631
+    midbrain tectum	UBERON:0002314
+    posterior commissure	UBERON:0000936
+    corticotectal tract	UBERON:0002556
+    inferior colliculus	UBERON:0001946
+    subcommissural organ	UBERON:0002139
+    parabigeminal nucleus	UBERON:0002140
+    pretectal region	UBERON:0001944
+    olivary pretectal nucleus	UBERON:0002565
+    nucleus of optic tract	UBERON:0002996
+    principal pretectal nucleus	UBERON:0002572
+    sublentiform nucleus	UBERON:0002578
+    anterior pretectal nucleus	UBERON:0034918
+    superior colliculus	UBERON:0001945
+    pons	UBERON:0000988
+    root of abducens nerve	UBERON:0002786
+    basal part of pons	UBERON:0002567
+    middle cerebellar peduncle	UBERON:0002152
+    longitudinal pontine fibers	UBERON:0002732
+    transverse pontine fibers	UBERON:0002735
+    pontine nuclear group	UBERON:0002151
+    vestibulocochlear nerve root	UBERON:0002731
+    pontine tegmentum	UBERON:0003023
+    oral part of spinal trigeminal nucleus	UBERON:0002591
+    central tegmental tract of pons	UBERON:0002783
+    intermediate acoustic stria	UBERON:0002952
+    decussation of trochlear nerve	UBERON:0002787
+    vestibulocerebellar tract	UBERON:0002552
+    abducens nucleus	UBERON:0002682
+    trapezoid body	UBERON:0002932
+    medial parabrachial nucleus	UBERON:0002918
+    spinothalamic tract of pons	UBERON:0002798
+    motor root of trigeminal nerve	UBERON:0002796
+    dorsal trigeminal tract	UBERON:0002797
+    dorsal longitudinal fasciculus of pons	UBERON:0002793
+    nucleus subceruleus	UBERON:0002587
+    lateral parabrachial nucleus	UBERON:0003007
+    dorsal nucleus of lateral lemniscus	UBERON:0003006
+    medial longitudinal fasciculus of pons	UBERON:0002794
+    tectopontine tract	UBERON:0002930
+    principal sensory nucleus of trigeminal nerve	UBERON:0002597
+    medial lemniscus of pons	UBERON:0002958
+    facial motor nucleus	UBERON:0003011
+    dorsal acoustic stria	UBERON:0002790
+    ventral acoustic stria	UBERON:0003046
+    pontine reticular formation	UBERON:0002573
+    uncinate fasciculus	UBERON:0003044
+    lateral lemniscus	UBERON:0002953
+    spinal trigeminal tract of pons	UBERON:0002800
+    superior salivatory nucleus	UBERON:0002149
+    pontine raphe nucleus	UBERON:0002047
+    superior medullary velum	UBERON:0002659
+    locus ceruleus	UBERON:0002148
+    motor nucleus of trigeminal nerve	UBERON:0002633
+    superior olivary complex	UBERON:0002128
+    ventral trigeminal tract	UBERON:0002549
+    ventral nucleus of lateral lemniscus	UBERON:0002604
+    trigeminal nerve root	UBERON:0004673
+    facial nerve root	UBERON:0004674
+    medulla oblongata	UBERON:0001896
+    inferior olivary complex	UBERON:0002127
+    medullary raphe nuclear complex	UBERON:0002692
+    accessory nerve root	UBERON:0014615
+    nucleus of solitary tract	UBERON:0009050
+    hypoglossal nerve root	UBERON:0004675
+    vestibular nuclear complex	UBERON:0002673
+    medullary reticular formation	UBERON:0002559
+    root of vagus nerve	UBERON:0011213
+    white matter of medulla oblongata	UBERON:0014649
+    cochlear nuclear complex	UBERON:0002610
+    glossopharyngeal nerve root	UBERON:0019310
+    accessory XI nerve nucleus	UBERON:0020358
+    accessory cuneate nucleus	UBERON:0002864
+    accessory nerve fiber bundle	UBERON:0006117
+    anterior spinocerebellar tract	UBERON:0002987
+    anteroventral cochlear nucleus	UBERON:0002830
+    area postrema	UBERON:0002162
+    caudal part of spinal trigeminal nucleus	UBERON:0002866
+    central gray substance of medulla	UBERON:0002867
+    central medullary reticular nuclear complex	UBERON:0035940
+    cochlear nucleus	UBERON:0001720
+    commissural nucleus of vagus nerve	UBERON:0002868
+    cuneate fasciculus of medulla	UBERON:0002642
+    cuneate nucleus	UBERON:0002045
+    cuneocerebellar tract	UBERON:0002640
+    decussation of medial lemniscus	UBERON:0002643
+    dorsal cap of Kooy	UBERON:0014286
+    dorsal cochlear nucleus pyramidal cell layer	UBERON:0022320
+    dorsal cochlear nucleus	UBERON:0002829
+    dorsal external arcuate fiber bundle	UBERON:0006089
+    dorsal longitudinal fasciculus of medulla	UBERON:0002646
+    dorsal motor nucleus of vagus nerve	UBERON:0002870
+    dorsal paramedian reticular nucleus	UBERON:0016827
+    dorsolateral fasciculus of medulla	UBERON:0002649
+    dorsolateral subnucleus of solitary tract	UBERON:0026663
+    dorsomedial subnucleus of solitary tract	UBERON:0026541
+    floor plate of medulla oblongata	UBERON:0003311
+    glossopharyngeal lobe	UBERON:2000517
+    glossopharyngeal nerve fiber bundle	UBERON:0006090
+    gracile fasciculus of medulla	UBERON:0002653
+    granular cell layer of dorsal cochlear nucleus	UBERON:0029009
+    hilum of inferior olivary complex	UBERON:0008333
+    inferior cerebellar peduncle	UBERON:0002163
+    inferior olivary commissure	UBERON:0015250
+    inferior olivary nucleus	UBERON:0007244
+    inferior olive beta nucleus	UBERON:0035019
+    inferior reticular formation	UBERON:2000523
+    inferior salivatory nucleus	UBERON:0002872
+    intermediate reticular formation	UBERON:0009776
+    intermediate reticular nucleus	UBERON:0009777
+    internal arcuate fiber bundle	UBERON:0006087
+    interpolar part of spinal trigeminal nucleus	UBERON:0002873
+    juxtarestiform body	UBERON:0002592
+    lateral corticospinal tract	UBERON:0002589
+    lateral medullary reticular complex	UBERON:0009775
+    lateral pericuneate nucleus	UBERON:0002874
+    lateral reticular nucleus	UBERON:0002154
+    medial accessory olive	UBERON:0014287
+    medial column	UBERON:2000542
+    medial lemniscus of medulla	UBERON:0002748
+    medial longitudinal fasciculus of medulla	UBERON:0002750
+    medial pericuneate nucleus	UBERON:0002875
+    medial subnucleus of solitary tract	UBERON:0023390
+    medulla oblongata anterior median fissure	UBERON:0003989
+    medulla oblongata sulcus limitans	UBERON:0009576
+    medullary anterior horn	UBERON:0023378
+    midline column	UBERON:2000241
+    molecular layer of dorsal cochlear nucleus	UBERON:0022326
+    nucleus ambiguus	UBERON:0001719
+    nucleus intercalatus	UBERON:0002876
+    nucleus lateralis valvulae	UBERON:2000551
+    nucleus of medial longitudinal fasciculus of medulla	UBERON:2000815
+    nucleus of medulla oblongata	UBERON:0007635
+    nucleus prepositus	UBERON:0002160
+    nucleus raphe magnus	UBERON:0002156
+    nucleus raphe obscurus	UBERON:0002684
+    nucleus raphe pallidus	UBERON:0002157
+    olivary body	UBERON:0000128
+    olivocerebellar tract	UBERON:0002752
+    paramedian medullary reticular complex	UBERON:0016826
+    parasolitary nucleus	UBERON:0002877
+    paratrigeminal nucleus	UBERON:0016832
+    parvicellular subnucleus of solitary tract	UBERON:0026666
+    parvocellular reticular nucleus	UBERON:0016633
+    peritrigeminal nucleus	UBERON:0002879
+    pontobulbar nucleus	UBERON:0002880
+    posteroventral cochlear nucleus	UBERON:0002831
+    pre-Botzinger complex	UBERON:0006007
+    predorsal bundle	UBERON:0002754
+    pyramid of medulla oblongata	UBERON:0005159
+    pyramidal decussation	UBERON:0002755
+    retrotrapezoid nucleus	UBERON:0009918
+    roof plate of medulla oblongata	UBERON:0003303
+    rostral portion of the medial accessory olive	UBERON:0024043
+    rostral ventrolateral medulla	UBERON:0005807
+    rubrospinal tract	UBERON:0002714
+    sensory root of facial nerve	UBERON:0001699
+    solitary tract nuclear complex	UBERON:0002126
+    solitary tract	UBERON:0002718
+    spinal nucleus of trigeminal nerve	UBERON:0001717
+    spinal trigeminal tract of medulla	UBERON:0002715
+    spino-olivary tract	UBERON:0002719
+    spinothalamic tract of medulla	UBERON:0002944
+    sublingual nucleus	UBERON:0002881
+    superior reticular formation medial column	UBERON:2000593
+    superior reticular formation	UBERON:0004166
+    supraspinal nucleus	UBERON:0002882
+    tectobulbar tract	UBERON:0002164
+    vagal nerve fiber bundle	UBERON:0006116
+    vallecula of cerebellum	UBERON:0013166
+    ventral cochlear nucleus	UBERON:0002828
+    ventral external arcuate fiber bundle	UBERON:0006097
+    ventrolateral sulcus of medulla oblongata	UBERON:0008335
+    vestibular nucleus	UBERON:0007228
+    visceromotor column	UBERON:2000611

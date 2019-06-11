@@ -21,25 +21,32 @@ def clean(self, string, clean_scale:int=0):
         return ' '.join(string_profiler(string)).replace('obsolete', '').strip()
 
 
-def string_profiler(string:str, start_delimiter:str='(', end_delimiter:str=')', remove:bool=True) -> List[str]:
-    ''' Seperates strings fragements into list based on the start and end delimiters
-        Args:
-            string: complete string you want to be broken up based on start and stop delimiters given
-            start_delimiter: delimiter element to start
-            end_delimiter: delimiter elemtent to end
-            remove: decide whether or not to keep strings inside the delimiters
-        Returns:
-            List[str]: list of strings that are split at start and end delimiters given and whether
-                or not you want to remove the string inside the delimiters
-        Tests:
-            long = '(life is is good) love world "(blah) blah" "here I am" once again "yes" blah '
-            print(string_profiler(long))
-            null = ''
-            print(string_profiler(null))
-            short = '(life love) yes(and much more)'
-            print(string_profiler(short))
-            short = 'yes "life love"'
-            print(string_profiler(short))
+def string_profiler(
+        string: str,
+        start_delimiter: str='(',
+        end_delimiter: str=')',
+        remove: bool=True,
+        keep_delimiter: bool = True,
+    ) -> List[str]:
+    '''
+    Seperates strings fragements into list based on the start and end delimiters
+    Args:
+        string: complete string you want to be broken up based on start and stop delimiters given
+        start_delimiter: delimiter element to start
+        end_delimiter: delimiter elemtent to end
+        remove: decide whether or not to keep strings inside the delimiters
+    Returns:
+        List[str]: list of strings that are split at start and end delimiters given and whether
+            or not you want to remove the string inside the delimiters
+    Tests:
+        long = '(life is is good) love world "(blah) blah" "here I am" once again "yes" blah '
+        print(string_profiler(long))
+        null = ''
+        print(string_profiler(null))
+        short = '(life love) yes(and much more)'
+        print(string_profiler(short))
+        short = 'yes "life love"'
+        print(string_profiler(short))
     '''
     outer_index  = 0  # stepper for outer delimier string elements
     inner_index  = 0  # stepper for inner delimier string elements
@@ -69,7 +76,10 @@ def string_profiler(string:str, start_delimiter:str='(', end_delimiter:str=')', 
                 # String inside delimiters
                 inner_string += string[j]
             # If you want the string inside the delimiters
-            if not remove: string_list.append(inner_string)
+            if not remove:
+                if keep_delimiter:
+                    inner_string = start_delimiter + inner_string + end_delimiter
+                string_list.append(inner_string)
             # inner delimiter string restart
             inner_string = ''
         # String outside of the delimiters
