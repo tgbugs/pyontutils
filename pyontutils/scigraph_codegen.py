@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 from pyontutils.core import devconfig
 __doc__ = f"""Client library generator for SciGraph REST api.
 
@@ -221,6 +221,40 @@ class Cypher(SUBCLASS):
             return super().execute(query, limit, output)
 
 
+class Dynamic(SUBCLASS):
+
+    @staticmethod
+    def _path_to_id(path):
+        return (path.strip('/')
+                .replace('dynamic/', '')
+                .replace('{', '')
+                .replace('}', '')
+                .replace('/', '_')
+                .replace('-', '_'))
+
+    def _path_function_arg(self, path):
+        if '.' in path:
+            raise ValueError('extensions not supported directly please use output=mimetype')
+
+        if ':' in path:  # curie FIXME way more potential arguments here ...
+            path, arg = path.rsplit('/', 1)
+            putative = self._path_to_id(path + '/{')
+            cands = [p for p in dir(self) if p.startswith(putative)]
+            fname = cands[0] if len(cands) == 1 else '___wat'
+        else:
+            arg = None
+            fname = self._path_to_id(path)
+
+        if not hasattr(self, fname):
+            raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
+
+        return getattr(self, fname), arg
+
+    def dispatch(self, path, output='application/json'):
+        f, a = self._path_function_arg(path)
+        return f(a, output=output) if a else f(output=output)
+
+
 class Graph(SUBCLASS):
     @staticmethod
     def ordered(start, edges, predicate=None, inverse=False):
@@ -255,7 +289,7 @@ class FAKECLASS:
         """
         {params_conditional}
         kwargs = {param_rest}
-        kwargs = {dict_comp}
+        {dict_comp}
         param_rest = self._make_rest({required}, **kwargs)
         url = self._basePath + ('{path}').format(**kwargs)
         requests_params = {dict_comp2}
@@ -469,12 +503,24 @@ class State:
         return None, ''
 
     def operation(self, api_dict):
-        dict_comp = '{k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}'  # json needs " not '
         params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
+        dict_comp = (('kwargs = {k:dumps(v) if builtins.type(v) '
+                      'is dict else v for k, v in kwargs.items()}')  # json needs " not '
+                      if param_rest != '{}' else '')
         empty_return_type = self.make_return(api_dict)
         nickname = api_dict['nickname']
         path = self._paths[nickname]
-        docstring = api_dict.get('summary', '') + ' from: ' + path + '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) + param_docs
+        docstring = (api_dict.get('summary', '') +
+                     ' from: ' +
+                     path +
+                     '\n\n{t}{t}{t}Arguments:\n'.format(t=self.tab) +
+                     param_docs)
+
+        if 'x-query' in api_dict:
+            _query = api_dict['x-query']
+            _p = '{t}{t}{t}'.format(t=self.tab)
+            docstring += '\n\n{p}Query:\n{p}{q}'.format(p=_p, q=_query)
+
         # handle whether required is in the url
         if required:
             if '{' + required.strip("'") + '}' not in path:
@@ -642,6 +688,18 @@ class State:
 
 class State2(State):
     path_prefix = ''
+    dynamic_produces = [
+        'application/json',
+        'application/graphson',
+        'application/xml',
+        'application/graphml+xml',
+        'application/xgmml',
+        'text/gml',
+        'text/csv',
+        'text/tab-separated-values',
+        'image/jpeg',
+        'image/png',
+    ]
     def dotopdict(self, dict_):
         """ Rewrite the 2.0 json to match what we feed the code for 1.2 """
         mlookup = {'get':'GET', 'post':'POST'}
@@ -654,8 +712,19 @@ class State2(State):
         paths = dict_['paths']
         for path, path_dict in paths.items():
             if path.startswith('/dynamic'):
-                path_dict['path'] = path
-                continue
+                #if '{' in path:
+                    #operationId = path.split('/{', 1)[0].rsplit('/', 1)[-1]
+                operationId = Dynamic._path_to_id(path)
+
+                xq = path_dict.pop('x-query')
+                for method_dict in path_dict.values():
+                    method_dict['operationId'] = operationId
+                    method_dict['x-query'] = xq
+                    method_dict['produces'] = self.dynamic_produces
+                    method_dict['path'] = path  # FIXME ??
+                    for pd in method_dict['parameters']:
+                        pd['name'] = pd['name'].replace('-', '_')
+
             elif self.path_prefix and self.path_prefix not in path:
                 continue
             path_dict['operations'] = []
