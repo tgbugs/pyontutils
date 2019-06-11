@@ -85,7 +85,7 @@ class Builder:
     """ Build and/or run the SciGraph build and deploy chain. """
     # filenames currently not set by options [default: ]
     scigraph_repo = 'SciGraph'
-    start_script = devconfig.scigraph_start
+    start_script = devconfig.scigraph_start  # FIXME remove?
     stop_script = devconfig.scigraph_stop
     services_jar = 'scigraph-services.jar'
     heap_dump = 'head.dump'

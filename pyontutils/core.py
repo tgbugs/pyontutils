@@ -3,16 +3,18 @@ import yaml
 import types
 import subprocess
 import rdflib
-import requests
-from pathlib import Path
-from collections import namedtuple
 from inspect import getsourcefile
-from rdflib.extras import infixowl
+from pathlib import Path
+from itertools import chain
+from collections import namedtuple
+import ontquery as oq
+import requests
 from joblib import Parallel, delayed
-import ontquery
+from rdflib.extras import infixowl
+from ttlser import CustomTurtleSerializer
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
-from pyontutils.utils import Async, deferred, TermColors as tc
+from pyontutils.utils import Async, deferred, TermColors as tc, log
 from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
@@ -22,6 +24,8 @@ from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
 from IPython import embed
 
 current_file = Path(__file__).absolute()
+oq.utils.log.removeHandler(oq.utils.log.handlers[0])
+oq.utils.log.addHandler(log.handlers[0])
 
 # common funcs
 
@@ -87,6 +91,455 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
         for p, o in source_graph.predicate_objects(new_s):
             yield from yield_recursive(new_s, p, o, source_graph)
 
+
+# ontology resource object
+from werkzeug.contrib.iterio import IterIO
+
+
+class OntRes:
+    """ Message manager for serialized ontology resource.
+        There are plenty of tools that already deal effectively
+        with a triplified store, but we need something that does
+        a better job at managing the interchange, esp in and out
+        of git. Sort of a better backend for ontquery services back by
+        serialized sources. May ultimately move this code there. """
+
+    #def __new__(cls, iri_or_path):
+        # TODO return an iri wrapper or a path wrapper
+        #pass
+
+    def __init__(self, identifier, repo=None, Graph=None):
+        self.identifier = identifier  # the potential attribute error here is intentional
+        self.repo = repo  # I have a repo augmented path in my thesis stats code
+        if Graph == None:
+            Graph = OntGraph
+
+        self.Graph = graph
+
+    @property
+    def identifier(self):
+        # FIXME interlex naming conventions call this a reference_name
+        # in order to give it a bit more lexical distance from identity
+        # which implies some hash function
+        raise NotImplementedError
+
+    @identifier.setter
+    def identifier(self, value):
+        raise NotImplementedError
+
+    @property
+    def headers(self):
+        # if you are sending a file the populate all the info
+        # needed by the server to set up the stream (even if that seems a bit low level)
+        raise NotImplementedError
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+        raise NotImplementedError('If you override self.headers in the child '
+                                  'you need to reimplement this too.')
+
+    @property
+    def data(self):
+        raise NotImplementedError
+
+    def _populate(self, graph, gen):
+        raise NotImplementedError('too many differences between header/data and xml/all the rest')
+
+    def populate(self, graph):
+        # TODO if self.header ...
+        self._populate(graph, self.data)
+
+    @property
+    def graph(self):
+        if not hasattr(self, '_graph'):
+            self._graph = self.Graph()
+            self.populate(self._graph)
+
+        return self._graph
+
+    @property
+    def identifier_bound(self):
+        return next(self.graph[:rdf.type:owl.Ontology])
+
+    @property
+    def identifier_version(self):
+        """ implicitly identifier_bound_version since we won't maniuplate a
+            version iri supplied as the identifi
+            the id to get
+        """
+        return next(self.graph[self.identifier_bound:owl.versionIRI])
+
+    @property
+    def imports(self):
+        for object in self.graph[self.identifier_bound:owl.imports]:
+            # TODO switch this for _res_remote_class to abstract beyond just owl
+            yield OntResIri(object)  # this is ok since files will be file:///
+
+    @property
+    def import_chain(self):
+        yield from self._import_chain({OntResIri(self.identifier_bound)})
+
+    def _import_chain(self, done):
+        imps = list(self.imports)
+        Async()(deferred(lambda r: r.header.graph)(_) for _ in imps)
+        for resource in imps:
+            if resource in done:
+                continue
+
+            done.add(resource)
+            yield resource
+            yield from resource.header._import_chain(done)
+
+    def __eq__(self, other):
+        raise NotImplementedError
+
+    def __hash__(self):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return self.__class__.__name__ + f'({self.identifier!r})'
+
+
+class OntHeader(OntRes):
+    """ only the header of an ontology, e.g. the owl:Ontology section for OWL2 """
+
+    # headers all the way down data -> ontology header -> response header -> iri
+
+    def _graph_sideload(self, data):
+        # this will overwrite any existing graph
+        self._graph = self.Graph().parse(data=data, format=self.format)
+
+    def _populate(self, graph, gen):
+        # we don't pop request headers or file metadata off in here 
+        # because different loading processes may use that information
+        # to dispatch different loading processes
+
+        if self.format == 'application/rdf+xml':
+            # rdflib xml parsing uses an incremental parser that
+            # constructs its own file object and byte stream
+            data = b''.join(gen)
+            graph.parse(data=data)
+
+        elif self.format == 'text/owl-functional':  # FIXME TODO
+            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+
+        else:
+            itio = IterIO(gen)
+            itio.name = self.identifier  # some rdflib parses need a name
+            graph.parse(file=itio, format=self.format)
+
+    def __eq__(self, other):
+        # FIXME this is ... complicated
+        return self.identifier_bound == other.identifier_bound
+
+    def __hash__(self):
+        return hash((self.__class__, self.identifier_bound))
+
+
+class OntResOnt(OntRes):
+    """ full ontology files """
+
+    _header_class = None  # FIXME can we do this by dispatching OntHeader like Path?
+
+    @property
+    def header(self):
+        """ ontology header """
+        # FIXME the nomenclature here is inconsistent with interlex
+        # interlex would call this metadata, or even bound_metadata
+        # depending on how it was retrieved
+        if not hasattr(self, '_header'):
+            self._header = self._header_class(self.iri)
+
+        return self._header
+
+    def __eq__(self, other):
+        return self.header.identifier_bound == other.header.identifier_bound
+
+    def __hash__(self):
+        return hash((self.__class__, self.header.identifier_bound))
+
+
+class OntIdIri(OntRes):
+    def __init__(self, iri):
+        self.iri = iri
+        # TODO version iris etc.
+
+    def get(self):
+        return requests.get(self.iri, stream=True, headers={'Accept': 'text/turtle'})  # worth a shot ...
+
+    @property
+    def identifier(self):
+        return self.iri
+
+    @property
+    def headers(self):
+        """ request headers """
+        if not hasattr(self, '_headers'):
+            resp = requests.head(self.iri)  # TODO status handling for all these
+            self._headers = resp.headers
+
+        return self._headers
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+
+
+class OntHeaderIri(OntHeader, OntIdIri):
+
+    @property
+    def data(self):
+        gen = self._data()
+        format = next(gen)  # advance to set self.format in _data
+        return gen
+
+    def _data(self, yield_response_gen=False):
+        if self.iri.endswith('.zip'):
+            # TODO use Content-Range to retrieve only the central directory
+            # after we get the header here
+            # https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+            # this could be another way to handle the filesystem issues for bf
+            # as well ...
+            pass
+
+        resp = self.get()
+        self.headers = resp.headers
+        # TODO consider yielding headers here as well?
+        gen = resp.iter_content(chunk_size=4096)
+        first = next(gen)
+        # TODO better type detection
+
+        if first.startswith(b'<?xml'):
+            start = b'<owl:Ontology'
+            stop = b'</owl:Ontology>'
+            self.format = 'application/rdf+xml'
+
+        elif first.startswith(b'@prefix'):
+            start = b' owl:Ontology'  # FIXME this is not standard
+            stop = b' .\n'  # FIXME can be fooled by strings
+            self.format = 'text/turtle'
+
+        elif first.startswith(b'Prefix(:='):
+            start = b'\nOntology'
+            stop = b')\n\n'  # FIXME I don't think owl functional syntax actually has a proper header :/
+            self.format = 'text/owl-functional'
+        else:
+            'text/owl-manchester'
+            raise ValueError(first.decode())
+
+        yield self.format  # we do this because self.format needs to be accessible before loading the graph
+
+        close_rdf = b'\n</rdf:RDF>\n'
+        searching = False
+        header_data = b''
+        for chunk in chain((first,), gen):
+            if start in chunk:
+                searching = True
+                # yield content prior to start since it may include a stop
+                # that we don't actually want to stop at
+                start_end_index = chunk.index(start) + len(start)
+                header_first_chunk = chunk[:start_end_index]
+                if yield_response_gen:
+                    header_data += header_first_chunk
+
+                yield header_first_chunk
+                chunk = chunk[start_end_index:]
+                
+            if searching and stop in chunk:
+                stop_end_index = chunk.index(stop) + len(stop)
+                header_last_chunk = chunk[:stop_end_index]
+                if yield_response_gen:
+                    header_data += header_last_chunk
+
+                yield header_last_chunk
+                if yield_response_gen:
+                    if self.format == 'application/rdf+xml':
+                        header_data += close_rdf
+
+                    self._graph_sideload(header_data)
+                    chunk = chunk[stop_end_index:]
+                    yield resp, chain((chunk,), gen)
+
+                else:
+                    # if we are not continuing then close the xml tags
+                    if self.format == 'application/rdf+xml':
+                        yield close_rdf
+
+                    resp.close()
+
+                return
+
+            else:
+                if yield_response_gen:
+                    header_data += chunk
+
+                yield chunk
+
+
+class OntResIri(OntIdIri, OntResOnt):
+
+    _header_class = OntHeaderIri
+
+    @property
+    def data(self):
+        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
+        self.headers = resp.headers
+        self.format = format
+        # TODO populate header graph? not sure this is actually possible
+        # maybe need to double wrap so that the header chunks always get
+        # consumbed by the header object ?
+        if self.format == 'application/rdf+xml':
+            resp.close()
+            return None
+
+        return chain(header_chunks, gen)
+
+    def _populate(self, graph, gen):
+        # we don't pop request headers or file metadata off in here 
+        # because different loading processes may use that information
+        # to dispatch different loading processes
+
+        if self.format == 'application/rdf+xml':
+            # rdflib xml parsing uses and incremental parser that
+            # constructs its own file object and byte stream
+            graph.parse(self.identifier, format=self.format)
+
+        elif self.format == 'text/owl-functional':  # FIXME TODO
+            log.error(f'TODO cannot parse owl functional syntax yet {self}')
+
+        else:
+            itio = IterIO(gen)
+            itio.name = self.identifier
+            graph.parse(file=itio, format=self.format)
+
+
+class OntIdPath(OntRes):
+    def __init__(self, path):
+        self.path = path
+
+    @property
+    def identifier(self):
+        return self.path
+
+    @property
+    def headers(self):
+        raise NotImplementedError('TODO source this from local info')
+
+
+class OntHeaderPath(OntIdPath, OntHeader):
+    pass
+
+
+class OntResPath(OntIdPath, OntResOnt):
+    """ ontology resource coming from a file """
+
+    _header_class = OntHeaderPath
+
+
+class OntHeaderInterLex(OntHeader):
+    pass
+
+
+class OntResInterLex(OntResOnt):
+    """ ontology resource backed by interlex """
+
+    _header_class = OntHeaderInterLex
+
+
+class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
+    def __call__(self, **kwargs):
+        """ set prefixes """
+        raise NotImplementedError
+
+    def __iter__(self):
+        yield from self.namespaces()
+
+    def qname(self, iri):
+        prefix, namespace, name = self.compute_qname(uri, generate=False)
+        if prefix == "":
+            return name
+        else:
+            return ":".join((prefix, name))
+
+    def populate(self, graph):
+        [graph.bind(k, v) for k, v in self.namespaces()]
+
+
+class OntGraph(rdflib.Graph):
+    """ A 5th try at making one of these. ConjunctiveGraph version? """
+
+    def __init__(self, *args, filename=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bind('owl', owl)
+        self.filename = filename
+
+    # TODO id for graphs like this ... use InterLex IdentityBNode?
+
+    def _get_namespace_manager(self):
+        if self.__namespace_manager is None:
+            self.__namespace_manager = BetterNamespaceManager(self)
+        return self.__namespace_manager
+
+    @property
+    def prefixes(self):
+        """ the prefix/curie/qname section of an rdf file """
+        # a new OntCuries-like object that wraps NamespaceManager
+        # and can leverage its trie
+        self.namespace_manager
+        raise NotImplementedError('yet')
+
+    @property
+    def metadata(self):
+        """ the header/metadata/ontology section of an rdf file """
+        raise NotImplementedError('yet')
+        return OntGraphMetadata(self)
+
+    @property
+    def data(self):
+        """ everything else """
+        raise NotImplementedError('yet')
+
+    def write(self, filename=None, format='nifttl'):
+        if filename is None:
+            filename = self.filename
+
+        with open(filename, 'wb') as f:
+            self.serialize(f, format=format)
+
+    @property
+    def ttl(self):
+        CustomTurtleSerializer.roundtrip_prefixes = False
+        out = self.serialize(format='nifttl').decode()
+        CustomTurtleSerializer.roundtrip_prefixes = True
+        return out
+
+    @property
+    def ttl_html(self):
+        CustomTurtleSerializer.roundtrip_prefixes = False
+        out = self.serialize(format='htmlttl').decode()
+        CustomTurtleSerializer.roundtrip_prefixes = True
+        return out
+
+
+class OntGraphMetadata(OntGraph):
+    """ header """
+    # TODO given some OntGraphData that doesn't already have some meta
+    # attache this meta to that data in prep to run all the hashing etc.
+
+
+class OntGraphData(OntGraph):
+    """ the homogenous everything else """
+
+
+# TODO bind _ont_class for headers
+
+
+def nif_import_chain():
+    test = OntResIri('http://ontology.neuinfo.org/NIF/ttl/nif.ttl')
+    return list(test.import_chain)
+
+
 #
 # old impl
 
@@ -101,18 +554,7 @@ def getNamespace(prefix, namespace):
         return rdflib.Namespace(namespace)
 
 
-class mGraph(rdflib.Graph):
-    def __init__(self, *args, filename='/tmp/test.ttl', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.bind('owl', owl)
-        self.filename = filename
-
-    def write(self, filename=None):
-        if filename is None:
-            filename = self.filename
-
-        with open(filename, 'wb') as f:
-            f.write(self.serialize(format='nifttl'))
+mGraph = OntGraph
 
 
 class makeGraph:
@@ -514,9 +956,9 @@ def createOntology(filename=    'temp-graph',
 #
 # query
 
-# ontquery.SciGraphRemote.verbose = True
+# oq.SciGraphRemote.verbose = True
 
-class OntId(ontquery.OntId, rdflib.URIRef):
+class OntId(oq.OntId, rdflib.URIRef):
     #def __eq__(self, other):  # FIXME this makes OntTerm unhashabel!?
         #return rdflib.URIRef.__eq__(rdflib.URIRef(self), other)
 
@@ -531,22 +973,30 @@ class OntId(ontquery.OntId, rdflib.URIRef):
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
-class OntTerm(ontquery.OntTerm, OntId):
+
+class OntTerm(oq.OntTerm, OntId):
     pass
 
-SGR = ontquery.plugin.get('SciGraph')
-IXR = ontquery.plugin.get('InterLex')
+
+SGR = oq.plugin.get('SciGraph')
+IXR = oq.plugin.get('InterLex')
 #sgr.verbose = True
 for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
-sgr = SGR(apiEndpoint=devconfig.scigraph_api, api_key=get_api_key())
+sgr = SGR(apiEndpoint=devconfig.scigraph_api)
+sgr.api_key = get_api_key()
 ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
-OntTerm.query = ontquery.OntQuery(sgr, ixr)
+OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
-#ontquery.QueryResult._OntTerm = OntTerm
-OntTerm.bindQueryResult()
-query = ontquery.OntQueryCli(query=OntTerm.query)
+query = oq.OntQueryCli(query=OntTerm.query)
+
+
+class IlxTerm(OntTerm):
+    skip_for_instrumentation = True
+    __firsts = 'curie', 'label'
+
+IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 
 #
 # classes
@@ -582,9 +1032,9 @@ class Class:
         class_definition=skos.definition,
     )
     lift = dict(
-        species=owl.allValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
-        devstage=owl.allValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
-        definingArtifacts=owl.allValuesFrom,
+        species=owl.someValuesFrom,  # FIXME really for all rats? check if reasoner makes r6 and r4 the same, see if they are disjoint
+        devstage=owl.someValuesFrom,  # protege says only but fact, and hermit which manage disjointness don't complain...
+        definingArtifacts=owl.someValuesFrom,  # TODO we do need the closure axioms
         definingArtifactsS=owl.someValuesFrom,  # HRM
     )
     _kwargs = tuple()  # but really a dict

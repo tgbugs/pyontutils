@@ -6,6 +6,7 @@ import inspect
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
 from importlib import import_module
+from collections import defaultdict
 from urllib.error import HTTPError
 import git
 import rdflib
@@ -83,7 +84,11 @@ def getPhenotypePredicates(graph):
     classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
     classDict['_litmap'] = literal_map
     phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
-    return phenoPreds
+    predicate_supers = {s:tuple(o for o in
+                                graph.transitive_objects(s, rdfs.subPropertyOf)
+                                if o != s) for s in out}
+
+    return phenoPreds, predicate_supers
 
 # label maker
 
@@ -164,10 +169,15 @@ class LabelMaker:
 
     def _default(self, phenotypes):
         for p in sorted(phenotypes, key=self._key):
-            if p in self._convention_lookup:
-                yield self._convention_lookup[p]
+            if isinstance(p, NegPhenotype):
+                prefix = '-'
             else:
-                yield getattr(p, self._label_property)
+                prefix = ''
+
+            if p in self._convention_lookup:
+                yield prefix + self._convention_lookup[p]
+            else:
+                yield prefix + getattr(p, self._label_property)
 
     @od
     def hasTaxonRank(self, phenotypes):
@@ -229,7 +239,7 @@ class LabelMaker:
     def _plus_minus(self, phenotypes):
         for phenotype in phenotypes:
             if isinstance(phenotype, NegPhenotype):
-                prefix = '-'
+                prefix = ''  # now handled in _default
             elif isinstance(phenotype, Phenotype):
                 prefix = '+'
             else:  # logical phenotypes aren't phenotypes confusingly enough
@@ -244,6 +254,12 @@ class LabelMaker:
         yield from self._plus_minus(phenotypes)
     @od
     def hasExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasDriverExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasReporterExpressionPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
@@ -304,21 +320,33 @@ class OntTerm(bOntTerm):
 
     @property
     def triples_simple(self):
-        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP',
-                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo')
+        skips = 'pheno:parvalbumin',
+        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
+                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
         s = self.URIRef
-        yield s, rdf.type, owl.Class
-        _label = self.label if self.label else self.suffix
-        label = rdflib.Literal(_label)
-        yield s, rdfs.label, label
+        if self.type is None:
+            yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
+        else:
+            yield s, rdf.type, self.type.u
+        if self.label:
+            _label = self.label 
+            label = rdflib.Literal(_label)
+            yield s, rdfs.label, label
+
         if self.synonyms is not None:  # FIXME this should never happen :/
             for syn in self.synonyms:
                 yield s, NIFRID.synonym, rdflib.Literal(syn)
 
         if self('rdfs:subClassOf', as_term=True):
             for superclass in self.predicates['rdfs:subClassOf']:
-                if superclass.prefix in bads:
+                if superclass.curie in skips:
                     continue
+                elif superclass.prefix in bads:
+                    if superclass.prefix == 'BFO' or self.prefix in bads or 'interlex' in self.iri:
+                        yield s, rdfs.subClassOf, superclass.URIRef
+                        break
+                    else:
+                        continue
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
@@ -334,7 +362,19 @@ class OntTerm(bOntTerm):
                         done.append((predicate, superpart))
 
 
-OntTerm.bindQueryResult()
+OntTerm.query_init(*bOntTerm.query.services)
+# initializing this way leads to a race condition on calling
+# service.setup since the first OntTerm to call setup on a shared
+# service is the one that will be attached to the query result
+# fortunately in some cases we cache at a level below this
+
+
+class OntTermOntologyOnly(OntTerm):
+    __firsts = ('curie', 'label')  # FIXME why do I need this here but didn't for OntTerm ??
+
+
+IXR = oq.plugin.get('InterLex')
+OntTermOntologyOnly.query_init(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
 
 
 class GraphOpsMixin:
@@ -1020,7 +1060,8 @@ class graphBase:
             no()  # populate generated by info
 
         # set predicates
-        graphBase._predicates = getPhenotypePredicates(graphBase.core_graph)
+        preds, pred_supers = getPhenotypePredicates(graphBase.core_graph)
+        graphBase._predicates, graphBase._predicate_supers = preds, pred_supers
 
         # scigraph setup
         if scigraph is not None:
@@ -1222,6 +1263,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
 
         if label is not None and override:
+            self._label = label  # I cannot wait to get rid of this premature graph integration >_<
             self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
         # use this specify consistent patterns for modifying labels
@@ -1338,9 +1380,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if hasattr(self, '_cache_pShortName'):
             return self._cache_pShortName
 
-        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        if self in inj:
-            return inj[self]
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if self in inj:
+                return inj[self]
 
         pn = self.in_graph.namespace_manager.qname(self.p)
         try:
@@ -1350,16 +1393,22 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
 
+        if hasattr(self, '_label'):
+            return self._label
+
+        if pn.startswith('NCBITaxon'):
+            return resp['labels'][0]
+
         if resp:  # DERP
             abvs = resp['abbreviations']
             if not abvs:
-                abvs = [s for s in resp['synonyms'] if len(s) < 5]
-                if not abvs and resp['labels']:
+                abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
+                if (not abvs or 'Pva' in abvs) and resp['labels']:
                     try:
                         t = next(OntTerm.query(term=resp['labels'][0], prefix='NCBIGene'))  # worth a shot
-                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if len(_) < 5]
+                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if 1 < len(_) < 5]
                         if abvs:
-                            log.warning(f'found shortnames for {pn} from NCBIGene {abvs}')
+                            log.info(f'found shortnames for {pn} from NCBIGene {abvs}')
                     except StopIteration:
                         pass
         else:
@@ -1369,15 +1418,27 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abv = abvs[0]
             if abv == 'Glu,':
                 return 'Glu'  # FIXME tempfix for bad glutamate abv
+            elif abv == '4Abu':  # sigh
+                return 'GABA'
             else:
                 return abv
+
         elif pn in self.local_names:
             return self.local_names[pn]
+
+        elif self in OntologyGlobalConventions.inverted():
+            # layer issues
+            return OntologyGlobalConventions.inverted()[self]
+
         else:
-            return ''
+            #log.error(f'No short name for {pn}')
+            return None  # self.pLongName
 
     @property
     def pLongName(self):
+        if hasattr(self, '_label'):
+            return self._label
+
         p = OntId(self.p)
 
         r = OntTerm.query.services[0]  # rdflib local
@@ -1546,23 +1607,43 @@ class LogicalPhenotype(graphBase):
 
         return OpClass((self.op, *(p._pClass for p in self.pes)))
 
+    def _lkey(self, attr):
+        def key(pe):
+            try:
+                # FIXME this is dumb should be using OntId internally
+                # the convert to URIRef only for the graph ...
+                return self.label_maker._order.index(OntId(pe.e).suffix), getattr(pe, attr)
+            except ValueError as e:
+                log.error(pe)
+                raise e
+
+        return key
+
     @property
     def pLabel(self):
+        spes = sorted(self.pes, key=self._lkey('pLabel'))
         #return f'({self.local_names[self.op]} ' + ' '.join(self.ng.qname(p) for p in self.p) + ')'
-        return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in self.pes) + ')'
+        return f'({self.local_names[self.op]} ' + ' '.join(f'"{p.pLabel}"' for p in spes) + ')'
 
     @property
     def pHiddenLabel(self):
-        label = ' '.join([pe.pHiddenLabel for pe in self.pes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
+        spes = sorted(self.pes, key=self._lkey('pHiddenLabel'))
+        label = ' '.join([pe.pHiddenLabel for pe in spes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
         return self.labelPostRule(f'({op} {label})')
 
     @property
     def pShortName(self):
-        inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
-        if self in inj:
-            return inj[self]
-        return self.labelPostRule(''.join([pe.pShortName for pe in self.pes]))
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if self in inj:
+                return inj[self]
+
+        spes = sorted(self.pes, key=self._lkey('pShortName'))
+        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName
+                          for pe in spes])
+        op = OntId(self.op).suffix
+        return self.labelPostRule(f'({op} {label})')
 
     @property
     def pLongName(self):
@@ -1675,7 +1756,12 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             'NIFEXT:5116': 'NCBIGene:20604',  # sst
             'NLX:69833': 'PR:000008235',  # GluR3
             'NLX:70371': 'UBERON:0002567',  # basal pons is not a synonym in ubron wat
-
+            'NIFEXT:5068': 'PR:000005110',  # cholecysokinin
+            'NIFEXT:5090': 'PR:000011387',  # npy
+            'NLXMOL:1006001': 'ilxtr:GABAReceptor',  # gaba receptor role -> gaba receptor itself
+            'SAO:1164727693': 'ilxtr:glutamateReceptor',
+            'NLXMOL:20090301': 'CHEBI:132943',  # aspartate
+            'NLXORG:110506': 'BIRNLEX:2',  # organism, except with actual lexical information attached to it  # FIXME automate this?
             #'NIFEXT:6':'PTHR:11653',  #  pv 'NCBIGene:19293'
             #'NIFEXT:5116': 'PTHR:10558', #  'NCBIGene:20604',
         }
@@ -1695,7 +1781,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
                 continue
 
-            if t.deprecated:
+            if hasattr(t, 'deprecated') and t.deprecated:  # FIXME why do we not have cases without?
                 rb = t('replacedBy:', as_term=True)
                 if rb:
                     nt = rb[0]
@@ -1705,9 +1791,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                     log.debug(f'Found deprecated phenotype {phenotype} -> {np}')
                     continue
 
+            elif not hasattr(t, 'deprecated'):
+                log.error(f'{t.source}')
+
             new.append(phenotype)
 
-        id_ = self.id_ if self.id_ != self.temp_id else None
+        id_ = (self.id_ if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else None)
         nn = self.__class__(*new, id_=id_, label=self.origLabel)
         nid = nn.Class.identifier
         oid = self.Class.identifier
@@ -1726,12 +1816,18 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if not cls._loading:
             NeuronBase._loading = True  # block all other neuron loading
             try:
+                log.debug(str([i for i in iris if '4164' in i or '100212' in i]))
                 for iri in iris:
+                        # rod/cone issue
+                        #breakpoint()
                     try:
-                        cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
+                        n = cls(id_=iri, override=True)#, out_graph=cls.config.load_graph)  # I think we can get away without this
+                        if iri.endswith('4164') or iri.endswith('100212'):
+                            log.debug(f'{iri} -> {n}')
+
                         # because we just call Config again an everything resets
                     except cls.owlClassMismatch as e:
-                        log.error(str(e))
+                        log.exception(e)
                         continue
                     except AttributeError as e:
                         log.critical(str(e))
@@ -1769,6 +1865,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             ilxtr.hasMolecularPhenotype,
             ilxtr.hasNeurotransmitterPhenotype,
             ilxtr.hasExpressionPhenotype,
+            ilxtr.hasDriverExpressionPhenotype,
+            ilxtr.hasReporterExpressionPhenotype,
             ilxtr.hasCircuitRolePhenotype,
             ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
             ilxtr.hasConnectionPhenotype,
@@ -1780,7 +1878,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         self._localContext = self.__context
         self.config = self.__class__.config  # persist the config a neuron was created with
-        phenotypeEdges = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
+        __pes = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
+        phenotypeEdges = self.removeDuplicateSuperProperties(__pes)
 
         if phenotypeEdges:
             frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
@@ -1868,6 +1967,32 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         self.ttl = self._instance_ttl
         self.python = self._instance_python
+
+
+    def removeDuplicateSuperProperties(self, rawpes):
+        # find any duplicate phenotype values
+        # check their dimensions to see if one is a subProperty of the other
+        # keep only the most granular
+        _cands = defaultdict(set)
+        for pe in rawpes:
+            _cands[pe.p].add(pe)
+
+        cands = tuple(pes for pes in _cands.values() if len(pes) > 1)
+        if cands:
+            skip = set()
+            for pes in cands:
+                for pe in pes:
+                    if pe not in skip:
+                        supers = self._predicate_supers[pe.e]
+                        for ope in pes:
+                            if ope != pe and ope.e in supers:
+                                skip.add(ope)
+
+            if skip:
+                log.warning(f'Phenotype subsumbed by more specific predicate {skip}')
+                return tuple(pe for pe in rawpes if pe not in skip)
+
+        return rawpes
 
     def _tuplesToPes(self, pes):
         for p, e in pes:
@@ -2018,7 +2143,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if sn:
             sn = ' ' + sn
 
-        id_ = f", id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        id_ = (f", id_={str(self.id_)!r}" if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else '')
         lab =  f", label={str(self.origLabel) + sn!r}" if self.origLabel else ''
         args = '(' + ', '.join([inj[_] if _ in inj else repr(_) for _ in self.pes]) + f'{id_}{lab})'
         #args = self.pes if len(self.pes) > 1 else '(%r)' % self.pes[0]  # trailing comma
@@ -2036,7 +2162,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         sn = self._shortname
         if sn:
             sn = ' ' + sn
-        id_ = ',\n' + t + f"id_={str(self.id_)!r}" if self.id_ != self.temp_id else ''
+        id_ = (',\n' + t + f"id_={str(self.id_)!r}"
+               if not hasattr(self, 'temp_id') or
+               self.id_ != self.temp_id else '')
         asdf += id_
         lab =  ',\n' + t + f"label={str(self.origLabel) + sn!r}" if self._origLabel else ''
         asdf += lab
@@ -2550,6 +2678,8 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasElectrophysiologicalPhenotype',
         'ilxtr:hasSpikingPhenotype',  # legacy support
         'ilxtr:hasExpressionPhenotype',
+        'ilxtr:hasDriverExpressionPhenotype',
+        'ilxtr:hasReporterExpressionPhenotype',
         'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
         ilxtr.hasConnectionPhenotype,
         ilxtr.hasExperimentalPhenotype,

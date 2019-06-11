@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes bridge old dep dev] [options]
+    neurondm-build [all phenotypes models bridge old dep dev] [options]
 
 Options:
     -h --help                   Display this help message
@@ -23,17 +23,18 @@ from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembe
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
+from neurondm.core import OntTermOntologyOnly, log as _log
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
+from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO, NIFRID, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 from itertools import chain
 
-log = makeSimpleLogger('neurondm.build')
+log = _log.getChild('build')
 
 resources = Path(devconfig.resources)
 
-NIFRAW, = makeNamespaces('NIFRAW')
+NIFRAW, NIFTTL = makeNamespaces('NIFRAW', 'NIFTTL')
 
 sgg = Graph(cache=True, verbose=True)
 sgv = Vocabulary(cache=True)
@@ -227,28 +228,6 @@ class OntId(OntId_):
         return rdflib.URIRef(self)
 
 
-def add_helpers(ng):
-    pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
-    ng.add_namespace('pheno', str(pheno))
-    ng.add_known_namespaces('JAX', 'NCBIGene')
-    triples = (
-        (pheno.parvalbumin, rdf.type, owl.Class),
-        (pheno.parvalbumin, rdfs.subClassOf, ilxtr.ExpressionPhenotype),
-        (OntId('JAX:008096').u, rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('JAX:021189').u, rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('JAX:021190').u, rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('JAX:022730').u, rdfs.subClassOf, pheno.parvalbumin),
-        (ilxtr.Pvalb, rdfs.subClassOf, pheno.parvalbumin),
-        (ilxtr['PV-cre'], rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('PR:000013502').u, rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('NCBIGene:19293').u, rdfs.subClassOf, pheno.parvalbumin),
-        (OntId('NIFEXT:6').u, rdfs.subClassOf, pheno.parvalbumin),
-        #(0, rdfs.subClassOf, pheno.parvalbumin),
-    )
-    graph = ng.g
-    for t in triples:
-        graph.add(t)
-
 def add_types(ng):
     graph = ng.g
     triples = (
@@ -336,6 +315,8 @@ def make_phenotypes():
             self.id_ = graph2.expand(value)
             self.Class = infixowl.Class(self.id_, graph=graph2.g)
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
+            if 'Cone' in label or 'Rod' in label:  # sigh hard coding
+                label = label.replace(' Morphological', '')
             self._label = label
 
         def subClassOf(self, value):
@@ -393,7 +374,11 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, self._label.rsplit(' Phenotype')[0])
+            hl = self._label.rsplit(' Phenotype')[0]
+            if hl.endswith('Morphological'):
+                hl = hl.rsplit(' Morphological')[0]
+
+            graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, hl)
 
             label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
 
@@ -492,7 +477,6 @@ def make_phenotypes():
     ontid2 = NIFRAW['neurons/ttl/' + graph2.name + '.ttl']
     graph2.add_ont(ontid2, 'NIF Phenotypes', comment='A taxonomy of phenotypes used to model biological types as collections of measurements.')
     graph2.add_trip(ontid2, 'owl:imports', ontid)
-    add_helpers(graph2)
     graph2.write()
 
     syn_mappings = {}
@@ -500,12 +484,12 @@ def make_phenotypes():
                      [_ for _ in graph2.g.subject_objects(rdflib.RDFS.label)]):
         syn = syn.toPython()
         if syn in syn_mappings:
-            log.error('duplicate synonym! {syn} {sub}')
+            log.error(f'duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
 
-
     phenotypes_o = [(s, o) for s, p, o in graph2.g.triples((None, None, None)) if ' Phenotype' in o]
-    extras = {o.replace('Phenotype', '').strip():s for s, o in phenotypes_o}
+    extras = {o.replace('Phenotype', '').strip():s
+              for s, o in phenotypes_o}
     epl = {(o.replace('Petilla', '')
             .replace('Initial', '')
             .replace('Sustained', '')
@@ -1112,8 +1096,24 @@ def predicate_disambig(graph):
     uit('ilxtr:hasLayerLocation', 'UBERON:0005394')
     uit('ilxtr:hasLayerLocation', 'UBERON:0005395')
 
-def make_bridge():
+
+def make_models():
     from importlib import import_module
+    from neurondm.models import __all__
+    skip = 'phenotype_direct',
+    __all__ = [a for a in __all__ if a not in skip]
+    for module in __all__:
+        if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
+            continue
+        m = import_module(f'neurondm.models.{module}')
+        #m = import_module(f'neurondm.compiled.{module}')  # XXX
+        if not hasattr(m, 'config') and hasattr(m, 'main'):
+            config, *_ = m.main()  # FIXME cuts hack
+        else:
+            config = m.config
+
+
+def make_bridge():
     from pyontutils.utils import subclasses
     from pyontutils.core import Ont, build
     from neurondm.lang import Config, NeuronEBM  # need ebm for subclasses to work
@@ -1143,8 +1143,11 @@ def make_bridge():
     #log.critical(f'{nb.imports} {models_imports}')
 
 def make_devel():
+    from ttlser import CustomTurtleSerializer
+    from pyontutils import combinators as cmb
     from pyontutils.core import Ont, build
     from pyontutils.utils import Async, deferred
+
     # inefficient but thorough way to populate the subset of objects we need.
     terms = set()
 
@@ -1159,8 +1162,8 @@ def make_devel():
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP',
-            'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo')
+    bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
+            'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
                                 g.predicates(),)
@@ -1168,7 +1171,7 @@ def make_devel():
                and (OntId(e).prefix not in bads or OntId(e).prefix in ('BIRNLEX', 'NIFEXT', 'NLX')))
 
     #terms |= set(Async()(deferred(OntTerm)(e) for e in ents))
-    terms |= set(OntTerm(e) for e in ents)
+    terms |= set(OntTermOntologyOnly(e) for e in ents)
 
     all_defined_by = set(o for t in terms
                          if t('rdfs:isDefinedBy')
@@ -1195,7 +1198,11 @@ def make_devel():
 
     terms |= all_sparts
 
-    terms |= {OntTerm('UBERON:2301'),  # cortical layer
+    terms |= {OntTermOntologyOnly('UBERON:0002301'),  # cortical layer
+              OntTermOntologyOnly('SAO:1813327414'),
+              OntTermOntologyOnly('NCBITaxon:9606'),
+              OntTermOntologyOnly('NCBITaxon:9685'),
+              OntTermOntologyOnly('SO:0000704'),
     }
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
@@ -1203,6 +1210,107 @@ def make_devel():
                                      #if asdf.prefix not in bads), key=lambda t: (not t.label, t.label))
                #for t in T.triples('rdfs:subClassOf'))
 
+    a = rdf.type
+    def helper_triples():
+        # model
+        yield ilxtr.labelPartOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
+        yield ilxtr.Phenotype, rdfs.subClassOf, OntId('BFO:0000016').u
+
+        # part of for markram
+        paxS1 = OntId('PAXRAT:794').u
+        uS1 = OntId('UBERON:0008933').u
+        yield paxS1, rdfs.subClassOf, uS1
+        yield from cmb.restriction(ilxtr.delineates, paxS1)(uS1)
+        yield from cmb.restriction(ilxtr.isDelineatedBy, uS1)(paxS1)
+
+        # missing labels
+        yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+
+        # receptor roles
+        gar = ilxtr.GABAReceptor
+        garole = OntId('NLXMOL:1006001').u
+        yield gar, a, owl.Class
+        yield gar, rdfs.label, rdflib.Literal('GABA receptor')
+        yield gar, NIFRID.synonym, rdflib.Literal('GABAR')
+        yield from cmb.Restriction(owl.equivalentClass)(OntId('hasRole:').u, garole)(gar)
+
+        glr = ilxtr.glutamateReceptor
+        glrole = OntId('SAO:1164727693').u
+        yield glr, a, owl.Class
+        yield glr, rdfs.label, rdflib.Literal('Glutamate receptor')
+        yield glr, NIFRID.synonym, rdflib.Literal('GluR')
+        yield from cmb.Restriction(owl.equivalentClass)(OntId('hasRole:').u, glrole)(glr)
+
+        yield ilxtr.parcellationLabel, rdfs.subClassOf, OntId('UBERON:0001062').u
+
+        # sst fix
+        sst = OntId('PTHR:10558').u
+        yield sst, a, owl.Class
+        yield sst, rdfs.subClassOf, ilxtr.PhenotypeIndicator
+        yield sst, rdfs.label, rdflib.Literal('somatostatin (indicator)')
+        yield sst, NIFRID.synonym, rdflib.Literal('Sst')
+        yield sst, NIFRID.synonym, rdflib.Literal('SOM')
+        yield sst, NIFRID.synonym, rdflib.Literal('somatostatin')
+        sst_members = (OntId('ilxtr:SST-flp'),
+                       OntId('NCBIGene:20604'),
+                       OntId('PR:000015665'),
+                       OntId('JAX:013044'),
+                       OntId('JAX:028579'),)
+        for i in sst_members:
+            yield i.u, rdfs.subClassOf, sst
+
+        # pv fix
+        pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
+        pv = OntId('PTHR:11653').u
+        yield pv, rdfs.label, rdflib.Literal('parvalbumin (indicator)')
+        yield pv, NIFRID.synonym, rdflib.Literal('PV')
+        yield pv, NIFRID.synonym, rdflib.Literal('Pvalb')
+        yield pv, NIFRID.synonym, rdflib.Literal('parvalbumin')
+        #yield pv, ilxtr.indicatesDisplayOfPhenotype, pheno.parvalbumin  # as restriction ...
+        yield from ((pv, rdf.type, owl.Class),
+                    (pv, rdfs.subClassOf, ilxtr.PhenotypeIndicator),)
+        pv_members = (OntId('JAX:008069'),
+                      OntId('JAX:021189'),
+                      OntId('JAX:021190'),
+                      OntId('JAX:022730'),
+                      ilxtr.Pvalb,
+                      ilxtr['PV-cre'],
+                      OntId('PR:000013502'),
+                      OntId('NCBIGene:19293'),
+                      OntId('NIFEXT:6'),)
+
+        for i in pv_members:
+            s = i.u if isinstance(i, OntId) else i
+            yield s, rdfs.subClassOf, pv
+
+        # alt fix using query neuron
+        # TODO the proper way to implement this is using unionOf logical phenotype
+        # since we do want to restrict it to Neurons
+        n_query = ilxtr.NeuronQuery
+        yield n_query, a, owl.Class
+        yield n_query, rdfs.subClassOf, _NEURON_CLASS
+
+        sst_query = ilxtr.NeuronQuerySST
+        yield sst_query, a, owl.Class
+        yield sst_query, rdfs.subClassOf, n_query
+        yield sst_query, rdfs.label, rdflib.Literal('Somatostatin Neuron (query)')
+        yield sst_query, NIFRID.synonym, rdflib.Literal('Sst Neuron (query)')
+        rf = cmb.Restriction(rdf.first)
+        yield from cmb.EquivalentClass(owl.unionOf)(
+            *(rf(ilxtr.hasMolecularPhenotype, m) for m in sst_members),
+        )(sst_query)
+
+        pv_query = ilxtr.NeuronQueryPV
+        yield pv_query, a, owl.Class
+        yield pv_query, rdfs.subClassOf, n_query
+        yield pv_query, rdfs.label, rdflib.Literal('Parvalbumin Neuron (query)')
+        yield pv_query, NIFRID.synonym, rdflib.Literal('Pvalb Neuron (query)')
+
+        yield from cmb.EquivalentClass(owl.unionOf)(
+            *(rf(ilxtr.hasMolecularPhenotype, m) for m in pv_members),
+        )(pv_query)
+
+       
 
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
@@ -1217,9 +1325,16 @@ def make_devel():
         )
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
+            yield from helper_triples()
+            yield OntId('BFO:0000050').u, a, owl.ObjectProperty
+            yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
+            yield OntId('BFO:0000050').u, owl.inverseOf, OntId('BFO:0000051').u
+            yield OntId('BFO:0000051').u, a, owl.ObjectProperty
+            yield OntId('BFO:0000051').u, a, owl.TransitiveProperty
+            yield OntId('BFO:0000051').u, rdfs.label, rdflib.Literal('has part')
+
             done = []
-            yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
-            cortical_layer = OntTerm('UBERON:2301')
+            cortical_layer = OntTermOntologyOnly('UBERON:0002301')
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
 
@@ -1230,17 +1345,25 @@ def make_devel():
                         continue
 
                     done.append(term)
-                    if not term.label or (not term.label.endswith('neuron') and not term.label.endswith('cell')):
+                    if not term.label or (not term.label.endswith('neuron') and
+                                          not term.label.endswith('cell')):
+                        haveLabel = False
                         for s, p, o in term.triples_simple:
+                            if p == rdfs.label:
+                                haveLabel = True
+                            if s == definition and p == rdf.type:  # FIXME :/
+                                o = owl.AnnotationProperty
+
                             yield s, p, o
+                            #log.debug(f'{o!r}')
                             if isinstance(o, rdflib.URIRef):
-                                no = OntTerm(o)
+                                no = OntTermOntologyOnly(o)
                                 if no not in done:
-                                    if no.prefix in bads:
+                                    if term.prefix not in bads and no.prefix in bads:
                                         if not no.label:
                                             continue
                                         try:
-                                            noo = next(OntTerm.query(term=no.label)).OntTerm
+                                            noo = next(OntTermOntologyOnly.query(term=no.label)).OntTerm
                                             if noo != no and noo.prefix not in bads:
                                                 no = noo
                                             else:
@@ -1250,9 +1373,38 @@ def make_devel():
 
                                     next_terms.append(no)
 
+                        if not haveLabel:
+                            ot = OntTerm(term)  # include InterLex
+                            if ot.label:
+                                yield ot.u, rdfs.label, rdflib.Literal(ot.label)
+
                 terms = next_terms
 
-    nu, *_ = build(neuronUtility, n_jobs=1)
+
+    class neuronUtilityBig(Ont):
+        remote_base = str(NIFRAW['neurons/'])
+        path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
+        filename = 'neuron-development-big'
+        name = 'Utility ontology for neuron development'
+        imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
+                   NIFRAW['neurons/ttl/bridge/chemical-bridge.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation-artifacts.ttl'],
+                   NIFRAW['neurons/ttl/generated/uberon-parcellation-mappings.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation/mbaslim.ttl'],
+                   NIFRAW['neurons/ttl/generated/parcellation/paxinos-rat-labels.ttl'],
+                   rdflib.URIRef('http://purl.obolibrary.org/obo/uberon.owl'),
+        )
+        prefixes = oq.OntCuries._dict
+
+
+        def _triples(self):
+            yield from helper_triples()
+
+
+    CustomTurtleSerializer.roundtrip_prefixes = ('',)
+    nu, nub, *_ = build(neuronUtility, neuronUtilityBig, n_jobs=1)
+    CustomTurtleSerializer.roundtrip_prefixes = True
 
 
 def main():
@@ -1260,6 +1412,7 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
+    models = args['models'] or all
     dev = args['dev'] or all
     old = args['old'] or all
     bridge = args['bridge'] or all
@@ -1281,6 +1434,9 @@ def main():
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
         syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
         expand_syns(syn_mappings)
+
+    if models:
+        make_models()
 
     if bridge:
         make_bridge()

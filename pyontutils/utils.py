@@ -12,7 +12,7 @@ import logging
 from time import time, sleep
 from uuid import uuid4
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
@@ -33,6 +33,12 @@ def get_working_dir(script__file__):
     return working_dir
 
 
+# time functions TODO object version? use case not well understood enough yet
+
+def TZLOCAL():
+    return datetime.now(timezone.utc).astimezone().tzinfo
+
+
 def TODAY():
     """ This needs to be a function for long running programs. """
     return date.today().isoformat()
@@ -41,26 +47,71 @@ def TODAY():
 def UTCNOW(): return datetime.utcnow().isoformat()
 
 
-def sysidpath(ignore_options=False):
+def utcnowtz(): return datetime.now(tz=timezone.utc)
+
+
+def isoformat(datetime_instance, timespec='auto'):
+    return (datetime_instance
+            .isoformat(timespec=timespec)
+            .replace('.', ',')
+            .replace('+00:00', 'Z'))
+
+def isoformat_safe(datetime_instance, timespec='auto'):
+    """ portable file system safe iso format (sigh) """
+    # FIXME this is super inefficient implement from scratch
+    #'%Y%m%dT%H%M%S{}%z'
+    unsafe = isoformat(datetime_instance, timespec)
+    return unsafe.replace('-', '').replace(':', '')
+
+def NOWDANGER(*, implicit_tz=None, timespec='auto'):
+    """ now without a timezone, if you use this you WILL encounter
+        a problem at some point in the future because the actual
+        timezone is implicit and if you ever have to move a server
+        you will want to record the original timezone to preserve
+        the sequntial nature of the sequence
+
+        the implicit_tz field is not used by the function but
+        is there to document the original expectation of the
+        programmer in the event that it changes in the future """
+
+    return isoformat(datetime.now(), timespec=timespec)
+
+
+def NOWISO(timespec='auto'):
+    return isoformat(datetime.now(tz=TZLOCAL()), timespec=timespec)
+
+
+def UTCNOWISO(timespec='auto'):
+    """ timespec is the smallest level of percision rendered """
+    return isoformat(utcnowtz(), timespec=timespec)
+
+
+def sysidpath(ignore_options=False, path_class=Path):
     """ get a unique identifier for the machine running this function """
     # in the event we have to make our own
     # this should not be passed in a as a parameter
     # since we need these definitions to be more or less static
-    failover = Path('/tmp/machine-id')
+    failover = path_class('/var/tmp/machine-id')  # /var/tmp is more persistent than /tmp/
+
+    if hasattr(path_class, 'access'):
+        accessf = lambda p: p.access(os.R_OK)
+    else:
+        # pypy3 3.6 still needs as_poxix here :/
+        accessf = lambda p: os.access(p.as_posix(), os.R_OK)
 
     if not ignore_options:
         options = (
-            Path('/etc/machine-id'),
+            path_class('/etc/machine-id'),
             failover,  # always read to see if we somehow managed to persist this
         )
         for option in options:
             if (option.exists() and
-                os.access(option, os.R_OK) and
+                accessf(option) and
                 option.stat().st_size > 0):
                     return option
 
     uuid = uuid4()
-    with open(failover, 'wt') as f:
+    with failover.open('wt') as f:
         f.write(uuid.hex)
 
     return failover
@@ -111,6 +162,9 @@ def makeSimpleLogger(name, color=True):
 
 
     return logger
+
+
+log = makeSimpleLogger('pyontutils')
 
 
 def test_notebook():  # also tests ipython
