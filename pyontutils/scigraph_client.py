@@ -153,7 +153,7 @@ class Analyzer(restService):
         """
 
         kwargs = {}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
         requests_params = kwargs
@@ -520,7 +520,7 @@ class Cypher(CypherBase):
             return super().execute(query, limit, output)
 
 
-class Dynamic(restService):
+class DynamicBase(restService):
     """ Dynamic Cypher resources """
 
     def __init__(self, basePath=None, verbose=False, cache=False, key=None):
@@ -530,7 +530,370 @@ class Dynamic(restService):
         self._verbose = verbose
         super().__init__(cache, key)
 
-    # No methods exist for this API endpoint.
+    def prod_sparc_artifactLabels_artifact_id(self, artifact_id, output='application/json'):
+        """ Get the graph of all parcellation labels for a single artifact WARNING this can return no results from: /dynamic/prod/sparc/artifactLabels/{artifact-id}
+
+            Arguments:
+            artifact_id: ontology id of the parcellation artifact
+
+            Query:
+            MATCH path = (label) -[:subClassOf]->(root) -[:ilxtr:isDefinedBy]->(a)<-[:subClassOf*0..2] -(artifact:Class{iri: "${artifact-id}"}) WHERE label.iri <> "http://www.w3.org/2002/07/owl#Nothing" RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'artifact_id':artifact_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/artifactLabels/{artifact-id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_artifactRoots_artifact_id(self, artifact_id, output='application/json'):
+        """ Get the graph of all parcellation label roots for a single artifact WARNING this can return no results from: /dynamic/prod/sparc/artifactRoots/{artifact-id}
+
+            Arguments:
+            artifact_id: ontology id of the parcellation artifact
+
+            Query:
+            MATCH path = (root) -[:ilxtr:isDefinedBy]->(a)<-[:subClassOf*0..2] -(artifact:Class{iri: "${artifact-id}"}) RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'artifact_id':artifact_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/artifactRoots/{artifact-id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_organList(self, output='application/json'):
+        """ Get the list of all FMA organ identifiers relevant to SPARC from: /dynamic/prod/sparc/organList
+
+            Arguments:
+
+
+            Query:
+            MATCH (n) WHERE n.iri IN [ "http://purl.org/sig/ont/fma/fma7195", "http://purl.org/sig/ont/fma/fma7088", "http://purl.org/sig/ont/fma/fma7197", "http://purl.org/sig/ont/fma/fma7198", "http://purl.org/sig/ont/fma/fma7203", "http://purl.org/sig/ont/fma/fma7148", "http://purl.org/sig/ont/fma/fma7196", "http://purl.org/sig/ont/fma/fma14543", "http://purl.org/sig/ont/fma/fma7201", "http://purl.org/sig/ont/fma/fma7200", "http://purl.org/sig/ont/fma/fma15900", "http://purl.org/sig/ont/fma/fma45659", "http://purl.org/sig/ont/fma/fma7647"] RETURN n
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/organList').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_organParts_id(self, id, output='application/json'):
+        """ Get the parts list for an organ including nerves and blood vessles from: /dynamic/prod/sparc/organParts/{id}
+
+            Arguments:
+            id: ontology id of the organ
+
+            Query:
+            MATCH path = (start:Class{iri: "${id}"}) -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..40]->(part) -[:fma:arterial_supply|fma:nerve_supply*0..1]->(sup) RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'id':id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/organParts/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationArtifacts(self, output='application/json'):
+        """ Get the graph of all parcellation artifacts for all species from: /dynamic/prod/sparc/parcellationArtifacts
+
+            Arguments:
+
+
+            Query:
+            MATCH path = (artifact) -[:subClassOf*0..2]->(parent) -[:ilxtr:isDefinedInTaxon]->(species) WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing" RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationArtifacts_species_id(self, species_id, output='application/json'):
+        """ Get the graph of all parcellation artifacts for a single species from: /dynamic/prod/sparc/parcellationArtifacts/{species-id}
+
+            Arguments:
+            species_id: ontology id of the species
+
+            Query:
+            MATCH (parent) -[:ilxtr:isDefinedInTaxon]->(species:Class{iri: "${species-id}"}) WITH parent MATCH path = (artifact) -[:subClassOf*0..2]->(parent) WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing" RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'species_id':species_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts/{species-id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationGraph(self, output='application/json'):
+        """ Get the graph of all parcellation labels for all species from: /dynamic/prod/sparc/parcellationGraph
+
+            Arguments:
+
+
+            Query:
+            MATCH path = (artifact) -[:subClassOf*0..2]->(parent) -[:ilxtr:isDefinedInTaxon]->(species) WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing" return path UNION MATCH path = (maybe) -[relation*0..1]-(label) -[:subClassOf]->(root) -[:ilxtr:isDefinedBy]->(artifact) -[:subClassOf*0..2]->(parent) -[:ilxtr:isDefinedInTaxon]->(species) WHERE NONE (r in relation WHERE type(r) IN ["isDefinedBy", "subClassOf", "filler"]) AND NOT (label.iri =~ ".*_:.*") AND NOT (maybe.iri =~ ".*_:.*") AND label.iri <> "http://www.w3.org/2002/07/owl#Nothing" RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationGraph').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationRoots(self, output='application/json'):
+        """ Get the graph of all parcellation label roots for all species from: /dynamic/prod/sparc/parcellationRoots
+
+            Arguments:
+
+
+            Query:
+            MATCH path = (artifact) -[:subClassOf*0..2]->(parent) -[:ilxtr:isDefinedInTaxon]->(species) WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing" return path UNION MATCH path = (root) -[:ilxtr:isDefinedBy]->(artifact) -[:subClassOf*0..2]->(parent) -[:ilxtr:isDefinedInTaxon]->(species) RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationRoots_species_id(self, species_id, output='application/json'):
+        """ Get the graph of all parcellation label roots for a single species from: /dynamic/prod/sparc/parcellationRoots/{species-id}
+
+            Arguments:
+            species_id: ontology id of the species
+
+            Query:
+            MATCH (parent) -[:ilxtr:isDefinedInTaxon]->(species:Class{iri: "${species-id}"}) WITH parent MATCH path = (artifact) -[:subClassOf*0..2]->(parent) WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing" return path UNION MATCH (parent) -[:ilxtr:isDefinedInTaxon]->(species:Class{iri: "${species-id}"}) WITH parent MATCH path = (root) -[:ilxtr:isDefinedBy]->(artifact) -[:subClassOf*0..2]->(parent) RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'species_id':species_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species-id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_rootLabels_root_id(self, root_id, output='application/json'):
+        """ Get the list of all parcellation labels for a single label root from: /dynamic/prod/sparc/rootLabels/{root-id}
+
+            Arguments:
+            root_id: ontology id of the parcellation label root
+
+            Query:
+            MATCH (label)-[:subClassOf]->(root:Class{iri: "${root-id}"}) WITH label MATCH path = (label)-[relation*0..1]-(maybe) WHERE NONE (r in relation WHERE type(r) IN ["isDefinedBy", "subClassOf", "filler"]) AND NOT (label.iri =~ ".*_:.*") AND NOT (maybe.iri =~ ".*_:.*") AND label.iri <> "http://www.w3.org/2002/07/owl#Nothing" RETURN path
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'root_id':root_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/rootLabels/{root-id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_speciesList(self, output='application/json'):
+        """ Get the list of all NCBITaxon species identifiers relevant to SPARC from: /dynamic/prod/sparc/speciesList
+
+            Arguments:
+
+
+            Query:
+            MATCH (n) WHERE n.iri IN [ "http://purl.obolibrary.org/obo/NCBITaxon_9378", "http://purl.obolibrary.org/obo/NCBITaxon_9606", "http://purl.obolibrary.org/obo/NCBITaxon_9685", "http://purl.obolibrary.org/obo/NCBITaxon_9823", "http://purl.obolibrary.org/obo/NCBITaxon_10090", "http://purl.obolibrary.org/obo/NCBITaxon_10116"] RETURN n
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/speciesList').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+
+class Dynamic(DynamicBase):
+
+    @staticmethod
+    def _path_to_id(path):
+        return (path.strip('/')
+                .replace('dynamic/', '')
+                .replace('{', '')
+                .replace('}', '')
+                .replace('/', '_')
+                .replace('-', '_'))
+
+    def _path_function_arg(self, path):
+        if '.' in path:
+            raise ValueError('extensions not supported directly please use output=mimetype')
+
+        if ':' in path:  # curie FIXME way more potential arguments here ...
+            path, arg = path.rsplit('/', 1)
+            putative = self._path_to_id(path + '/{')
+            cands = [p for p in dir(self) if p.startswith(putative)]
+            fname = cands[0] if len(cands) == 1 else '___wat'
+        else:
+            arg = None
+            fname = self._path_to_id(path)
+
+        if not hasattr(self, fname):
+            raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
+
+        return getattr(self, fname), arg
+
+    def dispatch(self, path, output='application/json'):
+        f, a = self._path_function_arg(path)
+        return f(a, output=output) if a else f(output=output)
 
 
 class GraphBase(restService):
@@ -1027,7 +1390,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/categories').format(**kwargs)
         requests_params = kwargs
@@ -1063,7 +1426,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
         requests_params = kwargs
