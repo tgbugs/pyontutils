@@ -5,6 +5,7 @@ from html import escape as html_escape
 from urllib.parse import quote
 from collections import namedtuple
 from collections import defaultdict as base_dd
+import htmlfn as hfn
 import requests
 from pyontutils.utils import TermColors as tc
 from ttlser import natsort
@@ -321,6 +322,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         output = output.replace('</summary> <br>', '</summary>')
         output = output.replace('</details> <br>', '</details>')
         html_head = '\n    '.join(self.html_head)
+        return output
         output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
                   '"http://www.w3.org/TR/html4/loose.dtd">\n'
                   '<html>\n'
@@ -352,38 +354,47 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
+def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix):
+    if relationshipType == 'rdfs:subClassOf':
+        relationshipType = 'subClassOf'
+    elif relationshipType == 'rdfs:subPropertyOf':
+        relationshipType = 'subPropertyOf'
+    j = sgg.getNeighbors(root, relationshipType=relationshipType,
+                            direction=direction, depth=depth, entail=entail)
+    if j is None:
+        raise ValueError(f'Unknown root {root}')
+    elif root.startswith('http'):
+        # FIXME https://github.com/SciGraph/SciGraph/issues/268
+        _ids = set(n['id'] for n in j['nodes'])
+        if root not in _ids:
+            root_iri = root
+            root = curie
+            if root is None:
+                raise ValueError('please provide a curie for {root_iri}')
+
+    if filter_prefix is not None:
+        j['edges'] = [e for e in j['edges']
+                        if not [v for v in e.values()
+                                if filter_prefix in v]]
+
+    if hasattr(sgg, '_cache'):
+        j = deepcopy(j)  # avoid dangers of mutable cache
+    #flag_dep(j)
+
+    return j
+
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None, entail=True):
+    sgg = graph
     html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
     root_iri = None  # FIXME 268
     if json is None:
-        if relationshipType == 'rdfs:subClassOf':
-            relationshipType = 'subClassOf'
-        elif relationshipType == 'rdfs:subPropertyOf':
-            relationshipType = 'subPropertyOf'
-        j = graph.getNeighbors(root, relationshipType=relationshipType,
-                               direction=direction, depth=depth, entail=entail)
+        j = queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix)
+        # FIXME stick this on sgg ...
+        # FIXME some magic nonsense for passing the last query to sgg out
+        # yet another reason to objectify this (heh)
         html_head.append('<link rel="http://www.w3.org/ns/prov#'
-                         f'wasDerivedFrom" href="{graph._last_url}">')  # FIXME WARNING leaking keys
-        if j is None:
-            raise ValueError(f'Unknown root {root}')
-        elif root.startswith('http'):
-            # FIXME https://github.com/SciGraph/SciGraph/issues/268
-            _ids = set(n['id'] for n in j['nodes'])
-            if root not in _ids:
-                root_iri = root
-                root = curie
-                if root is None:
-                    raise ValueError('please provide a curie for {root_iri}')
-
-        if filter_prefix is not None:
-            j['edges'] = [e for e in j['edges']
-                          if not [v for v in e.values()
-                                  if filter_prefix in v]]
-
-        if hasattr(graph, '_cache'):
-            j = deepcopy(j)  # avoid dangers of mutable cache
-        #flag_dep(j)
+                         f'wasDerivedFrom" href="{sgg._last_url}">')  # FIXME WARNING leaking keys
     else:
         j = dict(json)
         j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
@@ -465,44 +476,24 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         # and so we may need to reorder ?
 
     _, nTreeNode = newTree('names' + tree_name, parent_dict=pnames)  # FIXME pnames is wrong...
+    hierarchy, dupes = build_tree(root)
+
     def rename(tree):
         dict_ = nTreeNode()
         for k in tree:
             dict_[nodes[k]] = rename(tree[k])
         return dict_
 
-    htmlNodes = {}
-    for k, v in nodes.items():
-        if ':' in k and not k.startswith('http') and not k.startswith('file'):
-            prefix, suffix = k.split(':')
-            prefix = prefix.strip('\x1b[91m')  # colors :/
-            if graph is not None and not suffix and k == root:  # FIXME 268
-                url = os.path.join(graph._basePath, 'vocabulary', 'id',
-                                   quote(root_iri, safe=[]))
-                                   #root_iri.replace('/','%2F').replace('#','%23'))
-            elif graph is not None and local:
-                url = os.path.join(graph._basePath, 'vocabulary', 'id', k)
-            else:
-                url = str(prefixes[prefix]) + suffix
-        else:
-            if graph is not None and local:
-                url = os.path.join(graph._basePath, 'vocabulary', 'id',
-                                   quote(k, safe=[]))
-                                   #k.replace('/','%2F').replace('#','%23'))
-            else:
-                url = k
-        if v is None:  # if there is no label fail over to the url
-            v = f'<{url}>'
-        htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(v))
+    htmlNodes = makeHtmlNodes(nodes, sgg, prefixes, local)
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
+
     def htmlTree(tree):
         dict_ = hTreeNode()
         for k in tree:
             dict_[htmlNodes[k]] = htmlTree(tree[k])
         return dict_
 
-    hierarchy, dupes = build_tree(root)
     try:
         named_hierarchy = rename(hierarchy)
         html_hierarchy = htmlTree(hierarchy)
@@ -517,15 +508,46 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
                     p = str(p)
                 h = h.replace('href="' + n + ':', 'href="' + p)
                 h = h.replace('>' + p, '>' + n + ':')
+
         return h
 
-    html = sub_prefixes(html_hierarchy.__html__())
+    html_body = sub_prefixes(html_hierarchy.__html__())
     extras = Extras(hierarchy, html_hierarchy,
                     dupes, nodes, edgerep,
                     objects, parents,
                     names, pnames, hpnames, j,
-                    html, str(named_hierarchy))
+                    html_body, str(named_hierarchy))
+
     return named_hierarchy, extras
+
+
+def makeHtmlNodes(nodes, sgg, prefixes, local):
+    htmlNodes = {}
+    for k, v in nodes.items():
+        if ':' in k and not k.startswith('http') and not k.startswith('file'):
+            prefix, suffix = k.split(':')
+            prefix = prefix.strip('\x1b[91m')  # colors :/
+            if sgg is not None and not suffix and k == root:  # FIXME 268
+                url = os.path.join(sgg._basePath, 'vocabulary', 'id',
+                                   quote(root_iri, safe=[]))
+                                   #root_iri.replace('/','%2F').replace('#','%23'))
+            elif sgg is not None and local:
+                url = os.path.join(sgg._basePath, 'vocabulary', 'id', k)
+            else:
+                url = str(prefixes[prefix]) + suffix
+        else:
+            if sgg is not None and local:
+                url = os.path.join(sgg._basePath, 'vocabulary', 'id',
+                                   quote(k, safe=[]))
+                                   #k.replace('/','%2F').replace('#','%23'))
+            else:
+                url = k
+        if v is None:  # if there is no label fail over to the url
+            v = f'<{url}>'
+        htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(v))
+
+    return htmlNodes
+
 
 def levels(tree, p, l = 0):
     if p == 0:
