@@ -3,7 +3,7 @@ from pyontutils.core import devconfig
 __doc__ = f"""Client library generator for SciGraph REST api.
 
 Usage:
-    scigraph-codegen [options]
+    scigraph-codegen [options] [--dynamic=<PATH>...]
 
 Options:
     -o --output-file=FILE       save client library here    [default: /tmp/scigraph_client.py]
@@ -12,6 +12,7 @@ Options:
     -v --scigraph-version=VER   API docs version            [default: 2]
 
     -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]
+    -d --dynamic=<PATH>         additional servers to search for dynamic endpoints
 
 """
 
@@ -233,6 +234,9 @@ class Dynamic(SUBCLASS):
                 .replace('-', '_'))
 
     def _path_function_arg(self, path):
+        if '?' in path:
+            path, query = path.split('?', 1)
+
         if '.' in path:
             raise ValueError('extensions not supported directly please use output=mimetype')
 
@@ -250,9 +254,9 @@ class Dynamic(SUBCLASS):
 
         return getattr(self, fname), arg
 
-    def dispatch(self, path, output='application/json'):
+    def dispatch(self, path, output='application/json', **kwargs):
         f, a = self._path_function_arg(path)
-        return f(a, output=output) if a else f(output=output)
+        return f(a, output=output, **kwargs) if a else f(output=output, **kwargs)
 
 
 class Graph(SUBCLASS):
@@ -310,8 +314,9 @@ operation_code = FAKECLASS.make()
 
 
 class State:
-    def __init__(self, api_url, basepath=None):
+    def __init__(self, api_url, basepath=None, dynamics=tuple()):
         # TODO autopopulate from subclasses
+        self._dynamics = dynamics
         self.classname = None
         self._subclasses = {sc.__name__:sc for sc in SUBCLASS.__subclasses__()}
 
@@ -384,8 +389,9 @@ class State:
 
     def make_param_parts(self, dict_):
         if dict_['required']:
-            param_args = '{name}'
-            param_args = param_args.format(name=dict_['name'])
+            #param_args = '{name}'
+            #param_args = param_args.format(name=dict_['name'])
+            param_args = dict_['name']
             required = param_args
         else:
             param_args = "{name}={defaultValue}"
@@ -403,8 +409,9 @@ class State:
             param_args = param_args.format(name=dict_['name'], defaultValue=dv)
             required = None
 
-        param_rest = '{name}'
-        param_rest = param_rest.format(name=dict_['name'])
+        #param_rest = '{name}'
+        #param_rest = param_rest.format(name=dict_['name'])
+        param_rest = dict_['name']
 
         param_doc = '{t}{t}{t}{name}:{description}'
 
@@ -457,13 +464,15 @@ class State:
         else:
             pargs = ''
 
+        pkeys = prests
+
         if prests:
-            prests = '{' + ', '.join(["'%s':%s"%(pr, pr) for pr in prests]) + '}'
+            prests = '{' + ', '.join([f'{pr!r}: {pr}' for pr in prests]) + '}'
         else:
             prests = '{}'
 
         pdocs = '\n'.join(pdocs)
-        return pargs, prests, pdocs, required
+        return pargs, prests, pdocs, required, pkeys
 
     def make_return(self, api_dict):
         return_type = None
@@ -503,7 +512,7 @@ class State:
         return None, ''
 
     def operation(self, api_dict):
-        params, param_rest, param_docs, required = self.make_params(api_dict['parameters'])
+        params, param_rest, param_docs, required, pkeys = self.make_params(api_dict['parameters'])
         dict_comp = (('kwargs = {k:dumps(v) if builtins.type(v) '
                       'is dict else v for k, v in kwargs.items()}')  # json needs " not '
                       if param_rest != '{}' else '')
@@ -517,8 +526,8 @@ class State:
                      param_docs)
 
         if 'x-query' in api_dict:
-            _query = api_dict['x-query']
             _p = '{t}{t}{t}'.format(t=self.tab)
+            _query = api_dict['x-query'].replace('\n', '\n' + _p)
             docstring += '\n\n{p}Query:\n{p}{q}'.format(p=_p, q=_query)
 
         # handle whether required is in the url
@@ -531,8 +540,9 @@ class State:
             dict_comp2 = 'kwargs'
 
         params_conditional = ''
-        for cond in 'id', 'url', 'type':
-            if cond in param_rest:
+        for key in pkeys:
+            if [_ for _ in ('id', 'url', 'type', 'relationship') if _ in key]:
+                cond = key
                 params_conditional += (
                     "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
                     "{t}{t}{t}{cond} = parse.quote({cond}, safe='')").format(cond=cond, t=self.tab)
@@ -682,6 +692,12 @@ class State:
     def gencode(self):
         """ Run this to generate the code """
         ledict = requests.get(self.api_url).json()
+        for durl in self._dynamics:
+            dj = requests.get(durl).json()
+            for p in dj['paths']:
+                if p.startswith('/dynamic') and p not in ledict['paths']:
+                    ledict['paths'][p] = dj['paths'][p]
+
         ledict = self.dotopdict(ledict)
         out = self.dodict(ledict)
         self._code = out
@@ -808,7 +824,12 @@ def main():
 
     api_url = f'{api}/{docs_path}'
     print(api_url)
-    s = state(api_url, basepath)
+
+    dynamics = [f'{d}/swagger.json' for d in args['--dynamic']]
+    if dynamics:
+        print('dynamics:', dynamics)
+
+    s = state(api_url, basepath, dynamics=dynamics)
     code = s.code()
     with open(output_file, 'wt') as f:
         f.write(code)

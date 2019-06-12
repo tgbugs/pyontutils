@@ -124,21 +124,27 @@ def zeronotetag(text):
 
 inputtag = stag('input')
 
-
-def htmldoc(*body, title='Spooky Nameless Page', metas=tuple(), styles=tuple(), scripts=tuple()):
+_default_title = 'Spooky Nameless Page'
+def htmldoc(*body, title=_default_title, metas=tuple(), other=tuple(), styles=tuple(), scripts=tuple()):
     """ metas is a tuple of dicts """
     header = ('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n'
               '"http://www.w3.org/TR/html4/loose.dtd">\n')
+    titlet = ('' if
+              [o for o in other if o.startswith('<title')]
+              and title == _default_title
+              else titletag(title))
+    other = '\n'.join(other)
     styles = '\n'.join((styletag(s) for s in styles))
     scripts = '\n'.join((scripttag(s) for s in scripts))
     metas = (dict(charset='UTF-8'),) + metas
-    head = headtag('\n'.join((titletag(title), *(metatag(**md) for md in metas), styles, scripts)))
+    head = headtag('\n'.join((titlet, other, *(metatag(**md) for md in metas), styles, scripts)))
     return header + htmltag('\n'.join((head, bodytag(*body))))
 
 
-def render_table(rows, *headers):
+def render_table(rows, *headers, halign=None):
     output = []
-    output.append('<tr><th>' + '</th><th>'.join(headers) + '</th></tr>')
+    ha = '' if halign is None else f' align="{halign}"'
+    output.append(f'<tr><th{ha}>' + f'</th><th{ha}>'.join(headers) + '</th></tr>')
     clean_headers = [h.split('>', 1)[1].split('<', 1)[0]  # FIXME hack
                      if h.startswith('<a')
                      else h
@@ -418,3 +424,9 @@ atagpost_style = '''
   color:red;
 }
 '''
+
+# combined styles
+tree_styles = (details_style,
+               'body { font-family: Dejavu Sans Mono; font-size: 10pt; }',  # FIXME duplicate with monospace_body
+               'a:link { color: black; }',
+               'a:visited { color: grey; }',)

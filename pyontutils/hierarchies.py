@@ -7,6 +7,7 @@ from collections import namedtuple
 from collections import defaultdict as base_dd
 import htmlfn as hfn
 import requests
+from pyontutils.core import OntId, log as _log
 from pyontutils.utils import TermColors as tc
 from ttlser import natsort
 from pyontutils.scigraph import Graph
@@ -32,6 +33,8 @@ Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
                                'objects', 'parents',
                                'names', 'pnames', 'hpnames',
                                'json', 'html', 'text'])
+
+log = _log.getChild('hierarchies')
 
 def alphasortkey(keyvalue):
     key, value = keyvalue
@@ -354,11 +357,13 @@ def newTree(name, **kwargs):
 
     return Tree, newTreeNode
 
-def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix):
+def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix, curie):
+    root_iri = None  # FIXME 268
     if relationshipType == 'rdfs:subClassOf':
         relationshipType = 'subClassOf'
     elif relationshipType == 'rdfs:subPropertyOf':
         relationshipType = 'subPropertyOf'
+
     j = sgg.getNeighbors(root, relationshipType=relationshipType,
                             direction=direction, depth=depth, entail=entail)
     if j is None:
@@ -381,23 +386,123 @@ def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_pref
         j = deepcopy(j)  # avoid dangers of mutable cache
     #flag_dep(j)
 
-    return j
+    return j, root_iri
+
+def build_tree(tree_class, obj, objects, parents, existing = {}, flat_tree = set()):
+    subjects = objects[obj]
+    t = tree_class()
+    t[obj]
+
+    for sub in subjects:
+        if sub in existing:  # the first time down gets all children
+            t[obj][sub] = existing[sub]
+        elif sub in flat_tree:  # prevent cycles  KEK that is faster than doing in_tree :D
+            print(CYCLE, sub, 'parent is', obj)
+            t[obj][CYCLE][sub]
+        else:
+            flat_tree.add(sub)
+            subtree, _ = build_tree(tree_class, sub, objects, parents, existing, flat_tree)
+            t[obj].update(subtree)
+
+        if len(parents[sub]) > 1:
+            existing[sub] = t[obj][sub]
+
+    return t, existing
+    # for each list of subjects
+    # look up the subjects of that subject as if it were and object
+    # and and look up those subjects subjects until there are no subjects
+    # but we are not guranteed to have started at the right place
+    # and so we may need to reorder ?
+
+
+def pruneOutOfTree(nodes, verbose):
+    testk = len(nodes)
+    test = sum(len(v) for v in nodes.values())
+    while True:
+        if verbose:
+            print(test)
+        nodes = {k:[s for s in v if s in nodes or s == 'ROOT']
+                    for k, v in nodes.items() if v}
+        ntestk = len(nodes)
+        ntest = sum(len(v) for v in nodes.values())
+        if ntest == test and ntestk == testk:
+            if verbose:
+                print('done')
+            return nodes
+        else:
+            test = ntest
+            testk = ntestk
+
+
+def process_nodes(j, root, direction, verbose):
+    nodes = {n['id']:n['lbl'] for n in j['nodes']}
+    nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
+    edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
+
+    objects = defaultdict(list)  # note: not all nodes are objects!
+    for edge in j['edges']:
+        objects[edge['obj']].append(edge['sub'])
+
+    subjects = defaultdict(list)
+    for edge in j['edges']:
+        subjects[edge['sub']].append(edge['obj'])
+
+    if root not in nodes and root is not None:
+        root = OntId(root).curie
+
+    if direction == 'OUTGOING' or direction == 'BOTH':  # flip for the tree  # FIXME BOTH needs help!
+        objects, subjects = subjects, objects
+
+    # something is wrong with how we are doing subClassOf, see PAXRAT: INCOMING
+
+    if root is not None:
+        subjects[root] = ['ROOT']
+        subjects = pruneOutOfTree(subjects, verbose)
+        subjects[root] = []  # FIXME if OUTGOING maybe??
+
+    ss, so = set(subjects), set(objects)
+    roots = ss - so
+    leaves = so - ss
+
+    if root is None:
+        if len(roots) == 1:
+            root = next(iter(roots))
+        else:
+            root = 'ROOT'
+            nodes[root] = 'ROOT'
+
+        if direction == 'INCOMING' or direction is None:
+            objects[root] = list(roots)
+        else:
+            subjects[root] = list(roots)
+
+        subjects = pruneOutOfTree(subjects, verbose)
+        objects = pruneOutOfTree(objects, verbose)
+        subjects[root] = []
+        #breakpoint()
+
+    names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}  # children don't need filtering
+    pnames = {nodes[k]:[nodes[s] for s in v] for k,v in subjects.items()}
+    return nodes, objects, subjects, names, pnames, edgerep, root, roots, leaves
+
 
 def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None, entail=True):
     sgg = graph
     html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
-    root_iri = None  # FIXME 268
     if json is None:
-        j = queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix)
+        j, root_iri = queryTree(root, relationshipType, direction, depth, entail,
+                                sgg, filter_prefix, curie)
         # FIXME stick this on sgg ...
         # FIXME some magic nonsense for passing the last query to sgg out
         # yet another reason to objectify this (heh)
         html_head.append('<link rel="http://www.w3.org/ns/prov#'
                          f'wasDerivedFrom" href="{sgg._last_url}">')  # FIXME WARNING leaking keys
     else:
+        root_iri = None
         j = dict(json)
-        j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
+        if relationshipType is not None:
+            j['edges'] = [e for e in j['edges'] if e['pred'] == relationshipType]
         #if 'meta' in j['nodes'][0]:  # check if we are safe to check meta
             #flag_dep(j)
 
@@ -407,76 +512,18 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
     if verbose:
         print(len(j['nodes']))
 
-    nodes = {n['id']:n['lbl'] for n in j['nodes']}
-    nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
-    edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
+    (nodes, objects, subjects, names,
+     pnames, edgerep, root, roots, leaves) = process_nodes(j, root, direction, verbose)
 
-    objects = defaultdict(list)  # note: not all nodes are objects!
-    for edge in j['edges']:
-        objects[edge['obj']].append(edge['sub'])
+    if root is None:
+        breakpoint()
 
-    parents = defaultdict(list)
-    for edge in j['edges']:
-        parents[edge['sub']].append(edge['obj'])
+    rootsl = '\n'.join(roots)
+    tree_name = f'{rootsl}{relationshipType}{direction}{depth}'
 
-    if direction == 'OUTGOING' or direction == 'BOTH':  # flip for the tree  # FIXME BOTH needs help!
-        objects, parents = parents, objects
-
-    def pruneOutOfTree(n):
-        testk = len(n)
-        test = sum(len(v) for v in n.values())
-        while True:
-            if verbose:
-                print(test)
-            n = {k:[s for s in v if s in n or s == 'ROOT'] for k, v in n.items() if v}
-            ntestk = len(n)
-            ntest = sum(len(v) for v in n.values())
-            if ntest == test and ntestk == testk:
-                if verbose:
-                    print('done')
-                return n
-            else:
-                test = ntest
-                testk = ntestk
-
-    parents[root] = ['ROOT']
-    parents = pruneOutOfTree(parents)
-    parents[root] = []
-
-    names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}  # children don't need filtering
-    pnames = {nodes[k]:[nodes[s] for s in v] for k,v in parents.items()}
-
-    tree_name = root + relationshipType + direction + str(depth)
-    Tree, _ = newTree(tree_name, parent_dict=parents)
-
-    def build_tree(obj, existing = {}, flat_tree = set()):
-        subjects = objects[obj]
-        t = Tree()
-        t[obj]
-
-        for sub in subjects:
-            if sub in existing:  # the first time down gets all children
-                t[obj][sub] = existing[sub]
-            elif sub in flat_tree:  # prevent cycles  KEK that is faster than doing in_tree :D
-                print(CYCLE, sub, 'parent is', obj)
-                t[obj][CYCLE][sub]
-            else:
-                flat_tree.add(sub)
-                subtree, _ = build_tree(sub, existing, flat_tree)
-                t[obj].update(subtree)
-
-            if len(parents[sub]) > 1:
-                existing[sub] = t[obj][sub]
-
-        return t, existing
-        # for each list of subjects
-        # look up the subjects of that subject as if it were and object
-        # and and look up those subjects subjects until there are no subjects
-        # but we are not guranteed to have started at the right place
-        # and so we may need to reorder ?
-
+    Tree, _ = newTree(tree_name, parent_dict=subjects)
+    hierarchy, dupes = build_tree(Tree, root, objects, subjects)
     _, nTreeNode = newTree('names' + tree_name, parent_dict=pnames)  # FIXME pnames is wrong...
-    hierarchy, dupes = build_tree(root)
 
     def rename(tree):
         dict_ = nTreeNode()
@@ -484,8 +531,8 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
             dict_[nodes[k]] = rename(tree[k])
         return dict_
 
-    htmlNodes = makeHtmlNodes(nodes, sgg, prefixes, local)
-    hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in parents.items()}
+    htmlNodes = makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root)
+    hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in subjects.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
 
     def htmlTree(tree):
@@ -498,6 +545,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         named_hierarchy = rename(hierarchy)
         html_hierarchy = htmlTree(hierarchy)
     except KeyError as e:
+        log.exception(e)
         embed()
         raise e
 
@@ -514,14 +562,14 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
     html_body = sub_prefixes(html_hierarchy.__html__())
     extras = Extras(hierarchy, html_hierarchy,
                     dupes, nodes, edgerep,
-                    objects, parents,
+                    objects, subjects,
                     names, pnames, hpnames, j,
                     html_body, str(named_hierarchy))
 
     return named_hierarchy, extras
 
 
-def makeHtmlNodes(nodes, sgg, prefixes, local):
+def makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root):
     htmlNodes = {}
     for k, v in nodes.items():
         if ':' in k and not k.startswith('http') and not k.startswith('file'):

@@ -24,10 +24,14 @@ import os
 import re
 import asyncio
 import subprocess
+from pprint import pprint
 from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
+from urllib.parse import parse_qs
 import rdflib
+import htmlfn as hfn
+import ontquery as oq
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app
 from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
@@ -35,7 +39,7 @@ from htmlfn import render_table, table_style
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
-from pyontutils.utils import Async, deferred
+from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
 from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
@@ -51,6 +55,7 @@ log = makeSimpleLogger('ontree')
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
 sgc = scigraph.Cypher(cache=False, verbose=True)
+sgd = scigraph.Dynamic(cache=False, verbose=True)
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -102,21 +107,33 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         import_graph = rdflib.Graph()
         [import_graph.add(t) for t in itrips]
 
+        self.tree, self.extra = next(import_tree(import_graph, ontologies))
+        return self.tree, self.extra
+
+    def make_html(self):
         line = getSourceLine(self.__class__)
         wgb = self.wasGeneratedBy.format(line=line)
         prov = makeProv('owl:imports', 'NIFTTL:nif.ttl', wgb)
-        self.tree, self.extra = next(import_tree(import_graph, ontologies, html_head=prov))
-        return self.tree, self.extra
-
-    def write_import_chain(self, location='/tmp/'):
         tree, extra  = self.make_import_chain()
         if tree is None:
+            html_all = ''
+        else:
+        
+            html = extra.html.replace('NIFTTL:', '')
+            html_all = hfn.htmldoc(html,
+                                   other=prov,
+                                   styles=hfn.tree_styles)
+
+        self.html = html_all
+        return html_all
+
+    def write_import_chain(self, location='/tmp/'):
+        html = self.make_html()
+        if not html:
             self.path = '/tmp/noimport.html'
-            html = ''
         else:
             self.name = Path(next(iter(tree.keys()))).name
             self.path = Path(location, f'{self.name}-import-closure.html')
-            html = extra.html.replace('NIFTTL:', '')
 
         with open(self.path.as_posix(), 'wt') as f:
             f.write(html)  # much more readable
@@ -132,12 +149,23 @@ def graphFromGithub(link, verbose=False):
 
 def makeProv(pred, root, wgb):
     return [titletag(f'Transitive closure of {root} under {pred}'),
-            f'<meta name="date" content="{datetime.utcnow().isoformat()}">',
+            f'<meta name="date" content="{UTCNOWISO()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
 
+def connectivity_query(relationship=None, start=None, end=None):
+    j = sgd.dispatch('/dynamic/shortestSimple?'
+                     'start_id={start.quoted}&'
+                     'end_id={end.quoted}&'
+                     'relationship={relationship}')
+
+    kwargs['json'] = j
+    tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
+    return htmldoc(extras.html, styles=hfn.tree_styles)
+
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
-           restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False):
+           restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False,):
+
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
@@ -226,8 +254,12 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
                            # FIXME still stuff wrong, but better for non cache case
                            if not r['deprecated']), key=lambda lid: lid.lower())
             return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
+
         else:
-            return extras.html
+            return hfn.htmldoc(extras.html,
+                               other=prov,
+                               styles=hfn.tree_styles)
+
     except (KeyError, TypeError) as e:
         if verbose:
             log.error(f'{type(e)} {e}')
@@ -326,6 +358,11 @@ file_examples = (
      'ttl/bridge/uberon-bridge.ttl', '?direction=OUTGOING&restriction=true'),
 )
 
+dynamic_examples = (
+    ('Shortest path', 'shortestSimple',
+     '?start_id=UBERON:0000955&end_id=UBERON:0001062&relationship=subClassOf'),
+)
+
 def server(api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
@@ -349,7 +386,7 @@ def server(api_key=None, verbose=False):
     wgb = wasGeneratedBy.format(line=line)
 
     importchain = ImportChain(wasGeneratedBy=wasGeneratedBy)
-    importchain.make_import_chain()  # run this once, restart services on a new release
+    importchain.make_html()  # run this once, restart services on a new release
 
     loop = asyncio.get_event_loop()
     app = Flask('ontology tree service')
@@ -380,24 +417,46 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/examples', methods=['GET'])
     def route_examples():
-        links = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_query", pred=pred, root=root)}{args[0] if args else ""}">'
-                           f'../query/{pred}/{root}{args[0] if args else ""}</a></td></tr>')
-                          for name, pred, root, *args in examples)
-        flinks = '\n'.join((f'<tr><td>{name}</td>\n<td><a href="{url_for("route_filequery", pred=pred, root=root, file=file)}{args[0] if args else ""}">'
-                            f'../query/{pred}/{root}/{file}{args[0] if args else ""}</a></td></tr>')
-                           for name, pred, root, file, *args in file_examples)
-        return htmldoc(('<table><tr><th align="left">Root class</th><th align="left">'
-                        '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false</th></tr>'
-                        f'{links}</table>'
-                        '<table><tr><th align="left">Root class</th><th align="left">'
-                        '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false</th></tr>'
-                        f'{flinks}</table>'),
-                       title='Example hierarchy queries'
-        )
+        links = render_table([[name,
+                               atag(url_for("route_query", pred=pred, root=root) + (args[0] if args else ''),
+                                    f'../query/{pred}/{root}{args[0] if args else ""}')]
+                              for name, pred, root, *args in examples],
+                             'Root class', '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false',
+                             halign='left')
+
+        flinks = render_table([[name,
+                                atag(url_for("route_filequery", pred=pred, root=root, file=file) + (args[0] if args else ''),
+                                     f'../query/{pred}/{root}/{file}{args[0] if args else ""}')]
+                               for name, pred, root, file, *args in file_examples],
+                              'Root class', '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
+                              halign='left')
+
+
+        return htmldoc(links, flinks, title='Example hierarchy queries')
+
+    @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
+    def route_sparc_connectivity_query():
+        kwargs = request.args
+        log.debug(kwargs)
+        return connectivity_query(**kwargs)
+
+    @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
+    def route_dynamic(path):
+        j = sgd.dispatch(path, **request.args)
+        if not j['edges']:
+            log.error(pprint(j))
+            return abort(400)
+
+        kwargs = {'json': j}
+        direction = ('INCOMING' if
+                     'relationship' in request.args and request.args['relationship'] == 'subClassOf'
+                     else 'BOTH')
+        tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
+        return htmldoc(extras.html, styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
     def route_import_chain():
-        return importchain.extra.html
+        return importchain.html
 
     @app.route(f'/{basename}/query/<pred>/<root>', methods=['GET'])
     def route_query(pred, root):
@@ -510,6 +569,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc', methods=['GET'])
     @app.route(f'/{basename}/sparc/', methods=['GET'])
     def route_sparc():
+        # FIXME TODO route to compiled
         return htmldoc(
             atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
             atag(url_for('route_sparc_index'), 'Index'),
@@ -525,9 +585,11 @@ def test():
     request.args['depth'] = 1
     app = server()
     (route_, route_docs, route_filequery, route_examples, route_iriquery,
-     route_query) = (app.view_functions[k]
-                     for k in ('route_', 'route_docs', 'route_filequery',
-                               'route_examples', 'route_iriquery', 'route_query'))
+     route_query, route_dynamic,
+    ) = (app.view_functions[k]
+         for k in ('route_', 'route_docs', 'route_filequery',
+                   'route_examples', 'route_iriquery', 'route_query',
+                   'route_dynamic',))
 
     for _, predicate, root, *_ in examples + extra_examples:
         if root == 'UBERON:0001062':
@@ -535,7 +597,7 @@ def test():
         if root == 'PAXRAT:':
             continue  # not an official curie yet
 
-        log.info('ontree testing {predicate} {root}')
+        log.info(f'ontree testing {predicate} {root}')
         if root.startswith('http'):
             root = root.split('://')[-1]  # FIXME nginx behavior...
             resp = route_iriquery(predicate, root)
@@ -543,7 +605,7 @@ def test():
             resp = route_query(predicate, root)
 
     for _, predicate, root, file, *args in file_examples:
-        log.info('ontree testing {predicate} {root} {file}')
+        log.info(f'ontree testing {predicate} {root} {file}')
         if args and 'restriction' in args[0]:
             request.args['restriction'] = 'true'
 
@@ -552,6 +614,13 @@ def test():
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')
 
+    for _, path, querystring in dynamic_examples:
+        log.info(f'ontree testing {path} {args}')
+        request = fakeRequest()
+        request.args = {k:v[0] if len(v) == 1 else v
+                        for k,v in parse_qs(querystring.strip('?')).items()}
+        resp = route_dynamic(path)
+        
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontree 0.0.0')
