@@ -562,7 +562,7 @@ class DynamicBase(restService):
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/artifactLabels/{artifact-id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/artifactLabels/{artifact_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -597,7 +597,7 @@ class DynamicBase(restService):
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/artifactRoots/{artifact-id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/artifactRoots/{artifact_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -749,7 +749,7 @@ class DynamicBase(restService):
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts/{species-id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts/{species_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -880,7 +880,7 @@ class DynamicBase(restService):
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species-id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -918,7 +918,7 @@ class DynamicBase(restService):
         kwargs = {'root_id': root_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/rootLabels/{root-id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/rootLabels/{root_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
