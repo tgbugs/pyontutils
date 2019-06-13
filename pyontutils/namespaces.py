@@ -5,10 +5,39 @@ import requests
 from ontquery.terms import OntCuries
 from pyontutils.config import devconfig
 
-# prefixes
 
 def interlex_namespace(user):
     return 'http://uri.interlex.org/' + user
+
+
+# note that these will cause problems in SciGraph because I've run out of hacks still no https
+DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
+DMBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
+
+# interlex namespaces
+ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
+AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
+ilxHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/labels/'))
+ilxMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/labels/'))
+ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
+ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
+FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
+HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
+DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/'))
+DKTr = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/region/labels/'))
+DKTs = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/sulcus/labels/'))
+FSCL = rdflib.Namespace(interlex_namespace('freesurfer/uris/FreeSurferColorLUT/labels/'))
+MNDBGL = rdflib.Namespace(interlex_namespace('mindboggle/uris/mndbgl/labels/'))
+#PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
+paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
+#PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
+paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
+WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
+BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
+
+OntCuries({'BERCAT': str(BERCAT)})
+
+# prefixes
 
 def nsExact(namespace, slash=True):
     uri = str(namespace)
@@ -185,33 +214,10 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- ilxb, TEMP, ILX) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
-                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr', 'ilx', 'TEMP', 'ILX')
-
-# note that these will cause problems in SciGraph because I've run out of hacks still no https
-DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
-DMBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
-
-# interlex namespaces
-ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
-AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
-ilxHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/labels/'))
-ilxMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/labels/'))
-ilxDHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/devel/labels/'))
-ilxDMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/devel/labels/'))
-FSLATS = rdflib.Namespace(interlex_namespace('fsl/uris/atlases/'))
-HCPMMP = rdflib.Namespace(interlex_namespace('hcp/uris/mmp/labels/'))
-DKT = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/'))
-DKTr = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/region/labels/'))
-DKTs = rdflib.Namespace(interlex_namespace('mindboggle/uris/dkt/sulcus/labels/'))
-FSCL = rdflib.Namespace(interlex_namespace('freesurfer/uris/FreeSurferColorLUT/labels/'))
-MNDBGL = rdflib.Namespace(interlex_namespace('mindboggle/uris/mndbgl/labels/'))
-PAXMUS = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/labels/'))
-paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
-PAXRAT = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/labels/'))
-paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
-WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
-BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
+ TEMP, ILX, PAXRAT, PAXMUS
+) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
+                   'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
+                   'TEMP', 'ILX', 'PAXRAT', 'PAXMUS')
 
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
@@ -221,9 +227,6 @@ asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 dim = rdflib.Namespace(asp[''] + 'dimension/')
 unit = rdflib.Namespace(asp[''] + 'unit/')
 sparc = rdflib.Namespace(ilxtr[''] + 'sparc/')
-
-
-OntCuries({'BERCAT': str(BERCAT)})
 
 # retired namespaces kept as a record in the even that we need them for some reason
 _OLD_HCPMMP = rdflib.Namespace(interlex_namespace('hcpmmp/uris/labels/'))

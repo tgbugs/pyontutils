@@ -256,6 +256,7 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
 
         else:
+            print(tree)
             return hfn.htmldoc(extras.html,
                                other=prov,
                                styles=hfn.tree_styles)
@@ -344,6 +345,7 @@ examples = (
 )
 
 extra_examples = (
+    ('Cell septum', a, 'GO:0044457'),
     ('Old NIFGA part of', hpp, 'BIRNLEX:796'),
     ('Cereberal cortex parts', po, 'UBERON:0002749'),
     ('Broken iri of borken curie', a, 'http://uri.interlex.org/paxinos/uris/rat/labels/'),
@@ -361,6 +363,10 @@ file_examples = (
 dynamic_examples = (
     ('Shortest path', 'shortestSimple',
      '?start_id=UBERON:0000955&end_id=UBERON:0001062&relationship=subClassOf'),
+    ('Stomach parts', 'prod/sparc/organParts/FMA:7148', None),
+    ('Parc graph', 'prod/sparc/parcellationGraph', '?direction=INCOMING'),
+    ('Parc arts', 'prod/sparc/parcellationArtifacts/NCBITaxon:10116', '?direction=INCOMING'),
+    ('Parc arts', 'prod/sparc/parcellationRoots/NCBITaxon:10116', '?direction=INCOMING'),
 )
 
 def server(api_key=None, verbose=False):
@@ -431,8 +437,16 @@ def server(api_key=None, verbose=False):
                               'Root class', '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
                               halign='left')
 
+        dlinks = render_table([[name,
+                                atag(url_for("route_dynamic", path=path) + (querystring if querystring else ''),
+                                     f'../query/dynamic/{path}{querystring if querystring else ""}')]
+                               for name, path, querystring in dynamic_examples],
+                              'Root class', '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
+                              halign='left')
 
-        return htmldoc(links, flinks, title='Example hierarchy queries')
+
+
+        return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
 
     @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
     def route_sparc_connectivity_query():
@@ -442,16 +456,21 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
-        j = sgd.dispatch(path, **request.args)
+        args = dict(request.args)
+        if 'direction' in args:
+            direction = args.pop('direction')
+        else:
+            direction = 'OUTGOING'  # should always be outgoing here since we can't specify?
+            
+        j = sgd.dispatch(path, **args)
         if not j['edges']:
             log.error(pprint(j))
             return abort(400)
 
         kwargs = {'json': j}
-        direction = ('INCOMING' if
-                     'relationship' in request.args and request.args['relationship'] == 'subClassOf'
-                     else 'BOTH')
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
+        #print(extras.hierarhcy)
+        print(tree)
         return htmldoc(extras.html, styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
@@ -591,7 +610,18 @@ def test():
                    'route_examples', 'route_iriquery', 'route_query',
                    'route_dynamic',))
 
-    for _, predicate, root, *_ in examples + extra_examples:
+    for _, path, querystring in dynamic_examples:
+        log.info(f'ontree testing {path} {querystring}')
+        request = fakeRequest()
+        if querystring is not None:
+            request.args = {k:v[0] if len(v) == 1 else v
+                            for k,v in parse_qs(querystring.strip('?')).items()}
+        else:
+            request.args = {}
+
+        resp = route_dynamic(path)
+
+    for _, predicate, root, *_ in extra_examples + examples:
         if root == 'UBERON:0001062':
             continue  # too big
         if root == 'PAXRAT:':
@@ -604,6 +634,8 @@ def test():
         else:
             resp = route_query(predicate, root)
 
+        return
+
     for _, predicate, root, file, *args in file_examples:
         log.info(f'ontree testing {predicate} {root} {file}')
         if args and 'restriction' in args[0]:
@@ -614,12 +646,6 @@ def test():
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')
 
-    for _, path, querystring in dynamic_examples:
-        log.info(f'ontree testing {path} {args}')
-        request = fakeRequest()
-        request.args = {k:v[0] if len(v) == 1 else v
-                        for k,v in parse_qs(querystring.strip('?')).items()}
-        resp = route_dynamic(path)
         
 def main():
     from docopt import docopt

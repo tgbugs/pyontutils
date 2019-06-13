@@ -388,7 +388,8 @@ def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_pref
 
     return j, root_iri
 
-def build_tree(tree_class, obj, objects, parents, existing = {}, flat_tree = set()):
+
+def build_tree(tree_class, obj, objects, parents, existing=None, flat_tree=None):
     subjects = objects[obj]
     t = tree_class()
     t[obj]
@@ -454,32 +455,22 @@ def process_nodes(j, root, direction, verbose):
         objects, subjects = subjects, objects
 
     # something is wrong with how we are doing subClassOf, see PAXRAT: INCOMING
-
     if root is not None:
         subjects[root] = ['ROOT']
         subjects = pruneOutOfTree(subjects, verbose)
         subjects[root] = []  # FIXME if OUTGOING maybe??
 
     ss, so = set(subjects), set(objects)
-    roots = ss - so
-    leaves = so - ss
+    roots = so - ss
+    leaves = ss - so
 
     if root is None:
         if len(roots) == 1:
             root = next(iter(roots))
         else:
-            root = 'ROOT'
+            root = '*ROOT*'
             nodes[root] = 'ROOT'
-
-        if direction == 'INCOMING' or direction is None:
             objects[root] = list(roots)
-        else:
-            subjects[root] = list(roots)
-
-        subjects = pruneOutOfTree(subjects, verbose)
-        objects = pruneOutOfTree(objects, verbose)
-        subjects[root] = []
-        #breakpoint()
 
     names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}  # children don't need filtering
     pnames = {nodes[k]:[nodes[s] for s in v] for k,v in subjects.items()}
@@ -522,7 +513,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
     tree_name = f'{rootsl}{relationshipType}{direction}{depth}'
 
     Tree, _ = newTree(tree_name, parent_dict=subjects)
-    hierarchy, dupes = build_tree(Tree, root, objects, subjects)
+    hierarchy, dupes = build_tree(Tree, root, objects, subjects, existing={}, flat_tree=set())
     _, nTreeNode = newTree('names' + tree_name, parent_dict=pnames)  # FIXME pnames is wrong...
 
     def rename(tree):
