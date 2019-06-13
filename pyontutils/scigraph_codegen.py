@@ -557,6 +557,10 @@ class State:
 
         method = api_dict['method']
 
+        if '{' in path and '-' in path:  # FIXME hack
+            before, after = path.rsplit('{', 1)
+            path = before + '{' + after.replace('-', '_')
+
         formatted = operation_code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,
                             dict_comp=dict_comp, dict_comp2=dict_comp2, method=method,
                             docstring=docstring, required=required, default_output=default_output,
