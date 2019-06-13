@@ -9,6 +9,7 @@ from itertools import chain
 from collections import namedtuple
 import ontquery as oq
 import requests
+import htmlfn as hfn
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer
@@ -973,9 +974,15 @@ class OntId(oq.OntId, rdflib.URIRef):
     def __str__(self):
         return rdflib.URIRef.__str__(self)
 
+    def atag(self, **kwargs):
+        if 'curie' in kwargs:
+            kwargs.pop('curie')
+        return hfn.atag(self.iri, self.curie, **kwargs)
+
 
 class OntTerm(oq.OntTerm, OntId):
-    pass
+    def atag(self, curie=False, **kwargs):
+        return hfn.atag(self.iri, self.curie if curie else self.label, **kwargs)  # TODO schema.org ...
 
 
 SGR = oq.plugin.get('SciGraph')

@@ -256,7 +256,6 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             return '\n'.join(rows), 200, {'Content-Type':'text/plain;charset=utf-8'}
 
         else:
-            print(tree)
             return hfn.htmldoc(extras.html,
                                other=prov,
                                styles=hfn.tree_styles)
@@ -363,6 +362,8 @@ file_examples = (
 dynamic_examples = (
     ('Shortest path', 'shortestSimple',
      '?start_id=UBERON:0000955&end_id=UBERON:0001062&relationship=subClassOf'),
+    ('Shortest path table', 'shortestSimple',
+     '?start_id=UBERON:0000955&end_id=UBERON:0001062&relationship=subClassOf&format=table'),
     ('Stomach parts', 'prod/sparc/organParts/FMA:7148', None),
     ('Parc graph', 'prod/sparc/parcellationGraph', '?direction=INCOMING'),
     ('Parc arts', 'prod/sparc/parcellationArtifacts/NCBITaxon:10116', '?direction=INCOMING'),
@@ -461,7 +462,12 @@ def server(api_key=None, verbose=False):
             direction = args.pop('direction')
         else:
             direction = 'OUTGOING'  # should always be outgoing here since we can't specify?
-            
+
+        if 'format' in args:
+            format_ = args.pop('format')
+        else:
+            format_ = None
+
         j = sgd.dispatch(path, **args)
         if not j['edges']:
             log.error(pprint(j))
@@ -471,6 +477,20 @@ def server(api_key=None, verbose=False):
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
         print(tree)
+        if format_ is not None:
+            if format_ == 'table':
+                #breakpoint()
+                def nowrap(class_, tag=''):
+                    return (f'{tag}.{class_}'
+                            '{ white-space: nowrap; }')
+
+                ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
+                #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
+                rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
+
+                return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                               styles=(hfn.table_style, nowrap('col-label', 'td')))
+
         return htmldoc(extras.html, styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])

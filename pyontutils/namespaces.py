@@ -175,6 +175,7 @@ def _loadPrefixes():
 
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'TEMP': interlex_namespace('temp/uris/'),
+        'TEMPRAW': interlex_namespace('temp/uris/raw/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
@@ -214,10 +215,10 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- TEMP, ILX, PAXRAT, PAXMUS
+ TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS
 ) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
-                   'TEMP', 'ILX', 'PAXRAT', 'PAXMUS')
+                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS')
 
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
