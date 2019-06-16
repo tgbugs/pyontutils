@@ -63,6 +63,7 @@ from lxml import etree
 from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
+from ttlser import CustomTurtleSerializer
 from pyontutils.core import makeGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
 from pyontutils.utils_extra import memoryCheck
@@ -473,7 +474,10 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                             else:
                                 inner(nlfp, remote=True)
                 if not readonly:
+                    _orp = CustomTurtleSerializer.roundtrip_prefixes  # FIXME awful hack :/
+                    CustomTurtleSerializer.roundtrip_prefixes = True
                     ttl = scratch.serialize(format='nifttl')
+                    CustomTurtleSerializer.roundtrip_prefixes = _orp
                     ndata, comment = ttl.split(b'###', 1)
                     out = ndata + b'###' + rest
                     with open(local_filepath, 'wb') as f:
