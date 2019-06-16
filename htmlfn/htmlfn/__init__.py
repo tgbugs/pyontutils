@@ -137,7 +137,7 @@ def htmldoc(*body, title=_default_title, metas=tuple(), other=tuple(), styles=tu
     styles = '\n'.join((styletag(s) for s in styles))
     scripts = '\n'.join((scripttag(s) for s in scripts))
     metas = (dict(charset='UTF-8'),) + metas
-    head = headtag('\n'.join((titlet, other, *(metatag(**md) for md in metas), styles, scripts)))
+    head = headtag('\n'.join((_ for _ in (titlet, other, *(metatag(**md) for md in metas), styles, scripts) if _)))
     return header + htmltag('\n'.join((head, bodytag(*body))))
 
 
