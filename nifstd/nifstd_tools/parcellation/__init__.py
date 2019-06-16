@@ -302,6 +302,7 @@ class Artifact(Class):
                    version=None,
                    species=None,
                    devstage=None,
+                   region=None,
                    source=None,
                    citation=None,
                    docUri=None,
@@ -476,6 +477,7 @@ class Artifacts(Collector):
     PaxMouseAtlas = Atlas(iri=PaxMouseAt.iri,
                           species=NCBITaxon['10090'],
                           devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
+                          region=UBERON['0000955'],
                           )
 
     PaxMouse2 = PaxMouseAt(iri=paxmusver['2'],  # ilxtr.paxm2,
@@ -513,6 +515,7 @@ class Artifacts(Collector):
     PaxRatAtlas = Atlas(iri=PaxRatAt.iri,
                         species=NCBITaxon['10116'],
                         devstage=UBERON['0000113'],  # TODO this is 'Mature' which may not match... RnorDv:0000015 >10 weeks...
+                        region=UBERON['0000955'],
                         citation=('Paxinos, George, Charles RR Watson, and Piers C. Emson. '
                                   '"AChE-stained horizontal sections of the rat brain '
                                   'in stereotaxic coordinates." Journal of neuroscience '
@@ -555,6 +558,7 @@ class Artifacts(Collector):
                          abbrevs=('HCP_MMP', 'HCP-MMP1.0', 'HCP MMP 1.0'),
                          citation='https://doi.org/10.1038/nature18933',
                          species=NCBITaxon['9606'],
+                         region=UBERON['0000955'],
                          devstage=UBERON['0000113'],
                         )
 
@@ -570,6 +574,7 @@ class Artifacts(Collector):
                                             'Oxford University Press, USA, 2014.'),
                                   identifiers=('ISBN:9780195340624',),
                                   species=NCBITaxon['40674'],  # taxon
+                                  region=UBERON['0001016'],
                                   comment=('Each appendix probably needs its own artifact entry because '
                                            'the taxon rank and devstage are determined by appendix not NT.'),
                                   #devstage=UBERON['0000113'],  # FIXME multiple...
@@ -1750,6 +1755,7 @@ class FSL(LabelsBase):
                                    docUri='http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases',
                                    species=NCBITaxon['9606'],
                                    devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+                                   region=UBERON['0000955'],
                                    shortname=artifact_shortname)
             setattr(cls.Artifacts, shortname, artifact)
 

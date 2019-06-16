@@ -86,6 +86,7 @@ class Artifacts(Collector):
                       docUri='http://help.brain-map.org/download/attachments/2818169/AllenReferenceAtlas_v2_2011.pdf?version=1&modificationDate=1319667383440',  # yay no doi! wat
                       species=NCBITaxon['10090'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+                      region=UBERON['0000955'],
                       comment=('Note that the ontology version for MBA is distinct from '
                                'the common coordinate framework version. Unfortunately there '
                                'is not a link to documentation for the ontology independent '
@@ -106,6 +107,7 @@ class Artifacts(Collector):
                       docUri='http://help.brain-map.org/download/attachments/2818165/HBA_Ontology-and-Nomenclature.pdf?version=1&modificationDate=1382051847989',  # yay no doi! wat
                       species=NCBITaxon['9606'],
                       devstage=UBERON['0000113'],  # FIXME mature vs adult vs when they actually did it...
+                      region=UBERON['0000955'],
     )
 
     DMBA = Terminology(iri=AIBS['mouse/devel/versions/1'],
@@ -117,6 +119,7 @@ class Artifacts(Collector):
                        docUri='',  # TODO
                        species=NCBITaxon['10090'],
                        devstage='many',  # TODO
+                       region=UBERON['0000955'],
     )
 
     DHBA = Terminology(iri=AIBS['human/devel/versions/1'],
@@ -128,6 +131,7 @@ class Artifacts(Collector):
                        docUri='',  # TODO
                        species=NCBITaxon['9606'],
                        devstage='many',  # TODO
+                       region=UBERON['0000955'],
     )
 
     MBAxCCFv2 = None  # TODO

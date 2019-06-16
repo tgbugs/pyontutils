@@ -22,6 +22,7 @@ class Artifacts(Collector):
                             citation='https://www.ncbi.nlm.nih.gov/pubmed/24726336',
                             species=NCBITaxon['10116'],
                             devstage=UBERON['0000113'],
+                            region=UBERON['0000955'],
                             comment=('Versions of the .label file add and remove entries and '
                                      'sometimes slightly modify the label, but indexes are never '
                                      'reused and retain their meaning.'),)

@@ -28,6 +28,7 @@ class Artifacts(Collector):
                            'Madison, University of Wisconsin Press.',),  # NOTE this is a tuple
         species=NCBITaxon['9685'],
         devstage=UBERON['0000113'],  # assumedly
+        region=UBERON['0000955'],
         comment = (''),
     )
 

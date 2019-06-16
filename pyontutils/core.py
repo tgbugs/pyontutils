@@ -1022,6 +1022,7 @@ class Class:
         shortname=NIFRID.abbrev,  # FIXME used NIFRID:acronym originally probably need something better
         species=ilxtr.isDefinedInTaxon,  # FIXME was defined in much clearer in intent and scope
         devstage=ilxtr.isDefinedInDevelopmentalStage,  # FIXME
+        region=ilxtr.isDefinedInRegion,  # FIXME isAbout? For vs In?
         definingArtifacts=ilxtr.isDefinedBy,  # FIXME used in... also lifting to owl:allMembersOf
         definingArtifactsS=ilxtr.isDefinedBy,  # FIXME type check here...
         definingCitations=NIFRID.definingCitation,

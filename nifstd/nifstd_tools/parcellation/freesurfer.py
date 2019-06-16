@@ -29,6 +29,7 @@ class Artifacts(Collector):
                          citation='https://doi.org/10.1016/j.neuroimage.2012.01.021',
                          species=NCBITaxon['9606'],
                          devstage=UBERON['0000113'],  # FIXME not sure if this is accurate
+                         region=UBERON['0000955'],
     )
 
     FreeSurferColorLUT1_105 = FreeSurferColorLUT(iri=ilx['freesurfer/uris/FreeSurferColorLUT/versions/1.105'],
