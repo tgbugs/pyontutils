@@ -52,6 +52,7 @@ setup(
         'psutil',
         'pyyaml',
         'requests',
+        'terminaltables',
         'ttlser',
         'werkzeug',  # for IterIO which can probably just be copied one off
     ],
