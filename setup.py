@@ -53,6 +53,7 @@ setup(
         'pyyaml',
         'requests',
         'ttlser',
+        'werkzeug',  # for IterIO which can probably just be copied one off
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'spell': ['hunspell'],
