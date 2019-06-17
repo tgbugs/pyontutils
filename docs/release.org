@@ -1,0 +1,313 @@
+* Python release process
+  Release workflow.
+
+  Don't tag a release on github until all the tests pass
+  and the package contents are what we want and expect.
+  Once they do tag it with the version that you set below
+  so that everything is on the same page.
+
+  #+CAPTION: .pypirc on the release host (only need to create once)
+  #+BEGIN_SRC toml
+    [distutils]
+    index-servers =
+        pypi
+        test
+
+    [pypi]
+    repository: https://upload.pypi.org/legacy/
+    username: your-username
+    password: 
+
+    [test]
+    repository: https://test.pypi.org/legacy/
+    username: your-username
+    password: set-this-one-for-simplicity
+  #+END_SRC
+
+  Run the code block definitions to create the functions we will use.
+  *NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
+  #+NAME: build-release
+  #+BEGIN_SRC bash :eval never :exports code
+    build-release () {
+        # example
+        # build_release org    repo     folder   packagename version
+        # build_release tgbugs ontquery ontquery ontquery    0.0.8
+        org=$1
+        shift
+        repo=$1
+        shift
+        folder=$1
+        shift
+        packagename=$1
+        shift
+        version=$1
+        shift
+        # TODO make sure no vars are null
+
+        cd /tmp/  # ensure we are always working in tmp for the rest of the time
+
+        if [ -d ${repo} ]; then
+            rm /tmp/release-testing -r
+        fi
+        mkdir /tmp/release-testing
+
+        if [ -d ${repo} ]; then
+            pushd ${repo}
+            git clean -dfx
+            git pull
+            popd
+        else
+            git clone https://github.com/${org}/${repo}.git
+        fi
+        # TODO __version__ check against ${version}
+
+        pushd ${folder}  # or subfolder
+        if [[ -n ${BRANCH} ]]; then
+            git checkout ${BRANCH}
+        else
+            git checkout -f master  # just like clean -dfx this should wipe changes just in case
+        fi
+        #git checkout ${version}  # only if all tests are go and release is tagged
+        PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $@  # pass $@ along eg for --release
+        PYTHONPATH=''
+        echo PYTHONPATH should be empty? '->' ${PYTHONPATH}
+        cp dist/${packagename}-${version}* /tmp/release-testing
+
+        pushd /tmp/release-testing
+        tar xvzf ${packagename}-${version}.tar.gz
+
+        pushd ${packagename}-${version}
+        pipenv --rm  # clean any existing env
+        pipenv run pip install -e .[test]   # .[services] for ontquery full install
+        PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
+        # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
+        # everything should pass if not, keep going until it does
+        popd
+        popd
+        # build the wheel from the sdist NOT from the repo
+        pushd dist/
+        tar xvzf ${packagename}-${version}.tar.gz
+        pushd ./${packagename}-${version}/
+        python setup.py bdist_wheel $@
+        mv dist/*.whl ../
+        popd
+        rm ./${packagename}-${version}/ -r
+        popd
+        # background here to twine?
+        popd
+        if [[ -n ${FAILURE} ]]; then
+            echo "$(color red)TESTS FAILED$(color off)";
+        fi
+    }
+  #+END_SRC
+
+  #+NAME: push-release
+  #+BEGIN_SRC bash :eval never :exports code
+    function push-release () {
+        # example
+        # push-release folder   software_releases_path    packagename version
+        # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
+        folder=$1
+        shift
+        software_releases_path=$1
+        shift
+        packagename=$1
+        shift
+        version=$1
+        shift
+
+        rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/
+        pushd ${software_releases_path}
+        sha256sum ${packagename}-${version}* >> hashes
+        twine upload --repository test ${packagename}-${version}*
+        sleep 1
+        echo "test pypi hashes"
+        curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
+        echo "local hashes"
+        tail -n2 hashes
+        echo go inspect https://test.pypi.org/project/${packagename}
+        echo and go do the github release
+        popd
+    }
+  #+END_SRC
+  
+  #+NAME: github-release
+  #+BEGIN_SRC python :eval never :var module=nil
+    import requests
+    from sparcur.utils 
+    #from sparcur.utils import mimetype  # FIXME or something like that
+    # TODO api token
+
+    suffix_to_mime = {
+        '.whl': 'application/octet-stream',  # technically zip ...
+        '.gz': 'application/gzip',
+        '.zip': 'application/zip',
+    }
+
+
+    class BadAssetSuffixError(Exception):
+        """ u wot m8 !? """
+
+
+    def upload_assets(upload_base, version, *asset_paths):
+        for asset in asset_paths:
+            name = asset.name
+            requests.post()
+
+
+    def github_release(org, repo, version, hashes, *assets, branch='master'):
+        """ hashes should be the output of sha256sum {packagename}-{version} """
+        # FIXME pyontutils violates some assumptions about 1:1 ness here
+
+        asset_paths = tuple(Path(a).resolve() for a in assets)
+        bads = [p.suffix  for p in asset_paths if p.suffix not in suffix_to_mime]
+        if bads:
+            raise BadAssetSuffixError(' '.join(bads))
+
+        base = 'https://api.github.com'
+        path = f'/repos/{org}/{repo}/releases'
+        headers = {'Accept': 'application/vnd.github.v3+json'}
+        json_data = {'tag_name': version,
+                     'target_commitish': branch,
+                     'name': version,
+                     'body': hashes,
+                     'draft': False,  # ok because we can add assets later
+                     'prerelease': False}
+
+        url = base + path
+        resp = requests.post(url, headers=headers, json=json_data)
+        rel_J = resp.json()
+        uu = rel_j['upload_url']
+
+        upload_base = uu.replace('{?name,label}', '')
+
+        upload_assets(upload_base, *asset_paths)
+  #+END_SRC
+
+  #+NAME: final-release
+  #+CAPTION: on the release host final upload from previous block
+  #+CAPTION: you will need to enter your password
+  #+BEGIN_SRC bash :eval never :exports code
+    function final-release () {
+        # example
+        # final-release software_releases_path    packagename version
+        # final-release ~/nas/software-releases   ontquery    0.0.8
+        software_releases_path=$1
+        shift
+        packagename=$1
+        shift
+        version=$1
+        shift
+
+        pushd ${software_releases_path}
+
+        twine upload --repository pypi ${packagename}-${version}*  # enter password here
+
+        sleep 1
+        echo "pypi hashes"
+        curl https://pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
+        echo "local hashes"
+        tail -n2 hashes
+        echo go inspect https://pypi.org/project/${packagename}
+
+        popd
+    }
+  #+END_SRC
+
+  Tangle this block so you can source [[../bin/python-release-functions.sh]]
+  # FIXME WTF can only tangle sh not bash?!
+  #+NAME: all-blocks
+  #+CAPTION: run this to export all the things
+  #+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
+  #+BEGIN_SRC sh :eval never :noweb yes
+    <<build-release>>
+    <<push-release>>
+    # TODO github-release
+    <<final-release>>
+  #+END_SRC
+
+  After defining those functions (or sourcing the tangled file (TODO))
+  you can use them as we do in the example below.
+
+  *WHEN YOU PUSH TO TEST*
+  Inspect _everything_ at https://test.pypi.org/project/${packagename}.
+  MAKE SURE THE HASHES MATCH (tail hashes vs curl output)
+  You can also check https://test.pypi.org/project/ontquery/#files
+
+  This is a reasonable time to tag the release on github.
+
+  #+NAME: release-examples
+  #+CAPTION: examples, this is horrible and dangerous, never do this this way run the 3 commands separately
+  #+BEGIN_SRC bash :eval never
+    unset PYTHONPATH
+    SOMEVAR=some-value build-release org repo folder packagename version --some-arg
+    PYTHONPATH=~/git/pyontutils: SCICRUNCH_API_KEY=$(cat ~/ni/dev/secrets.yaml | grep tgbugs-travis | awk '{ print $2 }') build-release tgbugs ontquery ontquery ontquery 0.1.0 --release
+    exit  # if try to copy paste this block terminate here to prevent dumbs
+    push-release ontquery ~/nas/software-releases ontquery 0.1.0
+    read  -n 1 -p "Inspect everything and then hit a key to run final-release or ^C to break:"; echo "OK"
+    final-release ~/nas/software-releases ontquery 0.1.0
+  #+END_SRC
+  
+  These are examples they may be out of date and already finished.
+  #+CAPTION: pyontutils examples
+  #+BEGIN_SRC bash :eval never
+    build-release tgbugs pyontutils pyontutils/librdflib librdflib 0.0.1
+    push-release pyontutils/librdflib ~/nas/software-releases librdflib 0.0.1
+    final-release ~/nas/software-releases librdflib 0.0.1
+
+    build-release tgbugs pyontutils pyontutils/htmlfn htmlfn 0.0.1
+    push-release pyontutils/htmlfn ~/nas/software-releases htmlfn 0.0.1
+    final-release ~/nas/software-releases htmlfn 0.0.1
+
+    build-release tgbugs pyontutils pyontutils/ttlser ttlser 1.0.0
+    push-release pyontutils/ttlser ~/nas/software-releases ttlser 1.0.0
+    final-release ~/nas/software-releases ttlser 1.0.0
+
+    build-release tgbugs pyontutils pyontutils pyontutils 0.1.2
+    push-release pyontutils ~/nas/software-releases pyontutils 0.1.2
+    final-release ~/nas/software-releases pyontutils 0.1.2
+
+    NIFSTD_CHECKOUT_OK=1 build-release tgbugs pyontutils pyontutils/neurondm neurondm 0.1.0
+    push-release pyontutils/neurondm ~/nas/software-releases neurondm 0.1.0
+    final-release ~/nas/software-releases neurondm 0.1.0
+
+    build-release tgbugs pyontutils pyontutils/nifstd nifstd-tools 0.0.1
+  #+END_SRC
+
+* pyontutils full repo release testing
+  NOTE if you reuse a repo run =git clean -dfx= to clear all untracked files.
+  #+BEGIN_SRC bash :eval never
+  pushd /tmp
+  git clone https://github.com/tgbugs/pyontutils.git
+  pushd pyontutils
+  python setup.py sdist; cp dist/pyontutils* /tmp/release-testing
+  for f in {librdflib,htmlfn,ttlser,neurondm,nifstd}; do pushd $f; python setup.py sdist; cp dist/$f* /tmp/release-testing/; popd; done
+  pushd /tmp/release-testing
+  find -name "*.tar.gz" -exec tar xvzf {} \;
+  for f in {librdflib,htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f*/; pip install -e .[test]; python setup.py test; popd; done
+  #+END_SRC
+  
+  From inside /tmp/${repo}
+  #+NAME: bdist_wheel-from-sdist
+  #+CAPTION: build wheels from sdist never from repo directly
+  #+BEGIN_SRC bash :eval never
+    pushd dist/
+    tar xvzf pyontutils*.tar.gz
+    pushd pyontutils*/
+    python setup.py bdist_wheel
+    mv dist/*.whl ../
+    popd
+    rm ./pyontutils*/ -r
+    popd
+
+    for f in {librdflib,htmlfn,ttlser,neurondm,nifstd}; do
+    pushd $f/dist
+    tar xvzf $f*.tar.gz
+    pushd $f*/
+    python setup.py bdist_wheel
+    mv dist/*.whl ../
+    popd
+    rm ./$f*/ -r
+    popd
+    done
+  #+END_SRC
