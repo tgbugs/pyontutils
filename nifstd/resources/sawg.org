@@ -58,6 +58,5 @@
 ** Terminology review
    If you are here to provide expert review of terminology for SPARC
    here is a table!
-* Terminology services
 * Connectivity
 * Expertise
