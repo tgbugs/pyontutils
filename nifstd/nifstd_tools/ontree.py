@@ -453,9 +453,34 @@ def server(api_key=None, verbose=False):
     def route_sparc_connectivity_query():
         kwargs = request.args
         log.debug(kwargs)
-        return hfn.htmldoc('form here',
+        script = """
+        var ele = document.getElementById('model-selector')
+        ele.onselect
+        """
+        return hfn.htmldoc(hfn.render_form(
+            [[('Model',), {}],
+             [None, None],
+             [('Kidney', 'Defensive breathing',),  # TODO autopopulate
+              {'id':'model-selector'}]],  # FIXME auto via js?
+
+            # FIXME must switch start and stop per model (argh)
+            # or hide/show depending on which model is selected
+            [[('start',), {}],
+             [None, None],
+             [('one', 'two', 'three'),  # TODO auto populate
+              {}]],  # FIXME auto via js?
+
+            [[('end',), {}],
+             [None, None],
+             [('one', 'two', 'three'),  # TODO auto populate
+              {}]],  # FIXME auto via js?
+
+            [[tuple(), {}],
+             [tuple(), {'type': 'submit', 'value': 'Query'}],
+             [None, None]]  # FIXME auto via js?
+        ),
+            scripts=(script,),
             title='Connectivity query')
-        return connectivity_query(**kwargs)
 
     @app.route(f'/{basename}/sparc/connectivity/view', methods=['GET'])
     def route_sparc_connectivity_view():
@@ -689,6 +714,7 @@ def main():
     sgg._verbose = verbose
     sgv._verbose = verbose
     sgc._verbose = verbose
+    sgd._verbose = verbose
 
     if args['--test']:
         test()
@@ -701,12 +727,14 @@ def main():
             sgc._basePath = api
             # reinit curies state
             sgc.__init__(cache=sgc._get == sgc._cache_get, verbose=sgc._verbose)
+            sgd._basePath = api
 
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
             sgc.api_key = api_key
+            sgd.api_key = api_key
             scs = OntTerm.query.services[0]
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)
