@@ -22,16 +22,16 @@
    #+BEGIN_SRC emacs-lisp :eval never :tangle ../bin/publish.el :comments noweb
      (require 'ox-publish)
      (setq org-publish-project-alist
-           '(("SPARC-anatomy"
+           `(("SPARC-anatomy"
               :components ("page"))
-             ("thesis"
+             ("page"
               :base-directory "../resources"
               :base-extension "org"
               :exclude ".*"
               :include ("sawg.org")
               :publishing-directory
-              (let ((host (getenv "AUX_RESOLVER_HOST")))
-                (format "/ssh:%s|sudo:nginx@%s:/var/www/ontology/trees/sparc/index.html" host host))
+              ,(let ((host (getenv "AUX_RESOLVER_HOST")))
+                (format "/ssh:%s|sudo:nginx@%s:/var/www/ontology/trees/sparc/" (getenv "AUX_RESOLVER_HOST") (getenv "AUX_RESOLVER_HOST")))
               :publishing-function org-html-publish-to-html)
              ))
    #+END_SRC
@@ -40,8 +40,16 @@
    #+BEGIN_SRC bash :eval never :tangle ../bin/publish-sawg :tangle-mode (identity #o755)
      #!/usr/bin/env sh
      # this runs in the root of the git repository so we are ok
+     SOURCE="${BASH_SOURCE[0]}"
+     while [ -h "$SOURCE" ]; do # resolve all symlinks
+     DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+     SOURCE="$(readlink "$SOURCE")"
+     [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # resolve relative symlinks
+     done
+     ABS_PATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
      /usr/bin/emacs -Q --batch \
-         -l publish.el \
+         -l "${ABS_PATH}/publish.el" \
          ../resources/sawg.org \
          --funcall org-publish-all
    #+END_SRC
