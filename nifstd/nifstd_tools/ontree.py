@@ -709,7 +709,7 @@ def main():
             sgc.api_key = api_key
             scs = OntTerm.query.services[0]
             scs.api_key = api_key
-            scs.setup()
+            scs.setup(instrumented=OntTerm)
 
         app = server(verbose=verbose)
         app.debug = False
