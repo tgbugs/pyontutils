@@ -32,7 +32,7 @@ from urllib.parse import parse_qs
 import rdflib
 import htmlfn as hfn
 import ontquery as oq
-from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app
+from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app, send_from_directory
 from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
@@ -453,7 +453,15 @@ def server(api_key=None, verbose=False):
     def route_sparc_connectivity_query():
         kwargs = request.args
         log.debug(kwargs)
+        return hfn.htmldoc('form here',
+            title='Connectivity query')
         return connectivity_query(**kwargs)
+
+    @app.route(f'/{basename}/sparc/connectivity/view', methods=['GET'])
+    def route_sparc_connectivity_view():
+        kwargs = request.args
+        log.debug(kwargs)
+        return hfn.htmldoc(title='Connectivity view')
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
@@ -609,12 +617,18 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/', methods=['GET'])
     def route_sparc():
         # FIXME TODO route to compiled
-        return htmldoc(
-            atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
-            atag(url_for('route_sparc_index'), 'Index'),
-            title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
-            metas = ({'name':'date', 'content':time()},),
-        )
+        p = Path('/var/www/ontology/trees/sparc/index.html')
+        if p.exists():
+            return send_from_directory(p.parent.as_posix(), p.name)
+        
+        log.critical(f'{devconfig.resources}/sawg.org has not been published')
+        return send_from_directory(Path(devconfig.resources).as_posix(), 'sawg.org')
+        #return htmldoc(
+            #atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
+            #atag(url_for('route_sparc_index'), 'Index'),
+            #title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
+            #metas = ({'name':'date', 'content':time()},),
+        #)
 
     return app
 

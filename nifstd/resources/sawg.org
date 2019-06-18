@@ -1,4 +1,7 @@
 #+TITLE: SPARC Anatomy Working Group
+#+HTML_HEAD: <meta name="version" content="0.0.1" />
+#+OPTIONS: num:nil html-preamble:t H:2
+#+SETUPFILE: theme-readtheorg-local.setup
 # [[./sawg.html][local development]]
 # [[http://ontology.olympiangods.org/trees/sparc][testing]]
 # [[http://ontology.neuinfo.org/trees/sparc][production]]
@@ -6,6 +9,42 @@
 * Developer notes                                                 :noexport:
   This is a self publishing document!
   TODO import code from thesis.org to automate publishing.
+  
+** Theme
+   #+BEGIN_SRC bash
+     curl -O
+   #+END_SRC
+** Publishing
+   Tangle both blocks here =C-c C-v C-t= (=t= also works) and then you
+   can publish this document by running =../bin/publish-sawg= with
+   =AUX_RESOLVER_HOST= set in your environment (.e.g via =~/.bashrc=).
+   #+NAME: publish
+   #+BEGIN_SRC emacs-lisp :eval never :tangle ../bin/publish.el :comments noweb
+     (require 'ox-publish)
+     (setq org-publish-project-alist
+           '(("SPARC-anatomy"
+              :components ("page"))
+             ("thesis"
+              :base-directory "../resources"
+              :base-extension "org"
+              :exclude ".*"
+              :include ("sawg.org")
+              :publishing-directory
+              (let ((host (getenv "AUX_RESOLVER_HOST")))
+                (format "/ssh:%s|sudo:nginx@%s:/var/www/ontology/trees/sparc/index.html" host host))
+              :publishing-function org-html-publish-to-html)
+             ))
+   #+END_SRC
+
+   #+NAME: post-commit
+   #+BEGIN_SRC bash :eval never :tangle ../bin/publish-sawg :tangle-mode (identity #o755)
+     #!/usr/bin/env sh
+     # this runs in the root of the git repository so we are ok
+     /usr/bin/emacs -Q --batch \
+         -l publish.el \
+         ../resources/sawg.org \
+         --funcall org-publish-all
+   #+END_SRC
 
 * Overview
 * Terminology
