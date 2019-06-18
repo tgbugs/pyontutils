@@ -617,7 +617,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/', methods=['GET'])
     def route_sparc():
         # FIXME TODO route to compiled
-        p = Path('/var/www/ontology/trees/sparc/index.html')
+        p = Path('/var/www/ontology/trees/sparc/sawg.html')
         if p.exists():
             return send_from_directory(p.parent.as_posix(), p.name)
         
