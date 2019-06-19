@@ -91,7 +91,7 @@
       - visualization/tabulization of organ parts and parcellations 
       
         - [[https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/organParts/FMA:7203][Organ parts]]
-        - [https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/parcellationGraph.json][Parcellations]] 
+        - [[https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/parcellationGraph.json][Parcellations]] 
 
 
    e. Up-to-date listing of terms applied to SPARC1 metadata annotation 
