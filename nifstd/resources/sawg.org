@@ -79,24 +79,24 @@
 
 ** 1.2 Anatomical Terminology
    a. Documentation for SPARC term requests 
-      - Internal or advanced users [[https://docs.google.com/spreadsheets/d/1mU8Xxqt07pweDmtvdjDriuPSuw0EeGxiKC2733nOgvY/edit?usp=sharing][documentation sheet]]
+      - Internal or advanced users [[https://docs.google.com/spreadsheets/d/1mU8Xxqt07pweDmtvdjDriuPSuw0EeGxiKC2733nOgvY/edit?usp=sharing][Documentation sheet]]
    
    b. Vocabulary-building documentation
-      - Slide presentation outlining the vocabulary are [[located here],[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.p]] 
+      - Slide presentation outlining the vocabulary are [[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.p][Located here]] 
  
    c. Documentation for the adoption of InterLex terminology services
-      - [[ontology documentation],[http://ontology.neuinfo.org/docs/]]  
+      - [[http://ontology.neuinfo.org/docs/][Ontology documentation]]  
  
-   d. Tabulation of up-to-date MicroBrightField term lists by species and organ (together with acknowledgement/contact details for leads responsible for each list); 
+   d. Tabulation of up-to-date MicroBrightField term lists by species and organ (together with acknowledgDment/contact details for leads responsible for each list); 
       - visualization/tabulization of organ parts and parcellations 
       
-        - [organ parts], [https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/organParts/FMA:7203]]
-        - [parcellations], [https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/parcellationGraph.json]] 
+        - [[https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/organParts/FMA:7203][Organ parts]]
+        - [https://scicrunch.org/api/1/sparc-scigraph/dynamic/prod/sparc/parcellationGraph.json][Parcellations]] 
 
 
    e. Up-to-date listing of terms applied to SPARC1 metadata annotation 
-      - [[terms,[https://github.com/SciCrunch/sparc-curation/blob/963ddeb7b71c982ea1a449557547d6c38c96371c/sparcur/cli.py#L1162]] 
-      - [[term code],[https://github.com/SciCrunch/sparc-curation/blob/963ddeb7b71c982ea1a449557547d6c3] 
+      - [[https://github.com/SciCrunch/sparc-curation/blob/963ddeb7b71c982ea1a449557547d6c38c96371c/sparcur/cli.py#L1162][Terms]]
+      - [[https://github.com/SciCrunch/sparc-curation/blob/963ddeb7b71c982ea1a449557547d6c3][Term code]]
 
    f. Up-to-date listing of terms applied to flatmap metadata annotation 
       - TBA
@@ -109,12 +109,13 @@
 
    i. Searchable full reference list of terms (drawn from UBERON/FMA/Nomina/atlases)
       - TBA
+      
 * 2. Connectivity
   a. Catalogue of ApiNATOMY connectivity models 
      - TBA 
 
   b. Text-based querying of ApiNATOMY models (and SPARC1 metadata discovery) 
-     - [[Connectivity query],[http://ontology.neuinfo.org/trees/sparc/connectivity/query]]
+     - [[http://ontology.neuinfo.org/trees/sparc/connectivity/query][Connectivity query]]
  
   c. Flatmap-based querying of ApiNATOMY models (and SPARC1 metadata discovery) 
      - TBA 
