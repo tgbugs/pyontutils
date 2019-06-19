@@ -79,7 +79,7 @@
 
 ** 1.2 Anatomical Terminology
    a. Documentation for SPARC term requests 
-      - Internal or advanced users [documentation sheet](https://docs.google.com/spreadsheets/d/1mU8Xxqt07pweDmtvdjDriuPSuw0EeGxiKC2733nOgvY/edit?usp=sharing) 
+      - Internal or advanced users [[https://docs.google.com/spreadsheets/d/1mU8Xxqt07pweDmtvdjDriuPSuw0EeGxiKC2733nOgvY/edit?usp=sharing][documentation sheet]]
    
    b. Vocabulary-building documentation
       - Slide presentation outlining the vocabulary are [[located here],[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.p]] 
