@@ -118,7 +118,7 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         if tree is None:
             html_all = ''
         else:
-        
+
             html = extra.html.replace('NIFTTL:', '')
             html_all = hfn.htmldoc(html,
                                    other=prov,
@@ -620,15 +620,15 @@ def server(api_key=None, verbose=False):
         p = Path('/var/www/ontology/trees/sparc/sawg.html')
         if p.exists():
             return send_from_directory(p.parent.as_posix(), p.name)
-        
+
         log.critical(f'{devconfig.resources}/sawg.org has not been published')
         return send_from_directory(Path(devconfig.resources).as_posix(), 'sawg.org')
-        #return htmldoc(
-            #atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
-            #atag(url_for('route_sparc_index'), 'Index'),
-            #title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
-            #metas = ({'name':'date', 'content':time()},),
-        #)
+        # return htmldoc(
+        #     atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
+        #     atag(url_for('route_sparc_index'), 'Index'),
+        #     title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
+        #     metas = ({'name':'date', 'content':time()},),
+        # )
 
     return app
 
@@ -680,7 +680,7 @@ def test():
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')
 
-        
+
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontree 0.0.0')
@@ -712,7 +712,7 @@ def main():
             scs.setup(instrumented=OntTerm)
 
         app = server(verbose=verbose)
-        app.debug = False
+        app.debug = True
         app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
         os.sys.exit()
