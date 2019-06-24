@@ -1,14 +1,16 @@
 from collections import defaultdict
 from pathlib import Path as p
 import rdflib
+from rdflib import *
 from ilxutils.tools import open_pickle, create_pickle
 from ilxutils.interlex_sql import IlxSql
-from ilxutils.RdflibWrapper import RdflibWrapper, RDF, OWL, RDFS, BNode, Literal, URIRef, Namespace, ilxtr, DEFINITION, NIFRID
+# from ilxutils.RdflibWrapper import RdflibWrapper, RDF, OWL, RDFS, BNode, Literal, URIRef, Namespace, ilxtr, DEFINITION, NIFRID
 import pickle
 import os
-rw = RdflibWrapper()
+# graph = RdflibWrapper()
+graph = Graph()
 
-rw.add_prefixes({
+prefixes = {
     'hasRole': 'http://purl.obolibrary.org/obo/RO_0000087',
     'inheresIn': 'http://purl.obolibrary.org/obo/RO_0000052',
     'bearerOf': 'http://purl.obolibrary.org/obo/RO_0000053',
@@ -59,7 +61,10 @@ rw.add_prefixes({
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
     'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
     'prov': 'http://www.w3.org/ns/prov#',
-})
+}
+
+for prefix, ns in prefixes.items():
+    graph.bind(prefix, ns)
 
 ilx_uri_base = 'http://uri.interlex.org/base'
 in_sanity_check = {}
@@ -70,20 +75,21 @@ ILXTR = Namespace('http://uri.interlex.org/tgbugs/uris/readable/')
 terms = open_pickle(p.home()/'Dropbox/interlex_backups/ilx_db_terms_backup.pickle')
 for row in terms.itertuples():
     ilx_uri = '/'.join([ilx_uri_base, row.ilx])
+    ilx_uri = URIRef(ilx_uri)
     in_sanity_check[ilx_uri] = True
 
     if row.type in ['term', 'cde', 'fde', 'pde']:
-        rw.add_triple(ilx_uri, RDF.type, OWL.Class)
+        graph.add((ilx_uri, RDF.type, OWL.Class))
     elif row.type == 'annotation':
-        pass # g.add_triple(ilx_uri, RDF.type, OWL.AnnotationProperty)
+        pass # g.add(ilx_uri, RDF.type, OWL.AnnotationProperty)
     elif row.type == 'relationship':
-        pass # g.add_triple(ilx_uri, RDF.type, OWL.ObjectProperty)
+        pass # g.add(ilx_uri, RDF.type, OWL.ObjectProperty)
     else:
-        rw.add_triple(ilx_uri, RDF.type, OWL.Lost)
+        graph.add((ilx_uri, RDF.type, OWL.Lost))
         print('We have an no type entity!', row.ilx)
 
-    rw.add_triple(ilx_uri, RDFS.label, row.label)
-    rw.add_triple(ilx_uri, DEFINITION, row.definition)
+    graph.add((ilx_uri, RDFS.label, Literal(row.label)))
+    # graph.add((ilx_uri, URIRef(DEFINITION), Literal(row.definition)))
 del terms
 print('=== Class-AnnotationProperty-ObjectProperty triples complete ===')
 
@@ -92,9 +98,10 @@ ilx2ex = defaultdict(list)
 ex = open_pickle(p.home()/'Dropbox/interlex_backups/ilx_db_ex_backup.pickle')
 for row in ex.itertuples():
     ilx_uri = '/'.join([ilx_uri_base, row.ilx])
+    ilx_uri = URIRef(ilx_uri)
     if not in_sanity_check.get(ilx_uri):
         print('ex', ilx_uri)
-    rw.add_triple(ilx_uri, ILXTR.existingId, row.iri)
+    graph.add((ilx_uri, ILXTR.existingId, URIRef(row.iri)))
     ilx2ex[row.ilx].append(row.iri)
 del ex
 print('=== existingId triples complete ===')
@@ -105,7 +112,7 @@ print('=== existingId triples complete ===')
 #     ilx_uri = '/'.join([ilx_uri_base, row.ilx])
 #     if not in_sanity_check.get(ilx_uri):
 #         print('synonyms', ilx_uri)
-#     g.add_triple(ilx_uri, NIFRID.synonym, row.literal)
+#     g.add(ilx_uri, NIFRID.synonym, row.literal)
 # del synonyms
 # print('=== synonym triples complete ===')
 #
@@ -116,7 +123,7 @@ print('=== existingId triples complete ===')
 #     if not in_sanity_check.get(ilx_uri):
 #         print('superclasses', ilx_uri)
 #     for existing_id in ilx2ex[row.term_ilx]:
-#         g.add_triple(ilx_uri, RDFS.subClassOf, existing_id)
+#         g.add(ilx_uri, RDFS.subClassOf, existing_id)
 # del superclasses
 # print('=== superclass triples complete ===')
 
@@ -131,7 +138,7 @@ print('=== existingId triples complete ===')
 #     pred = prefix + ':'
 #     g.add_namespace(prefix, annotation_ilx_uri)
 #     g.add_annotation(ilx_uri, RDF.type, OWL.Class, pred, row.value)
-#     g.add_triple(ilx_uri, pred, row.value)
+#     g.add(ilx_uri, pred, row.value)
 # del annos
 # print('=== annotation axiom triples complete ===')
 
@@ -150,11 +157,11 @@ print('=== existingId triples complete ===')
 #     term2_ilx_uri = '/'.join([ilx_uri_base, row.term2_ilx])
 #     if not in_sanity_check.get(term2_ilx_uri): print('relationships', term2_ilx_uri)
 #
-#     g.add_triple(term1_ilx_uri, pred, term2_ilx_uri)
-#     g.add_triple(term2_ilx_uri, pred, term1_ilx_uri)
+#     g.add(term1_ilx_uri, pred, term2_ilx_uri)
+#     g.add(term2_ilx_uri, pred, term1_ilx_uri)
 #
 #     # TODO: create axiom for relationship?
 # print('=== relationship triples complete ===')
 
-rw.serialize(destination=str(p.home()/'Dropbox/interlex_backups/InterLex.ttl'), format='turtle')
-rw.picklize(p.home()/'Dropbox/interlex_backups/InterLex.Graph.pickle')
+graph.serialize(destination=str(p.home()/'Dropbox/interlex_backups/InterLex.ttl'), format='turtle')
+# graph.picklize(p.home()/'Dropbox/interlex_backups/InterLex.Graph.pickle')
