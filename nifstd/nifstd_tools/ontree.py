@@ -56,6 +56,8 @@ sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
 sgc = scigraph.Cypher(cache=False, verbose=True)
 sgd = scigraph.Dynamic(cache=False, verbose=True)
+data_sgd = scigraph.Dynamic(cache=False, verbose=True)
+data_sgd._basePath = 'https://sparc.olympiangods.org/scigraph'
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -69,6 +71,33 @@ _hr = 'http://purl.obolibrary.org/obo/RO_0000087'
 inc = 'INCOMING'
 out = 'OUTGOING'
 both = 'BOTH'
+
+uot =  (
+    "UBERON:0000056",
+    "UBERON:0000057",
+    "UBERON:0000074",
+    "UBERON:0001224",
+    "UBERON:0001226",
+    "UBERON:0001227",
+    "UBERON:0001255",
+    "UBERON:0001287",
+    "UBERON:0001290",
+    "UBERON:0001291",
+    "UBERON:0001292",
+    "UBERON:0004193",
+    "UBERON:0004203",
+    "UBERON:0004204",
+    "UBERON:0004205",
+    "UBERON:0004639",
+    "UBERON:0004640",
+    "UBERON:0005096",
+    "UBERON:0005097",
+    "UBERON:0005750",
+    "UBERON:0005751",
+    "UBERON:0009973",
+    "UBERON:0012240",
+    "UBERON:0012242",
+)
 
 
 def time():
@@ -403,6 +432,10 @@ def server(api_key=None, verbose=False):
     sparc_view = open_custom_sparc_view_yml()
     log.info('starting index load')
 
+    uot_terms = [OntTerm(t) for t in uot]
+    uot_lookup = {t.label:t for t in uot_terms}
+    uot_ordered = sorted(t.label for t in uot_terms)
+
     basename = 'trees'
 
     @app.route(f'/{basename}', methods=['GET'])
@@ -453,15 +486,96 @@ def server(api_key=None, verbose=False):
     def route_sparc_connectivity_query():
         kwargs = request.args
         log.debug(kwargs)
-        return hfn.htmldoc('form here',
-            title='Connectivity query')
-        return connectivity_query(**kwargs)
+        script = """
+        var ele = document.getElementById('model-selector')
+        ele.onselect
+        """
 
-    @app.route(f'/{basename}/sparc/connectivity/view', methods=['GET'])
+        return hfn.htmldoc(hfn.render_form(
+            [[('Model',), {}],
+             [None, None],
+             [
+                 #('Kidney', 'Defensive breathing',),  # TODO autopopulate
+                 ('Urinary Omega Tree',),
+              {'id':'model-selector', 'name': 'model'}]],  # FIXME auto via js?
+
+            # FIXME must switch start and stop per model (argh)
+            # or hide/show depending on which model is selected
+            [[('start',), {}],
+             [None, None],
+             [
+                 #('one', 'two', 'three'),  # TODO auto populate
+                 uot_ordered,
+              {'name': 'start'}]],  # FIXME auto via js?
+
+            [[('end',), {}],
+             [None, None],
+             [
+                 #('one', 'two', 'three'),  # TODO auto populate
+                 uot_ordered,
+              {'name': 'end'}]],  # FIXME auto via js?
+
+            [[tuple(), {}],
+             [tuple(), {'type': 'submit', 'value': 'Query'}],
+             [None, None]]  # FIXME auto via js?
+            , action='view', method='POST'
+        ),
+            scripts=(script,),
+            title='Connectivity query')
+
+    @app.route(f'/{basename}/sparc/connectivity/view', methods=['POST'])
     def route_sparc_connectivity_view():
         kwargs = request.args
         log.debug(kwargs)
-        return hfn.htmldoc(title='Connectivity view')
+        # FIXME error handling for bad data
+        model = request.form['model']
+        start = request.form['start']
+        end = request.form['end']
+        sid = uot_lookup[start].curie
+        eid = uot_lookup[end].curie
+        #start = 'UBERON:0005157'
+        #end = 'UBERON:0001255'
+        return redirect(f'/{basename}/sparc/dynamic/shortestSimple?start_id={sid}&end_id={eid}&direction=INCOMING&format=table')  # TODO
+        #return hfn.htmldoc(title='Connectivity view')
+
+    @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
+    def route_sparc_dynamic(path):
+        args = dict(request.args)
+        if 'direction' in args:
+            direction = args.pop('direction')
+        else:
+            direction = 'OUTGOING'  # should always be outgoing here since we can't specify?
+
+        if 'format' in args:
+            format_ = args.pop('format')
+        else:
+            format_ = None
+
+        j = data_sgd.dispatch(path, **args)
+        #breakpoint()
+        if not j['edges']:
+            log.error(pprint(j))
+            return abort(400)
+
+        kwargs = {'json': j}
+        tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
+        #print(extras.hierarhcy)
+        print(tree)
+        if format_ is not None:
+            if format_ == 'table':
+                #breakpoint()
+                def nowrap(class_, tag=''):
+                    return (f'{tag}.{class_}'
+                            '{ white-space: nowrap; }')
+
+                ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
+                #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
+                rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
+
+                return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                               styles=(hfn.table_style, nowrap('col-label', 'td')))
+
+        return htmldoc(extras.html, styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
@@ -689,6 +803,7 @@ def main():
     sgg._verbose = verbose
     sgv._verbose = verbose
     sgc._verbose = verbose
+    sgd._verbose = verbose
 
     if args['--test']:
         test()
@@ -701,12 +816,14 @@ def main():
             sgc._basePath = api
             # reinit curies state
             sgc.__init__(cache=sgc._get == sgc._cache_get, verbose=sgc._verbose)
+            sgd._basePath = api
 
         api_key = args['--key']
         if api_key:
             sgg.api_key = api_key
             sgv.api_key = api_key
             sgc.api_key = api_key
+            sgd.api_key = api_key
             scs = OntTerm.query.services[0]
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)

@@ -14,6 +14,8 @@ def tag(_tag, n=False):
     s = f'<{_tag}{{extra}}>{nl}'
     e = f'{nl}</{_tag}>'
     def tagwrap(*value, **kwargs):
+        if 'class_' in kwargs:
+            kwargs['class'] = kwargs.pop('class_')
         extra = (' ' + ' '.join(f'{k}="{v}"'
                                 for k, v in kwargs.items())
                  if kwargs else '')
@@ -26,6 +28,8 @@ def cmb(_tag, n=False):
     _s = f'<{_tag}{{extra}}>{nl}'
     e = f'{nl}</{_tag}>'
     def asdf(**kwargs):
+        if 'class_' in kwargs:
+            kwargs['class'] = kwargs.pop('class_')
         extra = (' ' + ' '.join(f'{k}="{v}"'
                                 for k, v in kwargs.items())
                  if kwargs else '')
@@ -39,6 +43,8 @@ def cmb(_tag, n=False):
 def stag(tag_):
     """ single tags """
     def inner(**kwargs):
+        if 'class_' in kwargs:
+            kwargs['class'] = kwargs.pop('class_')
         content = ' '.join(f'{key}="{value}"' for key, value in kwargs.items())
         return f'<{tag_} {content}>'
     return inner
@@ -167,6 +173,30 @@ def render_table(rows, *headers, halign=None):
 
     out = '<table>' + '\n'.join(output) + '</table>'
     return out
+
+
+# forms
+# FIXME this is quite bad
+
+labeltag = tag('label')
+inputtag = stag('input')
+formtag = tag('form')
+optiontag = tag('option')
+
+
+def selecttag(*options, **kwargs):
+    return tag('select')(*(optiontag(o) for o in options), **kwargs)
+
+
+def render_form(*elements, method='POST', **kwargs):
+    tags = labeltag, inputtag, selecttag
+    return formtag(*[divtag(*(tag(*args, **kwargs)
+                              for tag, (args, kwargs) in zip(tags, parts)
+                              if args or kwargs))
+                     for parts in elements],
+                   method=method,
+                   **kwargs)
+
 
 # css
 
