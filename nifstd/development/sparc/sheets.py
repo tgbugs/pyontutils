@@ -66,7 +66,7 @@ def open_custom_sparc_view_yml():
 
         return graph
 
-    with open(Path(devconfig.resources)/'sparc_term_versions/sparc_terms2.txt', 'rt') as infile:
+    with open(Path(devconfig.resources)/'sparc_term_versions/sparc_terms2-mod.txt', 'rt') as infile:
         raw_yaml = ''
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
@@ -305,7 +305,7 @@ class SheetPlus(Sheet):
         for sheet in self.grid['sheets']:
             if sheet['properties']['title'] == self.sheet_name:
                 for datum in sheet['data']:
-                    for i, row in enumerate(datum['rowData'][start_index:]):
+                    for i, row in enumerate(datum['rowData'][start_index:], start_index):
                         if 'values' in row:
                             try:
                                 cell = row['values'][column]
