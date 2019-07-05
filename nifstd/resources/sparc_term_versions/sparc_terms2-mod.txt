@@ -3262,7 +3262,7 @@ Peripheral Nervous System	UBERON:0000010
         vestibular ganglion	UBERON:0002827
         vestibulo-cochlear VIII ganglion complex	UBERON:0013498
         vestibulocochlear ganglion	UBERON:0002827
-OrganList & MBF
+OrganList (MBF)
     Lung	FMA:7195
     Liver	FMA:7197
     Pancreas	FMA:7198
@@ -4159,7 +4159,7 @@ SparcILX
     Phrenic nucleus of C5	ILX:0738325
     Wall of larynx	ILX:0738326
     Mucosa of trachea	ILX:0738327
-Minimal information model(MIS)
+Minimal information model (MIS)
     Felis catus	NCBITaxon:9685
     Homo sapiens	NCBITaxon:9606
     Mus musculus	NCBITaxon:10090
