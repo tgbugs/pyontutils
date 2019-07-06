@@ -3891,31 +3891,31 @@ FlatMap
     Diencephalon	UBERON:0001894
     Forebrain	UBERON:0001890
     Hypothalamus	UBERON:0001898
-    Neural tissue of the diencephalon
+    Neural tissue of the diencephalon	ILX:0738307
     Precentral Gyrus	UBERON:0002703
     Postcentral Gyrus	UBERON:0002581
     Thalamus	UBERON:0001897
     paraventricular nucleus	UBERON:0001930
-    Bötzinger complex
-    caudal ventral respiratory group
+    Bötzinger complex	ILX:0738329
+    caudal ventral respiratory group	ILX:0738330
     dorsal motor nucleus of the vagus nerve	UBERON:0002870
     Edinger-Westphal nucleus	UBERON:0002141
     Hypoglossal nucleus	UBERON:0002871
     locus ceruleus	UBERON:0002148
-    Medulla	UBERON:0001896
-    medullary reticular formation	UBERON:000255
+    Medulla	UBERON:0001236
+    medullary reticular formation	UBERON:0002559
     Midbrain	UBERON:0001891
-    Neural tissue of medulla
+    Neural tissue of medulla	ILX:0738320
     nucleus ambiguus	UBERON:0001719
     nucleus tractus solitarius	UBERON:0009050
     Oculomotor nucleus	UBERON:0001715
     Parabrachial nuclei	UBERON:0007634
-    parafacial respiratory group
+    parafacial respiratory group	ILX:0738331
     Pons	UBERON:0000988
     pre-Bötzinger complex	UBERON:0006007
-    retrofacial nucleus
+    retrofacial nucleus	FMA:77090
     retrotrapezoid nucleus	UBERON:0009918
-    rostral ventral respiratory group
+    rostral ventral respiratory group	ILX:0738332
     Rostral ventrolateral medulla	UBERON:0005807
     C1 spinal segment	UBERON:0006469
     C2 spinal segment	UBERON:0006489
@@ -3926,25 +3926,25 @@ FlatMap
     C7 spinal segment	UBERON:0006493
     C8 spinal segment	UBERON:0006470
     intermediolateral cell column	UBERON:0002175
-    Lamina IX of C2
-    Lamina IX of C3
-    Neural tissue of C4
-    Neural tissue of C5
-    Neural tissue of T1
-    nucleus intercalatus spinalis
-    nucleus intercalatus spinalis pars paraependymalis
+    Lamina IX of C2	ILX:0738333
+    Lamina IX of C3	ILX:0738334
+    Neural tissue of C4	ILX:0738321
+    Neural tissue of C5	ILX:0738322
+    Neural tissue of T1	ILX:0738306
+    nucleus intercalatus spinalis	ILX:0738335
+    nucleus intercalatus spinalis pars paraependymalis	ILX:0738336
     nucleus intermediolateralis pars funicularis	UBERON:0002175
     nucleus intermediolateralis pars principalis	UBERON:0002175
-    nucleus intermediomedialis
-    periaqueductal gray matter
-    Phrenic nucleus of C4
-    Phrenic nucleus of C5
-    Phrenic motor neuron
-    lumbar motor neuron
+    nucleus intermediomedialis	UBERON:0002175
+    periaqueductal gray matter	UBERON:0003040
+    Phrenic nucleus of C4	ILX:0738324
+    Phrenic nucleus of C5	ILX:0738325
+    Phrenic motor neuron	ILX:0738337
+    lumbar motor neuron	ILX:0738338
     Rexed Lamina VII of T1	FMA:68868
-    Rexed Lamina VII of T2
-    Rexed Lamina VII of T3
-    sacral dorsal horn
+    Rexed Lamina VII of T2	ILX:0738339
+    Rexed Lamina VII of T3	ILX:0738340
+    sacral dorsal horn	UBERON:0033939
     T1 spinal segment	UBERON:0006457
     T2 spinal segment	UBERON:0006458
     T3 spinal segment	UBERON:0006459
@@ -3955,93 +3955,93 @@ FlatMap
     T8 spinal segment	UBERON:0006459
     celiac ganglion	UBERON:0002262
     ciliary ganglion	UBERON:0002058
-    Dorsal root ganglia
-    External carotid nerve plexus	FMA:6579
-    hepatic plexus
+    Dorsal root ganglia	UBERON:0000044
+    External carotid nerve plexus	FMA:67532
+    hepatic plexus	FMA:6632
     inferior cervical ganglion	UBERON:0002440
     inferior mesenteric ganglion	UBERON:0005453
-    inferior salivatory nucleus
+    inferior salivatory nucleus	UBERON:0002872
     Internal carotid nerve plexus	UBERON:0002024
-    inter-renal ganglion
-    L1 paravertebral ganglion
-    L2 paravertebral ganglion
-    lacrimatory nucleus
+    inter-renal ganglion	FMA:323348
+    L1 paravertebral ganglion	UBERON:0001807
+    L2 paravertebral ganglion	UBERON:0001807
+    lacrimatory nucleus	ILX:0738341
     middle cervical ganglion	UBERON:0001990
-    Nodose ganglion of the Vagus nerve
+    Nodose ganglion of the Vagus nerve	ILX:0738311
     otic ganglion	UBERON:0003963
-    pelvic ganglion
-    Petrosal ganglion of the Glossopharyngeal nerve
-    posterior right atrial ganglionated plexus
-    posteromedial left atrial ganglionated plexus
+    pelvic ganglion	UBERON:0016508
+    Petrosal ganglion of the Glossopharyngeal nerve	ILX:0738310
+    posterior right atrial ganglionated plexus	ILX:0738180
+    posteromedial left atrial ganglionated plexus	ILX:0738183
     sphenopalatine ganglion	UBERON:0003962
-    splanchnic ganglion
-    stellate ganglion	UBERON:0002440
+    splanchnic ganglion	FMA:323344
+    stellate ganglion	UBERON:0002441
     submandibular ganglion	UBERON:0002059
     superior cervical ganglion	UBERON:0001989
-    superior left atrial ganglionated plexus
+    superior left atrial ganglionated plexus	ILX:0738182
     superior mesenteric ganglion	UBERON:0005479
-    superior right atrial ganglionated plexus
-    superior salivatory nucleus
-    T1 paravertebral ganglion	UBERON:0001807
+    superior right atrial ganglionated plexus	ILX:0738179
+    superior salivatory nucleus	UBERON:0002149
+    T1 paravertebral ganglion	ILX:0738342
     T1 ventral root	UBERON:0002260
-    T1 white ramus
-    T10 paravertebral ganglion	UBERON:0001807
-    T11 paravertebral ganglion	UBERON:0001807
-    T12 paravertebral ganglion	UBERON:0001807
-    T2 paravertebral ganglion	UBERON:0001807
-    T3 paravertebral ganglion	UBERON:0001807
-    T4 paravertebral ganglion	UBERON:0001807
-    T5 paravertebral ganglion	UBERON:0001807
-    T6 paravertebral ganglion	UBERON:0001807
-    T7 paravertebral ganglion	UBERON:0001807
-    T8 paravertebral ganglion	UBERON:0001807
-    T9 paravertebral ganglion	UBERON:0001807
-    anterior cusp of aortic valve
+    T1 white ramus	FMA:14056
+    T10 paravertebral ganglion	ILX:0738343
+    T11 paravertebral ganglion	ILX:0738344
+    T12 paravertebral ganglion	ILX:0738345
+    T2 paravertebral ganglion	ILX:0738346
+    T3 paravertebral ganglion	ILX:0738347
+    T4 paravertebral ganglion	ILX:0738348
+    T5 paravertebral ganglion	ILX:0738349
+    T6 paravertebral ganglion	ILX:0738350
+    T7 paravertebral ganglion	ILX:0738351
+    T8 paravertebral ganglion	ILX:0738352
+    T9 paravertebral ganglion	ILX:0738353
+    anterior cusp of aortic valve	FMA:7253
     anterior cusp of mitral valve	UBERON:0014854
-    anterior cusp of pulmonary valve
-    anterior cusp of tricuspid valve
+    anterior cusp of pulmonary valve	ILX:0738354
+    anterior cusp of tricuspid valve	FMA:7238
     anterior interventricular sulcus	UBERON:0005489
-    baroreceptors (Aortic arch)
+    baroreceptors (Aortic arch)	ILX:0738355
     apex of heart	UBERON:0002098
-    Atrioentricular node	UBERON:0002352
+    Atrioentricular node	FMA:9478
     bronchi	UBERON:0002185
     carotid body	UBERON:0001629
     Carotid sinus	UBERON:0003708
     cerebral arteries	UBERON:0004449
-    chemoreceptors
+    chemoreceptors	ILX:0738356
     ciliary muscle	UBERON:0001605
-    conus arteriosus	UBERON:0005953
-    coronary sinus inlet
-    coronary sulcus
+    conus arteriosus	UBERON:0003983
+    coronary sinus inlet	ILX:0738357
+    coronary sulcus	FMA:7174
     Diaphragm	UBERON:0001103
-    Epiglottic mechanoreceptors
+    Epiglottic mechanoreceptors	ILX:0738318
     epiglottis	UBERON:0000388
     esophagus	UBERON:0001043
     fossa ovalis	UBERON:0003369
     gall bladder	UBERON:0002110
     harderian gland	UBERON:0004187
-    inferior vena cava inlet
+    inferior vena cava inlet	ILX:0738358
     interatrial septum	UBERON:0002085
     interventricular septum	UBERON:0002094
-    Koch's triangle
+    Koch's triangle	FMA:0329292
     lacrimal gland	UBERON:0001817
     large intestine	UBERON:0000059
-    Laryngeal mechanoreceptors
+    Laryngeal mechanoreceptors	ILX:0738317
     larynx	UBERON:0001737
-    left anterior papillary muscle
+    left anterior papillary muscle	ILX:0738359
     left atrium	UBERON:0002079
     left auricle	UBERON:0006630
-    left coronary outlet
-    left cusp of aortic valve
-    left cusp of pulmonary valve
-    left fibrous ring
-    left fibrous trigone
-    left inferior pulmonary vein
-    left posterior papillary muscle
-    left superior pulmonary vein
+    left coronary outlet	UBERON:0001626
+    left cusp of aortic valve	FMA:7254
+    left cusp of pulmonary valve	ILX:0738360
+    left fibrous ring	ILX:0738361
+    left fibrous trigone	ILX:0738284
+    left inferior pulmonary vein	FMA:49913
+    left posterior papillary muscle	ILX:0738362
+    left superior pulmonary vein	FMA:49916
     left ventricle	UBERON:0002084
     liver	UBERON:0002107
-    mechanoreceptors (hair cells)
+    mechanoreceptors (hair cells)	ILX:0485330
     nasal gland	UBERON:0012278
     nasopharynx	UBERON:0001728
     Oesophagus	UBERON:0001043
@@ -4049,57 +4049,57 @@ FlatMap
     pancreas	UBERON:0001264
     parotid gland	UBERON:0001831
     posterior cusp of mitral valve	UBERON:0014855
-    posterior cusp of pulmonary valve
-    posterior cusp of tricuspid valve
+    posterior cusp of pulmonary valve	FMA:7250
+    posterior cusp of tricuspid valve	FMA:7239
     posterior interventricular sulcus	UBERON:0005490
     pupillary sphincter muscle	UBERON:0001607
-    right anterior papillary muscle
+    right anterior papillary muscle	ILX:0738363
     right atrium	UBERON:0002078
     right auricle	UBERON:0006631
-    right coronary outlet
-    right cusp of aortic valve
-    right fibrous ring
-    right fibrous trigone
-    right inferior pulmonary vein
-    right posterior papillary muscle
-    right superior pulmonary vein
+    right coronary outlet	ILX:0738283
+    right cusp of aortic valve	FMA:7253
+    right fibrous ring	ILX:0738364
+    right fibrous trigone	ILX:0738282
+    right inferior pulmonary vein	FMA:49911
+    right posterior papillary muscle	ILX:0738365
+    right superior pulmonary vein	FMA:49914
     right ventricle	UBERON:0002080
     root of aorta	UBERON:0010172
-    root of pulmonary trunk
+    root of pulmonary trunk	ILX:0738366
     septal cusp of tricuspid valve	UBERON:0005998
     Sinoatrial node	UBERON:0002351
-    skin
+    skin	UBERON:0002097
     small intestine	UBERON:0002108
     stomach	UBERON:0000945
     sublingual gland	UBERON:0001832
     submandibular gland	UBERON:0001736
-    superior vena cava inlet
-    T1-T2 intercostal muscle
-    terminal crest
+    superior vena cava inlet	ILX:0738367
+    T1-T2 intercostal muscle	ILX:0738319
+    terminal crest	ILX:0738368
     tongue	UBERON:0013476
-    trachea	UBERON:0003126
-    vortex of heart
-    Aortic arch depressor nerve
-    External branch of inferior laryngeal nerve
-    External branch of superior laryngeal nerve
-    Ganglioglomerular nerve
+    trachea	UBERON:0003127
+    vortex of heart	FMA:84628
+    Aortic arch depressor nerve	ILX:0738312
+    External branch of inferior laryngeal nerve	ILX:0738308
+    External branch of superior laryngeal nerve	FMA:6243
+    Ganglioglomerular nerve	ILX:0738293
     Glossopharyngeal nerve	UBERON:0001649
-    Herning's nerve
+    Herning's nerve	ILX:0738314
     Hypoglossal nerve	UBERON:0001650
-    ICG-MCG sympathetic cord
-    Inferior laryngeal nerve
-    inferior/lateral aspect of posterior left atrial ganglionated plexus
-    Internal branch of inferior laryngeal nerve
-    Internal branch of superior laryngeal nerve
-    MCG-SCG sympathetic cord
-    mechanoreceptors (tongue, tonsil, arterial wall, pharyngeal wall)
-    Pharyngeal branch of the Hypoglossal nerve
+    ICG-MCG sympathetic cord	ILX:0738290
+    Inferior laryngeal nerve	UBERON:0003716
+    inferior/lateral aspect of posterior left atrial ganglionated plexus	ILX:0738369
+    Internal branch of inferior laryngeal nerve	ILX:0738309
+    Internal branch of superior laryngeal nerve	FMA:6240
+    MCG-SCG sympathetic cord	ILX:0738292
+    mechanoreceptors (tongue, tonsil, arterial wall, pharyngeal wall)	ILX:0485330
+    Pharyngeal branch of the Hypoglossal nerve	ILX:0738315
     Phrenic nerve	UBERON:0001884
-    Rami glomi carotici
+    Rami glomi carotici	ILX:0738313
     Superior laryngeal nerve	UBERON:0011326
-    T1-ICG sympathetic cord
+    T1-ICG sympathetic cord	ILX:0738291
     Vagus nerve	UBERON:0001759
-    ventricular ganglionated plexuses (around coronary arteries)
+    ventricular ganglionated plexuses (around coronary arteries)	ILX:0738370
 SparcILX
     Right atrial ganglionated plexus	ILX:0738176
     Aortic chemoreceptor	ILX:0738177
