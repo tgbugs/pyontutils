@@ -3270,9 +3270,8 @@ OrganList (MBF)
     Colon	FMA:14543
     Kidney	FMA:7203
     Urinary bladder	FMA:15900
-    Spinal cord	FMA:7647
     Lower urinary tract	FMA:45659
-    Brain	FMA:50801
+    Brain (Braintstem & Spinal Cord)	FMA:50801
         Brainstem	UBERON:0002298
             Midbrain	UBERON:0001891
                 retrorubral area of midbrain reticular nucleus	UBERON:0011172
@@ -3508,7 +3507,7 @@ OrganList (MBF)
                 ventrolateral sulcus of medulla oblongata	UBERON:0008335
                 vestibular nucleus	UBERON:0007228
                 visceromotor column	UBERON:2000611
-        Spinal Cord	UBERON:0002240
+        Spinal Cord	UBERON:0002240	FMA:7647
             Gross Anatomy
                 ampulla caudalis	UBERON:0011360
                 central canal of spinal cord	UBERON:0002291
