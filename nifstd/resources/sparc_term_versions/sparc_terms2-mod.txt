@@ -4229,3 +4229,112 @@ Minimal information model (MIS)
     Genetic assessment	BIRNLEX:3001
     Holtzman Sprague-Dawley rat	BIRNLEX:421
     Sprague Dawley	BIRNLEX:266
+ApiNATOMY
+    Diencephalon	UBERON:0001894
+    Hypothalamus	UBERON:0001898
+    Paraventricular nucleus	UBERON:0001920
+    Midbrain	UBERON:0001891
+    Pons	UBERON:0000988
+    Medulla	UBERON:0001896
+    C1 spinal segment	UBERON:0006469
+    C2 spinal segment	UBERON:0006489
+    C3 spinal segment	UBERON:0006488
+    C4 spinal segment	UBERON:0006490
+    C5 spinal segment	UBERON:0006491
+    C6 spinal segment	UBERON:0006492
+    C7 spinal segment	UBERON:0006493
+    C8 spinal segment	UBERON:0006470
+    T1 spinal segment	UBERON:0006457
+    T2 spinal segment	UBERON:0006458
+    T3 spinal segment	UBERON:0006459
+    T1 sympathetic ganglion	FMA:6474
+    Inferior cervical ganglion	UBERON:0002440
+    Middle cervical ganglion	UBERON:0001990
+    Superior cervical ganglion	UBERON:0001989
+    Larynx	UBERON:0001737
+    Trachea	UBERON:0003126
+    Aortic arch	UBERON:0001508
+    Common carotid artery	UBERON:0010197
+    Internal carotid artery	UBERON:0001532
+    Wall of aortic arch	ILX:0738304
+    Wall of common carotid artery	FMA:66284
+    Wall of internal carotid artery	ILX:0738305
+    Epiglottis	UBERON:0000388
+    Tongue	UBERON:0001723
+    Rexed Lamina VII of T1	FMA:68868
+    Segment of neuron	CL:0000540
+    Neural tissue of T1	ILX:0738306
+    Neural tissue of the diencephalon	ILX:0738307
+    T1 ventral root	FMA:7643
+    T1 white ramus	FMA:14056
+    T1-ICG sympathetic cord	ILX:0738291
+    ICG-MCG sympathetic cord	ILX:0738290
+    MCG-SCG sympathetic cord	ILX:0738292
+    External carotid nerve	FMA:6579
+    Ganglioglomerular nerve	ILX:0738293
+    Internal carotid nerve	UBERON:0002024
+    Phrenic nerve	UBERON:0001884
+    Vagus nerve	UBERON:0001759
+    Glossopharyngeal nerve	UBERON:0001649
+    Hypoglossal nerve	UBERON:0001650
+    Mucosa of epiglottis	UBERON:0004982
+    Mucosa of tongue	UBERON:0005020
+    Superior laryngeal nerve	UBERON:0011326
+    External branch of superior laryngeal nerve	FMA:6243
+    Internal branch of superior laryngeal nerve	FMA:6240
+    Inferior laryngeal nerve	UBERON:0003716
+    External branch of inferior laryngeal nerve	ILX:0738308
+    Internal branch of inferior laryngeal nerve	ILX:0738309
+    Petrosal ganglion of the Glossopharyngeal nerve	ILX:0738310
+    Nodose ganglion of the Vagus nerve	ILX:0738311
+    Aortic arch depressor nerve	ILX:0738312
+    Rami glomi carotici	ILX:0738313
+    Herning's nerve	ILX:0738314
+    Pharyngeal branch of the Hypoglossal nerve	ILX:0738315
+    Aortic arch baroreceptors	ILX:0738316
+    Carotid body	UBERON:0001629
+    Carotid sinus	UBERON:0003708
+    Laryngeal mechanoreceptors	ILX:0738317
+    Epiglottic mechanoreceptors	ILX:0738318
+    Oesophafgus	UBERON:0001043
+    T1-T2 intercostal muscle	ILX:0738319
+    Diaphragm	UBERON:0001103
+    Neural tissue of medulla	ILX:0738320
+    Neural tissue of C4	ILX:0738321
+    Neural tissue of C5	ILX:0738322
+    Nucleus tractus solitarius	ILX:0738323
+    Retrotrapezoid nucleus	ILX:0110082
+    Rostral ventrolateral medulla	ILX:0730074
+    Phrenic nucleus of C4	ILX:0738324
+    Phrenic nucleus of C5	ILX:0738325
+    Wall of larynx	ILX:0738326
+    Mucosa of trachea	ILX:0738327
+    Soma in Paraventricular nucleus	NLX:154731
+    Soma in T1 Rexed Lamina VII	NLX:154731
+    Soma in Central nervous system of T1 spinal segment	NLX:154731
+    Soma in 265	NLX:154731
+    Soma in 266	NLX:154731
+    Soma in 262	NLX:154731
+    Soma in 264	NLX:154731
+    Soma in 249 (1)	NLX:154731
+    Soma in 249 (2)	NLX:154731
+    Soma in 249 (3)	NLX:154731
+    Soma in 248 (1)	NLX:154731
+    Soma in 248 (2)	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
+    Soma in Superior cervical ganglion	NLX:154731
