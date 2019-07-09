@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Render a tree from a predicate root pair.
 Normally run as a web service.
 
@@ -833,10 +833,10 @@ def main():
             scs.setup(instrumented=OntTerm)
 
         app = server(verbose=verbose)
-        app.debug = False
-        app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
+        # app.debug = False
+        # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # app.debug = True
-        # app.run(host='0.0.0.0', port=args['--port'], threaded=True)  # nginxwoo
+        app.run(host='0.0.0.0', port=args['--port'], threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
         os.sys.exit()
     else:
