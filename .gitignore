@@ -17,6 +17,11 @@ pyontutils/devconfig.yaml
 # temp files
 *.bak
 
+# emacs
+\#*\#
+*.elc
+.\#*
+
 # Vim
 *.swp
 *.swo
