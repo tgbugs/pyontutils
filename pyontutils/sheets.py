@@ -173,6 +173,7 @@ class Sheet:
         try:
             self.byCol = byCol(self.values, to_index=self.index_columns)
         except ValueError as e:
+            log.error(e)
             log.warning('Sheet has malformed header, not setting byCol')
 
         self.grid = grid
