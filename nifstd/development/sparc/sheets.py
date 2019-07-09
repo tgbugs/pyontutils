@@ -32,7 +32,7 @@ YML_DELIMITER = '\u1F4A9'
 REC_DD = lambda: defaultdict(REC_DD)
 
 
-def open_custom_sparc_view_yml():
+def open_custom_sparc_view_yml(seperate_curies: bool = True) -> dict:
     ''' Custom yaml is a normal yaml without colons and curies delimited by 4 spaces
         This causes last list elements to be a dictionary of None values which is fine bc
         labels should not be repeating '''
@@ -71,7 +71,10 @@ def open_custom_sparc_view_yml():
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
             raw_yaml += line.replace('\n', '').replace(YML_DISPLAY_DELIMITER, YML_DELIMITER) + ':\n'
-        sparc_view = sep_curies(ordered_load(raw_yaml, yaml.SafeLoader))
+        if seperate_curies:
+            sparc_view = sep_curies(ordered_load(raw_yaml, yaml.SafeLoader))
+        else:
+            sparc_view = ordered_load(raw_yaml, yaml.SafeLoader)
 
     return sparc_view
 

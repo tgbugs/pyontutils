@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+# this runs in the root of the git repository so we are ok
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve all symlinks
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+SOURCE="$(readlink "$SOURCE")"
+[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # resolve relative symlinks
+done
+ABS_PATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+/usr/bin/emacs -Q --batch \
+    -l "${ABS_PATH}/publish.el" \
+    ../resources/sawg.org \
+    --funcall org-publish-all
