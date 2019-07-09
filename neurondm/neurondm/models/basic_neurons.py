@@ -84,7 +84,8 @@ class lOntTerm(OntTerm):
     repr_arg_order = (('curie', 'label'),  # FIXME this doesn't stick?!
                       ('iri', 'label'),)
     __firsts = 'curie', 'iri'
-    query = ontquery.OntQuery(ontquery.plugin.get('rdflib')(sgraph))
+
+lOntTerm.query = ontquery.OntQuery(ontquery.plugin.get('rdflib')(sgraph), instrumented=lOntTerm)
 
 
 regions_unfilt = sorted(set(lOntTerm(e) for r in rests for e in (r.s, r.o)), key=lambda t:int(t.suffix))

@@ -1122,7 +1122,7 @@ def make_bridge():
     skip = 'phenotype_direct',
     __all__ = [a for a in __all__ if a not in skip]
     log.info('building the following\n' + '\n'.join(__all__))
-    models_imports = 'allen', 'markram', 'huang', 'common', 'Defined'
+    models_imports = 'allen', 'markram', 'huang', 'common', 'Defined', 'bolser',
     #models_imports = 'markram', 'huang', 'common', 'Defined'
 
     class neuronBridge(Ont):
@@ -1153,6 +1153,7 @@ def make_devel():
 
     n = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
     fns =('allen-cell-types.ttl',
+          'bolser-lewis.ttl',
           'common-usage-types.ttl',
           'cut-roundtrip.ttl',
           'huang-2017.ttl',

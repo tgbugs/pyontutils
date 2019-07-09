@@ -208,6 +208,10 @@ class LabelMaker:
     def hasAxonLocatedIn(self, phenotypes):
         yield from self._with_thing_located_in('with-axon{}-in', phenotypes)
 
+    @od
+    def hasPresynapticTerminalsIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-presynaptic-terminals-in', phenotypes)
+
     def _with_thing_located_in(self, prefix_template, phenotypes):
         # TODO consider field separator here as well ... or string quotes ...
         lp = len(phenotypes)
@@ -302,7 +306,7 @@ class LabelMaker:
 
 class OntTerm(bOntTerm):
     def as_phenotype(self, predicate=None):
-        if self.prefix == 'UBERON':  # FIXME layers
+        if predicate is None and self.prefix == 'UBERON':  # FIXME layers
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
@@ -1856,6 +1860,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
             ilxtr.hasDendriteLocatedIn,
             ilxtr.hasAxonLocatedIn,
+            ilxtr.hasPresynapticTerminalsIn,
             ilxtr.hasMorphologicalPhenotype,
             ilxtr.hasDendriteMorphologicalPhenotype,
             ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
@@ -2673,6 +2678,7 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
         'ilxtr:hasDendriteLocatedIn',
         'ilxtr:hasAxonLocatedIn',
+        ilxtr.hasPresynapticTerminalsIn,
         'ilxtr:hasMorphologicalPhenotype',
         'ilxtr:hasDendriteMorphologicalPhenotype',
         'ilxtr:hasElectrophysiologicalPhenotype',
