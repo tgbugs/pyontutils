@@ -124,6 +124,8 @@ def _loadPrefixes():
         'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
         'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
 
+        'NINDS.CDE': str(rdflib.Namespace(interlex_namespace('NINDSCDE/uris/readable/'))),
+
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
 
@@ -202,6 +204,7 @@ def _loadPrefixes():
 PREFIXES = _loadPrefixes()
 
 OntCuries(PREFIXES)  # anything importing this file should see these bindings
+breakpoint()
 
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
