@@ -76,6 +76,7 @@ def main():
 
     Neuron.write()
     Neuron.write_python()
+    return config,
 
 
 if __name__ == '__main__':
