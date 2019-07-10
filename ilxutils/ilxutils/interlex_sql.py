@@ -1,5 +1,5 @@
-import pandas as pd
 from pathlib import Path
+import pandas as pd
 from sqlalchemy import create_engine, inspect, Table, Column
 from collections import defaultdict
 from ilxutils.tools import light_degrade, open_pickle, create_pickle
@@ -73,7 +73,7 @@ class IlxSql():
             return self.terms
         engine = create_engine(self.db_url)
         data = """
-            SELECT t.id as tid, t.ilx, t.label, t.definition, t.type, t.comment, t.version
+            SELECT t.id as tid, t.ilx, t.label, t.definition, t.type, t.comment, t.version, t.uid, t.time
             FROM terms t
             GROUP BY t.ilx
         """

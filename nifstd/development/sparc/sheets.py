@@ -1,3 +1,17 @@
+"""
+WorkFlow:
+    1. Create schema class
+    2. Create sheet importing schema class
+    3. update collect_sheets in GoogleSheets
+    4. any merging in graphs and harding is down in the following
+        functions in GoogleSheets (merge_graphs & hardcode_graph_paths)
+    5. rerun sheet.py to generate sparc_terms.txt/csv to use
+    6. OPTIONAL: edit sparc_terms.txt manually for any last minute complicated tasks
+
+Notes:
+    - grid needs to be enabled to allow bold traversal
+    - new sheets == need work flow
+"""
 from collections import defaultdict, OrderedDict
 from copy import deepcopy
 import csv
@@ -18,7 +32,7 @@ YML_DELIMITER = '\u1F4A9'
 REC_DD = lambda: defaultdict(REC_DD)
 
 
-def open_custom_sparc_view_yml():
+def open_custom_sparc_view_yml(seperate_curies: bool = True) -> dict:
     ''' Custom yaml is a normal yaml without colons and curies delimited by 4 spaces
         This causes last list elements to be a dictionary of None values which is fine bc
         labels should not be repeating '''
@@ -52,12 +66,15 @@ def open_custom_sparc_view_yml():
 
         return graph
 
-    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'rt') as infile:
-        rawr_yaml = ''
+    with open(Path(devconfig.resources)/'sparc_term_versions/sparc_terms2-mod.txt', 'rt') as infile:
+        raw_yaml = ''
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
-            rawr_yaml += line.replace('\n', '').replace(YML_DISPLAY_DELIMITER, YML_DELIMITER) + ':\n'
-        sparc_view = sep_curies(ordered_load(rawr_yaml, yaml.SafeLoader))
+            raw_yaml += line.replace('\n', '').replace(YML_DISPLAY_DELIMITER, YML_DELIMITER) + ':\n'
+        if seperate_curies:
+            sparc_view = sep_curies(ordered_load(raw_yaml, yaml.SafeLoader))
+        else:
+            sparc_view = ordered_load(raw_yaml, yaml.SafeLoader)
 
     return sparc_view
 
@@ -291,7 +308,7 @@ class SheetPlus(Sheet):
         for sheet in self.grid['sheets']:
             if sheet['properties']['title'] == self.sheet_name:
                 for datum in sheet['data']:
-                    for i, row in enumerate(datum['rowData'][start_index:]):
+                    for i, row in enumerate(datum['rowData'][start_index:], start_index):
                         if 'values' in row:
                             try:
                                 cell = row['values'][column]
@@ -352,7 +369,7 @@ class UberonTermsSheet1Schema(SheetPlus):
                 self.tree[self.name][self.sheet_name][term] = terms_list
 
 
-class SpinalTerminalogySheet1Schema(SheetPlus):
+class SpinalTerminologySheet1Schema(SheetPlus):
 
     def populate_graph(self):
         ''' Will have to use grid to find headers and nest headers if anywhere in the column.
@@ -398,6 +415,14 @@ class SpinalTerminalogySheet1Schema(SheetPlus):
                             column = column,
                         )
                         self.tree[self.name][self.sheet_name][header][sub_header] = sub_terms_list
+
+
+class SpinalTerminologySheet2Schema(SheetPlus):
+
+    def populate_graph(self):
+        self.tree[self.name][self.sheet_name]['Gross Anatomy'] = self.get_sub_column(
+            start_index = 1,
+            column = 0)
 
 
 class ParcellationUberonSchema(SheetPlus):
@@ -455,11 +480,15 @@ class UberonTermsSheet1(UberonTermsSheet1Schema):
     fetch_grid = False
 
 
-class SpinalTerminologySheet1(SpinalTerminalogySheet1Schema):
+class SpinalTerminologySheet1(SpinalTerminologySheet1Schema):
     name = 'spinal-terminology'
     sheet_name = 'Sheet1'
     fetch_grid = True
 
+class SpinalTerminologySheet2(SpinalTerminologySheet2Schema):
+    name = 'spinal-terminology'
+    sheet_name = 'Sheet2'
+    fetch_grid = False
 
 class ParcellationUberon(ParcellationUberonSchema):
     name = 'parcellation-brainstem'
@@ -504,6 +533,7 @@ class GoogleSheets(SheetPlus):
         self.sheets.extend([
             UberonTermsSheet1(),
             SpinalTerminologySheet1(),
+            SpinalTerminologySheet2(),
             ParcellationUberon(),
             ParcellationAllen(),
             ParcellationPaxinos(),
@@ -553,11 +583,11 @@ class GoogleSheets(SheetPlus):
         self.tree['Atlas Nomenclature']['Berman Cat Brainstem'] = self.tree.pop('Berman Cat Brainstem')
         self.tree['Peripheral Nervous System'] = {}
         self.tree['Peripheral Nervous System']['Ganglia'] = self.tree.pop('Ganglia')
-        self.tree['Spinal Cord']['Segment Anatomy'] = {}
-        self.tree['Spinal Cord']['Segment Anatomy']['Lamina Of Spinal Cord'] = self.tree['Spinal Cord'].pop('Lamina of spinal cord')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.tree['Spinal Cord'].pop('Spinal cord internal structures per segment')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Segments'] = self.tree['Spinal Cord'].pop('Spinal cord segments')
-        self.tree['Spinal Cord']['Segment Anatomy']['Spinal Cord Subsegments'] = self.tree['Spinal Cord'].pop('Spinal cord subsegments')
+        self.tree['Spinal Cord']['Segmental Anatomy'] = {}
+        self.tree['Spinal Cord']['Segmental Anatomy']['Lamina Of Spinal Cord'] = self.tree['Spinal Cord'].pop('Lamina of spinal cord')
+        self.tree['Spinal Cord']['Segmental Anatomy']['Spinal Cord Internal Structures Per Segment'] = self.tree['Spinal Cord'].pop('Spinal cord internal structures per segment')
+        self.tree['Spinal Cord']['Segmental Anatomy']['Spinal Cord Segments'] = self.tree['Spinal Cord'].pop('Spinal cord segments')
+        self.tree['Spinal Cord']['Segmental Anatomy']['Spinal Cord Subsegments'] = self.tree['Spinal Cord'].pop('Spinal cord subsegments')
 
         # Remove empty columns
         headers_to_pop = []
@@ -569,12 +599,12 @@ class GoogleSheets(SheetPlus):
 
 def main():
     gsheets = GoogleSheets()
-    with open(Path(devconfig.resources, 'sparc_terms2.txt'), 'w') as outfile:
+    with open(Path(devconfig.resources, 'sparc_term_versions/sparc_terms3.txt'), 'w') as outfile:
         outfile.write(f'### YAML DELIMITER  ==  {YML_DELIMITER} ###')
         outfile.write('\n')
         outfile.write('\n'.join(gsheets.get_rows()))
 
-    with open(Path(devconfig.resources, 'sparc_terms2.csv'), "w") as csv_file:
+    with open(Path(devconfig.resources, 'sparc_term_versions/sparc_terms3.csv'), "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=',', lineterminator='\n')
         csv_rows = gsheets.create_master_csv_rows()
         for line in csv_rows:

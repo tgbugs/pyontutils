@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Render a tree from a predicate root pair.
 Normally run as a web service.
 
@@ -147,7 +147,7 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         if tree is None:
             html_all = ''
         else:
-        
+
             html = extra.html.replace('NIFTTL:', '')
             html_all = hfn.htmldoc(html,
                                    other=prov,
@@ -700,7 +700,9 @@ def server(api_key=None, verbose=False):
             if not tier2_on:
                 continue
             # BUG: Will break what we want if more is added to spinal cord
-            if len(tier2_on.keys()) > 6:
+            if len(tier2_on.keys()) > 15:
+                continue
+            if tier1_row[0] == 'Nerve roots of spinal cord segments':
                 continue
             for tier2, tier3_on in tier2_on.items():
                 if tier2 == 'CURIES':
@@ -709,6 +711,8 @@ def server(api_key=None, verbose=False):
                 tier2_row = tier2.split(YML_DELIMITER)
                 tier2_row += tier3_on['CURIES']
                 tagged_tier2_row = tag_row(row=tier2_row, url=url, tier_level=1)
+                if len(list(sparc_view[tier1_row[0]][tier2_row[0]].keys())) == 1:
+                    tagged_tier2_row[0] = spaces+tier2_row[0]
                 hyp_rows.append(tagged_tier2_row)
         return htmldoc(
             render_table(hyp_rows),
@@ -734,7 +738,7 @@ def server(api_key=None, verbose=False):
         p = Path('/var/www/ontology/trees/sparc/sawg.html')
         if p.exists():
             return send_from_directory(p.parent.as_posix(), p.name)
-        
+
         log.critical(f'{devconfig.resources}/sawg.org has not been published')
         return send_from_directory(Path(devconfig.resources).as_posix(), 'sawg.org')
         #return htmldoc(
@@ -794,7 +798,7 @@ def test():
         if args and 'restriction' in args[0]:
             request.args.pop('restriction')
 
-        
+
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ontree 0.0.0')
@@ -829,8 +833,10 @@ def main():
             scs.setup(instrumented=OntTerm)
 
         app = server(verbose=verbose)
-        app.debug = False
-        app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
+        # app.debug = False
+        # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
+        # app.debug = True
+        app.run(host='0.0.0.0', port=args['--port'], threaded=True)  # nginxwoo
         # FIXME pypy3 has some serious issues yielding when threaded=True, gil issues?
         os.sys.exit()
     else:
