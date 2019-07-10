@@ -204,7 +204,6 @@ def _loadPrefixes():
 PREFIXES = _loadPrefixes()
 
 OntCuries(PREFIXES)  # anything importing this file should see these bindings
-breakpoint()
 
 def makePrefixes(*prefixes):
     return {k:PREFIXES[k] for k in prefixes}
