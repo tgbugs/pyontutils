@@ -36,7 +36,10 @@ class APIN(Sheet):
 
                 predicate = ilxtr[h] if h != 'label' else rdfs.label
                 if column:
-                    objects = [self.convert(e) for e in column.split(',')]
+                    if h == 'label':
+                        objects = [column]
+                    else:
+                        objects = [self.convert(e) for e in column.split(',')]
                 else:
                     objects = et
                 
