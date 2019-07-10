@@ -2,17 +2,18 @@
 """Look look up ontology terms on the command line.
 
 Usage:
-    scig v [--local --verbose --key=KEY] <id>...
-    scig i [--local --verbose --key=KEY] <id>...
-    scig t [--local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
-    scig s [--local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
-    scig g [--local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
-    scig e [--local --verbose --key=KEY] <p> <s> <o>
-    scig c [--local --verbose --key=KEY]
-    scig cy [--verbose --limit=LIMIT] <query>
+    scig v  [--api --local --verbose --key=KEY] <id>...
+    scig i  [--api --local --verbose --key=KEY] <id>...
+    scig t  [--api --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
+    scig s  [--api --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
+    scig g  [--api --local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
+    scig e  [--api --local --verbose --key=KEY] <p> <s> <o>
+    scig c  [--api --local --verbose --key=KEY]
+    scig cy [--api --local --verbose --limit=LIMIT] <query>
     scig onts [options]
 
 Options:
+    -a --api=API        Full url to SciGraph api endpoint
     -e --edges          print edges only
     -l --local          hit the local scigraph server
     -v --verbose        print the full uri
@@ -187,6 +188,8 @@ def main():
     server = None
     api_key = args['--key']
     verbose = False
+    if args['--api']:
+        server = args['--api']
     if args['--local']:
         server = 'http://localhost:9000/scigraph'
     if args['--verbose']:
