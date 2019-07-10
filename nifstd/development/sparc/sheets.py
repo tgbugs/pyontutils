@@ -1,4 +1,4 @@
-"""
+""" Sparc View Tree
 WorkFlow:
     1. Create schema class
     2. Create sheet importing schema class
@@ -126,7 +126,7 @@ def hyperlink_tree(tree: dict) -> list:
     return hyp_rows
 
 
-class SheetPlus(Sheet):
+class SheetPlus:
     ''' Appending to Sheet functionality '''
 
     def create_master_csv_rows(self):
