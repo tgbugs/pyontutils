@@ -16,13 +16,12 @@
    =AUX_RESOLVER_HOST= set in your environment (.e.g via =~/.bashrc=).
    #+NAME: publish
    #+BEGIN_SRC emacs-lisp :eval never :tangle ../bin/publish.el :comments noweb
+     (require 'ox-publish)
      (defun org-custom-hrefl-export (path desc format)
        "export a rooted path as an absolute href with no server"
        (cond ((eq format 'html)
               (format "<a href=\"%s\">%s</a>" path desc))))
      (org-add-link-type "hrefl" 'org-custom-hrefl 'org-custom-hrefl-export)
-
-     (require 'ox-publish)
      (setq org-publish-project-alist
            `(("SPARC-anatomy"
               :components ("page"))
