@@ -2453,9 +2453,9 @@ class NeuronEBM(Neuron):
         for invalid_superclass, predicate in (('UBERON', self._predicates.hasSomaLocatedIn),):
             for pe in self.pes:
                 if pe.e == predicate and pe.p not in usage_ok and invalid_superclass in pe.p:
-                    log.warning(tc.red(f'subClassOf restriction violated '
+                    log.warning(tc.red('subClassOf restriction violated '
                                        '(please use a more specific identifier) '
-                                       'for {invalid_superclass} due to\n{pe}'))
+                                       f'for {invalid_superclass} due to\n{pe}'))
                     #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
 
