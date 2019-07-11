@@ -62,7 +62,7 @@
          ../resources/sawg.org \
          --funcall org-publish-all
    #+END_SRC
-   
+
    #+NAME: publish-static
    #+BEGIN_SRC bash :eval never :tangle ../bin/publish-sawg-static :tangle-mode (identity #o755)
      #!/usr/bin/env sh
@@ -92,29 +92,29 @@ This page will be continuously updated.
 * Terminology
 
 ** Term lists
-   It is critical to the SPARC project that these terms lists be synched across the different contexts in which anatomical labels are applied. Towards that goal, we have gathered user requirements for annotation of data sets, images, flatmaps and models and created a set of term lists to make it easier for researchers to review and tools, e.g., MBF Biolucida, to use. 
+   It is critical to the SPARC project that these terms lists be synched across the different contexts in which anatomical labels are applied. Towards that goal, we have gathered user requirements for annotation of data sets, images, flatmaps and models and created a set of term lists to make it easier for researchers to review and tools, e.g., MBF Biolucida, to use.
    Terms are extracted from existing ontologies whenever possible, primarily [[http://www.ontobee.org/ontology/UBERON][UBERON]] and [[http://fma.si.washington.edu/browser/#/][FMA]]. UBERON, a cross species anatomical ontology, is the primary source of terms, but we also draw on FMA extensively for human terms as necessary.
    If the term does not exist in either ontology (UBERON or FMA) they are added to a tool built by UCSD for adding terms to ontologies called [[https://scicrunch.org/scicrunch/interlex/dashboard][InterLex]].
-   
+
    Below is a table containing all current anatomical term sets.  They can be viewed as either a list in Google doc or a tree view in html.  We posted them to Google Docs to make it easy for people to give feedback on individual terms by adding a comment. We also provide additional information on some of these term sets below.
-  
+
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
   | Annotation term set                 | Tabular                                                                                                                               | Tree                                                                                    | raw |
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
-  | Terms added to Interlex by SPARC    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][google sheet]]  | [[hrefl:/trees/sparc/view/SparcILX/][trees/query]]                                      | ttl |
-  | Brainstem                           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1992114523][google sheet]]             | [[hrefl:/trees/sparc/view/Brainstem/][trees/query]]                                     | ttl |
-  | Spinal cord                         | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=675353960][google sheet]]              | [[hrefl:/trees/sparc/view/Spinal Cord/][trees/query]]                                   | ttl |
-  | Cranial nerves                      | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1299267287][google sheet]]             | [[hrefl:/trees/sparc/view/Cranial Nerves/][trees/query]]                                | ttl |
-  | Nerve roots of spinal cord segments | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1829812400][google sheet]]             | [[hrefl:/trees/sparc/view/Nerve roots of spinal cord segments/][trees/query]] | ttl |
-  | Nerves                              | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=376794406][google sheet]]              | [[hrefl:/trees/sparc/view/Nerves %28Also Includes Cranial%29/][trees/query]]      | ttl |
-  | Ganglia                             | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=446711020][google sheet]]              | [[hrefl:/trees/sparc/view/Peripheral Nervous System/Ganglia/][trees/query]]         | ttl |
+  | Terms added to Interlex by SPARC    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][google sheet]]  | [[hrefl:/trees/sparc/view/SparcILX/][trees/query]]                                      | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Brainstem                           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1992114523][google sheet]]             | [[hrefl:/trees/sparc/view/Brainstem/][trees/query]]                                     | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Spinal cord                         | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=675353960][google sheet]]              | [[hrefl:/trees/sparc/view/Spinal Cord/][trees/query]]                                   | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Cranial nerves                      | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1299267287][google sheet]]             | [[hrefl:/trees/sparc/view/Cranial Nerves/][trees/query]]                                | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Nerve roots of spinal cord segments | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1829812400][google sheet]]             | [[hrefl:/trees/sparc/view/Nerve roots of spinal cord segments/][trees/query]] | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Nerves                              | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=376794406][google sheet]]              | [[hrefl:/trees/sparc/view/Nerves %28Also Includes Cranial%29/][trees/query]]      | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Ganglia                             | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=446711020][google sheet]]              | [[hrefl:/trees/sparc/view/Peripheral Nervous System/Ganglia/][trees/query]]         | [[hrefl:/trees/sparc/ttl/][ttl]] |
   | *Model and group terms*             |                                                                                                                                       |                                                                                         |     |
-  | Atlas Nomenclature                  | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][google sheet]]             | [[hrefl:/trees/sparc/view/Atlas Nomenclature/][trees/query]]                          | ttl |
-  | ApiNATOMY                           | google sheet                                                                                                                          | trees/query                                                                             | ttl |
-  | Peripheral Organ terms sets (MBF)   | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429][google sheet]] | [[hrefl:/trees/sparc/view/OrganList %28MBF%29/][trees/query]]                           | ttl |
-  | Minimal information model           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1997366910][google sheet]]             | [[hrefl:/trees/sparc/view/Minimal information model %28MIS%29/][trees/query]]       | ttl |
-  | Flatmap metadata                    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=282530304][google sheet]]  | [[hrefl:/trees/sparc/view/FlatMap/][trees/query]]                                       | ttl |
-  | 3D scaffold                         | google sheet                                                                                                                          | trees/query                                                                             | ttl |
+  | Atlas Nomenclature                  | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][google sheet]]             | [[hrefl:/trees/sparc/view/Atlas Nomenclature/][trees/query]]                          | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | ApiNATOMY                           | google sheet                                                                                                                          | trees/query                                                                             | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Peripheral Organ terms sets (MBF)   | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429][google sheet]] | [[hrefl:/trees/sparc/view/OrganList %28MBF%29/][trees/query]]                           | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Minimal information model           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1997366910][google sheet]]             | [[hrefl:/trees/sparc/view/Minimal information model %28MIS%29/][trees/query]]       | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | Flatmap metadata                    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=282530304][google sheet]]  | [[hrefl:/trees/sparc/view/FlatMap/][trees/query]]                                       | [[hrefl:/trees/sparc/ttl/][ttl]] |
+  | 3D scaffold                         | google sheet                                                                                                                          | trees/query                                                                             | [[hrefl:/trees/sparc/ttl/][ttl]] |
 
 ** Anatomical Terminology
    Anatomy knowledge deals with the precise relationship between a human-readable anatomical term/label and the definition of that
@@ -143,7 +143,7 @@ This page will be continuously updated.
    2. SPARC vocabulary-building instructions
       - Slide presentation outlining the strategy and procedures for building the SPARC vocabularies are
         [[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.p][located here]]
-        - We keep [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][a master list]] of all terms that have been added to Interlex by SPARC researchers for annotation of data, flatmaps or models. Each of these terms are reviewed by a knowledge curator to determine whether or not the term may already exist (for example, it might be a synonym of an existing term) or whether it should be formally added to the SPARC vocabularies.  The SAWG, comprised of SPARC researchers and outside experts, provides advice to the knowledge curators about vocabulary additions. 
+        - We keep [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][a master list]] of all terms that have been added to Interlex by SPARC researchers for annotation of data, flatmaps or models. Each of these terms are reviewed by a knowledge curator to determine whether or not the term may already exist (for example, it might be a synonym of an existing term) or whether it should be formally added to the SPARC vocabularies.  The SAWG, comprised of SPARC researchers and outside experts, provides advice to the knowledge curators about vocabulary additions.
 
    3. Adoption of InterLex terminology services (for developers)
       - [[http://ontology.neuinfo.org/docs/][Ontology documentation]]
@@ -196,7 +196,7 @@ This page will be continuously updated.
      - TBA
 
   2. SAWG outside expert working group:  Current members
-  
+
      - [[https://profiles.ucsf.edu/jacqueline.bresnahan][*Jackie Bresnahan, Ph.D.*]]
        =Professor, Neurological Surgery, University of California, San Francisco= \\
        Dr. Bresnahan's research focuses on understanding the biological underpinnings of neurotrauma, particularly spinal cord injury,
