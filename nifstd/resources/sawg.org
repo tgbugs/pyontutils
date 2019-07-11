@@ -133,8 +133,8 @@ This page will be continuously updated.
    3. Adoption of InterLex terminology services (for developers)
       - [[http://ontology.neuinfo.org/docs/][Ontology documentation]]
 
-   4. Up-to-dateterm lists for annotation in MBF tools by species and organ,including nomenclatures derived from particular atlases (together with acknowledgment/contact details for leads responsible for each list);
-      - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429]][Tabulization of peripheral organ parts]
+   4. Up-to-date term lists for annotation in MBF tools by species and organ,including nomenclatures derived from particular atlases (together with acknowledgment/contact details for leads responsible for each list);
+      - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429][Tabulization of peripheral organ parts]]
       - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][Atlas nomenclatures]]
       -see table above for CNS and peripheral nervous system structures.
 
