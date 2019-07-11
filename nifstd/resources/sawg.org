@@ -82,7 +82,6 @@ This page will be continuously updated.
    
    Below is a table containing all current anatomical term sets.  They can be viewed as either a list in Google doc or a tree view in html.  We posted them to Google Docs to make it easy for people to give feedback on individual terms by adding a comment. We also provide additional information on some of these term sets below.
   
-
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
   | Annotation term set                 | Tabular                                                                                                                               | Tree                                                                                    | raw |
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
@@ -158,8 +157,7 @@ This page will be continuously updated.
   The development of multiscale route knowledge graphs is leveraging the ApiNATOMY knowledge representation.
   A graphical depiction of an ApiNATOMY model relevant to defensive breathing and Superior Cervical Ganglion physiology is shown below.
 
- [[http://open-physiology.org/docs/manual/asset/bolserLewis.png]]
-
+  https://raw.githubusercontent.com/tmsincomb/pyontutils/master/nifstd/resources/images/bolser-lewis_v1.png
 
   ApiNATOMY is used to build routing and connectivity graphs for anatomical entities. Such graphs support queries that,
   for instance, identify neural connections that course through a tract, nerve or ganglion. ApiNATOMY-based
