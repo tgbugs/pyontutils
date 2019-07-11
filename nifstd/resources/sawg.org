@@ -14,6 +14,9 @@
    Tangle both blocks here =C-c C-v C-t= (=t= also works) and then you
    can publish this document by running =../bin/publish-sawg= with
    =AUX_RESOLVER_HOST= set in your environment (.e.g via =~/.bashrc=).
+   NOTE: if you modify this publish function you need to remove
+   [[~/.org-timestamps/sawg-main-page.cache]] otherwise the hash
+   will match and nothing will be pushed.
    #+NAME: publish
    #+BEGIN_SRC emacs-lisp :eval never :tangle ../bin/publish.el :comments noweb
      (require 'ox-publish)
@@ -22,10 +25,15 @@
        (cond ((eq format 'html)
               (format "<a href=\"%s\">%s</a>" path desc))))
      (org-add-link-type "hrefl" 'org-custom-hrefl 'org-custom-hrefl-export)
+     (defun org-custom-imgl-export (path desc format)
+       "export a rooted path as an absolute img with no server"
+       (cond ((eq format 'html)
+              (format "<img src=\"%s\">" path))))
+     (org-add-link-type "imgl" 'org-custom-imgl 'org-custom-imgl-export)
      (setq org-publish-project-alist
            `(("SPARC-anatomy"
-              :components ("page"))
-             ("page"
+              :components ("sawg-main-page"))
+             ("sawg-main-page"
               :base-directory "../resources"
               :base-extension "org"
               :exclude ".*"
@@ -53,6 +61,14 @@
          -l "${ABS_PATH}/publish.el" \
          ../resources/sawg.org \
          --funcall org-publish-all
+   #+END_SRC
+   
+   #+NAME: publish-static
+   #+BEGIN_SRC bash :eval never :tangle ../bin/publish-sawg-static :tangle-mode (identity #o755)
+     #!/usr/bin/env sh
+     IMAGES=/var/www/ontology/trees/images/  # for now make this directory manually if it does not exist ...
+     CMD="curl https://lh3.googleusercontent.com/rAKEmXgr4dQ3Fe0UxTczHp8c5BSNoYMqKzYij7wtw_jvbzdlBFAdqgBYhTvrdgAPCeI52sjm9kKvVW7tVsRe=w1200-h1837 > bolser-lewis_v1.png; sudo mv bolser-lewis_v1.png ${IMAGES}; sudo chown -R nginx:nginx ${IMAGES}"
+     ssh ${AUX_RESOLVER_HOST} "${CMD}"
    #+END_SRC
 
 * Overview
@@ -85,18 +101,18 @@ This page will be continuously updated.
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
   | Annotation term set                 | Tabular                                                                                                                               | Tree                                                                                    | raw |
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
-  | Terms added to Interlex by SPARC       | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][google sheet]]             | [[http://ontology.neuinfo.org/trees/sparc/view/SparcILX/][trees/query]]                                            | ttl |
-  | Brainstem                           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1992114523][google sheet]]             | [[hrefl:/trees/sparc/view/OrganList%20%26%20MBF/Brain/][trees/query]]                   | ttl |
-  | Spinal cord                         | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=675353960][google sheet]]              | [[hrefl:/trees/sparc/view/OrganList%20%26%20MBF/Brain/][trees/query]]                   | ttl |
-  | Cranial nerves                      | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1299267287][google sheet]]             | [[hrefl:/trees/sparc/view/Cranial%20Nerves/][trees/query]]                              | ttl |
-  | Nerve roots of spinal cord segments | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1829812400][google sheet]]             | [[hrefl:/trees/sparc/view/Nerve%20roots%20of%20spinal%20cord%20segments/][trees/query]] | ttl |
-  | Nerves                              | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=376794406][google sheet]]              | [[hrefl:/trees/sparc/view/Nerves%20%28Also%20Includes%20Cranial%29/][trees/query]]      | ttl |
-  | Ganglia                             | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=446711020][google sheet]]              | [[hrefl:/trees/sparc/view/Peripheral%20Nervous%20System/Ganglia/][trees/query]]         | ttl |
+  | Terms added to Interlex by SPARC    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][google sheet]]  | [[hrefl:/trees/sparc/view/SparcILX/][trees/query]]                                      | ttl |
+  | Brainstem                           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1992114523][google sheet]]             | [[hrefl:/trees/sparc/view/Brainstem/][trees/query]]                                     | ttl |
+  | Spinal cord                         | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=675353960][google sheet]]              | [[hrefl:/trees/sparc/view/Spinal Cord/][trees/query]]                                   | ttl |
+  | Cranial nerves                      | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1299267287][google sheet]]             | [[hrefl:/trees/sparc/view/Cranial Nerves/][trees/query]]                                | ttl |
+  | Nerve roots of spinal cord segments | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1829812400][google sheet]]             | [[hrefl:/trees/sparc/view/Nerve roots of spinal cord segments/][trees/query]] | ttl |
+  | Nerves                              | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=376794406][google sheet]]              | [[hrefl:/trees/sparc/view/Nerves %28Also Includes Cranial%29/][trees/query]]      | ttl |
+  | Ganglia                             | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=446711020][google sheet]]              | [[hrefl:/trees/sparc/view/Peripheral Nervous System/Ganglia/][trees/query]]         | ttl |
   | *Model and group terms*             |                                                                                                                                       |                                                                                         |     |
-  | Atlas Nomenclature                  | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][google sheet]]             | [[hrefl:/trees/sparc/view/Atlas%20Nomenclature/][trees/query]]                          | ttl |
+  | Atlas Nomenclature                  | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][google sheet]]             | [[hrefl:/trees/sparc/view/Atlas Nomenclature/][trees/query]]                          | ttl |
   | ApiNATOMY                           | google sheet                                                                                                                          | trees/query                                                                             | ttl |
-  | Peripheral Organ terms sets (MBF)              | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429][google sheet]] | [[hrefl:/trees/sparc/view/OrganList%20%26%20MBF/][trees/query]]                         | ttl |
-  | Minimal information model           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1997366910][google sheet]]             | [[hrefl:/trees/sparc/view/Minimal%20information%20model%28MIS%29/][trees/query]]        | ttl |
+  | Peripheral Organ terms sets (MBF)   | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429][google sheet]] | [[hrefl:/trees/sparc/view/OrganList %28MBF%29/][trees/query]]                           | ttl |
+  | Minimal information model           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1997366910][google sheet]]             | [[hrefl:/trees/sparc/view/Minimal information model %28MIS%29/][trees/query]]       | ttl |
   | Flatmap metadata                    | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=282530304][google sheet]]  | [[hrefl:/trees/sparc/view/FlatMap/][trees/query]]                                       | ttl |
   | 3D scaffold                         | google sheet                                                                                                                          | trees/query                                                                             | ttl |
 
@@ -157,7 +173,7 @@ This page will be continuously updated.
   The development of multiscale route knowledge graphs is leveraging the ApiNATOMY knowledge representation.
   A graphical depiction of an ApiNATOMY model relevant to defensive breathing and Superior Cervical Ganglion physiology is shown below.
 
-  https://raw.githubusercontent.com/tmsincomb/pyontutils/master/nifstd/resources/images/bolser-lewis_v1.png
+  [[imgl:/trees/images/bolser-lewis_v1.png]]
 
   ApiNATOMY is used to build routing and connectivity graphs for anatomical entities. Such graphs support queries that,
   for instance, identify neural connections that course through a tract, nerve or ganglion. ApiNATOMY-based
