@@ -7332,52 +7332,52 @@ SparcILX
     Phrenic nucleus of C5	ILX:0738325
     Wall of larynx	ILX:0738326
     Mucosa of trachea	ILX:0738327
-    Bötzinger complex		ilx_0738329
-    caudal ventral respiratory group	ilx_0738330
-    parafacial respiratory group	ilx_0738331
-    rostral ventral respiratory group	ilx_0738332
-    Lamina IX of C2	ilx_0738333
-    Lamina IX of C3	ilx_0738334
-    nucleus intercalatus spinalis	ilx_0738335
-    nucleus intercalatus spinalis pars paraependymalis	ilx_0738336
-    Phrenic motor neuron	ilx_0738337
-    lumbar motor neuron	ilx_0738338
-    Rexed Lamina VII of T2	ilx_0738339
-    Rexed Lamina VII of T3	ilx_0738340
-    lacrimatory nucleus	ilx_0738341
-    T1 paravertebral ganglion	ilx_0738342
-    T10 paravertebral ganglion	ilx_0738343
-    T11 paravertebral ganglion	ilx_0738344
-    T12 paravertebral ganglion	ilx_0738345
-    T2 paravertebral ganglion	ilx_0738346
-    T3 paravertebral ganglion	ilx_0738347
-    T4 paravertebral ganglion	ilx_0738348
-    T5 paravertebral ganglion	ilx_0738349
-    T6 paravertebral ganglion	ilx_0738350
-    T7 paravertebral ganglion	ilx_0738351
-    T8 paravertebral ganglion	ilx_0738352
-    T9 paravertebral ganglion	ilx_0738353
-    anterior cusp of pulmonary valve	ilx_0738354
-    baroreceptors (Aortic arch)	ilx_0738355
-    chemoreceptors	ilx_0738356
-    coronary sinus inlet	ilx_0738357
-    inferior vena cava inlet	ilx_0738358
-    left anterior papillary muscle	ilx_0738359
-    left cusp of pulmonary valve	ilx_0738360
-    left fibrous ring	ilx_0738361
-    left posterior papillary muscle	ilx_0738362
-    right anterior papillary muscle	ilx_0738363
-    right fibrous ring	ilx_0738364
-    right posterior papillary muscle	ilx_0738365
-    root of pulmonary trunk	ilx_0738366
-    superior vena cava inlet	ilx_0738367
-    terminal crest	ilx_0738368
-    inferior/lateral aspect of posterior left atrial ganglionated plexus	ilx_0738369
-    ventricular ganglionated plexuses (around coronary arteries)	ilx_0738370
-    Rexed Lamina VII of T1	ilx_0738371
-    T1 white ramus	ilx_0738372
-    Internal branch of superior laryngeal nerve	ilx_0738373
-    External branch of superior laryngeal nerve	ilx_0738374
+    Bötzinger complex		ILX:0738329
+    caudal ventral respiratory group	ILX:0738330
+    parafacial respiratory group	ILX:0738331
+    rostral ventral respiratory group	ILX:0738332
+    Lamina IX of C2	ILX:0738333
+    Lamina IX of C3	ILX:0738334
+    nucleus intercalatus spinalis	ILX:0738335
+    nucleus intercalatus spinalis pars paraependymalis	ILX:0738336
+    Phrenic motor neuron	ILX:0738337
+    lumbar motor neuron	ILX:0738338
+    Rexed Lamina VII of T2	ILX:0738339
+    Rexed Lamina VII of T3	ILX:0738340
+    lacrimatory nucleus	ILX:0738341
+    T1 paravertebral ganglion	ILX:0738342
+    T10 paravertebral ganglion	ILX:0738343
+    T11 paravertebral ganglion	ILX:0738344
+    T12 paravertebral ganglion	ILX:0738345
+    T2 paravertebral ganglion	ILX:0738346
+    T3 paravertebral ganglion	ILX:0738347
+    T4 paravertebral ganglion	ILX:0738348
+    T5 paravertebral ganglion	ILX:0738349
+    T6 paravertebral ganglion	ILX:0738350
+    T7 paravertebral ganglion	ILX:0738351
+    T8 paravertebral ganglion	ILX:0738352
+    T9 paravertebral ganglion	ILX:0738353
+    anterior cusp of pulmonary valve	ILX:0738354
+    baroreceptors (Aortic arch)	ILX:0738355
+    chemoreceptors	ILX:0738356
+    coronary sinus inlet	ILX:0738357
+    inferior vena cava inlet	ILX:0738358
+    left anterior papillary muscle	ILX:0738359
+    left cusp of pulmonary valve	ILX:0738360
+    left fibrous ring	ILX:0738361
+    left posterior papillary muscle	ILX:0738362
+    right anterior papillary muscle	ILX:0738363
+    right fibrous ring	ILX:0738364
+    right posterior papillary muscle	ILX:0738365
+    root of pulmonary trunk	ILX:0738366
+    superior vena cava inlet	ILX:0738367
+    terminal crest	ILX:0738368
+    inferior/lateral aspect of posterior left atrial ganglionated plexus	ILX:0738369
+    ventricular ganglionated plexuses (around coronary arteries)	ILX:0738370
+    Rexed Lamina VII of T1	ILX:0738371
+    T1 white ramus	ILX:0738372
+    Internal branch of superior laryngeal nerve	ILX:0738373
+    External branch of superior laryngeal nerve	ILX:0738374
 Minimal information model (MIS)
     Felis catus	NCBITaxon:9685
     Homo sapiens	NCBITaxon:9606
