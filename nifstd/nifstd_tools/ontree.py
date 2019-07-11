@@ -37,18 +37,20 @@ from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm
+from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
 from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
-from pyontutils.closed_namespaces import rdfs
+from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
+from pyontutils.namespaces import OntCuries
 from nifstd.development.sparc.sheets import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
 from typing import Union, Dict, List
 from IPython import embed
 import yaml
+import networkx
 
 log = makeSimpleLogger('ontree')
 
@@ -103,6 +105,87 @@ uot =  (
 def time():
     return str(datetime.utcnow().isoformat()).replace('.', ',')
 
+class ImportOntologyFromRawYMLDict:
+
+    def __init__(self, raw_yml:dict, sgg=sgg):
+        self.sgg = sgg
+        self.raw_yml = raw_yml
+        self._namespaces = OntCuries()
+
+    def is_semantic(self, s):
+        return isinstance(s, rdflib.URIRef) or isinstance(s, rdflib.Literal) or isinstance(s, rdflib.BNode)
+
+    def is_iri(self, s):
+        return (str(s).startswith('http://') or str(s).startswith('https://')) & (' ' not in str(s))
+
+    def is_curie(self, s):
+        try:
+            if self.is_iri(s):
+                return
+            if self.is_semantic(s):
+                return
+            if ':' in s:
+                prefix, id_ = s.split(':', 1)
+                if ' ' in id_:
+                    return
+                if self._namespaces.get(prefix):
+                    return True
+        except:
+            return
+
+    def make_graph(self):
+        def get_triples_from_nodes(nodes):
+            triples = set()
+            for node in nodes:
+                node_curie, node_data = node
+                iri = OntId(node_curie)
+                if node_data:
+                    for key, value in node_data['nodes'][0]['meta'].items():
+                        if self.is_iri(key):
+                            if not value:
+                                continue
+                            elif not isinstance(value, list):
+                                value = [value]
+                            for v in value:
+                                if self.is_semantic(v):
+                                    pass
+                                elif self.is_iri(v) or self.is_curie(v):
+                                    # print(v)
+                                    # print(self.is_iri(v))
+                                    # print(self.is_curie(v))
+                                    v = OntId(v).iri
+                                    v = rdflib.URIRef(v)
+                                else:
+                                    v = rdflib.Literal(v)
+                                # DEBUG: not all are classes
+                                triples.add((rdflib.URIRef(iri), rdf.type, owl.Class))
+                                triples.add((rdflib.URIRef(iri), rdflib.URIRef(key), v))
+                #  TODO: how should we treat entities with no IDs?
+                # else:
+                #     triples.add((rdflib.URIRef(iri), rdf.type, owl.Class))
+                #     triples.add((rdflib.BNode, rdfs.label, rdflib.Literal(label)))
+            return triples
+
+        dict_ = self.raw_yml
+        try:
+            nodes = networkx.DiGraph(dict_).nodes
+        except:
+            nodes = dict_.keys()
+        curies_total = []
+        for node in nodes:
+            label, *curies = node.split(YML_DELIMITER)
+            if curies:
+                if ':' not in curies[0]:
+                    # print(label, curies)
+                    continue
+                curies_total += curies
+
+        gin = lambda i: (i, self.sgg.getNode(i))
+        nodes = Async()(deferred(gin)(i) for i in curies_total[:])
+        g = OntGraph()
+        [g.add(t) for t in get_triples_from_nodes(nodes)]
+        OntCuries.populate(g)
+        self.graph = g
 
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
@@ -430,6 +513,10 @@ def server(api_key=None, verbose=False):
 
     # gsheets = GoogleSheets()
     sparc_view = open_custom_sparc_view_yml()
+    sparc_view_raw = open_custom_sparc_view_yml(False)
+    importontology = ImportOntologyFromRawYMLDict(raw_yml=sparc_view_raw)
+    importontology.make_graph()
+
     log.info('starting index load')
 
     uot_terms = [OntTerm(t) for t in uot]
@@ -747,6 +834,11 @@ def server(api_key=None, verbose=False):
             #title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
             #metas = ({'name':'date', 'content':time()},),
         #)
+
+    @app.route(f'/{basename}/sparc/ttl', methods=['GET'])
+    @app.route(f'/{basename}/sparc/ttl/', methods=['GET'])
+    def route_ttl():
+        return render_template_string(importontology.graph.ttl_html)
 
     return app
 
