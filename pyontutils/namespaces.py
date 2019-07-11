@@ -185,6 +185,7 @@ def _loadPrefixes():
         'NLXWIKI':'http://neurolex.org/wiki/',
         # FIXME a thought: was # intentionally used to increase user privacy? or is this just happenstance?
         'nsu':'http://www.FIXME.org/nsupper#',
+        'core1':'http://purl.obolibrary.org/obo/core#', # common enough prefix
         'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
         'ro':'http://www.obofoundry.org/ro/ro.owl#',
 
