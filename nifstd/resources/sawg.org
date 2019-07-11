@@ -76,18 +76,17 @@ This page will be continuously updated.
 * Terminology
 
 ** Term lists
-   We have created a set of term lists for annotating SPARC1 data, including Flatmaps and models.
-   The annotations for the list are extracted from the [[http://www.ontobee.org/ontology/UBERON][UBERON]] and [[http://fma.si.washington.edu/browser/#/][FMA]] ontologies.
-   If the term does not exist in either ontology (UBERON or FMA) they are added to [[https://scicrunch.org/scicrunch/interlex/dashboard][InterLex]].
-   UBERON, a cross species anatomical ontology, is the primary source of terms, but we also draw on FMA extensively for human terms as necessary.
-
-   Below are lists of anatomical terms for review.
-   You can give feedback by creating a comment on the Google Sheets below.
+   It is critical to the SPARC project that these terms lists be synched across the different contexts in which anatomical labels are applied. Towards that goal, we have gathered user requirements for annotation of data sets, images, flatmaps and models and created a set of term lists to make it easier for researchers to review and tools, e.g., MBF Biolucida, to use. 
+   Terms are extracted from existing ontologies whenever possible, primarily [[http://www.ontobee.org/ontology/UBERON][UBERON]] and [[http://fma.si.washington.edu/browser/#/][FMA]]. UBERON, a cross species anatomical ontology, is the primary source of terms, but we also draw on FMA extensively for human terms as necessary.
+   If the term does not exist in either ontology (UBERON or FMA) they are added to a tool built by UCSD for adding terms to ontologies called [[https://scicrunch.org/scicrunch/interlex/dashboard][InterLex]].
+   
+   Below is a table containing all current anatomical term sets.  They can be viewed as either a list in Google doc or a tree view in html.  We posted them to Google Docs to make it easy for people to give feedback on individual terms by adding a comment. We also provide additional information on some of these term sets below.
+  
 
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
   | Annotation term set                 | Tabular                                                                                                                               | Tree                                                                                    | raw |
   |-------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-----|
-  | *Anatomical structures terms*       | [[https://docs.google.com/spreadsheets/d/1rNnobNekjfC4njdD4nwFKcDaVtS9DbwilahmZkpTsGg/edit#gid=1595844649][google sheet]]             | [[hrefl:/trees/sparc/view/ApiNATOMY/][list]]                                            | ttl |
+  | Terms added to Interlex by SPARC       | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][google sheet]]             | [[http://ontology.neuinfo.org/trees/sparc/view/SparcILX/][trees/query]]                                            | ttl |
   | Brainstem                           | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1992114523][google sheet]]             | [[hrefl:/trees/sparc/view/OrganList%20%26%20MBF/Brain/][trees/query]]                   | ttl |
   | Spinal cord                         | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=675353960][google sheet]]              | [[hrefl:/trees/sparc/view/OrganList%20%26%20MBF/Brain/][trees/query]]                   | ttl |
   | Cranial nerves                      | [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1299267287][google sheet]]             | [[hrefl:/trees/sparc/view/Cranial%20Nerves/][trees/query]]                              | ttl |
@@ -120,7 +119,7 @@ This page will be continuously updated.
    with which to annotate an image sub-region can submit a new term for global use within SPARC (and beyond).
 
    1. Documentation for adding terms to the SPARC vocabularies.
-      - SPARC has several methods for adding vocabulary terms to the SPARC vocabularies, depending on the number of terms to be added.  An
+      - SPARC has several methods for adding terms to the SPARC vocabularies, depending on the number of terms to be added.  An
         [[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.g5a45d9742c_0_49][overview]]
         of how to add to the SPARC vocabularies provides detailed instructions.
       - For internal or advanced users who are familiar with the process, you can access the
@@ -129,12 +128,15 @@ This page will be continuously updated.
    2. SPARC vocabulary-building instructions
       - Slide presentation outlining the strategy and procedures for building the SPARC vocabularies are
         [[https://docs.google.com/presentation/d/1lgjvHoYJIFXYdvY9JLO5577hO3y2rnDxUd3TRmUzLXA/edit#slide=id.p][located here]]
+        - We keep [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=308944449][a master list]] of all terms that have been added to Interlex by SPARC researchers for annotation of data, flatmaps or models. Each of these terms are reviewed by a knowledge curator to determine whether or not the term may already exist (for example, it might be a synonym of an existing term) or whether it should be formally added to the SPARC vocabularies.  The SAWG, comprised of SPARC researchers and outside experts, provides advice to the knowledge curators about vocabulary additions. 
 
-   3. Adoption of InterLex terminology services
+   3. Adoption of InterLex terminology services (for developers)
       - [[http://ontology.neuinfo.org/docs/][Ontology documentation]]
 
-   4. Up-to-date MicroBrightField term lists by species and organ (together with acknowledgDment/contact details for leads responsible for each list);
-      - Visualization/tabulization of organ parts and parcellations:Coming soon...
+   4. Up-to-dateterm lists for annotation in MBF tools by species and organ,including nomenclatures derived from particular atlases (together with acknowledgment/contact details for leads responsible for each list);
+      - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=1213472429]][Tabulization of peripheral organ parts]
+      - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit#gid=1966521870][Atlas nomenclatures]]
+      -see table above for CNS and peripheral nervous system structures.
 
    5. Up-to-date listing of terms applied to SPARC1 metadata annotation
       - [[https://github.com/SciCrunch/sparc-curation/blob/963ddeb7b71c982ea1a449557547d6c38c96371c/sparcur/cli.py#L1162][Term code]]
@@ -144,7 +146,7 @@ This page will be continuously updated.
       - [[https://docs.google.com/spreadsheets/d/1rUQnK2tns5x0HC8jg3OJjiLuPGsYFIodEQ6nPK5iKMk/edit?ts=5d1d0125#gid=282530304][flatmap metadata annotation ]]
 
    7. Up-to-date listing of terms applied to ApiNATOMY metadata annotation
-      - Coming soon...
+      [[https://docs.google.com/spreadsheets/d/1rNnobNekjfC4njdD4nwFKcDaVtS9DbwilahmZkpTsGg/edit#gid=1595844649][google sheet]]
 
    8. Up-to-date listing of terms applied to 3D scaffold metadata annotation
       - Coming soon...
@@ -167,26 +169,27 @@ This page will be continuously updated.
   tract, nerve or ganglion.
 
   1. Catalogue of ApiNATOMY connectivity models
-     - TBA
+     - Coming soon
 
   2. Text-based querying of ApiNATOMY models (and SPARC1 metadata discovery)
      - [[http://ontology.neuinfo.org/trees/sparc/connectivity/query][Simple sample here]]
 
   3. Flatmap-based querying of ApiNATOMY models (and SPARC1 metadata discovery)
-     - TBA
+     - Coming soon
 
 * Expertise
   1. Diagram/bibliography repository for flatmap construction
      - TBA
 
-  2. List of contributing experts by SAWG area (SAWG) Organization Chart
-     - *Jackie Bresnahan, Ph.D.*
+  2. SAWG outside expert working group:  Current members
+  
+     - [[https://profiles.ucsf.edu/jacqueline.bresnahan][*Jackie Bresnahan, Ph.D.*]]
        =Professor, Neurological Surgery, University of California, San Francisco= \\
        Dr. Bresnahan's research focuses on understanding the biological underpinnings of neurotrauma, particularly spinal cord injury,
        with the goal of improving recovery for individuals who suffer damage to the nervous system. Her laboratory has developed a
        number of models to study cellular systems and behavioral changes that occur as a consequence of injury.
 
-     - *Gary Mawe, Ph.D.*
+     - [[https://www.med.uvm.edu/neuro/mawe_lab][*Gary Mawe, Ph.D.*]]
        =Samuel W. Thayer Professor of Neurological Sciences, University of Vermont= \\
        Dr. Mawe's research focuses on the neurobiology of GI function in health and disease states and uses a variety of experimental
        approaches including electrophysiology, calcium imaging, immunocytochemistry and molecular biology. He is actively involved in
@@ -194,7 +197,7 @@ This page will be continuously updated.
        residents.
 
   3. Discussion forum for requirements collection, gap analysis, feedback
-     - TBA
+     - Coming soon
 
   4. Documents section: reports and other publications
      - TBA
