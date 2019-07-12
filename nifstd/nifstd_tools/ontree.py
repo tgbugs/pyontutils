@@ -37,7 +37,7 @@ from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph
+from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph, ixr
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
@@ -47,10 +47,13 @@ from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import OntCuries
 from nifstd.development.sparc.sheets import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Tuple, Generator
 from IPython import embed
 import yaml
 import networkx
+# Convienient Typing
+Semantic = Union[rdflib.URIRef, rdflib.Literal, rdflib.BNode]
+SemanticOptional = Union[Semantic, str, None]
 
 log = makeSimpleLogger('ontree')
 
@@ -103,22 +106,39 @@ uot =  (
 
 
 def time():
+    ''' Get current time in a year-month-day:meta format '''
     return str(datetime.utcnow().isoformat()).replace('.', ',')
 
 class ImportOntologyFromRawYMLDict:
+    ''' Parses dictionary with each key having this format:
+        label + YML_DELIMITER + curie(s)
+        where curie(s) are also seperated by YML_DELIMITER
 
-    def __init__(self, raw_yml:dict, sgg=sgg):
-        self.sgg = sgg
-        self.raw_yml = raw_yml
-        self._namespaces = OntCuries()
+        Note: I used the raw yml because nested curies complicated traversal '''
 
-    def is_semantic(self, s):
-        return isinstance(s, rdflib.URIRef) or isinstance(s, rdflib.Literal) or isinstance(s, rdflib.BNode)
+    def __init__(self,
+                 raw_yml: OrderedDict,
+                 sgg: scigraph.Graph = sgg,
+                 ixr: oq.plugins.services.InterLexRemote = ixr,) -> None:
+        self.sgg = sgg # SciGraph | can check source using its apiEndpoint instance
+        self.ixr = ixr # InterLexRemote | has to be seperate to minimize management confusion
+        self.raw_yml = raw_yml # OrderedDict with lists for leaves (to maintain src order)
+        self._namespaces = OntCuries() # Awesome storage of known namespaces
 
-    def is_iri(self, s):
-        return (str(s).startswith('http://') or str(s).startswith('https://')) & (' ' not in str(s))
+    def is_semantic(self, e: SemanticOptional) -> bool:
+        ''' Checks if element is a semantic type: URIRef, Literal, or BNode '''
+        return isinstance(e, rdflib.URIRef) or isinstance(e, rdflib.Literal) or isinstance(e, rdflib.BNode)
 
-    def is_curie(self, s):
+    def is_iri(self, e: SemanticOptional) -> bool:
+        ''' Checks if element is a valid/known iri '''
+        # avoid weird initial typing
+        e = str(e)
+        has_no_space = (' ' not in e)
+        starts_as_url = (e.startswith('http://') or str(e).startswith('https://'))
+        return starts_as_url and has_no_space
+
+    def is_curie(self, s: SemanticOptional) -> bool:
+        ''' Checks if element is in a prefix:id version of a known iri '''
         try:
             if self.is_iri(s):
                 return
@@ -126,6 +146,9 @@ class ImportOntologyFromRawYMLDict:
                 return
             if ':' in s:
                 prefix, id_ = s.split(':', 1)
+                # triple elements can start with a prefix or known iri,
+                # but it's really just a sentence meant for a Literal type
+                # example: "UBERON:0001291 is rada rada."
                 if ' ' in id_:
                     return
                 if self._namespaces.get(prefix):
@@ -133,59 +156,86 @@ class ImportOntologyFromRawYMLDict:
         except:
             return
 
-    def make_graph(self):
-        def get_triples_from_nodes(nodes):
-            triples = set()
-            for node in nodes:
-                node_curie, node_data = node
-                iri = OntId(node_curie)
-                if node_data:
-                    for key, value in node_data['nodes'][0]['meta'].items():
-                        if self.is_iri(key):
-                            if not value:
-                                continue
-                            elif not isinstance(value, list):
-                                value = [value]
-                            for v in value:
-                                if self.is_semantic(v):
-                                    pass
-                                elif self.is_iri(v) or self.is_curie(v):
-                                    # print(v)
-                                    # print(self.is_iri(v))
-                                    # print(self.is_curie(v))
-                                    v = OntId(v).iri
-                                    v = rdflib.URIRef(v)
-                                else:
-                                    v = rdflib.Literal(v)
-                                # DEBUG: not all are classes
-                                triples.add((rdflib.URIRef(iri), rdf.type, owl.Class))
-                                triples.add((rdflib.URIRef(iri), rdflib.URIRef(key), v))
-                #  TODO: how should we treat entities with no IDs?
-                # else:
-                #     triples.add((rdflib.URIRef(iri), rdf.type, owl.Class))
-                #     triples.add((rdflib.BNode, rdfs.label, rdflib.Literal(label)))
-            return triples
+    def give_sematic_type(self, e):
+        ''' Gives sematic type to element based on it's contents '''
+        if self.is_semantic(e):
+            pass
+        elif self.is_iri(e) or self.is_curie(e):
+            e = OntId(e).URIRef
+        else:
+            e = rdflib.Literal(e)
+        return e
 
+    def _get_triples_from_nodes(self, nodes: List[dict]) -> Generator:
+        ''' Exract predicate_objects from SciGraph Nodes located in its meta key '''
+        for node in nodes: # TODO: create check if node exists?
+
+            ### SUBJECT LOGIC ###
+            print(node)
+            curie = node['nodes'][0]['id']
+            subj = OntId(curie).URIRef
+
+            yield (subj, rdf.type, owl.Class)
+
+            # pull node meta that has iri keys only
+            # then check what to do with the values
+            predicate_objects = node['nodes'][0]['meta']
+            for pred, objects in predicate_objects.items():
+
+                ### PREDICATE LOGIC ###
+                if not self.is_iri(pred): # TODO: there has to be a better return from scigraph instead of this gibberish meta field
+                    continue
+                else:
+                    pred = OntId(pred).URIRef
+
+                ### OBJECT LOGIC ###
+                if not isinstance(objects, list):
+                    objects = [objects]
+                for obj in objects:
+                    obj = self.give_sematic_type(obj)
+
+                    yield (subj, pred, obj)
+
+    def make_graph(self):
+        ''' Create rdflib.Graph from nested OrderedDict with lists for leaves.
+            Each key is a label + curies where they are joined by the YML_DELIMITER '''
         dict_ = self.raw_yml
-        try:
-            nodes = networkx.DiGraph(dict_).nodes
-        except:
-            nodes = dict_.keys()
-        curies_total = []
+        nodes = networkx.DiGraph(dict_).nodes
+        g = OntGraph() # rdflib.Graph inheritor
+
+        external_curies = set()
+        interlex_curies = set()
         for node in nodes:
             label, *curies = node.split(YML_DELIMITER)
             if curies:
+                # could be just strings bc some trees are a single table
+                # example: Nieuwenhuys
                 if ':' not in curies[0]:
-                    # print(label, curies)
                     continue
-                curies_total += curies
+                for curie in curies:
+                    prefix = curie.split(':',1)[0]
+                    if prefix == 'ILX':
+                        interlex_curies.add(curie)
+                    else:
+                        external_curies.add(curie)
 
-        gin = lambda i: (i, self.sgg.getNode(i))
-        nodes = Async()(deferred(gin)(i) for i in curies_total[:])
-        g = OntGraph()
-        [g.add(t) for t in get_triples_from_nodes(nodes)]
+        # For each iri make a Tuple(iri, node_from_scigraph_using_iri)
+        scigraph_gin = lambda curie: (curie, self.sgg.getNode(id=curie))
+        interlex_gin = lambda curie: (curie, self.ixr.query(curie=curie))
+
+        # Concurrently search
+        scigraph_reqs: Tuple[str, dict] = Async()(deferred(scigraph_gin)(curie) for curie in external_curies)
+        interlex_reqs: Tuple[str, dict] = Async()(deferred(interlex_gin)(curie) for curie in interlex_curies)
+        # TODO: interlex_reqs returns a generator
+        scigraph_nodes = [node for curie, node in scigraph_reqs if node]
+        interlex_nodes = [node for curie, node in interlex_reqs if node]
+
+        nodes = scigraph_nodes # + interlex_nodes
+        [g.add(t) for t in self._get_triples_from_nodes(nodes)]
+        # add known namespaces we used
         OntCuries.populate(g)
         self.graph = g
+
 
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
     def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
