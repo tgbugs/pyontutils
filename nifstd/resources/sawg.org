@@ -67,7 +67,8 @@
    #+BEGIN_SRC bash :eval never :tangle ../bin/publish-sawg-static :tangle-mode (identity #o755)
      #!/usr/bin/env sh
      IMAGES=/var/www/ontology/trees/images/  # for now make this directory manually if it does not exist ...
-     CMD="curl https://lh3.googleusercontent.com/rAKEmXgr4dQ3Fe0UxTczHp8c5BSNoYMqKzYij7wtw_jvbzdlBFAdqgBYhTvrdgAPCeI52sjm9kKvVW7tVsRe=w1200-h1837 > bolser-lewis_v1.png; sudo mv bolser-lewis_v1.png ${IMAGES}; sudo chown -R nginx:nginx ${IMAGES}"
+     # This does not work directly from google drive
+     CMD="curl some-image > bolser-lewis_v1.png; sudo mv bolser-lewis_v1.png ${IMAGES}; sudo chown -R nginx:nginx ${IMAGES}"
      ssh ${AUX_RESOLVER_HOST} "${CMD}"
    #+END_SRC
 

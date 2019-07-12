@@ -91,20 +91,21 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
         ss = service.spreadsheets()
     else:
         ss = spreadsheet_service
+
     if fetch_grid:
         grid = ss.get(spreadsheetId=SPREADSHEET_ID, includeGridData=True).execute()
-        notes = get_notes_from_grid(grid, sheet_name)
-        notes_index = {(i, j):v for i, j, v in notes}
+        cells = get_cells_from_grid(grid, sheet_name)
+        cells_index = {(i, j):v for i, j, v in cells}
     else:
         grid = {}
-        notes_index = {}
+        cells_index = {}
 
     result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
     values = result.get('values', [])
-    return values, grid, notes_index
+    return values, grid, cells_index
 
 
-def get_notes_from_grid(grid, title):
+def get_cells_from_grid(grid, title):
     for sheet in grid['sheets']:
         if sheet['properties']['title'] == title:
             for datum in sheet['data']:
@@ -112,14 +113,47 @@ def get_notes_from_grid(grid, title):
                     # if cell is blank it might not have values
                     if 'values' in row:
                         for j, cell in enumerate(row['values']):
-                            if 'note' in cell:
-                                yield i, j, cell['note']
+                            yield i, j, cell
 
-def get_note(row_index, column_index, notes_index):
+
+def get_note(row_index, column_index, cells_index):
     try:
-        return notes_index[row_index, column_index]
+        cell = cells_index[row_index, column_index]
+        if 'note' in cell:
+            return cell['note']
+
     except KeyError:
         return None
+
+
+class Cell:
+    def __init__(self, sheet, row_index, column_index):
+        self.sheet = sheet
+        self.row_index = row_index
+        self.column_index = column_index
+
+    @property
+    def column_header(self):
+        return self.sheet.byCol.header[self.column_index]
+
+    @property
+    def row_header(self):
+        if self.sheet.byCol.index_columns:
+            col = self.sheet.byCol.index_columns[0]
+            row_header_column_index = self.sheet.byCol.header.index(col)
+            return self.sheet.values[self.row_index][row_header_column_index]
+
+    @property
+    def value(self):
+        return self.sheet.values[self.row_index][self.column_index]
+
+    @property
+    def grid(self):
+        return self.sheet.get_cell(self.row_index, self.column_index)
+
+    @property
+    def hyperlink(self):
+        return self.grid.get('hyperlink', None)
 
 
 class Sheet:
@@ -164,7 +198,7 @@ class Sheet:
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
-        values, grid, notes_index = get_sheet_values(self.name, self.sheet_name,
+        values, grid, cells_index = get_sheet_values(self.name, self.sheet_name,
                                                      spreadsheet_service=self._spreadsheet_service,
                                                      fetch_grid=fetch_grid)
 
@@ -177,7 +211,7 @@ class Sheet:
             log.warning('Sheet has malformed header, not setting byCol')
 
         self.grid = grid
-        self.notes_index = notes_index
+        self.cells_index = cells_index
 
     def update(self, values):
         if self.readonly:
@@ -193,15 +227,26 @@ class Sheet:
     def show_notes(self):
         for i, row in enumerate(self.values):
             for j, cell in enumerate(row):
-                if (i, j) in self.notes_index:
+                if (i, j) in self.cells_index:
                     print(f'========================== {i} {j}',
                         cell,
                         '------------------',
-                        self.notes_index[i, j],
+                        self.notes_index[i, j]['note'],
                         sep='\n')
 
-    def get_note(row_index, column_index):
-        return get_note(row_index, column_index, self.notes_index)
+    def get_note(self, row_index, column_index):
+        return get_note(row_index, column_index, self.cells_index)
+
+    def get_cell(self, row_index, column_index):
+        try:
+            return self.cells_index[row_index, column_index]
+        except KeyError:
+            return None
+        #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
+        #rd = grid['data'][0]['rowData']
+
+    def cell_object(self, row_index, column_index):
+        return Cell(self, row_index, column_index)
 
 
 def main():

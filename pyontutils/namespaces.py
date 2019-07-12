@@ -16,6 +16,7 @@ DMBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
 
 # interlex namespaces
 ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/
+lex = rdflib.Namespace(interlex_namespace('base/lexical/'))
 AIBS = rdflib.Namespace(interlex_namespace('aibs/uris/'))
 ilxHBA = rdflib.Namespace(interlex_namespace('aibs/uris/human/labels/'))
 ilxMBA = rdflib.Namespace(interlex_namespace('aibs/uris/mouse/labels/'))
@@ -178,6 +179,7 @@ def _loadPrefixes():
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'TEMP': interlex_namespace('temp/uris/'),
         'TEMPRAW': interlex_namespace('temp/uris/raw/'),
+        'lex': str(lex),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
