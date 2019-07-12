@@ -541,7 +541,10 @@ class State:
 
         params_conditional = ''
         for key in pkeys:
-            if [_ for _ in ('id', 'url', 'type', 'relationship') if _ in key]:
+            #if [_ for _ in ('id', 'url', 'type', 'relationship') if _ in key]:
+            # FIXME detect this from the parameter type ...
+            if key in ('id', 'artifact_id', 'species_id',
+                       'region_id', 'species-id', 'fma_id', 'root_id'):
                 cond = key
                 params_conditional += (
                     "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
