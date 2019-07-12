@@ -341,8 +341,6 @@ class Annotations(restService):
                 text/html
         """
 
-        if url and url.startswith('http:'):
-            url = parse.quote(url, safe='')
         kwargs = {'url': url, 'includeCat': includeCat, 'excludeCat': excludeCat, 'minLength': minLength, 'longestOnly': longestOnly, 'includeAbbrev': includeAbbrev, 'includeAcronym': includeAcronym, 'includeNumbers': includeNumbers, 'ignoreTag': ignoreTag, 'stylesheet': stylesheet, 'scripts': scripts, 'targetId': targetId, 'targetClass': targetClass}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -885,6 +883,136 @@ class DynamicBase(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
+    def prod_sparc_parcellationRoots_species_id_region_id(self, species_id, region_id, output='application/json'):
+        """ Get the graph of all parcellation label roots for a single species and anatomical region from: /dynamic/prod/sparc/parcellationRoots/{species-id}/{region-id}
+
+            Arguments:
+            species_id: ontology id of the species
+            region_id: ontology id of the anatomical region
+
+            Query:
+            MATCH
+            (region:Class{iri: "${region-id}"})
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (artifact)
+            -[:subClassOf*0..2]->(parent)
+            WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing"
+            RETURN path
+            UNION
+            MATCH
+            (region:Class{iri: "${region-id}"})
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (root)
+            -[:ilxtr:isDefinedBy]->(artifact)
+            -[:subClassOf*0..2]->(parent)
+            RETURN path
+            
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if species_id and species_id.startswith('http:'):
+            species_id = parse.quote(species_id, safe='')
+        if region_id and region_id.startswith('http:'):
+            region_id = parse.quote(region_id, safe='')
+        kwargs = {'species_id': species_id, 'region_id': region_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species-id}/{region_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def prod_sparc_parcellationRootsFMA_species_id_fma_id(self, species_id, fma_id, output='application/json'):
+        """ Get the graph of all parcellation label roots for a single species and anatomical region from: /dynamic/prod/sparc/parcellationRootsFMA/{species-id}/{fma-id}
+
+            Arguments:
+            species_id: ontology id of the species
+            fma_id: ontology id of the anatomical region
+
+            Query:
+            MATCH (fma:Class{iri: "${fma-id}"})
+            WITH "FMA:" + toString(fma.`http://purl.org/sig/ont/fma/FMAID`) AS curie
+            MATCH (region)
+            -[:subClassOf*]->(start:Class{iri: "http://purl.obolibrary.org/obo/UBERON_0001062"})
+            WHERE any(x IN
+                      region.`http://www.geneontology.org/formats/oboInOwl#hasDbXref`
+                      WHERE x =~ curie)
+            WITH region
+            MATCH
+            (region)
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (artifact)
+            -[:subClassOf*0..2]->(parent)
+            WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing"
+            RETURN path
+            UNION
+            MATCH (fma:Class{iri: "${fma-id}"})
+            WITH "FMA:" + toString(fma.`http://purl.org/sig/ont/fma/FMAID`) AS curie
+            MATCH (region)
+            -[:subClassOf*]->(start:Class{iri: "http://purl.obolibrary.org/obo/UBERON_0001062"})
+            WHERE any(x IN
+                      region.`http://www.geneontology.org/formats/oboInOwl#hasDbXref`
+                      WHERE x =~ curie)
+            WITH region
+            MATCH
+            (region)
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (root)
+            -[:ilxtr:isDefinedBy]->(artifact)
+            -[:subClassOf*0..2]->(parent)
+            RETURN path
+            
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if species_id and species_id.startswith('http:'):
+            species_id = parse.quote(species_id, safe='')
+        if fma_id and fma_id.startswith('http:'):
+            fma_id = parse.quote(fma_id, safe='')
+        kwargs = {'species_id': species_id, 'fma_id': fma_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRootsFMA/{species-id}/{fma_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
     def prod_sparc_rootLabels_root_id(self, root_id, output='application/json'):
         """ Get the list of all parcellation labels for a single label root from: /dynamic/prod/sparc/rootLabels/{root-id}
 
@@ -991,12 +1119,6 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if start_id and start_id.startswith('http:'):
-            start_id = parse.quote(start_id, safe='')
-        if end_id and end_id.startswith('http:'):
-            end_id = parse.quote(end_id, safe='')
-        if relationship and relationship.startswith('http:'):
-            relationship = parse.quote(relationship, safe='')
         kwargs = {'start_id': start_id, 'end_id': end_id, 'max_depth': max_depth, 'relationship': relationship}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -1077,8 +1199,6 @@ class GraphBase(restService):
                 image/png
         """
 
-        if type and type.startswith('http:'):
-            type = parse.quote(type, safe='')
         kwargs = {'type': type, 'entail': entail, 'limit': limit, 'skip': skip, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('type', **kwargs)
@@ -1117,8 +1237,6 @@ class GraphBase(restService):
 
         if id and id.startswith('http:'):
             id = parse.quote(id, safe='')
-        if relationshipType and relationshipType.startswith('http:'):
-            relationshipType = parse.quote(relationshipType, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
@@ -1157,8 +1275,6 @@ class GraphBase(restService):
 
         if id and id.startswith('http:'):
             id = parse.quote(id, safe='')
-        if relationshipType and relationshipType.startswith('http:'):
-            relationshipType = parse.quote(relationshipType, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
@@ -1213,8 +1329,6 @@ class GraphBase(restService):
 
         if id and id.startswith('http:'):
             id = parse.quote(id, safe='')
-        if relationships and relationships.startswith('http:'):
-            relationships = parse.quote(relationships, safe='')
         kwargs = {'id': id, 'hint': hint, 'relationships': relationships, 'lbls': lbls, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest('id', **kwargs)
