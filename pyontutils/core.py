@@ -1,3 +1,4 @@
+import io
 import os
 import yaml
 import types
@@ -109,13 +110,15 @@ class OntRes:
         # TODO return an iri wrapper or a path wrapper
         #pass
 
-    def __init__(self, identifier, repo=None, Graph=None):
+    Graph = None  # this is set below after OntGraph is created (derp)
+
+    def __init__(self, identifier, repo=None, Graph=None):  # XXX DO NOT USE THIS IT IS BROKEN
         self.identifier = identifier  # the potential attribute error here is intentional
         self.repo = repo  # I have a repo augmented path in my thesis stats code
         if Graph == None:
             Graph = OntGraph
 
-        self.Graph = graph
+        self.Graph = Graph
 
     @property
     def identifier(self):
@@ -250,7 +253,7 @@ class OntResOnt(OntRes):
         # interlex would call this metadata, or even bound_metadata
         # depending on how it was retrieved
         if not hasattr(self, '_header'):
-            self._header = self._header_class(self.iri)
+            self._header = self._header_class(self.identifier)
 
         return self._header
 
@@ -296,7 +299,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
         return gen
 
     def _data(self, yield_response_gen=False):
-        if self.iri.endswith('.zip'):
+        if self.identifier.endswith('.zip'):
             # TODO use Content-Range to retrieve only the central directory
             # after we get the header here
             # https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
@@ -438,6 +441,48 @@ class OntResPath(OntIdPath, OntResOnt):
     _header_class = OntHeaderPath
 
 
+class OntIdGit(OntIdPath):
+    def __init__(self, path, ref='HEAD'):
+        """ ref can be HEAD, branch, commit hash, etc. """
+        self.path = path
+        self.ref = ref
+
+    @property
+    def identifier(self):
+        # FIXME this doesn't quite conform because it is a local identifier
+        # which neglects the repo portion of the id ...
+        if type(self.path) == str:
+            breakpoint()
+        return self.ref + ':' + self.path.relative_to(self.path.repo.working_dir).as_posix()
+
+    def get(self):
+        resp = requests.Response()
+        resp.raw = io.BytesIO(self.path.repo.git.show(self.identifier).encode())
+        resp.status_code = 200
+        return resp
+
+    headers = OntIdIri.headers
+
+class OntHeaderGit(OntIdGit, OntHeader):
+    data = OntHeaderIri.data
+    _data = OntHeaderIri._data
+
+
+class OntResGit(OntIdGit, OntResOnt):
+    _header_class = OntHeaderGit
+    data = OntResIri.data
+
+    @property
+    def header(self):
+        """ ontology header """
+        if not hasattr(self, '_header'):
+            self._header = self._header_class(self.path, self.ref)
+
+        return self._header
+
+    _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
+
+
 class OntHeaderInterLex(OntHeader):
     pass
 
@@ -521,6 +566,9 @@ class OntGraph(rdflib.Graph):
         out = self.serialize(format='htmlttl').decode()
         CustomTurtleSerializer.roundtrip_prefixes = True
         return out
+
+
+OntRes.Graph = OntGraph
 
 
 class OntGraphMetadata(OntGraph):
