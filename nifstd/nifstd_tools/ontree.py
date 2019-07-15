@@ -64,6 +64,10 @@ sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd._basePath = 'https://sparc.olympiangods.org/scigraph'
 
+IXR = oq.plugin.get('InterLex')
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
+ixr.setup(instrumented=OntTerm)
+
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
 hpp = 'http://www.obofoundry.org/ro/ro.owl#has_proper_part'
@@ -116,10 +120,10 @@ class ImportOntologyFromRawYMLDict:
 
         Note: I used the raw yml because nested curies complicated traversal '''
 
-    def __init__(self,
-                 raw_yml: OrderedDict,
-                 sgg: scigraph.Graph = sgg,
-                 ixr: oq.plugins.services.InterLexRemote = ixr,) -> None:
+    def __init__( self,
+                  raw_yml: OrderedDict,
+                  sgg: oq.plugins.services.SciGraphRemote = sgg,
+                  ixr: oq.plugins.services.InterLexRemote = ixr, ) -> None:
         self.sgg = sgg # SciGraph | can check source using its apiEndpoint instance
         self.ixr = ixr # InterLexRemote | has to be seperate to minimize management confusion
         self.raw_yml = raw_yml # OrderedDict with lists for leaves (to maintain src order)
@@ -166,24 +170,27 @@ class ImportOntologyFromRawYMLDict:
             e = rdflib.Literal(e)
         return e
 
-    def _get_triples_from_nodes(self, nodes: List[dict]) -> Generator:
-        ''' Exract predicate_objects from SciGraph Nodes located in its meta key '''
-        for node in nodes: # TODO: create check if node exists?
+    def _get_triples_from_remote_reqs(self, remote_reqs: Tuple[str, Union[Generator, list]]) -> Generator:
+        ''' Exract predicate_objects from SciGraph Requests located in its meta key '''
+        for curie, node in remote_reqs: # TODO: create check if node exists?
+            if not node:
+                continue
 
             ### SUBJECT LOGIC ###
-            print(node)
-            curie = node['nodes'][0]['id']
             subj = OntId(curie).URIRef
 
             yield (subj, rdf.type, owl.Class)
 
             # pull node meta that has iri keys only
             # then check what to do with the values
-            predicate_objects = node['nodes'][0]['meta']
+            try:
+                predicate_objects = node['nodes'][0]['meta']
+            except:
+                predicate_objects = list(node)[0]['predicates']
             for pred, objects in predicate_objects.items():
 
                 ### PREDICATE LOGIC ###
-                if not self.is_iri(pred): # TODO: there has to be a better return from scigraph instead of this gibberish meta field
+                if not self.is_iri(pred) and not self.is_curie(pred): # TODO: there has to be a better return from scigraph instead of this gibberish meta field
                     continue
                 else:
                     pred = OntId(pred).URIRef
@@ -223,15 +230,12 @@ class ImportOntologyFromRawYMLDict:
         scigraph_gin = lambda curie: (curie, self.sgg.getNode(id=curie))
         interlex_gin = lambda curie: (curie, self.ixr.query(curie=curie))
 
-        # Concurrently search
+        # Concurrently search SciGraphs
         scigraph_reqs: Tuple[str, dict] = Async()(deferred(scigraph_gin)(curie) for curie in external_curies)
-        interlex_reqs: Tuple[str, dict] = Async()(deferred(interlex_gin)(curie) for curie in interlex_curies)
-        # TODO: interlex_reqs returns a generator
-        scigraph_nodes = [node for curie, node in scigraph_reqs if node]
-        interlex_nodes = [node for curie, node in interlex_reqs if node]
+        interlex_reqs: Tuple[str, Generator] = Async()(deferred(interlex_gin)(curie) for curie in interlex_curies)
 
-        nodes = scigraph_nodes # + interlex_nodes
-        [g.add(t) for t in self._get_triples_from_nodes(nodes)]
+        triples = self._get_triples_from_remote_reqs(scigraph_reqs + interlex_reqs)
+        [g.add(t) for t in triples]
         # add known namespaces we used
         OntCuries.populate(g)
         self.graph = g
@@ -563,9 +567,9 @@ def server(api_key=None, verbose=False):
 
     # gsheets = GoogleSheets()
     sparc_view = open_custom_sparc_view_yml()
-    sparc_view_raw = open_custom_sparc_view_yml(False)
-    importontology = ImportOntologyFromRawYMLDict(raw_yml=sparc_view_raw)
-    importontology.make_graph()
+    # sparc_view_raw = open_custom_sparc_view_yml(False)
+    # importontology = ImportOntologyFromRawYMLDict(raw_yml=sparc_view_raw)
+    # importontology.make_graph()
 
     log.info('starting index load')
 
@@ -885,10 +889,10 @@ def server(api_key=None, verbose=False):
             #metas = ({'name':'date', 'content':time()},),
         #)
 
-    @app.route(f'/{basename}/sparc/ttl', methods=['GET'])
-    @app.route(f'/{basename}/sparc/ttl/', methods=['GET'])
-    def route_ttl():
-        return render_template_string(importontology.graph.ttl_html)
+    # @app.route(f'/{basename}/sparc/ttl', methods=['GET'])
+    # @app.route(f'/{basename}/sparc/ttl/', methods=['GET'])
+    # def route_ttl():
+    #     return render_template_string(importontology.graph.ttl_html)
 
     return app
 
