@@ -96,6 +96,7 @@ scripttag = tag('script', n=True)
 bodytag = tag('body', n=True)
 h1tag = tag('h1')
 h2tag = tag('h2')
+h3tag = tag('h3')
 btag = tag('b')
 ptag = tag('p')
 
