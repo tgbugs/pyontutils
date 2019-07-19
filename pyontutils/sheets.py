@@ -209,11 +209,15 @@ class Sheet:
         except ValueError as e:
             log.error(e)
             log.warning('Sheet has malformed header, not setting byCol')
+        except IndexError as e:
+            log.error(e)
+            log.warning('Sheet has no header, not setting byCol')
 
         self.grid = grid
         self.cells_index = cells_index
 
     def update(self, values):
+        """ update all values at the same time """
         if self.readonly:
             raise PermissionError('sheet was loaded readonly, '
                                   'if you want to write '
@@ -222,7 +226,7 @@ class Sheet:
         update_sheet_values(self.name,
                             self.sheet_name,
                             values,
-                            spreadsheet_service=self.spreadsheet_service)
+                            spreadsheet_service=self._spreadsheet_service)
 
     def show_notes(self):
         for i, row in enumerate(self.values):
