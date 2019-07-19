@@ -17,6 +17,9 @@ from functools import wraps
 from collections import namedtuple, MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
+import nest_asyncio
+# Allows run_until_complete to check if there is an open loop already to append
+nest_asyncio.apply()
 
 
 def get_working_dir(script__file__):
