@@ -64,9 +64,8 @@ sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd._basePath = 'https://sparc.olympiangods.org/scigraph'
 
-IXR = oq.plugin.get('InterLex')
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
-ixr.setup(instrumented=OntTerm)
+# This was for ttl creation extension for sparc view
+# ixr.setup(instrumented=OntTerm)
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -232,6 +231,7 @@ class ImportOntologyFromRawYMLDict:
 
         # Concurrently search SciGraphs
         scigraph_reqs: Tuple[str, dict] = Async()(deferred(scigraph_gin)(curie) for curie in external_curies)
+        return scigraph_reqs
         interlex_reqs: Tuple[str, Generator] = Async()(deferred(interlex_gin)(curie) for curie in interlex_curies)
 
         triples = self._get_triples_from_remote_reqs(scigraph_reqs + interlex_reqs)
