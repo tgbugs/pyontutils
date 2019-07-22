@@ -1052,6 +1052,7 @@ class IlxTerm(OntTerm):
 
 
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
+ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 
 #
 # classes
