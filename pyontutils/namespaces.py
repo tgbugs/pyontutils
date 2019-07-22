@@ -4,6 +4,7 @@ import rdflib
 import requests
 from ontquery.terms import OntCuries
 from pyontutils.config import devconfig
+from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
 
 def interlex_namespace(user):
