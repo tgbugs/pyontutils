@@ -1049,9 +1049,10 @@ query = oq.OntQueryCli(query=OntTerm.query)
 
 class IlxTerm(OntTerm):
     skip_for_instrumentation = True
-    __firsts = 'curie', 'label'
+
 
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
+ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 
 #
 # classes
