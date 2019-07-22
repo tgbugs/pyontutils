@@ -37,6 +37,7 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
+        'wheel'
         'appdirs',
         'colorlog',
         'docopt',
@@ -44,9 +45,11 @@ setup(
         'google-api-python-client',
         'htmlfn',
         'hyputils>=0.0.3',
+        'isodate'
         'ipython',
         'joblib',
         'lxml',
+        'nest_asyncio',
         'oauth2client',
         'ontquery>=0.1.0',
         'psutil',
