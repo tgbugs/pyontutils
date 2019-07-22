@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """
     A collection of reused functions and classes.
     Depends only on python standard library.

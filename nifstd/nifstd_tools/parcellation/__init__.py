@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 __doc__ = f"""Generate NIF parcellation schemes from external resources.
 
@@ -386,7 +386,7 @@ class LabelRoot(Class):
 
     def __init__(self, *args, **kwargs):
         for it_name in ('definingArtifacts', 'definingArtifactsS'):  # TODO abstract to type
-            if it_name in kwargs: 
+            if it_name in kwargs:
                 kwargs[it_name] = tuple(set(kwargs[it_name]))
         super().__init__(*args, **kwargs)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 
 # this should be run at NIF-Ontology 9ef5b9e63d60f92cd01733be9d480ac3e5aee31c
 

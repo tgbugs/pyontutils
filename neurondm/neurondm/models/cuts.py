@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from IPython import embed
 import csv
 from pprint import pprint
@@ -274,7 +274,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(rows)
-        
+
     return [header] + rows
 
 def main():
@@ -392,7 +392,7 @@ def main():
             if match in l_rem and pheno:
                 l_rem = l_rem.replace(match, '').strip()
                 pes += (pheno,)
-            
+
         if l_rem in exact_rules:
             pes += (exact_rules[l_rem],)
             l_rem = ''

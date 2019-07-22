@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from pyontutils.config import devconfig
 
 import sys
@@ -323,7 +323,7 @@ def main():
                               'UBERON_', 'NCBITaxon_', 'SO_', 'IAO_'):
                     # FIXME doe we areally import HP?
                     ok = True
-                
+
                 if (subject, rdf.type, owl.AnnotationProperty) in ilx:  # FIXME for troy these need to be cleared up
                     annotations.add(subject)
                 elif (subject, rdf.type, owl.ObjectProperty) in ilx:

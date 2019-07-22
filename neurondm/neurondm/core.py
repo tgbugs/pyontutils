@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 import os
 import sys
 import atexit
@@ -292,7 +292,7 @@ class LabelMaker:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
-            else:  # principle, projection, etc. 
+            else:  # principle, projection, etc.
                 return 'neuron'
 
         for phenotype in phenotypes:
@@ -333,7 +333,7 @@ class OntTerm(bOntTerm):
         else:
             yield s, rdf.type, self.type.u
         if self.label:
-            _label = self.label 
+            _label = self.label
             label = rdflib.Literal(_label)
             yield s, rdfs.label, label
 
@@ -625,7 +625,7 @@ class Config:
         # because at the moment the code assumes that the superclass is invariant
         # this is not the case, and we need equality with and without the superclass
         # we are currently missing equality with the superclass
-        # we can probably us a conjuctive graph to 
+        # we can probably us a conjuctive graph to
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
 
@@ -1099,7 +1099,7 @@ class graphBase:
 
     @classmethod
     def python_header(cls):
-        out = '#!/usr/bin/env python3.6\n'
+        out = '#!/usr/bin/env python3.7\n'
         out += f'from {cls.__import_name__} import *\n\n'
 
         all_types = set(type(n) for n in cls.neurons())

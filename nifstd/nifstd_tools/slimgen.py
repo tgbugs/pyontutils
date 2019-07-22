@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 """
     Build lightweight slims from curie lists.
@@ -320,7 +320,7 @@ def main():
         with open('/tmp/chebi-debug.xml', 'wb') as f: ChebiOntSrc.raw.write(f)
         #with open('/tmp/chebi-debug.ttl', 'wb') as f: f.write(ChebiOntSrc._data[2].serialize(format='nifttl'))
         g = cull_prefixes(ChebiOntSrc._data[2])
-        g.filename = '/tmp/chebi-debug.ttl' 
+        g.filename = '/tmp/chebi-debug.ttl'
         g.write()
         embed()
 

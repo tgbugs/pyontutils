@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """ Converts owl or ttl or raw rdflib graph into a pandas DataFrame. Saved in .pickle format.
 
 Usage:

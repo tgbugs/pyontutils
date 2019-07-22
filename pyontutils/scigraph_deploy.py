@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from pyontutils.core import devconfig
 __doc__ = f"""Deploy SciGraph services and loaded graph.
 

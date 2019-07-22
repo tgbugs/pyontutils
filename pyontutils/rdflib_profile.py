@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """run rdflib performance tests
 
 Usage:
@@ -120,9 +120,9 @@ def main():
     fetch = ('http://ontology.neuinfo.org/NIF/ttl/NIF-Chemical.ttl',
              'http://ontology.neuinfo.org/NIF/ttl/NIF-Molecule.ttl',
              'https://raw.githubusercontent.com/tgbugs/pyontutils/master/test/nasty.ttl')
-    
+
     # functions to test
-    functions = constructed, 
+    functions = constructed,
 
     if 'TESTING' in os.environ:
         filenames = [f.strip("'").rstrip("'") for f in os.environ['FILENAMES'].split("' '")]
