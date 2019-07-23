@@ -58,6 +58,8 @@ sgc = scigraph.Cypher(cache=False, verbose=True)
 sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd = scigraph.Dynamic(cache=False, verbose=True)
 data_sgd._basePath = 'https://sparc.olympiangods.org/scigraph'
+data_sgc = scigraph.Cypher(cache=False, verbose=True)
+data_sgc._basePath = 'https://sparc.olympiangods.org/scigraph'
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -481,6 +483,52 @@ def server(api_key=None, verbose=False):
 
 
         return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
+
+    @app.route(f'/{basename}/sparc/demos/isan2019/flatmap-queries', methods=['GET'])
+    def route_sparc_connectivity_query():
+        # lift up to load from an external source at some point
+        # from pyontutils.core import OntResPath
+        # orp = OntResPath('annotations.ttl')
+        # [i for i in sorted(set(OntId(e) for t in orp.graph for e in t)) if i.prefix in ('UBERON', 'FMA', 'ILX')]
+        # for now hardcode
+        tests = [OntId('UBERON:0000388'),
+                 OntId('UBERON:0001629'),
+                 OntId('UBERON:0001723'),
+                 OntId('UBERON:0001737'),
+                 OntId('UBERON:0001759'),
+                 OntId('UBERON:0001930'),
+                 OntId('UBERON:0001989'),
+                 OntId('UBERON:0001990'),
+                 OntId('UBERON:0002024'),
+                 OntId('UBERON:0002440'),
+                 OntId('UBERON:0003126'),
+                 OntId('UBERON:0003708'),
+                 OntId('UBERON:0009050'),
+                 OntId('UBERON:0011326'),
+                 OntId('FMA:6240'),
+                 OntId('FMA:6243'),
+                 OntId('FMA:6474'),
+                 OntId('FMA:6579'),
+                 OntId('ILX:0738293')]
+        query = """
+      MATCH (blank)-
+      [entrytype:ilxtr:hasSomaLocatedIn|ilxtr:hasAxonLocatedIn|ilxtr:hasDendriteLocatedIn|ilxtr:hasPresynapticTerminalsIn]
+      ->(location:Class{{iri: "{iri}"}})
+      WITH entrytype, location, blank
+      MATCH (phenotype)<-[predicate]-(blank)<-[:equivalentClass]-(neuron)
+      WHERE NOT (phenotype.iri =~ ".*_:.*")
+      RETURN location, entrytype.iri, neuron.iri, predicate.iri, phenotype
+        """
+
+        def wheeee(iri):
+            blob = data_sgc.execute(query.format(iri=iri), 100, 'application/json')
+            return blob
+
+        hrm = [wheeee(oid) for oid in tests]
+
+        return hfn.htmldoc(hnf.render_table([[1, 2]],'oh', 'no'),
+                           title='Simulated flatmap query results',
+        )
 
     @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
     def route_sparc_connectivity_query():
