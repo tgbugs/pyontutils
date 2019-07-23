@@ -203,7 +203,10 @@ class Secrets:
             if isinstance(current, dict):
                 raise ValueError(f'Your secret path is incomplete. Keys are {sorted(current.keys())}')
 
+            if '-file' in name and current.startswith('~/'):  # FIXME usability hack to allow ~/ in filenames
+                current = Path(current).expanduser().as_posix()  # for consistency with current practice, keep paths as strings
             return current
+
 
 class DevConfig:
     skip = 'config', 'write', 'ontology_remote_repo', 'v', 'secrets'
