@@ -47,7 +47,6 @@ setup(
         'ipython',
         'joblib',
         'lxml',
-        'nest_asyncio',
         'oauth2client',
         'ontquery>=0.1.0',
         'psutil',
