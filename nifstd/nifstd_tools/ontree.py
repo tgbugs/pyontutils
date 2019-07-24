@@ -56,10 +56,14 @@ sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
 sgc = scigraph.Cypher(cache=False, verbose=True)
 sgd = scigraph.Dynamic(cache=False, verbose=True)
+
+# data endpoint
+#_dataBP = 'https://sparc.olympiangods.org/scigraph'
+_dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
 data_sgd = scigraph.Dynamic(cache=False, verbose=True)
-data_sgd._basePath = 'https://sparc.olympiangods.org/scigraph'
+data_sgd._basePath = _dataBP
 data_sgc = scigraph.Cypher(cache=False, verbose=True)
-data_sgc._basePath = 'https://sparc.olympiangods.org/scigraph'
+data_sgc._basePath = _dataBP
 
 a = 'rdfs:subClassOf'
 _hpp = 'RO_OLD:has_proper_part'  # and apparently this fails too
@@ -401,6 +405,11 @@ dynamic_examples = (
     ('Parc arts', 'prod/sparc/parcellationRoots/NCBITaxon:10116', '?direction=INCOMING'),
 )
 
+demo_examples = (
+    #('All connectivity', '/trees/sparc/demos/isan2019/flatmap-queries'),  # broken due to scigraph segfault for json return
+    ('Neuron connectivity', '/trees/sparc/demos/isan2019/neuron-connectivity'),
+)
+
 def server(api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
@@ -484,32 +493,22 @@ def server(api_key=None, verbose=False):
 
         return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
 
+    @app.route(f'/{basename}/sparc/demos/isan2019/neuron-connectivity', methods=['GET'])
+    def route_sparc_demos_isan2019_neuron_connectivity():
+        def connected(start):
+            blob = data_sgd.neurons_connectivity(start)#, limit=9999)
+            return blob
+            
+
+        hrm = [connected(t) for t in test_terms]
+        breakpoint()
+
     @app.route(f'/{basename}/sparc/demos/isan2019/flatmap-queries', methods=['GET'])
-    def route_sparc_connectivity_query():
+    def route_sparc_demos_isan2019_flatmap_queries():
         # lift up to load from an external source at some point
         # from pyontutils.core import OntResPath
         # orp = OntResPath('annotations.ttl')
         # [i for i in sorted(set(OntId(e) for t in orp.graph for e in t)) if i.prefix in ('UBERON', 'FMA', 'ILX')]
-        # for now hardcode
-        tests = [OntId('UBERON:0000388'),
-                 OntId('UBERON:0001629'),
-                 OntId('UBERON:0001723'),
-                 OntId('UBERON:0001737'),
-                 OntId('UBERON:0001759'),
-                 OntId('UBERON:0001930'),
-                 OntId('UBERON:0001989'),
-                 OntId('UBERON:0001990'),
-                 OntId('UBERON:0002024'),
-                 OntId('UBERON:0002440'),
-                 OntId('UBERON:0003126'),
-                 OntId('UBERON:0003708'),
-                 OntId('UBERON:0009050'),
-                 OntId('UBERON:0011326'),
-                 OntId('FMA:6240'),
-                 OntId('FMA:6243'),
-                 OntId('FMA:6474'),
-                 OntId('FMA:6579'),
-                 OntId('ILX:0738293')]
         query = """
       MATCH (blank)-
       [entrytype:ilxtr:hasSomaLocatedIn|ilxtr:hasAxonLocatedIn|ilxtr:hasDendriteLocatedIn|ilxtr:hasPresynapticTerminalsIn]
@@ -520,13 +519,18 @@ def server(api_key=None, verbose=False):
       RETURN location, entrytype.iri, neuron.iri, predicate.iri, phenotype
         """
 
-        def wheeee(iri):
-            blob = data_sgc.execute(query.format(iri=iri), 100, 'application/json')
+        def fetch(iri, limit=10):
+            q = query.format(iri=iri)
+            log.debug(q)
+            blob = data_sgc.execute(q, limit, 'application/json')
+            # oh boy
+            # if there are less results than the limit scigraph segfaults
+            # and returns nothing
             return blob
 
-        hrm = [wheeee(oid) for oid in tests]
+        hrm = [fetch(oid) for oid in test_terms]
 
-        return hfn.htmldoc(hnf.render_table([[1, 2]],'oh', 'no'),
+        return hfn.htmldoc(hfn.render_table([[1, 2]],'oh', 'no'),
                            title='Simulated flatmap query results',
         )
 
@@ -798,18 +802,49 @@ def server(api_key=None, verbose=False):
 
     return app
 
+# for now hardcode
+test_terms = [OntId('UBERON:0001759'),
+              OntId('UBERON:0000388'),
+              OntId('UBERON:0001629'),
+              OntId('UBERON:0001723'),
+              OntId('UBERON:0001737'),
+              OntId('UBERON:0001930'),
+              OntId('UBERON:0001989'),
+              OntId('UBERON:0001990'),
+              OntId('UBERON:0002024'),
+              OntId('UBERON:0002440'),
+              OntId('UBERON:0003126'),
+              OntId('UBERON:0003708'),
+              OntId('UBERON:0009050'),
+              OntId('UBERON:0011326'),
+              OntId('FMA:6240'),
+              OntId('FMA:6243'),
+              OntId('FMA:6474'),
+              OntId('FMA:6579'),
+              OntId('ILX:0738293')]
+
 def test():
     global request
     request = fakeRequest()
     request.args['depth'] = 1
     app = server()
     (route_, route_docs, route_filequery, route_examples, route_iriquery,
-     route_query, route_dynamic,
+     route_query, route_dynamic, route_sparc_demos_isan2019_flatmap_queries,
+     route_sparc_demos_isan2019_neuron_connectivity,
     ) = (app.view_functions[k]
          for k in ('route_', 'route_docs', 'route_filequery',
                    'route_examples', 'route_iriquery', 'route_query',
-                   'route_dynamic',))
+                   'route_dynamic', 'route_sparc_demos_isan2019_flatmap_queries',
+                   'route_sparc_demos_isan2019_neuron_connectivity',
+         ))
 
+    #for name, path in demo_examples:
+    request = fakeRequest()
+    route_sparc_demos_isan2019_flatmap_queries()
+    request = fakeRequest()
+    route_sparc_demos_isan2019_neuron_connectivity()
+
+    return
     for _, path, querystring in dynamic_examples:
         log.info(f'ontree testing {path} {querystring}')
         request = fakeRequest()
