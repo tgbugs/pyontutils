@@ -528,6 +528,82 @@ class DynamicBase(restService):
         self._verbose = verbose
         super().__init__(cache, key)
 
+    def neurons_connectedRegions(self, start_id=None, target_predicate=None, output='application/json'):
+        """ Get connected anatomical regions by starting location and target relationship from: /dynamic/neurons/connectedRegions
+
+            Arguments:
+            start_id: The starting location (eg UBERON:0001759)
+            target_predicate: The predicate for the type of connectivity (eg
+                              ilxtr:hasPresynapticTerminalsIn)
+
+            Query:
+            MATCH (blank)-
+            [entrytype:ilxtr:hasSomaLocatedIn|ilxtr:hasAxonLocatedIn|ilxtr:hasDendriteLocatedIn|ilxtr:hasPresynapticTerminalsIn]
+            ->(location:Class{iri: '${start_id}'})
+            WITH entrytype, blank
+            MATCH (phenotype)<-[:${target_predicate}]-(blank)
+            // WHERE NOT (phenotype.iri =~ ".*_:.*")
+            RETURN phenotype
+            
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id, 'target_predicate': target_predicate}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/neurons/connectedRegions').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def neurons_connectivity(self, start_id=None, output='application/json'):
+        """ Get connected anatomical regions by neuron type from: /dynamic/neurons/connectivity
+
+            Arguments:
+            start_id: The starting location (eg UBERON:0001759)
+
+            Query:
+            MATCH (blank)-
+            [entrytype:ilxtr:hasSomaLocatedIn|ilxtr:hasAxonLocatedIn|ilxtr:hasDendriteLocatedIn|ilxtr:hasPresynapticTerminalsIn]
+            ->(location:Class{iri: '${start_id}'})
+            WITH location, entrytype, blank
+            MATCH (phenotype)<-[predicate]-(blank)<-[:equivalentClass]-(neuron)
+            WHERE NOT (phenotype.iri =~ ".*_:.*")
+            // RETURN phenotype, (phenotype)-[predicate]-(neuron) as e
+            // WITH location, predicate, phenotype, neuron
+            RETURN location, entrytype, neuron, predicate, phenotype
+            
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/neurons/connectivity').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
     def prod_sparc_artifactLabels_artifact_id(self, artifact_id, output='application/json'):
         """ Get the graph of all parcellation labels for a single artifact WARNING this can return no results from: /dynamic/prod/sparc/artifactLabels/{artifact-id}
 
@@ -621,7 +697,8 @@ class DynamicBase(restService):
                     "http://purl.org/sig/ont/fma/fma7200",
                     "http://purl.org/sig/ont/fma/fma15900",
                     "http://purl.org/sig/ont/fma/fma45659",
-                    "http://purl.org/sig/ont/fma/fma7647"]
+                    "http://purl.org/sig/ont/fma/fma7647",
+                    "http://purl.org/sig/ont/fma/fma50801"]
             RETURN n
             
             outputs:
