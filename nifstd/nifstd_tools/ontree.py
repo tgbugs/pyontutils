@@ -60,9 +60,9 @@ sgd = scigraph.Dynamic(cache=False, verbose=True)
 # data endpoint
 #_dataBP = 'https://sparc.olympiangods.org/scigraph'
 _dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
-data_sgd = scigraph.Dynamic(cache=False, verbose=True)
+data_sgd = scigraph.Dynamic(cache=True, verbose=True)
 data_sgd._basePath = _dataBP
-data_sgc = scigraph.Cypher(cache=False, verbose=True)
+data_sgc = scigraph.Cypher(cache=True, verbose=True)
 data_sgc._basePath = _dataBP
 
 a = 'rdfs:subClassOf'
@@ -489,19 +489,61 @@ def server(api_key=None, verbose=False):
                               'Root class', '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
                               halign='left')
 
-
-
         return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
 
     @app.route(f'/{basename}/sparc/demos/isan2019/neuron-connectivity', methods=['GET'])
     def route_sparc_demos_isan2019_neuron_connectivity():
         def connected(start):
+            log.debug(start)
             blob = data_sgd.neurons_connectivity(start)#, limit=9999)
-            return blob
-            
+            edges = blob['edges']
+            neurons = {}
+            types = {}
+            rows = []
+            start_type = None
+            sc = OntId(start).curie
+            for e in edges:
+                s, p, o = e['sub'], e['pred'], e['obj']
+                if p == 'operand':
+                    continue
 
+                if s.startswith('_:'):
+                    if s not in neurons:
+                        neurons[s] = []
+                        types[s] = {}
+                otp = OntTerm(p)
+                oto = OntTerm(o)
+                neurons[s].append((otp, oto))
+                if o == sc:
+                    start_type = otp
+
+                if oto not in types[s]:
+                    types[s][oto] = []
+
+                types[s][oto].append(otp)
+
+            for v in neurons.values():
+                v.sort()
+
+            return OntTerm(start), start_type, neurons, types
+            
         hrm = [connected(t) for t in test_terms]
-        breakpoint()
+        header =['Start', 'Start Type', 'Neuron', 'Relation', 'Target']
+        rows = []
+        for start, start_type, neurons, types in hrm:
+            start = start.atag()
+            start_type = start_type.atag() if start_type is not None else ''
+            for i, v in enumerate(neurons.values()):
+                neuron = i
+                for p, o in v:
+                    relation = p.atag()
+                    target = o.atag()
+                    row = start, start_type, neuron, relation, target
+                    rows.append(row)
+                rows.append(['|'] + [' '] * 4)
+            
+        h = hfn.htmldoc(hfn.render_table(rows, *header), title='neuron connectivity')
+        return h
 
     @app.route(f'/{basename}/sparc/demos/isan2019/flatmap-queries', methods=['GET'])
     def route_sparc_demos_isan2019_flatmap_queries():
@@ -839,8 +881,8 @@ def test():
          ))
 
     #for name, path in demo_examples:
-    request = fakeRequest()
-    route_sparc_demos_isan2019_flatmap_queries()
+    #request = fakeRequest()
+    #route_sparc_demos_isan2019_flatmap_queries()
     request = fakeRequest()
     route_sparc_demos_isan2019_neuron_connectivity()
 
