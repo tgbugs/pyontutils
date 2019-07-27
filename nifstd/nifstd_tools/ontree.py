@@ -527,21 +527,22 @@ def server(api_key=None, verbose=False):
 
             return OntTerm(start), start_type, neurons, types
             
-        hrm = [connected(t) for t in test_terms]
+        hrm = [connected(t) for t in set(test_terms)]
         header =['Start', 'Start Type', 'Neuron', 'Relation', 'Target']
         rows = []
-        for start, start_type, neurons, types in hrm:
+        for start, start_type, neurons, types in sorted(hrm):
             start = start.atag()
             start_type = start_type.atag() if start_type is not None else ''
-            for i, v in enumerate(neurons.values()):
+            for i, v in enumerate(neurons.values(), 1):
                 neuron = i
                 for p, o in v:
                     relation = p.atag()
                     target = o.atag()
                     row = start, start_type, neuron, relation, target
                     rows.append(row)
+
                 rows.append(['|'] + [' '] * 4)
-            
+
         h = hfn.htmldoc(hfn.render_table(rows, *header), title='neuron connectivity')
         return h
 
@@ -863,7 +864,67 @@ test_terms = [OntId('UBERON:0001759'),
               OntId('FMA:6243'),
               OntId('FMA:6474'),
               OntId('FMA:6579'),
-              OntId('ILX:0738293')]
+              OntId('ILX:0738293'),
+              # # #
+              OntId('UBERON:0000388'),
+              OntId('UBERON:0000988'),
+              OntId('UBERON:0001103'),
+              OntId('UBERON:0001508'),
+              OntId('UBERON:0001629'),
+              OntId('UBERON:0001649'),
+              OntId('UBERON:0001650'),
+              OntId('UBERON:0001723'),
+              OntId('UBERON:0001737'),
+              OntId('UBERON:0001759'),
+              OntId('UBERON:0001884'),
+              OntId('UBERON:0001891'),
+              OntId('UBERON:0001896'),
+              OntId('UBERON:0001930'),
+              OntId('UBERON:0001990'),
+              OntId('UBERON:0002024'),
+              OntId('UBERON:0002126'),
+              OntId('UBERON:0002440'),
+              OntId('UBERON:0003126'),
+              OntId('UBERON:0003708'),
+              OntId('UBERON:0005807'),
+              OntId('UBERON:0006457'),
+              OntId('UBERON:0006469'),
+              OntId('UBERON:0006470'),
+              OntId('UBERON:0006488'),
+              OntId('UBERON:0006489'),
+              OntId('UBERON:0006490'),
+              OntId('UBERON:0006491'),
+              OntId('UBERON:0006492'),
+              OntId('UBERON:0006493'),
+              OntId('UBERON:0009009'),
+              OntId('UBERON:0009918'),
+              OntId('UBERON:0011326'),
+              OntId('FMA:67532'),
+              OntId('FMA:7643'),
+              OntId('ILX:0485722'),
+              OntId('ILX:0505839'),
+              OntId('ILX:0725956'),
+              OntId('ILX:0731873'),
+              OntId('ILX:0736966'),
+              OntId('ILX:0738279'),
+              OntId('ILX:0738290'),
+              OntId('ILX:0738291'),
+              OntId('ILX:0738292'),
+              OntId('ILX:0738293'),
+              OntId('ILX:0738308'),
+              OntId('ILX:0738309'),
+              OntId('ILX:0738312'),
+              OntId('ILX:0738313'),
+              OntId('ILX:0738315'),
+              OntId('ILX:0738319'),
+              OntId('ILX:0738324'),
+              OntId('ILX:0738325'),
+              OntId('ILX:0738342'),
+              OntId('ILX:0738371'),
+              OntId('ILX:0738372'),
+              OntId('ILX:0738373'),
+              OntId('ILX:0738374')]
+
 
 def test():
     global request
