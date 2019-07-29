@@ -8,7 +8,26 @@ from subprocess import call
 from sys import exit
 import csv
 from typing import Union, Dict, List
+import networkx as nx
 
+def sort_list_of_tuples_by_string(list_of_tuples:List[tuple], string_index:int) -> List[tuple]:
+    return sorted(list_of_tuples, key=lambda x: (str(x[string_index]).strip() in ['None', ''], x[string_index].lower()))
+
+def class_hierarchy(dag:List[tuple], descending=True) -> list:
+    ''' Topological Sorting
+    Args:
+        dag: directed acyclic graph that is a mappings of list of tuples with len of 2
+    Returns:
+        Ordered list of single entities in topological ordering of choice
+    Examples:
+        >>> class_hierarchy([(1, 2), (2, 3)])
+        [3, 2, 1]
+    '''
+    dag = nx.DiGraph(dag)
+    dag = list(nx.topological_sort(dag))
+    if descending:
+        dag = list(reversed(dag))
+    return dag
 
 def clean(self, string, clean_scale:int=0):
     if clean_scale == 0:
