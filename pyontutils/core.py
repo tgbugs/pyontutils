@@ -215,7 +215,7 @@ class OntHeader(OntRes):
         self._graph = self.Graph().parse(data=data, format=self.format)
 
     def _populate(self, graph, gen):
-        # we don't pop request headers or file metadata off in here 
+        # we don't pop request headers or file metadata off in here
         # because different loading processes may use that information
         # to dispatch different loading processes
 
@@ -349,7 +349,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
                 yield header_first_chunk
                 chunk = chunk[start_end_index:]
-                
+
             if searching and stop in chunk:
                 stop_end_index = chunk.index(stop) + len(stop)
                 header_last_chunk = chunk[:stop_end_index]
@@ -400,7 +400,7 @@ class OntResIri(OntIdIri, OntResOnt):
         return chain(header_chunks, gen)
 
     def _populate(self, graph, gen):
-        # we don't pop request headers or file metadata off in here 
+        # we don't pop request headers or file metadata off in here
         # because different loading processes may use that information
         # to dispatch different loading processes
 
@@ -1041,7 +1041,8 @@ for rc in (SGR, IXR):
 
 sgr = SGR(apiEndpoint=devconfig.scigraph_api)
 sgr.api_key = get_api_key()
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
+# Uses default apiEndpoint for InterLexRemote
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, readonly=True)
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 query = oq.OntQueryCli(query=OntTerm.query)
