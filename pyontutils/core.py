@@ -317,16 +317,21 @@ class OntHeaderIri(OntHeader, OntIdIri):
         if first.startswith(b'<?xml'):
             start = b'<owl:Ontology'
             stop = b'</owl:Ontology>'
+            sentinel = b'TODO'
             self.format = 'application/rdf+xml'
 
         elif first.startswith(b'@prefix'):
             start = b' owl:Ontology'  # FIXME this is not standard
             stop = b' .\n'  # FIXME can be fooled by strings
+            sentinel = b'### Annotations'  # FIXME only works for ttlser
+            #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
+            # also needs to be a regex that ends in [^owl:Ontology]
             self.format = 'text/turtle'
 
         elif first.startswith(b'Prefix(:='):
             start = b'\nOntology'
             stop = b')\n\n'  # FIXME I don't think owl functional syntax actually has a proper header :/
+            sentient = b'TODO'
             self.format = 'text/owl-functional'
         else:
             'text/owl-manchester'
@@ -350,7 +355,11 @@ class OntHeaderIri(OntHeader, OntIdIri):
                 yield header_first_chunk
                 chunk = chunk[start_end_index:]
 
-            if searching and stop in chunk:
+            if searching and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
+                # FIXME edge case where a stop crosses a chunk boundary
+                # if stop is short enough it may make sense to do a naieve contains check
+                # to start things off ...
+
                 stop_end_index = chunk.index(stop) + len(stop)
                 header_last_chunk = chunk[:stop_end_index]
                 if yield_response_gen:
@@ -374,7 +383,34 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
                 return
 
+            elif not searching and sentinel in chunk:
+                sent_end_index = chunk.index(sentinel) + len(sentinel)
+                header_last_chunk = chunk[:sent_end_index]
+                if yield_response_gen:
+                    header_data += header_last_chunk
+
+                yield header_last_chunk
+                if yield_response_gen:
+                    if self.format == 'application/rdf+xml':
+                        header_data += close_rdf
+
+                    self._graph_sideload(header_data)
+                    chunk = chunk[sent_end_index:]
+                    yield resp, chain((chunk,), gen)
+
+                else:
+                    # if we are not continuing then close the xml tags
+                    if self.format == 'application/rdf+xml':
+                        yield close_rdf
+
+                    resp.close()
+
+                return
+
             else:
+                # FIXME TODO need a sentinel value where there isn't a header
+                # so that we can infer that there is no header, or at least
+                # no headerish data at the head of the file
                 if yield_response_gen:
                     header_data += chunk
 
@@ -419,26 +455,50 @@ class OntResIri(OntIdIri, OntResOnt):
 
 
 class OntIdPath(OntRes):
+    # FIXME should this be an instrumented path?
+    # should OntResIri be an instrumented iri?
     def __init__(self, path):
+        # FIXME type caste?
         self.path = path
 
     @property
     def identifier(self):
         return self.path
 
-    @property
-    def headers(self):
-        raise NotImplementedError('TODO source this from local info')
+    def get(self):
+        resp = requests.Response()
+        with open(self.path, 'rb') as f:
+            resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
+
+        # TODO set headers here
+        #resp.headers = {'Content-Length': self.path.meta_no_checksum.size}
+        resp.status_code = 200
+        return resp
+
+    headers = OntIdIri.headers
 
 
 class OntHeaderPath(OntIdPath, OntHeader):
-    pass
+    data = OntHeaderIri.data
+    _data = OntHeaderIri._data
 
 
 class OntResPath(OntIdPath, OntResOnt):
     """ ontology resource coming from a file """
 
     _header_class = OntHeaderPath
+    data = OntResIri.data
+
+    @property
+    def header(self):
+        """ ontology header """
+        if not hasattr(self, '_header'):
+            self._header = self._header_class(self.path)
+
+        return self._header
+
+    _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
+
 
 
 class OntIdGit(OntIdPath):
