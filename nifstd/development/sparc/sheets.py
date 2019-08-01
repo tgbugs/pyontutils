@@ -126,7 +126,7 @@ def hyperlink_tree(tree: dict) -> list:
     return hyp_rows
 
 
-class SheetPlus:
+class SheetPlus(Sheet):
     ''' Appending to Sheet functionality '''
 
     def create_master_csv_rows(self):
