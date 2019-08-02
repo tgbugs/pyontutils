@@ -14,7 +14,8 @@ from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, date, timezone
 from functools import wraps
-from collections import namedtuple, MutableMapping
+from collections import namedtuple
+from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
 import nest_asyncio
