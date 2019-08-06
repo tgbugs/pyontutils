@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Look look up ontology terms on the command line.
 
 Usage:
@@ -186,7 +186,6 @@ def main():
     args = docopt(__doc__, version='scig 0')
     #print(args)
     server = None
-    api_key = args['--key']
     verbose = False
     if args['--api']:
         server = args['--api']
@@ -194,13 +193,15 @@ def main():
         server = 'http://localhost:9000/scigraph'
     if args['--verbose']:
         verbose = True
+    if args['--key']:
+        restService.api_key = args['--key']
 
     kwargs = {}
     if args['--prefix']:
         kwargs['prefix'] = args['--prefix']
 
     if args['i'] or args['v']:
-        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose, key=api_key)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         for id_ in args['<id>']:
             out = v.findById(id_, **kwargs)
             if out:
@@ -208,7 +209,7 @@ def main():
                 for key, value in sorted(out.items()):
                     print('\t%s:' % key, value)
     elif args['s'] or args['t']:
-        v = Vocabulary(server, verbose, key=api_key) if server else Vocabulary(verbose=verbose, key=api_key)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         for term in args['<term>']:
             print(term)
             limit = args['--limit']
@@ -224,14 +225,14 @@ def main():
                         print('\t\t%s:' % key, value)
                 print()
     elif args['g']:
-        g = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
+        g = Graph(server, verbose) if server else Graph(verbose=verbose)
         for id_ in args['<id>']:
             out = g.getNeighbors(id_, relationshipType=args['--rt'])
             if out:
                 print(id_,)
                 scigPrint.pprint_neighbors(out, nodes=not args['--edges'])
     elif args['e']:
-        v = Vocabulary(server, verbose, key=api_key) if server else Vocabulary(verbose=verbose, key=api_key)
+        v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         p, s, o = args['<p>'], args['<s>'], args['<o>']
         if ':' in p:
             p = v.findById(p)['labels'][0]
@@ -241,14 +242,14 @@ def main():
             o = v.findById(o)['labels'][0]
         print('(%s %s %s)' % tuple([_.replace(' ', '-') for _ in (p, s, o)]))
     elif args['c']:
-        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         curies = c.getCuries()
         align = max([len(c) for c in curies]) + 2
         fmt = '{: <%s}' % align
         for curie, iri in sorted(curies.items()):
             print(fmt.format(repr(curie)), repr(iri))
     elif args['cy']:
-        c = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
+        c = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         import pprint
         #results = c.execute(args['<query>'], args['--limit'])
         results = c.execute(args['<query>'], args['--limit'], 'application/json')
@@ -265,8 +266,8 @@ def main():
         from nifstd_tools.ontree import ImportChain  # FIXME FIXME FIXME
         from IPython import embed
 
-        sgc = Cypher(server, verbose, key=api_key) if server else Cypher(verbose=verbose, key=api_key)
-        sgg = Graph(server, verbose, key=api_key) if server else Graph(verbose=verbose, key=api_key)
+        sgc = Cypher(server, verbose) if server else Cypher(verbose=verbose)
+        sgg = Graph(server, verbose) if server else Graph(verbose=verbose)
         ic = ImportChain(sgg, sgc)
         ic.write_import_chain()
         fields = ('iri', 'rdfs:label', 'dc:title', 'definition', 'skos:definition',
