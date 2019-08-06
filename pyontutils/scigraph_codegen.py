@@ -38,7 +38,9 @@ class restService:
         else:
             self._get = self._normal_get
 
-        self.api_key = key
+        if key is not None:
+            self.api_key = key
+            raise DeprecationWarning('this way of passing keys will be deprecated soon')
 
     @property
     def api_key(self):
@@ -189,7 +191,17 @@ class Cypher(SUBCLASS):
 
         self._inv = {v:k for k, v in self._curies.items()}
 
-    api_key = restService.api_key
+    @property
+    def api_key(self):
+        # note that using properties means that
+        # if you want to use properties at all in
+        # a subClass hierarchy you have to reimplement
+        # them every single time to be aware if the
+        # parent class value chanes
+        if isinstance(restService.api_key, str):
+            return restService.api_key
+        else:
+            return self._api_key
 
     @api_key.setter
     def api_key(self, value):
