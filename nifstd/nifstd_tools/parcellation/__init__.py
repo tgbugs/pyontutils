@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 __doc__ = f"""Generate NIF parcellation schemes from external resources.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 """
     Build lightweight slims from curie lists.

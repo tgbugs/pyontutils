@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from IPython import embed
 import csv
 from pprint import pprint

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 import os
 from copy import deepcopy
 from html import escape as html_escape

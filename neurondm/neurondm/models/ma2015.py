@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 
 from pathlib import Path
 from pyontutils.utils import rowParse, relative_path
