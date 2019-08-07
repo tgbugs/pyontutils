@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """ run neurondm related exports and conversions
 Usage:
     neurondm-build [all phenotypes models bridge old dep dev] [options]
@@ -29,6 +29,7 @@ from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 from itertools import chain
+from neurondm.phenotype_indicators import PhenotypeIndicators
 
 log = _log.getChild('build')
 
@@ -1108,7 +1109,7 @@ def make_models():
         m = import_module(f'neurondm.models.{module}')
         #m = import_module(f'neurondm.compiled.{module}')  # XXX
         if not hasattr(m, 'config') and hasattr(m, 'main'):
-            config, *_ = m.main()  # FIXME cuts hack
+            config, *_ = m.main()  # FIXME cuts and allen ct hack
         else:
             config = m.config
 
@@ -1163,7 +1164,10 @@ def make_devel():
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
+    _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
+    g.parse(_pi.as_posix(), format='ttl')
+
+    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
             'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
@@ -1186,7 +1190,12 @@ def make_devel():
 
     terms |= all_supers
 
+    done = set()
     def partOf(term):
+        if term in done:
+            return term
+
+        done.add(term)
         if term('partOf:', as_term=True):
             for superpart in term.predicates['partOf:']:
                 if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
@@ -1244,46 +1253,7 @@ def make_devel():
 
         yield ilxtr.parcellationLabel, rdfs.subClassOf, OntId('UBERON:0001062').u
 
-        # sst fix
-        sst = OntId('PTHR:10558').u
-        yield sst, a, owl.Class
-        yield sst, rdfs.subClassOf, ilxtr.PhenotypeIndicator
-        yield sst, rdfs.label, rdflib.Literal('somatostatin (indicator)')
-        yield sst, NIFRID.synonym, rdflib.Literal('Sst')
-        yield sst, NIFRID.synonym, rdflib.Literal('SOM')
-        yield sst, NIFRID.synonym, rdflib.Literal('somatostatin')
-        sst_members = (OntId('ilxtr:SST-flp'),
-                       OntId('NCBIGene:20604'),
-                       OntId('PR:000015665'),
-                       OntId('JAX:013044'),
-                       OntId('JAX:028579'),)
-        for i in sst_members:
-            yield i.u, rdfs.subClassOf, sst
-
-        # pv fix
-        pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
-        pv = OntId('PTHR:11653').u
-        yield pv, rdfs.label, rdflib.Literal('parvalbumin (indicator)')
-        yield pv, NIFRID.synonym, rdflib.Literal('PV')
-        yield pv, NIFRID.synonym, rdflib.Literal('Pvalb')
-        yield pv, NIFRID.synonym, rdflib.Literal('parvalbumin')
-        #yield pv, ilxtr.indicatesDisplayOfPhenotype, pheno.parvalbumin  # as restriction ...
-        yield from ((pv, rdf.type, owl.Class),
-                    (pv, rdfs.subClassOf, ilxtr.PhenotypeIndicator),)
-        pv_members = (OntId('JAX:008069'),
-                      OntId('JAX:021189'),
-                      OntId('JAX:021190'),
-                      OntId('JAX:022730'),
-                      ilxtr.Pvalb,
-                      ilxtr['PV-cre'],
-                      OntId('PR:000013502'),
-                      OntId('NCBIGene:19293'),
-                      OntId('NIFEXT:6'),)
-
-        for i in pv_members:
-            s = i.u if isinstance(i, OntId) else i
-            yield s, rdfs.subClassOf, pv
-
+    def _old_trips(self):
         # alt fix using query neuron
         # TODO the proper way to implement this is using unionOf logical phenotype
         # since we do want to restrict it to Neurons
@@ -1312,7 +1282,6 @@ def make_devel():
         )(pv_query)
 
        
-
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
@@ -1358,6 +1327,9 @@ def make_devel():
                             yield s, p, o
                             #log.debug(f'{o!r}')
                             if isinstance(o, rdflib.URIRef):
+                                if o == owl.Restriction:
+                                    continue
+
                                 no = OntTermOntologyOnly(o)
                                 if no not in done:
                                     if term.prefix not in bads and no.prefix in bads:

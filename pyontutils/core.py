@@ -574,12 +574,16 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 class OntGraph(rdflib.Graph):
     """ A 5th try at making one of these. ConjunctiveGraph version? """
 
-    def __init__(self, *args, filename=None, **kwargs):
+    def __init__(self, *args, path=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.bind('owl', owl)
-        self.filename = filename
+        self.path = path
 
     # TODO id for graphs like this ... use InterLex IdentityBNode?
+
+    # TODO local_conventions aka curies
+    # NOTE you actually just use it the other way by passing this
+    # to OntCuries.populate
 
     def _get_namespace_manager(self):
         if self.__namespace_manager is None:
@@ -605,11 +609,11 @@ class OntGraph(rdflib.Graph):
         """ everything else """
         raise NotImplementedError('yet')
 
-    def write(self, filename=None, format='nifttl'):
-        if filename is None:
-            filename = self.filename
+    def write(self, path=None, format='nifttl'):
+        if path is None:
+            path = self.path
 
-        with open(filename, 'wb') as f:
+        with open(path, 'wb') as f:
             self.serialize(f, format=format)
 
     @property

@@ -258,7 +258,7 @@ class AllenCellTypes:
             phenotypes.extend(func(cell_line))
         return phenotypes
 
-    def build_neurons(self):
+    def make_config(self):
         # have to call Config here because transgenic lines doesn't exist
         self.config = Config(name=self.name,
                              imports=[f'NIFRAW:{self.branch}/ttl/generated/allen-transgenic-lines.ttl'],
@@ -267,6 +267,7 @@ class AllenCellTypes:
                              sources=tuple(),  # TODO insert the link to the query...
                              source_file=relative_path(__file__))
 
+    def build_neurons(self):
         for cell_line in self.neuron_data:
             NeuronACT(*self.build_phenotypes(cell_line))
 
@@ -314,7 +315,7 @@ class AllenCellTypes:
         transgenic_lines._graph.write()
 
 
-def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
+def main(args={o.name:o.value for o in parse_defaults(__doc__)}, run=True):
     #print(args)
     if not args['--refresh'] and args['--input'] and Path(args['--input']).exists():
         with open(args['--input'], 'rt') as f:
@@ -330,13 +331,14 @@ def main(args={o.name:o.value for o in parse_defaults(__doc__)}):
             json.dump(input, f, indent=4)
 
     act = AllenCellTypes(input, args['--output'])
-    act.build_transgenic_lines()
-    act.build_neurons()
+    act.make_config()
+    if __name__ == '__main__' or run:
+        act.build_transgenic_lines()
+        act.build_neurons()
+
     return act.config
 
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='0.0.4')
     main(args)
-else:
-    config = main()

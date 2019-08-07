@@ -331,7 +331,8 @@ class OntTerm(bOntTerm):
         if self.type is None:
             yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
         else:
-            yield s, rdf.type, self.type.u
+            _t = self.type
+            yield s, rdf.type, (_t if _t.__class__ == rdflib.URIRef else _t.u)
         if self.label:
             _label = self.label 
             label = rdflib.Literal(_label)
