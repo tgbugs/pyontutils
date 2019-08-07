@@ -1167,11 +1167,12 @@ def make_devel():
     _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
     g.parse(_pi.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
+    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT', 'NIFRAW',
             'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
-                                g.predicates(),)
+                                g.predicates(),
+                                (s for s in g.subjects() if isinstance(s, rdflib.URIRef) and OntId(s).prefix not in bads))
                if isinstance(e, rdflib.URIRef) and not isinstance(e, rdflib.BNode)
                and (OntId(e).prefix not in bads or OntId(e).prefix in ('BIRNLEX', 'NIFEXT', 'NLX')))
 
