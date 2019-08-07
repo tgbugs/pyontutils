@@ -1167,7 +1167,7 @@ def make_devel():
     _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
     g.parse(_pi.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT', 'NIFRAW',
+    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT', 'NIFRAW', 'NLXCELL', 'NLXNEURNT',
             'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),

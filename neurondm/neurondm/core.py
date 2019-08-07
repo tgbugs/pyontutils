@@ -325,7 +325,7 @@ class OntTerm(bOntTerm):
     @property
     def triples_simple(self):
         skips = 'pheno:parvalbumin',
-        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
+        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT', 'NLXCELL', 'NLXNEURNT',
                 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
         s = self.URIRef
         if self.type is None:
