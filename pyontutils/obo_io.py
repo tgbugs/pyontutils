@@ -177,7 +177,7 @@ class OboFile:
             self.Typedefs = typedefs
             self.Instances = instances
         elif header is None:
-            self.header = None
+            self.header = Header(obofile=self)
 
     def add_tvpair_store(self, tvpair_store):
         # TODO resolve terms
@@ -185,6 +185,10 @@ class OboFile:
         #add store to od.__dict__
         #add store to od.names
         tvpair_store.append_to_obofile(self)
+
+    def add(self, *tvpair_stores):
+        for store in tvpair_stores:
+            self.add_tvpair_store(store)
 
     def write(self, filename, type_='obo'):  #FIXME this is bugged
         """ Write file, will not overwrite files with the same name
@@ -561,7 +565,7 @@ class TVPairStore:
     def ___new__(cls, *args, **kwargs):
         return super().__new__(cls)
 
-    def __init__(self, block=None, obofile=None, tvpairs=None):
+    def __init__(self, block=None, obofile=None, tvpairs=tuple(), **pairs):
         # keep _tags out of self.__dict__ and add new tags for all instances
         if obofile is not None:
             type_od = getattr(obofile, self.__class__.__name__+'s')
@@ -584,6 +588,8 @@ class TVPairStore:
         else:
             for tvpair in tvpairs:  # FIXME, sorta need a way to get the type_od to them more naturally?
                 self.add_tvpair(tvpair)
+            for tag, value in pairs.items():
+                self.add_tvpair(TVPair(tag=tag, value=value))
             warn = False
 
         #clean up empty tags
@@ -599,7 +605,6 @@ class TVPairStore:
 
     def append_to_obofile(self, obofile):
         raise NotImplemented('Please implement me in your subclass!')
-
 
     def add_tvpair(self, tvpair):
         tag = tvpair.tag
@@ -622,6 +627,14 @@ class TVPairStore:
                 raise e
         else:
             self.__dict__[dict_tag] = tvpair
+
+    def add(self, *tvpairs, **pairs):
+        """ You can add simple pairs as kwargs or complex pairs as args. """
+        for tvpair in tvpairs:
+            self.add_tvpair(tvpair)
+
+        for tag, value in pairs.items():
+            self.add_tvpair(TVPair(tag=tag, value=value))
 
     @property
     def tvpairs(self):
@@ -731,6 +744,13 @@ class Header(TVPairStore):
 
     _datetime_fmt = '%d:%m:%Y %H:%M'  # WE USE ZULU
 
+    def __init__(self, block=None, obofile=None, tvpairs=tuple(), **pairs):
+        for tag, value in zip(self._r_tags, self._r_defaults):
+            if tag not in pairs or TVPair(tag=tag, value=value) not in tvpairs:
+                pairs[tag] = value
+
+        super().__init__(block=block, obofile=obofile, tvpairs=tvpairs, **pairs)
+
     def append_to_obofile(self, obofile):
         obofile.header = self
 
@@ -822,11 +842,11 @@ class Stanza(TVPairStore):
         cls.__new__ = super().__new__  # enforce runonce
         return instance  # we return here so we chain the runonce
 
-    def __init__(self, block=None, obofile=None, tvpairs=None):
+    def __init__(self, block=None, obofile=None, tvpairs=tuple(), **pairs):
         if block is not None and obofile is not None:
             super().__init__(block, obofile)
         else:
-            super().__init__(tvpairs=tvpairs)
+            super().__init__(tvpairs=tvpairs, **pairs)
 
         if obofile is not None:
             self.append_to_obofile(obofile)
@@ -1295,6 +1315,7 @@ class Xref(Value):  # TODO link internal ids, finalize will require cleanup, lot
 
 special_children = {sc.tag:sc for sc in (Subsetdef, Synonymtypedef, Idspace, Id_mapping, Def_, Synonym, Xref, Relationship, Is_a, Property_value)}
 
+
 def deNone(*args):
     for arg in args:
         if arg == None:
@@ -1302,7 +1323,9 @@ def deNone(*args):
         else:
             yield arg
 
+
 __all__ = [c.__name__ for c in (OboFile, TVPair, Header, Term, Typedef, Instance)]
+
 
 def main():
     args = docopt(__doc__, version='obo-io 0')
@@ -1329,6 +1352,7 @@ def main():
 
     if args['--debug']:
         embed()
+
 
 if __name__ == '__main__':
     main()

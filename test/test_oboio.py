@@ -25,3 +25,13 @@ class TestOboIo(unittest.TestCase):
                 if actual != expect]
 
         assert not bads, '\n' + '\n\n'.join(f'{e}\n{a}' for e, a in bads)
+
+    def test_construct_simple_file(self):
+        of = oio.OboFile()
+        ids_names = [['123', 'test'],
+                     ['234', 'yee'],
+                     ['345', 'haw'],
+                     ['456', 'oio']]
+        terms = [oio.Term(id=i, name=n) for i, n in ids_names]
+        of.add(*terms)
+        str(of)
