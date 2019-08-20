@@ -4,11 +4,64 @@ import rdflib
 from rdflib import *
 from ilxutils.tools import open_pickle, create_pickle
 from ilxutils.interlex_sql import IlxSql
-# from ilxutils.RdflibWrapper import RdflibWrapper, RDF, OWL, RDFS, BNode, Literal, URIRef, Namespace, ilxtr, DEFINITION, NIFRID
 import pickle
 import os
-# graph = RdflibWrapper()
-graph = Graph()
+from typing import *
+
+
+class rdfGraph(Graph):
+    ''' Adds needed functions to rdflib.Graph '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Need bnodes to be saved to keep them as an entity
+        self.axiom_triple_2_bnode = {} # (triple): BNode
+
+    def add_annotation(self,
+                       subj: URIRef,
+                       pred: URIRef,
+                       obj: Union[Literal, URIRef],
+                       a_p: URIRef,
+                       a_o: Union[Literal, URIRef],) -> BNode:
+        """ Adds annotation to rdflib graph.
+
+            The annotation axiom will filled in if this is a new annotation for the triple.
+
+            Args:
+                subj: Entity subject to be annotated
+                pref: Entities Predicate Anchor to be annotated
+                obj: Entities Object Anchor to be annotated
+                a_p: Annotation predicate
+                a_o: Annotation object
+
+            Returns:
+                A BNode which is an address to the location in the RDF graph that is
+                storing the annotation information.
+
+            Axiom Form Example:
+                [ a owl:Axiom ;
+                    owl:annotatedSource ILX:id  ;
+                    owl:annotatedProperty ilxtr:hasWikiDataId ;
+                    owl:annotatedTarget wdt:something ;
+                    rdfs:label "ILX label" ;
+                    skos:altLabel "wikidata label" ] .
+        """
+        bnode = self.axiom_triple_2_bnode.get( (subj, pred, obj) )
+        # If axiom is not created yet, make one
+        if not bnode:
+            a_s = BNode()
+            self.axiom_triple_2_bnode[(subj, pred, obj)]: BNode = a_s
+            self.add( (a_s, RDF.type, OWL.Axiom) )
+            self.add( (a_s, OWL.annotatedSource, subj) )
+            self.add( (a_s, OWL.annotatedProperty, pred) )
+            self.add( (a_s, OWL.annotatedTarget, obj) )
+        # Append to existing axiom
+        else:
+            a_s = bnode
+        self.add( (a_s, a_p, a_o) )
+        return a_s # In case you have more triples to add
+
+graph = rdfGraph()
 
 prefixes = {
     'hasRole': 'http://purl.obolibrary.org/obo/RO_0000087',
@@ -61,6 +114,7 @@ prefixes = {
     'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
     'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
     'prov': 'http://www.w3.org/ns/prov#',
+    'NIFRID': 'http://uri.neuinfo.org/nif/nifstd/readable/',
 }
 
 for prefix, ns in prefixes.items():
@@ -71,6 +125,7 @@ in_sanity_check = {}
 
 DEFINITION = Namespace('http://purl.obolibrary.org/obo/IAO_0000115')
 ILXTR = Namespace('http://uri.interlex.org/tgbugs/uris/readable/')
+NIFRID = Namespace('http://uri.neuinfo.org/nif/nifstd/readable/')
 
 terms = open_pickle(p.home()/'Dropbox/interlex_backups/ilx_db_terms_backup.pickle')
 for row in terms.itertuples():
@@ -81,15 +136,15 @@ for row in terms.itertuples():
     if row.type in ['term', 'cde', 'fde', 'pde']:
         graph.add((ilx_uri, RDF.type, OWL.Class))
     elif row.type == 'annotation':
-        pass # g.add(ilx_uri, RDF.type, OWL.AnnotationProperty)
+        graph.add((ilx_uri, RDF.type, OWL.AnnotationProperty))
     elif row.type == 'relationship':
-        pass # g.add(ilx_uri, RDF.type, OWL.ObjectProperty)
+        graph.add((ilx_uri, RDF.type, OWL.ObjectProperty))
     else:
         graph.add((ilx_uri, RDF.type, OWL.Lost))
         print('We have an no type entity!', row.ilx)
 
     graph.add((ilx_uri, RDFS.label, Literal(row.label)))
-    # graph.add((ilx_uri, URIRef(DEFINITION), Literal(row.definition)))
+    graph.add((ilx_uri, URIRef(DEFINITION), Literal(row.definition)))
 del terms
 print('=== Class-AnnotationProperty-ObjectProperty triples complete ===')
 
@@ -101,67 +156,75 @@ for row in ex.itertuples():
     ilx_uri = URIRef(ilx_uri)
     if not in_sanity_check.get(ilx_uri):
         print('ex', ilx_uri)
-    graph.add((ilx_uri, ILXTR.existingId, URIRef(row.iri)))
+    graph.add( (ilx_uri, ILXTR.existingId, URIRef(row.iri)) )
     ilx2ex[row.ilx].append(row.iri)
 del ex
 print('=== existingId triples complete ===')
 
 
-# synonyms = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_synonyms_backup.pickle')
-# for row in synonyms.itertuples():
-#     ilx_uri = '/'.join([ilx_uri_base, row.ilx])
-#     if not in_sanity_check.get(ilx_uri):
-#         print('synonyms', ilx_uri)
-#     g.add(ilx_uri, NIFRID.synonym, row.literal)
-# del synonyms
-# print('=== synonym triples complete ===')
-#
-#
-# superclasses = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_superclasses_backup.pickle')
-# for row in superclasses.itertuples():
-#     ilx_uri = '/'.join([ilx_uri_base, row.term_ilx])
-#     if not in_sanity_check.get(ilx_uri):
-#         print('superclasses', ilx_uri)
-#     for existing_id in ilx2ex[row.term_ilx]:
-#         g.add(ilx_uri, RDFS.subClassOf, existing_id)
-# del superclasses
-# print('=== superclass triples complete ===')
+synonyms = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_synonyms_backup.pickle')
+for row in synonyms.itertuples():
+    ilx_uri = '/'.join([ilx_uri_base, row.ilx])
+    ilx_uri = URIRef(ilx_uri)
+    if not in_sanity_check.get(ilx_uri):
+        print('synonyms', ilx_uri)
+    graph.add( (ilx_uri, NIFRID.synonym, Literal(row.literal)) )
+del synonyms
+print('=== synonym triples complete ===')
+
+
+superclasses = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_superclasses_backup.pickle')
+for row in superclasses.itertuples():
+    ilx_uri = '/'.join([ilx_uri_base, row.term_ilx])
+    ilx_uri = URIRef(ilx_uri)
+    if not in_sanity_check.get(ilx_uri):
+        print('superclasses', ilx_uri)
+    for existing_id in ilx2ex[row.term_ilx]:
+        id_ = URIRef(f'http://uri.interlex.org/base/{existing_id}')
+        graph.add( (ilx_uri, RDFS.subClassOf, id_) )
+del superclasses
+print('=== superclass triples complete ===')
 
 ### Data is both huge and not useful
-# annos = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_annos_backup.pickle')
-# for row in annos.itertuples():
-#     ilx_uri = '/'.join([ilx_uri_base, row.term_ilx])
-#     annotation_ilx_uri = '/'.join([ilx_uri_base, row.annotation_ilx])
-#     if not in_sanity_check.get(ilx_uri):
-#         print('annotations', ilx_uri)
-#     prefix = ''.join([w.capitalize() for w in row.annotation_label.split()])
-#     pred = prefix + ':'
-#     g.add_namespace(prefix, annotation_ilx_uri)
-#     g.add_annotation(ilx_uri, RDF.type, OWL.Class, pred, row.value)
-#     g.add(ilx_uri, pred, row.value)
-# del annos
-# print('=== annotation axiom triples complete ===')
+annos = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_annos_backup.pickle')
+for row in annos.itertuples():
+    ilx_uri = '/'.join([ilx_uri_base, row.term_ilx])
+    ilx_uri = URIRef(ilx_uri)
+    annotation_ilx_uri = '/'.join([ilx_uri_base, row.annotation_type_ilx])
+    if not in_sanity_check.get(ilx_uri):
+        print('annotations', ilx_uri)
+    prefix = ''.join([w.capitalize() for w in row.annotation_type_label.split()])
+    graph.bind(prefix, annotation_ilx_uri)
+    annotation_ilx_uri = URIRef(annotation_ilx_uri)
+    # TODO: check if row.value is a Literal or a URIRef
+    graph.add_annotation(ilx_uri, RDF.type, OWL.Class, annotation_ilx_uri, Literal(row.value))
+    # AnnotationProperty was defined in Cllas triples
+    graph.add( (ilx_uri, annotation_ilx_uri, Literal(row.value)) )
+del annos
+print('=== annotation axiom triples complete ===')
 
-### Data not useful
-# relationships = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle')
-# for row in relationships.itertuples():
-#
-#     prefix = ''.join([w.capitalize() for w in row.relationship_label.split()])
-#     pred = prefix + ':'
-#     relationship_ilx_uri = '/'.join([ilx_uri_base, row.relationship_ilx])
-#     g.add_namespace(prefix, relationship_ilx_uri)
-#
-#     term1_ilx_uri = '/'.join([ilx_uri_base, row.term1_ilx])
-#     if not in_sanity_check.get(term1_ilx_uri): print('relationships', term1_ilx_uri)
-#
-#     term2_ilx_uri = '/'.join([ilx_uri_base, row.term2_ilx])
-#     if not in_sanity_check.get(term2_ilx_uri): print('relationships', term2_ilx_uri)
-#
-#     g.add(term1_ilx_uri, pred, term2_ilx_uri)
-#     g.add(term2_ilx_uri, pred, term1_ilx_uri)
-#
-#     # TODO: create axiom for relationship?
-# print('=== relationship triples complete ===')
+relationships = open_pickle(p.home() / 'Dropbox/interlex_backups/ilx_db_relationships_backup.pickle')
+for row in relationships.itertuples():
+
+    prefix = ''.join([w.capitalize() for w in row.relationship_label.split()])
+    relationship_ilx_uri = '/'.join([ilx_uri_base, row.relationship_ilx])
+
+    graph.bind(prefix, relationship_ilx_uri)
+
+    relationship_ilx_uri = URIRef(relationship_ilx_uri)
+
+    term1_ilx_uri = '/'.join([ilx_uri_base, row.term1_ilx])
+    term1_ilx_uri = URIRef(term1_ilx_uri)
+    if not in_sanity_check.get(term1_ilx_uri): print('relationships', term1_ilx_uri)
+
+    term2_ilx_uri = '/'.join([ilx_uri_base, row.term2_ilx])
+    term2_ilx_uri = URIRef(term2_ilx_uri)
+    if not in_sanity_check.get(term2_ilx_uri): print('relationships', term2_ilx_uri)
+
+    graph.add( (term1_ilx_uri, relationship_ilx_uri, term2_ilx_uri) )
+    graph.add( (term2_ilx_uri, relationship_ilx_uri, term1_ilx_uri) )
+print('=== relationship triples complete ===')
 
 graph.serialize(destination=str(p.home()/'Dropbox/interlex_backups/InterLex.ttl'), format='turtle')
-# graph.picklize(p.home()/'Dropbox/interlex_backups/InterLex.Graph.pickle')
+graph.serialize(destination=str(p.home()/'Dropbox/interlex_backups/SciGraph/SciGraph-core/src/test/resources/ontologies/'), format='turtle')
+create_pickle(graph, p.home()/'Dropbox/interlex_backups/InterLex.graph.pickle')
