@@ -443,71 +443,21 @@ mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
           for r in OntTerm.query(label=l.toPython()) if
           not r.curie.startswith('ilxtr:')]
 
-def ncbigenemapping():
-    from pyontutils.config import devconfig
-    from pathlib import Path
-    import requests
-    from bs4 import BeautifulSoup
-    from lxml import etree
+
+def ncbigene():
+    from nifstd_tools.utils import ncbigenemapping
+
     asdf = {n:[qr.OntTerm.as_phenotype()
-               for qr in OntTerm.query(term=n, prefix='NCBIGene')]
+            for qr in OntTerm.query(term=n, prefix='NCBIGene')]
             for n, p in Genes.items()
             if not isinstance(p, LogicalPhenotype) and OntId(p.p).prefix != 'NCBIGene'}           
     may_need_ncbigene_added = [n for n, p in asdf.items() if not p]
-    #urlbase = 'https://www.ncbi.nlm.nih.gov/gene/?term=Mus+musculus+'
-    urlbase = ('https://www.ncbi.nlm.nih.gov/gene?term='
-               '({gene_name}[Gene%20Name])%20AND%20{taxon_suffix}[Taxonomy%20ID]&'
-               'report=xml')
-    urls = [urlbase.format(gene_name=n, taxon_suffix=10090) for n in may_need_ncbigene_added]
-    done2 = {}
-    for u in urls:
-        if u not in done2:
-            print(u)
-            done2[u] = requests.get(u)
 
-    base = Path(devconfig.resources, 'genesearch')
-    if not base.exists():
-        base.mkdir()
+    mapping, to_add = ncbigenemapping(may_need_ncbigene_added)
 
-    for resp in done2.values():
-        fn = OntId(resp.url).quoted
-        with open(base / fn, 'wb') as f:
-            f.write(resp.content)
-
-    so_much_soup = [BeautifulSoup(resp.content, 'lxml') for resp in done2.values()]
-
-    trees = []
-    for i, soup in enumerate(so_much_soup):
-        pre = soup.find_all('pre')
-        if pre:
-            for p in pre[0].text.split('\n\n'):
-                if p:
-                    tree = etree.fromstring(p)
-                    trees.append(tree)
-        else:
-            print('WAT', urls[i])
-
-    dimension = 'ilxtr:hasExpressionPhenotype'
-    errors = []
-    to_add = []
-    for tree in trees:
-        taxon = tree.xpath('//Org-ref//Object-id_id/text()')[0]
-        geneid = tree.xpath('//Gene-track_geneid/text()')[0]
-        genename = tree.xpath('//Gene-ref_locus/text()')[0]
-        if genename in may_need_ncbigene_added and taxon == '10090':
-            print(f'{genename} = Phenotype(\'NCBIGene:{geneid}\', {dimension!r}, label={genename!r}, override=True)')
-            to_add.append(geneid)
-        else:
-            errors.append((geneid, genename, taxon))
-
-    print(errors)
-    _ = [print('NCBIGene:' + ta) for ta in to_add]
-
-    #wat.find_all('div', **{'class':'rprt-header'})
-    #wat.find_all('div', **{'class':'ncbi-docsum'})
-
-    replace = [print(n, '=', repr(p[0])) for n, p in asdf.items()
-               if p and p[0].pLabel.toPython() == n]
+    if asdf is not None:
+        replace = [print(n, '=', repr(p[0])) for n, p in asdf.items()
+                if p and p[0].pLabel.toPython() == n]
 
     embed()
 
