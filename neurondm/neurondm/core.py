@@ -1644,7 +1644,16 @@ class LogicalPhenotype(graphBase):
             if self in inj:
                 return inj[self]
 
-        spes = sorted(self.pes, key=self._lkey('pShortName'))
+        snk = self._lkey('pShortName')
+        lnk = self._lkey('pLongName')
+        def dkey(value):
+            rank, string = snk(value)
+            if not string:
+                rank, string = lnk(value)
+
+            return rank, string
+
+        spes = sorted(self.pes, key=dkey)
         label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName
                           for pe in spes])
         op = OntId(self.op).suffix
