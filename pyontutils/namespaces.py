@@ -149,6 +149,7 @@ def _loadPrefixes():
         'locatedIn':'http://purl.obolibrary.org/obo/RO_0001025',
         'locationOf':'http://purl.obolibrary.org/obo/RO_0001015',
         'toward':'http://purl.obolibrary.org/obo/RO_0002503',
+        'overlaps':'http://purl.obolibrary.org/obo/RO_0002433',
 
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'hasCurStatus':'http://purl.obolibrary.org/obo/IAO_0000114',
