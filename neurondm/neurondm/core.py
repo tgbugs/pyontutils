@@ -716,7 +716,7 @@ class Config:
             def key(cid):
                 inrid = cid in ranked_ids
                 return not inrid, (ranked_ids.index(cid) if inrid else 0)
-                    
+
             return sorted(classes, key=key)[:1]
 
         # bug is that I am not wiping graphBase.knownClasses and swapping it for each config

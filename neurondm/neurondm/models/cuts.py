@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from IPython import embed
 import csv
 from pprint import pprint
@@ -22,7 +22,6 @@ from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
 # 3. pv superclass for query example
 
 class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_init__ is a __ method
-    __firsts = OntTerm._OntTerm__firsts
     def __repr__(self):
         if self.label:
             return f'Phenotype({self.curie}, ilxtr.hasSomaLocatedIn)  # {self.label}'

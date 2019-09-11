@@ -336,7 +336,7 @@ def main(args={o.name:o.value for o in parse_defaults(__doc__)}, run=True):
         act.build_transgenic_lines()
         act.build_neurons()
 
-    return act.config
+    return act.config,
 
 
 if __name__ == '__main__':
