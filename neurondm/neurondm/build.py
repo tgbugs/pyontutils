@@ -1191,17 +1191,31 @@ def make_devel():
 
     terms |= all_supers
 
-    done = set()
-    def partOf(term):
-        if term in done:
-            return term
+    terms |= {OntTermOntologyOnly('UBERON:0002301'),  # cortical layer
+              OntTermOntologyOnly('UBERON:0008933'),  # S1
+              OntTermOntologyOnly('SAO:1813327414'),
+              OntTermOntologyOnly('NCBITaxon:9606'),
+              OntTermOntologyOnly('NCBITaxon:9685'),
+              OntTermOntologyOnly('SO:0000704'),
+    }
 
-        done.add(term)
-        if term('partOf:', as_term=True):
-            for superpart in term.predicates['partOf:']:
-                if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
-                    yield superpart
-                    yield from partOf(superpart)
+    def makeTraverse(*predicates):
+        done = set()
+        def traverse(term):
+            if term in done:
+                return term
+
+            done.add(term)
+            for predicate in predicates:
+                if term(predicate, as_term=True):
+                    for superpart in term.predicates[predicate]:
+                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
+                            yield superpart
+                            yield from traverse(superpart)
+
+        return traverse
+
+    partOf = makeTraverse('partOf:', 'RO:0002433', 'rdfs:subClassOf')  # 2433 CTMO
 
     all_sparts = set(o for t in terms  # FIXME this is broken ...
                      for o in partOf(t)
@@ -1209,12 +1223,6 @@ def make_devel():
 
     terms |= all_sparts
 
-    terms |= {OntTermOntologyOnly('UBERON:0002301'),  # cortical layer
-              OntTermOntologyOnly('SAO:1813327414'),
-              OntTermOntologyOnly('NCBITaxon:9606'),
-              OntTermOntologyOnly('NCBITaxon:9685'),
-              OntTermOntologyOnly('SO:0000704'),
-    }
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
                                      #asdf in (t, *t('rdfs:subClassOf', depth=1, as_term=True))
@@ -1297,12 +1305,20 @@ def make_devel():
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
             yield from helper_triples()
+            yield OntId('overlaps:').u, rdfs.label, rdflib.Literal('overlaps')
+
             yield OntId('BFO:0000050').u, a, owl.ObjectProperty
             yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
             yield OntId('BFO:0000050').u, owl.inverseOf, OntId('BFO:0000051').u
+            yield OntId('BFO:0000050').u, rdfs.subPropertyOf, OntId('overlaps:').u
+
             yield OntId('BFO:0000051').u, a, owl.ObjectProperty
             yield OntId('BFO:0000051').u, a, owl.TransitiveProperty
             yield OntId('BFO:0000051').u, rdfs.label, rdflib.Literal('has part')
+            yield OntId('BFO:0000051').u, rdfs.subPropertyOf, OntId('overlaps:').u
+
+            yield OntId('RO:0002433').u, rdfs.label, rdflib.Literal('contributes to morphology of')
+            yield OntId('RO:0002433').u, rdfs.subPropertyOf, OntId('overlaps:').u
 
             done = []
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')

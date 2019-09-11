@@ -355,7 +355,7 @@ class OntTerm(bOntTerm):
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
 
-        predicates = 'partOf:', #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
+        predicates = 'partOf:', 'RO:0002433' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
         for predicate in predicates:
             if self(predicate, as_term=True):
