@@ -676,9 +676,13 @@ class Config:
         except StopIteration:
             pass
 
-        def getClassType(s):
-            graph = self.load_graph
+        def getClassType(s, graph):
             Class = infixowl.Class(s, graph=graph)
+
+            for cls in Class.subClassOf:
+                if isinstance(cls.identifier, rdflib.URIRef):
+                    yield cls.identifier
+
             for ec in Class.equivalentClass:
                 if isinstance(ec.identifier, rdflib.BNode):
                     bc = infixowl.CastClass(ec, graph=graph)
@@ -686,6 +690,34 @@ class Config:
                         for id_ in bc._rdfList:
                             if isinstance(id_, rdflib.URIRef):
                                 yield id_  # its one of our types
+
+        class SubClassCompare:
+            def __init__(self, cls):
+                self.cls = cls
+
+            def __lt__(self, other):
+                if self.cls is None:  # i.e. None is the least derived class
+                    return False
+                elif other.cls is None:
+                    return True
+                else:
+                    return issubclass(self.cls, other.cls)
+
+            def __gt__(self, other):
+                return other.__lt__(self)
+
+            def __eq__(self, other):
+                return self.cls is other.cls
+
+        ranked = sorted(graphBase.python_subclasses, key=SubClassCompare)
+        ranked_ids = [r.owlClass for r in ranked]
+
+        def mostDerived(classes):
+            def key(cid):
+                inrid = cid in ranked_ids
+                return not inrid, (ranked_ids.index(cid) if inrid else 0)
+                    
+            return sorted(classes, key=key)[:1]
 
         # bug is that I am not wiping graphBase.knownClasses and swapping it for each config
         # OR the bug is that self.load_graph is persisting, either way the call to type()
@@ -707,7 +739,7 @@ class Config:
                     ebms = []
 
                 class_types = [(type, s) for s in self.load_graph[:rdf.type:owl.Class]
-                               for type in getClassType(s) if type]
+                               for type in mostDerived(getClassType(s, self.load_graph)) if type]
                 sc = None
                 for sc in chain(graphBase.python_subclasses, ebms):
                     sc.owlClass
@@ -1105,7 +1137,8 @@ class graphBase:
 
         all_types = set(type(n) for n in cls.neurons())
         _subs = [inspect.getsource(c) for c in subclasses(Neuron)
-                 if c in all_types and Path(inspect.getfile(c)).exists()]
+                 if c in all_types and Path(inspect.getfile(c)).exists()
+                 and c.__name__ not in __all__]
         subs = '\n' + '\n\n'.join(_subs) + '\n\n' if _subs else ''
         #log.debug(str(all_types))
         #log.debug(f'python header for {cls.filename_python()}:\n{subs}')
@@ -1486,6 +1519,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     def _graphify(self, graph=None):
         if graph is None:
             graph = self.out_graph
+
         return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
 
     def __lt__(self, other):
@@ -1696,6 +1730,7 @@ class LogicalPhenotype(graphBase):
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
             members.append(pe._graphify(graph=graph))
+
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
 
     def __lt__(self, other):
@@ -2279,6 +2314,12 @@ class Neuron(NeuronBase):
             #raise TypeError('TEMP id, no need to bag')
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         embeddedKnownClasses = set()
+
+        # support CUT pattern  # FIXME maybe reimplement this method on NeuronCUT?
+        for c in self.Class.subClassOf:
+            if c.identifier in self.knownClasses:
+                embeddedKnownClasses.add(c.identifier)
+
         for c in self.Class.equivalentClass:
             if isinstance(c.identifier, rdflib.URIRef):
                 # FIXME this is entailment stuff
@@ -2379,7 +2420,7 @@ class Neuron(NeuronBase):
                     elif id_ == self.owlClass:
                         pes.append(id_)
                     elif pr is None:
-                        log.warning('dangling reference', id_)
+                        log.warning(f'dangling reference {id_}')
                     else:
                         log.critical(str(pr))
                         raise BaseException('wat')
@@ -2411,11 +2452,7 @@ class Neuron(NeuronBase):
             pes.append(type_(p, e))
         return LogicalPhenotype(op, *pes)
 
-    def _graphify(self, *args, graph=None): #  defined
-        """ Lift phenotypeEdges to Restrictions """
-        if graph is None:
-            graph = self.out_graph
-
+    def _graphify_labels(self, graph):
         ################## LABELS ARE DEFINED HERE ##################
         gl = self.genLabel
         ll = self.localLabel
@@ -2427,7 +2464,7 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
-        members = [self.expand(self.owlClass)]
+    def _graphify_pes(self, graph, members):
         for pe in self.pes:
             target = pe._graphify(graph=graph)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
@@ -2437,6 +2474,7 @@ class Neuron(NeuronBase):
                 members.append(djc)
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
+
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
         #existing = list(self.Class.equivalentClass)
         #if existing or str(pe.pLabel) == 'Htr3a':
@@ -2445,9 +2483,33 @@ class Neuron(NeuronBase):
         self.Class.equivalentClass = ec
         return self.Class
 
+    def _graphify(self, *args, graph=None): #  defined
+        """ Lift phenotypeEdges to Restrictions """
+        if graph is None:
+            graph = self.out_graph
+
+        self._graphify_labels(graph)
+        members = [self.expand(self.owlClass)]
+        return self._graphify_pes(graph, members)
+
 
 class NeuronCUT(Neuron):
+    """ Phenotypes listed as part of a CUT are all necessary. """
     owlClass = _CUT_CLASS
+
+    #def _unpackPheno(self, c, type_=Phenotype):
+        #return super()._unpackPheno(c, type_=type_)
+
+    def _graphify(self, *args, graph=None): #  defined
+        """ Lift phenotypeEdges to Restrictions """
+        if graph is None:
+            graph = self.out_graph
+
+        self._graphify_labels(graph)
+        members = [Neuron.owlClass]
+        Class = self._graphify_pes(graph, members)
+        Class.subClassOf = [self.owlClass]
+        return Class
 
 
 class NeuronEBM(Neuron):
