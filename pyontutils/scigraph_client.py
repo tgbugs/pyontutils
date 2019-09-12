@@ -1485,13 +1485,16 @@ class Graph(GraphBase):
         s, o = 'sub', 'obj'
         if inverse:
             s, o = o, s
-        for edge in edges:
+
+        edges = list(edges)
+        for edge in tuple(edges):
             if predicate is not None and edge['pred'] != predicate:
                 print('scoop!')
                 continue
 
             if edge[s] == start:
                 yield edge
+                edges.remove(edge)
                 yield from Graph.ordered(edge[o], edges, predicate=predicate)
 
 
