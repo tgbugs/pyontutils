@@ -291,7 +291,9 @@ def make_phenotypes():
         if row[5]:
             graph.add_trip(id_, 'rdfs:comment', row[5])
         if row[6]:
-            graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + row[6])
+            supers = row[6].split(',')
+            for sup in supers:
+                graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + sup)
         if row[7]:
             graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilxtr:' + row[7])
         if row[8]:

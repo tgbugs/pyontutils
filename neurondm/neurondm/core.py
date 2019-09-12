@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 import os
 import sys
 import atexit
@@ -201,6 +201,9 @@ class LabelMaker:
     def hasLayerLocationPhenotype(self, phenotypes):  # TODO soma naming...
         yield from self._default(phenotypes)
     @od
+    def hasSomaLocatedInLayer(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
     def hasDendriteLocatedIn(self, phenotypes):
         yield from self._with_thing_located_in('with-dendrite{}-in', phenotypes)
 
@@ -305,7 +308,25 @@ class LabelMaker:
 # helper classes
 
 class OntTerm(bOntTerm):
-    def as_phenotype(self, predicate=None):
+    def traverse(self, *predicates):
+        """ return the graph closure when traversing multiple edge types """
+        done = set()
+        def inner(term):
+            if term in done:
+                return term
+
+            done.add(term)
+            for predicate in predicates:
+                if term(predicate, as_term=True):
+                    for obj in term.predicates[predicate]:
+                        if obj.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):
+                            # avoid continuant and occurent form a cycle >_<
+                            yield obj
+                            yield from inner(obj)  # FIXME just call traverse again ...
+
+        yield from inner(self)
+
+    def asPhenotype(self, predicate=None):
         if predicate is None and self.prefix == 'UBERON':  # FIXME layers
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
@@ -824,7 +845,9 @@ class graphBase:
         self._namespaces = {p:rdflib.Namespace(ns) for p, ns in self.in_graph.namespaces()}
 
     def expand(self, putativeURI):
-        if isinstance(putativeURI, rdflib.URIRef):
+        if isinstance(putativeURI, OntId):
+            return putativeURI.u
+        elif isinstance(putativeURI, rdflib.URIRef):
             return putativeURI
 
         if type(putativeURI) == infixowl.Class:
@@ -1250,36 +1273,6 @@ class graphBase:
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
     local_names = {}
-    _local_names = {
-        'NCBITaxon:10116':'Rat',
-        'CHEBI:16865':'GABA',
-        'PR:000004967':'CB',
-        'PR:000004968':'CR',
-        'PR:000011387':'NPY',
-        'PR:000015665':'SOM',
-        #'NIFMOL:nifext_6':'PV',
-        'PR:000013502':'PV',
-        'PR:000017299':'VIP',
-        'PR:000005110':'CCK',
-        'ilxtr:PetillaSustainedAccomodatingPhenotype':'AC',
-        'ilxtr:PetillaSustainedNonAccomodatingPhenotype':'NAC',
-        'ilxtr:PetillaSustainedStutteringPhenotype':'STUT',
-        'ilxtr:PetillaSustainedIrregularPhenotype':'IR',
-        'ilxtr:PetillaInitialBurstSpikingPhenotype':'b',
-        'ilxtr:PetillaInitialClassicalSpikingPhenotype':'c',
-        'ilxtr:PetillaInitialDelayedSpikingPhenotype':'d',
-        'UBERON:0005390':'L1',
-        'UBERON:0005391':'L2',
-        'UBERON:0005392':'L3',
-        'UBERON:0005393':'L4',
-        'UBERON:0005394':'L5',
-        'UBERON:0005395':'L6',
-        'UBERON:0003881':'CA1',
-        'UBERON:0003882':'CA2',
-        'UBERON:0003883':'CA3',
-        'UBERON:0001950':'Neocortex',
-        'UBERON:0008933':'S1',
-    }
     def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
         # FIXME allow ObjectProperty or predicate? keyword?
         # label blackholes
@@ -1328,7 +1321,14 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                             log.info(f'Unknown phenotype {subject}')
                             #print(tc.red('WARNING:'), 'Unknown phenotype', subject)
                         else:
-                            self.in_graph.add((subject, rdfs.label, rdflib.Literal(t.label)))
+                            # because in_graph is queried first by OntTerm.query.services
+                            # we cannot add this triple, otherwise it will mask the other
+                            # services, which we do not want, it is also hard to avoid this
+                            # at some point query may be able to merge information from
+                            # multiple sources, or at least merge remote data with local,
+                            # taking local as authoritative or something like that
+                            #self.in_graph.add((subject, rdfs.label, rdflib.Literal(t.label)))
+                            pass
                     except ConnectionError:
                         #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                             #self._sgv._basePath)
@@ -1903,6 +1903,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             ilxtr.hasLocationPhenotype,  # FIXME
             ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
             ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
+            ilxtr.hasSomaLocatedInLayer,  # TODO soma naming...
             ilxtr.hasDendriteLocatedIn,
             ilxtr.hasAxonLocatedIn,
             ilxtr.hasPresynapticTerminalsIn,
@@ -2295,12 +2296,31 @@ class Neuron(NeuronBase):
             self._predicates.hasInstanceInSpecies,
             self._predicates.hasSomaLocatedIn,
             self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+            self._predicates.hasSomaLocatedInLayer,
             self._predicates.hasMorphologicalPhenotype,
         ]
 
         for disjoint in disjoints:
             phenos = [pe for pe in self.pes if pe.e == disjoint and type(pe) == Phenotype]
             if len(phenos) > 1:
+                raw_terms = [OntTerm(p.p) for p in phenos]
+                terms = set(t.asPreferred() for t in raw_terms)
+                if 'Loc' in disjoint:  # FIXME ... subPropertyOf hasLocationPhenotype
+                    po = [(t('partOf:', depth=10, as_term=True, include_supers=True),
+                           [t2 for t2 in terms if t2 != t]) for t in terms] + [
+                               (t('ilx.partOf:', depth=10, as_term=True, include_supers=True),
+                                [t2 for t2 in terms if t2 != t]) for t in terms]
+                    accounted_for = 0
+                    all_supers = []
+                    for supers, others in po:
+                        other_supers = [other for other in others if other in supers]
+                        accounted_for += len(other_supers)
+                        all_supers.extend(other_supers)
+
+                    if accounted_for >= len(phenos) - 1:
+                        continue
+
+                breakpoint()
                 raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
 
         # species matched identifiers TODO
@@ -2748,6 +2768,7 @@ class LocalNameManager(metaclass=injective):
         'ilxtr:hasTaxonRank',
         'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
         'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
+        'ilxtr:hasSomaLocatedInLayer',
         'ilxtr:hasDendriteLocatedIn',
         'ilxtr:hasAxonLocatedIn',
         ilxtr.hasPresynapticTerminalsIn,
@@ -2868,12 +2889,12 @@ objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
 Config()  # explicitly load the core graph TODO need a lighter weight way to do this
 OntologyGlobalConventions = _ogc = injective_dict(
-    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasLayerLocationPhenotype'),
-    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasLayerLocationPhenotype'),
-    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasLayerLocationPhenotype'),
-    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype'),
-    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype'),
-    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype'),
+    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer'),
+    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer'),
+    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasSomaLocatedInLayer'),
+    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasSomaLocatedInLayer'),
+    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasSomaLocatedInLayer'),
+    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasSomaLocatedInLayer'),
 
     CR = Phenotype('PR:000004968', 'ilxtr:hasMolecularPhenotype'),
     CB = Phenotype('PR:000004967', 'ilxtr:hasMolecularPhenotype'),

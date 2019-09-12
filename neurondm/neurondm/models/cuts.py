@@ -126,34 +126,34 @@ def make_contains_rules():
         'Globus pallidus internal segment': Phenotype('UBERON:0002477', ilxtr.hasSomaLocatedIn,  label='medial globus pallidus'),
         'Septal complex lateral': Phenotype('UBERON:0007628', ilxtr.hasSomaLocatedIn, label='lateral septal complex'),  # FIXME missing synonym in uberon
         'Septal complex medial': Phenotype('UBERON:0007629', ilxtr.hasSomaLocatedIn, label='medial septal complex'),  # FIXME missing synonym in uberon
-        'Premammillary nucleus dorsal': OntTerm('UBERON:0007767', label='dorsal premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-        'Premammillary nucleus ventral': OntTerm('UBERON:0007768', label='ventral premammillary nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-        'Raphe nucleus dorsal': OntTerm('UBERON:0002043', label='dorsal raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-        'Raphe nucleus medial': OntTerm('UBERON:0003004', label='median raphe nucleus').as_phenotype(),  # FIXME missing synonym in uberon
-        'Periventricular hypothalamic zone': OntTerm('UBERON:0002271', label='periventricular zone of hypothalamus').as_phenotype(),  # FIXME missing synonym in uberon
-        'Lateral lemniscus nuclear complex': OntTerm('UBERON:0006840', label='nucleus of lateral lemniscus').as_phenotype(),  # FIXME wow this was hard to find :/ may synonyms needed
+        'Premammillary nucleus dorsal': OntTerm('UBERON:0007767', label='dorsal premammillary nucleus').asPhenotype(),  # FIXME missing synonym in uberon
+        'Premammillary nucleus ventral': OntTerm('UBERON:0007768', label='ventral premammillary nucleus').asPhenotype(),  # FIXME missing synonym in uberon
+        'Raphe nucleus dorsal': OntTerm('UBERON:0002043', label='dorsal raphe nucleus').asPhenotype(),  # FIXME missing synonym in uberon
+        'Raphe nucleus medial': OntTerm('UBERON:0003004', label='median raphe nucleus').asPhenotype(),  # FIXME missing synonym in uberon
+        'Periventricular hypothalamic zone': OntTerm('UBERON:0002271', label='periventricular zone of hypothalamus').asPhenotype(),  # FIXME missing synonym in uberon
+        'Lateral lemniscus nuclear complex': OntTerm('UBERON:0006840', label='nucleus of lateral lemniscus').asPhenotype(),  # FIXME wow this was hard to find :/ may synonyms needed
         # 'nuclear complex of lateral lemniscus'
         # 'lateral lemniscus nucleus'
-        'Medial hypothalamic zone': OntTerm('UBERON:0002272', label='medial zone of hypothalamus').as_phenotype(),  # SciGraph default search is really bad >_<
-        'Incertus nucleus': OntTerm('UBERON:0035973', label='nucleus incertus').as_phenotype(),  # WOW ... that was bad
-        'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').as_phenotype(),  # spelling ...
-        'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').as_phenotype(),  # had to cook up my search function to find this
-        'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').as_phenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
-        'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').as_phenotype(),  # oof
-        'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').as_phenotype(),  # conclusion: scigraph cannot handle reordering
-        'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').as_phenotype(),
-        'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').as_phenotype(),  # scigraph can't unpluralize nucleus?
-        'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').as_phenotype(),
-        'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').as_phenotype(),
-        'Bed nucleus of the stria terminalis': OntTerm('UBERON:0001880', label='bed nucleus of stria terminalis').as_phenotype(),
-        'Hypothalamus paraventricular nucleus': OntTerm('UBERON:0001930', label='paraventricular nucleus of hypothalamus').as_phenotype(),
-        'Hypothalamus tuberomammillary nucleus': OntTerm('UBERON:0001936', label='tuberomammillary nucleus').as_phenotype(),
-        'Subthalamic nucleus': OntTerm('UBERON:0001906', label='subthalamic nucleus').as_phenotype(),
+        'Medial hypothalamic zone': OntTerm('UBERON:0002272', label='medial zone of hypothalamus').asPhenotype(),  # SciGraph default search is really bad >_<
+        'Incertus nucleus': OntTerm('UBERON:0035973', label='nucleus incertus').asPhenotype(),  # WOW ... that was bad
+        'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').asPhenotype(),  # spelling ...
+        'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').asPhenotype(),  # had to cook up my search function to find this
+        'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').asPhenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
+        'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').asPhenotype(),  # oof
+        'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').asPhenotype(),  # conclusion: scigraph cannot handle reordering
+        'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').asPhenotype(),
+        'Habenula nuclei': OntTerm('UBERON:0008993', label='habenular nucleus').asPhenotype(),  # scigraph can't unpluralize nucleus?
+        'Trapezoid Body medial nucleus': OntTerm('UBERON:0002833', label='medial nucleus of trapezoid body').asPhenotype(),
+        'Gigantocellular reticular nucleus': OntTerm('UBERON:0002155', label='gigantocellular nucleus').asPhenotype(),
+        'Bed nucleus of the stria terminalis': OntTerm('UBERON:0001880', label='bed nucleus of stria terminalis').asPhenotype(),
+        'Hypothalamus paraventricular nucleus': OntTerm('UBERON:0001930', label='paraventricular nucleus of hypothalamus').asPhenotype(),
+        'Hypothalamus tuberomammillary nucleus': OntTerm('UBERON:0001936', label='tuberomammillary nucleus').asPhenotype(),
+        'Subthalamic nucleus': OntTerm('UBERON:0001906', label='subthalamic nucleus').asPhenotype(),
 
-        'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').as_phenotype(),
-        'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').as_phenotype(),
-        'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').as_phenotype(),
-        'Medial amygdalar nucleus': OntTerm('UBERON:0002892', label='medial amygdaloid nucleus').as_phenotype(),  # a creeping madness issue
+        'Spinocerebellar dorsal tract': OntTerm('UBERON:0002753', label='posterior spinocerebellar tract').asPhenotype(),
+        'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').asPhenotype(),
+        'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').asPhenotype(),
+        'Medial amygdalar nucleus': OntTerm('UBERON:0002892', label='medial amygdaloid nucleus').asPhenotype(),  # a creeping madness issue
 
     })
 

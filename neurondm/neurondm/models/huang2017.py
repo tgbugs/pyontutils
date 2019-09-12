@@ -485,7 +485,7 @@ mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
 def ncbigene():
     from nifstd_tools.utils import ncbigenemapping
 
-    asdf = {n:[qr.OntTerm.as_phenotype()
+    asdf = {n:[qr.OntTerm.asPhenotype()
             for qr in OntTerm.query(term=n, prefix='NCBIGene')]
             for n, p in Genes.items()
             if not isinstance(p, LogicalPhenotype) and OntId(p.p).prefix != 'NCBIGene'}           
