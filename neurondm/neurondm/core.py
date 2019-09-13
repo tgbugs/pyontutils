@@ -317,7 +317,7 @@ class OntTerm(bOntTerm):
 
             done.add(term)
             for predicate in predicates:
-                if term(predicate, as_term=True):
+                if term(predicate, asTerm=True):
                     for obj in term.predicates[predicate]:
                         if obj.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):
                             # avoid continuant and occurent form a cycle >_<
@@ -363,7 +363,7 @@ class OntTerm(bOntTerm):
             for syn in self.synonyms:
                 yield s, NIFRID.synonym, rdflib.Literal(syn)
 
-        if self('rdfs:subClassOf', as_term=True):
+        if self('rdfs:subClassOf', asTerm=True):
             for superclass in self.predicates['rdfs:subClassOf']:
                 if superclass.curie in skips:
                     continue
@@ -379,7 +379,7 @@ class OntTerm(bOntTerm):
         predicates = 'partOf:', 'RO:0002433' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
         for predicate in predicates:
-            if self(predicate, as_term=True):
+            if self(predicate, asTerm=True):
                 for superpart in self.predicates[predicate]:
                     if superpart.prefix in bads:
                         continue
@@ -1481,7 +1481,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         r = OntTerm.query.services[0]  # rdflib local
         try:
-            l = next(r.query(iri=p.iri)).OntTerm.label
+            l = next(r.query(iri=p.iri)).label
+            if l is None:
+                raise StopIteration('somehow bare terms are making it it, which is bad')
         except StopIteration:
             if p.prefix == 'ilxtr' or 'swanson' in p.iri or p.prefix == 'TEMP':
                 return p.curie
@@ -1831,7 +1833,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 continue
 
             if hasattr(t, 'deprecated') and t.deprecated:  # FIXME why do we not have cases without?
-                rb = t('replacedBy:', as_term=True)
+                rb = t('replacedBy:', asTerm=True)
                 if rb:
                     nt = rb[0]
                     np = phenotype.__class__(nt, phenotype.e)
@@ -2300,16 +2302,37 @@ class Neuron(NeuronBase):
             self._predicates.hasMorphologicalPhenotype,
         ]
 
+        sgd = OntTerm.query.services[1].sgd
+        sgg = OntTerm.query.services[1].sgg
+        def multiquery(term):
+            blob = (sgd._get('GET',(sgd._basePath + '/dynamic/multiquery/{relationship}/{id}')
+                             .format(relationship='BFO:0000050', id=term.curie)))
+            return blob
+
+        def merge(term, blob):
+            edges = [e for e in blob['edges'] if not e['obj'].startswith('_:')]
+            ordered = list(sgg.ordered(term.curie, edges))
+            parts = [e for e in ordered if e['pred'] == 'BFO:0000050' and not e['obj'].startswith('_:')]
+            nodes = set(e for p in parts for e in [p['sub'], p['obj']])
+            #[e for e in blob['edges'] if e['pred'] == 'subClassOf' and e['obj'] in nodes]
+
         for disjoint in disjoints:
             phenos = [pe for pe in self.pes if pe.e == disjoint and type(pe) == Phenotype]
             if len(phenos) > 1:
                 raw_terms = [OntTerm(p.p) for p in phenos]
-                terms = set(t.asPreferred() for t in raw_terms)
+                oterms = terms = set(t.asPreferred() for t in raw_terms)
                 if 'Loc' in disjoint:  # FIXME ... subPropertyOf hasLocationPhenotype
-                    po = [(t('partOf:', depth=10, as_term=True, include_supers=True),
-                           [t2 for t2 in terms if t2 != t]) for t in terms] + [
-                               (t('ilx.partOf:', depth=10, as_term=True, include_supers=True),
-                                [t2 for t2 in terms if t2 != t]) for t in terms]
+                    #resp = [merge(t, multiquery(t)) for t in terms]
+                    #breakpoint()
+                    po = [(t('ilx.partOf:', depth=10, asPreferred=True, include_supers=True),
+                           [t2 for t2 in oterms if t2 != t])
+                          for t in terms]
+                    po += [(t('partOf:', depth=10, asTerm=True, include_supers=True),
+                            [t2 for t2 in oterms if t2 != t]) for t in
+                           terms]
+                    po += [(t('rdfs:subClassOf', depth=10, asTerm=True),
+                            [t2 for t2 in oterms if t2 != t])
+                           for t in terms]
                     accounted_for = 0
                     all_supers = []
                     for supers, others in po:

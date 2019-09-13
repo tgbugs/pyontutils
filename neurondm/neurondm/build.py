@@ -1187,7 +1187,7 @@ def make_devel():
                          if o.prefix not in bads)
 
     all_supers = set(o for t in terms
-                     if t('rdfs:subClassOf', depth=10, as_term=True)
+                     if t('rdfs:subClassOf', depth=10, asTerm=True)
                      for o in t.predicates['rdfs:subClassOf']
                          if o.prefix not in bads)
 
@@ -1209,7 +1209,7 @@ def make_devel():
 
             done.add(term)
             for predicate in predicates:
-                if term(predicate, as_term=True):
+                if term(predicate, asTerm=True):
                     for superpart in term.predicates[predicate]:
                         if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
                             yield superpart
@@ -1227,7 +1227,7 @@ def make_devel():
 
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
-                                     #asdf in (t, *t('rdfs:subClassOf', depth=1, as_term=True))
+                                     #asdf in (t, *t('rdfs:subClassOf', depth=1, asTerm=True))
                                      #if asdf.prefix not in bads), key=lambda t: (not t.label, t.label))
                #for t in T.triples('rdfs:subClassOf'))
 
