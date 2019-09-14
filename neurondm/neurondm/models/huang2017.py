@@ -476,7 +476,7 @@ res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
        OntTerm(s).curie.startswith('ilxtr:')
        for r in OntTerm.query(label=l.toPython()) if
        r.curie.startswith('ilxtr:')]
-mapped = [r.OntTerm for s, l in Neuron.out_graph[:rdfs.label:] if
+mapped = [r for s, l in Neuron.out_graph[:rdfs.label:] if
           OntTerm(s).curie.startswith('ilxtr:')
           for r in OntTerm.query(label=l.toPython()) if
           not r.curie.startswith('ilxtr:')]

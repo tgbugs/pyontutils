@@ -1355,7 +1355,7 @@ def make_devel():
                                         if not no.label:
                                             continue
                                         try:
-                                            noo = next(OntTermOntologyOnly.query(term=no.label)).OntTerm
+                                            noo = next(OntTermOntologyOnly.query(term=no.label))
                                             if noo != no and noo.prefix not in bads:
                                                 no = noo
                                             else:

@@ -428,8 +428,8 @@ def main():
 
             #t = OntTerm(term=maybe_region)
             # using query avoids the NoExplicitIdError
-            ots = sorted((qr.OntTerm for qr in OntTerm.query(term=maybe_region,
-                                                             exclude_prefix=('FMA',))), key=key)
+            ots = sorted((term for term in OntTerm.query(term=maybe_region,
+                                                         exclude_prefix=('FMA',))), key=key)
             if not ots:
                 log.error(f'No match for {maybe_region!r}')
             else:

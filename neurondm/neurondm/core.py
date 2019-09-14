@@ -15,7 +15,7 @@ from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
 from pyontutils import combinators as comb
-from pyontutils.core import Ont, makeGraph, OntId, OntTerm as bOntTerm
+from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
@@ -56,6 +56,12 @@ __all__ = [
     '_EBM_CLASS',
     'log',
 ]
+
+
+# helper class
+class OntId(bOntId):
+    """ explicit instantiation of a distinct OntId """
+
 
 # language constructes
 AND = owl.intersectionOf
@@ -307,7 +313,7 @@ class LabelMaker:
 
 # helper classes
 
-class OntTerm(bOntTerm):
+class OntTerm(bOntTerm, OntId):
     def traverse(self, *predicates):
         """ return the graph closure when traversing multiple edge types """
         done = set()
@@ -358,6 +364,10 @@ class OntTerm(bOntTerm):
             _label = self.label 
             label = rdflib.Literal(_label)
             yield s, rdfs.label, label
+
+        if not self.validated:
+            log.warn(f'{self!r}')
+            return
 
         if self.synonyms is not None:  # FIXME this should never happen :/
             for syn in self.synonyms:
@@ -712,25 +722,7 @@ class Config:
                             if isinstance(id_, rdflib.URIRef):
                                 yield id_  # its one of our types
 
-        class SubClassCompare:
-            def __init__(self, cls):
-                self.cls = cls
-
-            def __lt__(self, other):
-                if self.cls is None:  # i.e. None is the least derived class
-                    return False
-                elif other.cls is None:
-                    return True
-                else:
-                    return issubclass(self.cls, other.cls)
-
-            def __gt__(self, other):
-                return other.__lt__(self)
-
-            def __eq__(self, other):
-                return self.cls is other.cls
-
-        ranked = sorted(graphBase.python_subclasses, key=SubClassCompare)
+        ranked = sorted(graphBase.python_subclasses, key=oq.utils.SubClassCompare, reverse=True)
         ranked_ids = [r.owlClass for r in ranked]
 
         def mostDerived(classes):
@@ -1273,6 +1265,8 @@ class graphBase:
 class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- needs to work here too? TODO sorting
     _rank = '0'
     local_names = {}
+    __cache = {}
+    __pcache = {}
     def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
         # FIXME allow ObjectProperty or predicate? keyword?
         # label blackholes
@@ -1301,6 +1295,15 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         self.labelPostRule = lambda l: l
 
     def checkPhenotype(self, phenotype):
+        if isinstance(phenotype, infixowl.Class):
+            # fix for dumb infixowl code that asserts type equality
+            # rather than you know, just testing for it >_<
+            # massively breaking interoperatlibity >_<
+            phenotype = phenotype.identifier
+
+        if phenotype in self.__cache:
+            return self.__cache[phenotype]  # FIXME use a cross-instance caching decorator?
+
         subject = self.expand(phenotype)
         if self.do_check:
             try:
@@ -1308,11 +1311,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             except StopIteration:  # is a phenotype derived from an external class
                 prefix, suffix = phenotype.split(':', 1)
                 if 'swanson' in subject:
+                    self.__cache[phenotype] = subject
                     return subject
                 if prefix not in ('SWAN', 'TEMP'):  # known not registered  FIXME abstract this
                     try:
                         ois = OntId(subject)
                         if ois.prefix == 'ilxtr':
+                            self.__cache[phenotype] = subject
                             return subject
 
                         t = OntTerm(subject)
@@ -1334,6 +1339,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                             #self._sgv._basePath)
                         log.warning(f'Phenotype unvalidated. No SciGraph was instance found at {self._sgv._basePath}')
 
+        self.__cache[phenotype] = subject
         return subject
 
     def getObjectProperty(self, phenotype):
@@ -1472,6 +1478,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             #log.error(f'No short name for {pn}')
             return None  # self.pLongName
 
+    @classmethod
+    def _pterm(cls, p):
+        if p not in cls.__pcache:
+            cls.__pcache[p] = p.asTerm()
+
+        return cls.__pcache[p]
+
     @property
     def pLongName(self):
         if hasattr(self, '_label'):
@@ -1488,7 +1501,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             if p.prefix == 'ilxtr' or 'swanson' in p.iri or p.prefix == 'TEMP':
                 return p.curie
 
-            t = OntTerm(p)
+            t = self._pterm(p)
             l = t.label
 
         if not l:
