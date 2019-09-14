@@ -1525,10 +1525,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     def objects(self):
         yield self.p
 
-    def _uri_frag(self, index):
-        return (self._rank +
-                f'-p{index(self.e)}-' +
-                self.ng.qname(self.p).replace(':','-'))
+    def _uri_frag(self):
+        return (self._rank
+                + '-' +
+                OntId(self.e).curie.replace(':', '-')
+                + '-' +
+                OntId(self.p).curie.replace(':','-'))
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
     def _graphify(self, graph=None):
@@ -1734,10 +1736,15 @@ class LogicalPhenotype(graphBase):
         for pe in sorted(self.pes):
             yield pe.p
 
-    def _uri_frag(self, index):
+    def _uri_frag(self):
         rank = '4' if self.op == AND else '5'  # OR
-        return '-'.join(sorted((rank + f'-p{index(pe.e)}-' + self.ng.qname(pe.p).replace(':','-')
-                                for pe in sorted(self.pes)), key=natsort))
+        return rank + '_' + '-'.join(sorted((pe._uri_frag() for pe in self.pes), key=natsort)) + '_'
+        #return '-'.join(sorted((rank
+                                #+ '-' +
+                                #OntId(pe.e).curie.replace(':','-')
+                                #+ '-' +
+                                #OntId(pe.p).curie.replace(':','-')
+                                #for pe in sorted(self.pes)), key=natsort))
 
     def _graphify(self, graph=None):
         if graph is None:
@@ -1907,50 +1914,15 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             raise TypeError('Neurons defined by id may not use equivalent or disjoint')
 
         super().__init__()
-        self.ORDER = [
-            # FIXME it may make more sense to manage this in the NeuronArranger
-            # so that it can interconvert the two representations
-            # this is really high overhead to load this here
-            ilxtr.hasTaxonRank,
-            ilxtr.hasInstanceInSpecies,
-            ilxtr.hasBiologicalSex,
-            ilxtr.hasDevelopmentalStage,
-            ilxtr.hasLocationPhenotype,  # FIXME
-            ilxtr.hasSomaLocatedIn,  # hasSomaLocation?
-            ilxtr.hasLayerLocationPhenotype,  # TODO soma naming...
-            ilxtr.hasSomaLocatedInLayer,  # TODO soma naming...
-            ilxtr.hasDendriteLocatedIn,
-            ilxtr.hasAxonLocatedIn,
-            ilxtr.hasPresynapticTerminalsIn,
-            ilxtr.hasMorphologicalPhenotype,
-            ilxtr.hasDendriteMorphologicalPhenotype,
-            ilxtr.hasSomaPhenotype,  # FIXME probably hasSomaMorpohologicalPhenotype
-            ilxtr.hasElectrophysiologicalPhenotype,
-            #self._predicates.hasSpikingPhenotype,  # TODO do we need this?
-            self.expand('ilxtr:hasSpikingPhenotype'),  # legacy support
-            ilxtr.hasMolecularPhenotype,
-            ilxtr.hasNeurotransmitterPhenotype,
-            ilxtr.hasExpressionPhenotype,
-            ilxtr.hasDriverExpressionPhenotype,
-            ilxtr.hasReporterExpressionPhenotype,
-            ilxtr.hasCircuitRolePhenotype,
-            ilxtr.hasProjectionPhenotype,  # consider inserting after end, requires rework of code...
-            ilxtr.hasConnectionPhenotype,
-            ilxtr.hasExperimentalPhenotype,
-            ilxtr.hasClassificationPhenotype,
-            ilxtr.hasPhenotype,
-            ilxtr.hasPhenotypeModifier,
-        ]
-
         self._localContext = self.__context
         self.config = self.__class__.config  # persist the config a neuron was created with
         __pes = tuple(set(self._localContext + phenotypeEdges))  # remove dupes
         phenotypeEdges = self.removeDuplicateSuperProperties(__pes)
 
         if phenotypeEdges:
-            frag = '-'.join(sorted((pe._uri_frag(self.ORDER.index)
+            frag = '-'.join(sorted((pe._uri_frag()
                                     for pe in phenotypeEdges),
-                                    key=natsort))
+                                   key=natsort))
                                         #*(f'p{self.ORDER.index(p)}/{self.ng.qname(o)}'
                                             #for p, o in sorted(zip(pe.predicates,
                                                                 #pe.objects)))))
@@ -1991,8 +1963,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             self.equivalentClass(*equivalentNeurons)
             self.disjointWith(*disjointNeurons)
 
+        ORDER = [ilxtr[suffix] for suffix in LabelMaker._order]
+        lop1 = len(ORDER) + 1
         self.pes = tuple(sorted(sorted(phenotypeEdges),
-                                key=lambda pe: self.ORDER.index(pe.e) if pe.e in self.ORDER else len(self.ORDER) + 1))
+                                key=lambda pe: ORDER.index(pe.e) if pe.e in ORDER else lop1))
         self.validate()
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
@@ -2798,32 +2772,6 @@ class LocalNameManager(metaclass=injective):
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
 
     render_types = Phenotype, LogicalPhenotype
-
-    _ORDER = (
-        'ilxtr:hasInstanceInSpecies',
-        'ilxtr:hasTaxonRank',
-        'ilxtr:hasSomaLocatedIn',  # hasSomaLocation?
-        'ilxtr:hasLayerLocationPhenotype',  # TODO soma naming...
-        'ilxtr:hasSomaLocatedInLayer',
-        'ilxtr:hasDendriteLocatedIn',
-        'ilxtr:hasAxonLocatedIn',
-        ilxtr.hasPresynapticTerminalsIn,
-        'ilxtr:hasMorphologicalPhenotype',
-        'ilxtr:hasDendriteMorphologicalPhenotype',
-        'ilxtr:hasElectrophysiologicalPhenotype',
-        'ilxtr:hasSpikingPhenotype',  # legacy support
-        'ilxtr:hasExpressionPhenotype',
-        'ilxtr:hasDriverExpressionPhenotype',
-        'ilxtr:hasReporterExpressionPhenotype',
-        'ilxtr:hasProjectionPhenotype',  # consider inserting after end, requires rework of code...
-        ilxtr.hasConnectionPhenotype,
-        ilxtr.hasExperimentalPhenotype,
-        ilxtr.hasClassificationPhenotype,
-        'ilxtr:hasPhenotype',
-    )
-
-    #def __getitem__(self, key):  # just in case someone makes an instance by mistake
-        #return self.__class__.__dict__[key]
 
 
 def checkCalledInside(classname, stack):
