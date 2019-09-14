@@ -6,7 +6,7 @@ from pathlib import Path
 import rdflib
 import ontquery as oq
 from pyontutils.utils import byCol, relative_path, noneMembers, makeSimpleLogger
-from pyontutils.core import resSource, OntId
+from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID
@@ -27,6 +27,7 @@ class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_i
             return f'Phenotype({self.curie}, ilxtr.hasSomaLocatedIn)  # {self.label}'
         else:
             return super().__repr__()
+
 
 OntTerm.repr_level(verbose=False)
 
@@ -54,7 +55,7 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
 
 
 def make_contains_rules():
-    contains_rules = dict(GABAergic=BBP.GABA,
+    contains_rules = dict(GABAergic=CUT.GABA,
                           cholinergic=CUT.Ach,
                           glutamatergic=CUT.Glu,
                           serotonergic=CUT.Ser,
@@ -68,11 +69,11 @@ def make_contains_rules():
                           #CA3=Regions.CA3,
                           trilaminar=BBP.TRI,
                           neurogliaform=BBP.NGC,  # FIXME
-                          parvalbumin=BBP.PV,  # FIXME
-                          calbindin=BBP.CB,
-                          calretinin=BBP.CR,
-                          cholecystokinin=BBP.CCK,
-                          somatostatin=BBP.SOM,
+                          parvalbumin=CUT.PV,  # FIXME
+                          calbindin=CUT.CB,
+                          calretinin=CUT.CR,
+                          cholecystokinin=CUT.CCK,
+                          somatostatin=CUT.SST,
                           orexin=Phenotype('PR:000008476', ilxtr.hasExpressionPhenotype),
                           oxytocin=Phenotype('CHEBI:7872', ilxtr.hasExpressionPhenotype),
                           bitufted=BBP.BTC,
@@ -418,7 +419,7 @@ def main():
             maybe_region = None
 
         if maybe_region:
-            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT')
+            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT', 'NLX')
             def key(ot):
                 ranked = ot.prefix in prefix_rank
                 arg = ot._query_result._QueryResult__query_args['term'].lower()
@@ -426,8 +427,10 @@ def main():
                         prefix_rank.index(ot.prefix) if ranked else 0,
                         not (arg == ot.label.lower()))
 
-            #t = OntTerm(term=maybe_region)
-            # using query avoids the NoExplicitIdError
+            #ots = sorted((term for term in OntTerm.query(term=maybe_region,
+                                                         #exclude_prefix=('FMA', 'NLX'))), key=key)
+
+            #if not ots:
             ots = sorted((term for term in OntTerm.query(term=maybe_region,
                                                          exclude_prefix=('FMA',))), key=key)
             if not ots:
