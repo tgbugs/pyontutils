@@ -167,10 +167,21 @@ class CUT(LocalNameManager):
     Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasTaxonRank)
     proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
     inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
+
+    TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
+    Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)
+    MRN = Phenotype('UBERON:0007415', ilxtr.hasSomaLocatedIn)
+
+    GABA = Phenotype('TEMPIND:GABA', ilxtr.hasMolecularPhenotype)
+    PV = Phenotype('PTHR:11653', ilxtr.hasMolecularPhenotype)  # FIXME remove PTHR
+    CB = Phenotype('TEMPIND:Calb', ilxtr.hasMolecularPhenotype)
+    CR = Phenotype('TEMPIND:Calb2', ilxtr.hasMolecularPhenotype)
+    CCK = Phenotype('TEMPIND:Cck', ilxtr.hasMolecularPhenotype)
+    SST = Phenotype('PTHR:10558', ilxtr.hasMolecularPhenotype)
+
+    # TODO indicator these
     Ach = Phenotype('SAO:185580330', ilxtr.hasExpressionPhenotype)
     Glu = Phenotype('CHEBI:16015', ilxtr.hasExpressionPhenotype)
     Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
     TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
-    TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
-    Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)
-    MRN = Phenotype('UBERON:0007415', ilxtr.hasSomaLocatedIn)
+

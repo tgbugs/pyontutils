@@ -181,6 +181,7 @@ def _loadPrefixes():
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'TEMP': interlex_namespace('temp/uris/'),
         'TEMPRAW': interlex_namespace('temp/uris/raw/'),
+        'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
