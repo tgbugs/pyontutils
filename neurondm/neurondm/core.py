@@ -422,7 +422,7 @@ class GraphOpsMixin:
     # TODO even if it is the same underlying graph (conjuctive?) we should
     # still separate the read and write aspects
 
-    default_properties = 'definition', 'synonyms', 'abbrevs'
+    default_properties = 'definition', 'synonyms', 'abbrevs', 'hasTemporaryId'
     # TODO label ...
 
     class ObjectTypeError(Exception):
@@ -505,6 +505,11 @@ class GraphOpsMixin:
     @abbrevs.setter  # adder really
     def abbrevs(self, value):
         self.add_objects(NIFRID.abbrev, *value)
+
+    @property
+    def hasTemporaryId(self):
+        yield from self.objects(ilxtr.hasTemporaryId)
+
 
 # config
 

@@ -561,7 +561,7 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         yield from self.namespaces()
 
     def qname(self, iri):
-        prefix, namespace, name = self.compute_qname(uri, generate=False)
+        prefix, namespace, name = self.compute_qname(iri, generate=False)
         if prefix == "":
             return name
         else:
@@ -570,12 +570,19 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
 
+    def populate_from(self, *graphs):
+        [self.bind(k, v) for g in graphs for k, v in g.namespaces()]
 
-class OntGraph(rdflib.Graph):
+
+class OntGraph(rdflib.ConjunctiveGraph):
     """ A 5th try at making one of these. ConjunctiveGraph version? """
 
-    def __init__(self, *args, path=None, **kwargs):
+    def __init__(self, *args, path=None, namespace_manager=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # FIXME the way this is implemented in rdflib makes it impossible to
+        # change the namespace manager type in subclasses which is _really_ annoying
+        # we shortcircuit this here
+        self._namespace_manager = namespace_manager
         self.bind('owl', owl)
         self.path = path
 
@@ -586,9 +593,16 @@ class OntGraph(rdflib.Graph):
     # to OntCuries.populate
 
     def _get_namespace_manager(self):
-        if self.__namespace_manager is None:
-            self.__namespace_manager = BetterNamespaceManager(self)
-        return self.__namespace_manager
+        if self._namespace_manager is None:
+            self._namespace_manager = BetterNamespaceManager(self)
+        return self._namespace_manager
+
+    def _set_namespace_manager(self, nm):
+        self._namespace_manager = nm
+
+    namespace_manager = property(_get_namespace_manager,
+                                 _set_namespace_manager,
+                                 doc="this graph's namespace-manager")
 
     @property
     def prefixes(self):
