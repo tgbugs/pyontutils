@@ -503,12 +503,16 @@ class GraphOpsMixin:
         yield from self.objects(NIFRID.abbrev)
 
     @abbrevs.setter  # adder really
-    def abbrevs(self, value):
-        self.add_objects(NIFRID.abbrev, *value)
+    def abbrevs(self, values):
+        self.add_objects(NIFRID.abbrev, *values)
 
     @property
     def hasTemporaryId(self):
         yield from self.objects(ilxtr.hasTemporaryId)
+
+    @hasTemporaryId.setter
+    def hasTemporaryId(self, values):
+        self.add_objects(ilxtr.hasTemporaryId, *values)
 
 
 # config
