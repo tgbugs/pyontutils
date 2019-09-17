@@ -11,6 +11,7 @@ from neurondm import *
 from neurondm.phenotype_namespaces import *
 from IPython import embed
 
+extra = False  # construct extra classes
 config = Config('huang-2017',
                 imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
                 source_file=relative_path(__file__))
@@ -24,6 +25,8 @@ class NeuronHuang2017(NeuronEBM):
 
 Neuron, Neuron_ = NeuronHuang2017, Neuron
 dex = 'ilxtr:hasDriverExpressionPhenotype'
+induced_exp = 'ilxtr:hasDriverExpressionInducedPhenotype'
+const_exp = 'ilxtr:hasDriverExpressionConstitutivePhenotype'
 
 
 class Genes(LocalNameManager):
@@ -35,15 +38,15 @@ class Genes(LocalNameManager):
     #CR = Phenotype('PR:000004968', 'ilxtr:hasExpressionPhenotype')
     #PV = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')
 
-    # cre lines
-    VIP = Phenotype('ilxtr:VIP-flp', dex, label='VIP-flp', override=True)
-    CCK = Phenotype('ilxtr:CCK-cre', dex, label='CCK-cre', override=True)
-    SST = Phenotype('ilxtr:SST-flp', dex, label='SST-flp', override=True)
-    CR = Phenotype('ilxtr:CR-cre', dex, label='CR-cre', override=True)
-    PV = Phenotype('ilxtr:PV-cre', dex, label='PV-cre', override=True)
-    NOS1 = Phenotype('ilxtr:NOS1-creER', dex, label='NOS1-creER', override=True)
-    Nkx2_1 = Phenotype('ilxtr:Nkx2.1-creER', dex, label='Nkx2.1-creER', override=True)
-    Nkx2_1flp = Phenotype('ilxtr:Nkx2.1-flp', dex, label='Nxk2.1-flp', override=True)
+    # cre lines from star methods table
+    VIP = Phenotype('JAX:028578', const_exp, label='VIP-flp', override=True)
+    CCK = Phenotype('JAX:012706', const_exp, label='CCK-cre', override=True)
+    SST = Phenotype('JAX:028579', const_exp, label='SST-flp', override=True)
+    CR = Phenotype('JAX:013730', const_exp, label='CR-cre', override=True)
+    PV = Phenotype('JAX:017320', const_exp, label='PV-cre', override=True)
+    NOS1 = Phenotype('JAX:014541', induced_exp, label='NOS1-creER', override=True)
+    Nkx2_1 = Phenotype('JAX:014552', induced_exp, label='Nkx2.1-creER', override=True)
+    Nkx2_1flp = Phenotype('JAX:028577', const_exp, label='Nxk2.1-flp', override=True)
 
     # Actual genes
 
@@ -431,13 +434,18 @@ with Huang2017:
             # some _subset_ of those have cck, but it is not clear how many
             figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
-        peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
-                for l, p in zip(fig1a, f7['peptides'])]
-        sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
-                for l, p in zip(fig1a, f7['signaling'])]
-        # asserted by Tom Gillespie interpreting Huang
-        [p.equivalentClass(s) for p, s in zip(peps, sigs)]
-        # assert that the peptide markers are disjoint
+        if extra:
+            peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
+                    for l, p in zip(fig1a, f7['peptides'])]
+            sigs = [Neuron(*p.pes, label=f'{l} signaling neuron', override=True)
+                    for l, p in zip(fig1a, f7['signaling'])]
+            # asserted by Tom Gillespie interpreting Huang
+            [p.equivalentClass(s) for p, s in zip(peps, sigs)]
+            # assert that the peptide markers are disjoint
+        else:
+            peps = []
+            sigs = []
+
         for dis in (peps, sigs, tuple(fig1a.values())):
             for i, n in enumerate(dis[:-1]):
                 for on in dis[i+1:]:
@@ -456,9 +464,14 @@ for n, p in Huang2017.items():
             o = rdflib.Literal(n) if not hasattr(p, '_label') else rdflib.Literal(p._label)
             lt = (rdflib.URIRef(ident), rdfs.label, o)
             Neuron.core_graph.add(lt)
-            Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
+            if ident.prefix != 'NCBIGene':
+                Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
 
-            if ident.prefix == 'ilxtr' or ident.prefix == 'NCBIGene':  # FIXME NCBIGene temp fix ...
+            if ident.prefix == 'JAX':
+                sct = (rdflib.URIRef(ident), rdfs.subClassOf, ilxtr.transgenicLine)
+                Neuron.core_graph.add(sct)
+                Neuron.out_graph.add(sct)
+            elif ident.prefix == 'ilxtr':# or ident.prefix == 'NCBIGene':  # FIXME NCBIGene temp fix ...
                 if ident.suffix in ('LowerExpression', 'HigherExpression', 'to'):
                     continue
                 sct = (rdflib.URIRef(ident), rdfs.subClassOf, ilxtr.gene)

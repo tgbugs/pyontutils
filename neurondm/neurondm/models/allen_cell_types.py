@@ -37,30 +37,6 @@ class AllenCellTypes:
 
     branch = devconfig.neurons_branch
 
-    phenotype_preds = [
-        'hasSomaLocatedIn',
-        'hasCircuitRolePhenotype',
-        'hasNeurotransmitterPhenotype',
-        'hasInstanceInSpecies',
-        'hasExperimentalPhenotype',
-        'hasDendriteLocatedIn',
-        'hasNucleicAcidExpressionPhenotype',
-        'hasLayerLocationPhenotype',
-        'hasExpressionPhenotype',
-        'hasSmallMoleculeExpressionPhenotype',
-        'hasPresynapticTerminalsIn',
-        'hasPhenotype',
-        'hasTaxonRank',
-        'hasProteinExpressionPhenotype',
-        'hasMorphologicalPhenotype',
-        'hasDendriteMorphologicalPhenotype',
-        'hasAxonLocatedIn',
-        'hasDevelopmentalOrigin',
-        'hasElectrophysiologicalPhenotype',
-        'hasProjectionPhenotype',
-        'hasLocationPhenotype'
-    ]
-
     prefixes = {**{'JAX': 'http://jaxmice.jax.org/strain/',
                    'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
                    'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
@@ -90,13 +66,13 @@ class AllenCellTypes:
         # embed()
         print(graphBase.ttl())
 
-    def cell_phenotypes(self, cell_line):
+    def cell_phenotypes(self, cell_specimen):
         cell_mappings = {
             'hemisphere': 'ilxtr:hasLocationPhenotype',
             # 'name': 'ilxtr:hasPhenotype',
         }
         phenotypes = []
-        for name, value in cell_line.items():
+        for name, value in cell_specimen.items():
             mapping = cell_mappings.get(name)
             if mapping and value:
                 if name == 'hemisphere':
@@ -116,8 +92,8 @@ class AllenCellTypes:
         return phenotypes
 
     # TODO: wrong phenotype
-    def structure_phenotypes(self, cell_line):
-        struc = cell_line['structure']
+    def structure_phenotypes(self, cell_specimen):
+        struc = cell_specimen['structure']
         phenotypes = []
         acronym = self.avoid_url_conversion(struc['acronym'])
         curie = 'MBA:' + str(struc['id'])
@@ -131,12 +107,12 @@ class AllenCellTypes:
             )
         return phenotypes
 
-    def donor_phenotypes(self, cell_line):
+    def donor_phenotypes(self, cell_specimen):
         donor_mappings = {
             'sex_full_name': 'ilxtr:hasBiologicalSex'
         }
         phenotypes = []
-        for name, value in cell_line['donor'].items():
+        for name, value in cell_specimen['donor'].items():
             mapping = donor_mappings.get(name)
             if mapping and value:
                 if name == 'sex_full_name':
@@ -156,11 +132,11 @@ class AllenCellTypes:
         return phenotypes
 
     # TODO: Figure how to add: description, name and type
-    def transgenic_lines_phenotypes(self, cell_line):
+    def transgenic_lines_phenotypes(self, cell_specimen):
         transgenic_mappings = {
         }
         phenotypes = []
-        for tl in cell_line['donor']['transgenic_lines']:
+        for tl in cell_specimen['donor']['transgenic_lines']:
             prefix = tl['transgenic_line_source_name']
             suffix = tl['stock_number'] if tl['stock_number'] else str(tl['id'])
             name = self.avoid_url_conversion(tl['name'])
@@ -183,7 +159,7 @@ class AllenCellTypes:
     # TODO: search if description exists
     # TODO: Create mapping for all possible types
     # TODO: Fork negatives to NegPhenotype
-    def specimen_tags_phenotypes(self, cell_line):
+    def specimen_tags_phenotypes(self, cell_specimen):
         pred = 'ilxtr:hasDendriteMorphologicalPhenotype'
         specimen_tag_mappings = {
             'spiny': Phenotype('ilxtr:SpinyPhenotype', pred),
@@ -198,7 +174,7 @@ class AllenCellTypes:
             'apicalNa': NegPhenotype('ilxtr:ApicalDendritePhenotype', 'ilxtr:hasMorphologicalPhenotype'),  # NA means there was no apical dendrite
         }
         phenotypes = []
-        for tag in cell_line['specimen_tags']:
+        for tag in cell_specimen['specimen_tags']:
             if 'dendrite type' in tag['name']:
                 one_two = tag['name'].split(' - ')[1]
                 #if ' ' in one_two:
@@ -225,11 +201,11 @@ class AllenCellTypes:
         return phenotypes
 
     # TODO: check to see if specimen_id is really the priority
-    def cell_soma_locations_phenotypes(self, cell_line):
+    def cell_soma_locations_phenotypes(self, cell_specimen):
         cell_soma_mappings = {
         }
         phenotypes = []
-        for csl in cell_line['cell_soma_locations']:
+        for csl in cell_specimen['cell_soma_locations']:
             location = csl['id']
             phenotypes.append(
                 Phenotype(
@@ -239,11 +215,11 @@ class AllenCellTypes:
             )
         return phenotypes
 
-    def add_mouse_lineage(self, cell_line):
+    def add_mouse_lineage(self, cell_specimen):
         phenotypes = [Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')]
         return phenotypes
 
-    def build_phenotypes(self, cell_line):
+    def build_phenotypes(self, cell_specimen):
         phenotype_functions = [
             self.cell_phenotypes,
             self.structure_phenotypes,
@@ -255,7 +231,7 @@ class AllenCellTypes:
         ]
         phenotypes = []
         for func in phenotype_functions:
-            phenotypes.extend(func(cell_line))
+            phenotypes.extend(func(cell_specimen))
         return phenotypes
 
     def make_config(self):
@@ -268,8 +244,12 @@ class AllenCellTypes:
                              source_file=relative_path(__file__))
 
     def build_neurons(self):
-        for cell_line in self.neuron_data:
-            NeuronACT(*self.build_phenotypes(cell_line))
+        instances = []
+        AIBSSPEC = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Specimen/')
+        for cell_specimen in self.neuron_data:
+            neuron = NeuronACT(*self.build_phenotypes(cell_specimen))
+            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, owl.NamedIndividual))
+            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, neuron.identifier))
 
         print(sorted(self.tag_names))
         NeuronACT.write()
@@ -286,8 +266,8 @@ class AllenCellTypes:
         """
 
         triples = []
-        for cell_line in self.neuron_data:
-            for tl in cell_line['donor']['transgenic_lines']:
+        for cell_specimen in self.neuron_data:
+            for tl in cell_specimen['donor']['transgenic_lines']:
                 _id = tl['stock_number'] if tl['stock_number'] else tl['id']
                 prefix = tl['transgenic_line_source_name']
                 line_type = tl['transgenic_line_type_name']

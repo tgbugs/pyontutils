@@ -218,6 +218,14 @@ class LabelMaker:
         yield from self._with_thing_located_in('with-axon{}-in', phenotypes)
 
     @od
+    def hasPresynapticElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-presynaptic-element-in', phenotypes)
+
+    @od
+    def hasAxonPresynapticElementIn(self, phenotypes):
+        yield from self._with_thing_located_in('with-axon-presynaptic-element-in', phenotypes)
+
+    @od
     def hasPresynapticTerminalsIn(self, phenotypes):
         yield from self._with_thing_located_in('with-presynaptic-terminals-in', phenotypes)
 
@@ -270,6 +278,12 @@ class LabelMaker:
         yield from self._plus_minus(phenotypes)
     @od
     def hasDriverExpressionPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasDriverExpressionConstitutivePhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasDriverExpressionInducedPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
     def hasReporterExpressionPhenotype(self, phenotypes):
@@ -1931,9 +1945,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         phenotypeEdges = self.removeDuplicateSuperProperties(__pes)
 
         if phenotypeEdges:
-            frag = '-'.join(sorted((pe._uri_frag()
-                                    for pe in phenotypeEdges),
-                                   key=natsort))
+            _oic = OntId(self.owlClass).curie.replace(':','-')
+            frag = f'{_oic}-' + '-'.join(sorted((pe._uri_frag()
+                                                 for pe in phenotypeEdges),
+                                                key=natsort))
                                         #*(f'p{self.ORDER.index(p)}/{self.ng.qname(o)}'
                                             #for p, o in sorted(zip(pe.predicates,
                                                                 #pe.objects)))))
