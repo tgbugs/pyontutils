@@ -1,4 +1,5 @@
 import hashlib
+from collections import defaultdict
 import rdflib
 
 
@@ -221,8 +222,8 @@ class IdentityBNode(rdflib.BNode):
 
                         if isinstance(p, rdflib.BNode):
                             raise TypeError(f'predicates cannot be blank {thing}')
-                        elif p == rdf.rest:
-                            if o == rdf.nil:
+                        elif p == rdflib.RDF.rest:
+                            if o == rdflib.RDF.nil:
                                 self.to_lift.add(thing)
                             else:
                                 if o in self.find_heads:
@@ -234,7 +235,7 @@ class IdentityBNode(rdflib.BNode):
 
                             self.bsubjects.add(s)
                             continue
-                        elif p == rdf.first:
+                        elif p == rdflib.RDF.first:
                             self.to_lift.add(thing)
                             self.bsubjects.add(s)
                             if isinstance(o, rdflib.BNode):
