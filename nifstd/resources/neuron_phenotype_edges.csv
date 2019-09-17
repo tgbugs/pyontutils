@@ -13,6 +13,8 @@ hasProteinExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflex
 hasNucleicAcidExpressionPhenotype,,,,,This should be used for detection of RNAs that code for proteins which may or may not have been detected directly.,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasReporterExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflexive"
 hasDriverExpressionPhenotype,,,,,,hasExpressionPhenotype,,"asymmetric, irreflexive"
+hasDriverExpressionConstitutivePhenotype,,,,,,hasDriverExpressionPhenotype,,"asymmetric, irreflexive"
+hasDriverExpressionInducedPhenotype,,,,,Use for things like cre-ER,hasDriverExpressionPhenotype,,"asymmetric, irreflexive"
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type including any gene products.,,"This may also include the products of molecular synthesis pathways that are indirectly supported by genes, however it seems likely that that relationship should not be though of as an expression phenotype.",hasMolecularPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,"includes small molecule and peptide, not entirely sure if we need this one",hasMolecularPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
@@ -51,7 +53,9 @@ hasSomaPhenotype,,,Expresses a relationship between a neuron type and some pheno
 ,,,,,,,,
 hasAxonLocatedIn,"LocationOfAxonArborization, LocationOfLocalAxonArborization",,,,,hasProcessLocatedIn,,"asymmetric, irreflexive"
 #projectsThrough,,,,,"has weak semantics, axons in and presynatical terminals in are ok for traditional tracing experiments, fasciculates with?",,,
-hasPresynapticTerminalsIn,,,,,"projectsTo does not work because of dendrodentritic synapses, for the same reason this cannot be a subProperty of hasAxonLocatedIn",hasProcessLocatedIn,,"asymmetric, irreflexive"
+hasPresynapticElementIn,,,,,"projectsTo does not work because of dendrodentritic synapses, for the same reason this cannot be a subProperty of hasAxonLocatedIn",hasProcessLocatedIn,,"asymmetric, irreflexive"
+hasPresynapticTerminalsIn,,,,,Are there cases where there are boutons that form on dendrites?,hasPresynapticElementIn,,
+hasAxonPresynapticElementIn,,,,,,"hasPresynapticElementIn,hasAxonLocatedIn",,
 hasCircuitRolePhenotype,,,,,needs work,hasPhenotype,,"asymmetric, irreflexive"
 hasExperimentalPhenotype,,,Expresses a relationship between a neuron and an experimental condition. This should be used when a neuron type is described by some experimental condition or functional designation.,,This needs a better name. It is clear what it means when you see examples of the usage.,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
