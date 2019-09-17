@@ -574,15 +574,22 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         [self.bind(k, v) for g in graphs for k, v in g.namespaces()]
 
 
-class OntGraph(rdflib.ConjunctiveGraph):
+class OntGraph(rdflib.Graph):
     """ A 5th try at making one of these. ConjunctiveGraph version? """
 
-    def __init__(self, *args, path=None, namespace_manager=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        # FIXME the way this is implemented in rdflib makes it impossible to
-        # change the namespace manager type in subclasses which is _really_ annoying
-        # we shortcircuit this here
-        self._namespace_manager = namespace_manager
+    def __init__(self, *args, path=None, existing=None, namespace_manager=None, **kwargs):
+        if existing:
+            self.__dict__ == existing.__dict__
+            if not hasattr(existing, '_namespace_manager'):
+                self._namespace_manager = BetterNamespaceManager(self)
+                self.namespace_manager.populate_from(existing)
+        else:
+            super().__init__(*args, **kwargs)
+            # FIXME the way this is implemented in rdflib makes it impossible to
+            # change the namespace manager type in subclasses which is _really_ annoying
+            # we shortcircuit this here
+            self._namespace_manager = namespace_manager
+
         self.bind('owl', owl)
         self.path = path
 
@@ -645,7 +652,16 @@ class OntGraph(rdflib.ConjunctiveGraph):
         return out
 
 
-OntRes.Graph = OntGraph
+class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
+    def __init__(self, *args, store='default', identifier=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # overwrite default context with our subclass
+        self.default_context = OntGraph(store=self.store,
+                                        identifier=identifier or rdflib.BNode())
+
+
+
+OntRes.Graph = OntConjunctiveGraph
 
 
 class OntGraphMetadata(OntGraph):

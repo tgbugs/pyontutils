@@ -10,35 +10,27 @@ from pyontutils.identity_bnode import IdentityBNode
 
 
 class GraphToMap(OntGraph):
-    def __init__(self, *args, existing=None, **kwargs):
-        if existing:
-            self.__dict__ == existing.__dict__
-            if not hasattr(existing, '_namespace_manager'):
-                self._namespace_manager = BetterNamespaceManager(self)
-                self.namespace_manager.populate_from(existing)
-        else:
-            super().__init__(*args, **kwargs)
-
-    def uriPrefix(self, namespace):
+    def matchNamespace(self, namespace):
+        # FIXME can't we hit the cache for these?
         for t in self:
             for e in t:
                 if isinstance(e, rdflib.URIRef):
                     if e.startswith(namespace):
                         yield e
 
-    def couldMap(self, *temp_namespaces):
-        yield from (e for p in temp_namespaces for e in self.uriPrefix(p))
+    def couldMapEntities(self, *temp_namespaces):
+        yield from (e for ns in temp_namespaces for e in self.matchNamespace(ns))
 
-    def add_remove_same(self, add_and_replace_graph, *, new_replaces_old=True):
+    def diffFromReplace(self, replace_graph, *, new_replaces_old=True):
         """ compute add, remove, same graphs based on a graph
             the contains triples of the form `new replaces old`
             where replaces can be any predicate set new_replaces_old=False
             if the add_and_replace graph is of the form `old replacedBy new`
         """
         if new_replaces_old:
-            replace = {old:new for new, _, old in add_and_replace_graph}
+            replace = {old:new for new, _, old in replace_graph}
         else:
-            replace = {old:new for old, _, new in add_and_replace_graph}
+            replace = {old:new for old, _, new in replace_graph}
 
         def iri_replace(t):
             return tuple(replace[e] if e in replace else e for e in t)
@@ -163,12 +155,12 @@ class GraphToMap(OntGraph):
             have already been mapped and have a new temporary id. That
             functionality is implemented elsewhere. """
 
-        existing_indexes  = list(set(index_graph.uriPrefix(index_namespace)))  # target prefix?
+        existing_indexes  = list(set(index_graph.matchNamespace(index_namespace)))  # target prefix?
         lp = len(index_namespace)
         suffixes = [int(u[lp:]) for u in existing_indexes]
         start = max(suffixes) + 1 if suffixes else 1
 
-        could_map = list(set(self.couldMap(*temp_namespaces)))
+        could_map = list(set(self.couldMapEntities(*temp_namespaces)))
         mapped_triples = [(s,
                            ilxtr.hasTemporaryId,
                            o) for s, o in index_graph[:ilxtr.hasTemporaryId:]]
@@ -216,9 +208,9 @@ class GraphToMap(OntGraph):
         # TODO also want the transitions here if we
         # want to record the record in InterLex
         index_graph.namespace_manager.populate_from(self)
-        index_graph.addN(add_replace_graph.quads())
+        [index_graph.add(t) for t in add_replace_graph]
 
-        add_only_graph, remove_graph, same_graph = self.add_remove_same(add_replace_graph)
+        add_only_graph, remove_graph, same_graph = self.diffFromReplace(add_replace_graph)
         # the other semantics that could be used here
         # would be to do an in place modification of self
         # to remove the remove graph and add the add_only_graph
@@ -226,9 +218,9 @@ class GraphToMap(OntGraph):
         # NOTE the BNodes need to retain their identity across the 3 graphs
         # so that they reassemble correctly
         new_self = self.__class__()
-        new_self.addN(add_replace_graph.quads())
-        new_self.addN(add_only_graph.quads())
-        new_self.addN(same_graph.quads())
+        [new_self.add(t) for t in add_replace_graph]
+        [new_self.add(t) for t in add_only_graph]
+        [new_self.add(t) for t in same_graph]
 
         new_self.namespace_manager.populate_from(index_graph)
         return new_self
