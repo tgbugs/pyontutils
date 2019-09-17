@@ -661,14 +661,19 @@ class OntGraph(rdflib.Graph):
         CustomTurtleSerializer.roundtrip_prefixes = True
         return out
 
-    def matchNamespace(self, namespace, ignore_predicates=tuple()):
+    def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
         # FIXME can't we hit the cache for these?
+        sns = str(namespace)
         for s, p, o in self:
             if p not in ignore_predicates:
                 for e in (s, p, o):
                     if isinstance(e, rdflib.URIRef):
-                        if e.startswith(namespace):
-                            yield e
+                        try:
+                            pre, ns, suff = self.compute_qname(e, generate=False)
+                            if str(ns) == sns:
+                                yield e
+                        except KeyError:
+                            pass
 
     def couldMapEntities(self, *temp_namespaces, ignore_predicates=tuple()):
         yield from (e for ns in temp_namespaces

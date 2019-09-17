@@ -33,8 +33,8 @@ def main():
     input_graph, output_graph = ios[0]
     a, r, c = output_graph.subjectsChanged(input_graph)
     index_graph.write()
-    from sparcur.paths import Path
-    Path(index_graph.path).xopen()
+    #from sparcur.paths import Path
+    #Path(index_graph.path).xopen()
     breakpoint()
 
 if __name__ == '__main__':
