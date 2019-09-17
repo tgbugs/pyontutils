@@ -14,7 +14,7 @@ import requests
 import htmlfn as hfn
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
-from ttlser import CustomTurtleSerializer
+from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
@@ -842,7 +842,7 @@ class OntGraph(rdflib.Graph):
         iri_replace_map = [(index_namespace[str(i + start)],
                             ilxtr.hasTemporaryId,
                             temp_id)
-                           for i, temp_id in enumerate(sorted(not_mapped))]
+                           for i, temp_id in enumerate(sorted(not_mapped, key=natsort))]
 
         # FIXME
         # iris that have been mapped but not replaced
@@ -903,7 +903,7 @@ class OntGraph(rdflib.Graph):
 
         # NOTE the BNodes need to retain their identity across the 3 graphs
         # so that they reassemble correctly
-        new_self = self.__class__()
+        new_self = self.__class__(path=self.path)
         [new_self.add(t) for t in add_replace_graph]
         [new_self.add(t) for t in add_only_graph]
         [new_self.add(t) for t in same_graph]

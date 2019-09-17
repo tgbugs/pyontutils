@@ -25,14 +25,15 @@ def main():
     ios = []
     for eff in ('common-usage-types', 'huang-2017', 'markram-2015', 'allen-cell-types'):
         path = Path(devconfig.ontology_local_repo, f'ttl/generated/neurons/{eff}.ttl')
-        input_graph = OntGraph()
-        input_graph.parse(path.as_posix(), format='ttl')
+        input_graph = OntGraph(path=path)
+        input_graph.parse()
         output_graph = input_graph.mapTempToIndex(index_graph, npokb, TEMP)
         ios.append((input_graph, output_graph))
 
     input_graph, output_graph = ios[0]
     a, r, c = output_graph.subjectsChanged(input_graph)
     index_graph.write()
+    # [o.write() for i, o, in ios]  # when ready
     #from sparcur.paths import Path
     #Path(index_graph.path).xopen()
     breakpoint()
