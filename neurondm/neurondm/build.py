@@ -801,6 +801,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
             true_o = None
             true_id = None
             terms = []
+            _pp = p.toPython()
             if o in syn_mappings:
                 id_ = syn_mappings[o]  # FIXME can this happen more than once?
 
@@ -811,7 +812,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                 true_o = o_lit
                 true_id = id_
 
-            elif 'Location' in p.toPython() or 'LocatedIn' in p.toPython():  # lift location to restrictions
+            elif ('Location' in _pp or 'LocatedIn' in _pp or 'ElementsIn' in
+                  _pp or 'TerminalsIn' in _pp):  # lift location to restrictions
                 if o.startswith('http://'):
                     ng.add_hierarchy(o_lit, p, s)
                     ng.g.remove((s, p, o_lit))
@@ -832,7 +834,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                         log.debug(f'{o_lit}')
                         continue
 
-                terms = [t.OntTerm for t in OntTerm.query(term=o)]
+                terms = [t for t in OntTerm.query(term=o)]
                 for t in terms:
                     if t.prefix in ('PR', 'CHEBI'):
                         sgt = t.URIRef
