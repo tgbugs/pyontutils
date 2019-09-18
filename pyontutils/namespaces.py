@@ -36,6 +36,7 @@ paxmusver = rdflib.Namespace(interlex_namespace('paxinos/uris/mouse/versions/'))
 paxratver = rdflib.Namespace(interlex_namespace('paxinos/uris/rat/versions/'))
 WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
+npokb = rdflib.Namespace(interlex_namespace('npo/uris/neurons/'))
 
 OntCuries({'BERCAT': str(BERCAT)})
 
@@ -149,6 +150,7 @@ def _loadPrefixes():
         'locatedIn':'http://purl.obolibrary.org/obo/RO_0001025',
         'locationOf':'http://purl.obolibrary.org/obo/RO_0001015',
         'toward':'http://purl.obolibrary.org/obo/RO_0002503',
+        'overlaps':'http://purl.obolibrary.org/obo/RO_0002131',
 
         'replacedBy':'http://purl.obolibrary.org/obo/IAO_0100001',
         'hasCurStatus':'http://purl.obolibrary.org/obo/IAO_0000114',
@@ -180,7 +182,9 @@ def _loadPrefixes():
         'PROTEGE':'http://protege.stanford.edu/plugins/owl/protege#',
         'TEMP': interlex_namespace('temp/uris/'),
         'TEMPRAW': interlex_namespace('temp/uris/raw/'),
+        'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
+        'npokb': str(npokb),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',

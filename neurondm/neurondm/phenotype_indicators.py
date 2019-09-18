@@ -113,6 +113,7 @@ class PhenotypeIndicators(Sheet):
                       OntId('JAX:021189'),
                       OntId('JAX:021190'),
                       OntId('JAX:022730'),
+                      OntId('JAX:017320'),
                       ilxtr.Pvalb,
                       ilxtr['PV-cre'],
                       OntId('PR:000013502'),

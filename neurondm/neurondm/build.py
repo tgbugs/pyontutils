@@ -291,7 +291,9 @@ def make_phenotypes():
         if row[5]:
             graph.add_trip(id_, 'rdfs:comment', row[5])
         if row[6]:
-            graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + row[6])
+            supers = row[6].split(',')
+            for sup in supers:
+                graph.add_trip(id_, rdflib.RDFS.subPropertyOf, 'ilxtr:' + sup)
         if row[7]:
             graph.add_trip(id_, rdflib.OWL.inverseOf, 'ilxtr:' + row[7])
         if row[8]:
@@ -799,6 +801,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
             true_o = None
             true_id = None
             terms = []
+            _pp = p.toPython()
             if o in syn_mappings:
                 id_ = syn_mappings[o]  # FIXME can this happen more than once?
 
@@ -809,7 +812,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                 true_o = o_lit
                 true_id = id_
 
-            elif 'Location' in p.toPython() or 'LocatedIn' in p.toPython():  # lift location to restrictions
+            elif ('Location' in _pp or 'LocatedIn' in _pp or 'ElementsIn' in
+                  _pp or 'TerminalsIn' in _pp):  # lift location to restrictions
                 if o.startswith('http://'):
                     ng.add_hierarchy(o_lit, p, s)
                     ng.g.remove((s, p, o_lit))
@@ -830,7 +834,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
                         log.debug(f'{o_lit}')
                         continue
 
-                terms = [t.OntTerm for t in OntTerm.query(term=o)]
+                terms = [t for t in OntTerm.query(term=o)]
                 for t in terms:
                     if t.prefix in ('PR', 'CHEBI'):
                         sgt = t.URIRef
@@ -1185,23 +1189,37 @@ def make_devel():
                          if o.prefix not in bads)
 
     all_supers = set(o for t in terms
-                     if t('rdfs:subClassOf', depth=10, as_term=True)
+                     if t('rdfs:subClassOf', depth=10, asTerm=True)
                      for o in t.predicates['rdfs:subClassOf']
                          if o.prefix not in bads)
 
     terms |= all_supers
 
-    done = set()
-    def partOf(term):
-        if term in done:
-            return term
+    terms |= {OntTermOntologyOnly('UBERON:0002301'),  # cortical layer
+              OntTermOntologyOnly('UBERON:0008933'),  # S1
+              OntTermOntologyOnly('SAO:1813327414'),
+              OntTermOntologyOnly('NCBITaxon:9606'),
+              OntTermOntologyOnly('NCBITaxon:9685'),
+              OntTermOntologyOnly('SO:0000704'),
+    }
 
-        done.add(term)
-        if term('partOf:', as_term=True):
-            for superpart in term.predicates['partOf:']:
-                if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
-                    yield superpart
-                    yield from partOf(superpart)
+    def makeTraverse(*predicates):
+        done = set()
+        def traverse(term):
+            if term in done:
+                return term
+
+            done.add(term)
+            for predicate in predicates:
+                if term(predicate, asTerm=True):
+                    for superpart in term.predicates[predicate]:
+                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
+                            yield superpart
+                            yield from traverse(superpart)
+
+        return traverse
+
+    partOf = makeTraverse('partOf:', 'RO:0002433', 'rdfs:subClassOf')  # 2433 CTMO
 
     all_sparts = set(o for t in terms  # FIXME this is broken ...
                      for o in partOf(t)
@@ -1209,15 +1227,9 @@ def make_devel():
 
     terms |= all_sparts
 
-    terms |= {OntTermOntologyOnly('UBERON:0002301'),  # cortical layer
-              OntTermOntologyOnly('SAO:1813327414'),
-              OntTermOntologyOnly('NCBITaxon:9606'),
-              OntTermOntologyOnly('NCBITaxon:9685'),
-              OntTermOntologyOnly('SO:0000704'),
-    }
 
     #sctrips = (t for T in sorted(set(asdf for t in terms for
-                                     #asdf in (t, *t('rdfs:subClassOf', depth=1, as_term=True))
+                                     #asdf in (t, *t('rdfs:subClassOf', depth=1, asTerm=True))
                                      #if asdf.prefix not in bads), key=lambda t: (not t.label, t.label))
                #for t in T.triples('rdfs:subClassOf'))
 
@@ -1297,12 +1309,20 @@ def make_devel():
         prefixes = oq.OntCuries._dict
         def _triples(self, terms=terms):
             yield from helper_triples()
+            yield OntId('overlaps:').u, rdfs.label, rdflib.Literal('overlaps')
+
             yield OntId('BFO:0000050').u, a, owl.ObjectProperty
             yield OntId('BFO:0000050').u, a, owl.TransitiveProperty
             yield OntId('BFO:0000050').u, owl.inverseOf, OntId('BFO:0000051').u
+            yield OntId('BFO:0000050').u, rdfs.subPropertyOf, OntId('overlaps:').u
+
             yield OntId('BFO:0000051').u, a, owl.ObjectProperty
             yield OntId('BFO:0000051').u, a, owl.TransitiveProperty
             yield OntId('BFO:0000051').u, rdfs.label, rdflib.Literal('has part')
+            yield OntId('BFO:0000051').u, rdfs.subPropertyOf, OntId('overlaps:').u
+
+            yield OntId('RO:0002433').u, rdfs.label, rdflib.Literal('contributes to morphology of')
+            yield OntId('RO:0002433').u, rdfs.subPropertyOf, OntId('overlaps:').u
 
             done = []
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')
@@ -1337,7 +1357,7 @@ def make_devel():
                                         if not no.label:
                                             continue
                                         try:
-                                            noo = next(OntTermOntologyOnly.query(term=no.label)).OntTerm
+                                            noo = next(OntTermOntologyOnly.query(term=no.label))
                                             if noo != no and noo.prefix not in bads:
                                                 no = noo
                                             else:

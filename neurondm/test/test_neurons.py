@@ -1,9 +1,9 @@
 from test.common import _TestNeuronsBase, pyel, tel
-
-
+'''
 class TestNeurons(_TestNeuronsBase):
     # TODO make sure this runs after cli test? it should ...
     # but then we need to keep the output of ndl around
+
     def test_load_existing(self):
         from neurondm.lang import Neuron, Config
         config = Config('neuron_data_lifted')
@@ -111,22 +111,35 @@ class TestNeurons(_TestNeuronsBase):
         assert hash(NeuronCUT(pp)) != hash(NeuronEBM(pp))
 
 
+'''
+
 class TestRoundtrip(_TestNeuronsBase):
     # need to test other more complex constructs
-    def test_py_simple(self):
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
 
-        config = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
-        n1 = Neuron(Phenotype('TEMP:python-phenotype'))
-        n2 = Neuron(NegPhenotype('TEMP:python-phenotype'))
+    pyname = 'test-py'
+    ttlname = 'test-ttl'
+
+    def setUp(self):
+        super().setUp()
+        from neurondm import Config, Neuron, Phenotype, NegPhenotype
+        self.Config = Config
+        self.Neuron = Neuron
+        self.Phenotype = Phenotype
+        self.NegPhenotype = NegPhenotype
+
+    def test_py_simple(self):
+
+        config = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
+        n1 = self.Neuron(self.Phenotype('TEMP:python-phenotype'))
+        n2 = self.Neuron(self.NegPhenotype('TEMP:python-phenotype'))
         assert n1 != n2
         config.write_python()
 
-        config2 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config2 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
         config2.load_python()  # FIXME load existing python ...
         config2.write()
 
-        config3 = Config('test-py', ttl_export_dir=tel, py_export_dir=pyel)
+        config3 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
         config3.load_existing()
 
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
@@ -138,23 +151,33 @@ class TestRoundtrip(_TestNeuronsBase):
         # AND
         # test_roundtrip_py is run
         # but NOT when either is run independently
-        from neurondm import Config, Neuron, Phenotype, NegPhenotype
 
-        config = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
-        Neuron(Phenotype('TEMP:turtle-phenotype'))
-        Neuron(NegPhenotype('TEMP:turtle-phenotype'))
+        config = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
+        self.Neuron(self.Phenotype('TEMP:turtle-phenotype'))
+        self.Neuron(self.NegPhenotype('TEMP:turtle-phenotype'))
         config.write()
         a = config.neurons()
 
-        config2 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
+        config2 = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
         config2.load_existing()
         config2.write_python()
         b = config2.neurons()
 
-        config3 = Config('test-ttl', ttl_export_dir=tel, py_export_dir=pyel)
+        config3 = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
         config3.load_python()
         c = config3.neurons()
 
         print(a, b, c)
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
         assert a == b == c
+
+
+class TestRoundtripCUT(TestRoundtrip):
+
+    pyname = 'test-cut-py'  # can't import the same module name twice
+    ttlname = 'test-cut-ttl'
+
+    def setUp(self):
+        super().setUp()
+        from neurondm import NeuronCUT
+        self.Neuron = NeuronCUT

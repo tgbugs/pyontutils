@@ -59,7 +59,7 @@ class APIN(Sheet):
 
                     continue
                 for o in objects:
-                    pheno = OntTerm(o).as_phenotype(predicate=predicate)
+                    pheno = OntTerm(o).asPhenotype(predicate=predicate)
                     phenotypes.append(pheno)
 
             yield label, phenotypes
