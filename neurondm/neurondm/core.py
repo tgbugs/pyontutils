@@ -380,7 +380,7 @@ class OntTerm(bOntTerm, OntId):
             yield s, rdfs.label, label
 
         if not self.validated:
-            log.warn(f'{self!r}')
+            log.warning(f'{self!r}')
             return
 
         if self.synonyms is not None:  # FIXME this should never happen :/
