@@ -1,6 +1,6 @@
 edge,neurolex names,existing equiv,definition,label,notes,subPropertyOf,inverse,types
-hasPhenotype,,,,,,,phenotypeOf,"asymmetric, irreflexive"
-phenotypeOf,,,,,"of course this can never be universal, so is mostly useful for the python representation",,,"asymmetric, irreflexive"
+hasPhenotype,,,,,,,phenotypeOf,
+phenotypeOf,,,,,"of course this can never be universal, so is mostly useful for the python representation",,,
 hasPhenotypeModifier,,,"Expresses a restriction that modifies all phenotypes associated with a neuron type or a logical phenotype, only meaningful when used inside of owl:intersectionOf",,,,,"asymmetric, irreflexive"
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
