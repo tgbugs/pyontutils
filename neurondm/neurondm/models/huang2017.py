@@ -408,12 +408,12 @@ with Huang2017:
         Neuron(Sst, Calb2)
 
         fig1a = dict(
-        PVBC = Neuron(Basket, PV),
-        CHC =  Neuron(Nkx2_1),
-        CCKC = Neuron(Basket, VIP, CCK),
-        MNC =  Neuron(SST, CR),
-        ISC =  Neuron(VIP, CR),
-        LPC =  Neuron(SST, NOS1),
+        PVBC = Neuron(Basket, PV, label='PVBC neuron', override=True),
+        CHC =  Neuron(Nkx2_1, label='CHC neuron', override=True),
+        CCKC = Neuron(Basket, VIP, CCK, label='CCKC neuron', override=True),
+        MNC =  Neuron(SST, CR, label='MNC neuron', override=True),
+        ISC =  Neuron(VIP, CR, label='ISC neuron', override=True),
+        LPC =  Neuron(SST, NOS1, label='LPC neuron', override=True),
         )
 
         f7 = dict(
@@ -425,13 +425,19 @@ with Huang2017:
         other =     (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
         figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                            label=f'{type} all neuron', override=True)
+                            label=f'{type} molecular types neuron', override=True)
                  # the zip below packs all PVBC with PVBC, all CHEC, etc.
-                for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
+                 #for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
+                 for type, *phenos in zip(fig1a, *f7.values())}
 
         for k, v in fig1a.items():
-            # FIXME ISC currently classifies as vip cr cck which is incorrect
-            # some _subset_ of those have cck, but it is not clear how many
+            # ISC is in fact corrctly classified as a subClassOf +Cck neurons
+            # which is consistent with the overlap between CR and CCK in fig1b
+            # some _subset_ of those have cck, but it is not clear how many and
+            # if fig s7 columns are interpreted as equivalent to the fig1b as
+            # we do here, then the only question is whether the ISC -Cck subset
+            # has any additional distinguishing features CCKC doesn't have Calb2
+            # on the list, but fig1b suggests that some might
             figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
         if extra:
@@ -446,6 +452,7 @@ with Huang2017:
             peps = []
             sigs = []
 
+        # assert disjointness between top level types based on fig1a
         for dis in (peps, sigs, tuple(fig1a.values())):
             for i, n in enumerate(dis[:-1]):
                 for on in dis[i+1:]:
@@ -483,6 +490,9 @@ for n, p in Huang2017.items():
             Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
 
 Neuron.out_graph.add((ilxtr.gene, owl.equivalentClass, OntId('SO:0000704').u))
+Neuron.out_graph.add((ilxtr.NeuronHuang2017,
+                      ilxtr.modelSource,
+                      OntId('https://doi.org/10.1016/j.cell.2017.08.032').u))
 Neuron.write()
 Neuron.write_python()
 res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
