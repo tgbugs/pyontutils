@@ -1,7 +1,10 @@
 #!/usr/bin/env python3.7
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes models bridge old dep dev] [options]
+    neurondm-build release [options]
+    neurondm-build all [options]
+    neurondm-build [indicators phenotypes] [options]
+    neurondm-build [models bridge old dep dev] [options]
 
 Options:
     -h --help                   Display this help message
@@ -730,7 +733,7 @@ def _rest_make_phenotypes():
     #embed()
     return syn_mappings, pedges, ilx_start
 
-def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
+def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',
                 'star':None,  # is a morphological phen that is missing but hits scigraph
@@ -898,8 +901,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     defined_graph.add_class(defined_class_parent, NIFCELL_NEURON, label='defined class neuron')
     defined_graph.add_trip(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
 
-    defined_graph.write()
-    ng.write()
+    if old:
+        defined_graph.write()  # NIF-Neuron-Defined
+        ng.write()  # NIF-Neuron
 
     for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('NIFRID:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -1106,7 +1110,7 @@ def make_models():
     from importlib import import_module
     from neurondm.models import __all__
     skip = 'phenotype_direct',
-    __all__ = [a for a in __all__ if a not in skip]
+    __all__ = [a for a in __all__ if a not in skip and '2015' in a]
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
@@ -1407,12 +1411,18 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
-    models = args['models'] or all
-    dev = args['dev'] or all
-    old = args['old'] or all
-    bridge = args['bridge'] or all
-    phenotypes = args['phenotypes'] or all or old
+    release = args['release']       or all
+    models = args['models']         or all or release
+    dev = args['dev']               or all or release
+    old = args['old']               or all
+    bridge = args['bridge']         or all
+    phenotypes = args['phenotypes'] or all or old or release
+    indicators = args['indicators'] or all        or release
 
+
+    if indicators:
+        from neurondm import phenotype_indicators as pind
+        pind.main()
 
     if dep:
         from neurondm.lang import Config
@@ -1427,8 +1437,9 @@ def main():
 
     if phenotypes:
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
-        syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
-        expand_syns(syn_mappings)
+        if old:
+            syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
+            expand_syns(syn_mappings)
 
     if models:
         make_models()
@@ -1437,7 +1448,7 @@ def main():
         make_bridge()
 
     if old:
-        ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
+        ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph, old=old)
 
     if dev:
         make_devel()

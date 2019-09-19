@@ -130,10 +130,19 @@ class PhenotypeIndicators(Sheet):
         yield from self.triples_data
 
     def asGraph(self):
-        g = OntGraph()
-        [g.add(t) for t in self.triples]
-        OntCuries.populate(g)
-        return g
+        return self.populate()
+
+    def populate(self, graph=None):
+        """ Populate a graph, or if no graph is provided
+            populate a new empty graph from the current
+            content. (Also useful for debug) """
+
+        if graph is None:
+            graph = OntGraph()
+
+        [graph.add(t) for t in self.triples]
+        OntCuries.populate(graph)
+        return graph
 
 
 def main():

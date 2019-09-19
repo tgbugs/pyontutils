@@ -2792,7 +2792,11 @@ class LocalNameManager(metaclass=injective):
     """ Base class for sets of local names for phenotypes.
         Local name managers are singletons and do not need to be instantiated.
         Can be used in a context manager or globally via setLocalNames.
-        It is possible to subclass to add your custom names to a core. """
+        It is possible to subclass to add your custom names to a core.
+
+        NOTE: If you plan use the context manager functionality of a LNM
+        anywhere other than at top level, then you need to assign
+        __globals__ = globals() """
 
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
 

@@ -201,7 +201,8 @@ def stack_magic(stack):
     # note: in ipython with thing: print(name) will not work if on the same line
     # REMEMBER KIDS ALWAYS CALL inspect.stack(0) if you don't want
     # to acess the file system for every frame! (still slow, but better)
-    if len(stack) > 2 and 'exec_module' in [f.function for f in stack]:
+    function_names = [f.function for f in stack]
+    if len(stack) > 2 and 'exec_module' in function_names:
         for i, frame in enumerate(stack):
             fl = frame[0].f_locals
             if '__builtins__' in fl:
@@ -209,6 +210,16 @@ def stack_magic(stack):
                 return fl
     elif in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
+    elif function_names.count('main') >= 2:
+        # FIXME this is a hack that only works
+        # if the main of another module is called
+        # it doesn't actually fix the case where
+        # a context manager is used inside a class
+        f = stack[1][0]
+        if '__globals__' in f.f_globals:
+            return f.f_globals['__globals__']
+
+        index = -1
     else:
         index = -1
 
