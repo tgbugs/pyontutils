@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 
 from pathlib import Path
 from pyontutils.utils import rowParse, relative_path
@@ -146,6 +146,10 @@ class table1(rowParse):
                 NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
 
     def _end(self):
+        graphBase.out_graph.add((NeuronMarkram2015.owlClass,
+                                 ilxtr.modelSource,
+                                 OntId('https://doi.org/10.1016/j.cell.2015.09.029').u))
+
         graphBase.write()
         graphBase.write_python()
 

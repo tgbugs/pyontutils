@@ -490,7 +490,7 @@ for n, p in Huang2017.items():
             Neuron.out_graph.add(lt)  # FIXME maybe a helper graph?
 
 Neuron.out_graph.add((ilxtr.gene, owl.equivalentClass, OntId('SO:0000704').u))
-Neuron.out_graph.add((ilxtr.NeuronHuang2017,
+Neuron.out_graph.add((NeuronHuang2017.owlClass,
                       ilxtr.modelSource,
                       OntId('https://doi.org/10.1016/j.cell.2017.08.032').u))
 Neuron.write()
