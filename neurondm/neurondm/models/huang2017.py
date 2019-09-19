@@ -9,7 +9,6 @@ from pyontutils.closed_namespaces import rdf, rdfs, owl
 from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import *
-from IPython import embed
 
 extra = False  # construct extra classes
 config = Config('huang-2017',
@@ -462,7 +461,6 @@ with Huang2017:
 # common usage types
 # allen 2016 hongwei
 
-#embed()
 for n, p in Huang2017.items():
     if isinstance(p, Phenotype) and not n.startswith('_'):
         # FIXME rdflib allows instances but tests type so OntId can go in, but won't ever match
@@ -520,11 +518,11 @@ def ncbigene():
         replace = [print(n, '=', repr(p[0])) for n, p in asdf.items()
                 if p and p[0].pLabel.toPython() == n]
 
-    embed()
+    breakpoint()
 
 
 def main():
-    embed()
+    breakpoint()
 
 
 if __name__ == '__main__':

@@ -631,7 +631,6 @@ class Config:
 
         self.__class__._subclasses.add(lConfig)
 
-
         kwargs = dict(remote_base = remote_base,  # leave it as raw for now?
                       local_base = local_base.as_posix(),
                       core_graph_paths = core_graph_paths,
@@ -1172,7 +1171,7 @@ class graphBase:
 
     @classmethod
     def python_header(cls):
-        out = '#!/usr/bin/env python3.6\n'
+        out = '#!/usr/bin/env python3.7\n'
         out += f'from {cls.__import_name__} import *\n\n'
 
         all_types = set(type(n) for n in cls.neurons())

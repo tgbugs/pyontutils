@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """ Converts owl or ttl or raw rdflib graph into a pandas DataFrame. Saved in .pickle format.
 
 Usage:
@@ -16,16 +16,14 @@ import json
 from pathlib import Path
 import rdflib
 import requests
-from rdflib.namespace import *
 from pyontutils.utils import TermColors as tc, relative_path
-from pyontutils.core import simpleOnt
+from pyontutils.core import simpleOnt, OntGraph
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
+from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
 from pyontutils.combinators import annotation
 from neurondm.lang import *
-from pyontutils.closed_namespaces import rdf, rdfs, owl
 from docopt import docopt, parse_defaults
-from IPython import embed
 
 
 class NeuronACT(NeuronEBM):
@@ -63,7 +61,6 @@ class AllenCellTypes:
                       'ilxtr:hasExperimentalPhenotype',
                       label='prefix+stock_number'),
         )
-        # embed()
         print(graphBase.ttl())
 
     def cell_phenotypes(self, cell_specimen):
@@ -244,16 +241,31 @@ class AllenCellTypes:
                              source_file=relative_path(__file__))
 
     def build_neurons(self):
-        instances = []
-        AIBSSPEC = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Specimen/')
+        self._instances = []
         for cell_specimen in self.neuron_data:
             neuron = NeuronACT(*self.build_phenotypes(cell_specimen))
-            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, owl.NamedIndividual))
-            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, neuron.identifier))
+            self._instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, owl.NamedIndividual))
+            self._instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, neuron.identifier))
 
         print(sorted(self.tag_names))
         NeuronACT.write()
         NeuronACT.write_python()
+        self.build_instances()
+
+    def build_instances(self):
+        folder = Path(self.config.out_graph_path()).parent
+        # WOW do I need to implement the new/better way of
+        # managing writing collections of neurons to graphs
+        neuron_uri = next(NeuronACT.out_graph[:rdf.type:owl.Ontology])
+        name = 'allen-cell-instances.ttl'
+        base, _ = neuron_uri.rsplit('/', 1)
+        uri = rdflib.URIRef(base + '/' + name)
+        metadata = ((uri, rdf.type, owl.Ontology),)
+        instance_graph = OntGraph(path=folder / name)
+        instance_graph.bind('AIBSSPEC', AIBSSPEC)
+        [instance_graph.add(t) for t in metadata]
+        [instance_graph.add(t) for t in self._instances]
+        instance_graph.write()
 
     def build_transgenic_lines(self):
         """
