@@ -9,6 +9,7 @@ from inspect import getsourcefile
 from pathlib import Path
 from itertools import chain
 from collections import namedtuple
+from urllib.parse import urlparse
 import ontquery as oq
 import requests
 import htmlfn as hfn
@@ -500,10 +501,13 @@ class OntResPath(OntIdPath, OntResOnt):
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
 
-
 class OntIdGit(OntIdPath):
     def __init__(self, path, ref='HEAD'):
-        """ ref can be HEAD, branch, commit hash, etc. """
+        """ ref can be HEAD, branch, commit hash, etc.
+
+            if ref = None, the working copy of the file is used
+            if ref = '',   the index   copy of the file is used """
+
         self.path = path
         self.ref = ref
 
@@ -513,15 +517,25 @@ class OntIdGit(OntIdPath):
         # which neglects the repo portion of the id ...
         if type(self.path) == str:
             breakpoint()
-        return self.ref + ':' + self.path.relative_to(self.path.repo.working_dir).as_posix()
+
+        if self.ref is None:
+            return self.path.as_posix()
+
+        return self.ref + ':' + self.path.repo_relative_path.as_posix()
 
     def get(self):
         resp = requests.Response()
-        resp.raw = io.BytesIO(self.path.repo.git.show(self.identifier).encode())
+        if self.identifier == self.path.as_posix():
+            with open(self.path, 'rb') as f:
+                resp.raw = io.BytesIO(f.read())  # FIXME can't we stream/seek these?
+        else:
+            resp.raw = io.BytesIO(self.path.repo.git.show(self.identifier).encode())
+
         resp.status_code = 200
         return resp
 
     headers = OntIdIri.headers
+
 
 class OntHeaderGit(OntIdGit, OntHeader):
     data = OntHeaderIri.data
@@ -541,6 +555,32 @@ class OntResGit(OntIdGit, OntResOnt):
         return self._header
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
+
+
+class OntResAny:
+    def __new__(cls, path, ref=None):
+        try:
+            org = OntResGit(path, ref=ref)
+            org.get()  # yes this is slow, but it is the safest way ...
+            return org
+        except BaseException as e:
+            #log.exception(e)
+            repo = path.repo
+            remote = repo.remote()
+            rnprefix = remote.name + '/'
+            url_base = next(remote.urls)
+            pu = urlparse(url_base)
+            if pu.netloc == 'github.com':
+                if not ref or ref == 'HEAD':
+                    ref = repo.active_branch.name
+                elif ref not in [r.name.replace(rnprefix, '') for r in repo.refs]:
+                    log.warning(f'unknown ref {ref}')
+
+                rpath = Path(pu.path).with_suffix('') / ref / path.repo_relative_path
+                iri = 'https://raw.githubusercontent.com' + rpath.as_posix()
+                return OntResIri(iri)
+
+            breakpoint()
 
 
 class OntHeaderInterLex(OntHeader):
@@ -660,6 +700,9 @@ class OntGraph(rdflib.Graph):
         out = self.serialize(format='htmlttl').decode()
         CustomTurtleSerializer.roundtrip_prefixes = True
         return out
+
+    def debug(self):
+        print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
         # FIXME can't we hit the cache for these?
