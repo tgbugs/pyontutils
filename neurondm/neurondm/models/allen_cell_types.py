@@ -213,7 +213,7 @@ class AllenCellTypes:
         return phenotypes
 
     def add_mouse_lineage(self, cell_specimen):
-        phenotypes = [Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')]
+        phenotypes = [Phenotype('NCBITaxon:10090', 'ilxtr:hasTaxonRank')]
         return phenotypes
 
     def build_phenotypes(self, cell_specimen):

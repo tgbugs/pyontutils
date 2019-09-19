@@ -358,6 +358,7 @@ def main():
             if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
                           Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
                           Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:263', ilxtr.hasTaxonRank),
                           Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
                 yield pe
 

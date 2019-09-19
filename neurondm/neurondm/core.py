@@ -1375,7 +1375,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # TODO check if falls in one of the expression categories
             predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
             mapping = {
-                'NCBITaxon':self._predicates.hasInstanceInSpecies,
+                'NCBITaxon':self._predicates.hasTaxonRank,
                 'CHEBI':self._predicates.hasExpressionPhenotype,
                 'PR':self._predicates.hasExpressionPhenotype,
                 'NCBIGene':self._predicates.hasExpressionPhenotype,
@@ -2307,7 +2307,7 @@ class Neuron(NeuronBase):
         #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
 
         disjoints = [  # FIXME there has got to be a better place to do this :/
-            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasTaxonRank,
             self._predicates.hasSomaLocatedIn,
             self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
             self._predicates.hasSomaLocatedInLayer,

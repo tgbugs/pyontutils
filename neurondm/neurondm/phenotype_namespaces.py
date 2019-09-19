@@ -15,7 +15,7 @@ Config()  # explicitly load the core graph TODO need a lighter weight way to do 
 
 
 class Test(LocalNameManager):
-    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
+    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasTaxonRank')
 
 
 class Layers(LocalNameManager):
@@ -76,8 +76,8 @@ class PaxRatRegions(LocalNameManager):
 
 
 class Species(LocalNameManager):
-    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
-    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')
+    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasTaxonRank')
+    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasTaxonRank')
 
 
 class BBP(PaxRatLayers, PaxRatRegions, Species):
