@@ -883,6 +883,9 @@ class OntGraph(rdflib.Graph):
         # want to record the record in InterLex
         index_graph.namespace_manager.populate_from(self)
         [index_graph.add(t) for t in add_replace_graph]
+        # FIXME for some reason I had a thought that the index
+        # graph should include labels as a semi-orthogonal check
+        # to make sure that everything lines up as expected
 
         # if an identifier is used in multiple serialized graphs
         # then we want to make sure that we can do a replacement

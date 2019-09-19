@@ -21,7 +21,7 @@ from pyontutils.core import simpleOnt, OntGraph
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
 from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
-from pyontutils.combinators import annotation
+from pyontutils.combinators import annotation, allDifferent, distinctMembers
 from neurondm.lang import *
 from docopt import docopt, parse_defaults
 
@@ -241,18 +241,21 @@ class AllenCellTypes:
                              source_file=relative_path(__file__))
 
     def build_neurons(self):
-        self._instances = []
+        instances = []
+        dids = []
         for cell_specimen in self.neuron_data:
             neuron = NeuronACT(*self.build_phenotypes(cell_specimen))
-            self._instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, owl.NamedIndividual))
-            self._instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, neuron.identifier))
+            did = AIBSSPEC[str(cell_specimen['id'])]
+            dids.append(did)
+            instances.append((did, rdf.type, owl.NamedIndividual))
+            instances.append((did, rdf.type, neuron.identifier))
 
         print(sorted(self.tag_names))
         NeuronACT.write()
         NeuronACT.write_python()
-        self.build_instances()
+        self.build_instances(instances, dids)
 
-    def build_instances(self):
+    def build_instances(self, instances, dids):
         folder = Path(self.config.out_graph_path()).parent
         # WOW do I need to implement the new/better way of
         # managing writing collections of neurons to graphs
@@ -264,7 +267,8 @@ class AllenCellTypes:
         instance_graph = OntGraph(path=folder / name)
         instance_graph.bind('AIBSSPEC', AIBSSPEC)
         [instance_graph.add(t) for t in metadata]
-        [instance_graph.add(t) for t in self._instances]
+        [instance_graph.add(t) for t in instances]
+        [instance_graph.add(t) for t in allDifferent(None, distinctMembers(*dids))]
         instance_graph.write()
 
     def build_transgenic_lines(self):

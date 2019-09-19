@@ -654,6 +654,12 @@ class Members(PredicateList):
 members = Members()
 
 
+class DistinctMembers(PredicateList):
+    predicate = owl.distinctMembers
+
+distinctMembers = DistinctMembers()
+
+
 class EquivalentClass(Triple):
     """ That moment when you realize you are reimplementing a crappy version of
         owl functional syntax in python. """

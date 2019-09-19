@@ -1302,6 +1302,7 @@ def make_devel():
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/generated/allen-transgenic-lines.ttl'],
+                   #NIFRAW['neurons/ttl/generated/neurons/allen-cell-instances.ttl'],  # too slow
                    NIFRAW['neurons/ttl/generated/parcellation/mbaslim.ttl'],
                    rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owl'),
 
