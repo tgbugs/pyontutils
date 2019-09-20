@@ -450,7 +450,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                             #triples.add((s, p, o))
                 for s, o in sorted(scratch.subject_objects(p)):
                     if revert:
-                        raise NotImplemented('TODO')
+                        raise NotImplementedError('TODO')
                     nlfp = o.replace(remote_base, local_base)
                     triples.add((s, p, o))
                     if 'http://' in local_filepath or 'external' in local_filepath:  # FIXME what to do about https used inconsistently :/
@@ -680,7 +680,7 @@ def run(args):
     if graph:
         if args['--build-scigraph']:
             (scigraph_commit, load_base, services_zip,
-            scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
+             scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
                                                     git_local, sbranch, scommit,
                                                     check_built=check_built,
                                                     cleanup_later=True)
