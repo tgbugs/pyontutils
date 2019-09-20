@@ -32,10 +32,10 @@ from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes, interlex_namespace, nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, FSLATS
 from pyontutils.namespaces import PAXMUS, PAXRAT, paxmusver, paxratver, HCPMMP
-from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL
+from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL, partOf
+from pyontutils.namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
 from pyontutils.combinators import annotations
 from pyontutils.process_fixed import ProcessPoolExecutor
-from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
 from IPython import embed
 
 sgv = Vocabulary(cache=True)
@@ -634,6 +634,9 @@ class parcCore(ParcOnt):
     parents = LabelRoot, RegionRoot
 
     def _triples(self):
+        yield ilxtr.labelPartOf, rdf.type, owl.ObjectProperty
+        yield ilxtr.labelPartOf, rdf.type, owl.TransitiveProperty
+        yield ilxtr.labelPartOf, rdfs.subPropertyOf, partOf
         for parent in self.parents:
             yield from parent.class_triples()
 

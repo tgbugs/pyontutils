@@ -1,18 +1,18 @@
 import rdflib
-from pyontutils.core import simpleOnt, OntId, mGraph
+from pyontutils.core import simpleOnt, OntId, OntGraph
 from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.namespaces import partOf, definition
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
 from pyontutils.namespaces import prot, proc, tech, asp, dim, unit
+from pyontutils.namespaces import owl, rdf, rdfs
 from pyontutils.combinators import oc, oc_, odp, oop, olit, oec
 from pyontutils.combinators import POCombinator, ObjectCombinator
 from pyontutils.combinators import propertyChainAxiom, Combinator, Restriction2, EquivalentClass
 from pyontutils.combinators import restriction, restrictions, intersectionOf
-from pyontutils.closed_namespaces import owl, rdf, rdfs
 
 
-collector = mGraph(filename='property-chains.ttl')
+collector = OntGraph(path='property-chains.ttl')
 
 
 def _propertyChainAxiom(*args):

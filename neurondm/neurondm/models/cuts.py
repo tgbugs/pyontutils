@@ -355,11 +355,12 @@ def main():
     ians = [None] * len(ans)
     def zap(pes):
         for pe in pes:
-            if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasInstanceInTaxon),
-                          Phenotype('NCBITaxon:7742', ilxtr.hasInstanceInTaxon),
-                          Phenotype('BIRNLEX:252', ilxtr.hasInstanceInTaxon),
-                          Phenotype('BIRNLEX:263', ilxtr.hasInstanceInTaxon),
-                          Phenotype('BIRNLEX:516', ilxtr.hasInstanceInTaxon),):
+            # NOTE: these are RAW phenos that have not been converted
+            if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
+                          Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:263', ilxtr.hasTaxonRank),
+                          Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
                 yield pe
 
     with Neuron(CUT.Mammalia):

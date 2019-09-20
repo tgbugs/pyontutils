@@ -245,7 +245,6 @@ def add_types(ng):
 
 
 def phenotype_core_triples():
-    yield ilxtr.labelPartOf, rdfs.subPropertyOf, BFO['0000050']
     yield ilxtr.delineates, owl.inverseOf, ilxtr.isDelineatedBy
 
 
@@ -1111,7 +1110,7 @@ def make_models():
     from importlib import import_module
     from neurondm.models import __all__
     skip = 'phenotype_direct',
-    __all__ = [a for a in __all__ if a not in skip and '2015' in a]
+    __all__ = [a for a in __all__ if a not in skip]
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix
             continue
@@ -1241,7 +1240,6 @@ def make_devel():
     a = rdf.type
     def helper_triples():
         # model
-        yield ilxtr.labelPartOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
         yield ilxtr.Phenotype, rdfs.subClassOf, OntId('BFO:0000016').u
 
         # part of for markram
@@ -1253,6 +1251,7 @@ def make_devel():
 
         # missing labels
         yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+        yield OntId('BFO:0000050').u, rdfs.label, rdflib.Literal("part of")
 
         # receptor roles
         gar = ilxtr.GABAReceptor
@@ -1445,9 +1444,6 @@ def main():
     if models:
         make_models()
 
-    if bridge:
-        make_bridge()
-
     if old:
         ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph, old=old)
 
@@ -1457,6 +1453,9 @@ def main():
     if sheets:
         from neurondm import sheets
         sheets.main()
+
+    if bridge:
+        make_bridge()
 
     if __name__ == '__main__':
         #embed()

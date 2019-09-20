@@ -1590,7 +1590,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if graph is None:
             graph = self.out_graph
 
-        if self.p in self._location_predicates:
+        if self.e in self._location_predicates:
             #restn = cmb.restrictionN(self.e,
                                      #cmb.oc_.full_combinator(
                                          #cmb.unionOf(self.p,
@@ -1822,6 +1822,8 @@ class LogicalPhenotype(graphBase):
             members.append(getattr(pe, method)(graph=graph, method=method))
 
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
+
+    _graphify_cut = _graphify
 
     def __lt__(self, other):
         if type(other) == type(self):
