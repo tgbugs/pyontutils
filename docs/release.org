@@ -44,12 +44,13 @@
         shift
         # TODO make sure no vars are null
 
-        cd /tmp/  # ensure we are always working in tmp for the rest of the time
+        : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
+        cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
         if [ -d ${repo} ]; then
-            rm /tmp/release-testing -r
+            rm ${BASE_PATH}/release-testing -r
         fi
-        mkdir /tmp/release-testing
+        mkdir ${BASE_PATH}/release-testing
 
         if [ -d ${repo} ]; then
             pushd ${repo}
@@ -71,9 +72,9 @@
         PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $@  # pass $@ along eg for --release
         PYTHONPATH=''
         echo PYTHONPATH should be empty? '->' ${PYTHONPATH}
-        cp dist/${packagename}-${version}* /tmp/release-testing
+        cp dist/${packagename}-${version}* ${BASE_PATH}/release-testing
 
-        pushd /tmp/release-testing
+        pushd ${BASE_PATH}/release-testing
         tar xvzf ${packagename}-${version}.tar.gz
 
         pushd ${packagename}-${version}
