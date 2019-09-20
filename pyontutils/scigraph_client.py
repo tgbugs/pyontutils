@@ -7,6 +7,7 @@ generated for http://localhost:9000/scigraph/swagger.json
 by scigraph.py
 """
 import re
+import copy
 import builtins
 import requests
 from ast import literal_eval
@@ -22,7 +23,7 @@ class restService:
 
     _api_key = None
 
-    def __init__(self, cache=False, key=None):
+    def __init__(self, cache=False, safe_cache=False, key=None):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
         self._session.mount('http://', adapter)
@@ -30,7 +31,11 @@ class restService:
         if cache:
             #print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
             self._cache = dict()
-            self._get = self._cache_get
+            if safe_cache:
+                self._get = self._safe_cache_get
+            else:
+                self._get = self._cache_get
+
         else:
             self._get = self._normal_get
 
@@ -104,6 +109,12 @@ class restService:
 
         return resp
 
+    def _safe_cache_get(self, *args, **kwargs):
+        """ If cached values might be used in a context where they
+            could be mutated, then safe_cache = True should be set
+            and this wrapper will protect the output """
+        return copy.deepcopy(self._cache_get(*args, **kwargs))  # prevent mutation of the cache
+
     def _make_rest(self, default=None, **kwargs):
         kwargs = {k:v for k, v in kwargs.items() if v}
         param_rest = '&'.join(['%s={%s}' % (arg, arg) for arg in kwargs if arg != default])
@@ -114,12 +125,12 @@ class restService:
 class Analyzer(restService):
     """ Analysis services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def enrich(self, sample, ontologyClass, path, callback=None, output='application/json'):
         """ Class Enrichment Service from: /analyzer/enrichment
@@ -166,12 +177,12 @@ class Analyzer(restService):
 class Annotations(restService):
     """ Annotation services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def annotate(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='text/plain; charset=utf-8'):
         """ Annotate text from: /annotations
@@ -355,12 +366,12 @@ class Annotations(restService):
 class CypherBase(restService):
     """ Cypher utility services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def getCuries(self, callback=None, output='application/json'):
         """ Get the curie map from: /cypher/curies
@@ -533,12 +544,68 @@ class Cypher(CypherBase):
 class DynamicBase(restService):
     """ Dynamic Cypher resources """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+
+    def multiquery_relationship_id(self, relationship, id, output='application/json'):
+        """ actually include parent class properties like owl is supposed to ... from: /dynamic/multiquery/{relationship}/{id}
+
+            Arguments:
+            relationship: ontology id of the relationship to traverse
+            id: ontology id of the starting point
+
+            Query:
+            MATCH path = (start:Class{iri: "${id}"})
+            -[:subClassOf|${relationship}*]
+            ->(end)
+            RETURN path
+            /* // apparently broken
+            MATCH (start:Class{iri: "${id}"})
+            -[:subClassOf*0..40]
+            -(intermediate)
+            -[${relationship}*]
+            ->(end)
+            RETURN end
+            */
+            /*
+            MATCH (start:Class{iri: "${id}"})
+            -[:subClassOf*]
+            ->(superClass)
+            WITH superClass
+            MATCH (superClass)-[:${relationship}*]->(superpart)
+            RETURN superpart
+            UNION
+            MATCH (start:Class{iri: "${id}"})
+            -[:${relationship}*]->(superpart)
+            RETURN superpart
+            */
+            
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and id.startswith('http:'):
+            id = parse.quote(id, safe='')
+        kwargs = {'relationship': relationship, 'id': id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/dynamic/multiquery/{relationship}/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
 
     def neurons_connectedRegions(self, start_id=None, target_predicate=None, output='application/json'):
         """ Get connected anatomical regions by starting location and target relationship from: /dynamic/neurons/connectedRegions
@@ -1257,12 +1324,12 @@ class Dynamic(DynamicBase):
 class GraphBase(restService):
     """ Graph services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def getEdges(self, type, entail=None, limit=None, skip=None, callback=None, output='application/json'):
         """ Get nodes connected by an edge type from: /graph/edges/{type}
@@ -1501,12 +1568,12 @@ class Graph(GraphBase):
 class Lexical(restService):
     """ Lexical services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def getChunks(self, text, output='application/json'):
         """ Extract entities from text. from: /lexical/chunks
@@ -1580,12 +1647,12 @@ class Lexical(restService):
 class Refine(restService):
     """ OpenRefine Reconciliation Services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def getPreview(self, id, output='application/json'):
         """  from: /refine/preview/{id}
@@ -1708,12 +1775,12 @@ class Refine(restService):
 class Vocabulary(restService):
     """ Vocabulary services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
     def findByPrefix(self, term, limit=None, searchSynonyms=None, searchAbbreviations=None, searchAcronyms=None, includeDeprecated=None, category=None, prefix=None, output='application/json'):
         """ Find a concept by its prefix from: /vocabulary/autocomplete/{term}
