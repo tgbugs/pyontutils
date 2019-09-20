@@ -117,7 +117,7 @@
         version=$1
         shift
 
-        rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/
+        rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/ || return 1
         pushd ${software_releases_path}
         sha256sum ${packagename}-${version}* >> hashes
         twine upload --repository test ${packagename}-${version}*
