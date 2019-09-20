@@ -5,6 +5,7 @@ Usage:
     neurondm-build all [options]
     neurondm-build [indicators phenotypes] [options]
     neurondm-build [models bridge old dep dev] [options]
+    neurondm-build [sheets] [options]
 
 Options:
     -h --help                   Display this help message
@@ -21,7 +22,7 @@ from urllib.parse import quote
 import rdflib
 import ontquery as oq
 from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, createOntology, OntId as OntId_
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntConjunctiveGraph
 from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
@@ -1167,7 +1168,7 @@ def make_devel():
           'cut-roundtrip.ttl',
           'huang-2017.ttl',
           'markram-2015.ttl',)
-    g = rdflib.ConjunctiveGraph()
+    g = OntConjunctiveGraph()
     for fn in fns:
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
@@ -1411,18 +1412,14 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
+    old = args['old']               or all
     release = args['release']       or all
+    phenotypes = args['phenotypes'] or all or release or old
+    bridge = args['bridge']         or all
     models = args['models']         or all or release
     dev = args['dev']               or all or release
-    old = args['old']               or all
-    bridge = args['bridge']         or all
-    phenotypes = args['phenotypes'] or all or old or release
-    indicators = args['indicators'] or all        or release
-
-
-    if indicators:
-        from neurondm import phenotype_indicators as pind
-        pind.main()
+    indicators = args['indicators'] or all or release
+    sheets = args['sheets']         or all or release
 
     if dep:
         from neurondm.lang import Config
@@ -1434,6 +1431,10 @@ def main():
         config.write_python()
         embed()
         return
+
+    if indicators:
+        from neurondm import phenotype_indicators as pind
+        pind.main()
 
     if phenotypes:
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
@@ -1452,6 +1453,10 @@ def main():
 
     if dev:
         make_devel()
+
+    if sheets:
+        from neurondm import sheets
+        sheets.main()
 
     if __name__ == '__main__':
         #embed()

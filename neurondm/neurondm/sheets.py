@@ -367,7 +367,6 @@ class CutsV1(Cuts):
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
-    from IPython import embed
     from neurondm.compiled.common_usage_types import config as cuts_config
     cuts_neurons = cuts_config.neurons()
     expect_pes = {n.id_:len(n.pes) for n in cuts_neurons}
@@ -418,7 +417,9 @@ def main():
 
     rows = [list(replace(r, 'Status', 'definition', 'synonyms', 'PMID')) for r in reviewC]
     #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
-    embed()
+    if __name__ == '__main__':
+        breakpoint()
+
 
 if __name__ == '__main__':
     main()
