@@ -14,8 +14,9 @@ import ontquery as oq
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
+from augpathlib import RepoPath
 from pyontutils import combinators as cmb
-from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm,
+from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
 from pyontutils.core import OntConjunctiveGraph, OntResAny
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
@@ -95,7 +96,6 @@ def getPhenotypePredicates(graph):
                                 graph.transitive_objects(s, rdfs.subPropertyOf)
                                 if o != s) for s in out}
 
-    breakpoint()
     return phenoPreds, predicate_supers
 
 # label maker
@@ -1060,7 +1060,13 @@ class graphBase:
             core_graph = OntConjunctiveGraph()
         for cg in use_core_paths:
             try:
-                core_graph.parse(cg, format='turtle')
+                #core_graph.parse(cg, format='turtle')
+                if cg.startswith('file://'):
+                    cg = cg[7:]  # FIXME ... from_uri ...
+
+                ora = OntResAny(RepoPath(cg))
+                giri = ora.identifier_bound
+                core_graph.addN(((*t, giri) for t in ora.graph))
             except (FileNotFoundError, HTTPError) as e:
                 # TODO failover to local if we were remote?
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
