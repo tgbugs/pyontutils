@@ -15,7 +15,7 @@ Config()  # explicitly load the core graph TODO need a lighter weight way to do 
 
 
 class Test(LocalNameManager):
-    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasTaxonRank')
+    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInTaxon')
 
 
 class Layers(LocalNameManager):
@@ -76,8 +76,8 @@ class PaxRatRegions(LocalNameManager):
 
 
 class Species(LocalNameManager):
-    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasTaxonRank')
-    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasTaxonRank')
+    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInTaxon')
+    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInTaxon')
 
 
 class BBP(PaxRatLayers, PaxRatRegions, Species):
@@ -164,7 +164,7 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
 
 
 class CUT(LocalNameManager):
-    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasTaxonRank)
+    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasInstanceInTaxon)
     proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
     inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
 

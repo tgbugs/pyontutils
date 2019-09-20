@@ -250,14 +250,14 @@ def phenotype_core_triples():
 
 def make_phenotypes():
     ilx_start = 50114
-    graph = createOntology(filename='phenotype-core',
-                           name='NIF Phenotype Core',
-                           path='ttl/',
-                           prefixes=PREFIXES)
-    graph2 = createOntology(filename='phenotypes',
-                            name='NIF Phenotypes',
-                            path='ttl/',
-                            prefixes=PREFIXES)
+
+    writeloc = Path(devconfig.ontology_local_repo, 'ttl')
+    graph = makeGraph('phenotype-core',
+                      writeloc=writeloc,
+                      prefixes=PREFIXES)
+    graph2 = makeGraph('phenotypes',
+                       writeloc=writeloc,
+                       prefixes=PREFIXES)
 
     defined_graph = createOntology(filename='NIF-Neuron-Defined',
                                    path='ttl/',

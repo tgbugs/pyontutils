@@ -14,17 +14,18 @@ import ontquery as oq
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
-from pyontutils import combinators as comb
-from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
+from pyontutils import combinators as cmb
+from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm,
+from pyontutils.core import OntConjunctiveGraph, OntResAny
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
-from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy
+from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy, partOf
 from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID
-from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
+from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
@@ -94,6 +95,7 @@ def getPhenotypePredicates(graph):
                                 graph.transitive_objects(s, rdfs.subPropertyOf)
                                 if o != s) for s in out}
 
+    breakpoint()
     return phenoPreds, predicate_supers
 
 # label maker
@@ -187,6 +189,9 @@ class LabelMaker:
 
     @od
     def hasTaxonRank(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
+    def hasInstanceInTaxon(self, phenotypes):
         yield from self._default(phenotypes)
     @od
     def hasInstanceInSpecies(self, phenotypes):
@@ -408,7 +413,7 @@ class OntTerm(bOntTerm, OntId):
                     if superpart.prefix in bads:
                         continue
                     if (predicate, superpart) not in done:
-                        yield from comb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
+                        yield from cmb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
                         done.append((predicate, superpart))
 
 
@@ -599,7 +604,10 @@ class Config:
         imports += [remote.iri + 'ttl/phenotype-core.ttl',
                     remote.iri + 'ttl/phenotypes.ttl',
                     remote.iri + 'ttl/phenotype-indicators.ttl']
-        remote_path = '' if local_base is None else ttl_export_dir.resolve().relative_to(local_base.resolve())
+        remote_path = ('' if local_base is None
+                       else (ttl_export_dir
+                             .resolve()
+                             .relative_to(local_base.resolve())))
         out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
 
@@ -618,9 +626,12 @@ class Config:
         if import_as_local:
             # NOTE: we currently do the translation more ... inelegantly inside of config so we
             # have to keep the translation layer out here (sigh)
-            core_graph_paths = [Path(local, i.iri.replace(remote.iri, '')).relative_to(local_base).as_posix()
+            core_graph_paths = [(Path(local,
+                                     i.iri.replace(remote.iri, ''))
+                                 .relative_to(local_base).as_posix())
                                 if remote.iri in i.iri else
                                 i for i in imports]
+            log.debug(core_graph_paths)
         else:
             core_graph_paths = imports
 
@@ -1046,7 +1057,7 @@ class graphBase:
 
         # core graph setup
         if core_graph is None:
-            core_graph = rdflib.ConjunctiveGraph()
+            core_graph = OntConjunctiveGraph()
         for cg in use_core_paths:
             try:
                 core_graph.parse(cg, format='turtle')
@@ -1375,7 +1386,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # TODO check if falls in one of the expression categories
             predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
             mapping = {
-                'NCBITaxon':self._predicates.hasTaxonRank,
+                'NCBITaxon':self._predicates.hasInstanceInTaxon,
                 'CHEBI':self._predicates.hasExpressionPhenotype,
                 'PR':self._predicates.hasExpressionPhenotype,
                 'NCBIGene':self._predicates.hasExpressionPhenotype,
@@ -1557,11 +1568,32 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 OntId(self.p).curie.replace(':','-'))
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
-    def _graphify(self, graph=None):
+    def _graphify(self, graph=None, **kwargs):
         if graph is None:
             graph = self.out_graph
 
         return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
+
+    def _graphify_cut(self, graph=None, **kwargs):
+        if graph is None:
+            graph = self.out_graph
+
+        if self.p in self._location_predicates:
+            #restn = cmb.restrictionN(self.e,
+                                     #cmb.oc_.full_combinator(
+                                         #cmb.unionOf(self.p,
+                                                     #cmb.restrictionN(partOf,
+                                                                      #self.p))))
+            por = infixowl.Restriction(onProperty=partOf,
+                                       someValuesFrom=self.p,
+                                       graph=graph)
+            members = self.p, por
+            uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
+            return infixowl.Restriction(onProperty=self.e, someValuesFrom=uo, graph=graph)
+        else:
+            return self._graphify(self, graph)
+
+
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -1770,12 +1802,12 @@ class LogicalPhenotype(graphBase):
                                 #OntId(pe.p).curie.replace(':','-')
                                 #for pe in sorted(self.pes)), key=natsort))
 
-    def _graphify(self, graph=None):
+    def _graphify(self, graph=None, method='_graphify'):
         if graph is None:
             graph = self.out_graph
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
-            members.append(pe._graphify(graph=graph))
+            members.append(getattr(pe, method)(graph=graph, method=method))
 
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
 
@@ -2307,7 +2339,7 @@ class Neuron(NeuronBase):
         #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
 
         disjoints = [  # FIXME there has got to be a better place to do this :/
-            self._predicates.hasTaxonRank,
+            self._predicates.hasInstanceInTaxon,
             self._predicates.hasSomaLocatedIn,
             self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
             self._predicates.hasSomaLocatedInLayer,
@@ -2519,9 +2551,9 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
-    def _graphify_pes(self, graph, members):
+    def _graphify_pes(self, graph, members, method='_graphify'):
         for pe in self.pes:
-            target = pe._graphify(graph=graph)
+            target = getattr(pe, method)(graph=graph, method=method)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
                 #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
@@ -2562,7 +2594,7 @@ class NeuronCUT(Neuron):
 
         self._graphify_labels(graph)
         members = [Neuron.owlClass]
-        Class = self._graphify_pes(graph, members)
+        Class = self._graphify_pes(graph, members, method='_graphify_cut')
         Class.subClassOf = [self.owlClass]
         return Class
 

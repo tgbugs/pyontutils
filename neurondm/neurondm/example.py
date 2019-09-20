@@ -98,7 +98,7 @@ with phns.BBP:
     print('sumn a neuron again', repr(nn))
 
 setLocalNames(phns.BBP)
-setLocalContext(Phenotype('NCBITaxon:10090', ilxtr.hasTaxonRank))
+setLocalContext(Phenotype('NCBITaxon:10090', ilxtr.hasInstanceInTaxon))
 Neuron(Phenotype('UBERON:0001950', ilxtr.hasSomaLocatedIn, label='neocortex'))
 Neuron(brain, Phenotype('PR:000013502'))
 Neuron(Phenotype('UBERON:0000955'), Phenotype('CHEBI:18243'))
