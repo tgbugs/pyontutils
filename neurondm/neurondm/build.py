@@ -1217,7 +1217,7 @@ def make_devel():
             for predicate in predicates:
                 if term(predicate, asTerm=True):
                     for superpart in term.predicates[predicate]:
-                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
+                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT', 'FMA'):  # continuant and occurent form a cycle >_<
                             yield superpart
                             yield from traverse(superpart)
 
@@ -1334,6 +1334,9 @@ def make_devel():
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
 
+            if not terms:
+                raise BaseException('WHAT')
+
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1341,6 +1344,7 @@ def make_devel():
                         continue
 
                     done.append(term)
+                    log.debug(repr(term))
                     if not term.label or (not term.label.endswith('neuron') and
                                           not term.label.endswith('cell')):
                         haveLabel = False
@@ -1363,7 +1367,9 @@ def make_devel():
                                             continue
                                         try:
                                             noo = next(OntTermOntologyOnly.query(term=no.label))
-                                            if noo != no and noo.prefix not in bads:
+                                            if noo.curie in ('owl:Class', 'owl:Thing'):
+                                                continue
+                                            elif noo != no and noo.prefix not in bads:
                                                 no = noo
                                             else:
                                                 continue
