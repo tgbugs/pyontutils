@@ -558,7 +558,24 @@ class OntResGit(OntIdGit, OntResOnt):
 
 
 class OntResAny:
-    def __new__(cls, path, ref=None):
+    def __new__(cls, path, ref=None, ref_failover=None):
+        # it really is better if people statically know so we don't have to guess
+        """
+        if isinstance(path_or_iri, Path):
+            iri = None
+            path = path_or_iri
+        elif isinstance(path_or_iri, str):
+            if path_or_iri.startswith('http://') or path_or_iri.startswith('https://'):
+                iri = path_or_iri
+                # TODO try to find the local version?
+                path = None
+            else:
+                iri = None
+                path = path_or_iri
+        else:
+            raise TypeError(f'what is a {type(path_or_iri)} {path_or_iri!r}')
+
+        """
         try:
             org = OntResGit(path, ref=ref)
             org.get()  # yes this is slow, but it is the safest way ...

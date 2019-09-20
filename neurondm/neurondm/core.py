@@ -17,7 +17,7 @@ from ttlser import natsort
 from augpathlib import RepoPath
 from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
-from pyontutils.core import OntConjunctiveGraph, OntResAny
+from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
@@ -1064,8 +1064,10 @@ class graphBase:
                 #core_graph.parse(cg, format='turtle')
                 if cg.startswith('file://'):
                     cg = cg[7:]  # FIXME ... from_uri ...
+                    ora = OntResAny(RepoPath(cg))
+                else:
+                    ora = OntResIri(cg)
 
-                ora = OntResAny(RepoPath(cg))
                 giri = ora.identifier_bound
                 core_graph.addN(((*t, giri) for t in ora.graph))
             except (FileNotFoundError, HTTPError) as e:
