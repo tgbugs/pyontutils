@@ -2505,6 +2505,7 @@ class Neuron(NeuronBase):
                             # in case we didn't catch it before
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
+                            # FIXME this could error for CUTs at some point
                             log.error(f'Wrong owl:Class, expected: {self.id_} got: {id_}')
                             return
                         else:
@@ -2521,6 +2522,8 @@ class Neuron(NeuronBase):
                     elif isinstance(pr, infixowl.Restriction):
                         pes.append(restriction_to_phenotype(pr))
                     elif id_ == self.owlClass:
+                        pes.append(id_)
+                    elif id_ == _NEURON_CLASS:  # CUT case
                         pes.append(id_)
                     elif pr is None:
                         log.warning(f'dangling reference {id_}')
