@@ -763,7 +763,18 @@ class OntGraph(rdflib.Graph):
 
         return add, rem, same
 
-    def subjectGraph(self, subject, *, done=None):
+    def subjectGraph(self, subject):
+        # some days I am smart, as in years ago when working on neuron stuff
+        # TODO do we need to check for duplicates and cycels?
+        def f(triple, graph):
+            subject, predicate, object = triple
+            for p, o in graph[object]:
+                yield object, p, o
+
+        yield from self.transitiveClosure(f, (None, None, subject))
+
+    def _subjectGraph(self, subject, *, done=None):
+        # some days I am dumb
         first = False
         if done is None:
             first = True
