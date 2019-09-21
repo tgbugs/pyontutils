@@ -133,6 +133,8 @@ class TestRoundtrip(_TestNeuronsBase):
         n1 = self.Neuron(self.Phenotype('TEMP:python-phenotype'))
         n2 = self.Neuron(self.NegPhenotype('TEMP:python-phenotype'))
         assert n1 != n2
+        self.Neuron(self.Phenotype('TEMP:python-location', 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.NegPhenotype('TEMP:python-location', 'ilxtr:hasLocationPhenotype'))
         config.write_python()
 
         config2 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
@@ -155,6 +157,8 @@ class TestRoundtrip(_TestNeuronsBase):
         config = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
         self.Neuron(self.Phenotype('TEMP:turtle-phenotype'))
         self.Neuron(self.NegPhenotype('TEMP:turtle-phenotype'))
+        self.Neuron(self.Phenotype('TEMP:turtle-location', 'ilxtr:hasLocationPhenotype'))
+        self.Neuron(self.NegPhenotype('TEMP:turtle-location', 'ilxtr:hasLocationPhenotype'))
         config.write()
         a = config.neurons()
 
