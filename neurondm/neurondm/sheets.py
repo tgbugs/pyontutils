@@ -57,7 +57,7 @@ def process_note(raw_note):
             yield p, rdflib.Literal(bit)  # FIXME cull editorial notes
 
 
-def sheet_to_neurons(values, notes_index, expect_pes):
+def sheet_to_neurons(values, cells_index, expect_pes):
     # TODO import existing ids to register by label
     sgv = Vocabulary()
     e_config = Config('common-usage-types')
@@ -170,7 +170,7 @@ def sheet_to_neurons(values, notes_index, expect_pes):
         other_notes = {}
         wat = {}
         for j, (header, cell) in enumerate(zip(headers, neuron_row)):
-            notes = list(process_note(get_note(i + 1, j, notes_index)))  # + 1 since headers is removed
+            notes = list(process_note(get_note(i + 1, j, cells_index)))  # + 1 since headers is removed
             if notes and not header.startswith('has'):
                 _predicate = convert_other(header)
                 if cell:
@@ -372,7 +372,7 @@ def main():
     expect_pes = {n.id_:len(n.pes) for n in cuts_neurons}
 
     sheet = CutsV1()
-    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.notes_index, expect_pes)
+    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.cells_index, expect_pes)
     #sheet.show_notes()
     config.write_python()
     config.write()
