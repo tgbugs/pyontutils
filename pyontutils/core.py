@@ -1050,7 +1050,7 @@ class makeGraph:
         if graph is not None:
             self.g = graph
         else:
-            self.g = rdflib.Graph()  # default args issue
+            self.g = OntGraph()  # default args issue
 
         for p, ns in self.namespaces.items():
             self.add_namespace(p, ns)

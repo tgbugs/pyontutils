@@ -141,6 +141,8 @@ class TestRoundtrip(_TestNeuronsBase):
         config2.load_python()  # FIXME load existing python ...
         config2.write()
 
+        config2.out_graph.debug()
+
         config3 = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
         config3.load_existing()
 
