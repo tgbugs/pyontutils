@@ -1,6 +1,7 @@
 import unittest
 import rdflib
 from pyontutils.core import OntResIri, OntResPath, OntResGit, OntResAny
+from pyontutils.core import OntGraph, OntConjunctiveGraph
 
 
 class TestOntResIri(unittest.TestCase):
@@ -22,7 +23,15 @@ class TestOntResIri(unittest.TestCase):
 
     def test_4_graph(self):
         g = self.ori.graph
-        assert list(g), 'no graph?'
+        assert next(iter(g)), 'no graph?'
+
+    def test_5_asConjunctive(self):
+        g = self.ori.graph
+        c = g.asConjunctive()
+        assert next(iter(c)), 'wat'
+        assert not [g for g in c.contexts() if not isinstance(g, OntGraph)]
+        breakpoint()
+
 
 class TestOntResIriConsecutive(TestOntResIri):
     @classmethod

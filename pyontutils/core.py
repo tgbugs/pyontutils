@@ -1047,6 +1047,71 @@ class OntGraph(rdflib.Graph):
         new_self.namespace_manager.populate_from(index_graph)
         return new_self
 
+    # variously named/connected subsets
+
+    @property
+    def boundIdentifier(self):
+        return next(self[:rdf.type:owl.Ontology])
+
+    @property
+    def metadata(self):
+        yield from self.subjectGraph(self.boundIdentifier)
+
+    @property
+    def metadata_unnamed(self):
+        yield from ((s, p, o) for s, p, o in self.metadata
+                    if isinstance(s, rdflib.BNode))
+
+    @property
+    def data(self):
+        bi = self.boundIdentifier
+        meta_bnodes = tuple(e for t in metadata_unnamed for e in t
+                            if isinstance(e, rdflib.BNode))
+        meta_skip_subject = bi, + meta_bnodes
+        for s, p, o in self:
+            if s not in meta_skip_subject:
+                yield (s, p, o)
+
+    @property
+    def data_named(self):
+        # FIXME process_graph is more efficient that this ...
+        bi = self.boundIdentifier
+        for s in self.subjects():
+            if not isinstance(s, rdflib.BNode) and s != bi:
+                yield from self.subjectGraph(s)
+
+    @property
+    def data_unnamed(self):
+        # there is no metadata unnamed
+        # FIXME connected unnamed vs named ...
+        # why is this so darned complex
+
+        # have to know which bnodes are attached to meta
+        #bi = self.boundIdentifier
+        #connected_bnodes = tuple(e for t in self.data_named for e in t
+                                 #if isinstance(e, rdflib.BNode))
+        object_bnodes = tuple(o for o in self.objects() if isinstance(o, rdflib.BNode))
+        for s in self.subjects():  # FIXME some non-bnode fellows seem to be sneeking in here
+            if isinstance(s, rdflib.BNode) and s not in object_bnodes:
+                yield from self.subjectGraph(s)
+
+    def asConjunctive(self):
+        # TODO a version of this that can populate
+        # from OntRes directly if conjunctive graph is requested or similar
+        # since the individual graphs are already separate (though possibly incorrect)
+        id = self.boundIdentifier
+        #curies = rdflib.URIRef(id + '?section=localConventions')
+        meta_id = rdflib.URIRef(id + '?section=metadata')
+        data_id = rdflib.URIRef(id + '?section=data')
+        datan_id = rdflib.URIRef(id + '?section=data_named')
+        datau_id = rdflib.URIRef(id + '?section=data_unnamed')
+        c = OntConjunctiveGraph(identifier=id)
+        [c.addN((*t, meta_id) for t in self.metadata)]
+        #[c.addN((*t, data_id)) for t in self.data]
+        [c.addN((*t, datan_id) for t in self.data_named)]
+        [c.addN((*t, datau_id) for t in self.data_unnamed)]
+        return c
+
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
     def __init__(self, *args, store='default', identifier=None, **kwargs):
@@ -1055,6 +1120,17 @@ class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
         self.default_context = OntGraph(store=self.store,
                                         identifier=identifier or rdflib.BNode())
 
+    def get_context(self, identifier, quoted=False):
+        """Return a context graph for the given identifier
+
+        identifier must be a URIRef or BNode.
+        """
+        return OntGraph(store=self.store, identifier=identifier,
+                        namespace_manager=self.namespace_manager)
+
+    def debugAll(self):
+        for g in self.contexts():
+            g.debug()
 
 
 OntRes.Graph = OntGraph
