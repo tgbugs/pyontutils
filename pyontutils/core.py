@@ -1101,7 +1101,7 @@ class OntGraph(rdflib.Graph):
             if isinstance(s, rdflib.BNode) and s not in object_bnodes:
                 yield from self.subjectGraph(s)
 
-    def asConjunctive(self):
+    def asConjunctive(self, debug=False):
         # TODO a version of this that can populate
         # from OntRes directly if conjunctive graph is requested or similar
         # since the individual graphs are already separate (though possibly incorrect)
@@ -1116,13 +1116,13 @@ class OntGraph(rdflib.Graph):
         #[c.addN((*t, data_id)) for t in self.data]
         [c.addN((*t, datan_id) for t in self.data_named)]
         [c.addN((*t, datau_id) for t in self.data_unnamed)]
-        if True:  # debug
+        if debug:
             c.bind('ilxtr', ilxtr)
             tc = CustomTurtleSerializer.topClasses
             if ilxtr.StreamSection not in tc:
                 sec = CustomTurtleSerializer.SECTIONS
-                CustomTurtleSerializer.topClasses = tc[:1] + [ilxtr.StreamSection] + tc[1:]
-                CustomTurtleSerializer.SECTIONS = sec[:1] + ('',) + sec[1:]
+                CustomTurtleSerializer.topClasses = [ilxtr.StreamSection] + tc
+                CustomTurtleSerializer.SECTIONS = ('',) + sec
             c.add((meta_id, rdf.type, ilxtr.StreamSection, meta_id))
             c.add((datan_id, rdf.type, ilxtr.StreamSection, datan_id))
             c.add((datau_id, rdf.type, ilxtr.StreamSection, datau_id))

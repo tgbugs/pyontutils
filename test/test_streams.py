@@ -30,7 +30,6 @@ class TestOntResIri(unittest.TestCase):
         c = g.asConjunctive()
         assert next(iter(c)), 'wat'
         assert not [g for g in c.contexts() if not isinstance(g, OntGraph)]
-        breakpoint()
 
 
 class TestOntResIriConsecutive(TestOntResIri):
