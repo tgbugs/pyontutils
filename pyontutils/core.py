@@ -228,7 +228,11 @@ class OntRes(Stream):
         self._populate(graph, self.data)
 
     @property
-    def graph(self):
+    def graph(self, cypher=None):
+        # FIXME transitions to other streams should be functions
+        # and it also allows passing an explicit cypher argument
+        # to enable checksumming in one pass, however this will
+        # require one more wrapper
         if not hasattr(self, '_graph'):
             self._graph = self.Graph()
             self.populate(self._graph)
@@ -746,6 +750,13 @@ class OntGraph(rdflib.Graph):
     @property
     def data(self):
         """ everything else """
+        # FIXME this is actually metadata + homogenous data
+        # question: should data sections automatically checksum
+        # their contents as it streams through?
+        # answer: no, if someone needs a checksum, they should ask
+        # for it explicitly when they transition to some other stream
+        # whether that is a file or a graph etc.
+
         raise NotImplementedError('yet')
 
     def write(self, path=None, format='nifttl'):
