@@ -1,0 +1,49 @@
+import unittest
+import rdflib
+from pyontutils.core import OntResIri, OntResPath, OntResGit, OntResAny
+
+
+class TestOntResIri(unittest.TestCase):
+    def setUp(self):
+        # TODO localhost server running in thread ?
+        self.ori = OntResIri('https://raw.githubusercontent.com/tgbugs/pyontutils/master/ttlser/test/nasty.ttl')
+
+    def test_1_hrm(self):  # FIXME naming
+        headers = self.ori.headers
+        assert headers, 'no headers?'
+
+    def test_2_metadata(self):
+        metadata = self.ori.metadata
+        assert metadata, 'no metadata?'
+
+    def test_3_data(self):
+        data = self.ori.data
+        assert data, 'no data?'
+
+    def test_4_graph(self):
+        g = self.ori.graph
+        assert list(g), 'no graph?'
+
+class TestOntResIriConsecutive(TestOntResIri):
+    @classmethod
+    def setUpClass(cls):
+        cls.ori = OntResIri('https://raw.githubusercontent.com/tgbugs/pyontutils/master/ttlser/test/nasty.ttl')
+
+    def setUp(self): pass
+
+    def test_1_hrm(self):  # FIXME naming
+        super().test_1_hrm()
+
+    def test_2_metadata(self):
+        assert hasattr(self.ori, '_headers') and self.ori._headers, 'headers not populated'
+        super().test_2_metadata()
+
+    def test_3_data(self):
+        assert hasattr(self.ori, '_metadata') and self.ori._metadata, 'metadata not populated'
+        super().test_3_data()
+
+    #def test_4_graph(self):
+        #assert hasattr(self.ori, '_data') and self.ori._data, 'data not populated'
+        #super().test_4_graph()
+
+

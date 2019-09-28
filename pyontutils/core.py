@@ -100,7 +100,105 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
 from werkzeug.contrib.iterio import IterIO
 
 
-class OntRes:
+class Stream:
+
+    @property
+    def identifier(self):
+        """ Implicitly the unbound identifier that is to be dereferenced. """
+        # FIXME interlex naming conventions call this a reference_name
+        # in order to give it a bit more lexical distance from identity
+        # which implies some hash function
+        raise NotImplementedError
+
+    @identifier.setter
+    def identifier(self, value):
+        raise NotImplementedError
+
+    def checksum(self, cypher=None):  # FIXME default cypher value
+        if not hasattr(self, '__checksum'):  # NOTE can set __checksum on the fly
+            self.__checksum = self._checksum(cypher)
+
+        return self.__checksum
+
+    identity = checksum  # FIXME the naming here is mathematically incorrect
+
+    def _checksum(self, cypher):
+        raise NotImplementedError
+
+    @property
+    def progenitor(self):
+        """ the lower level stream from which this one is derived """
+        # could also, confusingly be called a superstream, but
+        # the superstream might have a less differentiated, or simply
+        # a different type or structure (e.g. an IP packet -> a byte stream)
+
+        # unfortunately the idea of a tributary, or a stream bed
+        # breaks down, though in a pure bytes representation
+        # technically the transport headers do come first
+        raise NotImplementedError
+
+    superstream = progenitor
+
+    @property
+    def headers(self):
+        """ Data from the lower level stream from which this stream is
+            derived/differentiated """
+        # FIXME naming ...
+        # sometimes this is related to ...
+        #  transport
+        #  prior in time
+        #  unbound metadata, or metadata that will be unbound in the target
+        #  metadata kept by the stream management layer (e.g. file system)
+        #  stream type
+        #  stream size
+        #  operational metadata
+        #  summary information
+
+        # if you are sending a file then populate all the info
+        # needed by the server to set up the stream (even if that seems a bit low level)
+        raise NotImplementedError
+        return self.superstream.metadata
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+        raise NotImplementedError('If you override self.headers in the child '
+                                  'you need to reimplement this too.')
+
+    @property
+    def data(self):
+        """ The primary opaque datastream that will be differentiated
+            at the next level """
+        raise NotImplementedError
+
+    @property
+    def metadata(self):
+        """ stream metadata, hopefully as a header
+
+            technically this should be called metadata_bound
+            since it is part of the same stream, it might
+            make sense to invert this to have a variety of
+            datasources external to a stream that contain
+            additional relevant data using that id
+        """
+        if not hasattr(self, '_metadata'):
+            self._metadata = self._metadata_class(self.identifier)
+
+        return self._metadata
+
+    @property
+    def identifier_bound(self):
+        raise NotImplementedError
+        return self.metadata.identifier_bound
+
+    @property
+    def identifier_version(self):
+        """ implicitly identifier_bound_version """
+        raise NotImplementedError
+        return self.metadata.identifier_version
+
+
+class OntRes(Stream):
     """ Message manager for serialized ontology resource.
         There are plenty of tools that already deal effectively
         with a triplified store, but we need something that does
@@ -121,33 +219,6 @@ class OntRes:
             Graph = OntGraph
 
         self.Graph = Graph
-
-    @property
-    def identifier(self):
-        # FIXME interlex naming conventions call this a reference_name
-        # in order to give it a bit more lexical distance from identity
-        # which implies some hash function
-        raise NotImplementedError
-
-    @identifier.setter
-    def identifier(self, value):
-        raise NotImplementedError
-
-    @property
-    def headers(self):
-        # if you are sending a file the populate all the info
-        # needed by the server to set up the stream (even if that seems a bit low level)
-        raise NotImplementedError
-
-    @headers.setter
-    def headers(self, value):
-        self._headers = value
-        raise NotImplementedError('If you override self.headers in the child '
-                                  'you need to reimplement this too.')
-
-    @property
-    def data(self):
-        raise NotImplementedError
 
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
@@ -188,14 +259,14 @@ class OntRes:
 
     def _import_chain(self, done):
         imps = list(self.imports)
-        Async()(deferred(lambda r: r.header.graph)(_) for _ in imps)
+        Async()(deferred(lambda r: r.metadata.graph)(_) for _ in imps)
         for resource in imps:
             if resource in done:
                 continue
 
             done.add(resource)
             yield resource
-            yield from resource.header._import_chain(done)
+            yield from resource.metadata._import_chain(done)
 
     def __eq__(self, other):
         raise NotImplementedError
@@ -207,7 +278,7 @@ class OntRes:
         return self.__class__.__name__ + f'({self.identifier!r})'
 
 
-class OntHeader(OntRes):
+class OntMeta(OntRes):
     """ only the header of an ontology, e.g. the owl:Ontology section for OWL2 """
 
     # headers all the way down data -> ontology header -> response header -> iri
@@ -246,24 +317,13 @@ class OntHeader(OntRes):
 class OntResOnt(OntRes):
     """ full ontology files """
 
-    _header_class = None  # FIXME can we do this by dispatching OntHeader like Path?
-
-    @property
-    def header(self):
-        """ ontology header """
-        # FIXME the nomenclature here is inconsistent with interlex
-        # interlex would call this metadata, or even bound_metadata
-        # depending on how it was retrieved
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.identifier)
-
-        return self._header
+    _metadata_class = None  # FIXME can we do this by dispatching OntMeta like Path?
 
     def __eq__(self, other):
-        return self.header.identifier_bound == other.header.identifier_bound
+        return self.metadata.identifier_bound == other.metadata.identifier_bound
 
     def __hash__(self):
-        return hash((self.__class__, self.header.identifier_bound))
+        return hash((self.__class__, self.metadata.identifier_bound))
 
 
 class OntIdIri(OntRes):
@@ -271,7 +331,7 @@ class OntIdIri(OntRes):
         self.iri = iri
         # TODO version iris etc.
 
-    def get(self):
+    def _get(self):
         return requests.get(self.iri, stream=True, headers={'Accept': 'text/turtle'})  # worth a shot ...
 
     @property
@@ -282,7 +342,7 @@ class OntIdIri(OntRes):
     def headers(self):
         """ request headers """
         if not hasattr(self, '_headers'):
-            resp = requests.head(self.iri)  # TODO status handling for all these
+            resp = requests.head(self.identifier)  # TODO status handling for all these
             self._headers = resp.headers
 
         return self._headers
@@ -292,7 +352,7 @@ class OntIdIri(OntRes):
         self._headers = value
 
 
-class OntHeaderIri(OntHeader, OntIdIri):
+class OntMetaIri(OntMeta, OntIdIri):
 
     @property
     def data(self):
@@ -309,7 +369,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
             # as well ...
             pass
 
-        resp = self.get()
+        resp = self._get()
         self.headers = resp.headers
         # TODO consider yielding headers here as well?
         gen = resp.iter_content(chunk_size=4096)
@@ -322,7 +382,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
             sentinel = b'TODO'
             self.format = 'application/rdf+xml'
 
-        elif first.startswith(b'@prefix'):
+        elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
             stop = b' .\n'  # FIXME can be fooled by strings
             sentinel = b'### Annotations'  # FIXME only works for ttlser
@@ -420,11 +480,11 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
 class OntResIri(OntIdIri, OntResOnt):
 
-    _header_class = OntHeaderIri
+    _metadata_class = OntMetaIri
 
     @property
     def data(self):
-        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
+        format, *header_chunks, (resp, gen) = self.metadata._data(yield_response_gen=True)
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible
@@ -466,7 +526,7 @@ class OntIdPath(OntRes):
     def identifier(self):
         return self.path
 
-    def get(self):
+    def _get(self):
         resp = requests.Response()
         with open(self.path, 'rb') as f:
             resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
@@ -479,24 +539,16 @@ class OntIdPath(OntRes):
     headers = OntIdIri.headers
 
 
-class OntHeaderPath(OntIdPath, OntHeader):
-    data = OntHeaderIri.data
-    _data = OntHeaderIri._data
+class OntMetaPath(OntIdPath, OntMeta):
+    data = OntMetaIri.data
+    _data = OntMetaIri._data
 
 
 class OntResPath(OntIdPath, OntResOnt):
     """ ontology resource coming from a file """
 
-    _header_class = OntHeaderPath
+    _metadata_class = OntMetaPath
     data = OntResIri.data
-
-    @property
-    def header(self):
-        """ ontology header """
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.path)
-
-        return self._header
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
@@ -523,9 +575,16 @@ class OntIdGit(OntIdPath):
 
         return self.ref + ':' + self.path.repo_relative_path.as_posix()
 
-    def get(self):
+    @property
+    def metadata(self):
+        if not hasattr(self, '_metadata'):
+            self._metadata = self._metadata_class(self.path, ref=self.ref)
+
+        return self._metadata
+
+    def _get(self):
         resp = requests.Response()
-        if self.identifier == self.path.as_posix():
+        if self.ref is None:
             with open(self.path, 'rb') as f:
                 resp.raw = io.BytesIO(f.read())  # FIXME can't we stream/seek these?
         else:
@@ -537,22 +596,14 @@ class OntIdGit(OntIdPath):
     headers = OntIdIri.headers
 
 
-class OntHeaderGit(OntIdGit, OntHeader):
-    data = OntHeaderIri.data
-    _data = OntHeaderIri._data
+class OntMetaGit(OntIdGit, OntMeta):
+    data = OntMetaIri.data
+    _data = OntMetaIri._data
 
 
 class OntResGit(OntIdGit, OntResOnt):
-    _header_class = OntHeaderGit
+    _metadata_class = OntMetaGit
     data = OntResIri.data
-
-    @property
-    def header(self):
-        """ ontology header """
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.path, self.ref)
-
-        return self._header
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
@@ -600,14 +651,14 @@ class OntResAny:
             breakpoint()
 
 
-class OntHeaderInterLex(OntHeader):
+class OntMetaInterLex(OntMeta):
     pass
 
 
 class OntResInterLex(OntResOnt):
     """ ontology resource backed by interlex """
 
-    _header_class = OntHeaderInterLex
+    _metadata_class = OntMetaInterLex
 
 
 class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
