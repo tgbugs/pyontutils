@@ -1050,12 +1050,18 @@ class OntGraph(rdflib.Graph):
     # variously named/connected subsets
 
     @property
+    def boundIdentifiers(self):
+        """ There should only be one but ... """
+        yield from self[:rdf.type:owl.Ontology]
+
+    @property
     def boundIdentifier(self):
-        return next(self[:rdf.type:owl.Ontology])
+        return next(self.boundIdentifiers)
 
     @property
     def metadata(self):
-        yield from self.subjectGraph(self.boundIdentifier)
+        for bi in self.boundIdentifiers:
+            yield from self.subjectGraph(bi)
 
     @property
     def metadata_unnamed(self):
@@ -1064,10 +1070,10 @@ class OntGraph(rdflib.Graph):
 
     @property
     def data(self):
-        bi = self.boundIdentifier
+        bis = tuple(self.boundIdentifiers)
         meta_bnodes = tuple(e for t in metadata_unnamed for e in t
                             if isinstance(e, rdflib.BNode))
-        meta_skip_subject = bi, + meta_bnodes
+        meta_skip_subject = bis + meta_bnodes
         for s, p, o in self:
             if s not in meta_skip_subject:
                 yield (s, p, o)
@@ -1075,9 +1081,9 @@ class OntGraph(rdflib.Graph):
     @property
     def data_named(self):
         # FIXME process_graph is more efficient that this ...
-        bi = self.boundIdentifier
+        bis = tuple(self.boundIdentifiers)
         for s in self.subjects():
-            if not isinstance(s, rdflib.BNode) and s != bi:
+            if not isinstance(s, rdflib.BNode) and s not in bis:
                 yield from self.subjectGraph(s)
 
     @property
@@ -1110,6 +1116,16 @@ class OntGraph(rdflib.Graph):
         #[c.addN((*t, data_id)) for t in self.data]
         [c.addN((*t, datan_id) for t in self.data_named)]
         [c.addN((*t, datau_id) for t in self.data_unnamed)]
+        if True:  # debug
+            c.bind('ilxtr', ilxtr)
+            tc = CustomTurtleSerializer.topClasses
+            if ilxtr.StreamSection not in tc:
+                sec = CustomTurtleSerializer.SECTIONS
+                CustomTurtleSerializer.topClasses = tc[:1] + [ilxtr.StreamSection] + tc[1:]
+                CustomTurtleSerializer.SECTIONS = sec[:1] + ('',) + sec[1:]
+            c.add((meta_id, rdf.type, ilxtr.StreamSection, meta_id))
+            c.add((datan_id, rdf.type, ilxtr.StreamSection, datan_id))
+            c.add((datau_id, rdf.type, ilxtr.StreamSection, datau_id))
         return c
 
 
@@ -1129,7 +1145,9 @@ class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
                         namespace_manager=self.namespace_manager)
 
     def debugAll(self):
-        for g in self.contexts():
+        for g in sorted(self.contexts(), key=lambda g: g.identifier):
+            print('-' * 80)
+            print('-' * 80)
             g.debug()
 
 
