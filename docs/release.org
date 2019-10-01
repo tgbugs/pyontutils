@@ -106,85 +106,85 @@ build-release () {
 
 #+NAME: push-release
 #+BEGIN_SRC bash :eval never :exports code
-    function push-release () {
-        # example
-        # push-release folder   software_releases_path    packagename version
-        # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
-        folder=$1
-        shift
-        software_releases_path=$1
-        shift
-        packagename=$1
-        shift
-        version=$1
-        shift
+function push-release () {
+    # example
+    # push-release folder   software_releases_path    packagename version
+    # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
+    folder=$1
+    shift
+    software_releases_path=$1
+    shift
+    packagename=$1
+    shift
+    version=$1
+    shift
 
-        rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/ || return 1
-        pushd ${software_releases_path}
-        sha256sum ${packagename}-${version}* >> hashes
-        twine upload --repository test ${packagename}-${version}*
-        sleep 1
-        echo "test pypi hashes"
-        curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
-        echo "local hashes"
-        tail -n2 hashes
-        echo go inspect https://test.pypi.org/project/${packagename}
-        echo and go do the github release
-        popd
-    }
+    rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/ || return 1
+    pushd ${software_releases_path}
+    sha256sum ${packagename}-${version}* >> hashes
+    twine upload --repository test ${packagename}-${version}*
+    sleep 1
+    echo "test pypi hashes"
+    curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
+    echo "local hashes"
+    tail -n2 hashes
+    echo go inspect https://test.pypi.org/project/${packagename}
+    echo and go do the github release
+    popd
+}
 #+END_SRC
   
 #+NAME: github-release
 #+BEGIN_SRC python :eval never :var module=nil
-    import requests
-    from sparcur.utils 
-    #from sparcur.utils import mimetype  # FIXME or something like that
-    # TODO api token
+import requests
+from sparcur.utils
+#from sparcur.utils import mimetype  # FIXME or something like that
+# TODO api token
 
-    suffix_to_mime = {
-        '.whl': 'application/octet-stream',  # technically zip ...
-        '.gz': 'application/gzip',
-        '.zip': 'application/zip',
-    }
-
-
-    class BadAssetSuffixError(Exception):
-        """ u wot m8 !? """
+suffix_to_mime = {
+    '.whl': 'application/octet-stream',  # technically zip ...
+    '.gz': 'application/gzip',
+    '.zip': 'application/zip',
+}
 
 
-    def upload_assets(upload_base, version, *asset_paths):
-        for asset in asset_paths:
-            name = asset.name
-            requests.post()
+class BadAssetSuffixError(Exception):
+    """ u wot m8 !? """
 
 
-    def github_release(org, repo, version, hashes, *assets, branch='master'):
-        """ hashes should be the output of sha256sum {packagename}-{version} """
-        # FIXME pyontutils violates some assumptions about 1:1 ness here
+def upload_assets(upload_base, version, *asset_paths):
+    for asset in asset_paths:
+        name = asset.name
+        requests.post()
 
-        asset_paths = tuple(Path(a).resolve() for a in assets)
-        bads = [p.suffix  for p in asset_paths if p.suffix not in suffix_to_mime]
-        if bads:
-            raise BadAssetSuffixError(' '.join(bads))
 
-        base = 'https://api.github.com'
-        path = f'/repos/{org}/{repo}/releases'
-        headers = {'Accept': 'application/vnd.github.v3+json'}
-        json_data = {'tag_name': version,
-                     'target_commitish': branch,
-                     'name': version,
-                     'body': hashes,
-                     'draft': False,  # ok because we can add assets later
-                     'prerelease': False}
+def github_release(org, repo, version, hashes, *assets, branch='master'):
+    """ hashes should be the output of sha256sum {packagename}-{version} """
+    # FIXME pyontutils violates some assumptions about 1:1 ness here
 
-        url = base + path
-        resp = requests.post(url, headers=headers, json=json_data)
-        rel_J = resp.json()
-        uu = rel_j['upload_url']
+    asset_paths = tuple(Path(a).resolve() for a in assets)
+    bads = [p.suffix  for p in asset_paths if p.suffix not in suffix_to_mime]
+    if bads:
+        raise BadAssetSuffixError(' '.join(bads))
 
-        upload_base = uu.replace('{?name,label}', '')
+    base = 'https://api.github.com'
+    path = f'/repos/{org}/{repo}/releases'
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    json_data = {'tag_name': version,
+                 'target_commitish': branch,
+                 'name': version,
+                 'body': hashes,
+                 'draft': False,  # ok because we can add assets later
+                 'prerelease': False}
 
-        upload_assets(upload_base, *asset_paths)
+    url = base + path
+    resp = requests.post(url, headers=headers, json=json_data)
+    rel_J = resp.json()
+    uu = rel_j['upload_url']
+
+    upload_base = uu.replace('{?name,label}', '')
+
+    upload_assets(upload_base, *asset_paths)
 #+END_SRC
 
 #+NAME: final-release
