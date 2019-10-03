@@ -173,17 +173,17 @@ class CUT(LocalNameManager):
     MRN = Phenotype('UBERON:0007415', ilxtr.hasSomaLocatedIn)
 
     GABA = Phenotype('TEMPIND:GABA', ilxtr.hasMolecularPhenotype)
-    PV = Phenotype('PTHR:11653', ilxtr.hasMolecularPhenotype)  # FIXME remove PTHR
+    PV = Phenotype('TEMPIND:Pvalb', ilxtr.hasMolecularPhenotype)
     CB = Phenotype('TEMPIND:Calb', ilxtr.hasMolecularPhenotype)
     CR = Phenotype('TEMPIND:Calb2', ilxtr.hasMolecularPhenotype)
     CCK = Phenotype('TEMPIND:Cck', ilxtr.hasMolecularPhenotype)
-    SST = Phenotype('PTHR:10558', ilxtr.hasMolecularPhenotype)
+    SST = Phenotype('TEMPIND:Sst', ilxtr.hasMolecularPhenotype)
 
     # TODO indicator these
-    Ach = Phenotype('SAO:185580330', ilxtr.hasExpressionPhenotype)
-    Glu = Phenotype('CHEBI:16015', ilxtr.hasExpressionPhenotype)
-    Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
-    TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
+    ACh = Phenotype('TEMPIND:ACh', ilxtr.hasExpressionPhenotype)
+    Glu = Phenotype('TEMPIND:Glutamate', ilxtr.hasExpressionPhenotype)
+    Ser = Phenotype('TEMPIND:Serotonin', ilxtr.hasExpressionPhenotype)
+    TH = Phenotype('TEMPIND:TH', ilxtr.hasExpressionPhenotype)
 
     VIP = Phenotype('TEMPIND:VIP', ilxtr.hasExpressionPhenotype)
     NPY = Phenotype('TEMPIND:Npy', ilxtr.hasExpressionPhenotype)

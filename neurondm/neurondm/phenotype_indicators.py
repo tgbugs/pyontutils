@@ -84,7 +84,7 @@ class PhenotypeIndicators(Sheet):
         for thing in self.things:
             yield from self.indicator(thing)
 
-        sst = OntId('PTHR:10558').u
+        sst = OntId('TEMPIND:Sst').u
         yield sst, a, owl.Class
         yield sst, rdfs.subClassOf, ilxtr.PhenotypeIndicator
         yield sst, rdfs.label, rdflib.Literal('somatostatin (indicator)')
@@ -92,6 +92,7 @@ class PhenotypeIndicators(Sheet):
         yield sst, NIFRID.synonym, rdflib.Literal('SOM')
         yield sst, NIFRID.synonym, rdflib.Literal('somatostatin')
         sst_members = (OntId('ilxtr:SST-flp'),
+                       OntId('PTHR:10558'),
                        OntId('NCBIGene:20604'),
                        OntId('PR:000015665'),
                        OntId('JAX:013044'),
@@ -101,7 +102,7 @@ class PhenotypeIndicators(Sheet):
 
         # pv fix
         pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
-        pv = OntId('PTHR:11653').u
+        pv = OntId('TEMPIND:Pvalb').u
         yield pv, rdfs.label, rdflib.Literal('parvalbumin (indicator)')
         yield pv, NIFRID.synonym, rdflib.Literal('PV')
         yield pv, NIFRID.synonym, rdflib.Literal('Pvalb')
@@ -115,6 +116,7 @@ class PhenotypeIndicators(Sheet):
                       OntId('JAX:022730'),
                       OntId('JAX:017320'),
                       ilxtr.Pvalb,
+                      OntId('PTHR:11653'),
                       ilxtr['PV-cre'],
                       OntId('PR:000013502'),
                       OntId('NCBIGene:19293'),
