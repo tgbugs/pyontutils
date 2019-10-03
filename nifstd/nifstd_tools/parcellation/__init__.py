@@ -626,7 +626,7 @@ class parcCore(ParcOnt):
     filename = 'parcellation-core'
     name = 'Parcellation Core'
     #shortname = 'parcore'  # huehuehue
-    prefixes = {**makePrefixes('skos'), **ParcOnt.prefixes}
+    prefixes = {**makePrefixes('skos', 'BFO'), **ParcOnt.prefixes}
     imports = NIFTTL['nif_backend.ttl'], parcArts
 
     # stuff
