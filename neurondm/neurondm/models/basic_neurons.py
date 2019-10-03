@@ -8,9 +8,9 @@ from pyontutils.utils import relative_path
 from pyontutils.namespaces import makePrefixes, makeNamespaces, OntCuries
 from pyontutils.namespaces import interlex_namespace, PREFIXES
 from pyontutils.namespaces import NIFRID, ilxtr, hasRole, definition
+from pyontutils.namespaces import rdf, rdfs, owl
 from pyontutils.combinators import restriction
-from pyontutils.closed_namespaces import rdf, rdfs, owl
-from IPython import embed
+
 
 swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
 NIFRAW, = makeNamespaces('NIFRAW')
@@ -20,12 +20,9 @@ config = Config('basic-neurons',
                           'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),},
                 source_file=relative_path(__file__))
 
-from neurondm.phenotype_namespaces import *  # this has to come after reconfig or it will error
-
 class NeuronSWAN(NeuronEBM):
     owlClass = ilxtr.NeuronSWAN
 
-_Neuron = Neuron
 Neuron = NeuronSWAN
 
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
