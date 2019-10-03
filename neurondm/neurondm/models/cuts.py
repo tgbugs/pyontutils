@@ -55,7 +55,7 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
 
 def make_contains_rules():
     contains_rules = dict(GABAergic=CUT.GABA,
-                          cholinergic=CUT.Ach,
+                          cholinergic=CUT.ACh,
                           glutamatergic=CUT.Glu,
                           serotonergic=CUT.Ser,
                           #principle=CUT.proj,  # NOTE this was a spelling error
@@ -362,7 +362,7 @@ def main():
                           Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
                 yield pe
 
-    with Neuron(CUT.Mammalia):
+    with NeuronCUT(CUT.Mammalia):
         mamns = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
                  for i, n in zip(ins + ians, ns + ans)]
 
@@ -452,7 +452,7 @@ def main():
             smatch.add(l)
             rem[l] = l_rem
 
-            with Neuron(CUT.Mammalia):
+            with NeuronCUT(CUT.Mammalia):
                 NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
 
     labels_set3 = labels_set2 - smatch
@@ -501,6 +501,8 @@ def main():
     print(f'\nUnmapped (n = {len(labels_set3)}):')
     _ = [print(l) for l in unmapped]
 
+    no_location = [n for n in Neuron.neurons()
+                   if noneMembers((ilxtr.hasSomaLocatedIn,), *n.unique_predicates)]
     if __name__ == '__main__':
         rows = export_for_review(config, unmapped, partial, nlx_missing)
         breakpoint()
