@@ -139,7 +139,10 @@ class AllenCellTypes:
             name = self.avoid_url_conversion(tl['name'])
             _type = tl['transgenic_line_type_name']
             if _type == 'driver':
-                pred = 'ilxtr:hasDriverExpressionPhenotype'
+                if 'CreERT2' in name:  # FIXME from structured instead of name?
+                    pred = ilxtr.hasDriverExpressionInducedPhenotype
+                else:
+                    pred = 'ilxtr:hasDriverExpressionPhenotype'
             elif _type == 'reporter':
                 pred = 'ilxtr:hasReporterExpressionPhenotype'
             else:
@@ -287,6 +290,9 @@ class AllenCellTypes:
                 _id = tl['stock_number'] if tl['stock_number'] else tl['id']
                 prefix = tl['transgenic_line_source_name']
                 line_type = tl['transgenic_line_type_name']
+                if line_type == 'driver' and 'CreERT2' in tl['name']:
+                    line_type = 'inducibleDriver'
+
                 if prefix not in ['JAX', 'MMRRC', 'AIBS']:
                     print(tc.red('WARNING:'), 'unknown prefix', prefix, json.dumps(tl, indent=4))
                     continue
