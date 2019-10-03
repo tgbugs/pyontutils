@@ -185,3 +185,5 @@ class CUT(LocalNameManager):
     Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
     TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
 
+    VIP = Phenotype('TEMPIND:VIP', ilxtr.hasExpressionPhenotype)
+    NPY = Phenotype('TEMPIND:Npy', ilxtr.hasExpressionPhenotype)

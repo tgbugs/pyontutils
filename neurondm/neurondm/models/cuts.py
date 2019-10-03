@@ -1,5 +1,4 @@
 #!/usr/bin/env python3.7
-from IPython import embed
 import csv
 from pprint import pprint
 from pathlib import Path
@@ -96,8 +95,8 @@ def make_contains_rules():
         'Neocortex layer 6': Layers.L6,
         'cortex layer III': Layers.L3,  # probably needs the cortex to still be attached
         'cortex layer II': Layers.L2,  # FIXME medial entorhinal ...
-        'neuropeptide Y': BBP.NPY,
-        'vasoactive intestinal peptide': BBP.VIP,
+        'neuropeptide Y': CUT.NPY,
+        'vasoactive intestinal peptide': CUT.VIP,
         'Pedunculopontine nucleus': Phenotype('UBERON:0002142', ilxtr.hasSomaLocatedIn),
         #'Incertus nucleus': OntTerm,
         'Raphe nucleus medial': OntTerm,
@@ -224,7 +223,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
             if pdim in neuron:
                 #print('>>>>>>>>>>>>>', pdim, neuron)
                 #if any(isinstance(p, LogicalPhenotype) for p in neuron):
-                    #embed()
+                    #breakpoint()
                 row.append(','.join(sorted([f'{_._pClass.qname}|{_.pLabel}'
                                             if with_curies else
                                             _.pLabel
@@ -236,7 +235,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
                     #log = [p for p in derp if isinstance(p, LogicalPhenotype)]
                     #if log:
                         #print(log, row)
-                        #embed()
+                        #breakpoint()
             else:
                 row.append(None)
 
@@ -411,7 +410,7 @@ def main():
         hrm = [pe for pe in pes if pe.e == ilxtr.hasSomaLocatedIn]
         if '  ' in l_rem:
             #print('l_rem:', l_rem)
-            #embed()
+            #breakpoint()
             maybe_region, rest = l_rem.split('  ', 1)
         elif noneMembers(l_rem, *terminals) and not hrm:
             maybe_region, rest = l_rem, ''
@@ -504,7 +503,7 @@ def main():
 
     if __name__ == '__main__':
         rows = export_for_review(config, unmapped, partial, nlx_missing)
-        embed()
+        breakpoint()
 
     return config, unmapped, partial, nlx_missing
 
