@@ -400,17 +400,17 @@ def main():
     def key(field_value):
         field, value = field_value
         try:
-            return valuesC.header._fields.index(field)  # TODO warn on field mismatch
+            return 0, valuesC.header._fields.index(field)  # TODO warn on field mismatch
         except ValueError as e:
             log.error(f'{field} {value}')
-            return None
+            return 1, 0
 
     def replace(r, *cols):
         """ replace and reorder """
         # FIXME _super_ inefficient
         vrow = grow(r)
         log.debug('\n'.join(r._fields))
-        log.debug('\n'.join(r))
+        log.debug('\n'.join(str(_) for _ in r))
         for field, value in sorted(zip(r._fields, r), key=key):
             if field in cols:
                 value = getattr(vrow, field)
