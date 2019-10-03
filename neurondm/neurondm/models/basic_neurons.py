@@ -27,9 +27,6 @@ Neuron = NeuronSWAN
 
 Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
                       owl.imports,
-                      NIFRAW['neurons/ttl/generated/neurons/phenotype-direct.ttl']))
-Neuron.out_graph.add((next(Neuron.out_graph[:rdf.type:owl.Ontology]),
-                      owl.imports,
                       # this will cause reasoner issues due to the protege bug
                       NIFRAW['dev/ttl/generated/swanson.ttl']))
 

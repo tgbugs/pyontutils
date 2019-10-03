@@ -12,7 +12,6 @@ from neurondm.phenotype_namespaces import *
 
 extra = False  # construct extra classes
 config = Config('huang-2017',
-                imports=['NIFRAW:neurons/ttl/generated/neurons/phenotype-direct.ttl'],
                 source_file=relative_path(__file__))
 OntTerm.query.add(ontquery.plugin.get('rdflib')(Neuron.core_graph, OntId))
 
