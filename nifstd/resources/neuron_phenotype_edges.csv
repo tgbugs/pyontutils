@@ -45,6 +45,7 @@ hasLayerLocationPhenotype,,,Expresses a relationship between a neuron type and a
 hasLocationPhenotype,,,Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly.,,This property should not be used directly.,hasPhenotype,,"asymmetric, irreflexive"
 hasSomaLocatedIn,Located in,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasSomaLocatedInLayer,,,,,,"hasLayerLocationPhenotype,hasSomaLocatedIn",,
+hasSomaLocationLaterality,,,,,,hasSomaLocatedIn,,
 hasProcessLocatedIn,,,,,,hasLocationPhenotype,,"asymmetric, irreflexive"
 hasDendriteLocatedIn,DendriteLocation,,,,,hasProcessLocatedIn,,"asymmetric, irreflexive"
 hasAxonPhenotype,,,Expresses a relationship between a neuron type and some phenotype of its axon.,,Use to provide clarity about where a generic phenotype is attached in the event that the object is not qualified. The alternative is to precompose the subcompartments e.g. SmallSomaPhenotype and SmallAxonPhenotype.,hasPhenotype,,
