@@ -1,15 +1,14 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from pathlib import Path
 import rdflib
 from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, TEMP
+from pyontutils.namespaces import rdf, rdfs, owl
 from neurondm import *
 from neurondm.lang import *
-from neurondm.core import MeasuredNeuron
-from pyontutils.closed_namespaces import rdf, rdfs, owl
-from IPython import embed
+from neurondm.core import MeasuredNeuron, PHENO_ROOT, MOD_ROOT
 
 
 def main():
@@ -36,7 +35,10 @@ def main():
     #graphBase.core_graph = EXISTING_GRAPH
     #graphBase.out_graph = rdflib.Graph()
     graphBase.__import_name__ = 'neurondm.lang'
-    graphBase._predicates = getPhenotypePredicates(EXISTING_GRAPH)
+
+    proot = graphBase.core_graph.qname(PHENO_ROOT)
+    mroot = graphBase.core_graph.qname(MOD_ROOT)
+    graphBase._predicates, _psupers = getPhenotypePredicates(EXISTING_GRAPH, proot, mroot)
 
     g = makeGraph('merged', prefixes={k:str(v) for k, v in EXISTING_GRAPH.namespaces()}, graph=EXISTING_GRAPH)
     reg_neurons = list(g.g.subjects(rdfs.subClassOf, _NEURON_CLASS))
@@ -81,7 +83,7 @@ def main():
     bads = [n for n in Neuron.ng.g.subjects(rdf.type, owl.Class)
             if len(list(Neuron.ng.g.predicate_objects(n))) == 1]
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
     return config
 
