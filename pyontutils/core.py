@@ -633,7 +633,7 @@ class OntResAny:
         """
         try:
             org = OntResGit(path, ref=ref)
-            org.get()  # yes this is slow, but it is the safest way ...
+            org._get()  # yes this is slow, but it is the safest way ...
             return org
         except BaseException as e:
             #log.exception(e)
