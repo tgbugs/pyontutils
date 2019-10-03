@@ -2053,7 +2053,16 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
 
         self.phenotypes = set(pe.p for pe in self.pes)  # NOTE the valence is NOT included here
+        self.unique_objects = set(p for p_or_tup in self.phenotypes
+                                  for p in (p_or_tup
+                                            if isinstance(p_or_tup, tuple)
+                                            else (p_or_tup,)))
+
         self.edges = set(pe.e for pe in self.pes)
+        self.unique_predicates = set(e for e_or_tup in self.edges
+                                     for e in (e_or_tup
+                                               if isinstance(e_or_tup, tuple)
+                                               else (e_or_tup,)))
         self._pesDict = {}
         for pe in self.pes:  # FIXME TODO
             if isinstance(pe, LogicalPhenotype):  # FIXME
@@ -2499,9 +2508,15 @@ class Neuron(NeuronBase):
             return ptype(p, e)
 
         def expand_restriction(r, pes, ptype=type_):
-            if r.onProperty in self._location_predicates:
+            if (r.onProperty in self._location_predicates and
+                isinstance(r.someValuesFrom.identifier, rdflib.BNode)):
                 _pe = location_restriction_to_phenotype(r, ptype=ptype)
                 pes.append(_pe)
+
+            elif r.onProperty in self._location_predicates:
+                log.warning(f'Old location model for {c}')
+                pes.append(restriction_to_phenotype(r, ptype=ptype))
+
             else:
                 pes.append(restriction_to_phenotype(r, ptype=ptype))
 
