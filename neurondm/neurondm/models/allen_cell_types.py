@@ -65,7 +65,7 @@ class AllenCellTypes:
 
     def cell_phenotypes(self, cell_specimen):
         cell_mappings = {
-            'hemisphere': 'ilxtr:hasLocationPhenotype',
+            'hemisphere': 'ilxtr:hasSomaLocationLaterality',
             # 'name': 'ilxtr:hasPhenotype',
         }
         phenotypes = []

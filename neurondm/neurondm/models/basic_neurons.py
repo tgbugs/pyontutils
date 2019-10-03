@@ -23,7 +23,7 @@ config = Config('basic-neurons',
 from neurondm.phenotype_namespaces import *  # this has to come after reconfig or it will error
 
 class NeuronSWAN(NeuronEBM):
-    owlClass = 'ilxtr:NeuronSWAN'
+    owlClass = ilxtr.NeuronSWAN
 
 _Neuron = Neuron
 Neuron = NeuronSWAN

@@ -207,6 +207,9 @@ class LabelMaker:
     def hasLocationPhenotype(self, phenotypes):  # FIXME
         yield from self._default(phenotypes)
     @od
+    def hasSomaLocationLaterality(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
     def hasSomaLocatedIn(self, phenotypes):  # hasSomaLocation?
         yield from self._default(phenotypes)
     @od
@@ -1321,6 +1324,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         self.do_check = check
+
         super().__init__()
         if isinstance(phenotype, Phenotype):  # simplifies negation of a phenotype
             ObjectProperty = phenotype.e
@@ -1331,6 +1335,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             self.e = self.getObjectProperty(self.p)
         else:
             self.e = self.checkObjectProperty(ObjectProperty)  # FIXME this doesn't seem to work
+
+        if isinstance(self.p, rdflib.BNode):
+            raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
 
         self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
@@ -1588,7 +1595,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
 
-    def _graphify_cut(self, graph=None, **kwargs):
+    def _graphify_expand_location(self, graph=None, **kwargs):
         if graph is None:
             graph = self.out_graph
 
@@ -1825,7 +1832,7 @@ class LogicalPhenotype(graphBase):
 
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
 
-    _graphify_cut = _graphify
+    _graphify_expand_location = _graphify
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -2358,6 +2365,7 @@ class Neuron(NeuronBase):
             self._predicates.hasInstanceInTaxon,
             self._predicates.hasSomaLocatedIn,
             self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+            self._predicates.hasSomaLocationLaterality,
             self._predicates.hasSomaLocatedInLayer,
             self._predicates.hasMorphologicalPhenotype,
         ]
@@ -2484,6 +2492,20 @@ class Neuron(NeuronBase):
             e = r.onProperty
             return ptype(p, e)
 
+        def location_restriction_to_phenotype(r, ptype=type_):
+            bc = infixowl.CastClass(r.someValuesFrom, graph=self.in_graph)
+            p = [e for e in bc._rdfList if isinstance(e, rdflib.URIRef)][0]
+            e = r.onProperty
+            return ptype(p, e)
+
+        def expand_restriction(r, pes, ptype=type_):
+            if r.onProperty in self._location_predicates:
+                _pe = location_restriction_to_phenotype(r, ptype=ptype)
+                pes.append(_pe)
+            else:
+                pes.append(restriction_to_phenotype(r, ptype=ptype))
+
+
         if c.identifier == self.id_ or c.identifier == self.owlClass:
             return
 
@@ -2512,7 +2534,7 @@ class Neuron(NeuronBase):
                             if pr.complementOf:
                                 coc = infixowl.CastClass(pr.complementOf, graph=self.in_graph)
                                 if isinstance(coc, infixowl.Restriction):
-                                    pes.append(restriction_to_phenotype(coc, ptype=NegPhenotype))
+                                    expand_restriction(coc, pes, ptype=NegPhenotype)
                                 else:
                                     log.critical(str(coc))
                                     raise BaseException('wat')
@@ -2520,7 +2542,7 @@ class Neuron(NeuronBase):
                                 log.critical(str(pr))
                                 raise BaseException('wat')
                     elif isinstance(pr, infixowl.Restriction):
-                        pes.append(restriction_to_phenotype(pr))
+                        expand_restriction(pr, pes)
                     elif id_ == self.owlClass:
                         pes.append(id_)
                     elif id_ == _NEURON_CLASS:  # CUT case
@@ -2570,7 +2592,7 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
-    def _graphify_pes(self, graph, members, method='_graphify'):
+    def _graphify_pes(self, graph, members, method='_graphify_expand_location'):
         for pe in self.pes:
             target = getattr(pe, method)(graph=graph, method=method)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
@@ -2613,13 +2635,23 @@ class NeuronCUT(Neuron):
 
         self._graphify_labels(graph)
         members = [Neuron.owlClass]
-        Class = self._graphify_pes(graph, members, method='_graphify_cut')
+        Class = self._graphify_pes(graph, members)
         Class.subClassOf = [self.owlClass]
         return Class
 
 
 class NeuronEBM(Neuron):
     owlClass = _EBM_CLASS
+
+    def _graphify(self, *args, graph=None):
+        """ Lift phenotypeEdges to Restrictions """
+        if graph is None:
+            graph = self.out_graph
+
+        self._graphify_labels(graph)
+        members = [self.owlClass]
+        # use _graphify_expand_location to get the location + part of location behavior
+        return self._graphify_pes(graph, members)
 
     def validate(self):
         # EBM's probably should not be using UBERON ids since they are not species specific
