@@ -20,39 +20,39 @@ class Test(LocalNameManager):
 
 class Layers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
-    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasLayerLocationPhenotype')
-    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasLayerLocationPhenotype')
-    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasLayerLocationPhenotype')
+    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer')
+    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer')
+    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasSomaLocatedInLayer')
     L23 = LogicalPhenotype(OR, L2, L3)
-    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype')
-    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype')
-    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype')
+    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasSomaLocatedInLayer')
+    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasSomaLocatedInLayer')
+    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasSomaLocatedInLayer')
     L56 = LogicalPhenotype(OR, L5, L6)
 
-    SO = Phenotype('UBERON:0005371', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
-    SPy = Phenotype('UBERON:0002313', 'ilxtr:hasLayerLocationPhenotype')  # SP
-    SLA = Phenotype('UBERON:0005370', 'ilxtr:hasLayerLocationPhenotype')
-    SLM = Phenotype('UBERON:0007640', 'ilxtr:hasLayerLocationPhenotype')
-    SLU = Phenotype('UBERON:0007637', 'ilxtr:hasLayerLocationPhenotype')
-    SR = Phenotype('UBERON:0005372', 'ilxtr:hasLayerLocationPhenotype')
+    SO = Phenotype('UBERON:0005371', 'ilxtr:hasSomaLocatedInLayer')  # WARNING: uberon has precomposed these, which is annoying
+    SPy = Phenotype('UBERON:0002313', 'ilxtr:hasSomaLocatedInLayer')  # SP
+    SLA = Phenotype('UBERON:0005370', 'ilxtr:hasSomaLocatedInLayer')
+    SLM = Phenotype('UBERON:0007640', 'ilxtr:hasSomaLocatedInLayer')
+    SLU = Phenotype('UBERON:0007637', 'ilxtr:hasSomaLocatedInLayer')
+    SR = Phenotype('UBERON:0005372', 'ilxtr:hasSomaLocatedInLayer')
 
 
 class PaxRatLayers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
-    L1 = Phenotype('PAXRAT:509', 'ilxtr:hasLayerLocationPhenotype')
-    L2 = Phenotype('PAXRAT:512', 'ilxtr:hasLayerLocationPhenotype')
-    L3 = Phenotype('PAXRAT:513', 'ilxtr:hasLayerLocationPhenotype')
+    L1 = Phenotype('PAXRAT:509', 'ilxtr:hasSomaLocatedInLayer')
+    L2 = Phenotype('PAXRAT:512', 'ilxtr:hasSomaLocatedInLayer')
+    L3 = Phenotype('PAXRAT:513', 'ilxtr:hasSomaLocatedInLayer')
     L23 = LogicalPhenotype(OR, L2, L3)
-    L4 = Phenotype('PAXRAT:515', 'ilxtr:hasLayerLocationPhenotype')
-    L5 = Phenotype('PAXRAT:516', 'ilxtr:hasLayerLocationPhenotype')
-    L6 = Phenotype('PAXRAT:519', 'ilxtr:hasLayerLocationPhenotype')
+    L4 = Phenotype('PAXRAT:515', 'ilxtr:hasSomaLocatedInLayer')
+    L5 = Phenotype('PAXRAT:516', 'ilxtr:hasSomaLocatedInLayer')
+    L6 = Phenotype('PAXRAT:519', 'ilxtr:hasSomaLocatedInLayer')
 
-    SO = Phenotype('PAXRAT:675', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
-    SPy = Phenotype('PAXRAT:815', 'ilxtr:hasLayerLocationPhenotype')  # SP
-    #SLA = Phenotype('', 'ilxtr:hasLayerLocationPhenotype')  # paxrat does not seem to have this, only LM
-    SLM = Phenotype('PAXRAT:443', 'ilxtr:hasLayerLocationPhenotype')
-    SLU = Phenotype('PAXRAT:901', 'ilxtr:hasLayerLocationPhenotype')
-    SR = Phenotype('PAXRAT:822', 'ilxtr:hasLayerLocationPhenotype')
+    SO = Phenotype('PAXRAT:675', 'ilxtr:hasSomaLocatedInLayer')  # WARNING: uberon has precomposed these, which is annoying
+    SPy = Phenotype('PAXRAT:815', 'ilxtr:hasSomaLocatedInLayer')  # SP
+    #SLA = Phenotype('', 'ilxtr:hasSomaLocatedInLayer')  # paxrat does not seem to have this, only LM
+    SLM = Phenotype('PAXRAT:443', 'ilxtr:hasSomaLocatedInLayer')
+    SLU = Phenotype('PAXRAT:901', 'ilxtr:hasSomaLocatedInLayer')
+    SR = Phenotype('PAXRAT:822', 'ilxtr:hasSomaLocatedInLayer')
 
 
 class Regions(LocalNameManager):
