@@ -717,9 +717,9 @@ class OntGraph(rdflib.Graph):
         if not args and not kwargs and self.path is not None:
             # FIXME augpathlib.Path ;_;
             mimetype, _ = mimetypes.guess_type(self.path.as_uri())
-            super().parse(self.path.as_posix(), format=mimetype)
+            return super().parse(self.path.as_posix(), format=mimetype)
         else:
-            super().parse(*args, **kwargs)
+            return super().parse(*args, **kwargs)
 
     def _get_namespace_manager(self):
         if self._namespace_manager is None:
@@ -1625,6 +1625,7 @@ for rc in (SGR, IXR):
 sgr = SGR(apiEndpoint=devconfig.scigraph_api)
 sgr.api_key = get_api_key()
 ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
+ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 query = oq.OntQueryCli(query=OntTerm.query)
