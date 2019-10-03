@@ -2570,14 +2570,9 @@ class Neuron(NeuronBase):
             # lingering byte/string issues
             log.warning(f'Could not convert class to Neuron {c}')
 
-    def _unpackLogical(self, bc, type_=Phenotype):  # TODO this will be needed for disjoint as well
+    def _unpackLogical(self, bc, type_=Phenotype):
         op = bc._operator
-        pes = []
-        for id_ in bc._rdfList:
-            pr = infixowl.CastClass(id_, graph=self.in_graph)
-            p = pr.someValuesFrom
-            e = pr.onProperty
-            pes.append(type_(p, e))
+        pes = self._unpackPheno(bc, type_=type_)
         return LogicalPhenotype(op, *pes)
 
     def _graphify_labels(self, graph):
