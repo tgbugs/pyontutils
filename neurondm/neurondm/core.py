@@ -360,6 +360,18 @@ class OntTerm(bOntTerm, OntId):
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
+    def asIndicator(self):
+        sco = self(rdfs.subClassOf, depth=2, asTerm=True)
+        uris = [t.URIRef for t in sco]
+        if ilxtr.PhenotypeIndicator in uris:
+            ind = sco[0]
+            # FIXME it being first is by accident of implementation only
+            assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
+            return ind
+        else:
+            log.debug(f'No indicator for {self.curie} {self.label}')
+            return self
+
     def triples(self, predicate):
         if predicate not in self.predicates:
             objects = self(predicate)
@@ -1166,6 +1178,8 @@ class graphBase:
         graphBase._predicates, graphBase._predicate_supers = preds, pred_supers
         lp, lps = getPhenotypePredicates(graphBase.core_graph, 'ilxtr:hasLocationPhenotype')
         graphBase._location_predicates, graphBase._location_predicate_supers = lp, lps
+        mp, mps = getPhenotypePredicates(graphBase.core_graph, 'ilxtr:hasMolecularPhenotype')
+        graphBase._molecular_predicates, graphBase._molecular_predicate_supers = mp, mps
 
         # scigraph setup
         if scigraph is not None:
@@ -1492,6 +1506,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             #print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
+
+        if pn.startswith('TEMPIND'):
+            return next(self.in_graph[self.p:skos.hiddenLabel])
 
         if hasattr(self, '_label'):
             return self._label
