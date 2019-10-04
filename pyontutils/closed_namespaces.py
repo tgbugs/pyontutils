@@ -13,6 +13,7 @@ __all__ = [
     'rdf',
     'rdfs',
     'skos',
+    'npoph',
 ]
 
 ###
@@ -136,6 +137,63 @@ dcterms = ClosedNamespace(
            'title',
            'type',
            'valid']
+)
+
+npoph = ClosedNamespace(
+    uri=URIRef('http://uri.interlex.org/tgbugs/uris/readable/'),
+    terms=['hasAxonLocatedIn',
+           'hasAxonMorphologicalPhenotype',
+           'hasAxonPhenotype',
+           'hasAxonPresynapticElementIn',
+           'hasBiologicalSex',
+           'hasCircuitRolePhenotype',
+           'hasClassificationPhenotype',
+           'hasConnectionDeterminedByCellFilling',
+           'hasConnectionDeterminedByElectronMicroscopy',
+           'hasConnectionDeterminedByElectrophysiology',
+           'hasConnectionDeterminedByPharmacology',
+           'hasConnectionDeterminedBySynapticPhysiology',
+           'hasConnectionDeterminedByViralTracing',
+           'hasConnectionPhenotype',
+           'hasDendriteLocatedIn',
+           'hasDendriteMorphologicalPhenotype',
+           'hasDendritePhenotype',
+           'hasDevelopmentalStage',
+           'hasDevelopmentalStructure',
+           'hasDevelopmentalType',
+           'hasDriverExpressionConstitutivePhenotype',
+           'hasDriverExpressionInducedPhenotype',
+           'hasDriverExpressionPhenotype',
+           'hasElectrophysiologicalPhenotype',
+           'hasExperimentalPhenotype',
+           'hasExpressionPhenotype',
+           'hasForwardConnectionPhenotype',
+           'hasInstanceInSpecies',
+           'hasInstanceInTaxon',
+           'hasLayerLocationPhenotype',
+           'hasLocationPhenotype',
+           'hasMolecularPhenotype',
+           'hasMorphologicalPhenotype',
+           'hasNeurotransmitterPhenotype',
+           'hasNucleicAcidExpressionPhenotype',
+           'hasPhenotype',
+           'hasPhenotypeModifier',
+           'hasPresynapticElementIn',
+           'hasPresynapticTerminalsIn',
+           'hasProcessLocatedIn',
+           'hasProjectionPhenotype',
+           'hasProteinExpressionPhenotype',
+           'hasReporterExpressionPhenotype',
+           'hasReverseConnectionPhenotype',
+           'hasSmallMoleculePhenotype',
+           'hasSomaLocatedIn',
+           'hasSomaLocatedInLayer',
+           'hasSomaLocationLaterality',
+           'hasSomaPhenotype',
+           'hasTaxonRank',
+           'phenotypeCooccuresWith',
+           'phenotypeObservedInBrainRegion',
+           'phenotypeOf']
 )
 
 oboInOwl = ClosedNamespace(
@@ -467,12 +525,16 @@ skos = ClosedNamespace(
 def main():
     # use to populate terms
     uris = {
-        'oboInOwl':'http://www.geneontology.org/formats/oboInOwl#',
-        'owl':'http://www.w3.org/2002/07/owl#',
-        'skos':'http://www.w3.org/2004/02/skos/core#',
-        'dc':'http://purl.org/dc/elements/1.1/',
-        'dcterms':'http://purl.org/dc/terms/',
-        'prov':'http://www.w3.org/ns/prov#',
+        'oboInOwl': 'http://www.geneontology.org/formats/oboInOwl#',
+        'owl': 'http://www.w3.org/2002/07/owl#',
+        'skos': 'http://www.w3.org/2004/02/skos/core#',
+        'dc': 'http://purl.org/dc/elements/1.1/',
+        'dcterms': 'http://purl.org/dc/terms/',
+        'prov': 'http://www.w3.org/ns/prov#',
+        'npoph': 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/neurons/ttl/phenotype-core.ttl',
+    }
+    alternate_prefixs = {
+        'npoph': 'http://uri.interlex.org/tgbugs/uris/readable/',
     }
     tw = 4
     tab = ' ' * tw
@@ -480,13 +542,29 @@ def main():
     functions = ''
     for name, uri in sorted(uris.items()):
         print(uri)
-        try:
-            g = Graph().parse(uri.rstrip('#'))
-        except PluginException:
+        if uri.endswith('.ttl'):
+            args_list = [
+                ((uri,), {'format': 'turtle'}),
+            ]
+
+        else:
+            args_list = [
+                ((uri.rstrip('#'),), {}),
+                ((uri.rstrip('#') + '.owl',), {}),
+                ((uri.rstrip('#') + '.owl',), {'format': 'xml'}),
+            ]
+
+        for args, kwargs in args_list:
             try:
-                g = Graph().parse(uri.rstrip('#') + '.owl')
-            except PluginException:  # redirecting via github breaks mimetypes (sigh)
-                g = Graph().parse(uri.rstrip('#') + '.owl', format='xml')
+                g = Graph().parse(*args, **kwargs)
+                break
+            except PluginException:
+                continue
+            except rdflib.plugins.parsers.notation3.BadSyntax:
+                continue
+
+        if name in alternate_prefixs:
+            uri = alternate_prefixs[name]
 
         sep = uri[-1]
         globals().update(locals())
