@@ -743,6 +743,7 @@ class Config:
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
+        self.part_of_graph.write()
 
     def write_python(self):
         # FIXME hack, will write other configs if call after graphbase has switched
@@ -1074,6 +1075,13 @@ class graphBase:
                 # it is a mess
                 graphBase.set_repo_state()
 
+        # part of graph
+        # FIXME hardcoded ...
+        partofpath = RepoPath(devconfig.ontology_local_repo, 'ttl/generated/part-of-self.ttl')
+        graphBase.part_of_graph = OntResAny(partofpath).graph
+        graphBase.part_of_graph.path = partofpath  # FIXME why is this not passed by OntResAny?
+        [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
         # core graph setup
         if core_graph is None:
             core_graph = OntConjunctiveGraph()
@@ -1092,6 +1100,7 @@ class graphBase:
                 # TODO failover to local if we were remote?
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
                 log.warning(f'no file found for core graph at {cg}')
+
         graphBase.core_graph = core_graph
         if RDFL not in [type(s) for s in OntTerm.query.services]:
             # FIXME ah subtle differences between graphs >_<
@@ -1195,6 +1204,7 @@ class graphBase:
         og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
+        graphBase.part_of_graph.write()
 
     @staticmethod
     def filename_python():
@@ -1634,8 +1644,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 _done.add(self.p)
                 eff = infixowl.Restriction(onProperty=partOf,
                                            someValuesFrom=self.p,
-                                           graph=self.out_graph)
-                self.out_graph.add((self.p, rdfs.subClassOf, eff.identifier))
+                                           graph=self.part_of_graph)
+                self.part_of_graph.add((self.p, rdfs.subClassOf, eff.identifier))
 
             return infixowl.Restriction(onProperty=self.e, someValuesFrom=por, graph=graph)
 
