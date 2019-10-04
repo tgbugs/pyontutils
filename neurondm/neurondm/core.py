@@ -30,6 +30,7 @@ from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
+_done = set()
 
 __all__ = [
     'AND',
@@ -1628,12 +1629,18 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                                        someValuesFrom=self.p,
                                        graph=graph)
             members = self.p, por
-            uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
-            return infixowl.Restriction(onProperty=self.e, someValuesFrom=uo, graph=graph)
+            #uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
+            if self.p not in _done:
+                _done.add(self.p)
+                eff = infixowl.Restriction(onProperty=partOf,
+                                           someValuesFrom=self.p,
+                                           graph=self.out_graph)
+                self.out_graph.add((self.p, rdfs.subClassOf, eff.identifier))
+
+            return infixowl.Restriction(onProperty=self.e, someValuesFrom=por, graph=graph)
+
         else:
             return self._graphify(graph)
-
-
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -2522,7 +2529,11 @@ class Neuron(NeuronBase):
 
         def location_restriction_to_phenotype(r, ptype=type_):
             bc = infixowl.CastClass(r.someValuesFrom, graph=self.in_graph)
-            p = [e for e in bc._rdfList if isinstance(e, rdflib.URIRef)][0]
+            if type(bc) == infixowl.BooleanClass:
+                p = [e for e in bc._rdfList if isinstance(e, rdflib.URIRef)][0]
+            elif type(bc) == infixowl.Restriction:
+                p = bc.someValuesFrom.identifier
+
             e = r.onProperty
             return ptype(p, e)
 
