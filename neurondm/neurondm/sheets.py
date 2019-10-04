@@ -26,16 +26,16 @@ def select_by_curie_rank(results):
         if 'curie' in result:
             curie = result['curie']
         else:
-            return len(results) * 3
+            return 3, len(results) * 3
 
         prefix, _ = curie.split(':')
         if prefix in ranking:
             try:
-                return ranking.index(result['curie'])
+                return 0, ranking.index(result['curie'])
             except ValueError:
-                return len(results) + 1
+                return 1, len(results) + 1
         else:
-            return len(results) * 2
+            return 2, len(results) * 2
 
     return sorted(results, key=key)[0]
 

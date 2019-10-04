@@ -1372,7 +1372,8 @@ def make_devel():
                                         if not no.label:
                                             continue
                                         try:
-                                            noo = next(OntTermOntologyOnly.query(term=no.label))
+                                            gen = OntTermOntologyOnly.query(term=no.label)
+                                            noo = next(gen)
                                             if noo.curie in ('owl:Class', 'owl:Thing'):
                                                 continue
                                             elif noo != no and noo.prefix not in bads:
