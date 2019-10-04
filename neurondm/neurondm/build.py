@@ -1350,9 +1350,10 @@ def make_devel():
                         continue
 
                     done.append(term)
-                    if not term.label or (not term.label.lower().endswith('neuron') and
-                                          not term.label.lower().endswith('cell') and
-                                          not term.label.lower().endswith('cell outer')):
+                    if (not term.label or (not term.label.lower().endswith('neuron') and
+                                           not term.label.lower().endswith('cell') and
+                                           not term.label.lower().endswith('cell outer'))
+                        or term.URIRef == _NEURON_CLASS):
                         haveLabel = False
                         for s, p, o in term.triples_simple:
                             if p == rdfs.label:
