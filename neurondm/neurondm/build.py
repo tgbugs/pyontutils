@@ -1175,8 +1175,9 @@ def make_devel():
     _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
     g.parse(_pi.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT', 'NIFRAW', 'NLXCELL', 'NLXNEURNT',
-            'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
+            'NIFRAW', 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
+            'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
                                 g.predicates(),
@@ -1329,7 +1330,12 @@ def make_devel():
             yield OntId('RO:0002433').u, rdfs.label, rdflib.Literal('contributes to morphology of')
             yield OntId('RO:0002433').u, rdfs.subPropertyOf, OntId('overlaps:').u
 
-            done = []
+            done = [
+                # these don't have labels in the ontology and they are cells which is bad
+                # so skip them by putting them in done from the start
+                OntTermOntologyOnly('NIFSTD:BAMSC1121'),
+                OntTermOntologyOnly('NIFSTD:BAMSC1126'),
+            ]
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
@@ -1344,9 +1350,9 @@ def make_devel():
                         continue
 
                     done.append(term)
-                    log.debug(repr(term))
-                    if not term.label or (not term.label.endswith('neuron') and
-                                          not term.label.endswith('cell')):
+                    if not term.label or (not term.label.lower().endswith('neuron') and
+                                          not term.label.lower().endswith('cell') and
+                                          not term.label.lower().endswith('cell outer')):
                         haveLabel = False
                         for s, p, o in term.triples_simple:
                             if p == rdfs.label:
