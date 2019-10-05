@@ -276,11 +276,12 @@ class CutsV1(Cuts):
                 lp = len(phenotypes)
                 lep = len(_ep)
                 if lp == lep:
-                    AAAAAA = id  # hack for debugger
                     (pprint(sorted(_ep)))
                     (pprint(phenotypes))
-                    print(AAAAAA)
-                    breakpoint()
+                    pprint(set(_ep) - set(phenotypes))
+                    pprint(set(phenotypes) - set(_ep))
+                    _AAAAAA = id  # hack for debugger
+                    print(_AAAAAA)
                 log.error(f'{id!r} failed roundtrip {lp} != {lep}')
                 self.failed[id] = phenotypes
                 return
