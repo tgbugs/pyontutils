@@ -1,14 +1,17 @@
+from pprint import pprint
 import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
 from pyontutils.sheets import update_sheet_values, get_note, Sheet
 from pyontutils.scigraph import Vocabulary
-from pyontutils.namespaces import ilxtr, TEMP, definition
-from pyontutils.closed_namespaces import rdfs, rdf
+from pyontutils.namespaces import ilxtr, TEMP, definition, npoph
+from pyontutils.namespaces import rdfs, rdf
+from pyontutils.utils import allMembers
 from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
 from neurondm.core import log, OntId, OntTerm
 
+log.setLevel('WARNING')
 
 def normalizeDoi(doi):
     if 'http' in doi:
@@ -31,7 +34,7 @@ def select_by_curie_rank(results):
         prefix, _ = curie.split(':')
         if prefix in ranking:
             try:
-                return 0, ranking.index(result['curie'])
+                return 0, ranking.index(prefix)
             except ValueError:
                 return 1, len(results) + 1
         else:
@@ -57,107 +60,45 @@ def process_note(raw_note):
             yield p, rdflib.Literal(bit)  # FIXME cull editorial notes
 
 
-def sheet_to_neurons(values, cells_index, expect_pes):
-    # TODO import existing ids to register by label
-    sgv = Vocabulary()
-    e_config = Config('common-usage-types')
-    e_config.load_existing()
-    query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
-    # FIXME clear use case for the remaining bound to whatever query produced it rather
-    # than the other way around ... how to support this use case ...
-    existing = {str(n.origLabel):n for n in e_config.neurons()}
-    def convert_header(header):
-        if header.startswith('has'):  # FIXME use a closed namespace
-            return ilxtr[header]
-        else:
-            return None
+class Cuts(Sheet):
+    name = 'neurons-cut'
 
-    def convert_other(header):
-        if header == 'label':
-            return rdfs.label
-        elif header == 'curie':
-            return rdf.type
-        elif header == 'definition':
-            return definition
-        else:
-            header = header.replace(' ', '_')
-            return TEMP[header]  # FIXME
 
-    def mapCell(cell, syns=False):
-        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBITaxon', 'NCBIGene', 'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL',
-                           'BIRNLEX',)
-
-        if ':' in cell and ' ' not in cell:
-            log.debug(cell)
-            if 'http' in cell:
-                if cell.startswith('http'):
-                    t = OntTerm(iri=cell)
-                else:
-                    return None, None  # garbage with http inline
-            else:
-                t = OntTerm(cell, exclude_prefix=('FMA',))  # FIXME need better error message in ontquery
-
-            return t.u, t.label
-
-        result = [r for r in sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
-                  if not r['deprecated']]
-        #printD(cell, result)
-        if not result:
-            log.debug(f'{cell}')
-            maybe = list(query(label=cell, exclude_prefix=('FMA',)))
-            if maybe:
-                qr = maybe[0]
-                return qr.OntTerm.u, qr.label
-            elif not syns:
-                return mapCell(cell, syns=True)
-            else:
-                return None, None
-        elif len(result) > 1:
-            #printD('WARNING', result)
-            result = select_by_curie_rank(result)
-        else:
-            result = result[0]
-
-        return rdflib.URIRef(result['iri']), result['labels'][0]
-
-    def lower_check(label, cell):
-        return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
+class CutsV1(Cuts):
+    sheet_name = 'CUT V1.0'
+    fetch_grid = True
 
     lnlu = {v:k for k, v in LogicalPhenotype.local_names.items()}
-    def convert_cell(cell_or_comma_sep):
-        #printD('CONVERTING', cell_or_comma_sep)
-        for cell_w_junk in cell_or_comma_sep.split(','):  # XXX WARNING need a way to alter people to this
-            cell = cell_w_junk.strip()
-            if cell.startswith('(OR') or cell.startswith('(AND'):
-                start, *middle, end = cell.split('" "')
-                OPoperator, first = start.split(' "')
-                operator = OPoperator[1:]
-                operator = lnlu[operator]
-                last, CP = end.rsplit('"')
-                iris, labels = [], []
-                for term in (first, *middle, last):
-                    iri, label = mapCell(term)
-                    if label is None:
-                        label = cell_or_comma_sep
-                    iris.append(iri)
-                    labels.append(label)
 
-                yield (operator, *iris), tuple(labels)
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, 'existing'):
+            e_config = Config('common-usage-types')
+            e_config.load_existing()
+            # FIXME clear use case for the remaining bound to whatever query produced it rather
+            # than the other way around ... how to support this use case ...
+            cls.existing = {str(n.origLabel):n for n in e_config.neurons()}
+            cls.query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
+            cls.sgv = Vocabulary()
 
-            else:
-                iri, label = mapCell(cell)
-                if label is None:
-                    yield iri, cell_or_comma_sep  # FIXME need a way to handle this that doesn't break things?
-                else:
-                    yield iri, label
+        return super().__new__(cls)
 
-    config = Config('cut-roundtrip')
-    skip = 'alignment label',
-    headers, *rows = values
-    errors = []
-    new = []
-    release = []
-    for i, neuron_row in enumerate(rows):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def neurons(self, expect_pes):
+        # TODO import existing ids to register by label
+        self.config = Config('cut-roundtrip')
+        self.skip = 'alignment label',
+        self.errors = []
+        self.failed = {}
+        self.new = []
+        self.release = []
+        headers, *rows = self.values
+        self.tomqc_check_ind = headers.index('tomqc')
+        for i, neuron_row in enumerate(rows):
+            yield from self.convert_row(i, neuron_row, headers, expect_pes)
+
+    def convert_row(self, i, neuron_row, headers, expect_pes):
         id = None
         label_neuron  = None
         definition_neuron = None
@@ -169,10 +110,13 @@ def sheet_to_neurons(values, cells_index, expect_pes):
         object_notes = {}
         other_notes = {}
         wat = {}
-        for j, (header, cell) in enumerate(zip(headers, neuron_row)):
-            notes = list(process_note(get_note(i + 1, j, cells_index)))  # + 1 since headers is removed
+        def loop_internal(j, header, cell):
+            nonlocal id
+            nonlocal current_neuron
+            nonlocal do_release
+            notes = list(process_note(get_note(i + 1, j, self.cells_index)))  # + 1 since headers is removed
             if notes and not header.startswith('has'):
-                _predicate = convert_other(header)
+                _predicate = self.convert_other(header)
                 if cell:
                     _object = rdflib.Literal(cell)  # FIXME curies etc.
                 else:
@@ -181,17 +125,17 @@ def sheet_to_neurons(values, cells_index, expect_pes):
 
             if header == 'curie':
                 id = OntId(cell).u if cell else None
-                continue
+                return
             elif header == 'label':
                 label_neuron = cell
-                if cell in existing:
-                    current_neuron = existing[cell]
+                if cell in self.existing:
+                    current_neuron = self.existing[cell]
                 elif cell:
                     # TODO
-                    new.append(cell)
+                    self.new.append(cell)
                 else:
                     raise ValueError(cell)  # wat
-                continue
+                return
             elif header == 'Status':
                 # TODO
                 if cell == 'Yes':
@@ -205,23 +149,21 @@ def sheet_to_neurons(values, cells_index, expect_pes):
                 else:
                     pass
 
-                continue
+                return
             elif header == 'PMID':
                 # TODO
-                continue
+                return
             elif header == 'Other reference':
                 # TODO
-                continue
+                return
             elif header == 'Other label':
                 # TODO
-                continue
+                return
             elif header == 'definition':
-                continue  # FIXME single space differences between the spreadsheet and the source
+                return  # FIXME single space differences between the spreadsheet and the source
 
                 if cell:
                     definition_neuron = rdflib.Literal(cell)
-
-                continue
 
             elif header == 'synonyms':
                 if cell:
@@ -229,30 +171,39 @@ def sheet_to_neurons(values, cells_index, expect_pes):
                                     # FIXME bare comma is extremely dangerous
                                     for s in cell.split(',')]
 
-                continue
-            elif header in skip:
-                continue
+                return
+            elif header in self.skip:
+                return
 
             objects = []
             if cell:
-                predicate = convert_header(header)
+                predicate = self.convert_header(header)
                 if predicate is None:
                     log.debug(f'{(header, cell, notes)}')
 
-                for object, label in convert_cell(cell):
+                for object, label in self.convert_cell(cell):
+                    if predicate in NeuronCUT._molecular_predicates:
+                        if isinstance(object, tuple):
+                            op, *rest = object
+                            rest = [OntTerm(o).asIndicator().URIRef for o in rest]
+                            object = op, *rest
+                        elif object:
+                            log.debug(f'{object!r}')
+                            object = OntTerm(object).asIndicator().URIRef
+
                     if isinstance(label, tuple):  # LogicalPhenotype case
                         _err = []
                         for l in label:
-                            if lower_check(l, cell):
+                            if self.lower_check(l, cell):
                                 _err.append((cell, label))
                         if _err:
-                            errors.extend(_err)
+                            self.errors.extend(_err)
                         else:
                             objects.append(object)
-                    elif lower_check(label, cell):
-                        errors.append((cell, label))
+                    elif self.lower_check(label, cell):
+                        self.errors.append((cell, label))
                     elif str(id) == object:
-                        errors.append((header, cell, object, label))
+                        self.errors.append((header, cell, object, label))
                         object = None
                     else:
                         objects.append(object)
@@ -277,7 +228,7 @@ def sheet_to_neurons(values, cells_index, expect_pes):
                         # or perhaps having another sheet for cases like that
 
             else:
-                continue
+                return
 
             if predicate and objects:
                 for object in objects:  # FIXME has layer location phenotype
@@ -288,13 +239,18 @@ def sheet_to_neurons(values, cells_index, expect_pes):
                     elif object:
                         phenotypes.append(Phenotype(object, predicate))
                     else:
-                        errors.append((object, predicate, cell))
+                        self.errors.append((object, predicate, cell))
             elif objects:
-                errors.append((header, objects))
+                self.errors.append((header, objects))
             else:
-                errors.append((header, cell))
+                self.errors.append((header, cell))
             # translate header -> predicate
             # translate cell value to ontology id
+
+        #########################################
+
+        for j, (header, cell) in enumerate(zip(headers, neuron_row)):
+            loop_internal(j, header, cell)
 
         if current_neuron and phenotypes:
             # TODO merge current with changes
@@ -307,27 +263,48 @@ def sheet_to_neurons(values, cells_index, expect_pes):
                 id = make_cut_id(label_neuron)
 
             if id not in expect_pes:
-                log.error(f'{id!r} not in cuts!?')
-                continue
+                if id is not None:
+                    log.error(f'{id!r} not in cuts!?')
 
-            if expect_pes[id] != len(phenotypes):
-                log.error(f'{id!r} failed roundtrip {len(phenotypes)} != {expect_pes[id]}')
-                continue
+                return
+
+            phenotypes = sorted(set(phenotypes))
+            _ep = expect_pes[id]
+            if not allMembers(_ep, *phenotypes) and not neuron_row[self.tomqc_check_ind]:
+            #if expect_pes[id] != len(phenotypes):
+                # FIXME this is not a strict roundtrip, it may also include additions
+                lp = len(phenotypes)
+                lep = len(_ep)
+                if lp == lep:
+                    AAAAAA = id  # hack for debugger
+                    (pprint(sorted(_ep)))
+                    (pprint(phenotypes))
+                    print(AAAAAA)
+                    breakpoint()
+                log.error(f'{id!r} failed roundtrip {lp} != {lep}')
+                self.failed[id] = phenotypes
+                return
 
             neuron = NeuronCUT(*phenotypes, id_=id, label=label_neuron,
                                override=bool(id) or bool(label_neuron))
             neuron.adopt_meta(current_neuron)
             # FIXME occasionally this will error?!
+            yield neuron
+
         else:
-            continue  # FIXME this polutes everything ???
+            return  # FIXME this polutes everything ???
+        """
             fn = fixname(label_neuron)
             if not phenotypes and i:  # i skips header
-                errors.append((i, neuron_row))  # TODO special review for phenos but not current
+                self.errors.append((i, neuron_row))  # TODO special review for phenos but not current
                 phenotypes = Phenotype('TEMP:phenotype/' + fn),
 
             neuron = NeuronCUT(*phenotypes,
                                id_=make_cut_id(label_neuron),
                                label=label_neuron, override=True)
+
+        """
+        ###################################################
 
         # update the meta if there were any changes
         if definition_neuron is not None:
@@ -350,29 +327,116 @@ def sheet_to_neurons(values, cells_index, expect_pes):
         # FIXME there may be no predicate? if the object fails to match?
 
         if do_release:
-            release.append(neuron)
-
-    return config, errors, new, release
+            self.release.append(neuron)
 
 
-class Cuts(Sheet):
-    name = 'neurons-cut'
+    @staticmethod
+    def convert_header(header):
+        if header.startswith('has'):  # FIXME use a closed namespace
+            if header == 'hasLocationPhenotype':
+                # can't have duplicate headers in the sheet so fix it here
+                header = 'hasSomaLocatedIn'
 
+            return npoph[header]
+        else:
+            return None
 
-class CutsV1(Cuts):
-    sheet_name = 'CUT V1.0'
-    fetch_grid = True
+    @staticmethod
+    def convert_other(header):
+        if header == 'label':
+            return rdfs.label
+        elif header == 'curie':
+            return rdf.type
+        elif header == 'definition':
+            return definition
+        else:
+            header = header.replace(' ', '_')
+            return TEMP[header]  # FIXME
 
+    @staticmethod
+    def lower_check(label, cell):
+        return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
+
+    @classmethod
+    def mapCell(cls, cell, syns=False):
+        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBITaxon', 'NCBIGene', 'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL',
+                           'BIRNLEX',)
+
+        if ':' in cell and ' ' not in cell:
+            log.debug(cell)
+            if 'http' in cell:
+                if cell.startswith('http'):
+                    t = OntTerm(iri=cell)
+                else:
+                    return None, None  # garbage with http inline
+            else:
+                t = OntTerm(cell, exclude_prefix=('FMA',))  # FIXME need better error message in ontquery
+
+            return t.u, t.label
+
+        result = [r for r in cls.sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
+                  if not r['deprecated']]
+        #printD(cell, result)
+        if not result:
+            log.debug(f'{cell}')
+            maybe = list(cls.query(label=cell, exclude_prefix=('FMA',)))
+            if maybe:
+                t = maybe[0]
+                return t.u, t.label
+            elif not syns:
+                return cls.mapCell(cell, syns=True)
+            else:
+                return None, None
+        elif len(result) > 1:
+            #printD('WARNING', result)
+            result = select_by_curie_rank(result)
+        else:
+            result = result[0]
+
+        return rdflib.URIRef(result['iri']), result['labels'][0]
+
+    @classmethod
+    def convert_cell(cls, cell_or_comma_sep):
+        #printD('CONVERTING', cell_or_comma_sep)
+        for cell_w_junk in cell_or_comma_sep.split(','):  # XXX WARNING need a way to alter people to this
+            cell = cell_w_junk.strip()
+            if cell.startswith('(OR') or cell.startswith('(AND'):
+                start, *middle, end = cell.split('" "')
+                OPoperator, first = start.split(' "')
+                operator = OPoperator[1:]
+                operator = cls.lnlu[operator]
+                last, CP = end.rsplit('"')
+                iris, labels = [], []
+                for term in (first, *middle, last):
+                    iri, label = cls.mapCell(term)
+                    if label is None:
+                        label = cell_or_comma_sep
+                    iris.append(iri)
+                    labels.append(label)
+
+                yield (operator, *iris), tuple(labels)
+
+            else:
+                iri, label = cls.mapCell(cell)
+                if label is None:
+                    yield iri, cell_or_comma_sep  # FIXME need a way to handle this that doesn't break things?
+                else:
+                    yield iri, label
 
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
     from neurondm.compiled.common_usage_types import config as cuts_config
     cuts_neurons = cuts_config.neurons()
-    expect_pes = {n.id_:len(n.pes) for n in cuts_neurons}
+    expect_pes = {n.id_:n.pes for n in cuts_neurons}
 
     sheet = CutsV1()
-    config, errors, new, release = sheet_to_neurons(sheet.values, sheet.cells_index, expect_pes)
+    _neurons = list(sheet.neurons(expect_pes))
+    config = sheet.config
+    errors = sheet.errors
+    new = sheet.new
+    release = sheet.release
+
     #sheet.show_notes()
     config.write_python()
     config.write()
@@ -417,6 +481,7 @@ def main():
 
             yield '' if value is None else value  # completely overwrite the sheet
 
+    breakpoint()
     rows = [list(replace(r, 'Status', 'definition', 'synonyms', 'PMID')) for r in reviewC]
     #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     if __name__ == '__main__':

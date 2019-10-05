@@ -446,9 +446,12 @@ OntTerm.query_init(*bOntTerm.query.services)
 class OntTermOntologyOnly(OntTerm):
     __firsts = ('curie', 'label')  # FIXME why do I need this here but didn't for OntTerm ??
 
+class OntTermInterLexOnly(OntTerm):
+    pass
 
 IXR = oq.plugin.get('InterLex')
 OntTermOntologyOnly.query_init(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
+OntTermInterLexOnly.query_init(*(s for s in OntTerm.query.services if isinstance(s, IXR)))
 
 
 class GraphOpsMixin:
@@ -730,6 +733,10 @@ class Config:
     @property
     def core_graph(self):
         return graphBase.core_graph  # FIXME :/
+
+    @property
+    def part_of_graph(self):
+        return graphBase.part_of_graph
 
     def neurons(self):
         return sorted(self.existing_pes)
@@ -1376,6 +1383,14 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
+
+    def asIndicator(self):
+        t = OntTerm(self.p)
+        it = t.asIndicator()
+        if t != it:
+            return it.asPhenotype(self.e)
+        else:
+            return self
 
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
@@ -2284,7 +2299,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 return p.e
             # FIXME warn/error on ambiguous?
 
-        raise AttributeError(f'{self} has no aspect with the phenotype {OntId(object)!r}')  # FIXME AttributeError seems wrong
+        t = OntTerm(object)
+        t.set_next_repr('curie', 'label')
+        raise AttributeError(f'{self} has no aspect with the phenotype {t!r}')  # FIXME AttributeError seems wrong
 
     def getObject(self, predicate):
         for p in self.pes:
@@ -2437,9 +2454,12 @@ class Neuron(NeuronBase):
                 if 'Loc' in disjoint:  # FIXME ... subPropertyOf hasLocationPhenotype
                     #resp = [merge(t, multiquery(t)) for t in terms]
                     #breakpoint()
+                    _oq = OntTerm.query
+                    OntTerm.query = OntTermInterLexOnly.query
                     po = [(t('ilx.partOf:', depth=10, asPreferred=True, include_supers=True),
                            [t2 for t2 in oterms if t2 != t])
                           for t in terms]
+                    OntTerm.query = _oq
                     po += [(t('partOf:', depth=10, asTerm=True, include_supers=True),
                             [t2 for t2 in oterms if t2 != t]) for t in
                            terms]
