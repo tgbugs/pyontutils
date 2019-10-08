@@ -327,10 +327,12 @@ def make_phenotypes():
 
         def subClassOf(self, value):
             if value:
-                self.parent = graph2.expand(value)
-                self.parent_child_map[self.parent].add(self.id_)
-                self.child_parent_map[self.id_].add(self.parent)
-                self.Class.subClassOf = [self.parent]
+                values = value.split(',')
+                for v in values:
+                    self.parent = graph2.expand(v)
+                    self.parent_child_map[self.parent].add(self.id_)
+                    self.child_parent_map[self.id_].add(self.parent)
+                    self.Class.subClassOf = [self.parent]
 
         def label(self, value):
             if value:

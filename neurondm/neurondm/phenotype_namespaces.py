@@ -167,6 +167,9 @@ class CUT(LocalNameManager):
     Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasInstanceInTaxon)
     proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
     inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
+    intrinsic = Phenotype(ilxtr.IntrinsicPhenotype, ilxtr.hasCircuitRolePhenotype)
+    motor = Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype)
+    sensory = Phenotype(ilxtr.SensoryPhenotype, ilxtr.hasCircuitRolePhenotype)
 
     TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
     Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)

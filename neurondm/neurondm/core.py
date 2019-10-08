@@ -318,20 +318,27 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
-        def suffix(phenotypes):
+        inp = self.predicate_namespace['InterneuronPhenotype']
+        def suffix():
+            # reminder that the phenotype loop variable below binds in here
             if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
                 return  'neuron'
-            elif phenotype.p == self.predicate_namespace['InterneuronPhenotype']:
+            elif phenotype.p == inp:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
             else:  # principle, projection, etc. 
                 return 'neuron'
 
+        # put interneuron last if it is in the phenotypes list
+        if inp in phenotypes:
+            phenotypes.remove(inp)
+            phenotypes = phenotypes + [inp]
+
         for phenotype in phenotypes:
             yield next(self._default((phenotype,))).lower()
 
-        suffix = suffix(phenotypes)
+        suffix = suffix()
         if suffix:
             yield suffix
 
@@ -1975,6 +1982,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
 
             t = OntTerm(phenotype.p)
+            if not t.validated:  # FIXME masking the _source issue
+                new.append(phenotype)  # essentially an unknown phenotype
+                continue
+
             if t.curie in replace:
                 np = phenotype.__class__(replace[t.curie], phenotype.e)
                 new.append(np)
