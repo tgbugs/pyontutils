@@ -1830,7 +1830,7 @@ class Source(tuple):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
 
-            if cls.source.startswith('http'):
+            if isinstance(cls.source, str) and cls.source.startswith('http'):
                 if cls.source.endswith('.git'):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
@@ -1870,24 +1870,27 @@ class Source(tuple):
                     cls.iri = rdflib.URIRef(cls.source)
 
             elif os.path.exists(cls.source):  # TODO no expanded stuff
+                if not isinstance(cls.source, Path):
+                    cls.source = Path(cls.source)
+
                 try:
                     file_commit = subprocess.check_output(['git', 'log', '-n', '1',
                                                            '--pretty=format:%H', '--',
                                                            cls.source],
                                                           stderr=subprocess.DEVNULL).decode().rstrip()
-                    cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
+                    cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
+                                            + cls.source.as_posix())
                     cls._type = 'git-local'
                 except subprocess.CalledProcessError as e:
                     cls._type = 'local'
                     if e.args[0] == 128:  # hopefully this is the git status code for not a get repo...
                         if not hasattr(cls, 'iri'):
-                            cls.iri = rdflib.URIRef('file://' + cls.source)
+                            cls.iri = rdflib.URIRef(cls.source.as_uri())
                         #else:
                             #print(cls, 'already has an iri', cls.iri)
                     else:
                         raise e
 
-                cls.source = Path(cls.source)
             else:
                 cls._type = None
                 print('Unknown source', cls.source)
@@ -1928,7 +1931,7 @@ class Source(tuple):
     def prov(cls):
         if cls._type == 'local' or cls._type == 'git-local':
             if cls._type == 'git-local':
-                object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+                object = rdflib.URIRef(cls.iri_prefix_hd + cls.source.as_posix())
             else:
                 object = rdflib.URIRef(cls.source.as_posix())
             if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):  # FIXME no help on mispelling
