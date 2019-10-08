@@ -24,6 +24,42 @@ A full list can be generated using [gen.rkt](https://github.com/tgbugs/protc/blo
 1. Tagging ephys data
 2. Tagging fMRI data
 
+# Existing sources and sources of interest
+## NIFSTD
+[NIF-Investigation.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Investigation.ttl)  
+[NIF-Scientific-Discipline.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Scientific-Discipline.ttl)  
+[cogat_v0.3.owl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/cogat_v0.3.owl)  
+[CogPO](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/CogPO.ttl)
+
+## BBP
+[hbp_measurement_methods_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_measurement_methods_ontology.ttl)
+corresponds closely to initial work from 2015.  
+[hbp_data_modality_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_data_modality_ontology.ttl)  
+[hbp_ephys_stimuli.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_ephys_stimuli.ttl)  
+[hbp_activity_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_activity_ontology.ttl)  
+[hbp_data_type_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_data_type_ontology.ttl)  
+[hbp_storage_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_storage_ontology.ttl)  
+[hbp_role_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_role_ontology.ttl)
+This could be expanded into the human executor 'role/skillset/responsibility' ontology.  
+
+## tgbugs/methodsOntology
+[tgbugs/methodsOntology](https://github.com/tgbugs/methodsOntology) contains the original work that was done back in 2015.  
+[ns_methods.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_methods.obo)  
+[ns_entities.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_entities.obo)  
+
+## Other
+[OEN](https://github.com/G-Node/OEN)  
+[CNO](https://github.com/INCF/Computational-Neurosciences-Ontology--C.N.O.-)  
+[nat](https://github.com/BlueBrain/nat/blob/master/nat/data/modelingDictionary.csv)  
+[odml](https://github.com/G-Node/odml-terminologies) see also the [main page](http://www.g-node.org/projects/odml/terminologies)  
+[ero.owl](https://www.eagle-i.net/ero/latest/ero.owl) see also the [wiki](https://open.med.harvard.edu/wiki/display/eaglei/Ontology)  
+[efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  
+[CHMO](https://github.com/rsc-ontologies/rsc-cmo) (note the cc-by license)
+
+## Related github issues
+https://github.com/SciCrunch/NIF-Ontology/issues/100  
+https://github.com/SciCrunch/NIF-Ontology/issues/128  
+
 # Collected thoughts/working draft
 My initial work to provide a consistent view of methodology lives in [methods_isa.graphml](./methods_isa.graphml).
 The initial version has a collection of thoughts which need to be refined.
@@ -62,41 +98,6 @@ To obtain a ttl version of the file and generate hierarchies run `graphml_to_ttl
    There is no common axis that these can be classified under, and in fact trying to categorize
    these high level approaches by something like they tool they employ can quickly lead to electrophysiology
    being classified as a type of microscopy without a bunch of accompanying restrictions that make ones head hurt.
-
-# Existing sources and sources of interest
-## NIFSTD
-[NIF-Investigation.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Investigation.ttl)  
-[NIF-Scientific-Discipline.ttl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/NIF-Scientific-Discipline.ttl)  
-[cogat_v0.3.owl](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/cogat_v0.3.owl)  
-[CogPO](https://github.com/SciCrunch/NIF-Ontology/blob/master/ttl/external/CogPO.ttl)
-
-## BBP
-[hbp_measurement_methods_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_measurement_methods_ontology.ttl)
-corresponds closely to initial work from 2015.  
-[hbp_data_modality_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_data_modality_ontology.ttl)  
-[hbp_ephys_stimuli.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_ephys_stimuli.ttl)  
-[hbp_activity_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_activity_ontology.ttl)  
-[hbp_data_type_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_data_type_ontology.ttl)  
-[hbp_storage_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_storage_ontology.ttl)  
-[hbp_role_ontology.ttl](https://github.com/OpenKnowledgeSpace/methodsOntology/blob/master/ttl/hbp_role_ontology.ttl)
-This could be expanded into the human executor 'role/skillset/responsibility' ontology.  
-
-## tgbugs/methodsOntology
-[tgbugs/methodsOntology](https://github.com/tgbugs/methodsOntology) contains the original work that was done back in 2015.  
-[ns_methods.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_methods.obo)  
-[ns_entities.obo](https://github.com/tgbugs/methodsOntology/blob/master/source-material/ns_entities.obo)  
-
-## Other
-[OEN](https://github.com/G-Node/OEN)  
-[CNO](https://github.com/INCF/Computational-Neurosciences-Ontology--C.N.O.-)  
-[nat](https://github.com/BlueBrain/nat/blob/master/nat/data/modelingDictionary.csv)  
-[odml](https://github.com/G-Node/odml-terminologies) see also the [main page](http://www.g-node.org/projects/odml/terminologies)  
-[ero.owl](https://www.eagle-i.net/ero/latest/ero.owl) see also the [wiki](https://open.med.harvard.edu/wiki/display/eaglei/Ontology)  
-[efo.owl](http://www.ebi.ac.uk/efo/efo.owl) see also the [main page](https://www.ebi.ac.uk/efo/)  
-[CHMO](https://github.com/rsc-ontologies/rsc-cmo) (note the cc-by license)
-
-## Related github issues
-https://github.com/SciCrunch/NIF-Ontology/issues/100  
 
 ## Thoughts
 

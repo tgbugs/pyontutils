@@ -61,8 +61,8 @@ ilxtr:LargeAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
 ilxtr:SmallAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
 ,,,,,,,
 ilxtr:IvyPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
-ilxtr:MediumSpinyPhenotype,ilxtr:MorphologicalPhenotype,,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype
-ilxtr:SpinyStellatePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:MediumSpinyPhenotype,"ilxtr:MorphologicalPhenotype,ilxtr:SpinyPhenotype",,,,,we really should be able to deal with spines in a convenient way,hasMorphologicalPhenotype
+ilxtr:SpinyStellatePhenotype,"ilxtr:MorphologicalPhenotype,ilxtr:SpinyPhenotype",,,,,,hasMorphologicalPhenotype
 ilxtr:TrilaminarPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
 ilxtr:IntrinsicPhenotype,ilxtr:AxonPhenotype,,,,subClassesDisjoint,"local projections only? (define local) equivalent to LocalAxonOnly, is this an axon phenotype or an axon location phenotype?",

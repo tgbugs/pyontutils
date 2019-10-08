@@ -1,7 +1,11 @@
 #!/usr/bin/env python3.7
 """ run neurondm related exports and conversions
 Usage:
-    neurondm-build [all phenotypes models bridge old dep dev] [options]
+    neurondm-build release [options]
+    neurondm-build all [options]
+    neurondm-build [indicators phenotypes] [options]
+    neurondm-build [models bridge old dep dev] [options]
+    neurondm-build [sheets] [options]
 
 Options:
     -h --help                   Display this help message
@@ -18,7 +22,7 @@ from urllib.parse import quote
 import rdflib
 import ontquery as oq
 from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, createOntology, OntId as OntId_
+from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntConjunctiveGraph
 from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
 from pyontutils.config import devconfig, working_dir
@@ -241,20 +245,19 @@ def add_types(ng):
 
 
 def phenotype_core_triples():
-    yield ilxtr.labelPartOf, rdfs.subPropertyOf, BFO['0000050']
     yield ilxtr.delineates, owl.inverseOf, ilxtr.isDelineatedBy
 
 
 def make_phenotypes():
     ilx_start = 50114
-    graph = createOntology(filename='phenotype-core',
-                           name='NIF Phenotype Core',
-                           path='ttl/',
-                           prefixes=PREFIXES)
-    graph2 = createOntology(filename='phenotypes',
-                            name='NIF Phenotypes',
-                            path='ttl/',
-                            prefixes=PREFIXES)
+
+    writeloc = Path(devconfig.ontology_local_repo, 'ttl')
+    graph = makeGraph('phenotype-core',
+                      writeloc=writeloc,
+                      prefixes=PREFIXES)
+    graph2 = makeGraph('phenotypes',
+                       writeloc=writeloc,
+                       prefixes=PREFIXES)
 
     defined_graph = createOntology(filename='NIF-Neuron-Defined',
                                    path='ttl/',
@@ -324,10 +327,12 @@ def make_phenotypes():
 
         def subClassOf(self, value):
             if value:
-                self.parent = graph2.expand(value)
-                self.parent_child_map[self.parent].add(self.id_)
-                self.child_parent_map[self.id_].add(self.parent)
-                self.Class.subClassOf = [self.parent]
+                values = value.split(',')
+                for v in values:
+                    self.parent = graph2.expand(v)
+                    self.parent_child_map[self.parent].add(self.id_)
+                    self.child_parent_map[self.id_].add(self.parent)
+                    self.Class.subClassOf = [self.parent]
 
         def label(self, value):
             if value:
@@ -730,7 +735,7 @@ def _rest_make_phenotypes():
     #embed()
     return syn_mappings, pedges, ilx_start
 
-def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
+def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
     ilx_start = ilx_start_
     cheating = {'vasoactive intestinal peptide':'VIP',
                 'star':None,  # is a morphological phen that is missing but hits scigraph
@@ -898,8 +903,9 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph):
     defined_graph.add_class(defined_class_parent, NIFCELL_NEURON, label='defined class neuron')
     defined_graph.add_trip(defined_class_parent, rdflib.namespace.SKOS.definition, 'Parent class For all defined class neurons')
 
-    defined_graph.write()
-    ng.write()
+    if old:
+        defined_graph.write()  # NIF-Neuron-Defined
+        ng.write()  # NIF-Neuron
 
     for sub, syn in [_ for _ in ng.g.subject_objects(ng.expand('NIFRID:synonym'))] + [_ for _ in ng.g.subject_objects(rdflib.RDFS.label)]:
         syn = syn.toPython()
@@ -1163,7 +1169,7 @@ def make_devel():
           'cut-roundtrip.ttl',
           'huang-2017.ttl',
           'markram-2015.ttl',)
-    g = rdflib.ConjunctiveGraph()
+    g = OntConjunctiveGraph()
     for fn in fns:
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
@@ -1171,8 +1177,9 @@ def make_devel():
     _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
     g.parse(_pi.as_posix(), format='ttl')
 
-    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT', 'NIFRAW', 'NLXCELL', 'NLXNEURNT',
-            'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+    bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',
+            'NIFRAW', 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
+            'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
     ents = set(e for e in chain((o for _, o in g[:owl.someValuesFrom:]),
                                 (o for _, o in g[:rdfs.subClassOf:]),
                                 g.predicates(),
@@ -1213,7 +1220,7 @@ def make_devel():
             for predicate in predicates:
                 if term(predicate, asTerm=True):
                     for superpart in term.predicates[predicate]:
-                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT'):  # continuant and occurent form a cycle >_<
+                        if superpart.prefix not in ('BFO', 'NLX', 'BIRNLEX', 'NIFEXT', 'FMA'):  # continuant and occurent form a cycle >_<
                             yield superpart
                             yield from traverse(superpart)
 
@@ -1236,7 +1243,6 @@ def make_devel():
     a = rdf.type
     def helper_triples():
         # model
-        yield ilxtr.labelPartOf, rdfs.subPropertyOf, OntId('BFO:0000050').u
         yield ilxtr.Phenotype, rdfs.subClassOf, OntId('BFO:0000016').u
 
         # part of for markram
@@ -1248,6 +1254,7 @@ def make_devel():
 
         # missing labels
         yield OntId('CHEBI:18234').u, rdfs.label, rdflib.Literal("α,α'-trehalose 6-mycolate")
+        yield OntId('BFO:0000050').u, rdfs.label, rdflib.Literal("part of")
 
         # receptor roles
         gar = ilxtr.GABAReceptor
@@ -1302,6 +1309,7 @@ def make_devel():
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/generated/allen-transgenic-lines.ttl'],
+                   #NIFRAW['neurons/ttl/generated/neurons/allen-cell-instances.ttl'],  # too slow
                    NIFRAW['neurons/ttl/generated/parcellation/mbaslim.ttl'],
                    rdflib.URIRef('http://purl.obolibrary.org/obo/bfo.owl'),
 
@@ -1324,10 +1332,18 @@ def make_devel():
             yield OntId('RO:0002433').u, rdfs.label, rdflib.Literal('contributes to morphology of')
             yield OntId('RO:0002433').u, rdfs.subPropertyOf, OntId('overlaps:').u
 
-            done = []
+            done = [
+                # these don't have labels in the ontology and they are cells which is bad
+                # so skip them by putting them in done from the start
+                OntTermOntologyOnly('NIFSTD:BAMSC1121'),
+                OntTermOntologyOnly('NIFSTD:BAMSC1126'),
+            ]
             cortical_layer = OntTermOntologyOnly('UBERON:0002301')
             #yield from cortical_layer.triples_simple
             #yield from cortical_layer('hasPart:')
+
+            if not terms:
+                raise BaseException('WHAT')
 
             while terms:
                 next_terms = []
@@ -1336,8 +1352,10 @@ def make_devel():
                         continue
 
                     done.append(term)
-                    if not term.label or (not term.label.endswith('neuron') and
-                                          not term.label.endswith('cell')):
+                    if (not term.label or (not term.label.lower().endswith('neuron') and
+                                           not term.label.lower().endswith('cell') and
+                                           not term.label.lower().endswith('cell outer'))
+                        or term.URIRef == _NEURON_CLASS):
                         haveLabel = False
                         for s, p, o in term.triples_simple:
                             if p == rdfs.label:
@@ -1357,8 +1375,11 @@ def make_devel():
                                         if not no.label:
                                             continue
                                         try:
-                                            noo = next(OntTermOntologyOnly.query(term=no.label))
-                                            if noo != no and noo.prefix not in bads:
+                                            gen = OntTermOntologyOnly.query(term=no.label)
+                                            noo = next(gen)
+                                            if noo.curie in ('owl:Class', 'owl:Thing'):
+                                                continue
+                                            elif noo != no and noo.prefix not in bads:
                                                 no = noo
                                             else:
                                                 continue
@@ -1406,12 +1427,14 @@ def main():
     args = docopt(__doc__)
     dep = args['dep']
     all = args['all']
-    models = args['models'] or all
-    dev = args['dev'] or all
-    old = args['old'] or all
-    bridge = args['bridge'] or all
-    phenotypes = args['phenotypes'] or all or old
-
+    old = args['old']               or all
+    release = args['release']       or all
+    phenotypes = args['phenotypes'] or all or release or old
+    bridge = args['bridge']         or all
+    models = args['models']         or all or release
+    dev = args['dev']               or all or release
+    indicators = args['indicators'] or all or release
+    sheets = args['sheets']         or all or release
 
     if dep:
         from neurondm.lang import Config
@@ -1424,22 +1447,31 @@ def main():
         embed()
         return
 
+    if indicators:
+        from neurondm import phenotype_indicators as pind
+        pind.main()
+
     if phenotypes:
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()
-        syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
-        expand_syns(syn_mappings)
+        if old:
+            syn_mappings['thalamus'] = defined_graph.expand('UBERON:0001879')
+            expand_syns(syn_mappings)
 
     if models:
         make_models()
 
-    if bridge:
-        make_bridge()
-
     if old:
-        ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph)
+        ilx_start = make_neurons(syn_mappings, pedge, ilx_start, defined_graph, old=old)
 
     if dev:
         make_devel()
+
+    if sheets:
+        from neurondm import sheets
+        sheets.main()
+
+    if bridge:
+        make_bridge()
 
     if __name__ == '__main__':
         #embed()

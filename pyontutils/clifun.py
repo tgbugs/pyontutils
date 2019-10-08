@@ -33,6 +33,7 @@ def python_identifier(string):
 class Options:
     # there is only ever one of these because of how docopt works
     def __new__(cls, args, defaults):
+        cls = type(cls.__name__, (cls,), {})  # prevent persistence of args
         cls.args = args
         cls.defaults = defaults
         for arg, value in cls.args.items():

@@ -14,20 +14,23 @@ import ontquery as oq
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
-from pyontutils import combinators as comb
+from augpathlib import RepoPath
+from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
+from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
-from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy
+from pyontutils.namespaces import makePrefixes, OntCuries, definition, replacedBy, partOf
 from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NIFRID
-from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
+from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
+_done = set()
 
 __all__ = [
     'AND',
@@ -76,20 +79,21 @@ MOD_ROOT = ilxtr.hasPhenotypeModifier
 
 # utility functions
 
-def getPhenotypePredicates(graph):
+def getPhenotypePredicates(graph, *roots):
     # put existing predicate short names in the phenoPreds namespace (TODO change the source for these...)
-    proot = graph.qname(PHENO_ROOT)
-    mroot = graph.qname(MOD_ROOT)
-    qstring = ('SELECT DISTINCT ?prop WHERE {'
-               f'{{ ?prop rdfs:subPropertyOf* {proot} . }}'
-               'UNION'
-               f'{{ ?prop rdfs:subPropertyOf* {mroot} . }}'
-               '}')
+    qstring = ('SELECT DISTINCT ?prop WHERE {' +
+               ('UNION'.join(f'{{ ?prop rdfs:subPropertyOf* {root} . }}' for root in roots))
+               + '}')
     out = [_[0] for _ in graph.query(qstring)]
     literal_map = {uri.rsplit('/',1)[-1]:uri for uri in out}  # FIXME this will change
     classDict = {uri.rsplit('/',1)[-1]:uri for uri in out}  # need to use label or something
     classDict['_litmap'] = literal_map
-    phenoPreds = type('PhenoPreds', (object,), classDict)  # FIXME this makes it impossible to add fake data
+    class meta(type):
+        def __contains__(self, value):
+            return value in out
+
+    class whenyoujustneedastaticiterable(metaclass=meta): pass
+    phenoPreds = type('PhenoPreds', (whenyoujustneedastaticiterable,), classDict)  # FIXME this makes it impossible to add fake data
     predicate_supers = {s:tuple(o for o in
                                 graph.transitive_objects(s, rdfs.subPropertyOf)
                                 if o != s) for s in out}
@@ -189,6 +193,9 @@ class LabelMaker:
     def hasTaxonRank(self, phenotypes):
         yield from self._default(phenotypes)
     @od
+    def hasInstanceInTaxon(self, phenotypes):
+        yield from self._default(phenotypes)
+    @od
     def hasInstanceInSpecies(self, phenotypes):
         yield from self._default(phenotypes)
     @od
@@ -199,6 +206,9 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasLocationPhenotype(self, phenotypes):  # FIXME
+        yield from self._default(phenotypes)
+    @od
+    def hasSomaLocationLaterality(self, phenotypes):
         yield from self._default(phenotypes)
     @od
     def hasSomaLocatedIn(self, phenotypes):  # hasSomaLocation?
@@ -308,20 +318,27 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
-        def suffix(phenotypes):
+        inp = self.predicate_namespace['InterneuronPhenotype']
+        def suffix():
+            # reminder that the phenotype loop variable below binds in here
             if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
                 return  'neuron'
-            elif phenotype.p == self.predicate_namespace['InterneuronPhenotype']:
+            elif phenotype.p == inp:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
             else:  # principle, projection, etc.
                 return 'neuron'
 
+        # put interneuron last if it is in the phenotypes list
+        if inp in phenotypes:
+            phenotypes.remove(inp)
+            phenotypes = phenotypes + [inp]
+
         for phenotype in phenotypes:
             yield next(self._default((phenotype,))).lower()
 
-        suffix = suffix(phenotypes)
+        suffix = suffix()
         if suffix:
             yield suffix
 
@@ -351,6 +368,18 @@ class OntTerm(bOntTerm, OntId):
             predicate = ilxtr.hasSomaLocatedIn
         return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
+    def asIndicator(self):
+        sco = self(rdfs.subClassOf, depth=2, asTerm=True)
+        uris = [t.URIRef for t in sco]
+        if ilxtr.PhenotypeIndicator in uris:
+            ind = sco[0]
+            # FIXME it being first is by accident of implementation only
+            assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
+            return ind
+        else:
+            log.debug(f'No indicator for {self.curie} {self.label}')
+            return self
+
     def triples(self, predicate):
         if predicate not in self.predicates:
             objects = self(predicate)
@@ -366,21 +395,23 @@ class OntTerm(bOntTerm, OntId):
     @property
     def triples_simple(self):
         skips = 'pheno:parvalbumin',
-        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT', 'NLXCELL', 'NLXNEURNT',
-                'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX', 'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+        bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
+                'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
+                'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
         s = self.URIRef
         if self.type is None:
             yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
         else:
             _t = self.type
             yield s, rdf.type, (_t if _t.__class__ == rdflib.URIRef else _t.u)
+
         if self.label:
             _label = self.label
             label = rdflib.Literal(_label)
             yield s, rdfs.label, label
 
         if not self.validated:
-            log.warn(f'{self!r}')
+            log.warning(f'{self!r}')
             return
 
         if self.synonyms is not None:  # FIXME this should never happen :/
@@ -408,7 +439,7 @@ class OntTerm(bOntTerm, OntId):
                     if superpart.prefix in bads:
                         continue
                     if (predicate, superpart) not in done:
-                        yield from comb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
+                        yield from cmb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
                         done.append((predicate, superpart))
 
 
@@ -422,9 +453,12 @@ OntTerm.query_init(*bOntTerm.query.services)
 class OntTermOntologyOnly(OntTerm):
     __firsts = ('curie', 'label')  # FIXME why do I need this here but didn't for OntTerm ??
 
+class OntTermInterLexOnly(OntTerm):
+    pass
 
 IXR = oq.plugin.get('InterLex')
 OntTermOntologyOnly.query_init(*(s for s in OntTerm.query.services if not isinstance(s, IXR)))
+OntTermInterLexOnly.query_init(*(s for s in OntTerm.query.services if isinstance(s, IXR)))
 
 
 class GraphOpsMixin:
@@ -599,7 +633,10 @@ class Config:
         imports += [remote.iri + 'ttl/phenotype-core.ttl',
                     remote.iri + 'ttl/phenotypes.ttl',
                     remote.iri + 'ttl/phenotype-indicators.ttl']
-        remote_path = '' if local_base is None else ttl_export_dir.resolve().relative_to(local_base.resolve())
+        remote_path = ('' if local_base is None
+                       else (ttl_export_dir
+                             .resolve()
+                             .relative_to(local_base.resolve())))
         out_remote_base = os.path.join(remote.iri, remote_path)
         imports = [OntId(i) for i in imports]
 
@@ -618,9 +655,12 @@ class Config:
         if import_as_local:
             # NOTE: we currently do the translation more ... inelegantly inside of config so we
             # have to keep the translation layer out here (sigh)
-            core_graph_paths = [Path(local, i.iri.replace(remote.iri, '')).relative_to(local_base).as_posix()
+            core_graph_paths = [(Path(local,
+                                     i.iri.replace(remote.iri, ''))
+                                 .relative_to(local_base).as_posix())
                                 if remote.iri in i.iri else
                                 i for i in imports]
+            log.debug(core_graph_paths)
         else:
             core_graph_paths = imports
 
@@ -630,7 +670,6 @@ class Config:
             iri = os.path.join(out_remote_base, f'{name}.ttl')
 
         self.__class__._subclasses.add(lConfig)
-
 
         kwargs = dict(remote_base = remote_base,  # leave it as raw for now?
                       local_base = local_base.as_posix(),
@@ -702,6 +741,10 @@ class Config:
     def core_graph(self):
         return graphBase.core_graph  # FIXME :/
 
+    @property
+    def part_of_graph(self):
+        return graphBase.part_of_graph
+
     def neurons(self):
         return sorted(self.existing_pes)
 
@@ -714,6 +757,7 @@ class Config:
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
+        self.part_of_graph.write()
 
     def write_python(self):
         # FIXME hack, will write other configs if call after graphbase has switched
@@ -1045,16 +1089,32 @@ class graphBase:
                 # it is a mess
                 graphBase.set_repo_state()
 
+        # part of graph
+        # FIXME hardcoded ...
+        partofpath = RepoPath(devconfig.ontology_local_repo, 'ttl/generated/part-of-self.ttl')
+        graphBase.part_of_graph = OntResAny(partofpath).graph
+        graphBase.part_of_graph.path = partofpath  # FIXME why is this not passed by OntResAny?
+        [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
         # core graph setup
         if core_graph is None:
-            core_graph = rdflib.ConjunctiveGraph()
+            core_graph = OntConjunctiveGraph()
         for cg in use_core_paths:
             try:
-                core_graph.parse(cg, format='turtle')
+                #core_graph.parse(cg, format='turtle')
+                if cg.startswith('file://'):
+                    cg = cg[7:]  # FIXME ... from_uri ...
+                    ora = OntResAny(RepoPath(cg))
+                else:
+                    ora = OntResIri(cg)
+
+                giri = ora.identifier_bound
+                core_graph.addN(((*t, giri) for t in ora.graph))
             except (FileNotFoundError, HTTPError) as e:
                 # TODO failover to local if we were remote?
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
                 log.warning(f'no file found for core graph at {cg}')
+
         graphBase.core_graph = core_graph
         if RDFL not in [type(s) for s in OntTerm.query.services]:
             # FIXME ah subtle differences between graphs >_<
@@ -1137,8 +1197,15 @@ class graphBase:
             no()  # populate generated by info
 
         # set predicates
-        preds, pred_supers = getPhenotypePredicates(graphBase.core_graph)
+
+        proot = graphBase.core_graph.qname(PHENO_ROOT)
+        mroot = graphBase.core_graph.qname(MOD_ROOT)
+        preds, pred_supers = getPhenotypePredicates(graphBase.core_graph, proot, mroot)
         graphBase._predicates, graphBase._predicate_supers = preds, pred_supers
+        lp, lps = getPhenotypePredicates(graphBase.core_graph, 'ilxtr:hasLocationPhenotype')
+        graphBase._location_predicates, graphBase._location_predicate_supers = lp, lps
+        mp, mps = getPhenotypePredicates(graphBase.core_graph, 'ilxtr:hasMolecularPhenotype')
+        graphBase._molecular_predicates, graphBase._molecular_predicate_supers = mp, mps
 
         # scigraph setup
         if scigraph is not None:
@@ -1151,6 +1218,7 @@ class graphBase:
         og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
+        graphBase.part_of_graph.write()
 
     @staticmethod
     def filename_python():
@@ -1297,6 +1365,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
         self.do_check = check
+
         super().__init__()
         if isinstance(phenotype, Phenotype):  # simplifies negation of a phenotype
             ObjectProperty = phenotype.e
@@ -1308,6 +1377,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             self.e = self.checkObjectProperty(ObjectProperty)  # FIXME this doesn't seem to work
 
+        if isinstance(self.p, rdflib.BNode):
+            raise TypeError(f'Phenotypes cannot be bnodes! {self.p}')
+
         self._pClass = infixowl.Class(self.p, graph=self.in_graph)
         self._eClass = infixowl.Class(self.e, graph=self.in_graph)
         # do not call graphify here because phenotype edges may be reused in multiple places in the graph
@@ -1318,6 +1390,14 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         # use this specify consistent patterns for modifying labels
         self.labelPostRule = lambda l: l
+
+    def asIndicator(self):
+        t = OntTerm(self.p)
+        it = t.asIndicator()
+        if t != it:
+            return it.asPhenotype(self.e)
+        else:
+            return self
 
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
@@ -1376,7 +1456,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             # TODO check if falls in one of the expression categories
             predicates = [_[1] for _ in self.in_graph.subject_predicates(phenotype) if _ in self._predicates.__dict__.values()]
             mapping = {
-                'NCBITaxon':self._predicates.hasInstanceInSpecies,
+                'NCBITaxon':self._predicates.hasInstanceInTaxon,
                 'CHEBI':self._predicates.hasExpressionPhenotype,
                 'PR':self._predicates.hasExpressionPhenotype,
                 'NCBIGene':self._predicates.hasExpressionPhenotype,
@@ -1461,6 +1541,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             #print(tc.red('WARNING:'), f'Could not set label for {pn}. No SciGraph was instance found at', self._sgv._basePath)
             log.info(f'Could not set label for {pn}. No SciGraph was instance found at ' + self._sgv._basePath)
             resp = None
+
+        if pn.startswith('TEMPIND'):
+            return next(self.in_graph[self.p:skos.hiddenLabel])
 
         if hasattr(self, '_label'):
             return self._label
@@ -1558,11 +1641,38 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 OntId(self.p).curie.replace(':','-'))
         #yield from (self._rank + '/{}/' + self.ng.qname(_) for _ in self.objects)
 
-    def _graphify(self, graph=None):
+    def _graphify(self, graph=None, **kwargs):
         if graph is None:
             graph = self.out_graph
 
         return infixowl.Restriction(onProperty=self.e, someValuesFrom=self.p, graph=graph)
+
+    def _graphify_expand_location(self, graph=None, **kwargs):
+        if graph is None:
+            graph = self.out_graph
+
+        if self.e in self._location_predicates:
+            #restn = cmb.restrictionN(self.e,
+                                     #cmb.oc_.full_combinator(
+                                         #cmb.unionOf(self.p,
+                                                     #cmb.restrictionN(partOf,
+                                                                      #self.p))))
+            por = infixowl.Restriction(onProperty=partOf,
+                                       someValuesFrom=self.p,
+                                       graph=graph)
+            members = self.p, por
+            #uo = infixowl.BooleanClass(operator=owl.unionOf, members=members, graph=graph)
+            if self.p not in _done:
+                _done.add(self.p)
+                eff = infixowl.Restriction(onProperty=partOf,
+                                           someValuesFrom=self.p,
+                                           graph=self.part_of_graph)
+                self.part_of_graph.add((self.p, rdfs.subClassOf, eff.identifier))
+
+            return infixowl.Restriction(onProperty=self.e, someValuesFrom=por, graph=graph)
+
+        else:
+            return self._graphify(graph)
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -1771,14 +1881,16 @@ class LogicalPhenotype(graphBase):
                                 #OntId(pe.p).curie.replace(':','-')
                                 #for pe in sorted(self.pes)), key=natsort))
 
-    def _graphify(self, graph=None):
+    def _graphify(self, graph=None, method='_graphify'):
         if graph is None:
             graph = self.out_graph
         members = []
         for pe in self.pes:  # FIXME fails to work properly for negative phenotypes...
-            members.append(pe._graphify(graph=graph))
+            members.append(getattr(pe, method)(graph=graph, method=method))
 
         return infixowl.BooleanClass(operator=self.expand(self.op), members=members, graph=graph)
+
+    _graphify_expand_location = _graphify
 
     def __lt__(self, other):
         if type(other) == type(self):
@@ -1870,6 +1982,10 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
 
             t = OntTerm(phenotype.p)
+            if not t.validated:  # FIXME masking the _source issue
+                new.append(phenotype)  # essentially an unknown phenotype
+                continue
+
             if t.curie in replace:
                 np = phenotype.__class__(replace[t.curie], phenotype.e)
                 new.append(np)
@@ -1999,7 +2115,16 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
 
         self.phenotypes = set(pe.p for pe in self.pes)  # NOTE the valence is NOT included here
+        self.unique_objects = set(p for p_or_tup in self.phenotypes
+                                  for p in (p_or_tup
+                                            if isinstance(p_or_tup, tuple)
+                                            else (p_or_tup,)))
+
         self.edges = set(pe.e for pe in self.pes)
+        self.unique_predicates = set(e for e_or_tup in self.edges
+                                     for e in (e_or_tup
+                                               if isinstance(e_or_tup, tuple)
+                                               else (e_or_tup,)))
         self._pesDict = {}
         for pe in self.pes:  # FIXME TODO
             if isinstance(pe, LogicalPhenotype):  # FIXME
@@ -2185,7 +2310,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 return p.e
             # FIXME warn/error on ambiguous?
 
-        raise AttributeError(f'{self} has no aspect with the phenotype {OntId(object)!r}')  # FIXME AttributeError seems wrong
+        t = OntTerm(object)
+        t.set_next_repr('curie', 'label')
+        raise AttributeError(f'{self} has no aspect with the phenotype {t!r}')  # FIXME AttributeError seems wrong
 
     def getObject(self, predicate):
         for p in self.pes:
@@ -2308,9 +2435,10 @@ class Neuron(NeuronBase):
         #  can't use logical OR for this because BOTH are present in the same neuron under different conditions
 
         disjoints = [  # FIXME there has got to be a better place to do this :/
-            self._predicates.hasInstanceInSpecies,
+            self._predicates.hasInstanceInTaxon,
             self._predicates.hasSomaLocatedIn,
             self._predicates.hasLayerLocationPhenotype,  # FIXME coping with cases that force unionOf?
+            self._predicates.hasSomaLocationLaterality,
             self._predicates.hasSomaLocatedInLayer,
             self._predicates.hasMorphologicalPhenotype,
         ]
@@ -2337,9 +2465,12 @@ class Neuron(NeuronBase):
                 if 'Loc' in disjoint:  # FIXME ... subPropertyOf hasLocationPhenotype
                     #resp = [merge(t, multiquery(t)) for t in terms]
                     #breakpoint()
+                    _oq = OntTerm.query
+                    OntTerm.query = OntTermInterLexOnly.query
                     po = [(t('ilx.partOf:', depth=10, asPreferred=True, include_supers=True),
                            [t2 for t2 in oterms if t2 != t])
                           for t in terms]
+                    OntTerm.query = _oq
                     po += [(t('partOf:', depth=10, asTerm=True, include_supers=True),
                             [t2 for t2 in oterms if t2 != t]) for t in
                            terms]
@@ -2437,6 +2568,30 @@ class Neuron(NeuronBase):
             e = r.onProperty
             return ptype(p, e)
 
+        def location_restriction_to_phenotype(r, ptype=type_):
+            bc = infixowl.CastClass(r.someValuesFrom, graph=self.in_graph)
+            if type(bc) == infixowl.BooleanClass:
+                p = [e for e in bc._rdfList if isinstance(e, rdflib.URIRef)][0]
+            elif type(bc) == infixowl.Restriction:
+                p = bc.someValuesFrom.identifier
+
+            e = r.onProperty
+            return ptype(p, e)
+
+        def expand_restriction(r, pes, ptype=type_):
+            if (r.onProperty in self._location_predicates and
+                isinstance(r.someValuesFrom.identifier, rdflib.BNode)):
+                _pe = location_restriction_to_phenotype(r, ptype=ptype)
+                pes.append(_pe)
+
+            elif r.onProperty in self._location_predicates:
+                log.warning(f'Old location model for {c}')
+                pes.append(restriction_to_phenotype(r, ptype=ptype))
+
+            else:
+                pes.append(restriction_to_phenotype(r, ptype=ptype))
+
+
         if c.identifier == self.id_ or c.identifier == self.owlClass:
             return
 
@@ -2458,13 +2613,14 @@ class Neuron(NeuronBase):
                             # in case we didn't catch it before
                             pes.append(id_)
                         elif isinstance(id_, rdflib.URIRef):  # FIXME this never runs?
+                            # FIXME this could error for CUTs at some point
                             log.error(f'Wrong owl:Class, expected: {self.id_} got: {id_}')
                             return
                         else:
                             if pr.complementOf:
                                 coc = infixowl.CastClass(pr.complementOf, graph=self.in_graph)
                                 if isinstance(coc, infixowl.Restriction):
-                                    pes.append(restriction_to_phenotype(coc, ptype=NegPhenotype))
+                                    expand_restriction(coc, pes, ptype=NegPhenotype)
                                 else:
                                     log.critical(str(coc))
                                     raise BaseException('wat')
@@ -2472,8 +2628,10 @@ class Neuron(NeuronBase):
                                 log.critical(str(pr))
                                 raise BaseException('wat')
                     elif isinstance(pr, infixowl.Restriction):
-                        pes.append(restriction_to_phenotype(pr))
+                        expand_restriction(pr, pes)
                     elif id_ == self.owlClass:
+                        pes.append(id_)
+                    elif id_ == _NEURON_CLASS:  # CUT case
                         pes.append(id_)
                     elif pr is None:
                         log.warning(f'dangling reference {id_}')
@@ -2498,14 +2656,9 @@ class Neuron(NeuronBase):
             # lingering byte/string issues
             log.warning(f'Could not convert class to Neuron {c}')
 
-    def _unpackLogical(self, bc, type_=Phenotype):  # TODO this will be needed for disjoint as well
+    def _unpackLogical(self, bc, type_=Phenotype):
         op = bc._operator
-        pes = []
-        for id_ in bc._rdfList:
-            pr = infixowl.CastClass(id_, graph=self.in_graph)
-            p = pr.someValuesFrom
-            e = pr.onProperty
-            pes.append(type_(p, e))
+        pes = self._unpackPheno(bc, type_=type_)
         return LogicalPhenotype(op, *pes)
 
     def _graphify_labels(self, graph):
@@ -2520,9 +2673,9 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
-    def _graphify_pes(self, graph, members):
+    def _graphify_pes(self, graph, members, method='_graphify_expand_location'):
         for pe in self.pes:
-            target = pe._graphify(graph=graph)
+            target = getattr(pe, method)(graph=graph, method=method)
             if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
                 #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
@@ -2570,6 +2723,16 @@ class NeuronCUT(Neuron):
 
 class NeuronEBM(Neuron):
     owlClass = _EBM_CLASS
+
+    def _graphify(self, *args, graph=None):
+        """ Lift phenotypeEdges to Restrictions """
+        if graph is None:
+            graph = self.out_graph
+
+        self._graphify_labels(graph)
+        members = [self.owlClass]
+        # use _graphify_expand_location to get the location + part of location behavior
+        return self._graphify_pes(graph, members)
 
     def validate(self):
         # EBM's probably should not be using UBERON ids since they are not species specific
@@ -2793,7 +2956,11 @@ class LocalNameManager(metaclass=injective):
     """ Base class for sets of local names for phenotypes.
         Local name managers are singletons and do not need to be instantiated.
         Can be used in a context manager or globally via setLocalNames.
-        It is possible to subclass to add your custom names to a core. """
+        It is possible to subclass to add your custom names to a core.
+
+        NOTE: If you plan use the context manager functionality of a LNM
+        anywhere other than at top level, then you need to assign
+        __globals__ = globals() """
 
     # TODO context dependent switches for making PAXRAT/PAXMOUSE transitions transparent
 

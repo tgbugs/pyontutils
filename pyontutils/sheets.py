@@ -235,7 +235,7 @@ class Sheet:
                     print(f'========================== {i} {j}',
                         cell,
                         '------------------',
-                        self.notes_index[i, j]['note'],
+                        self.cells_index[i, j]['note'],
                         sep='\n')
 
     def get_note(self, row_index, column_index):

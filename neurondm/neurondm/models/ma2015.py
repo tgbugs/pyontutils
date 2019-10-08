@@ -5,21 +5,23 @@ from pyontutils.utils import rowParse, relative_path
 from pyontutils.namespaces import ilxtr
 from neurondm.lang import *
 from neurondm.phenotype_namespaces import BBP
-from IPython import embed
+
 
 class NeuronMarkram2015(NeuronEBM):
     owlClass = ilxtr.NeuronMarkram2015
     shortname = 'Markram2015'
 
-config = Config('markram-2015', source_file=relative_path(__file__))
-
-with BBP:
-    context = Neuron(Rat, S1, INT, GABA)
 
 class table1(rowParse):
     citation = 'Markram et al Cell 2015'
     pmid = 'PMID:26451489'
     _sep = '|'
+
+    def __init__(self, *args, **kwargs):
+        with BBP:
+            self._context = Neuron(Rat, S1, INT, GABA)
+
+        super().__init__(*args, **kwargs)
 
     def Morphological_type(self, value):
         syn, abrv = value.split(' (')
@@ -141,19 +143,31 @@ class table1(rowParse):
         return self._other_etypes
 
     def _row_post(self):
-        with context:
+        with self._context:
             for etype in self._etypes:
                 NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
 
     def _end(self):
+        graphBase.out_graph.add((NeuronMarkram2015.owlClass,
+                                 ilxtr.modelSource,
+                                 OntId('https://doi.org/10.1016/j.cell.2015.09.029').u))
+
         graphBase.write()
         graphBase.write_python()
+
 
 def main():
     import csv
     from pyontutils.config import devconfig
     with open(Path(devconfig.resources, '26451489 table 1.csv').as_posix(), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
-    table1(rows)
 
-main()
+    config = Config('markram-2015', source_file=relative_path(__file__))
+    table1(rows)
+    return config,
+
+
+__globals__ = globals()  # fuck you python
+
+if __name__ == '__main__':
+    main()

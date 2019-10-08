@@ -16,6 +16,7 @@ Options:
 
 """
 
+import copy
 import inspect
 import requests
 from  IPython import embed
@@ -26,7 +27,7 @@ class restService:
 
     _api_key = None
 
-    def __init__(self, cache=False, key=None):
+    def __init__(self, cache=False, safe_cache=False, key=None):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
         self._session.mount('http://', adapter)
@@ -34,7 +35,11 @@ class restService:
         if cache:
             #print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
             self._cache = dict()
-            self._get = self._cache_get
+            if safe_cache:
+                self._get = self._safe_cache_get
+            else:
+                self._get = self._cache_get
+
         else:
             self._get = self._normal_get
 
@@ -107,6 +112,12 @@ class restService:
             self._cache[key] = self.__last_url, resp
 
         return resp
+
+    def _safe_cache_get(self, *args, **kwargs):
+        """ If cached values might be used in a context where they
+            could be mutated, then safe_cache = True should be set
+            and this wrapper will protect the output """
+        return copy.deepcopy(self._cache_get(*args, **kwargs))  # prevent mutation of the cache
 
     def _make_rest(self, default=None, **kwargs):
         kwargs = {k:v for k, v in kwargs.items() if v}
@@ -294,12 +305,12 @@ class Graph(SUBCLASS):
 class CLASSNAME(restService):
     """ DOCSTRING """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache, key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
 
 
 class FAKECLASS:
@@ -337,6 +348,7 @@ class State:
 
         self.shebang = "#!/usr/bin/env python3\n"
         self.imports = ('import re\n'
+                        'import copy\n'
                         'import builtins\n'
                         'import requests\n'
                         'from ast import literal_eval\n'

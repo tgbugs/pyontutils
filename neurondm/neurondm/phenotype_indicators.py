@@ -33,7 +33,7 @@ class PhenotypeIndicators(Sheet):
             else:
                 return rdflib.Literal(v)
 
-        lexical = 'synonyms', 'molecule', 'comments'
+        lexical = 'synonyms', 'molecule', 'comments', 'hiddenlabel'
         for row in self.byCol.rows:
             if not any(row):
                 continue
@@ -41,11 +41,12 @@ class PhenotypeIndicators(Sheet):
             lex = {k:process(k, v) for k, v in row._asdict().items() if v and k in lexical}
             members = set(idents.values())
             mol = lex['molecule']
+            hl = lex['hiddenlabel'] if 'hiddenlabel' in lex else mol
             label = f'{mol} (indicator)'
             id = OntId('TEMPIND:' + mol)
             thing = {'id': id,
                      'label': rdflib.Literal(label),
-                     'hiddenLabel': mol,
+                     'hiddenLabel': hl,
                      'synonyms': lex['synonyms'],
                      'members': members,}
             yield thing
@@ -84,14 +85,20 @@ class PhenotypeIndicators(Sheet):
         for thing in self.things:
             yield from self.indicator(thing)
 
-        sst = OntId('PTHR:10558').u
+        # FIXME rework the sheet and move this stuff to it
+        # or start editing the indicators file directly
+        # making use of OntGraph diff utilities
+        sst = OntId('TEMPIND:Sst').u
         yield sst, a, owl.Class
         yield sst, rdfs.subClassOf, ilxtr.PhenotypeIndicator
         yield sst, rdfs.label, rdflib.Literal('somatostatin (indicator)')
+        yield sst, skos.hiddenLabel, rdflib.Literal('Sst')
         yield sst, NIFRID.synonym, rdflib.Literal('Sst')
         yield sst, NIFRID.synonym, rdflib.Literal('SOM')
         yield sst, NIFRID.synonym, rdflib.Literal('somatostatin')
         sst_members = (OntId('ilxtr:SST-flp'),
+                       OntId('PTHR:10558'),
+                       OntId('NIFEXT:5116'),
                        OntId('NCBIGene:20604'),
                        OntId('PR:000015665'),
                        OntId('JAX:013044'),
@@ -101,8 +108,9 @@ class PhenotypeIndicators(Sheet):
 
         # pv fix
         pheno = rdflib.Namespace(ilxtr[''] + 'Phenotype/')
-        pv = OntId('PTHR:11653').u
+        pv = OntId('TEMPIND:Pvalb').u
         yield pv, rdfs.label, rdflib.Literal('parvalbumin (indicator)')
+        yield pv, skos.hiddenLabel, rdflib.Literal('PV')
         yield pv, NIFRID.synonym, rdflib.Literal('PV')
         yield pv, NIFRID.synonym, rdflib.Literal('Pvalb')
         yield pv, NIFRID.synonym, rdflib.Literal('parvalbumin')
@@ -115,6 +123,7 @@ class PhenotypeIndicators(Sheet):
                       OntId('JAX:022730'),
                       OntId('JAX:017320'),
                       ilxtr.Pvalb,
+                      OntId('PTHR:11653'),
                       ilxtr['PV-cre'],
                       OntId('PR:000013502'),
                       OntId('NCBIGene:19293'),
@@ -130,10 +139,19 @@ class PhenotypeIndicators(Sheet):
         yield from self.triples_data
 
     def asGraph(self):
-        g = OntGraph()
-        [g.add(t) for t in self.triples]
-        OntCuries.populate(g)
-        return g
+        return self.populate()
+
+    def populate(self, graph=None):
+        """ Populate a graph, or if no graph is provided
+            populate a new empty graph from the current
+            content. (Also useful for debug) """
+
+        if graph is None:
+            graph = OntGraph()
+
+        [graph.add(t) for t in self.triples]
+        OntCuries.populate(graph)
+        return graph
 
 
 def main():

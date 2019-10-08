@@ -14,6 +14,7 @@ def interlex_namespace(user):
 # note that these will cause problems in SciGraph because I've run out of hacks still no https
 DHBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
 DMBA = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Structure/')
+AIBSSPEC = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Specimen/')
 
 # interlex namespaces
 ilx = rdflib.Namespace(interlex_namespace(''))  # XXX NOTE NOT /base/

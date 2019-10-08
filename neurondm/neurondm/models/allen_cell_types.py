@@ -16,16 +16,14 @@ import json
 from pathlib import Path
 import rdflib
 import requests
-from rdflib.namespace import *
 from pyontutils.utils import TermColors as tc, relative_path
-from pyontutils.core import simpleOnt
+from pyontutils.core import simpleOnt, OntGraph
 from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
-from pyontutils.combinators import annotation
+from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
+from pyontutils.combinators import annotation, allDifferent, distinctMembers
 from neurondm.lang import *
-from pyontutils.closed_namespaces import rdf, rdfs, owl
 from docopt import docopt, parse_defaults
-from IPython import embed
 
 
 class NeuronACT(NeuronEBM):
@@ -63,12 +61,11 @@ class AllenCellTypes:
                       'ilxtr:hasExperimentalPhenotype',
                       label='prefix+stock_number'),
         )
-        # embed()
         print(graphBase.ttl())
 
     def cell_phenotypes(self, cell_specimen):
         cell_mappings = {
-            'hemisphere': 'ilxtr:hasLocationPhenotype',
+            'hemisphere': 'ilxtr:hasSomaLocationLaterality',
             # 'name': 'ilxtr:hasPhenotype',
         }
         phenotypes = []
@@ -142,7 +139,10 @@ class AllenCellTypes:
             name = self.avoid_url_conversion(tl['name'])
             _type = tl['transgenic_line_type_name']
             if _type == 'driver':
-                pred = 'ilxtr:hasDriverExpressionPhenotype'
+                if 'CreERT2' in name:  # FIXME from structured instead of name?
+                    pred = ilxtr.hasDriverExpressionInducedPhenotype
+                else:
+                    pred = 'ilxtr:hasDriverExpressionPhenotype'
             elif _type == 'reporter':
                 pred = 'ilxtr:hasReporterExpressionPhenotype'
             else:
@@ -216,7 +216,7 @@ class AllenCellTypes:
         return phenotypes
 
     def add_mouse_lineage(self, cell_specimen):
-        phenotypes = [Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')]
+        phenotypes = [Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInTaxon')]
         return phenotypes
 
     def build_phenotypes(self, cell_specimen):
@@ -245,15 +245,34 @@ class AllenCellTypes:
 
     def build_neurons(self):
         instances = []
-        AIBSSPEC = rdflib.Namespace('http://api.brain-map.org/api/v2/data/Specimen/')
+        dids = []
         for cell_specimen in self.neuron_data:
             neuron = NeuronACT(*self.build_phenotypes(cell_specimen))
-            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, owl.NamedIndividual))
-            instances.append((AIBSSPEC[str(cell_specimen['id'])], rdf.type, neuron.identifier))
+            did = AIBSSPEC[str(cell_specimen['id'])]
+            dids.append(did)
+            instances.append((did, rdf.type, owl.NamedIndividual))
+            instances.append((did, rdf.type, neuron.identifier))
 
         print(sorted(self.tag_names))
         NeuronACT.write()
         NeuronACT.write_python()
+        self.build_instances(instances, dids)
+
+    def build_instances(self, instances, dids):
+        folder = Path(self.config.out_graph_path()).parent
+        # WOW do I need to implement the new/better way of
+        # managing writing collections of neurons to graphs
+        neuron_uri = next(NeuronACT.out_graph[:rdf.type:owl.Ontology])
+        name = 'allen-cell-instances.ttl'
+        base, _ = neuron_uri.rsplit('/', 1)
+        uri = rdflib.URIRef(base + '/' + name)
+        metadata = ((uri, rdf.type, owl.Ontology),)
+        instance_graph = OntGraph(path=folder / name)
+        instance_graph.bind('AIBSSPEC', AIBSSPEC)
+        [instance_graph.add(t) for t in metadata]
+        [instance_graph.add(t) for t in instances]
+        [instance_graph.add(t) for t in allDifferent(None, distinctMembers(*dids))]
+        instance_graph.write()
 
     def build_transgenic_lines(self):
         """
@@ -271,6 +290,9 @@ class AllenCellTypes:
                 _id = tl['stock_number'] if tl['stock_number'] else tl['id']
                 prefix = tl['transgenic_line_source_name']
                 line_type = tl['transgenic_line_type_name']
+                if line_type == 'driver' and 'CreERT2' in tl['name']:
+                    line_type = 'inducibleDriver'
+
                 if prefix not in ['JAX', 'MMRRC', 'AIBS']:
                     print(tc.red('WARNING:'), 'unknown prefix', prefix, json.dumps(tl, indent=4))
                     continue

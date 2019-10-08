@@ -1,5 +1,4 @@
 #!/usr/bin/env python3.7
-from IPython import embed
 import csv
 from pprint import pprint
 from pathlib import Path
@@ -9,7 +8,7 @@ from pyontutils.utils import byCol, relative_path, noneMembers, makeSimpleLogger
 from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
-from pyontutils.namespaces import interlex_namespace, definition, NIFRID
+from pyontutils.namespaces import interlex_namespace, definition, NIFRID, NIFSTD
 from pyontutils.closed_namespaces import rdfs
 # import these last so that graphBase resets (sigh)
 from neurondm.lang import *
@@ -56,13 +55,13 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
 
 def make_contains_rules():
     contains_rules = dict(GABAergic=CUT.GABA,
-                          cholinergic=CUT.Ach,
+                          cholinergic=CUT.ACh,
                           glutamatergic=CUT.Glu,
                           serotonergic=CUT.Ser,
                           #principle=CUT.proj,  # NOTE this was a spelling error
                           projection=CUT.proj,
-                          intrinsic=CUT.inter,
-                          interneuron=CUT.inter,
+                          intrinsic=CUT.intrinsic,
+                          interneuron=CUT.intrinsic,
                           Striatum=Phenotype('UBERON:0002435', ilxtr.hasSomaLocatedIn),
                           #CA1=Regions.CA1,
                           #CA2=Regions.CA2,
@@ -83,6 +82,7 @@ def make_contains_rules():
     )
 
     contains_rules.update({  # FIXME still need to get some of the original classes from neurolex
+        'medium spiny': (BBP.MSN, Phenotype(ilxtr.SpinyPhenotype, ilxtr.hasDendriteMorphologicalPhenotype)),
         'TH+': CUT.TH,
         'Thalamic reticular nucleus': CUT.TRN,  # FIXME disambiguate with reticular nucleus
         'Midbrain reticular nucleus': CUT.MRN,
@@ -96,8 +96,8 @@ def make_contains_rules():
         'Neocortex layer 6': Layers.L6,
         'cortex layer III': Layers.L3,  # probably needs the cortex to still be attached
         'cortex layer II': Layers.L2,  # FIXME medial entorhinal ...
-        'neuropeptide Y': BBP.NPY,
-        'vasoactive intestinal peptide': BBP.VIP,
+        'neuropeptide Y': CUT.NPY,
+        'vasoactive intestinal peptide': CUT.VIP,
         'Pedunculopontine nucleus': Phenotype('UBERON:0002142', ilxtr.hasSomaLocatedIn),
         #'Incertus nucleus': OntTerm,
         'Raphe nucleus medial': OntTerm,
@@ -161,7 +161,13 @@ def make_contains_rules():
     for k, v in contains_rules.items():  # ah lack of types
         if v == OntTerm:
             continue
-        if not isinstance(v, graphBase):
+
+        if isinstance(v, tuple):
+            for _v in v:
+                if not isinstance(_v, graphBase):
+                    raise TypeError(f'{k!r}: {_v!r}  # is not a Phenotype or some such')
+
+        elif not isinstance(v, graphBase):
             raise TypeError(f'{k!r}: {v!r}  # is not a Phenotype or some such')
 
     return contains_rules
@@ -196,10 +202,21 @@ def make_cut_id(label):
     return 'TEMP:' + fixname(label)
 
 
+def zap(pes):
+    for pe in pes:
+        # NOTE: these are RAW phenos that have not been converted
+        if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
+                      Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
+                      Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),
+                      Phenotype('BIRNLEX:263', ilxtr.hasTaxonRank),
+                      Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
+            yield pe
+
+
 def export_for_review(config, unmapped, partial, nlx_missing,
                       filename='cuts-review.csv',
                       with_curies=False):
-    neurons = config.neurons()
+    neurons = sorted(config.neurons())
     predicates = sorted(set(e for n in neurons
                             for me in n.edges
                             for e in (me if isinstance(me, tuple) else (me,))))  # columns
@@ -224,7 +241,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
             if pdim in neuron:
                 #print('>>>>>>>>>>>>>', pdim, neuron)
                 #if any(isinstance(p, LogicalPhenotype) for p in neuron):
-                    #embed()
+                    #breakpoint()
                 row.append(','.join(sorted([f'{_._pClass.qname}|{_.pLabel}'
                                             if with_curies else
                                             _.pLabel
@@ -236,7 +253,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
                     #log = [p for p in derp if isinstance(p, LogicalPhenotype)]
                     #if log:
                         #print(log, row)
-                        #embed()
+                        #breakpoint()
             else:
                 row.append(None)
 
@@ -254,6 +271,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
         elif label in partial:
             rem = partial[label]
             row.append(f'Partial: {rem!r}')
+
         if label in nlx_missing:
             row.append('Could not find NeuroLex mapping')
         else:
@@ -270,17 +288,110 @@ def export_for_review(config, unmapped, partial, nlx_missing,
     incomplete = [[None, u] + [None] * (len(rows[0]) - 2) + ['Unmapped', None, None] for u in unmapped]
     incomplete = sorted(incomplete, key=lambda r:r[1])
     rows += incomplete
-    with open(reviewcsv.as_posix(), 'wt', newline='\n') as f:
-        writer = csv.writer(f)
+    with open(reviewcsv.as_posix(), 'wt') as f:
+        writer = csv.writer(f, lineterminator='\n')
         writer.writerow(header)
         writer.writerows(rows)
 
     return [header] + rows
 
+
+def get_smatch(labels_set2):
+    contains_rules = make_contains_rules()
+    skip = set()
+    smatch = set()
+    rem = {}
+    for l in labels_set2:
+        pes = tuple()
+        l_rem = l
+        for match, pheno in contains_rules.items():
+            t = None
+            if match not in skip and pheno == OntTerm:
+                try:
+                    t = OntTerm(term=match)
+                    print('WTF', match, t)
+                    if t.validated:
+                        pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
+                    else:
+                        pheno = None
+                except oq.exceptions.NotFoundError:
+                    skip.add(match)
+                    pheno = None
+            if match in skip and pheno == OntTerm:
+                pheno = None
+
+            if match in l_rem and pheno:
+                l_rem = l_rem.replace(match, '').strip()
+                pes += (pheno if isinstance(pheno, tuple) else (pheno,))
+
+        if l_rem in exact_rules:
+            pes += (exact_rules[l_rem],)
+            l_rem = ''
+
+        if l_rem == '  neuron':
+            l_rem = ''
+        elif l_rem.endswith('  cell'):
+            l_rem = l_rem[:-len('  cell')]
+            #print('l_rem no cell:', l_rem)
+        elif l_rem.endswith('  neuron'):
+            l_rem = l_rem[:-len('  neuron')]
+            #print('l_rem no neuron:', l_rem)
+
+        hrm = [pe for pe in pes if pe.e == ilxtr.hasSomaLocatedIn]
+        if '  ' in l_rem:
+            #print('l_rem:', l_rem)
+            #breakpoint()
+            maybe_region, rest = l_rem.split('  ', 1)
+        elif noneMembers(l_rem, *terminals) and not hrm:
+            maybe_region, rest = l_rem, ''
+            #print('MR:', maybe_region)
+        else:
+            #print(hrm)
+            maybe_region = None
+
+        if maybe_region:
+            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT', 'NLX')
+            def key(ot):
+                ranked = ot.prefix in prefix_rank
+                arg = ot._query_result._QueryResult__query_args['term'].lower()
+                return (not ranked,
+                        prefix_rank.index(ot.prefix) if ranked else 0,
+                        not (arg == ot.label.lower()))
+
+            #ots = sorted((term for term in OntTerm.query(term=maybe_region,
+                                                         #exclude_prefix=('FMA', 'NLX'))), key=key)
+
+            #if not ots:
+            ots = sorted((term for term in OntTerm.query(term=maybe_region,
+                                                         exclude_prefix=('FMA',))), key=key)
+            if not ots:
+                log.error(f'No match for {maybe_region!r}')
+            else:
+                t = ots[0]
+                if 'oboInOwl:id' in t.predicates:  # uberon replacement
+                    t = OntTerm(t.predicates['oboInOwl:id'])
+
+                t.set_next_repr('curie', 'label')
+                log.info(f'Match for {maybe_region!r} was {t!r}')
+                if t.validated:
+                    l_rem = rest
+                    pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)  # FIXME
+                    pes += (pheno,)
+
+        if pes:
+            smatch.add(l)
+            rem[l] = l_rem
+
+            with NeuronCUT(CUT.Mammalia):
+                NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+
+    return smatch, rem
+
+
 def main():
     ndl_config = Config('neuron_data_lifted')
     ndl_config.load_existing()
-    ndl_neurons = ndl_config.neurons()
+    ndl_neurons = sorted(ndl_config.neurons())
     bn_config = Config('basic-neurons')
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
@@ -295,7 +406,14 @@ def main():
     (_, *labels), *_ = zip(*bc)
     labels_set0 = set(labels)
     ns = []
+    skipped = []
+    bamscok = (NIFSTD.BAMSC1125,)
     for n in ndl_neurons:
+        if n.id_ and 'BAMSC' in n.id_:
+            if n.id_ not in bamscok:
+                skipped.append(n)
+                continue
+
         l = str(n.origLabel)
         if l is not None:
             for replace, match in rename_rules.items():  # HEH
@@ -305,6 +423,7 @@ def main():
             n._origLabel = l
             ns.append(n)
 
+    ns = sorted(ns)
     sns = set(n.origLabel for n in ns)
 
     labels_set1 = labels_set0 - sns
@@ -347,112 +466,20 @@ def main():
 
     sources = SourceCUT(),
     swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
+    SWAN = interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/')
+    SWAA = interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/')
     config = Config('common-usage-types-raw', sources=sources, source_file=relative_path(__file__),
-                    prefixes={'swanr':swanr,
-                              'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                              'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+                    prefixes={'swanr': swanr,
+                              'SWAN': SWAN,
+                              'SWAA': SWAA,})
     ins = [None if OntId(n.id_).prefix == 'TEMP' else n.id_ for n in ns]
     ians = [None] * len(ans)
-    def zap(pes):
-        for pe in pes:
-            if pe not in (Phenotype('BIRNLEX:212', ilxtr.hasTaxonRank),
-                          Phenotype('NCBITaxon:7742', ilxtr.hasTaxonRank),
-                          Phenotype('BIRNLEX:252', ilxtr.hasTaxonRank),
-                          Phenotype('BIRNLEX:516', ilxtr.hasTaxonRank),):
-                yield pe
 
-    with Neuron(CUT.Mammalia):
+    with NeuronCUT(CUT.Mammalia):
         mamns = [NeuronCUT(*zap(n.pes), id_=i, label=n._origLabel, override=bool(i)).adopt_meta(n)
                  for i, n in zip(ins + ians, ns + ans)]
 
-    contains_rules = make_contains_rules()
-
-    skip = set()
-    smatch = set()
-    rem = {}
-    for l in labels_set2:
-        pes = tuple()
-        l_rem = l
-        for match, pheno in contains_rules.items():
-            t = None
-            if match not in skip and pheno == OntTerm:
-                try:
-                    t = OntTerm(term=match)
-                    print('WTF', match, t)
-                    if t.validated:
-                        pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
-                    else:
-                        pheno = None
-                except oq.exceptions.NotFoundError:
-                    skip.add(match)
-                    pheno = None
-            if match in skip and pheno == OntTerm:
-                pheno = None
-
-            if match in l_rem and pheno:
-                l_rem = l_rem.replace(match, '').strip()
-                pes += (pheno,)
-
-        if l_rem in exact_rules:
-            pes += (exact_rules[l_rem],)
-            l_rem = ''
-
-        if l_rem == '  neuron':
-            l_rem = ''
-        elif l_rem.endswith('  cell'):
-            l_rem = l_rem[:-len('  cell')]
-            #print('l_rem no cell:', l_rem)
-        elif l_rem.endswith('  neuron'):
-            l_rem = l_rem[:-len('  neuron')]
-            #print('l_rem no neuron:', l_rem)
-
-        hrm = [pe for pe in pes if pe.e == ilxtr.hasSomaLocatedIn]
-        if '  ' in l_rem:
-            #print('l_rem:', l_rem)
-            #embed()
-            maybe_region, rest = l_rem.split('  ', 1)
-        elif noneMembers(l_rem, *terminals) and not hrm:
-            maybe_region, rest = l_rem, ''
-            #print('MR:', maybe_region)
-        else:
-            #print(hrm)
-            maybe_region = None
-
-        if maybe_region:
-            prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT', 'NLX')
-            def key(ot):
-                ranked = ot.prefix in prefix_rank
-                arg = ot._query_result._QueryResult__query_args['term'].lower()
-                return (not ranked,
-                        prefix_rank.index(ot.prefix) if ranked else 0,
-                        not (arg == ot.label.lower()))
-
-            #ots = sorted((term for term in OntTerm.query(term=maybe_region,
-                                                         #exclude_prefix=('FMA', 'NLX'))), key=key)
-
-            #if not ots:
-            ots = sorted((term for term in OntTerm.query(term=maybe_region,
-                                                         exclude_prefix=('FMA',))), key=key)
-            if not ots:
-                log.error(f'No match for {maybe_region!r}')
-            else:
-                t = ots[0]
-                if 'oboInOwl:id' in t.predicates:  # uberon replacement
-                    t = OntTerm(t.predicates['oboInOwl:id'])
-
-                t.set_next_repr('curie', 'label')
-                log.info(f'Match for {maybe_region!r} was {t!r}')
-                if t.validated:
-                    l_rem = rest
-                    pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)  # FIXME
-                    pes += (pheno,)
-
-        if pes:
-            smatch.add(l)
-            rem[l] = l_rem
-
-            with Neuron(CUT.Mammalia):
-                NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+    smatch, rem = get_smatch(labels_set2)
 
     labels_set3 = labels_set2 - smatch
     added_unmapped = sadded & labels_set3
@@ -462,9 +489,9 @@ def main():
     Neuron.write_python()
     raw_neurons = config.neurons()
     config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
-                    prefixes={'swanr':swanr,
-                              'SWAN':interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/'),
-                              'SWAA':interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/'),})
+                    prefixes={'swanr': swanr,
+                              'SWAN': SWAN,
+                              'SWAA': SWAA,})
     ids_updated_neurons = [n.asUndeprecated() for n in raw_neurons]
     assert len(ids_updated_neurons) == len(raw_neurons)
     Neuron.write()
@@ -500,9 +527,11 @@ def main():
     print(f'\nUnmapped (n = {len(labels_set3)}):')
     _ = [print(l) for l in unmapped]
 
+    no_location = [n for n in Neuron.neurons()
+                   if noneMembers((ilxtr.hasSomaLocatedIn,), *n.unique_predicates)]
     if __name__ == '__main__':
         rows = export_for_review(config, unmapped, partial, nlx_missing)
-        embed()
+        breakpoint()
 
     return config, unmapped, partial, nlx_missing
 

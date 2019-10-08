@@ -15,44 +15,44 @@ Config()  # explicitly load the core graph TODO need a lighter weight way to do 
 
 
 class Test(LocalNameManager):
-    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
+    LOOK_AT_THE_CUTE_LITTLE_GUY = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInTaxon')
 
 
 class Layers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
-    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasLayerLocationPhenotype')
-    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasLayerLocationPhenotype')
-    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasLayerLocationPhenotype')
+    L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer')
+    L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer')
+    L3 = Phenotype('UBERON:0005392', 'ilxtr:hasSomaLocatedInLayer')
     L23 = LogicalPhenotype(OR, L2, L3)
-    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasLayerLocationPhenotype')
-    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasLayerLocationPhenotype')
-    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasLayerLocationPhenotype')
+    L4 = Phenotype('UBERON:0005393', 'ilxtr:hasSomaLocatedInLayer')
+    L5 = Phenotype('UBERON:0005394', 'ilxtr:hasSomaLocatedInLayer')
+    L6 = Phenotype('UBERON:0005395', 'ilxtr:hasSomaLocatedInLayer')
     L56 = LogicalPhenotype(OR, L5, L6)
 
-    SO = Phenotype('UBERON:0005371', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
-    SPy = Phenotype('UBERON:0002313', 'ilxtr:hasLayerLocationPhenotype')  # SP
-    SLA = Phenotype('UBERON:0005370', 'ilxtr:hasLayerLocationPhenotype')
-    SLM = Phenotype('UBERON:0007640', 'ilxtr:hasLayerLocationPhenotype')
-    SLU = Phenotype('UBERON:0007637', 'ilxtr:hasLayerLocationPhenotype')
-    SR = Phenotype('UBERON:0005372', 'ilxtr:hasLayerLocationPhenotype')
+    SO = Phenotype('UBERON:0005371', 'ilxtr:hasSomaLocatedInLayer')  # WARNING: uberon has precomposed these, which is annoying
+    SPy = Phenotype('UBERON:0002313', 'ilxtr:hasSomaLocatedInLayer')  # SP
+    SLA = Phenotype('UBERON:0005370', 'ilxtr:hasSomaLocatedInLayer')
+    SLM = Phenotype('UBERON:0007640', 'ilxtr:hasSomaLocatedInLayer')
+    SLU = Phenotype('UBERON:0007637', 'ilxtr:hasSomaLocatedInLayer')
+    SR = Phenotype('UBERON:0005372', 'ilxtr:hasSomaLocatedInLayer')
 
 
 class PaxRatLayers(LocalNameManager):
     # TODO there might be a way to set a default predicate here...
-    L1 = Phenotype('PAXRAT:509', 'ilxtr:hasLayerLocationPhenotype')
-    L2 = Phenotype('PAXRAT:512', 'ilxtr:hasLayerLocationPhenotype')
-    L3 = Phenotype('PAXRAT:513', 'ilxtr:hasLayerLocationPhenotype')
+    L1 = Phenotype('PAXRAT:509', 'ilxtr:hasSomaLocatedInLayer')
+    L2 = Phenotype('PAXRAT:512', 'ilxtr:hasSomaLocatedInLayer')
+    L3 = Phenotype('PAXRAT:513', 'ilxtr:hasSomaLocatedInLayer')
     L23 = LogicalPhenotype(OR, L2, L3)
-    L4 = Phenotype('PAXRAT:515', 'ilxtr:hasLayerLocationPhenotype')
-    L5 = Phenotype('PAXRAT:516', 'ilxtr:hasLayerLocationPhenotype')
-    L6 = Phenotype('PAXRAT:519', 'ilxtr:hasLayerLocationPhenotype')
+    L4 = Phenotype('PAXRAT:515', 'ilxtr:hasSomaLocatedInLayer')
+    L5 = Phenotype('PAXRAT:516', 'ilxtr:hasSomaLocatedInLayer')
+    L6 = Phenotype('PAXRAT:519', 'ilxtr:hasSomaLocatedInLayer')
 
-    SO = Phenotype('PAXRAT:675', 'ilxtr:hasLayerLocationPhenotype')  # WARNING: uberon has precomposed these, which is annoying
-    SPy = Phenotype('PAXRAT:815', 'ilxtr:hasLayerLocationPhenotype')  # SP
-    #SLA = Phenotype('', 'ilxtr:hasLayerLocationPhenotype')  # paxrat does not seem to have this, only LM
-    SLM = Phenotype('PAXRAT:443', 'ilxtr:hasLayerLocationPhenotype')
-    SLU = Phenotype('PAXRAT:901', 'ilxtr:hasLayerLocationPhenotype')
-    SR = Phenotype('PAXRAT:822', 'ilxtr:hasLayerLocationPhenotype')
+    SO = Phenotype('PAXRAT:675', 'ilxtr:hasSomaLocatedInLayer')  # WARNING: uberon has precomposed these, which is annoying
+    SPy = Phenotype('PAXRAT:815', 'ilxtr:hasSomaLocatedInLayer')  # SP
+    #SLA = Phenotype('', 'ilxtr:hasSomaLocatedInLayer')  # paxrat does not seem to have this, only LM
+    SLM = Phenotype('PAXRAT:443', 'ilxtr:hasSomaLocatedInLayer')
+    SLU = Phenotype('PAXRAT:901', 'ilxtr:hasSomaLocatedInLayer')
+    SR = Phenotype('PAXRAT:822', 'ilxtr:hasSomaLocatedInLayer')
 
 
 class Regions(LocalNameManager):
@@ -76,8 +76,8 @@ class PaxRatRegions(LocalNameManager):
 
 
 class Species(LocalNameManager):
-    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInSpecies')
-    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInSpecies')
+    Rat = Phenotype('NCBITaxon:10116', 'ilxtr:hasInstanceInTaxon')
+    Mouse = Phenotype('NCBITaxon:10090', 'ilxtr:hasInstanceInTaxon')
 
 
 class BBP(PaxRatLayers, PaxRatRegions, Species):
@@ -164,24 +164,29 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
 
 
 class CUT(LocalNameManager):
-    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasTaxonRank)
+    Mammalia = Phenotype('NCBITaxon:40674', ilxtr.hasInstanceInTaxon)
     proj = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
     inter = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
+    intrinsic = Phenotype(ilxtr.IntrinsicPhenotype, ilxtr.hasCircuitRolePhenotype)
+    motor = Phenotype(ilxtr.MotorPhenotype, ilxtr.hasCircuitRolePhenotype)
+    sensory = Phenotype(ilxtr.SensoryPhenotype, ilxtr.hasCircuitRolePhenotype)
 
     TRN = Phenotype('UBERON:0001903', ilxtr.hasSomaLocatedIn)
     Thal = Phenotype('UBERON:0001897', ilxtr.hasSomaLocatedIn)
     MRN = Phenotype('UBERON:0007415', ilxtr.hasSomaLocatedIn)
 
     GABA = Phenotype('TEMPIND:GABA', ilxtr.hasMolecularPhenotype)
-    PV = Phenotype('PTHR:11653', ilxtr.hasMolecularPhenotype)  # FIXME remove PTHR
+    PV = Phenotype('TEMPIND:Pvalb', ilxtr.hasMolecularPhenotype)
     CB = Phenotype('TEMPIND:Calb', ilxtr.hasMolecularPhenotype)
     CR = Phenotype('TEMPIND:Calb2', ilxtr.hasMolecularPhenotype)
     CCK = Phenotype('TEMPIND:Cck', ilxtr.hasMolecularPhenotype)
-    SST = Phenotype('PTHR:10558', ilxtr.hasMolecularPhenotype)
+    SST = Phenotype('TEMPIND:Sst', ilxtr.hasMolecularPhenotype)
 
     # TODO indicator these
-    Ach = Phenotype('SAO:185580330', ilxtr.hasExpressionPhenotype)
-    Glu = Phenotype('CHEBI:16015', ilxtr.hasExpressionPhenotype)
-    Ser = Phenotype('CHEBI:28790', ilxtr.hasExpressionPhenotype)
-    TH = Phenotype('PR:000016301', ilxtr.hasExpressionPhenotype)  # NCBIGene:21823
+    ACh = Phenotype('TEMPIND:ACh', ilxtr.hasExpressionPhenotype)
+    Glu = Phenotype('TEMPIND:Glutamate', ilxtr.hasExpressionPhenotype)
+    Ser = Phenotype('TEMPIND:Serotonin', ilxtr.hasExpressionPhenotype)
+    TH = Phenotype('TEMPIND:TH', ilxtr.hasExpressionPhenotype)
 
+    VIP = Phenotype('TEMPIND:VIP', ilxtr.hasExpressionPhenotype)
+    NPY = Phenotype('TEMPIND:Npy', ilxtr.hasExpressionPhenotype)

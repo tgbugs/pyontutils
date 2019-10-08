@@ -21,7 +21,7 @@ from rdflib import URIRef, BNode, Namespace, Graph
 from IPython import embed
 from pyontutils.core import makeGraph, cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, PREFIXES as uPREFIXES
-from pyontutils.combinators import restriction, restrictionN, allDifferent, members, unionOf, oneOf
+from pyontutils.combinators import restriction, restrictionN, allDifferent, distinctMembers, unionOf, oneOf
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from pyontutils.hierarchies import creatTree
 
@@ -374,7 +374,7 @@ class WorkflowMapping(Flatten, TripleExport):
             yield s, p, o
 
     def post(self):
-        yield from allDifferent(None, members(*self.different_tags))
+        yield from allDifferent(None, distinctMembers(*self.different_tags))
 
     def post_graph(self, graph):
         for p in (wf.hasTag, wf.hasReplyTag, wf.hasTagOrReplyTag, wf.hasOutputTag):

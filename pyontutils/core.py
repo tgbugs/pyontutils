@@ -9,6 +9,7 @@ from inspect import getsourcefile
 from pathlib import Path
 from itertools import chain
 from collections import namedtuple
+from urllib.parse import urlparse
 import ontquery as oq
 import requests
 import htmlfn as hfn
@@ -99,7 +100,105 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
 from werkzeug.contrib.iterio import IterIO
 
 
-class OntRes:
+class Stream:
+
+    @property
+    def identifier(self):
+        """ Implicitly the unbound identifier that is to be dereferenced. """
+        # FIXME interlex naming conventions call this a reference_name
+        # in order to give it a bit more lexical distance from identity
+        # which implies some hash function
+        raise NotImplementedError
+
+    @identifier.setter
+    def identifier(self, value):
+        raise NotImplementedError
+
+    def checksum(self, cypher=None):  # FIXME default cypher value
+        if not hasattr(self, '__checksum'):  # NOTE can set __checksum on the fly
+            self.__checksum = self._checksum(cypher)
+
+        return self.__checksum
+
+    identity = checksum  # FIXME the naming here is mathematically incorrect
+
+    def _checksum(self, cypher):
+        raise NotImplementedError
+
+    @property
+    def progenitor(self):
+        """ the lower level stream from which this one is derived """
+        # could also, confusingly be called a superstream, but
+        # the superstream might have a less differentiated, or simply
+        # a different type or structure (e.g. an IP packet -> a byte stream)
+
+        # unfortunately the idea of a tributary, or a stream bed
+        # breaks down, though in a pure bytes representation
+        # technically the transport headers do come first
+        raise NotImplementedError
+
+    superstream = progenitor
+
+    @property
+    def headers(self):
+        """ Data from the lower level stream from which this stream is
+            derived/differentiated """
+        # FIXME naming ...
+        # sometimes this is related to ...
+        #  transport
+        #  prior in time
+        #  unbound metadata, or metadata that will be unbound in the target
+        #  metadata kept by the stream management layer (e.g. file system)
+        #  stream type
+        #  stream size
+        #  operational metadata
+        #  summary information
+
+        # if you are sending a file then populate all the info
+        # needed by the server to set up the stream (even if that seems a bit low level)
+        raise NotImplementedError
+        return self.superstream.metadata
+
+    @headers.setter
+    def headers(self, value):
+        self._headers = value
+        raise NotImplementedError('If you override self.headers in the child '
+                                  'you need to reimplement this too.')
+
+    @property
+    def data(self):
+        """ The primary opaque datastream that will be differentiated
+            at the next level """
+        raise NotImplementedError
+
+    @property
+    def metadata(self):
+        """ stream metadata, hopefully as a header
+
+            technically this should be called metadata_bound
+            since it is part of the same stream, it might
+            make sense to invert this to have a variety of
+            datasources external to a stream that contain
+            additional relevant data using that id
+        """
+        if not hasattr(self, '_metadata'):
+            self._metadata = self._metadata_class(self.identifier)
+
+        return self._metadata
+
+    @property
+    def identifier_bound(self):
+        raise NotImplementedError
+        return self.metadata.identifier_bound
+
+    @property
+    def identifier_version(self):
+        """ implicitly identifier_bound_version """
+        raise NotImplementedError
+        return self.metadata.identifier_version
+
+
+class OntRes(Stream):
     """ Message manager for serialized ontology resource.
         There are plenty of tools that already deal effectively
         with a triplified store, but we need something that does
@@ -121,33 +220,6 @@ class OntRes:
 
         self.Graph = Graph
 
-    @property
-    def identifier(self):
-        # FIXME interlex naming conventions call this a reference_name
-        # in order to give it a bit more lexical distance from identity
-        # which implies some hash function
-        raise NotImplementedError
-
-    @identifier.setter
-    def identifier(self, value):
-        raise NotImplementedError
-
-    @property
-    def headers(self):
-        # if you are sending a file the populate all the info
-        # needed by the server to set up the stream (even if that seems a bit low level)
-        raise NotImplementedError
-
-    @headers.setter
-    def headers(self, value):
-        self._headers = value
-        raise NotImplementedError('If you override self.headers in the child '
-                                  'you need to reimplement this too.')
-
-    @property
-    def data(self):
-        raise NotImplementedError
-
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
 
@@ -156,7 +228,11 @@ class OntRes:
         self._populate(graph, self.data)
 
     @property
-    def graph(self):
+    def graph(self, cypher=None):
+        # FIXME transitions to other streams should be functions
+        # and it also allows passing an explicit cypher argument
+        # to enable checksumming in one pass, however this will
+        # require one more wrapper
         if not hasattr(self, '_graph'):
             self._graph = self.Graph()
             self.populate(self._graph)
@@ -187,14 +263,14 @@ class OntRes:
 
     def _import_chain(self, done):
         imps = list(self.imports)
-        Async()(deferred(lambda r: r.header.graph)(_) for _ in imps)
+        Async()(deferred(lambda r: r.metadata.graph)(_) for _ in imps)
         for resource in imps:
             if resource in done:
                 continue
 
             done.add(resource)
             yield resource
-            yield from resource.header._import_chain(done)
+            yield from resource.metadata._import_chain(done)
 
     def __eq__(self, other):
         raise NotImplementedError
@@ -206,7 +282,7 @@ class OntRes:
         return self.__class__.__name__ + f'({self.identifier!r})'
 
 
-class OntHeader(OntRes):
+class OntMeta(OntRes):
     """ only the header of an ontology, e.g. the owl:Ontology section for OWL2 """
 
     # headers all the way down data -> ontology header -> response header -> iri
@@ -245,24 +321,13 @@ class OntHeader(OntRes):
 class OntResOnt(OntRes):
     """ full ontology files """
 
-    _header_class = None  # FIXME can we do this by dispatching OntHeader like Path?
-
-    @property
-    def header(self):
-        """ ontology header """
-        # FIXME the nomenclature here is inconsistent with interlex
-        # interlex would call this metadata, or even bound_metadata
-        # depending on how it was retrieved
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.identifier)
-
-        return self._header
+    _metadata_class = None  # FIXME can we do this by dispatching OntMeta like Path?
 
     def __eq__(self, other):
-        return self.header.identifier_bound == other.header.identifier_bound
+        return self.metadata.identifier_bound == other.metadata.identifier_bound
 
     def __hash__(self):
-        return hash((self.__class__, self.header.identifier_bound))
+        return hash((self.__class__, self.metadata.identifier_bound))
 
 
 class OntIdIri(OntRes):
@@ -270,7 +335,7 @@ class OntIdIri(OntRes):
         self.iri = iri
         # TODO version iris etc.
 
-    def get(self):
+    def _get(self):
         return requests.get(self.iri, stream=True, headers={'Accept': 'text/turtle'})  # worth a shot ...
 
     @property
@@ -281,7 +346,7 @@ class OntIdIri(OntRes):
     def headers(self):
         """ request headers """
         if not hasattr(self, '_headers'):
-            resp = requests.head(self.iri)  # TODO status handling for all these
+            resp = requests.head(self.identifier)  # TODO status handling for all these
             self._headers = resp.headers
 
         return self._headers
@@ -291,7 +356,7 @@ class OntIdIri(OntRes):
         self._headers = value
 
 
-class OntHeaderIri(OntHeader, OntIdIri):
+class OntMetaIri(OntMeta, OntIdIri):
 
     @property
     def data(self):
@@ -308,7 +373,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
             # as well ...
             pass
 
-        resp = self.get()
+        resp = self._get()
         self.headers = resp.headers
         # TODO consider yielding headers here as well?
         gen = resp.iter_content(chunk_size=4096)
@@ -321,7 +386,7 @@ class OntHeaderIri(OntHeader, OntIdIri):
             sentinel = b'TODO'
             self.format = 'application/rdf+xml'
 
-        elif first.startswith(b'@prefix'):
+        elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
             stop = b' .\n'  # FIXME can be fooled by strings
             sentinel = b'### Annotations'  # FIXME only works for ttlser
@@ -420,11 +485,11 @@ class OntHeaderIri(OntHeader, OntIdIri):
 
 class OntResIri(OntIdIri, OntResOnt):
 
-    _header_class = OntHeaderIri
+    _metadata_class = OntMetaIri
 
     @property
     def data(self):
-        format, *header_chunks, (resp, gen) = self.header._data(yield_response_gen=True)
+        format, *header_chunks, (resp, gen) = self.metadata._data(yield_response_gen=True)
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible
@@ -466,7 +531,7 @@ class OntIdPath(OntRes):
     def identifier(self):
         return self.path
 
-    def get(self):
+    def _get(self):
         resp = requests.Response()
         with open(self.path, 'rb') as f:
             resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
@@ -479,32 +544,27 @@ class OntIdPath(OntRes):
     headers = OntIdIri.headers
 
 
-class OntHeaderPath(OntIdPath, OntHeader):
-    data = OntHeaderIri.data
-    _data = OntHeaderIri._data
+class OntMetaPath(OntIdPath, OntMeta):
+    data = OntMetaIri.data
+    _data = OntMetaIri._data
 
 
 class OntResPath(OntIdPath, OntResOnt):
     """ ontology resource coming from a file """
 
-    _header_class = OntHeaderPath
+    _metadata_class = OntMetaPath
     data = OntResIri.data
-
-    @property
-    def header(self):
-        """ ontology header """
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.path)
-
-        return self._header
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
 
-
 class OntIdGit(OntIdPath):
     def __init__(self, path, ref='HEAD'):
-        """ ref can be HEAD, branch, commit hash, etc. """
+        """ ref can be HEAD, branch, commit hash, etc.
+
+            if ref = None, the working copy of the file is used
+            if ref = '',   the index   copy of the file is used """
+
         self.path = path
         self.ref = ref
 
@@ -514,44 +574,96 @@ class OntIdGit(OntIdPath):
         # which neglects the repo portion of the id ...
         if type(self.path) == str:
             breakpoint()
-        return self.ref + ':' + self.path.relative_to(self.path.repo.working_dir).as_posix()
 
-    def get(self):
+        if self.ref is None:
+            return self.path.as_posix()
+
+        return self.ref + ':' + self.path.repo_relative_path.as_posix()
+
+    @property
+    def metadata(self):
+        if not hasattr(self, '_metadata'):
+            self._metadata = self._metadata_class(self.path, ref=self.ref)
+
+        return self._metadata
+
+    def _get(self):
         resp = requests.Response()
-        resp.raw = io.BytesIO(self.path.repo.git.show(self.identifier).encode())
+        if self.ref is None:
+            with open(self.path, 'rb') as f:
+                resp.raw = io.BytesIO(f.read())  # FIXME can't we stream/seek these?
+        else:
+            resp.raw = io.BytesIO(self.path.repo.git.show(self.identifier).encode())
+
         resp.status_code = 200
         return resp
 
     headers = OntIdIri.headers
 
-class OntHeaderGit(OntIdGit, OntHeader):
-    data = OntHeaderIri.data
-    _data = OntHeaderIri._data
+
+class OntMetaGit(OntIdGit, OntMeta):
+    data = OntMetaIri.data
+    _data = OntMetaIri._data
 
 
 class OntResGit(OntIdGit, OntResOnt):
-    _header_class = OntHeaderGit
+    _metadata_class = OntMetaGit
     data = OntResIri.data
-
-    @property
-    def header(self):
-        """ ontology header """
-        if not hasattr(self, '_header'):
-            self._header = self._header_class(self.path, self.ref)
-
-        return self._header
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
 
-class OntHeaderInterLex(OntHeader):
+class OntResAny:
+    def __new__(cls, path, ref=None, ref_failover=None):
+        # it really is better if people statically know so we don't have to guess
+        """
+        if isinstance(path_or_iri, Path):
+            iri = None
+            path = path_or_iri
+        elif isinstance(path_or_iri, str):
+            if path_or_iri.startswith('http://') or path_or_iri.startswith('https://'):
+                iri = path_or_iri
+                # TODO try to find the local version?
+                path = None
+            else:
+                iri = None
+                path = path_or_iri
+        else:
+            raise TypeError(f'what is a {type(path_or_iri)} {path_or_iri!r}')
+
+        """
+        try:
+            org = OntResGit(path, ref=ref)
+            org._get()  # yes this is slow, but it is the safest way ...
+            return org
+        except BaseException as e:
+            #log.exception(e)
+            repo = path.repo
+            remote = repo.remote()
+            rnprefix = remote.name + '/'
+            url_base = next(remote.urls)
+            pu = urlparse(url_base)
+            if pu.netloc == 'github.com':
+                if not ref or ref == 'HEAD':
+                    ref = repo.active_branch.name
+                elif ref not in [r.name.replace(rnprefix, '') for r in repo.refs]:
+                    log.warning(f'unknown ref {ref}')
+
+                rpath = Path(pu.path).with_suffix('') / ref / path.repo_relative_path
+                iri = 'https://raw.githubusercontent.com' + rpath.as_posix()
+                return OntResIri(iri)
+
+            breakpoint()
+
+
+class OntMetaInterLex(OntMeta):
     pass
 
 
 class OntResInterLex(OntResOnt):
     """ ontology resource backed by interlex """
 
-    _header_class = OntHeaderInterLex
+    _metadata_class = OntMetaInterLex
 
 
 class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
@@ -606,9 +718,9 @@ class OntGraph(rdflib.Graph):
         if not args and not kwargs and self.path is not None:
             # FIXME augpathlib.Path ;_;
             mimetype, _ = mimetypes.guess_type(self.path.as_uri())
-            super().parse(self.path.as_posix(), format=mimetype)
+            return super().parse(self.path.as_posix(), format=mimetype)
         else:
-            super().parse(*args, **kwargs)
+            return super().parse(*args, **kwargs)
 
     def _get_namespace_manager(self):
         if self._namespace_manager is None:
@@ -639,6 +751,13 @@ class OntGraph(rdflib.Graph):
     @property
     def data(self):
         """ everything else """
+        # FIXME this is actually metadata + homogenous data
+        # question: should data sections automatically checksum
+        # their contents as it streams through?
+        # answer: no, if someone needs a checksum, they should ask
+        # for it explicitly when they transition to some other stream
+        # whether that is a file or a graph etc.
+
         raise NotImplementedError('yet')
 
     def write(self, path=None, format='nifttl'):
@@ -661,6 +780,9 @@ class OntGraph(rdflib.Graph):
         out = self.serialize(format='htmlttl').decode()
         CustomTurtleSerializer.roundtrip_prefixes = True
         return out
+
+    def debug(self):
+        print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
         # FIXME can't we hit the cache for these?
@@ -704,7 +826,18 @@ class OntGraph(rdflib.Graph):
 
         return add, rem, same
 
-    def subjectGraph(self, subject, *, done=None):
+    def subjectGraph(self, subject):
+        # some days I am smart, as in years ago when working on neuron stuff
+        # TODO do we need to check for duplicates and cycels?
+        def f(triple, graph):
+            subject, predicate, object = triple
+            for p, o in graph[object]:
+                yield object, p, o
+
+        yield from self.transitiveClosure(f, (None, None, subject))
+
+    def _subjectGraph(self, subject, *, done=None):
+        # some days I am dumb
         first = False
         if done is None:
             first = True
@@ -731,7 +864,7 @@ class OntGraph(rdflib.Graph):
     def subjectIdentity(self, subject, *, debug=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
-            not quite 
+            not quite
         """
 
         pairs_triples = list(self.subjectGraph(subject))
@@ -884,6 +1017,9 @@ class OntGraph(rdflib.Graph):
         # want to record the record in InterLex
         index_graph.namespace_manager.populate_from(self)
         [index_graph.add(t) for t in add_replace_graph]
+        # FIXME for some reason I had a thought that the index
+        # graph should include labels as a semi-orthogonal check
+        # to make sure that everything lines up as expected
 
         # if an identifier is used in multiple serialized graphs
         # then we want to make sure that we can do a replacement
@@ -912,6 +1048,87 @@ class OntGraph(rdflib.Graph):
         new_self.namespace_manager.populate_from(index_graph)
         return new_self
 
+    # variously named/connected subsets
+
+    @property
+    def boundIdentifiers(self):
+        """ There should only be one but ... """
+        yield from self[:rdf.type:owl.Ontology]
+
+    @property
+    def boundIdentifier(self):
+        return next(self.boundIdentifiers)
+
+    @property
+    def metadata(self):
+        for bi in self.boundIdentifiers:
+            yield from self.subjectGraph(bi)
+
+    @property
+    def metadata_unnamed(self):
+        yield from ((s, p, o) for s, p, o in self.metadata
+                    if isinstance(s, rdflib.BNode))
+
+    @property
+    def data(self):
+        bis = tuple(self.boundIdentifiers)
+        meta_bnodes = tuple(e for t in metadata_unnamed for e in t
+                            if isinstance(e, rdflib.BNode))
+        meta_skip_subject = bis + meta_bnodes
+        for s, p, o in self:
+            if s not in meta_skip_subject:
+                yield (s, p, o)
+
+    @property
+    def data_named(self):
+        # FIXME process_graph is more efficient that this ...
+        bis = tuple(self.boundIdentifiers)
+        for s in self.subjects():
+            if not isinstance(s, rdflib.BNode) and s not in bis:
+                yield from self.subjectGraph(s)
+
+    @property
+    def data_unnamed(self):
+        # there is no metadata unnamed
+        # FIXME connected unnamed vs named ...
+        # why is this so darned complex
+
+        # have to know which bnodes are attached to meta
+        #bi = self.boundIdentifier
+        #connected_bnodes = tuple(e for t in self.data_named for e in t
+                                 #if isinstance(e, rdflib.BNode))
+        object_bnodes = tuple(o for o in self.objects() if isinstance(o, rdflib.BNode))
+        for s in self.subjects():  # FIXME some non-bnode fellows seem to be sneeking in here
+            if isinstance(s, rdflib.BNode) and s not in object_bnodes:
+                yield from self.subjectGraph(s)
+
+    def asConjunctive(self, debug=False):
+        # TODO a version of this that can populate
+        # from OntRes directly if conjunctive graph is requested or similar
+        # since the individual graphs are already separate (though possibly incorrect)
+        id = self.boundIdentifier
+        #curies = rdflib.URIRef(id + '?section=localConventions')
+        meta_id = rdflib.URIRef(id + '?section=metadata')
+        data_id = rdflib.URIRef(id + '?section=data')
+        datan_id = rdflib.URIRef(id + '?section=data_named')
+        datau_id = rdflib.URIRef(id + '?section=data_unnamed')
+        c = OntConjunctiveGraph(identifier=id)
+        [c.addN((*t, meta_id) for t in self.metadata)]
+        #[c.addN((*t, data_id)) for t in self.data]
+        [c.addN((*t, datan_id) for t in self.data_named)]
+        [c.addN((*t, datau_id) for t in self.data_unnamed)]
+        if debug:
+            c.bind('ilxtr', ilxtr)
+            tc = CustomTurtleSerializer.topClasses
+            if ilxtr.StreamSection not in tc:
+                sec = CustomTurtleSerializer.SECTIONS
+                CustomTurtleSerializer.topClasses = [ilxtr.StreamSection] + tc
+                CustomTurtleSerializer.SECTIONS = ('',) + sec
+            c.add((meta_id, rdf.type, ilxtr.StreamSection, meta_id))
+            c.add((datan_id, rdf.type, ilxtr.StreamSection, datan_id))
+            c.add((datau_id, rdf.type, ilxtr.StreamSection, datau_id))
+        return c
+
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
     def __init__(self, *args, store='default', identifier=None, **kwargs):
@@ -920,6 +1137,19 @@ class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
         self.default_context = OntGraph(store=self.store,
                                         identifier=identifier or rdflib.BNode())
 
+    def get_context(self, identifier, quoted=False):
+        """Return a context graph for the given identifier
+
+        identifier must be a URIRef or BNode.
+        """
+        return OntGraph(store=self.store, identifier=identifier,
+                        namespace_manager=self.namespace_manager)
+
+    def debugAll(self):
+        for g in sorted(self.contexts(), key=lambda g: g.identifier):
+            print('-' * 80)
+            print('-' * 80)
+            g.debug()
 
 
 OntRes.Graph = OntGraph
@@ -977,7 +1207,7 @@ class makeGraph:
         if graph is not None:
             self.g = graph
         else:
-            self.g = rdflib.Graph()  # default args issue
+            self.g = OntGraph()  # default args issue
 
         for p, ns in self.namespaces.items():
             self.add_namespace(p, ns)
@@ -1395,8 +1625,8 @@ for rc in (SGR, IXR):
 
 sgr = SGR(apiEndpoint=devconfig.scigraph_api)
 sgr.api_key = get_api_key()
-# Uses default apiEndpoint for InterLexRemote
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, readonly=True)
+ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
+ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
 query = oq.OntQueryCli(query=OntTerm.query)

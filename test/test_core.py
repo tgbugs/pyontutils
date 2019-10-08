@@ -14,7 +14,7 @@ annotation_ev = """ Axioms
 """
 
 
-class TestCore(unittest.TestCase):
+class TestAnnotation(unittest.TestCase):
     def test_annotation(self):
         ac = annotation((ilxtr.a, ilxtr.b, ilxtr.c), (ilxtr.e, ilxtr.f), (ilxtr.g, ilxtr.h))
         assert len(ac.value) == 6, 'wrong number of triples'
@@ -33,5 +33,3 @@ class TestCore(unittest.TestCase):
             raise AssertionError('should have failed')
         except TypeError:
             pass
-
-
