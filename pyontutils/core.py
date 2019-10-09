@@ -6,11 +6,12 @@ import mimetypes
 import subprocess
 import rdflib
 from inspect import getsourcefile
-from pathlib import Path
+from pathlib import Path, PurePath
 from itertools import chain
 from collections import namedtuple
 from urllib.parse import urlparse
 import ontquery as oq
+import augpathlib as aug
 import requests
 import htmlfn as hfn
 from joblib import Parallel, delayed
@@ -18,7 +19,7 @@ from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
+from pyontutils.utils import refile, TODAY, UTCNOW, UTCNOWISO, getSourceLine, utcnowtz
 from pyontutils.utils import Async, deferred, TermColors as tc, log
 from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
@@ -1059,6 +1060,16 @@ class OntGraph(rdflib.Graph):
         return next(self.boundIdentifiers)
 
     @property
+    def versionIdentifiers(self):
+        """ There should only be one but ... """
+        for bid in self.boundIdentifiers:
+            yield from self[bid:owl.versionIRI]
+
+    @property
+    def versionIdentifier(self):
+        return next(self.versionIdentifiers)
+
+    @property
     def metadata(self):
         for bi in self.boundIdentifiers:
             yield from self.subjectGraph(bi)
@@ -1283,7 +1294,7 @@ class makeGraph:
         else:
             return thing
 
-    def add_ont(self, ontid, label, shortName=None, comment=None, version=None):
+    def add_ont(self, ontid, label, shortName=None, comment=None, version=None, epoch=None):
         self.add_trip(ontid, rdf.type, owl.Ontology)
         self.add_trip(ontid, rdfs.label, label)
         if comment:
@@ -1292,6 +1303,11 @@ class makeGraph:
             self.add_trip(ontid, owl.versionInfo, version)
         if shortName:
             self.add_trip(ontid, skos.altLabel, shortName)
+        if epoch:
+            pp = PurePath(ontid)
+            vp = (pp.with_suffix('') / str(epoch) / pp.stem).with_suffix(pp.suffix)
+            versionIRI = rdflib.URIRef(str(vp))
+            self.add_trip(ontid, owl.versionIRI, versionIRI)
 
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None, autogen=False):
         self.add_trip(id_, rdf.type, owl.Class)
@@ -1566,6 +1582,7 @@ def createOntology(filename=    'temp-graph',
                    shortname=   None,  # 'TO'
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY(),
+                   nowish=      utcnowtz(),
                    path=        'ttl/generated/',
                    local_base=  None,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
@@ -1580,7 +1597,8 @@ def createOntology(filename=    'temp-graph',
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
     if ontid is not None:
-        graph.add_ont(ontid, name, shortname, comment, version)
+        epoch = round(nowish.timestamp())
+        graph.add_ont(ontid, name, shortname, comment, version, epoch)
         for import_ in imports:
             graph.add_trip(ontid, owl.imports, import_)
     return graph
@@ -1835,21 +1853,21 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = Path(devconfig.git_local_base)
-                    cls.repo_path = glb / Path(cls.source).stem
-                    rap = cls.repo_path.as_posix()
-                    print(rap)
+                    glb = RepoPath(devconfig.git_local_base)
+                    cls.repo_path = glb.cone_path(cls.sourceRepo)
+                    print(cls.repo_path)
                     # TODO branch and commit as usual
                     if not cls.repo_path.exists():
-                        cls.repo = Repo.clone_from(cls.sourceRepo, rap)
+                        cls.repo = cls.repo_path.init(cls.sourceRepo)
                     else:
-                        cls.repo = Repo(rap)
+                        cls.repo = cls.repo_path.repo
                         # cls.repo.remote().pull()  # XXX remove after testing finishes
 
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
                         if not dry_run:  # dry_run means data may not be present
-                            file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                            file_commit = cls.repo_path.latest_commit.hexsha
+                            #file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
                             commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                             print(commit_path)
                             if 'github' in cls.source:
@@ -1870,8 +1888,7 @@ class Source(tuple):
                     cls.iri = rdflib.URIRef(cls.source)
 
             elif os.path.exists(cls.source):  # TODO no expanded stuff
-                if not isinstance(cls.source, Path):
-                    cls.source = Path(cls.source)
+                cls.source = aug.RepoPath(cls.source)
 
                 try:
                     file_commit = subprocess.check_output(['git', 'log', '-n', '1',
@@ -1879,7 +1896,7 @@ class Source(tuple):
                                                            cls.source],
                                                           stderr=subprocess.DEVNULL).decode().rstrip()
                     cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
-                                            + cls.source.as_posix())
+                                            + cls.source.repo_relative_path.as_posix())
                     cls._type = 'git-local'
                 except subprocess.CalledProcessError as e:
                     cls._type = 'local'
@@ -1997,6 +2014,7 @@ class Ont:
     shortname = None
     comment = None  # about how the file was generated, nothing about what it contains
     version = TODAY()
+    start_time = UTCNOWISO(timespec='seconds')
     namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
@@ -2008,7 +2026,7 @@ class Ont:
 
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
-        wasGeneratedBy=prov.wasGeneratedBy,
+        wasGeneratedBy=prov.wasGeneratedBy,  # FIXME technically wgb range is Activity
         hasSourceArtifact=ilxtr.hasSourceArtifact,  # the owl:Class it was derived from
     )
 
@@ -2182,7 +2200,11 @@ class Ont:
 
     @property
     def iri(self):
-        return self._graph.ontid
+        return self.graph.boundIdentifier
+
+    @property
+    def versionIRI(self):
+        return self.graph.versionIdentifier
 
     def write(self, cull=False):
         # TODO warn in ttl file when run when __file__ has not been committed

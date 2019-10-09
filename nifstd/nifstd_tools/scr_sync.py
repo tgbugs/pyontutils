@@ -35,7 +35,7 @@ from sqlalchemy import create_engine, inspect
 from pyontutils.core import Ont, Source, build, OntId
 from pyontutils.utils import mysql_conn_helper, log
 from pyontutils.namespaces import makePrefixes, NIFRID, definition
-from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
+from pyontutils.namespaces import rdf, rdfs, owl, oboInOwl
 
 log = log.getChild('registry-sync')
 logd = log.getChild('data')

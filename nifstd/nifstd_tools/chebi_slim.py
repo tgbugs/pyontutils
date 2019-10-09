@@ -1,6 +1,7 @@
-#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
+#!/usr/bin/env python3.7
 import os
+import sys
 import gzip
 from io import BytesIO
 from pathlib import Path
@@ -10,9 +11,8 @@ import requests
 from pyontutils.core import makeGraph, yield_recursive, qname, build
 from pyontutils.core import Ont, Source
 from pyontutils.config import devconfig
-from pyontutils.utils_extra import memoryCheck
 from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole
-from pyontutils.namespaces import PREFIXES as uPREFIXES
+from pyontutils.namespaces import PREFIXES as uPREFIXES, ilxtr
 from pyontutils.namespaces import rdf, rdfs, owl, prov, oboInOwl
 
 
@@ -128,6 +128,7 @@ class Chebi(Ont):
                             'chebi1',
                             'chebi2',
                             'chebi3',
+                            'ilxtr',
                             'prov',
                             'skos',
                             'oboInOwl')
@@ -143,10 +144,31 @@ class Chebi(Ont):
         chebiiri = next(g[:rdf.type:owl.Ontology])
         oiodate = rdflib.URIRef(str(oboInOwl) + 'date')  # this predicate doesn't actually exist...
         chebidate = next(g[chebiiri:oiodate])
-        b0 = rdflib.BNode()
+        yield self.iri, oiodate, chebidate
+        # wow prov is extremely heavy weight ...
+        b0, b1, b2 = [rdflib.BNode() for _ in range(3)]
+        e1, e2 = self.wasDerivedFrom
         yield self.iri, prov.qualifiedDerivation, b0
         yield b0, rdf.type, prov.Derivation
-        yield b0, prov.atTime, chebidate
+        yield b0, prov.entity, e1
+        yield b0, prov.hadActivity, b1
+        yield b1, rdf.type, prov.Activity
+        yield b1, prov.startedAtTime, rdflib.Literal(self.start_time)
+        yield b1, prov.used, rdflib.URIRef(self.wasGeneratedBy)
+        yield b1, prov.generated, self.versionIRI
+        yield b1, prov.wasAssociatedWith, b2
+        yield b2, rdf.type, prov.SoftwareAgent
+        yield b2, ilxtr.implementationOf, ilxtr['ProgrammingLanguage/Python']
+        yield b2, ilxtr.versionString, rdflib.Literal(sys.version.replace('\n', ' '))
+        # NOTE: b1 doesn't quite work if we want endedAtTime
+        # because we don't actually know when the process will
+        # end IF we consider the end of the process to be the
+        # actual serialization of the file, in which case the
+        # prov has to be external to the file itself, or the
+        # last serialization cannot have bound provenance
+        # or some real identifier has to be used to allow
+        # a reference to the activity so that an end time can
+        # be logged in another system
 
         yield from ((ss, ps, os)
                     for s in g[:rdf.type:owl.ObjectProperty]
@@ -212,7 +234,8 @@ class Chebi(Ont):
 
 
 def main():
-    memoryCheck(7300000000)
+    from nifstd_tools.utils import memoryCheck
+    #memoryCheck(7300000000)
     build(Chebi, n_jobs=1)
     chebi_dead().write()
 
