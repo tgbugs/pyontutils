@@ -17,6 +17,7 @@ NIFRID = Namespace('http://uri.neuinfo.org/nif/nifstd/readable/')
 OBOANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/OBO_annotation_properties.owl#')
 BIRNANN = Namespace('http://ontology.neuinfo.org/NIF/Backend/BIRNLex_annotation_properties.owl#')
 oboInOwl = Namespace('http://www.geneontology.org/formats/oboInOwl#')
+prov = Namespace('http://www.w3.org/ns/prov#')
 #IAO = Namespace('http://purl.obolibrary.org/obo/IAO_')  # won't work because numbers ...
 
 DEBUG = False
@@ -230,6 +231,14 @@ class CustomTurtleSerializer(TurtleSerializer):
                       NIFRID.modifiedDate,
                       OBOANN.modifiedDate,
                       RDFS.isDefinedBy,
+                      prov.wasDerivedFrom,
+                      prov.qualifiedDerivation,
+                      prov.entity,
+                      prov.startedAtTime,
+                      prov.endedAtTime,
+                      prov.used,
+                      prov.generated,
+                      prov.wasAssociatedWith,
                      ]
 
     symmetric_predicates = [OWL.disjointWith,  # TODO source externally depending on resource semantics?
