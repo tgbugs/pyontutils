@@ -1,5 +1,5 @@
-#!/usr/bin/env pypy3
 #!/usr/bin/env python3.7
+#!/usr/bin/env pypy3
 import os
 import sys
 import gzip
