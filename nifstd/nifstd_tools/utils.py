@@ -1,10 +1,35 @@
+import psutil
+
+
+def memoryCheck(vms_max_kb):
+    """ Lookup vms_max using getCurrentVMSKb """
+    safety_factor = 1.2
+    vms_max = vms_max_kb
+    vms_gigs = vms_max / 1024 ** 2
+    buffer = safety_factor * vms_max
+    buffer_gigs = buffer / 1024 ** 2
+    vm = psutil.virtual_memory()
+    free_gigs = vm.available / 1024 ** 2
+    if vm.available < buffer:
+        raise MemoryError('Running this requires quite a bit of memory ~ '
+                          f'{vms_gigs:.2f}, you have {free_gigs:.2f} of the '
+                          f'{buffer_gigs:.2f} needed')
+
+
+def currentVMSKb():
+    p = psutil.Process(os.getpid())
+    return p.memory_info().vms
+
+
+from pyontutils.config import devconfig
+from pyontutils.core import OntId
+from pathlib import Path
+import requests
+from bs4 import BeautifulSoup
+from lxml import etree
+
+
 def ncbigenemapping(may_need_ncbigene_added):
-    from pyontutils.config import devconfig
-    from pyontutils.core import OntId
-    from pathlib import Path
-    import requests
-    from bs4 import BeautifulSoup
-    from lxml import etree
     #urlbase = 'https://www.ncbi.nlm.nih.gov/gene/?term=Mus+musculus+'
     urlbase = ('https://www.ncbi.nlm.nih.gov/gene?term='
                '({gene_name}[Gene%20Name])%20AND%20{taxon_suffix}[Taxonomy%20ID]&'

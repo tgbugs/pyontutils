@@ -66,7 +66,6 @@ from joblib import Parallel, delayed
 from ttlser import CustomTurtleSerializer
 from pyontutils.core import makeGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
-from pyontutils.utils_extra import memoryCheck
 from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
@@ -490,7 +489,6 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
     return sorted(triples)
 
 def loadall(git_local, repo_name, local=False, dobig=False):
-    memoryCheck(2665488384)
     local_base = jpth(git_local, repo_name)
     lb_ttl = os.path.realpath(jpth(local_base, 'ttl'))
 
@@ -731,6 +729,8 @@ def run(args):
     elif chain:
         itrips = local_imports(remote_base, local_base, ontologies, readonly=True)
     elif extra:
+        from nifstd_tools.utils import memoryCheck
+        memoryCheck(2665488384)
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
         ng_.add_known_namespaces('NIFRID')  # not officially in the curies yet...
