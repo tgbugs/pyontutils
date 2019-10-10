@@ -155,7 +155,10 @@ class Chebi(Ont):
         yield b1, rdf.type, prov.Activity
         yield b1, prov.startedAtTime, rdflib.Literal(self.start_time)
         yield b1, prov.used, rdflib.URIRef(self.wasGeneratedBy)
-        yield b1, prov.generated, self.versionIRI
+        #yield b1, prov.generated, self.versionIRI
+        # the fact that it isn't really possible to include a versionIRI
+        # reveals that trying to include bound prov data rapidly encounters
+        # significant issues
         yield b1, prov.wasAssociatedWith, b2
         yield b2, rdf.type, prov.SoftwareAgent
         yield b2, ilxtr.implementationOf, ilxtr['ProgrammingLanguage/Python']

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 from pyontutils.config import devconfig
 __doc__ = f"""Common commands for ontology processes.
@@ -27,7 +27,7 @@ Options:
     -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
     -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
     -f --fetch                      fetch catalog extras from their remote location
-    -d --debug                      call IPython embed when done
+    -d --debug                      drop into debugger when finished
     -v --verbose                    verbose output
     -w --write                      write devconfig file
 """
@@ -38,6 +38,7 @@ from random import shuffle
 from pathlib import Path
 import rdflib
 import requests
+import augpathlib as aug
 from joblib import Parallel, delayed
 from git.repo import Repo
 from pyontutils.core import makeGraph, createOntology
@@ -46,7 +47,6 @@ from pyontutils.ontload import loadall
 from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos
-from IPython import embed
 
 try:
     import hunspell
@@ -56,6 +56,7 @@ except ImportError:
 # common
 
 zoneoffset = strftime('%z', localtime())
+
 
 def do_file(filename, swap, *args):
     print('START', filename)
@@ -67,6 +68,7 @@ def do_file(filename, swap, *args):
     wg.write()
     print('END', filename)
     return reps
+
 
 def switchURIs(g, swap, *args):
     if len(args) > 1:  # FIXME hack!
@@ -89,6 +91,7 @@ def switchURIs(g, swap, *args):
                 prefs.add(pref)
                 addpg.add_known_namespaces(fragment_prefixes[pref])
     return reps
+
 
 class ontologySection:
     def __init__(self, filename):
@@ -178,7 +181,8 @@ def spell(filenames, debug=False):
 
     if debug:
         [print(_) for _ in sorted(collect)]
-        embed()
+        breakpoint()
+
 
 _bads = (',', ';', ':', '"', "'", '(', ')', '[',']','{','}',
          '.', '-', '/',  '\\t', '\\n', '\\', '%', '$', '*',
@@ -211,6 +215,7 @@ def get_spells(filename):
     check_spelling = {skos.definition, definition, rdfs.comment}
     return [(filename, s, p, o) for s, p, o in rdflib.Graph().parse(filename, format='turtle') if p in check_spelling]
 
+
 def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=devconfig.scigraph_api):
     # TODO use the api classes
     with open((Path(devconfig.resources) / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
@@ -218,9 +223,11 @@ def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=devcon
     print(urls)
     url_blaster(urls, rate, timeout, verbose, debug)
 
+
 def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     urls = list(set(u for r in Parallel(n_jobs=9)(delayed(furls)(f) for f in filenames) for u in r))
     url_blaster(urls, rate, timeout, verbose, debug)
+
 
 def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head', fail=False, negative=False):
     shuffle(urls)  # try to distribute timeout events evenly across workers
@@ -295,12 +302,13 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
                 legend()
             show()
         asyncVis(collector)
-        embed()
+        breakpoint()
 
 
 def furls(filename):
     return set(url for t in rdflib.Graph().parse(filename, format='turtle')
                for url in t if isinstance(url, rdflib.URIRef) and not url.startswith('file://'))
+
 
 def version_iris(*filenames, epoch=None):
     # TODO make sure that when we add versionIRIs the files we are adding them to are either unmodified or in the index
@@ -308,17 +316,19 @@ def version_iris(*filenames, epoch=None):
         epoch = int(time())
     Parallel(n_jobs=9)(delayed(version_iri)(f, epoch) for f in filenames)
 
+
 def version_iri(filename, epoch):
     with ontologySection(filename) as ont:
         add_version_iri(ont.graph, epoch)
 
+
 def make_version_iri_from_iri(iri, epoch):
-    base = os.path.dirname(iri)
-    basename = os.path.basename(iri)
-    name, ext = os.path.splitext(basename)
-    newiri = f'{base}/{name}/version/{epoch}/{basename}'
-    print(newiri)
-    return rdflib.URIRef(newiri)
+    pp = PurePath(iri)
+    vp = (pp.with_suffix('') / 'version' / str(epoch) / pp.stem).with_suffix(pp.suffix)
+    versionIRI = rdflib.URIRef(str(vp))
+    print(versionIRI)
+    return rdflib.URIRef(versionIRI)
+
 
 def add_version_iri(graph, epoch):
     """ Also remove the previous versionIRI if there was one."""
@@ -328,28 +338,42 @@ def add_version_iri(graph, epoch):
         t = ont, owl.versionIRI, make_version_iri_from_iri(ont, epoch)
         graph.add(t)
 
+
 def validate_new_version_iris(diffs):  # TODO
     for diff in diffs:
         diff.diff.split('\n')
 
+
 def make_git_commit_command(git_local, repo_name):
     # TODO also need to get the epochs for all unchanged files and make sure that the max of those is less than commit_epoch...
-    repo_path = os.path.join(git_local, repo_name)
-    print(repo_path)
-    repo = Repo(repo_path)
+    rp = RepoPath(git_local, repo_name)
+    repo = rp.repo
     diffs = repo.index.diff(None) + repo.index.diff(repo.head.commit)  # not staged + staged; cant use create_patch=True...
     filenames = [d.a_path for d in diffs if d.change_type == 'M']
     print(filenames)
     #validate_new_version_iris(something)  # TODO
     min_epoch = get_epoch(*filenames)
     other_filenames = [f for f in repo.git.ls_files().split('\n') if f not in filenames and f.endswith('.ttl')]
+    # search all other existing ttl files to find the maximum existing versionIRI
     max_old_epoch = get_epoch(*other_filenames, min_=False)
     print(min_epoch, max_old_epoch)
-    assert min_epoch - max_old_epoch >= 2, "NOPE"
+    minimum_time_difference_for_new_version = 2  # seconds
+    msg = ('you want a versionIRI less than {minimum_time_difference_for_new_version} '
+           'seconds newer than an existing versionIRI, slow down there bud')
+    # timeline ...old-1.|......old-2.|...<min-dt>...|.new-1..|.new-2..
+    #                  max_old_epoch                  min_epoch
+    assert minimum_time_difference_for_new_version <= min_epoch - max_old_epoch, msg
     commit_epoch = min_epoch
+
+    # XXX I know I have tested this, but it still seems wrong because the versionIRIs
+    # are all in epoch which *should* be in utc, but maybe the way git works it works out
+    # as expected ??
     print(f'git commit --date {commit_epoch}{zoneoffset}')
 
+
 def get_epoch(*filenames, min_=True):
+    """ get the minimum or maximum epoch from ithe versionIRI triples
+        of multiple files """
     comp_epoch = None
     for f in filenames:
         graph = ontologySection(f).graph
@@ -686,7 +710,7 @@ def backend_refactor(filenames, get_values):
     else:
         trips_lists = Parallel(n_jobs=9)(delayed(do_file)(f, swapBackend, ureps) for f in filenames)
     print('Done writing')
-    embed()
+    breakpoint()
 
 #
 # graph todo
@@ -795,12 +819,13 @@ def main():
     elif args['todo']:
         graph = loadall(git_local, repo_name, local=True)
         graph_todo(graph, curie_prefixes, uri_switch_values)
-        embed()
+        breakpoint()
     elif args['expand']:
         curies['NLXWIKI'] = 'http://legacy.neurolex.org/wiki/'
         for curie in args['<curie>']:
             prefix, suffix = curie.split(':')
             print(curies[prefix] + suffix)
+
 
 if __name__ == '__main__':
     main()

@@ -1294,7 +1294,7 @@ class makeGraph:
         else:
             return thing
 
-    def add_ont(self, ontid, label, shortName=None, comment=None, version=None, epoch=None):
+    def add_ont(self, ontid, label, shortName=None, comment=None, version=None):
         self.add_trip(ontid, rdf.type, owl.Ontology)
         self.add_trip(ontid, rdfs.label, label)
         if comment:
@@ -1303,11 +1303,6 @@ class makeGraph:
             self.add_trip(ontid, owl.versionInfo, version)
         if shortName:
             self.add_trip(ontid, skos.altLabel, shortName)
-        if epoch:
-            pp = PurePath(ontid)
-            vp = (pp.with_suffix('') / str(epoch) / pp.stem).with_suffix(pp.suffix)
-            versionIRI = rdflib.URIRef(str(vp))
-            self.add_trip(ontid, owl.versionIRI, versionIRI)
 
     def add_class(self, id_, subClassOf=None, synonyms=tuple(), label=None, autogen=False):
         self.add_trip(id_, rdf.type, owl.Class)
