@@ -93,8 +93,14 @@ build-release () {
 
     if [ -d ${repo} ]; then
         pushd ${repo}
+        rurl="$(git remote get-url origin)"
+        if [[ ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
+            git remote set-url origin https://github.com/${org}/${repo}.git
+            git fetch
+            git reset --hard origin/master
+        fi
         git clean -dfx
-        if [ -n ${CLONEFROM} ]; then
+        if [[ -n ${CLONEFROM} ]]; then
             git pull --force
         else
             git pull
