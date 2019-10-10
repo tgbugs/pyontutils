@@ -84,4 +84,4 @@ def ncbigenemapping(may_need_ncbigene_added):
     #wat.find_all('div', **{'class':'rprt-header'})
     #wat.find_all('div', **{'class':'ncbi-docsum'})
 
-    return mapping, to_add
+    return mapping, to_add, errors

@@ -511,7 +511,7 @@ def ncbigene():
             if not isinstance(p, LogicalPhenotype) and OntId(p.p).prefix != 'NCBIGene'}           
     may_need_ncbigene_added = [n for n, p in asdf.items() if not p]
 
-    mapping, to_add = ncbigenemapping(may_need_ncbigene_added)
+    mapping, to_add, errors = ncbigenemapping(may_need_ncbigene_added)
 
     if asdf is not None:
         replace = [print(n, '=', repr(p[0])) for n, p in asdf.items()
