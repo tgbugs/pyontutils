@@ -1577,7 +1577,6 @@ def createOntology(filename=    'temp-graph',
                    shortname=   None,  # 'TO'
                    comment=     None,  # 'This is a temporary ontology.'
                    version=     TODAY(),
-                   nowish=      utcnowtz(),
                    path=        'ttl/generated/',
                    local_base=  None,
                    #remote_base= 'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/master/',
@@ -1592,8 +1591,7 @@ def createOntology(filename=    'temp-graph',
         prefixes.update(makePrefixes('skos'))
     graph = makeGraph(filename, prefixes=prefixes, writeloc=writeloc)
     if ontid is not None:
-        epoch = round(nowish.timestamp())
-        graph.add_ont(ontid, name, shortname, comment, version, epoch)
+        graph.add_ont(ontid, name, shortname, comment, version)
         for import_ in imports:
             graph.add_trip(ontid, owl.imports, import_)
     return graph
