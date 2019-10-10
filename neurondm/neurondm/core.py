@@ -308,6 +308,12 @@ class LabelMaker:
     def hasComputedMolecularPhenotypeFromRNA(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
+    def hasComputedMolecularPhenotypeFromProtein(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasComputedPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
         yield from self._with_thing_located_in('projecting to', phenotypes)
     @od
