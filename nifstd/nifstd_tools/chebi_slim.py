@@ -190,9 +190,9 @@ class Chebi(Ont):
 
             yield s, p, o
 
-        return  # the implementation below is a much slower equivalent that does needless checks
+    def _old(self):
+        # the implementation below is a much slower equivalent that does needless checks
         # better simply to validate that there are no chebi ids that are missing an owl:Class
-
         #for id_ in sorted(set(ids_raw) | set((ug.g.namespace_manager.qname(_) for _ in mids))):
         print('more_ids', more_ids)
         for eid in sorted(ids | more_ids):
