@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.6
 import re
 import sys
 from decimal import Decimal
@@ -23,8 +22,10 @@ prov = Namespace('http://www.w3.org/ns/prov#')
 DEBUG = False
 SDEBUG = False
 
+
 def natsort(s, pat=re.compile(r'([0-9]+)')):
     return tuple(int(t) if t.isdigit() else t.lower() for t in pat.split(s))
+
 
 def make_litsort(sortkey=natsort):
     def litsort(l):
@@ -52,6 +53,7 @@ def make_litsort(sortkey=natsort):
 
     return litsort
 
+
 def qname_mp(self, uri):  # for monkey patching Graph
     try:
         prefix, namespace, name = self.compute_qname(uri, False)
@@ -62,6 +64,7 @@ def qname_mp(self, uri):  # for monkey patching Graph
         return name
     else:
         return ':'.join((prefix, name))
+
 
 def makeSymbolPrefixes(n):
     from collections import deque
@@ -87,6 +90,7 @@ def makeSymbolPrefixes(n):
         #print(' '.join('{:>3}'.format(_) for _ in (index, bd, br)), out)
         yield out
         count += 1
+
 
 class ListRanker:
     def __init__(self, node, serializer):
@@ -142,16 +146,18 @@ class ListRanker:
     def _bval_key(self, val, ranks):
         return ranks[val]
 
+
 SUBJECT = 0
 VERB = 1
 OBJECT = 2
+
 
 class CustomTurtleSerializer(TurtleSerializer):
     """ NIFSTD custom ttl serliziation. See ../docs/ttlser.md for more info. """
 
     roundtrip_prefixes = '',
     short_name = 'nifttl'
-    _name = 'pyontutils deterministic'
+    _name = 'ttlser deterministic'
     __version = 'v1.2.0'
     _newline = True
     _nl = '\n'
@@ -482,7 +488,7 @@ class CustomTurtleSerializer(TurtleSerializer):
                 # This is what we have to contend with here :/
                 # ro:proper_part_of oboInOwl:hasDefinition [ oboInOwl:hasDbXref [ ] ] .
                 sys.stderr.write(('\nWARNING: some node {bnode} that is an object '
-                                 'isnt really an object?\n').format(bnode=bnode))
+                                  'isnt really an object?\n').format(bnode=bnode))
                 sys.stderr.write(str(e) + '\n')
                 return -1
         else:  # every Literal and URIRef object has a global rank
@@ -842,7 +848,7 @@ class RacketTurtleSerializer(CustomTurtleSerializer):
 class CompactTurtleSerializer(CustomTurtleSerializer):
 
     short_name = 'cmpttl'
-    _name = 'pyontutils compact deterministic'
+    _name = 'ttlser compact deterministic'
     _newline = False
     _compact = True
 
@@ -894,7 +900,7 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
 class UncompactTurtleSerializer(CompactTurtleSerializer):
 
     short_name = 'uncmpttl'
-    _name = 'pyontutils uncompact deterministic'
+    _name = 'ttlser uncompact deterministic'
     _newline = False
     _compact = False
 
@@ -909,7 +915,7 @@ class DeterministicTurtleSerializer(UncompactTurtleSerializer):
 class SubClassOfTurtleSerializer(CustomTurtleSerializer):
 
     short_name = 'scottl'
-    _name = 'pyontutils subClassOf deterministic'
+    _name = 'ttlser subClassOf deterministic'
 
     def __init__(self, store):
         super(SubClassOfTurtleSerializer, self).__init__(store)
