@@ -15,7 +15,10 @@ __version__ = find_version('ttlser/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+ttlfmt_require = ['docopt',
+                  'joblib',     # FIXME better if this were optional? or just use a PPE?
+]
+tests_require = ['pytest', 'pytest-runner'] + ttlfmt_require
 setup(
     name='ttlser',
     version=__version__,
@@ -41,9 +44,7 @@ setup(
         'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
-                    'ttlfmt': ['docopt',
-                               'joblib',     # FIXME better if this were optional? or just use a PPE?
-                              ],
+                    'ttlfmt': ttlfmt_require,
                     'test': tests_require},
     entry_points={
         'console_scripts': [
