@@ -98,6 +98,10 @@ build-release () {
             git remote set-url origin https://github.com/${org}/${repo}.git
             git fetch
             git reset --hard origin/master
+        elif [[ -n ${CLONEFROM} ]]; then
+            git remote set-url origin ${CLONEFROM}
+            git fetch
+            git reset --hard origin/master
         fi
         git clean -dfx
         if [[ -n ${CLONEFROM} ]]; then
