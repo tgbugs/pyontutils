@@ -4,7 +4,7 @@ import os
 
 InterLexRemote = oq.plugin.get('InterLex')
 
-TEST = 'https://test.scicrunch.org/api/1/'
+TEST = 'https://test3.scicrunch.org/api/1/'
 PRODUCTION = 'https://scicrunch.org/api/1/'
 
 interlex_remote_production = InterLexRemote(
