@@ -551,12 +551,14 @@ def main():
     repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
              Repo(working_dir.as_posix()),
              *(Repo(Path(devconfig.git_local_base, repo_name).as_posix())
-               for repo_name in ('ontquery', 'sparc-curation')))
+               for repo_name in ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')))
 
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
     rskip = {'pyontutils': ('docs/NeuronLangExample.ipynb',  # exact skip due to moving file
                             'ilxutils/ilx-playground.ipynb'),
              'sparc-curation': ('README.md',),
+             'interlex': ('README.md',
+                          'docs/explaining.org',),
             }
 
     et = tuple()
@@ -591,6 +593,7 @@ def main():
     outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']))
 
     titles = {
+        ###
         'Components':'Components',
         'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  # 
         'ontquery/README.html':'Introduction to ontquery',
@@ -599,23 +602,33 @@ def main():
         'pyontutils/neurondm/README.html':'Introduction to neurondm',
         'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
 
+        ###
         'Developer docs':'Developer docs',
         'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
-        'NIF-Ontology/docs/development-setup.html':'Ontology development setup',  # HOWTO
+        'NIF-Ontology/docs/development-setup.html': 'Ontology development setup',  # HOWTO
         'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
-        'NIF-Ontology/docs/import-chain.html':'Ontology import chain',  # Documentation
+        'NIF-Ontology/docs/import-chain.html': 'Ontology import chain',  # Documentation
+
         'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
+        'interlex/alt/README.html': 'InterLex alternate resolver',  # TODO
+        'interlex/docs/setup.html': '',  # present but not visibly listed
+        'interlex/docs/implementation.html': '',  # present but not visibly listed
+
         'pyontutils/nifstd/scigraph/README.html': 'Ontology SciGraph setup',
         'sparc-curation/resources/scigraph/README.html': 'SPARC SciGraph setup',
+        'sparc-curation/resources/scigraph/data/build.html': 'SPARC SciGraph data setup',
+
         'pyontutils/docstrings.html':'Command line programs',
         'NIF-Ontology/docs/external-sources.html':'External sources for the ontology',  # Other
         'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
 
+        ###
         'Contributing':'Contributing',
         'pyontutils/nifstd/development/README.html':'Contributing to the ontology',
         'pyontutils/nifstd/development/community/README.html':'Contributing term lists to the ontology',
         'pyontutils/neurondm/neurondm/models/README.html':'Contributing neuron terminology to the ontology',
 
+        ###
         'Ontology content':'Ontology content',
         'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
         'pyontutils/nifstd/development/methods/README.html':'Methods and techniques',  # Ontology content
@@ -623,11 +636,14 @@ def main():
         'pyontutils/neurondm/docs/NeuronLangExample.html':'Neuron Lang examples',
         'pyontutils/neurondm/docs/neurons_notebook.html':'Neuron Lang setup',
 
+        ###
         'Specifications':'Specifications',
         'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
         'pyontutils/ttlser/docs/ttlser.html':'Deterministic turtle specification',
 
+        ###
         'Other':'Other',
+        'augpathlib/README.html': 'augpathlib readme',
         'pyontutils/htmlfn/README.html': 'htmlfn readme',
         'pyontutils/ttlser/README.html': 'ttlser readme',
         'sparc-curation/docs/background.html': '',  # present but not visibly listed
