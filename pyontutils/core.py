@@ -1883,27 +1883,23 @@ class Source(tuple):
             elif os.path.exists(cls.source):  # TODO no expanded stuff
                 cls.source = aug.RepoPath(cls.source)
 
-                try:
-                    file_commit = subprocess.check_output(['git', 'log', '-n', '1',
-                                                           '--pretty=format:%H', '--',
-                                                           cls.source],
-                                                          stderr=subprocess.DEVNULL).decode().rstrip()
+                file_commit = cls.source.latest_commit
+                if file_commit is not None:
                     cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
                                             + cls.source.repo_relative_path.as_posix())
                     cls._type = 'git-local'
-                except subprocess.CalledProcessError as e:
+                elif cls.source.repo is None:
                     cls._type = 'local'
-                    if e.args[0] == 128:  # hopefully this is the git status code for not a get repo...
-                        if not hasattr(cls, 'iri'):
-                            cls.iri = rdflib.URIRef(cls.source.as_uri())
-                        #else:
-                            #print(cls, 'already has an iri', cls.iri)
-                    else:
-                        raise e
+                    if not hasattr(cls, 'iri'):
+                        cls.iri = rdflib.URIRef(cls.source.as_uri())
+                    #else:
+                        #print(cls, 'already has an iri', cls.iri)
+                else:
+                    raise BaseException('I can\'t believe you\'ve done this.')
 
             else:
                 cls._type = None
-                print('Unknown source', cls.source)
+                log.warning('Unknown source {cls.source}')
 
             cls.raw = cls.loadData()
             cls._data = cls.validate(*cls.processData())
