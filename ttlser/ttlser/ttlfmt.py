@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 #!/usr/bin/env pypy3
 """Format ontology files using a uniform ttl serializer from rdflib
 
@@ -16,13 +16,15 @@ Options:
     -u --uncompact  use the uncompact turtle serializer
     -r --racket     use the racket turtle serializer
     -j --jsonld     use the rdflib-jsonld serializer
+
     -f --format=FM  specify the input format (used for pipes)
     -t --outfmt=F   specify the output format [default: nifttl]
+
     -s --slow       do not use a process pool
     -n --nowrite    parse the file and reserialize it but do not write changes
     -o --output=FI  serialize all input files to output file
     -p --profile    enable profiling on parsing and serialization
-    -d --debug      embed after parsing and before serialization
+    -d --debug      launch debugger after parsing and before serialization
 
 """
 import os
@@ -30,24 +32,18 @@ import sys
 from io import StringIO, TextIOWrapper
 from json.decoder import JSONDecodeError
 from concurrent.futures import ProcessPoolExecutor
-from docopt import docopt
+from docopt import docopt, parse_defaults
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
 
-profile_me = lambda f:f
+defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
+
 
 def getVersion():
     ttlser = rdflib.plugin.get('nifttl', rdflib.serializer.Serializer)
     ttlser_version = ttlser._CustomTurtleSerializer__version  # FIXME
-    version = "ttlfmt v0.0.1\nttlser {}".format(ttlser_version)
+    version = "ttlfmt v0.0.2\nttlser {}".format(ttlser_version)
     return version
-
-if __name__ == '__main__':
-    args = docopt(__doc__, version=getVersion())
-    if args['--debug']:
-        from IPython import embed
-    if args['--profile']:
-        from desc.prof import profile_me
 
 
 def prepare(filepath_or_stream, outpath=None, stream=False):
@@ -72,14 +68,17 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
                 format_guess=infmt_guess,
                 outpath=outpath)
 
+
 formats = ('ttl', 'json-ld', None, 'xml', 'n3', 'nt', 'nquads', 'trix',
            'trig', 'hturtle', 'rdfa', 'mdata', 'rdfa1.0', 'html')
-@profile_me
-def parse(source, format_guess, outpath, graph=None):
+
+
+def parse(source, format_guess, outpath, graph=None, infmt=None):
     graph = rdflib.Graph() if graph is None else graph
     errors = []
-    if args['--format']:
-        format_guess = args['--format']
+    if infmt:
+        format_guess = infmt
+
     for format in (format_guess, *(f for f in formats if f != format_guess)):
         # TODO we don't need to reset just saved parsed streams to the point where they fail?
         if type(source) == TextIOWrapper:  # stdin can't reset
@@ -91,22 +90,22 @@ def parse(source, format_guess, outpath, graph=None):
             return graph, outpath
         except (StopIteration, BadSyntax, JSONDecodeError) as e:
             print('PARSING FAILED', format, source)
-            if args['--format']:  # or format_guess != None:
+            if infmt:  # or format_guess != None:
                 raise e
             errors.append(e)
             if type(source) == StringIO:
                 source.seek(0)
     raise BadSyntax(str(errors)) from errors[0]
 
-@profile_me
-def serialize(graph, outpath):
-    if args['--debug']:
+
+def serialize(graph, outpath, outfmt=defaults['--outfmt'], debug=False, profile=False):
+    if debug:
         if type(outpath) == type(sys.stdout):
             pipe_debug(graph=graph, outpath=outpath)
         else:
-            from IPython import embed
-            embed()
-    elif args['--profile'] and type(outpath) != type(sys.stdout):
+            breakpoint()
+
+    elif profile and type(outpath) != type(sys.stdout):
         *_, _out = outpath.rsplit('/', 1)
         print('triple count for {_out}:'.format(_out=_out), len(graph))
 
@@ -115,7 +114,7 @@ def serialize(graph, outpath):
     else:
         kwargs = {}
     out = graph.serialize(format=outfmt, **kwargs)
-    if args['--nowrite']:
+    if profile:
         print('PARSING Success', outpath)
     elif not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
@@ -123,28 +122,51 @@ def serialize(graph, outpath):
         with open(outpath, 'wb') as f:
             f.write(out)
 
-def convert(file, outpath=None, stream=False):
+
+def convert(file, outpath=None, stream=False,
+            infmt=None, outfmt=defaults['--outfmt'],
+            debug=False, profile=False):
     if stream or type(file) == str:
         file_or_stream = file
-        serialize(*parse(**prepare(file_or_stream, outpath, stream)))
+        serialize(*parse(**prepare(file_or_stream, outpath, stream),
+                         infmt=infmt),
+                  debug=debug, profile=profile)
     else:
+        # file list is used here because this allows is to merge files
+        # without any additional code if we pass it more than one file
+        # in normal use a tuple with a single element is passed in
         file_list = file
         graph = rdflib.Graph()
-        [parse(**prepare(file, outpath), graph=graph) for file in file_list]
-        serialize(graph, outpath)
+        [parse(**prepare(file, outpath), graph=graph, infmt=infmt) for file in file_list]
+        serialize(graph, outpath, outfmt=outfmt,
+                  debug=debug, profile=profile)
+
 
 def pipe_debug(*args, source=None, graph=None, outpath=None, **kwargs):
     fn = sys.stdout.fileno()
     tty = os.ttyname(fn)
     with open(tty) as sys.stdin:
-        from IPython import embed
-        embed()
+        breakpoint()
+
 
 def main():
-    global args  # vastly preferable to classing everything since this way we can see
-    global outfmt  # in 2 lines what is actually shared instead of stuffed into self
-    if __name__ != '__main__':
-        args = docopt(__doc__, version=getVersion())
+    #global args  # vastly preferable to classing everything since this way we can see
+    #global outfmt  # in 2 lines what is actually shared instead of stuffed into self
+    args = docopt(__doc__, version=getVersion())
+
+    profile = args['--profile']
+    if profile:
+        try:
+            from desc.prof import profile_me
+            global parse
+            global serialize
+            parse = profile_me(parse)
+            serialize = profile_me(serialize)
+        except ImportError:
+            pass
+
+    infmt = args['--format']
+    debug = args['--debug']
 
     if args['--subclass']:
         outfmt = 'scottl'
@@ -167,17 +189,31 @@ def main():
         from ttlser.utils import readFromStdIn
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
-            convert(stdin, outpath, stream=True)
+            convert(stdin, outpath, stream=True,
+                    infmt=infmt, outfmt=outfmt,
+                    debug=debug, profile=profile)
         else:
             print(__doc__)
     else:
-        if outpath or args['--slow'] or len(files) == 1:
-            if len(files) == 1:
+        lenfiles = len(files)
+        if outpath or args['--slow'] or lenfiles == 1:
+            if lenfiles == 1:
                 files,  = files
-            convert(files, outpath=outpath)
+            convert(files, outpath=outpath,
+                    infmt=infmt, outfmt=outfmt,
+                    debug=debug, profile=profile)
         else:
             from joblib import Parallel, delayed
-            Parallel(n_jobs=9)(delayed(convert)(f) for f in files)
+            nj = 9
+            if lenfiles < nj:
+                nj = lenfiles
+
+            Parallel(n_jobs=nj, verbose=10)(delayed(convert)
+                                            (file,
+                                             infmt=infmt, outfmt=outfmt,
+                                             debug=debug, profile=profile)
+                                            for file in files)
+
 
 if __name__ == '__main__':
     main()
