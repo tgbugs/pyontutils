@@ -577,6 +577,8 @@ BLX:9 rdfs:subClassOf [ a owl:Restriction ;
             owl:onProperty other:b1 ;
             owl:someValuesFrom B:1 ] .
 
+c: C: xml: .
+
 <http://ihavenoqname.org/a> owl:disjointWith <http://ihavenoqname.org/b> .
 
 <http://ihavenoqname.org/c> owl:disjointWith [] .
