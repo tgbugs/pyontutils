@@ -23,15 +23,20 @@ Options:
     -p --prefix=P...    filter by prefix
 
 """
+import rdflib
+import htmlfn as hfn
 from docopt import docopt
-from pyontutils.core import qname
-from pyontutils.utils import TermColors as tc, getSourceLine
+from pathlib import Path
+from pyontutils.core import qname, OntId
+from pyontutils.utils import TermColors as tc, getSourceLine, UTCNOWISO
+from pyontutils.utils import Async, deferred
+from pyontutils.ontload import import_tree
 from pyontutils.scigraph import *
 from pyontutils.namespaces import PREFIXES
 
 
 def makeProv(pred, root, wgb):
-    return [titletag(f'Transitive closure of {root} under {pred}'),
+    return [hfn.titletag(f'Transitive closure of {root} under {pred}'),
             f'<meta name="date" content="{UTCNOWISO()}">',
             f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
@@ -93,7 +98,7 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         if not html:
             self.path = '/tmp/noimport.html'
         else:
-            self.name = Path(next(iter(tree.keys()))).name
+            self.name = Path(next(iter(self.tree.keys()))).name
             self.path = Path(location, f'{self.name}-import-closure.html')
 
         with open(self.path.as_posix(), 'wt') as f:

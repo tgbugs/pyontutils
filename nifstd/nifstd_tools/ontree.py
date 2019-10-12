@@ -34,15 +34,14 @@ import htmlfn as hfn
 import ontquery as oq
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app, send_from_directory
 from docopt import docopt, parse_defaults
-from htmlfn import htmldoc, titletag, atag, ptag, nbsp
+from htmlfn import htmldoc, atag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
-from pyontutils.utils import Async, deferred, UTCNOWISO
+from pyontutils.utils import Async, deferred
 from pyontutils.config import devconfig
-from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
 from pyontutils.sheets import Sheet
