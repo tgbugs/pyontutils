@@ -38,7 +38,7 @@ from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
-from pyontutils.scig import ImportChain
+from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
@@ -117,12 +117,6 @@ def graphFromGithub(link, verbose=False):
     if verbose:
         log.info(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
-
-
-def makeProv(pred, root, wgb):
-    return [titletag(f'Transitive closure of {root} under {pred}'),
-            f'<meta name="date" content="{UTCNOWISO()}">',
-            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
 
 def connectivity_query(relationship=None, start=None, end=None):
@@ -347,7 +341,7 @@ demo_examples = (
     ('Neuron connectivity', '/trees/sparc/demos/isan2019/neuron-connectivity'),
 )
 
-def server(api_key=None, verbose=False):
+def server(sgg, sgc, api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
     if working_dir:
@@ -369,7 +363,7 @@ def server(api_key=None, verbose=False):
     line = getSourceLine(render)
     wgb = wasGeneratedBy.format(line=line)
 
-    importchain = ImportChain(wasGeneratedBy=wasGeneratedBy)
+    importchain = ImportChain(sgg=sgg, sgc=sgc, wasGeneratedBy=wasGeneratedBy)
     importchain.make_html()  # run this once, restart services on a new release
 
     loop = asyncio.get_event_loop()
@@ -955,7 +949,7 @@ def main():
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)
 
-        app = server(verbose=verbose)
+        app = server(sgg, sgc, verbose=verbose)
         # app.debug = False
         # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # app.debug = True

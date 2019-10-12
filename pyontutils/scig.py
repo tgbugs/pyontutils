@@ -25,13 +25,19 @@ Options:
 """
 from docopt import docopt
 from pyontutils.core import qname
-from pyontutils.utils import TermColors as tc
+from pyontutils.utils import TermColors as tc, getSourceLine
 from pyontutils.scigraph import *
 from pyontutils.namespaces import PREFIXES
 
 
+def makeProv(pred, root, wgb):
+    return [titletag(f'Transitive closure of {root} under {pred}'),
+            f'<meta name="date" content="{UTCNOWISO()}">',
+            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
+
+
 class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
-    def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
+    def __init__(self, sgg, sgc, wasGeneratedBy='FIXME#L{line}'):
         self.sgg = sgg
         self.sgc = sgc
         self.wasGeneratedBy = wasGeneratedBy
