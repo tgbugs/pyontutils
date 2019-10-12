@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Compile all ontology related documentation.
 
 Usage:
@@ -17,13 +17,13 @@ import ast
 import shutil
 import subprocess
 from urllib.parse import urlparse
-from pathlib import Path
 from importlib import import_module
 import nbformat
 from git import Repo
 from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
+from augpathlib import RepoPath as Path
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, get_working_dir
 from pyontutils.config import devconfig, working_dir
@@ -36,12 +36,7 @@ try:
 except ImportError:
     hunspell = None
 
-from IPython import embed
-
 suffixFuncs = {}
-
-theme_repo = Path(devconfig.git_local_base, 'org-html-themes')
-theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
 
 
 def patch_theme_setup(theme):
@@ -51,7 +46,7 @@ def patch_theme_setup(theme):
         f.write(dat.replace('="styles/', '="/docs/styles/'))
 
 
-def makeOrgHeader(title, authors, date, theme=theme):
+def makeOrgHeader(title, authors, date, theme):
     header = (f'#+TITLE: {title}\n'
               f'#+AUTHOR: {authors}\n'
               f'#+DATE: {date}\n'
@@ -172,8 +167,13 @@ class FixLinks:
                     rest = ''
 
                 if not any(name.startswith(p) for p in ('$', '#')):
-                    rel = (self.current_file.parent /
-                           (name + suffix)).resolve().relative_to(self.working_dir)
+                    try:
+                        rel = (self.current_file.parent /
+                            (name + suffix)).resolve().relative_to(self.working_dir)
+                    except ValueError as e:
+                        log.error('path went outside current repo')
+                        return name + suffix + rest
+
                     if suffix in ('.md', '.org', '.ipynb'):
                         rel = rel.with_suffix('.html')
                     rel_path = rel.as_posix() + rest
@@ -253,7 +253,7 @@ def get__doc__s():
     return sorted(docs, reverse=True)
 
 
-def docstrings(theme=theme):
+def docstrings(theme):
     docstr_file = 'docstrings.org'
     docstr_path = working_dir / docstr_file
     title = 'Command line programs and libraries' 
@@ -346,7 +346,7 @@ def spell(filenames, debug=False):
 
     if debug:
         [print(_) for _ in sorted(collect)]
-        embed()
+        breakpoint()
 
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
@@ -369,9 +369,21 @@ def renderOrg(path, **kwargs):
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
         if b'#+SETUPFILE:' not in org_in:
+            theme = kwargs['theme']
             full_theme = theme.as_posix()
-            title_author_etc, rest = org_in.split(b'\n\n', 1)
-            org = title_author_etc + f'\n\n#+SETUPFILE: {full_theme}\n'.encode() + rest
+            try:
+                title_author_etc, rest = org_in.split(b'\n\n', 1)
+                org = (title_author_etc +
+                       f'\n\n#+SETUPFILE: {full_theme}\n'.encode() +
+                       rest)
+            except ValueError as e:
+                title = kwargs['title']
+                authors = kwargs['authors']
+                date = kwargs['date']
+                title_author_etc = makeOrgHeader(title, authors, date, theme)
+                org = title_author_etc.encode() + org_in
+                #raise ValueError(f'{orgfile!r}') from e
+
         else:
             org = org_in
 
@@ -413,6 +425,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)  # DUH
     authors = ', '.join(authors)
+    theme = kwargs['theme']
     header = makeOrgHeader(title, authors, date, theme)
     out, err = s.communicate()
     #print(out.decode())
@@ -447,7 +460,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     # debug
     #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(compile_org_file))
     #if b'[[img:' in out or not out or 'external-sources' in path.as_posix():
-        #embed()
+        #breakpoint()
     err = err.strip(b'Created img link.\n')  # FIMXE lack of distinc STDERR is very annoying
     if e.returncode:
         # if this happens direct stderr to stdout to get the message
@@ -517,17 +530,12 @@ def deadlink_check(html_file):
     """ TODO """
 
 
-def main():
-    from docopt import docopt
-    args = docopt(__doc__)
-
+def prepare_paths(BUILD, docs_dir, theme_repo, theme):
     patch_theme_setup(theme)
 
-    BUILD = working_dir / 'doc_build'
     if not BUILD.exists():
         BUILD.mkdir()
 
-    docs_dir = BUILD / 'docs'
     if not docs_dir.exists():
         docs_dir.mkdir()
 
@@ -538,9 +546,21 @@ def main():
 
     shutil.copytree(theme_styles_dir, doc_styles_dir)
 
-    docstring_kwargs = docstrings()
+
+def main():
+    from docopt import docopt
+    args = docopt(__doc__)
+
+    BUILD = working_dir / 'doc_build'
+    docs_dir = BUILD / 'docs'
+    theme_repo = Path(devconfig.git_local_base, 'org-html-themes')
+    theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
+    prepare_paths(BUILD, docs_dir, theme_repo, theme)
+
+    docstring_kwargs = docstrings(theme)
     wd_docs_kwargs = [docstring_kwargs]
     if args['--docstring-only']:
+        [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
         outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1)[0]
         if not outname.parent.exists():
             outname.parent.mkdir(parents=True)
@@ -548,18 +568,29 @@ def main():
             f.write(rendered)
         return
 
-    repos = (Repo(Path(devconfig.ontology_local_repo).resolve().as_posix()),
-             Repo(working_dir.as_posix()),
-             *(Repo(Path(devconfig.git_local_base, repo_name).as_posix())
-               for repo_name in ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')))
-
+    glb = Path(devconfig.git_local_base)
+    names = ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')
+    repo_paths = [Path(devconfig.ontology_local_repo),
+                  Path(working_dir)] + [glb / name for name in names]
+    repos = [p.repo for p in repo_paths]
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
-    rskip = {'pyontutils': ('docs/NeuronLangExample.ipynb',  # exact skip due to moving file
-                            'ilxutils/ilx-playground.ipynb'),
-             'sparc-curation': ('README.md',),
-             'interlex': ('README.md',
-                          'docs/explaining.org',),
-            }
+    rskip = {
+        'pyontutils': (
+            'docs/NeuronLangExample.ipynb',  # exact skip due to moving file
+            'ilxutils/ilx-playground.ipynb',
+            'nifstd/resources/sawg.org',  # published via another workflow
+        ),
+        'sparc-curation': (
+            'README.md',  # insubstantial
+            'docs/apinatomy.org',
+            'docs/developer-guide.org',
+            'docs/notes.org',
+            'test/apinatomy/README.org',
+        ),
+        'interlex': (
+            'README.md',  # insubstantial
+            'docs/explaining.org',  # not ready
+        ),}
 
     et = tuple()
     # TODO move this into run_all
@@ -575,6 +606,8 @@ def main():
                        #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
                        and noneMembers(f, *skip_folders)
                        and f not in rskip.get(Path(repo.working_dir).name, et)]
+
+    [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
 
     # doesn't work because read-from-minibuffer cannot block
     #compile_org_forever = ['emacs', '-q', '-l',
@@ -607,6 +640,7 @@ def main():
         'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
         'NIF-Ontology/docs/development-setup.html': 'Ontology development setup',  # HOWTO
         'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
+        'pyontutils/docs/release.html': 'Python library packaging and release process',
         'NIF-Ontology/docs/import-chain.html': 'Ontology import chain',  # Documentation
 
         'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
@@ -618,8 +652,8 @@ def main():
         'sparc-curation/resources/scigraph/README.html': 'SPARC SciGraph setup',
         'sparc-curation/resources/scigraph/data/build.html': 'SPARC SciGraph data setup',
 
-        'pyontutils/docstrings.html':'Command line programs',
-        'NIF-Ontology/docs/external-sources.html':'External sources for the ontology',  # Other
+        'pyontutils/docstrings.html': 'Command line programs',
+        'NIF-Ontology/docs/external-sources.html': 'External sources for the ontology',  # Other
         'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
 
         ###
