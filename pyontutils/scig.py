@@ -30,6 +30,70 @@ from pyontutils.scigraph import *
 from pyontutils.namespaces import PREFIXES
 
 
+class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
+    def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
+        self.sgg = sgg
+        self.sgc = sgc
+        self.wasGeneratedBy = wasGeneratedBy
+
+    def get_scigraph_onts(self):
+        self.results = self.sgc.execute('MATCH (n:Ontology) RETURN n', 1000)
+        return self.results
+
+    def get_itrips(self):
+        results = self.get_scigraph_onts()
+        iris = sorted(set(r['iri'] for r in results))
+        gin = lambda i: (i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
+                                                  direction='OUTGOING'))
+        nodes = Async()(deferred(gin)(i) for i in iris)
+        imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
+                         for e in n['edges']])
+                   for i, n in nodes if n]
+        self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
+                                 for i, *ts in imports if ts for t in ts))
+        return self.itrips
+
+    def make_import_chain(self, ontology='nif.ttl'):
+        itrips = self.get_itrips()
+        if not any(ontology in t[0] for t in itrips):
+            return None, None
+
+        ontologies = ontology,  # hack around bad code in ontload
+        import_graph = rdflib.Graph()
+        [import_graph.add(t) for t in itrips]
+
+        self.tree, self.extra = next(import_tree(import_graph, ontologies))
+        return self.tree, self.extra
+
+    def make_html(self):
+        line = getSourceLine(self.__class__)
+        wgb = self.wasGeneratedBy.format(line=line)
+        prov = makeProv('owl:imports', 'NIFTTL:nif.ttl', wgb)
+        tree, extra  = self.make_import_chain()
+        if tree is None:
+            html_all = ''
+        else:
+
+            html = extra.html.replace('NIFTTL:', '')
+            html_all = hfn.htmldoc(html,
+                                   other=prov,
+                                   styles=hfn.tree_styles)
+
+        self.html = html_all
+        return html_all
+
+    def write_import_chain(self, location='/tmp/'):
+        html = self.make_html()
+        if not html:
+            self.path = '/tmp/noimport.html'
+        else:
+            self.name = Path(next(iter(tree.keys()))).name
+            self.path = Path(location, f'{self.name}-import-closure.html')
+
+        with open(self.path.as_posix(), 'wt') as f:
+            f.write(html)  # much more readable
+
+
 class scigPrint:
 
     _shorten_ = {
@@ -261,11 +325,6 @@ def main():
         else:
             print('Error?')
     elif args['onts']:
-        from pathlib import Path
-        import rdflib
-        from nifstd_tools.ontree import ImportChain  # FIXME FIXME FIXME
-        from IPython import embed
-
         sgc = Cypher(server, verbose) if server else Cypher(verbose=verbose)
         sgg = Graph(server, verbose) if server else Graph(verbose=verbose)
         ic = ImportChain(sgg, sgc)

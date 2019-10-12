@@ -35,7 +35,7 @@ import os
 from glob import glob
 from time import time, localtime, strftime
 from random import shuffle
-from pathlib import Path
+from pathlib import Path, PurePath
 import rdflib
 import requests
 import augpathlib as aug

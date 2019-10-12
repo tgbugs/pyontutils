@@ -691,6 +691,8 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 class OntGraph(rdflib.Graph):
     """ A 5th try at making one of these. ConjunctiveGraph version? """
 
+    metadata_type_markers = [owl.Ontology]  # FIXME naming
+
     def __init__(self, *args, path=None, existing=None, namespace_manager=None, **kwargs):
         if existing:
             self.__dict__ == existing.__dict__
@@ -1053,7 +1055,8 @@ class OntGraph(rdflib.Graph):
     @property
     def boundIdentifiers(self):
         """ There should only be one but ... """
-        yield from self[:rdf.type:owl.Ontology]
+        for type in self.metadata_type_markers:
+            yield from self[:rdf.type:type]
 
     @property
     def boundIdentifier(self):
