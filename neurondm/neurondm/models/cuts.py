@@ -28,7 +28,7 @@ class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_i
             return super().__repr__()
 
 
-OntTerm.repr_level(verbose=False)
+OntTerm.set_repr_args('curie', 'label')
 
 
 class NeuronSWAN(NeuronEBM):
