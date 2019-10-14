@@ -1850,7 +1850,7 @@ class Source(tuple):
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
                     glb = aug.RepoPath(devconfig.git_local_base)
-                    cls.repo_path = glb.cone_path(cls.sourceRepo)
+                    cls.repo_path = glb.clone_path(cls.sourceRepo)
                     print(cls.repo_path)
                     # TODO branch and commit as usual
                     if not cls.repo_path.exists():
