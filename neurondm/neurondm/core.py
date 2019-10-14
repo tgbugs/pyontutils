@@ -1570,14 +1570,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abvs = resp['abbreviations']
             if not abvs:
                 abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
-                if (not abvs or 'Pva' in abvs) and resp['labels']:
-                    try:
-                        t = next(OntTerm.query(term=resp['labels'][0], prefix='NCBIGene'))  # worth a shot
-                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if 1 < len(_) < 5]
-                        if abvs:
-                            log.info(f'found shortnames for {pn} from NCBIGene {abvs}')
-                    except StopIteration:
-                        pass
         else:
             abvs = None
 
