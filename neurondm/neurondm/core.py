@@ -277,27 +277,32 @@ class LabelMaker:
                 prefix = ''
 
             yield prefix + next(self._default((phenotype,)))
+    def _molecular(self, phenotypes):
+        if self.local_conventions:
+            yield from self._plus_minus(phenotypes)
+        else:
+            yield from self._plus_minus([p.asIndicator() for p in phenotypes])
     @od
     def hasMolecularPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasNeurotransmitterPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasExpressionPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionConstitutivePhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionInducedPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasReporterExpressionPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasComputedMolecularPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
@@ -378,10 +383,13 @@ class OntTerm(bOntTerm, OntId):
 
         yield from inner(self)
 
-    def asPhenotype(self, predicate=None):
+    def asPhenotype(self, predicate=None, phenotype_class=None):
+        if phenotype_class is None:
+            phenotype_class = Phenotype
+
         if predicate is None and self.prefix == 'UBERON':  # FIXME layers
             predicate = ilxtr.hasSomaLocatedIn
-        return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
+        return phenotype_class(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
     def asIndicator(self):
         sco = self(rdfs.subClassOf, depth=2, asTerm=True)
@@ -1410,7 +1418,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         t = OntTerm(self.p)
         it = t.asIndicator()
         if t != it:
-            return it.asPhenotype(self.e)
+            return it.asPhenotype(self.e, phenotype_class=self.__class__)
         else:
             return self
 
@@ -1559,11 +1567,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         if pn.startswith('TEMPIND'):
             return next(self.in_graph[self.p:skos.hiddenLabel])
-
-        if self.e in self._molecular_predicates:
-            ind = self.asIndicator()
-            if ind != self:
-                return ind.pShortName
 
         if hasattr(self, '_label'):
             return self._label
@@ -1792,6 +1795,9 @@ class LogicalPhenotype(graphBase):
                 self._pesDict[pe.e] = [pe]
 
         self.labelPostRule = lambda l: l
+
+    def asIndicator(self):
+        return self.__class__(self.op, *[pe.asIndicator() for pe in self.pes])
 
     @property
     def p(self):
