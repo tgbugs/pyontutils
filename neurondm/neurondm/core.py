@@ -1560,6 +1560,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if pn.startswith('TEMPIND'):
             return next(self.in_graph[self.p:skos.hiddenLabel])
 
+        if self.e in self._molecular_predicates:
+            ind = self.asIndicator()
+            if ind != self:
+                return ind.pShortName
+
         if hasattr(self, '_label'):
             return self._label
 
@@ -1579,6 +1584,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 return 'Glu'  # FIXME tempfix for bad glutamate abv
             elif abv == '4Abu':  # sigh
                 return 'GABA'
+            elif abv == 'Pva':  # a very strange synonym on the PR entry for parvalbumin
+                return 'PV'
             else:
                 return abv
 
