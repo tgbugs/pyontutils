@@ -395,8 +395,12 @@ class OntTerm(bOntTerm, OntId):
         sco = self(rdfs.subClassOf, depth=2, asTerm=True)
         uris = [t.URIRef for t in sco]
         if ilxtr.PhenotypeIndicator in uris:
+            if uris[0] == ilxtr.PhenotypeIndicator:
+                return self
+
             ind = sco[0]
             # FIXME it being first is by accident of implementation only
+            log.debug(f'{sco} {self}')
             assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
             return ind
         else:
