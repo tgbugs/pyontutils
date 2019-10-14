@@ -4,7 +4,7 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
-from pyontutils.utils import byCol, relative_path, noneMembers, makeSimpleLogger
+from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
@@ -58,6 +58,9 @@ def make_contains_rules():
                           cholinergic=CUT.ACh,
                           glutamatergic=CUT.Glu,
                           serotonergic=CUT.Ser,
+                          Cholinergic=CUT.ACh,
+                          Glutamatergic=CUT.Glu,
+                          Serotonergic=CUT.Ser,
                           #principle=CUT.proj,  # NOTE this was a spelling error
                           projection=CUT.proj,
                           intrinsic=CUT.intrinsic,
@@ -309,7 +312,7 @@ def get_smatch(labels_set2):
             if match not in skip and pheno == OntTerm:
                 try:
                     t = OntTerm(term=match)
-                    print('WTF', match, t)
+                    log.debug(f'WTF {match} {t}')
                     if t.validated:
                         pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
                     else:
@@ -317,6 +320,7 @@ def get_smatch(labels_set2):
                 except oq.exceptions.NotFoundError:
                     skip.add(match)
                     pheno = None
+
             if match in skip and pheno == OntTerm:
                 pheno = None
 
@@ -496,15 +500,17 @@ def main():
     assert len(ids_updated_neurons) == len(raw_neurons)
     Neuron.write()
     Neuron.write_python()
-    progress = len(labels_set0), len(sns), len(sans), len(smatch), len(labels_set1), len(labels_set2), len(labels_set3)
-    print('\nProgress:\n'
-          f'total:            {progress[0]}\n'
-          f'from nlx:         {progress[1]}\n'
-          f'from basic:       {progress[2]}\n'
-          f'from match:       {progress[3]}\n'
-          f'TODO after nlx:   {progress[4]}\n'
-          f'TODO after basic: {progress[5]}\n'
-          f'TODO after match: {progress[6]}\n')
+    progress = (len(labels_set0), len(sns), len(sans), len(smatch),
+                len(labels_set1), len(labels_set2), len(labels_set3))
+    prog_report = ('\nProgress:\n'
+                   f'total:            {progress[0]}\n'
+                   f'from nlx:         {progress[1]}\n'
+                   f'from basic:       {progress[2]}\n'
+                   f'from match:       {progress[3]}\n'
+                   f'TODO after nlx:   {progress[4]}\n'
+                   f'TODO after basic: {progress[5]}\n'
+                   f'TODO after match: {progress[6]}\n')
+    print(prog_report)
     assert progress[0] == progress[1] + progress[4], 'neurolex does not add up'
     assert progress[4] == progress[2] + progress[5], 'basic does not add up'
 
@@ -530,7 +536,7 @@ def main():
     no_location = [n for n in Neuron.neurons()
                    if noneMembers((ilxtr.hasSomaLocatedIn,), *n.unique_predicates)]
     if __name__ == '__main__':
-        rows = export_for_review(config, unmapped, partial, nlx_missing)
+        review_rows = export_for_review(config, unmapped, partial, nlx_missing)
         breakpoint()
 
     return config, unmapped, partial, nlx_missing
