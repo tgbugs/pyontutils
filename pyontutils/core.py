@@ -1849,7 +1849,7 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = RepoPath(devconfig.git_local_base)
+                    glb = aug.RepoPath(devconfig.git_local_base)
                     cls.repo_path = glb.cone_path(cls.sourceRepo)
                     print(cls.repo_path)
                     # TODO branch and commit as usual
