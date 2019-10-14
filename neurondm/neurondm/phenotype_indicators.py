@@ -82,6 +82,9 @@ class PhenotypeIndicators(Sheet):
 
     @property
     def triples_data(self):
+        s = ilxtr.PhenotypeIndicator
+        yield s, a, owl.Class
+        yield s, rdfs.label, 'phenotype indicator'
         for thing in self.things:
             yield from self.indicator(thing)
 
