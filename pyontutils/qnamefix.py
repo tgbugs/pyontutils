@@ -60,7 +60,7 @@ def serialize(graph, outpath):
             ps.pop('NIFGA')
 
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
-    graph = cull_prefixes(graph, cleanup=pc)
+    graph = cull_prefixes(graph, cleanup=pc, prefixes=PREFIXES)
 
     out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
@@ -84,8 +84,9 @@ def main():
         for k in list(PREFIXES):
             PREFIXES.pop(k)
     else:
-        for x in args['--exclude'] and x in PREFIXES:
-            PREFIXES.pop(x)
+        for x in args['--exclude']:
+            if x in PREFIXES:
+                PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
