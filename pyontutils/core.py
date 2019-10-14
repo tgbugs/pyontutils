@@ -771,16 +771,12 @@ class OntGraph(rdflib.Graph):
 
     @property
     def ttl(self):
-        CustomTurtleSerializer.roundtrip_prefixes = False
         out = self.serialize(format='nifttl').decode()
-        CustomTurtleSerializer.roundtrip_prefixes = True
         return out
 
     @property
     def ttl_html(self):
-        CustomTurtleSerializer.roundtrip_prefixes = False
         out = self.serialize(format='htmlttl').decode()
-        CustomTurtleSerializer.roundtrip_prefixes = True
         return out
 
     def debug(self):
