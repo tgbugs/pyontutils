@@ -86,6 +86,12 @@ def UTCNOWISO(timespec='auto'):
     return isoformat(utcnowtz(), timespec=timespec)
 
 
+def logToFile(logger, path):
+    lfh = logging.FileHandler(path.as_posix())
+    lfh.setFormatter(logger.handlers[0].formatter)
+    logger.addHandler(logger)
+
+
 def makeSimpleLogger(name, color=True):
     # TODO use extra ...
 
