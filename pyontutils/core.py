@@ -25,7 +25,7 @@ from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
-from pyontutils.namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
+from pyontutils.namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov, oboInOwl
 from pyontutils.identity_bnode import IdentityBNode
 
 current_file = Path(__file__).absolute()
@@ -1648,6 +1648,31 @@ class IlxTerm(OntTerm):
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 
+def map_term(subject, label, prefix=tuple()):
+    def gn(t):
+        try:
+            return next(OntTerm.query(term=t, prefix=prefix))
+        except StopIteration:
+            return None
+
+    def term_source(t, test):
+        tl = t.lower()
+        if tl == test.label:
+            return 'label'
+        elif tl in test.synonyms:
+            return 'synonym'
+        else:
+            return 'WAT'
+
+    ot = gn(label)
+    if ot is not None:
+        source = term_source(label, ot)
+        t = subject, oboInOwl.hasDbXref, ot.URIRef
+        pairs = (ilxtr.termMatchType, rdflib.Literal(source)),
+        yield t
+        yield from cmb.annotations(pairs, *t)
+
+
 #
 # classes
 
@@ -1881,13 +1906,16 @@ class Source(tuple):
 
             elif os.path.exists(cls.source):  # TODO no expanded stuff
                 cls.source = aug.RepoPath(cls.source)
-
-                file_commit = cls.source.latest_commit
-                if file_commit is not None:
-                    cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
-                                            + cls.source.repo_relative_path.as_posix())
-                    cls._type = 'git-local'
-                elif cls.source.repo is None:
+                try:
+                    cls.source.repo
+                    file_commit = cls.source.latest_commit
+                    if file_commit is not None:
+                        cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
+                                                + cls.source.repo_relative_path.as_posix())
+                        cls._type = 'git-local'
+                    else:
+                        raise aug.exceptions.NotInRepoError('oops no commit?')
+                except aug.exceptions.NotInRepoError:
                     cls._type = 'local'
                     if not hasattr(cls, 'iri'):
                         cls.iri = rdflib.URIRef(cls.source.as_uri())

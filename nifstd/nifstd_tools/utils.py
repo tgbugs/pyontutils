@@ -1,4 +1,8 @@
 import psutil
+from pyontutils.utils import makeSimpleLogger
+
+log = makeSimpleLogger('nifstd-tools')
+logd = log.getChild('data')
 
 
 def memoryCheck(vms_max_kb):
@@ -21,8 +25,8 @@ def currentVMSKb():
     return p.memory_info().vms
 
 
-from pyontutils.config import devconfig
 from pyontutils.core import OntId
+from pyontutils.config import devconfig
 from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
