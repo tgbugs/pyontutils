@@ -9,11 +9,17 @@ from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID, NIFSTD
-from pyontutils.closed_namespaces import rdfs
+from pyontutils.namespaces import rdfs
 # import these last so that graphBase resets (sigh)
 from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
+
+try:
+    breakpoint
+except NameError:
+    # <=python-3.7
+    from IPython import embed as breakpoint
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -105,7 +111,6 @@ def make_contains_rules():
         #'Incertus nucleus': OntTerm,
         'Raphe nucleus medial': OntTerm,
         'double bouquet': BBP.DBC,
-        'Neocortex ': Regions.CTX,
         'Neocortex  ': Regions.CTX,
         'Cuneate nucleus  ': Phenotype('UBERON:0002045', ilxtr.hasSomaLocatedIn),
         'Interstitial nucleus of Cajal  ': Phenotype('UBERON:0002551', ilxtr.hasSomaLocatedIn),
@@ -179,6 +184,7 @@ def make_contains_rules():
 
 
 exact_rules = {'pyramidal cell': BBP.PC,
+               'Neocortex neuron': Regions.CTX,
                'Neocortex': Regions.CTX,
                'Thalamic': CUT.Thal,
                'principal cell': CUT.proj,
@@ -394,8 +400,7 @@ def get_smatch(labels_set2):
     return smatch, rem
 
 
-def ontneurons(branch=devconfig.neurons_branch):
-    remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+def ontneurons(remote):
     in_config = Config(imports=[remote.iri + 'ttl/NIF-Cell.ttl',
                                 remote.iri + 'ttl/NIF-Neuron-BrainRegion-Bridge.ttl',
                                 remote.iri + 'ttl/NIF-Neuron-NT-Bridge.ttl'])
@@ -415,12 +420,21 @@ def ontneurons(branch=devconfig.neurons_branch):
 
 
 def main():
-    ont_config = ontneurons()
+    branch=devconfig.neurons_branch
+    remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+
+    ont_config = ontneurons(remote)
     ont_neurons = ont_config.neurons()
+
     ndl_config = Config('neuron_data_lifted')
     ndl_config.load_existing()
     ndl_neurons = sorted(ndl_config.neurons())
-    bn_config = Config('basic-neurons')
+
+    bn_config = Config('basic-neurons',
+                       # FIXME this should probably be pulled in automatically
+                       # from the import statements, and it doesn't work even as is
+                       # also a chicken and an egg problem here
+                       imports=[remote.iri + 'ttl/generated/swanson.ttl'])
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
 

@@ -173,7 +173,8 @@ class LabelMaker:
             labels += ['neuron']
 
         if isinstance(neuron, NeuronEBM):
-            labels += [neuron._shortname]
+            if neuron._shortname:
+                labels += [neuron._shortname]
 
         return self.field_separator.join(labels)
 
@@ -338,12 +339,12 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
-        inp = self.predicate_namespace['InterneuronPhenotype']
+        interneuron_phenotype = self.predicate_namespace['InterneuronPhenotype']
         def suffix():
             # reminder that the phenotype loop variable below binds in here
             if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
                 return  'neuron'
-            elif phenotype.p == inp:
+            elif phenotype.p == interneuron_phenotype:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
@@ -351,9 +352,9 @@ class LabelMaker:
                 return 'neuron'
 
         # put interneuron last if it is in the phenotypes list
-        if inp in phenotypes:
-            phenotypes.remove(inp)
-            phenotypes = phenotypes + [inp]
+        if interneuron_phenotype in phenotypes:
+            phenotypes.remove(interneuron_phenotype)
+            phenotypes = phenotypes + [interneuron_phenotype]
 
         for phenotype in phenotypes:
             yield next(self._default((phenotype,))).lower()
@@ -1614,9 +1615,15 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return cls.__pcache[p]
 
     @property
+    @cacheout
     def pLongName(self):
         if hasattr(self, '_label'):
             return self._label
+
+        if hasattr(self, '_cache_pLongName'):
+            # FIXME hack for the fact that the rdflibLocal service
+            # changes from config to config
+            return self._cache_pLongName
 
         p = OntId(self.p)
 
