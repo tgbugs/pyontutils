@@ -105,6 +105,7 @@ def make_contains_rules():
         #'Incertus nucleus': OntTerm,
         'Raphe nucleus medial': OntTerm,
         'double bouquet': BBP.DBC,
+        'Neocortex ': Regions.CTX,
         'Neocortex  ': Regions.CTX,
         'Cuneate nucleus  ': Phenotype('UBERON:0002045', ilxtr.hasSomaLocatedIn),
         'Interstitial nucleus of Cajal  ': Phenotype('UBERON:0002551', ilxtr.hasSomaLocatedIn),
@@ -158,6 +159,7 @@ def make_contains_rules():
         'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').asPhenotype(),
         'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').asPhenotype(),
         'Medial amygdalar nucleus': OntTerm('UBERON:0002892', label='medial amygdaloid nucleus').asPhenotype(),  # a creeping madness issue
+        'Hippocampal formation': OntTerm('UBERON:0002421', label='hippocampal formation').asPhenotype(),
 
     })
 
@@ -392,7 +394,29 @@ def get_smatch(labels_set2):
     return smatch, rem
 
 
+def ontneurons(branch=devconfig.neurons_branch):
+    remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+    in_config = Config(imports=[remote.iri + 'ttl/NIF-Cell.ttl',
+                                remote.iri + 'ttl/NIF-Neuron-BrainRegion-Bridge.ttl',
+                                remote.iri + 'ttl/NIF-Neuron-NT-Bridge.ttl'])
+
+    eids = ['NLXNEURNT:090803',
+            'NLXNEURNT:090804',
+            'NLXNEURNT:090802',
+            'NLXNEURNT:090807',
+            'NLXCELL:0912004',
+            # 'NLXCELL:0912003',  # leaving out since mismatch in modelling and definition
+    ]
+
+    nrns = [NeuronCUT(id_=eid) for eid in eids]
+    inrns =  [n.asIndicator() for n in nrns]
+    ont_config = Config('ontology-neurons')
+    return ont_config
+
+
 def main():
+    ont_config = ontneurons()
+    ont_neurons = ont_config.neurons()
     ndl_config = Config('neuron_data_lifted')
     ndl_config.load_existing()
     ndl_neurons = sorted(ndl_config.neurons())
@@ -412,7 +436,7 @@ def main():
     ns = []
     skipped = []
     bamscok = (NIFSTD.BAMSC1125,)
-    for n in ndl_neurons:
+    for n in (ont_neurons + ndl_neurons):
         if n.id_ and 'BAMSC' in n.id_:
             if n.id_ not in bamscok:
                 skipped.append(n)
@@ -492,10 +516,16 @@ def main():
     Neuron.write()
     Neuron.write_python()
     raw_neurons = config.neurons()
+    # do this before creating the new config
+    # even though we are in theory tripling number of neurons in the current config graph
+    # it won't show up in the next config (and this is why we need to reengineer)
+    raw_neurons_ind_undep = [n.asUndeprecated().asIndicator() for n in raw_neurons]
     config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
                     prefixes={'swanr': swanr,
                               'SWAN': SWAN,
                               'SWAA': SWAA,})
+    # FIXME the call to asUndprecated currenlty triggers addition
+    # to the current config and output graph as a side effect (ick!)
     ids_updated_neurons = [n.asUndeprecated() for n in raw_neurons]
     assert len(ids_updated_neurons) == len(raw_neurons)
     Neuron.write()

@@ -793,7 +793,6 @@ class Config:
     def load_existing(self):
         """ advanced usage allows loading multiple sets of neurons and using a config
             object to keep track of the different graphs """
-        from pyontutils.closed_namespaces import rdfs
         # bag existing
 
         try:
@@ -1981,6 +1980,11 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         return super().__new__(cls)
 
+    def asIndicator(self):
+        newself = self.__class__(*[pe.asIndicator() for pe in self.pes])
+        newself.adopt_meta(self)
+        return newself
+
     def asUndeprecated(self):
         replace = {
             'NIFEXT:5': 'NCBIGene:12308',  # cr
@@ -2526,6 +2530,7 @@ class Neuron(NeuronBase):
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         embeddedKnownClasses = set()
 
+        c = None
         # support CUT pattern  # FIXME maybe reimplement this method on NeuronCUT?
         for c in self.Class.subClassOf:
             if c.identifier in self.knownClasses:
@@ -2590,6 +2595,12 @@ class Neuron(NeuronBase):
         def restriction_to_phenotype(r, ptype=type_):
             p = r.someValuesFrom  # if _NEURON_CLASS is not a owl:Class > problems
             e = r.onProperty
+
+            if e == NIFRID.has_neurotransmitter:  # FIXME the very old model
+                e = self._predicates.hasNeurotransmitterPhenotype
+            elif e == NIFRID.has_proper_part:  # FIXME the very old model
+                return old_nif_location(r, ptype=ptype)
+
             return ptype(p, e)
 
         def location_restriction_to_phenotype(r, ptype=type_):
@@ -2600,6 +2611,15 @@ class Neuron(NeuronBase):
                 p = bc.someValuesFrom.identifier
 
             e = r.onProperty
+            return ptype(p, e)
+
+        def old_nif_location(r, ptype=type_):
+            # not quite correct
+            e = self._predicates.hasSomaLocatedIn
+            bc = infixowl.CastClass(r.someValuesFrom, graph=self.in_graph)
+            cs = [infixowl.CastClass(e, graph=self.in_graph)
+                  for e in bc._rdfList if isinstance(e, rdflib.BNode)]
+            p = cs[0].someValuesFrom.identifier
             return ptype(p, e)
 
         def expand_restriction(r, pes, ptype=type_):

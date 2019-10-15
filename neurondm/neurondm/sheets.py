@@ -443,11 +443,19 @@ def main():
     config.write()
     #config = Config(config.name)
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
+
+
     from neurondm import Config, NeuronCUT
+    failed_config = Config('cut-failed')
+    [NeuronCUT(*pes, id_=id_) for id_, pes in sheet.failed.items()]
+    failed_config.write_python()
+    failed_config.write()
+
     release_config = Config('cut-release')
     [NeuronCUT(*n, id_=n.id_, label=n.origLabel, override=True).adopt_meta(n) for n in release]
     release_config.write_python()
     release_config.write()
+
     from neurondm.models.cuts import export_for_review
     review_rows = export_for_review(config, [], [], [], filename='cut-rt-test.csv', with_curies=True)
     from pyontutils.utils import byCol
