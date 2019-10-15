@@ -1628,7 +1628,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
         p = OntId(self.p)
 
-        r = OntTerm.query.services[0]  # rdflib local
+        r = OntTerm.query.services[0]  # rdflib local FIXME WARNING doing this can skip setup
         try:
             l = next(r.query(iri=p.iri)).label
             if l is None:
@@ -1639,6 +1639,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
             t = self._pterm(p)
             l = t.label
+        except AttributeError as e:
+            # FIXME ick
+            # we aren't set up yet and we are doing something stupid
+            OntTerm(p.iri)  # force setup
+            return self.pLongName
 
         if not l:
             return t.curie

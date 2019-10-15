@@ -365,7 +365,11 @@ def get_smatch(labels_set2):
             prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT', 'NLX')
             def key(ot):
                 ranked = ot.prefix in prefix_rank
-                arg = ot._query_result._QueryResult__query_args['term'].lower()
+                qargs = ot._query_result._QueryResult__query_args
+                if 'term' in qargs and qargs['term'] is not None:
+                    arg = qargs['term'].lower()
+                else:
+                    arg = None
                 return (not ranked,
                         prefix_rank.index(ot.prefix) if ranked else 0,
                         not (arg == ot.label.lower()))
@@ -433,12 +437,11 @@ def main():
                        imports=[remote.iri + 'ttl/generated/swanson.ttl'])
 
     RDFL = oq.plugin.get('rdflib')  # FIXME ick
-    OntTerm.query.ladd(RDFL(bn_config.core_graph, OntId))  # FIXME ick
+    rdfl = RDFL(bn_config.core_graph, OntId)
+    OntTerm.query.ladd(rdfl)  # FIXME ick
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
-    [n.label for n in bn_neurons]  # FIXME ick
-    OntTerm.query._services = OntTerm.query._services[1:]  # FIXME ick
-    breakpoint()
+    OntTerm.query._services = OntTerm.query._services[:-1]  # FIXME ick
 
     ndl_config = Config('neuron_data_lifted')
     ndl_config.load_existing()  # FIXME this is extremely slow
