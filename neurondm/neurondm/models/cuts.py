@@ -435,8 +435,13 @@ def main():
                        # from the import statements, and it doesn't work even as is
                        # also a chicken and an egg problem here
                        imports=[remote.iri + 'ttl/generated/swanson.ttl'])
+
+    RDFL = oq.plugin.get('rdflib')  # FIXME ick
+    OntTerm.query.ladd(RDFL(bn_config.core_graph(), OntId))  # FIXME ick
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
+    [n.label for n in bn_neurons]  # FIXME ick
+    OntTerm.query._services = OntTerm.query._services[1:]  # FIXME ick
 
     resources = Path(devconfig.resources)
     cutcsv = resources / 'common-usage-types.csv'
