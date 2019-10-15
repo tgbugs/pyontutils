@@ -486,6 +486,7 @@ def main():
     ans = []
     sans = set()
     missed = set()
+    _bl = []  # XXX NOTE THE CONTINUE BELOW
     for n in bn_neurons:
         continue  # we actually get all of these with uberon, will map between them later
         # can't use capitalize here because there are proper names that stay uppercase
@@ -504,6 +505,8 @@ def main():
 
         else:
             missed.add(l)
+
+        _bl.append(l)
 
     agen_missing = sagen - sans
     labels_set2 = labels_set1 - sans
