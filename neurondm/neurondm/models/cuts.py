@@ -426,10 +426,6 @@ def main():
     ont_config = ontneurons(remote)
     ont_neurons = ont_config.neurons()
 
-    ndl_config = Config('neuron_data_lifted')
-    ndl_config.load_existing()
-    ndl_neurons = sorted(ndl_config.neurons())
-
     bn_config = Config('basic-neurons',
                        # FIXME this should probably be pulled in automatically
                        # from the import statements, and it doesn't work even as is
@@ -437,11 +433,16 @@ def main():
                        imports=[remote.iri + 'ttl/generated/swanson.ttl'])
 
     RDFL = oq.plugin.get('rdflib')  # FIXME ick
-    OntTerm.query.ladd(RDFL(bn_config.core_graph(), OntId))  # FIXME ick
+    OntTerm.query.ladd(RDFL(bn_config.core_graph, OntId))  # FIXME ick
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
     [n.label for n in bn_neurons]  # FIXME ick
     OntTerm.query._services = OntTerm.query._services[1:]  # FIXME ick
+    breakpoint()
+
+    ndl_config = Config('neuron_data_lifted')
+    ndl_config.load_existing()  # FIXME this is extremely slow
+    ndl_neurons = sorted(ndl_config.neurons())
 
     resources = Path(devconfig.resources)
     cutcsv = resources / 'common-usage-types.csv'

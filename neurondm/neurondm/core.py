@@ -30,6 +30,7 @@ from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
+_SGR = oq.plugin.get('SciGraph')
 _done = set()
 
 __all__ = [
@@ -2478,8 +2479,8 @@ class Neuron(NeuronBase):
             self._predicates.hasMorphologicalPhenotype,
         ]
 
-        sgd = OntTerm.query.services[1].sgd
-        sgg = OntTerm.query.services[1].sgg
+        sgd = [s for s in OntTerm.query.services if isinstance(s, _SGR)][0].sgd
+        sgg = [s for s in OntTerm.query.services if isinstance(s, _SGR)][0].sgg
         def multiquery(term):
             blob = (sgd._get('GET',(sgd._basePath + '/dynamic/multiquery/{relationship}/{id}')
                              .format(relationship='BFO:0000050', id=term.curie)))
