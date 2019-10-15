@@ -590,7 +590,7 @@ def main():
     _ = [print(l) for l in unmapped]
 
     no_location = [n for n in Neuron.neurons()
-                   if noneMembers((ilxtr.hasSomaLocatedIn,), *n.unique_predicates)]
+                   if noneMembers((ilxtr.hasSomaLocatedIn, ilxtr.hasSomaLocatedInLayer), *n.unique_predicates)]
     if __name__ == '__main__':
         review_rows = export_for_review(config, unmapped, partial, nlx_missing)
         breakpoint()
