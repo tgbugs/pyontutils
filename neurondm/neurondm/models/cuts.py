@@ -398,8 +398,9 @@ def get_smatch(labels_set2):
             smatch.add(l)
             rem[l] = l_rem
 
-            with NeuronCUT(CUT.Mammalia):
-                NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+            if not l_rem:
+                with NeuronCUT(CUT.Mammalia):
+                    NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
 
     return smatch, rem
 
