@@ -1,4 +1,5 @@
 from pprint import pprint
+from functools import wraps
 import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
@@ -10,6 +11,11 @@ from pyontutils.utils import allMembers
 from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
 from neurondm.core import log, OntId, OntTerm
+
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 log.setLevel('WARNING')
 
@@ -445,9 +451,21 @@ def main():
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
 
 
+    # FIXME we need this because _bagExisting doesn't deal with unionOf right now
+    def trything(f):
+        @wraps(f)
+        def inner(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except:
+                pass
+
+        return inner
+
     from neurondm import Config, NeuronCUT
+
     failed_config = Config('cut-failed')
-    [NeuronCUT(*pes, id_=id_) for id_, pes in sheet.failed.items()]
+    [trything(NeuronCUT)(*pes, id_=id_) for id_, pes in sheet.failed.items()]
     failed_config.write_python()
     failed_config.write()
 
