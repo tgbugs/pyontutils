@@ -40,6 +40,7 @@ setup(
         'flask',
         'nbconvert',
         'nbformat',
+        'psutil',
         'pymysql',
         'pyontutils>=0.1.1',
         'robobrowser',

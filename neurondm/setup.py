@@ -38,6 +38,7 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
+        'hyputils>=0.0.3',
         'pyontutils>=0.1.2',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
