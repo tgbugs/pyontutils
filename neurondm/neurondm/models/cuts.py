@@ -396,11 +396,12 @@ def get_smatch(labels_set2):
 
         if pes:
             smatch.add(l)
-            rem[l] = l_rem
 
-            if not l_rem:
+            if not l_rem or l_rem in ('neuron', 'neurons', 'cell', 'Cell', 'positive cell'):
                 with NeuronCUT(CUT.Mammalia):
                     NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+            else:
+                rem[l] = l_rem
 
     return smatch, rem
 
