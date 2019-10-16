@@ -24,6 +24,7 @@ import os
 import re
 import asyncio
 import subprocess
+from copy import deepcopy
 from pprint import pprint
 from pathlib import Path
 from datetime import datetime
@@ -127,6 +128,41 @@ def connectivity_query(relationship=None, start=None, end=None):
     kwargs['json'] = j
     tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
     return htmldoc(extras.html, styles=hfn.tree_styles)
+
+
+def cleanBad(json):
+    deep = deepcopy(json)
+    bads = 'fma:continuous_with',
+    edges = deep['edges']
+    putative_bads = [e for e in edges if e['pred'] in bads]
+    skip = []
+    for e in tuple(putative_bads):
+        if e not in skip:
+            rev = {'sub': e['obj'], 'pred': e['pred'], 'obj':e['sub'], 'meta': e['meta']}
+            if rev in putative_bads:
+                skip.append(rev)
+                edges.remove(e)
+
+    remed = []
+    for e in skip:
+        for ae in tuple(edges):
+            if ae not in remed and ae != e:
+                if (
+                        e['sub'] == ae['sub'] or
+                        e['obj'] == ae['obj'] or
+                        e['obj'] == ae['sub'] or
+                        e['sub'] == ae['obj']
+                ):
+                    # there is already another edge that pulls in one of the
+                    # members of this edge so discard the bad edge
+                    edges.remove(e)
+                    remed.append(e)
+                    break
+
+    log.debug(len(edges))
+    log.debug(len(json['edges']))
+    return deep
+
 
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
            restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False,):
@@ -588,7 +624,7 @@ def server(sgg, sgc, api_key=None, verbose=False):
                 '<meta name="representation" content="SciGraph">',
                 f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
 
-        kwargs = {'json': j,
+        kwargs = {'json': cleanBad(j),
                   'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
@@ -635,7 +671,7 @@ def server(sgg, sgc, api_key=None, verbose=False):
                 '<meta name="representation" content="SciGraph">',
                 f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{sgd._last_url}">']
 
-        kwargs = {'json': j,
+        kwargs = {'json': cleanBad(j),
                   'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
@@ -942,6 +978,9 @@ def main():
     sgv._verbose = verbose
     sgc._verbose = verbose
     sgd._verbose = verbose
+
+    if verbose:
+        log.setLevel('DEBUG')
 
     if args['--test']:
         test()
