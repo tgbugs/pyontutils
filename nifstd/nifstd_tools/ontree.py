@@ -40,7 +40,7 @@ from pyontutils import scigraph
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
-from pyontutils.utils import Async, deferred
+from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs
@@ -582,10 +582,17 @@ def server(sgg, sgc, api_key=None, verbose=False):
             log.error(pprint(j))
             return abort(400)
 
-        kwargs = {'json': j}
+        prov = [hfn.titletag(f'Dynamic query result for {path}'),
+                f'<meta name="date" content="{UTCNOWISO()}">',
+                f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+                '<meta name="representation" content="SciGraph">',
+                f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
+
+        kwargs = {'json': j,
+                  'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
-        print(tree)
+        #print(tree)
         if format_ is not None:
             if format_ == 'table':
                 #breakpoint()
@@ -600,7 +607,9 @@ def server(sgg, sgc, api_key=None, verbose=False):
                 return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
                                styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html, styles=hfn.tree_styles)
+        return htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
@@ -620,10 +629,17 @@ def server(sgg, sgc, api_key=None, verbose=False):
             log.error(pprint(j))
             return abort(400)
 
-        kwargs = {'json': j}
+        prov = [hfn.titletag(f'Dynamic query result for {path}'),
+                f'<meta name="date" content="{UTCNOWISO()}">',
+                f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+                '<meta name="representation" content="SciGraph">',
+                f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{sgd._last_url}">']
+
+        kwargs = {'json': j,
+                  'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
-        print(tree)
+        #print(tree)
         if format_ is not None:
             if format_ == 'table':
                 #breakpoint()
@@ -638,7 +654,9 @@ def server(sgg, sgc, api_key=None, verbose=False):
                 return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
                                styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html, styles=hfn.tree_styles)
+        return htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
     def route_import_chain():
