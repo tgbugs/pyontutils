@@ -438,12 +438,12 @@ def main():
                        # also a chicken and an egg problem here
                        imports=[remote.iri + 'ttl/generated/swanson.ttl'])
 
-    RDFL = oq.plugin.get('rdflib')  # FIXME ick
-    rdfl = RDFL(bn_config.core_graph, OntId)
-    OntTerm.query.ladd(rdfl)  # FIXME ick
+    #RDFL = oq.plugin.get('rdflib')  # FIXME ick
+    #rdfl = RDFL(bn_config.core_graph, OntId)
+    #OntTerm.query.ladd(rdfl)  # FIXME ick
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
-    OntTerm.query._services = OntTerm.query._services[:-1]  # FIXME ick
+    #OntTerm.query._services = OntTerm.query._services[:-1]  # FIXME ick
 
     ndl_config = Config('neuron_data_lifted')
     ndl_config.load_existing()  # FIXME this is extremely slow
