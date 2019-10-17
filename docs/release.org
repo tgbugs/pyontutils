@@ -96,19 +96,12 @@ build-release () {
         rurl="$(git remote get-url origin)"
         if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
             git remote set-url origin https://github.com/${org}/${repo}.git
-            git fetch
-            git reset --hard origin/master
         elif [[ -n ${CLONEFROM} && $rurl =~ "https://" || $rurl =~ "git@" ]]; then
             git remote set-url origin ${CLONEFROM}
-            git fetch
-            git reset --hard origin/master
         fi
+        git fetch
+        git reset --hard origin/master
         git clean -dfx
-        if [[ -n ${CLONEFROM} ]]; then
-            git pull --force
-        else
-            git pull
-        fi
         popd
     else
         if [[ -n ${CLONEFROM} ]]; then
@@ -295,7 +288,15 @@ Tangle this block so you can source [[../bin/python-release-functions.sh]]
 <<final-release>>
 #+END_SRC
 
-After defining those functions (or sourcing the tangled file (TODO))
+You can also tangle this whole file by running the following from
+the working directory of this repository. You can then source the
+tangled file directly.
+#+begin_src bash :eval never
+emacs --batch -l org --eval '(org-babel-tangle-file "docs/release.org")'
+source bin/python-release-functions.sh
+#+end_src
+
+After defining those functions or sourcing the tangled file
 you can use them as we do in the example below.
 
 *WHEN YOU PUSH TO TEST*
