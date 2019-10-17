@@ -42,7 +42,7 @@ setup(
         'nbformat',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.1',
+        'pyontutils>=0.1.3',
         'robobrowser',
         'sqlalchemy',
     ],
