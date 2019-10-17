@@ -77,6 +77,8 @@ build-release () {
     local folder=${POSITIONAL[2]}
     local packagename=${POSITIONAL[3]}
     local version=${POSITIONAL[4]}
+    local REST=${POSITIONAL[@]:5}  # remaining position passed along
+    echo $REST
 
     if [[ ${folder} == ${packagename} ]]; then
         local tag=${version}
@@ -92,10 +94,12 @@ build-release () {
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
+    TEST_PATH=${BASE_PATH}/release-testing/${packagename}  # allow multiple builds at the same time
+
     if [ -d ${repo} ]; then
-        rm ${BASE_PATH}/release-testing -r
+        rm -r ${TEST_PATH}
     fi
-    mkdir ${BASE_PATH}/release-testing
+    mkdir -p ${TEST_PATH}
 
     if [ -d ${repo} ]; then
         pushd ${repo}
@@ -118,7 +122,7 @@ build-release () {
     fi
     # TODO __version__ check against ${version}
 
-    pushd ${folder}  # or subfolder
+    pushd ${folder} || return 1  # or subfolder
 
     if [[ $(git tag -l ${tag}) ]]; then
         echo "${tag} has already been released for this repo!"
@@ -131,12 +135,12 @@ build-release () {
         git checkout -f master  # just like clean -dfx this should wipe changes just in case
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
-    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $@  # pass $@ along eg for --release
+    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
     PYTHONPATH=''
     echo PYTHONPATH should be empty? '->' ${PYTHONPATH}
-    cp dist/${packagename}-${version}* ${BASE_PATH}/release-testing
+    cp dist/${packagename}-${version}* ${TEST_PATH}
 
-    pushd ${BASE_PATH}/release-testing
+    pushd ${TEST_PATH}
     tar xvzf ${packagename}-${version}.tar.gz
     if [ $? -ne 0 ]; then
         echo "tar failed, probably due to a version mismatch"
