@@ -78,11 +78,17 @@ build-release () {
     local packagename=${POSITIONAL[3]}
     local version=${POSITIONAL[4]}
 
+    if [[ ${folder} == ${packagename} ]]; then
+        local tag=${version}
+    else
+        local tag=${packagename}-${version}
+    fi
+
     # TODO make sure no vars are null
 
     : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
 
-    echo $org $repo $folder $packagename $version $CLONEFROM $BASE_PATH
+    echo $org $repo $folder $packagename $version $tag $CLONEFROM $BASE_PATH
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
@@ -113,6 +119,12 @@ build-release () {
     # TODO __version__ check against ${version}
 
     pushd ${folder}  # or subfolder
+
+    if [[ $(git tag -l ${tag}) ]]; then
+        echo "${tag} has already been released for this repo!"
+        return 1
+    fi
+
     if [[ -n ${BRANCH} ]]; then
         git checkout ${BRANCH}
     else
@@ -126,7 +138,12 @@ build-release () {
 
     pushd ${BASE_PATH}/release-testing
     tar xvzf ${packagename}-${version}.tar.gz
-
+    if [ $? -ne 0 ]; then
+        echo "tar failed, probably due to a version mismatch"
+        popd
+        popd
+        return 1
+    fi
     pushd ${packagename}-${version}
     pipenv --rm  # clean any existing env
     pipenv run pip install -e .[test]   # .[services] for ontquery full install
