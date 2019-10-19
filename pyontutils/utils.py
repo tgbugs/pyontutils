@@ -202,10 +202,14 @@ def stack_magic(stack):
 
 
 def subclasses(start):
-    for sc in start.__subclasses__():
-        if sc is not None:
-            yield sc
-            yield from subclasses(sc)
+    try:
+        for sc in start.__subclasses__():
+            if sc is not None:
+                yield sc
+                yield from subclasses(sc)
+    except TypeError as e:
+        log.exception(e)
+
 
 
 def getSourceLine(cls):
