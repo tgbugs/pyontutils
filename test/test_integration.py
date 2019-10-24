@@ -71,6 +71,7 @@ mains = {'scigraph':None,
          ],
 'qnamefix':[['qnamefix', ban],
             ['qnamefix', mba],
+            ['qnamefix', '-x', 'skos', mba],
             #[zap]
            ],
 'necromancy':['necromancy', ban],

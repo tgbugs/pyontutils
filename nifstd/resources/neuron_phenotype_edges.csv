@@ -5,6 +5,7 @@ hasPhenotypeModifier,,,"Expresses a restriction that modifies all phenotypes ass
 #intrinsic phenotypes,,,,,,,,
 ,,,,,,,,
 hasClassificationPhenotype,,,Expresses a relationship between a neuron type and an opaque symbol that is used by experts to distinguish subtypes.,,Use this when numbers or letters have been assigned to disambiguate naming.,hasPhenotype,,"asymmetric, irreflexive"
+hasComputedPhenotype,,,Expresses a relationship between a neuron type and a type computed from some combination of primary data types.,,,hasPhenotype,,"asymmetric, irreflexive"
 ,,,,,,,,
 #hasIntrinsicPhenotype,,,,,,hasPhenotype,,"asymmetric, irreflexive"
 hasMolecularPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,"Expresses a relationship between a neuron type and a molecule type, a gene type, or a gene product type.",,This can be used for detection of the molecule or gene by any means.,hasPhenotype,,"asymmetric, irreflexive"
@@ -17,6 +18,10 @@ hasDriverExpressionConstitutivePhenotype,,,,,,hasDriverExpressionPhenotype,,"asy
 hasDriverExpressionInducedPhenotype,,,,,Use for things like cre-ER,hasDriverExpressionPhenotype,,"asymmetric, irreflexive"
 hasExpressionPhenotype,"MolecularConstituents, Neurotransmitter/NeurotransmitterReceptors",,Expresses a relationship between a neuron type and a gene type including any gene products.,,"This may also include the products of molecular synthesis pathways that are indirectly supported by genes, however it seems likely that that relationship should not be though of as an expression phenotype.",hasMolecularPhenotype,,"asymmetric, irreflexive"
 hasNeurotransmitterPhenotype,Neurotransmitter,,,,"includes small molecule and peptide, not entirely sure if we need this one",hasMolecularPhenotype,,"asymmetric, irreflexive"
+hasComputedMolecularPhenotype,,,Expresses a relationship between a neuron type and a type computed from only molecular data.,,,"hasComputedPhenotype,hasMolecularPhenotype",,"asymmetric, irreflexive"
+hasComputedMolecularPhenotypeFromDNA,,,Expresses a relationship between a neuron type and a type computed from only DNA data (e.g. epigenetics data).,,,hasComputedMolecularPhenotype,,"asymmetric, irreflexive"
+hasComputedMolecularPhenotypeFromRNA,,,Expresses a relationship between a neuron type and a type computed from only RNA expression data.,,,hasComputedMolecularPhenotype,,"asymmetric, irreflexive"
+hasComputedMolecularPhenotypeFromProtein,,,Expresses a relationship between a neuron type and a type computed from only Protein expression data.,,,hasComputedMolecularPhenotype,,"asymmetric, irreflexive"
 hasMorphologicalPhenotype,"SpineDensityOnDendrites, CellSomaSize, CellSomaShape",,Expresses a relationship between a neuron type and a morphological phenotype concept. This should be used when a neuron type is described using a high level morphological concept class.,,,hasPhenotype,,"asymmetric, irreflexive"
 hasAxonMorphologicalPhenotype,,,,,not clear whether this should be subPropertyOf hasMorphologicalPhenotype,hasMorphologicalPhenotype,,"asymmetric, irreflexive"
 hasDendriteMorphologicalPhenotype,,,Expresses a relationship between a neuron and a dendrite phenotype. This should be used when a neuron type is described by the morphology of its dendrites.,,not clear whether this should be subPropertyOf hasMorphologicalPhenotype,hasMorphologicalPhenotype,,"asymmetric, irreflexive"

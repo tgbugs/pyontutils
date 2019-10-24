@@ -24,6 +24,7 @@ import os
 import re
 import asyncio
 import subprocess
+from copy import deepcopy
 from pprint import pprint
 from pathlib import Path
 from datetime import datetime
@@ -34,14 +35,14 @@ import htmlfn as hfn
 import ontquery as oq
 from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app, send_from_directory
 from docopt import docopt, parse_defaults
-from htmlfn import htmldoc, titletag, atag, ptag, nbsp
+from htmlfn import htmldoc, atag, nbsp
 from htmlfn import render_table, table_style
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph, ixr
+from pyontutils.core import makeGraph, qname, OntId, OntTerm
+from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import devconfig
-from pyontutils.ontload import import_tree
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
@@ -247,82 +248,12 @@ class ImportOntologyFromRawYMLDict:
         self.graph = g
 
 
-class ImportChain:  # TODO abstract this a bit to support other onts, move back to pyontutils
-    def __init__(self, sgg=sgg, sgc=sgc, wasGeneratedBy='FIXME#L{line}'):
-        self.sgg = sgg
-        self.sgc = sgc
-        self.wasGeneratedBy = wasGeneratedBy
-
-    def get_scigraph_onts(self):
-        self.results = self.sgc.execute('MATCH (n:Ontology) RETURN n', 1000)
-        return self.results
-
-    def get_itrips(self):
-        results = self.get_scigraph_onts()
-        iris = sorted(set(r['iri'] for r in results))
-        gin = lambda i: (i, self.sgg.getNeighbors(i, relationshipType='isDefinedBy',
-                                                  direction='OUTGOING'))
-        nodes = Async()(deferred(gin)(i) for i in iris)
-        imports = [(i, *[(e['obj'], 'owl:imports', e['sub'])
-                         for e in n['edges']])
-                   for i, n in nodes if n]
-        self.itrips = sorted(set(tuple(rdflib.URIRef(OntId(e).iri) for e in t)
-                                 for i, *ts in imports if ts for t in ts))
-        return self.itrips
-
-    def make_import_chain(self, ontology='nif.ttl'):
-        itrips = self.get_itrips()
-        if not any(ontology in t[0] for t in itrips):
-            return None, None
-
-        ontologies = ontology,  # hack around bad code in ontload
-        import_graph = rdflib.Graph()
-        [import_graph.add(t) for t in itrips]
-
-        self.tree, self.extra = next(import_tree(import_graph, ontologies))
-        return self.tree, self.extra
-
-    def make_html(self):
-        line = getSourceLine(self.__class__)
-        wgb = self.wasGeneratedBy.format(line=line)
-        prov = makeProv('owl:imports', 'NIFTTL:nif.ttl', wgb)
-        tree, extra  = self.make_import_chain()
-        if tree is None:
-            html_all = ''
-        else:
-
-            html = extra.html.replace('NIFTTL:', '')
-            html_all = hfn.htmldoc(html,
-                                   other=prov,
-                                   styles=hfn.tree_styles)
-
-        self.html = html_all
-        return html_all
-
-    def write_import_chain(self, location='/tmp/'):
-        html = self.make_html()
-        if not html:
-            self.path = '/tmp/noimport.html'
-        else:
-            self.name = Path(next(iter(tree.keys()))).name
-            self.path = Path(location, f'{self.name}-import-closure.html')
-
-        with open(self.path.as_posix(), 'wt') as f:
-            f.write(html)  # much more readable
-
-
 def graphFromGithub(link, verbose=False):
     # mmmm no validation
     # also caching probably
     if verbose:
         log.info(link)
     return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
-
-
-def makeProv(pred, root, wgb):
-    return [titletag(f'Transitive closure of {root} under {pred}'),
-            f'<meta name="date" content="{UTCNOWISO()}">',
-            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">']
 
 
 def connectivity_query(relationship=None, start=None, end=None):
@@ -334,6 +265,41 @@ def connectivity_query(relationship=None, start=None, end=None):
     kwargs['json'] = j
     tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
     return htmldoc(extras.html, styles=hfn.tree_styles)
+
+
+def cleanBad(json):
+    deep = deepcopy(json)
+    bads = 'fma:continuous_with',
+    edges = deep['edges']
+    putative_bads = [e for e in edges if e['pred'] in bads]
+    skip = []
+    for e in tuple(putative_bads):
+        if e not in skip:
+            rev = {'sub': e['obj'], 'pred': e['pred'], 'obj':e['sub'], 'meta': e['meta']}
+            if rev in putative_bads:
+                skip.append(rev)
+                edges.remove(e)
+
+    remed = []
+    for e in skip:
+        for ae in tuple(edges):
+            if ae not in remed and ae != e:
+                if (
+                        e['sub'] == ae['sub'] or
+                        e['obj'] == ae['obj'] or
+                        e['obj'] == ae['sub'] or
+                        e['sub'] == ae['obj']
+                ):
+                    # there is already another edge that pulls in one of the
+                    # members of this edge so discard the bad edge
+                    edges.remove(e)
+                    remed.append(e)
+                    break
+
+    log.debug(len(edges))
+    log.debug(len(json['edges']))
+    return deep
+
 
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
            restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False,):
@@ -547,7 +513,7 @@ demo_examples = (
     ('Neuron connectivity', '/trees/sparc/demos/isan2019/neuron-connectivity'),
 )
 
-def server(api_key=None, verbose=False):
+def server(sgg, sgc, api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
     if working_dir:
@@ -569,7 +535,7 @@ def server(api_key=None, verbose=False):
     line = getSourceLine(render)
     wgb = wasGeneratedBy.format(line=line)
 
-    importchain = ImportChain(wasGeneratedBy=wasGeneratedBy)
+    importchain = ImportChain(sgg=sgg, sgc=sgc, wasGeneratedBy=wasGeneratedBy)
     importchain.make_html()  # run this once, restart services on a new release
 
     loop = asyncio.get_event_loop()
@@ -667,7 +633,7 @@ def server(api_key=None, verbose=False):
                 v.sort()
 
             return OntTerm(start), start_type, neurons, types
-            
+
         hrm = [connected(t) for t in set(test_terms)]
         header =['Start', 'Start Type', 'Neuron', 'Relation', 'Target']
         rows = []
@@ -793,10 +759,17 @@ def server(api_key=None, verbose=False):
             log.error(pprint(j))
             return abort(400)
 
-        kwargs = {'json': j}
+        prov = [hfn.titletag(f'Dynamic query result for {path}'),
+                f'<meta name="date" content="{UTCNOWISO()}">',
+                f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+                '<meta name="representation" content="SciGraph">',
+                f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
+
+        kwargs = {'json': cleanBad(j),
+                  'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
-        print(tree)
+        #print(tree)
         if format_ is not None:
             if format_ == 'table':
                 #breakpoint()
@@ -811,7 +784,9 @@ def server(api_key=None, verbose=False):
                 return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
                                styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html, styles=hfn.tree_styles)
+        return htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
@@ -831,10 +806,17 @@ def server(api_key=None, verbose=False):
             log.error(pprint(j))
             return abort(400)
 
-        kwargs = {'json': j}
+        prov = [hfn.titletag(f'Dynamic query result for {path}'),
+                f'<meta name="date" content="{UTCNOWISO()}">',
+                f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+                '<meta name="representation" content="SciGraph">',
+                f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{sgd._last_url}">']
+
+        kwargs = {'json': cleanBad(j),
+                  'html_head': prov}
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
-        print(tree)
+        #print(tree)
         if format_ is not None:
             if format_ == 'table':
                 #breakpoint()
@@ -849,7 +831,9 @@ def server(api_key=None, verbose=False):
                 return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
                                styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html, styles=hfn.tree_styles)
+        return htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
     def route_import_chain():
@@ -1141,6 +1125,9 @@ def main():
     sgc._verbose = verbose
     sgd._verbose = verbose
 
+    if verbose:
+        log.setLevel('DEBUG')
+
     if args['--test']:
         test()
     elif args['server']:
@@ -1164,7 +1151,7 @@ def main():
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)
 
-        app = server(verbose=verbose)
+        app = server(sgg, sgc, verbose=verbose)
         # app.debug = False
         # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # app.debug = True

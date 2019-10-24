@@ -27,6 +27,7 @@
 @prefix prefixa: <http://example.org/a/> .
 @prefix prefixz: <http://example.org/z/> .
 @prefix requestedBy: <http://uri.binterlex.org/base/blx_999> . #make sure we can manage prefixes that are full uris
+@prefix unused: <http://uri.binterlex.org/base/readable/unused> .  # test remove unused
 @base <http://ihavenoqname.org/> .  # this will be stripped and we prefer proper prefixes
 
 <http://testurl.org/filename.ttl> a owl:Ontology ;
@@ -529,3 +530,6 @@ p:property a owl:ObjectProperty ;
                 owl:onProperty <pred> ;
                 owl:someValuesFrom <other> ] ) ] ;
     oboInOwl:source "hrm"^^xsd:string .
+
+# preserve prefixes needed for that part of the test
+c: C: xml: .

@@ -33,7 +33,7 @@ from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 from IPython import embed
 from itertools import chain
-from neurondm.phenotype_indicators import PhenotypeIndicators
+from neurondm.indicators import PhenotypeIndicators
 
 log = _log.getChild('build')
 
@@ -1448,8 +1448,8 @@ def main():
         return
 
     if indicators:
-        from neurondm import phenotype_indicators as pind
-        pind.main()
+        from neurondm import indicators as ind
+        ind.main()
 
     if phenotypes:
         syn_mappings, pedge, ilx_start, phenotypes, defined_graph = make_phenotypes()

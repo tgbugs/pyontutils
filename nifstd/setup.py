@@ -40,8 +40,9 @@ setup(
         'flask',
         'nbconvert',
         'nbformat',
+        'psutil',
         'pymysql',
-        'pyontutils>=0.1.1',
+        'pyontutils>=0.1.3',
         'robobrowser',
         'sqlalchemy',
     ],
@@ -59,6 +60,7 @@ setup(
             'ont-docs=nifstd_tools.docs:main',
             'ontree=nifstd_tools.ontree:main',
             'registry-sync=nifstd_tools.scr_sync:main',
+            'slimgen=nifstd_tools.slimgen:main',
         ],
     },
 )

@@ -6,11 +6,12 @@ import mimetypes
 import subprocess
 import rdflib
 from inspect import getsourcefile
-from pathlib import Path
+from pathlib import Path, PurePath
 from itertools import chain
 from collections import namedtuple
 from urllib.parse import urlparse
 import ontquery as oq
+import augpathlib as aug
 import requests
 import htmlfn as hfn
 from joblib import Parallel, delayed
@@ -18,13 +19,13 @@ from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, getSourceLine
+from pyontutils.utils import refile, TODAY, UTCNOW, UTCNOWISO, getSourceLine, utcnowtz
 from pyontutils.utils import Async, deferred, TermColors as tc, log
 from pyontutils.utils_extra import check_value
 from pyontutils.config import get_api_key, devconfig, working_dir
 from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
 from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
-from pyontutils.namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov
+from pyontutils.namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov, oboInOwl
 from pyontutils.identity_bnode import IdentityBNode
 
 current_file = Path(__file__).absolute()
@@ -691,6 +692,8 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 class OntGraph(rdflib.Graph):
     """ A 5th try at making one of these. ConjunctiveGraph version? """
 
+    metadata_type_markers = [owl.Ontology]  # FIXME naming
+
     def __init__(self, *args, path=None, existing=None, namespace_manager=None, **kwargs):
         if existing:
             self.__dict__ == existing.__dict__
@@ -769,16 +772,12 @@ class OntGraph(rdflib.Graph):
 
     @property
     def ttl(self):
-        CustomTurtleSerializer.roundtrip_prefixes = False
         out = self.serialize(format='nifttl').decode()
-        CustomTurtleSerializer.roundtrip_prefixes = True
         return out
 
     @property
     def ttl_html(self):
-        CustomTurtleSerializer.roundtrip_prefixes = False
         out = self.serialize(format='htmlttl').decode()
-        CustomTurtleSerializer.roundtrip_prefixes = True
         return out
 
     def debug(self):
@@ -1053,11 +1052,22 @@ class OntGraph(rdflib.Graph):
     @property
     def boundIdentifiers(self):
         """ There should only be one but ... """
-        yield from self[:rdf.type:owl.Ontology]
+        for type in self.metadata_type_markers:
+            yield from self[:rdf.type:type]
 
     @property
     def boundIdentifier(self):
         return next(self.boundIdentifiers)
+
+    @property
+    def versionIdentifiers(self):
+        """ There should only be one but ... """
+        for bid in self.boundIdentifiers:
+            yield from self[bid:owl.versionIRI]
+
+    @property
+    def versionIdentifier(self):
+        return next(self.versionIdentifiers)
 
     @property
     def metadata(self):
@@ -1639,6 +1649,31 @@ class IlxTerm(OntTerm):
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 
+def map_term(subject, label, prefix=tuple()):
+    def gn(t):
+        try:
+            return next(OntTerm.query(term=t, prefix=prefix))
+        except StopIteration:
+            return None
+
+    def term_source(t, test):
+        tl = t.lower()
+        if tl == test.label:
+            return 'label'
+        elif tl in test.synonyms:
+            return 'synonym'
+        else:
+            return 'WAT'
+
+    ot = gn(label)
+    if ot is not None:
+        source = term_source(label, ot)
+        t = subject, oboInOwl.hasDbXref, ot.URIRef
+        pairs = (ilxtr.termMatchType, rdflib.Literal(source)),
+        yield t
+        yield from cmb.annotations(pairs, *t)
+
+
 #
 # classes
 
@@ -1831,26 +1866,26 @@ class Source(tuple):
             if hasattr(cls, 'runonce'):  # must come first since it can modify how cls.source is defined
                 cls.runonce()
 
-            if cls.source.startswith('http'):
+            if isinstance(cls.source, str) and cls.source.startswith('http'):
                 if cls.source.endswith('.git'):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = Path(devconfig.git_local_base)
-                    cls.repo_path = glb / Path(cls.source).stem
-                    rap = cls.repo_path.as_posix()
-                    print(rap)
+                    glb = aug.RepoPath(devconfig.git_local_base)
+                    cls.repo_path = glb.clone_path(cls.sourceRepo)
+                    print(cls.repo_path)
                     # TODO branch and commit as usual
                     if not cls.repo_path.exists():
-                        cls.repo = Repo.clone_from(cls.sourceRepo, rap)
+                        cls.repo = cls.repo_path.init(cls.sourceRepo)
                     else:
-                        cls.repo = Repo(rap)
+                        cls.repo = cls.repo_path.repo
                         # cls.repo.remote().pull()  # XXX remove after testing finishes
 
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
                         if not dry_run:  # dry_run means data may not be present
-                            file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                            file_commit = cls.repo_path.latest_commit.hexsha
+                            #file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
                             commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                             print(commit_path)
                             if 'github' in cls.source:
@@ -1871,27 +1906,28 @@ class Source(tuple):
                     cls.iri = rdflib.URIRef(cls.source)
 
             elif os.path.exists(cls.source):  # TODO no expanded stuff
+                cls.source = aug.RepoPath(cls.source)
                 try:
-                    file_commit = subprocess.check_output(['git', 'log', '-n', '1',
-                                                           '--pretty=format:%H', '--',
-                                                           cls.source],
-                                                          stderr=subprocess.DEVNULL).decode().rstrip()
-                    cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit) + cls.source)
-                    cls._type = 'git-local'
-                except subprocess.CalledProcessError as e:
-                    cls._type = 'local'
-                    if e.args[0] == 128:  # hopefully this is the git status code for not a get repo...
-                        if not hasattr(cls, 'iri'):
-                            cls.iri = rdflib.URIRef('file://' + cls.source)
-                        #else:
-                            #print(cls, 'already has an iri', cls.iri)
+                    cls.source.repo
+                    file_commit = cls.source.latest_commit
+                    if file_commit is not None:
+                        cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
+                                                + cls.source.repo_relative_path.as_posix())
+                        cls._type = 'git-local'
                     else:
-                        raise e
+                        raise aug.exceptions.NotInRepoError('oops no commit?')
+                except aug.exceptions.NotInRepoError:
+                    cls._type = 'local'
+                    if not hasattr(cls, 'iri'):
+                        cls.iri = rdflib.URIRef(cls.source.as_uri())
+                    #else:
+                        #print(cls, 'already has an iri', cls.iri)
+                else:
+                    raise BaseException('I can\'t believe you\'ve done this.')
 
-                cls.source = Path(cls.source)
             else:
                 cls._type = None
-                print('Unknown source', cls.source)
+                log.warning('Unknown source {cls.source}')
 
             cls.raw = cls.loadData()
             cls._data = cls.validate(*cls.processData())
@@ -1929,7 +1965,7 @@ class Source(tuple):
     def prov(cls):
         if cls._type == 'local' or cls._type == 'git-local':
             if cls._type == 'git-local':
-                object = rdflib.URIRef(cls.iri_prefix_hd + cls.source)
+                object = rdflib.URIRef(cls.iri_prefix_hd + cls.source.as_posix())
             else:
                 object = rdflib.URIRef(cls.source.as_posix())
             if os.path.exists(cls.source) and not hasattr(cls, 'source_original'):  # FIXME no help on mispelling
@@ -1995,6 +2031,7 @@ class Ont:
     shortname = None
     comment = None  # about how the file was generated, nothing about what it contains
     version = TODAY()
+    start_time = UTCNOWISO(timespec='seconds')
     namespace = None
     prefixes = makePrefixes('NIFRID', 'ilxtr', 'prov', 'dc', 'dcterms')
     imports = tuple()
@@ -2006,7 +2043,7 @@ class Ont:
 
     propertyMapping = dict(
         wasDerivedFrom=prov.wasDerivedFrom,  # the direct source file(s)  FIXME semantics have changed
-        wasGeneratedBy=prov.wasGeneratedBy,
+        wasGeneratedBy=prov.wasGeneratedBy,  # FIXME technically wgb range is Activity
         hasSourceArtifact=ilxtr.hasSourceArtifact,  # the owl:Class it was derived from
     )
 
@@ -2180,7 +2217,11 @@ class Ont:
 
     @property
     def iri(self):
-        return self._graph.ontid
+        return self.graph.boundIdentifier
+
+    @property
+    def versionIRI(self):
+        return self.graph.versionIdentifier
 
     def write(self, cull=False):
         # TODO warn in ttl file when run when __file__ has not been committed

@@ -1,10 +1,39 @@
+import psutil
+from pyontutils.utils import makeSimpleLogger
+
+log = makeSimpleLogger('nifstd-tools')
+logd = log.getChild('data')
+
+
+def memoryCheck(vms_max_kb):
+    """ Lookup vms_max using getCurrentVMSKb """
+    safety_factor = 1.2
+    vms_max = vms_max_kb
+    vms_gigs = vms_max / 1024 ** 2
+    buffer = safety_factor * vms_max
+    buffer_gigs = buffer / 1024 ** 2
+    vm = psutil.virtual_memory()
+    free_gigs = vm.available / 1024 ** 2
+    if vm.available < buffer:
+        raise MemoryError('Running this requires quite a bit of memory ~ '
+                          f'{vms_gigs:.2f}, you have {free_gigs:.2f} of the '
+                          f'{buffer_gigs:.2f} needed')
+
+
+def currentVMSKb():
+    p = psutil.Process(os.getpid())
+    return p.memory_info().vms
+
+
+from pyontutils.core import OntId
+from pyontutils.config import devconfig
+from pathlib import Path
+import requests
+from bs4 import BeautifulSoup
+from lxml import etree
+
+
 def ncbigenemapping(may_need_ncbigene_added):
-    from pyontutils.config import devconfig
-    from pyontutils.core import OntId
-    from pathlib import Path
-    import requests
-    from bs4 import BeautifulSoup
-    from lxml import etree
     #urlbase = 'https://www.ncbi.nlm.nih.gov/gene/?term=Mus+musculus+'
     urlbase = ('https://www.ncbi.nlm.nih.gov/gene?term='
                '({gene_name}[Gene%20Name])%20AND%20{taxon_suffix}[Taxonomy%20ID]&'
@@ -25,16 +54,16 @@ def ncbigenemapping(may_need_ncbigene_added):
         with open(base / fn, 'wb') as f:
             f.write(resp.content)
 
-    so_much_soup = [BeautifulSoup(resp.content, 'lxml') for resp in done2.values()]
+    so_much_soup = [(resp.url, BeautifulSoup(resp.content, 'lxml')) for resp in done2.values()]
 
     trees = []
-    for i, soup in enumerate(so_much_soup):
+    for i, (url, soup) in enumerate(so_much_soup):
         pre = soup.find_all('pre')
         if pre:
             for p in pre[0].text.split('\n\n'):
                 if p:
                     tree = etree.fromstring(p)
-                    trees.append(tree)
+                    trees.append((url, tree))
         else:
             print('WAT', urls[i])
 
@@ -42,7 +71,7 @@ def ncbigenemapping(may_need_ncbigene_added):
     errors = []
     to_add = []
     mapping = {}
-    for tree in trees:
+    for url, tree in trees:
         taxon = tree.xpath('//Org-ref//Object-id_id/text()')[0]
         geneid = tree.xpath('//Gene-track_geneid/text()')[0]
         genename = tree.xpath('//Gene-ref_locus/text()')[0]
@@ -51,7 +80,7 @@ def ncbigenemapping(may_need_ncbigene_added):
             to_add.append(geneid)
             mapping[genename] = f'NCBIGene:{geneid}'
         else:
-            errors.append((geneid, genename, taxon))
+            errors.append((geneid, genename, taxon, url))
 
     print(errors)
     _ = [print('NCBIGene:' + ta) for ta in to_add]
@@ -59,4 +88,4 @@ def ncbigenemapping(may_need_ncbigene_added):
     #wat.find_all('div', **{'class':'rprt-header'})
     #wat.find_all('div', **{'class':'ncbi-docsum'})
 
-    return mapping, to_add
+    return mapping, to_add, errors

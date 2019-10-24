@@ -60,7 +60,7 @@ def serialize(graph, outpath):
             ps.pop('NIFGA')
 
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
-    graph = cull_prefixes(graph, cleanup=pc)
+    graph = cull_prefixes(graph, cleanup=pc, prefixes=PREFIXES)
 
     out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
@@ -69,35 +69,36 @@ def serialize(graph, outpath):
         with open(outpath, 'wb') as f:
             f.write(out)
 
-def convert(file_or_stream, stream=False):
+def convert(file_or_stream, stream=False, infmt=None):
     if file_or_stream in exclude:
         print('skipping', file)
         return file
-    serialize(*parse(**prepare(file_or_stream, stream=stream)))
+    serialize(*parse(**prepare(file_or_stream, stream=stream), infmt=infmt))
 
 def main():
     global PREFIXES
     args = docopt(__doc__, version = "qnamefix 0")
-    args['--format'] = 'turtle'
+    infmt = args['--format'] = 'turtle'
     ttlser.ttlfmt.args = args
     if args['--exclude'] == ['ALL']:
         for k in list(PREFIXES):
             PREFIXES.pop(k)
     else:
-        for x in args['--exclude'] and x in PREFIXES:
-            PREFIXES.pop(x)
+        for x in args['--exclude']:
+            if x in PREFIXES:
+                PREFIXES.pop(x)
     if not args['<file>']:
         stdin = readFromStdIn(sys.stdin)
         if stdin is not None:
-            convert(stdin, stream=True)
+            convert(stdin, stream=True, infmt=infmt)
         else:
             print(__doc__)
     else:
         if args['--slow'] or len(args['<file>']) == 1:
-            [convert(f) for f in args['<file>']]
+            [convert(f, infmt=infmt) for f in args['<file>']]
         else:
             from joblib import Parallel, delayed
-            Parallel(n_jobs=9)(delayed(convert)(f) for f in args['<file>'])
+            Parallel(n_jobs=9)(delayed(convert)(f, infmt=infmt) for f in args['<file>'])
 
 if __name__ == '__main__':
     main()

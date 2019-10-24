@@ -65,25 +65,3 @@ class OrderInvariantHash:
         # it is safe to sort last because identity is ensured
         [m.update(b) for b in sorted(self.makeByteTuple(t) for t in iterable)]
         return m.digest()
-
-
-def currentVMSKb():
-    import psutil
-    p = psutil.Process(os.getpid())
-    return p.memory_info().vms
-
-
-def memoryCheck(vms_max_kb):
-    """ Lookup vms_max using getCurrentVMSKb """
-    import psutil
-    safety_factor = 1.2
-    vms_max = vms_max_kb
-    vms_gigs = vms_max / 1024 ** 2
-    buffer = safety_factor * vms_max
-    buffer_gigs = buffer / 1024 ** 2
-    vm = psutil.virtual_memory()
-    free_gigs = vm.available / 1024 ** 2
-    if vm.available < buffer:
-        raise MemoryError('Running this requires quite a bit of memory ~ '
-                          f'{vms_gigs:.2f}, you have {free_gigs:.2f} of the '
-                          f'{buffer_gigs:.2f} needed')

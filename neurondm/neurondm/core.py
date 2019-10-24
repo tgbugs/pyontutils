@@ -30,6 +30,7 @@ from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 RDFL = oq.plugin.get('rdflib')
+_SGR = oq.plugin.get('SciGraph')
 _done = set()
 
 __all__ = [
@@ -173,7 +174,8 @@ class LabelMaker:
             labels += ['neuron']
 
         if isinstance(neuron, NeuronEBM):
-            labels += [neuron._shortname]
+            if neuron._shortname:
+                labels += [neuron._shortname]
 
         return self.field_separator.join(labels)
 
@@ -277,26 +279,46 @@ class LabelMaker:
                 prefix = ''
 
             yield prefix + next(self._default((phenotype,)))
+    def _molecular(self, phenotypes):
+        if self.local_conventions:
+            yield from self._plus_minus(phenotypes)
+        else:
+            yield from self._plus_minus([p.asIndicator() for p in phenotypes])
     @od
     def hasMolecularPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasNeurotransmitterPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasExpressionPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionConstitutivePhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasDriverExpressionInducedPhenotype(self, phenotypes):
-        yield from self._plus_minus(phenotypes)
+        yield from self._molecular(phenotypes)
     @od
     def hasReporterExpressionPhenotype(self, phenotypes):
+        yield from self._molecular(phenotypes)
+    @od
+    def hasComputedMolecularPhenotype(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasComputedMolecularPhenotypeFromDNA(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasComputedMolecularPhenotypeFromRNA(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasComputedMolecularPhenotypeFromProtein(self, phenotypes):
+        yield from self._plus_minus(phenotypes)
+    @od
+    def hasComputedPhenotype(self, phenotypes):
         yield from self._plus_minus(phenotypes)
     @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
@@ -318,12 +340,12 @@ class LabelMaker:
         yield from self._default(phenotypes)
     @od
     def hasCircuitRolePhenotype(self, phenotypes):
-        inp = self.predicate_namespace['InterneuronPhenotype']
+        interneuron_phenotype = self.predicate_namespace['InterneuronPhenotype']
         def suffix():
             # reminder that the phenotype loop variable below binds in here
             if phenotype.p == self.predicate_namespace['IntrinsicPhenotype']:
                 return  'neuron'
-            elif phenotype.p == inp:
+            elif phenotype.p == interneuron_phenotype:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
@@ -331,9 +353,9 @@ class LabelMaker:
                 return 'neuron'
 
         # put interneuron last if it is in the phenotypes list
-        if inp in phenotypes:
-            phenotypes.remove(inp)
-            phenotypes = phenotypes + [inp]
+        if interneuron_phenotype in phenotypes:
+            phenotypes.remove(interneuron_phenotype)
+            phenotypes = phenotypes + [interneuron_phenotype]
 
         for phenotype in phenotypes:
             yield next(self._default((phenotype,))).lower()
@@ -363,17 +385,24 @@ class OntTerm(bOntTerm, OntId):
 
         yield from inner(self)
 
-    def asPhenotype(self, predicate=None):
+    def asPhenotype(self, predicate=None, phenotype_class=None):
+        if phenotype_class is None:
+            phenotype_class = Phenotype
+
         if predicate is None and self.prefix == 'UBERON':  # FIXME layers
             predicate = ilxtr.hasSomaLocatedIn
-        return Phenotype(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
+        return phenotype_class(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
     def asIndicator(self):
         sco = self(rdfs.subClassOf, depth=2, asTerm=True)
         uris = [t.URIRef for t in sco]
         if ilxtr.PhenotypeIndicator in uris:
+            if uris[0] == ilxtr.PhenotypeIndicator:
+                return self
+
             ind = sco[0]
             # FIXME it being first is by accident of implementation only
+            log.debug(f'{sco} {self}')
             assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
             return ind
         else:
@@ -766,7 +795,6 @@ class Config:
     def load_existing(self):
         """ advanced usage allows loading multiple sets of neurons and using a config
             object to keep track of the different graphs """
-        from pyontutils.closed_namespaces import rdfs
         # bag existing
 
         try:
@@ -1395,7 +1423,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         t = OntTerm(self.p)
         it = t.asIndicator()
         if t != it:
-            return it.asPhenotype(self.e)
+            return it.asPhenotype(self.e, phenotype_class=self.__class__)
         else:
             return self
 
@@ -1555,14 +1583,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             abvs = resp['abbreviations']
             if not abvs:
                 abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
-                if (not abvs or 'Pva' in abvs) and resp['labels']:
-                    try:
-                        t = next(OntTerm.query(term=resp['labels'][0], prefix='NCBIGene'))  # worth a shot
-                        abvs = [_ for _ in sorted(t.synonyms, key= lambda s: (len(s), s)) if 1 < len(_) < 5]
-                        if abvs:
-                            log.info(f'found shortnames for {pn} from NCBIGene {abvs}')
-                    except StopIteration:
-                        pass
         else:
             abvs = None
 
@@ -1572,6 +1592,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 return 'Glu'  # FIXME tempfix for bad glutamate abv
             elif abv == '4Abu':  # sigh
                 return 'GABA'
+            elif abv == 'Pva':  # a very strange synonym on the PR entry for parvalbumin
+                return 'PV'
             else:
                 return abv
 
@@ -1594,13 +1616,19 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         return cls.__pcache[p]
 
     @property
+    @cacheout
     def pLongName(self):
         if hasattr(self, '_label'):
             return self._label
 
+        if hasattr(self, '_cache_pLongName'):
+            # FIXME hack for the fact that the rdflibLocal service
+            # changes from config to config
+            return self._cache_pLongName
+
         p = OntId(self.p)
 
-        r = OntTerm.query.services[0]  # rdflib local
+        r = OntTerm.query.services[0]  # rdflib local FIXME WARNING doing this can skip setup
         try:
             l = next(r.query(iri=p.iri)).label
             if l is None:
@@ -1611,6 +1639,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 
             t = self._pterm(p)
             l = t.label
+        except AttributeError as e:
+            # FIXME ick
+            # we aren't set up yet and we are doing something stupid
+            OntTerm(p.iri)  # force setup
+            return self.pLongName
 
         if not l:
             return t.curie
@@ -1778,6 +1811,9 @@ class LogicalPhenotype(graphBase):
                 self._pesDict[pe.e] = [pe]
 
         self.labelPostRule = lambda l: l
+
+    def asIndicator(self):
+        return self.__class__(self.op, *[pe.asIndicator() for pe in self.pes])
 
     @property
     def p(self):
@@ -1956,6 +1992,11 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             cls.ng.add_trip(cls.owlClass, rdfs.subClassOf, _EBM_CLASS)
 
         return super().__new__(cls)
+
+    def asIndicator(self):
+        newself = self.__class__(*[pe.asIndicator() for pe in self.pes])
+        newself.adopt_meta(self)
+        return newself
 
     def asUndeprecated(self):
         replace = {
@@ -2443,8 +2484,8 @@ class Neuron(NeuronBase):
             self._predicates.hasMorphologicalPhenotype,
         ]
 
-        sgd = OntTerm.query.services[1].sgd
-        sgg = OntTerm.query.services[1].sgg
+        sgd = [s for s in OntTerm.query.services if isinstance(s, _SGR)][0].sgd
+        sgg = [s for s in OntTerm.query.services if isinstance(s, _SGR)][0].sgg
         def multiquery(term):
             blob = (sgd._get('GET',(sgd._basePath + '/dynamic/multiquery/{relationship}/{id}')
                              .format(relationship='BFO:0000050', id=term.curie)))
@@ -2502,6 +2543,7 @@ class Neuron(NeuronBase):
         out = set()  # prevent duplicates in cases where phenotypes are duplicated in the hierarchy
         embeddedKnownClasses = set()
 
+        c = None
         # support CUT pattern  # FIXME maybe reimplement this method on NeuronCUT?
         for c in self.Class.subClassOf:
             if c.identifier in self.knownClasses:
@@ -2566,6 +2608,12 @@ class Neuron(NeuronBase):
         def restriction_to_phenotype(r, ptype=type_):
             p = r.someValuesFrom  # if _NEURON_CLASS is not a owl:Class > problems
             e = r.onProperty
+
+            if e == NIFRID.has_neurotransmitter:  # FIXME the very old model
+                e = self._predicates.hasNeurotransmitterPhenotype
+            elif e == NIFRID.has_proper_part:  # FIXME the very old model
+                return old_nif_location(r, ptype=ptype)
+
             return ptype(p, e)
 
         def location_restriction_to_phenotype(r, ptype=type_):
@@ -2576,6 +2624,15 @@ class Neuron(NeuronBase):
                 p = bc.someValuesFrom.identifier
 
             e = r.onProperty
+            return ptype(p, e)
+
+        def old_nif_location(r, ptype=type_):
+            # not quite correct
+            e = self._predicates.hasSomaLocatedIn
+            bc = infixowl.CastClass(r.someValuesFrom, graph=self.in_graph)
+            cs = [infixowl.CastClass(e, graph=self.in_graph)
+                  for e in bc._rdfList if isinstance(e, rdflib.BNode)]
+            p = cs[0].someValuesFrom.identifier
             return ptype(p, e)
 
         def expand_restriction(r, pes, ptype=type_):

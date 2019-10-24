@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [requires]
-python_version = '3.6'  # also works with pypy3
+python_version = '3.7'  # also works with pypy3
 
 [packages]
 ontquery = {git = "https://github.com/tgbugs/ontquery.git", editable = true, ref = "master"}

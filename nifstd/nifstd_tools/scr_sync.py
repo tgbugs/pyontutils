@@ -33,10 +33,12 @@ import rdflib
 from docopt import parse_defaults
 from sqlalchemy import create_engine, inspect
 from pyontutils.core import Ont, Source, build, OntId
-from pyontutils.utils import mysql_conn_helper
+from pyontutils.utils import mysql_conn_helper, log
 from pyontutils.namespaces import makePrefixes, NIFRID, definition
-from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
-from IPython import embed
+from pyontutils.namespaces import rdf, rdfs, owl, oboInOwl
+
+log = log.getChild('registry-sync')
+logd = log.getChild('data')
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
@@ -57,7 +59,8 @@ _field_mapping = {
     'Abbreviation':'abbrev',
     'Synonyms':'synonyms',
     'Alternate IDs':'alt_ids',
-    'Supercategory':'superclass',
+    'Supercategory':'superclass',  # this ultimately is converted to rdf.type
+    'rdf:type': 'rdf:type',  # this is a hack
     #'Keywords':'keywords'  # don't think we need this
     'MULTI':{'Synonyms':'synonym',
              'Alternate IDs':'alt_id',
@@ -74,7 +77,8 @@ _column_to_predicate = {
     'label':rdfs.label,
     'old_id':oboInOwl.hasDbXref,  # old vs alt id?
     'deprecated':owl.deprecated,
-    'superclass':rdfs.subClassOf,  # translation required
+    'superclass': rdfs.subClassOf,  # translation required
+    'rdf:type': rdf.type,
     'synonym':NIFRID.synonym,
     'type':'FIXME:type',  # bloody type vs superclass :/ ask james
 }
@@ -110,7 +114,7 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
             res_cols_latest[(rid, value_name)] = (rid, value_name, value)
 
     latest = {}
-    for (rid, value_name), version in sorted(versions.items(), key=lambda a: (a[0][0], a[1], a[0][1]))[::-1]:
+    for (rid, value_name), version in sorted(versions.items(), key=lambda a: (a[0][0], a[1], a[0][1]), reverse=True):
         if rid not in latest:
             latest[rid] = version
         if version < latest[rid]:
@@ -126,6 +130,8 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
         scrid, oid, type_, status = resources[rid]
         if scrid.startswith('SCR_'):
             scrid = scrid.replace('_',':')
+            if field_mapping[value_name] == 'superclass':
+                value_name = 'rdf:type'
         if scrid not in output:
             output[scrid] = []
         #if 'id' not in [a for a in zip(*output[rid])][0]:
@@ -134,7 +140,10 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
                 output[scrid].append(('old_id', oid))
             #output[scrid].append(('type', type_))  # this should come via the scigraph cats func
             if status == 'Rejected':
-                output[scrid].append(('deprecated', True))
+                # do not include rejected resources
+                output.pop(scrid)
+                #output[scrid].append(('deprecated', True))
+                return
 
         if value_name in field_mapping['MULTI']:
             values = [v.strip() for v in value.split(',')]  # XXX DANGER ZONE
@@ -149,7 +158,7 @@ def make_records(resources, res_cols, field_mapping=_field_mapping, remap_supers
         else:
             if field_mapping[value_name] == 'definition':
                 value = value.replace('\r\n','\n').replace('\r','\n').replace("'''","' ''")  # the ''' replace is because owlapi ttl parser considers """ to match ''' :/ probably need to submit a bug
-            elif field_mapping[value_name] == 'superclass':
+            elif field_mapping[value_name] in ('superclass', 'rdf:type'):
                 if value in remap_supers:
                     value = remap_supers[value]
             output[scrid].append((field_mapping[value_name], value))  # TODO we may want functions here
@@ -168,7 +177,7 @@ def make_triple(id_, field, value, column_to_predicate=_column_to_predicate):
         if value.startswith('SCR:'):
             value = owl.NamedIndividual
         else:
-            print(value)
+            log.info(value)
             value = owl.Class
     #if type(value) == bool:
         #if value:
@@ -216,18 +225,18 @@ def get_records(user=defaults['--user'],
         #join = query.fetchall()
 
         #print('running join')
-        print('running 1')
-        r_query = conn.execute('SELECT id, rid, original_id, type, status FROM resources WHERE id < 16000;')  # avoid the various test entries :(
-        print('fetching 1 ')
+        log.info('running 1')
+        r_query = conn.execute('SELECT id, rid, original_id, type, status FROM resources WHERE id >= 0;')  # avoid the various test entries :(
+        log.info('fetching 1 ')
         r = r_query.fetchall()
-        print('running 2')
-        rc_query = conn.execute('SELECT rid, name, value, version FROM resource_columns as rc WHERE rc.rid < 16000 AND rc.name IN %s;' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
-        print('fetching 2')
+        log.info('running 2')
+        rc_query = conn.execute('SELECT rid, name, value, version FROM resource_columns as rc WHERE rc.rid >= 0 AND rc.name IN %s;' % str(tuple([n for n in field_mapping if n != 'MULTI'])))
+        log.info('fetching 2')
         rc = rc_query.fetchall()
 
     fixesForResourcesAndColumns(r, rc)
     records = make_records(r, rc, field_mapping)
-    print('Fetching and data prep done.')
+    log.info('Fetching and data prep done.')
     return records
 
 def make_file(graph, records):
@@ -235,11 +244,11 @@ def make_file(graph, records):
         for field, value in rec:
             #print(field, value)
             if not value:  # don't add empty edges  # FIXME issue with False literal
-                print('caught an empty value on field', id_, field)
+                logd.debug(f'caught an empty value on field {id_} {field}')
                 continue
             if field != 'id' and (str(value).replace('_',':') in id_ or str(value) in id_):
             #if field == 'alt_id' and id_[1:] == value:
-                print('caught a mainid appearing as altid', field, value)
+                logd.debug(f'caught a mainid appearing as altid {field} {value}')
                 continue
             yield make_triple(id_, field, value)
 
@@ -268,6 +277,7 @@ class Registry(Ont):
                             'SCR',  # generate base from this directly?
                             #'obo':'http://purl.obolibrary.org/obo/',
                             #'FIXME':'http://fixme.org/',
+                            'NLX',
                             'NIFSTD',  # for old ids??
                             'NIFRID',
                             'oboInOwl')
@@ -293,11 +303,13 @@ class Registry(Ont):
             for field, value in rec:
                 #print(field, value)
                 if not value:  # don't add empty edges  # FIXME issue with False literal
-                    print('caught an empty value on field', id_, field)
+                    logd.debug(f'caught an empty value on field {id_} {field}')
                     continue
                 if field != 'id' and (str(value).replace('_',':') in id_ or str(value) in id_):
                 #if field == 'alt_id' and id_[1:] == value:
-                    print('caught a mainid appearing as altid', field, value)
+                    if field != 'old_id':
+                        logd.debug(f'caught a mainid appearing as altid {field} {value}')
+
                     continue
                 s, p, o = make_triple(id_, field, value)
 

@@ -4,16 +4,22 @@ from pprint import pprint
 from pathlib import Path
 import rdflib
 import ontquery as oq
-from pyontutils.utils import byCol, relative_path, noneMembers, makeSimpleLogger
+from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource
 from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID, NIFSTD
-from pyontutils.closed_namespaces import rdfs
+from pyontutils.namespaces import rdfs
 # import these last so that graphBase resets (sigh)
 from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
+
+try:
+    breakpoint
+except NameError:
+    # <=python-3.7
+    from IPython import embed as breakpoint
 
 # TODO
 # 1. inheritance for owlClass from python classes
@@ -28,7 +34,7 @@ class PT(OntTerm):  # FIXME subclassing very broken :/ probably because __real_i
             return super().__repr__()
 
 
-OntTerm.repr_level(verbose=False)
+OntTerm.set_repr_args('curie', 'label')
 
 
 class NeuronSWAN(NeuronEBM):
@@ -58,6 +64,9 @@ def make_contains_rules():
                           cholinergic=CUT.ACh,
                           glutamatergic=CUT.Glu,
                           serotonergic=CUT.Ser,
+                          Cholinergic=CUT.ACh,
+                          Glutamatergic=CUT.Glu,
+                          Serotonergic=CUT.Ser,
                           #principle=CUT.proj,  # NOTE this was a spelling error
                           projection=CUT.proj,
                           intrinsic=CUT.intrinsic,
@@ -155,6 +164,7 @@ def make_contains_rules():
         'Spinocerebellar ventral tract': OntTerm('UBERON:0002987', label='anterior spinocerebellar tract').asPhenotype(),
         'Abducens nucleus': OntTerm('UBERON:0002682', label='abducens nucleus').asPhenotype(),
         'Medial amygdalar nucleus': OntTerm('UBERON:0002892', label='medial amygdaloid nucleus').asPhenotype(),  # a creeping madness issue
+        'Hippocampal formation': OntTerm('UBERON:0002421', label='hippocampal formation').asPhenotype(),
 
     })
 
@@ -174,6 +184,7 @@ def make_contains_rules():
 
 
 exact_rules = {'pyramidal cell': BBP.PC,
+               'Neocortex neuron': Regions.CTX,
                'Neocortex': Regions.CTX,
                'Thalamic': CUT.Thal,
                'principal cell': CUT.proj,
@@ -309,7 +320,7 @@ def get_smatch(labels_set2):
             if match not in skip and pheno == OntTerm:
                 try:
                     t = OntTerm(term=match)
-                    print('WTF', match, t)
+                    log.debug(f'WTF {match} {t}')
                     if t.validated:
                         pheno = Phenotype(t.u, ilxtr.hasSomaLocatedIn)
                     else:
@@ -317,6 +328,7 @@ def get_smatch(labels_set2):
                 except oq.exceptions.NotFoundError:
                     skip.add(match)
                     pheno = None
+
             if match in skip and pheno == OntTerm:
                 pheno = None
 
@@ -353,7 +365,11 @@ def get_smatch(labels_set2):
             prefix_rank = ('UBERON', 'SWAN', 'BIRNLEX', 'SAO', 'NLXANAT', 'NLX')
             def key(ot):
                 ranked = ot.prefix in prefix_rank
-                arg = ot._query_result._QueryResult__query_args['term'].lower()
+                qargs = ot._query_result._QueryResult__query_args
+                if 'term' in qargs and qargs['term'] is not None:
+                    arg = qargs['term'].lower()
+                else:
+                    arg = None
                 return (not ranked,
                         prefix_rank.index(ot.prefix) if ranked else 0,
                         not (arg == ot.label.lower()))
@@ -380,21 +396,58 @@ def get_smatch(labels_set2):
 
         if pes:
             smatch.add(l)
-            rem[l] = l_rem
 
-            with NeuronCUT(CUT.Mammalia):
-                NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+            if not l_rem or l_rem in ('neuron', 'neurons', 'cell', 'Cell', 'positive cell'):
+                with NeuronCUT(CUT.Mammalia):
+                    NeuronCUT(*zap(pes), id_=make_cut_id(l), label=l, override=True)
+            else:
+                rem[l] = l_rem
 
     return smatch, rem
 
 
+def ontneurons(remote):
+    in_config = Config(imports=[remote.iri + 'ttl/NIF-Cell.ttl',
+                                remote.iri + 'ttl/NIF-Neuron-BrainRegion-Bridge.ttl',
+                                remote.iri + 'ttl/NIF-Neuron-NT-Bridge.ttl'])
+
+    eids = ['NLXNEURNT:090803',
+            'NLXNEURNT:090804',
+            'NLXNEURNT:090802',
+            'NLXNEURNT:090807',
+            'NLXCELL:0912004',
+            # 'NLXCELL:0912003',  # leaving out since mismatch in modelling and definition
+    ]
+
+    nrns = [NeuronCUT(id_=eid) for eid in eids]
+    inrns =  [n.asIndicator() for n in nrns]
+    ont_config = Config('ontology-neurons')
+    return ont_config
+
+
 def main():
-    ndl_config = Config('neuron_data_lifted')
-    ndl_config.load_existing()
-    ndl_neurons = sorted(ndl_config.neurons())
-    bn_config = Config('basic-neurons')
+    branch=devconfig.neurons_branch
+    remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
+
+    ont_config = ontneurons(remote)
+    ont_neurons = ont_config.neurons()
+
+    bn_config = Config('basic-neurons',
+                       # FIXME this should probably be pulled in automatically
+                       # from the import statements, and it doesn't work even as is
+                       # also a chicken and an egg problem here
+                       imports=[remote.iri + 'ttl/generated/swanson.ttl'])
+
+    #RDFL = oq.plugin.get('rdflib')  # FIXME ick
+    #rdfl = RDFL(bn_config.core_graph, OntId)
+    #OntTerm.query.ladd(rdfl)  # FIXME ick
     bn_config.load_existing()
     bn_neurons = bn_config.neurons()
+    #OntTerm.query._services = OntTerm.query._services[:-1]  # FIXME ick
+
+    ndl_config = Config('neuron_data_lifted')
+    ndl_config.load_existing()  # FIXME this is extremely slow
+    ndl_neurons = sorted(ndl_config.neurons())
 
     resources = Path(devconfig.resources)
     cutcsv = resources / 'common-usage-types.csv'
@@ -408,7 +461,7 @@ def main():
     ns = []
     skipped = []
     bamscok = (NIFSTD.BAMSC1125,)
-    for n in ndl_neurons:
+    for n in (ont_neurons + ndl_neurons):
         if n.id_ and 'BAMSC' in n.id_:
             if n.id_ not in bamscok:
                 skipped.append(n)
@@ -435,6 +488,7 @@ def main():
     ans = []
     sans = set()
     missed = set()
+    _bl = []  # XXX NOTE THE CONTINUE BELOW
     for n in bn_neurons:
         continue  # we actually get all of these with uberon, will map between them later
         # can't use capitalize here because there are proper names that stay uppercase
@@ -453,6 +507,8 @@ def main():
 
         else:
             missed.add(l)
+
+        _bl.append(l)
 
     agen_missing = sagen - sans
     labels_set2 = labels_set1 - sans
@@ -488,23 +544,31 @@ def main():
     Neuron.write()
     Neuron.write_python()
     raw_neurons = config.neurons()
+    # do this before creating the new config
+    # even though we are in theory tripling number of neurons in the current config graph
+    # it won't show up in the next config (and this is why we need to reengineer)
+    raw_neurons_ind_undep = [n.asUndeprecated().asIndicator() for n in raw_neurons]
     config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
                     prefixes={'swanr': swanr,
                               'SWAN': SWAN,
                               'SWAA': SWAA,})
+    # FIXME the call to asUndprecated currenlty triggers addition
+    # to the current config and output graph as a side effect (ick!)
     ids_updated_neurons = [n.asUndeprecated() for n in raw_neurons]
     assert len(ids_updated_neurons) == len(raw_neurons)
     Neuron.write()
     Neuron.write_python()
-    progress = len(labels_set0), len(sns), len(sans), len(smatch), len(labels_set1), len(labels_set2), len(labels_set3)
-    print('\nProgress:\n'
-          f'total:            {progress[0]}\n'
-          f'from nlx:         {progress[1]}\n'
-          f'from basic:       {progress[2]}\n'
-          f'from match:       {progress[3]}\n'
-          f'TODO after nlx:   {progress[4]}\n'
-          f'TODO after basic: {progress[5]}\n'
-          f'TODO after match: {progress[6]}\n')
+    progress = (len(labels_set0), len(sns), len(sans), len(smatch),
+                len(labels_set1), len(labels_set2), len(labels_set3))
+    prog_report = ('\nProgress:\n'
+                   f'total:            {progress[0]}\n'
+                   f'from nlx:         {progress[1]}\n'
+                   f'from basic:       {progress[2]}\n'
+                   f'from match:       {progress[3]}\n'
+                   f'TODO after nlx:   {progress[4]}\n'
+                   f'TODO after basic: {progress[5]}\n'
+                   f'TODO after match: {progress[6]}\n')
+    print(prog_report)
     assert progress[0] == progress[1] + progress[4], 'neurolex does not add up'
     assert progress[4] == progress[2] + progress[5], 'basic does not add up'
 
@@ -528,9 +592,9 @@ def main():
     _ = [print(l) for l in unmapped]
 
     no_location = [n for n in Neuron.neurons()
-                   if noneMembers((ilxtr.hasSomaLocatedIn,), *n.unique_predicates)]
+                   if noneMembers((ilxtr.hasSomaLocatedIn, ilxtr.hasSomaLocatedInLayer), *n.unique_predicates)]
     if __name__ == '__main__':
-        rows = export_for_review(config, unmapped, partial, nlx_missing)
+        review_rows = export_for_review(config, unmapped, partial, nlx_missing)
         breakpoint()
 
     return config, unmapped, partial, nlx_missing

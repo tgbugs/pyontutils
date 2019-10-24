@@ -26,59 +26,128 @@ username: your-username
 password: set-this-one-for-simplicity
 #+END_SRC
 
+Note that if you use the =--local ~/path/to/my/working/repo= option as the source repo
+then =git pull= is called with =--force= since the assumption is that =git commit --amend=
+may be used in certain cases.
+
 Run the code block definitions to create the functions we will use.
 *NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
+# arg {(((( darned mismatched parens :/
 #+NAME: build-release
 #+BEGIN_SRC bash :eval never :exports code
 build-release () {
     # example
     # build_release org    repo     folder   packagename version
     # build_release tgbugs ontquery ontquery ontquery    0.0.8
-    org=$1
-    shift
-    repo=$1
-    shift
-    folder=$1
-    shift
-    packagename=$1
-    shift
-    version=$1
-    shift
+
+    local POSITIONAL=()
+    while [[ $# -gt 0 ]]
+    do
+    key="$1"
+
+    case $key in
+        -l|--local)
+        local CLONEFROM="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -p|--base-path)
+        local BASE_PATH="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -b|--branch)
+        local BRANCH="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        --default)
+        local DEFAULT=YES
+        shift # past argument
+        ;;
+        ,*)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+    esac
+    done
+
+    local org=${POSITIONAL[0]}
+    local repo=${POSITIONAL[1]}
+    local folder=${POSITIONAL[2]}
+    local packagename=${POSITIONAL[3]}
+    local version=${POSITIONAL[4]}
+    local REST=${POSITIONAL[@]:5}  # remaining position passed along
+    echo $REST
+
+    if [[ ${folder} == ${packagename} ]]; then
+        local tag=${version}
+    else
+        local tag=${packagename}-${version}
+    fi
+
     # TODO make sure no vars are null
 
     : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
+
+    echo $org $repo $folder $packagename $version $tag $CLONEFROM $BASE_PATH
+
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
+    TEST_PATH=${BASE_PATH}/release-testing/${packagename}  # allow multiple builds at the same time
+
     if [ -d ${repo} ]; then
-        rm ${BASE_PATH}/release-testing -r
+        rm -r ${TEST_PATH}
     fi
-    mkdir ${BASE_PATH}/release-testing
+    mkdir -p ${TEST_PATH}
 
     if [ -d ${repo} ]; then
         pushd ${repo}
+        rurl="$(git remote get-url origin)"
+        if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
+            git remote set-url origin https://github.com/${org}/${repo}.git
+        elif [[ -n ${CLONEFROM} && $rurl =~ "https://" || $rurl =~ "git@" ]]; then
+            git remote set-url origin ${CLONEFROM}
+        fi
+        git fetch
+        git reset --hard origin/master
         git clean -dfx
-        git pull
         popd
     else
-        git clone https://github.com/${org}/${repo}.git
+        if [[ -n ${CLONEFROM} ]]; then
+            git clone ${CLONEFROM} ${repo}
+        else
+            git clone https://github.com/${org}/${repo}.git
+        fi
     fi
     # TODO __version__ check against ${version}
 
-    pushd ${folder}  # or subfolder
+    pushd ${folder} || return 1  # or subfolder
+
+    if [[ $(git tag -l ${tag}) ]]; then
+        echo "${tag} has already been released for this repo!"
+        return 1
+    fi
+
     if [[ -n ${BRANCH} ]]; then
         git checkout ${BRANCH}
     else
         git checkout -f master  # just like clean -dfx this should wipe changes just in case
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
-    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $@  # pass $@ along eg for --release
+    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
     PYTHONPATH=''
     echo PYTHONPATH should be empty? '->' ${PYTHONPATH}
-    cp dist/${packagename}-${version}* ${BASE_PATH}/release-testing
+    cp dist/${packagename}-${version}* ${TEST_PATH}
 
-    pushd ${BASE_PATH}/release-testing
+    pushd ${TEST_PATH}
     tar xvzf ${packagename}-${version}.tar.gz
-
+    if [ $? -ne 0 ]; then
+        echo "tar failed, probably due to a version mismatch"
+        popd
+        popd
+        return 1
+    fi
     pushd ${packagename}-${version}
     pipenv --rm  # clean any existing env
     pipenv run pip install -e .[test]   # .[services] for ontquery full install
@@ -101,6 +170,17 @@ build-release () {
     if [[ -n ${FAILURE} ]]; then
         echo "$(color red)TESTS FAILED$(color off)";
     fi
+
+    if [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
+        rm ${folder}/dist/${packagename}-${version}*
+        if [[ -n ${CLONEFROM} ]]; then
+            echo "$(color yellow)release build was cloned from a local source$(color off) ${CLONEFROM}"
+        else
+            echo "$(color yellow)release build was cloned from a specific branch$(color off) ${BRANCH}"
+        fi
+        echo "$(color ltyellow)therefore removing the build artifacts to prevent$(color off)"
+        echo "$(color ltyellow)accidental releases built from a private source$(color off)"
+    fi
 }
 #+END_SRC
 
@@ -110,13 +190,13 @@ function push-release () {
     # example
     # push-release folder   software_releases_path    packagename version
     # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
-    folder=$1
+    local folder=$1
     shift
-    software_releases_path=$1
+    local software_releases_path=$1
     shift
-    packagename=$1
+    local packagename=$1
     shift
-    version=$1
+    local version=$1
     shift
 
     rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}* ${software_releases_path}/ || return 1
@@ -195,11 +275,11 @@ function final-release () {
     # example
     # final-release software_releases_path    packagename version
     # final-release ~/nas/software-releases   ontquery    0.0.8
-    software_releases_path=$1
+    local software_releases_path=$1
     shift
-    packagename=$1
+    local packagename=$1
     shift
-    version=$1
+    local version=$1
     shift
 
     pushd ${software_releases_path}
@@ -229,7 +309,15 @@ Tangle this block so you can source [[../bin/python-release-functions.sh]]
 <<final-release>>
 #+END_SRC
 
-After defining those functions (or sourcing the tangled file (TODO))
+You can also tangle this whole file by running the following from
+the working directory of this repository. You can then source the
+tangled file directly.
+#+begin_src bash :eval never
+emacs --batch -l org --eval '(org-babel-tangle-file "docs/release.org")'
+source bin/python-release-functions.sh
+#+end_src
+
+After defining those functions or sourcing the tangled file
 you can use them as we do in the example below.
 
 *WHEN YOU PUSH TO TEST*

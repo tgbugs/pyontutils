@@ -37,7 +37,7 @@ class Basic(LocalNameManager):
 
     # FIXME naming
     projection = Phenotype(ilxtr.ProjectionPhenotype, ilxtr.hasCircuitRolePhenotype)
-    intrinsic = Phenotype(ilxtr.InterneuronPhenotype, ilxtr.hasCircuitRolePhenotype)
+    intrinsic = Phenotype(ilxtr.IntrinsicPhenotype, ilxtr.hasCircuitRolePhenotype)
 
 """
 http://ontology.neuinfo.org/trees/query/swanr:hasPart1/SWAN:1/ttl/generated/swanson.ttl?restriction=true&depth=40&direction=OUTGOING

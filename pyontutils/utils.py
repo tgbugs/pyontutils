@@ -88,6 +88,12 @@ def UTCNOWISO(timespec='auto'):
     return isoformat(utcnowtz(), timespec=timespec)
 
 
+def logToFile(logger, path):
+    lfh = logging.FileHandler(path.as_posix())
+    lfh.setFormatter(logger.handlers[0].formatter)
+    logger.addHandler(logger)
+
+
 def makeSimpleLogger(name, color=True):
     # TODO use extra ...
 
@@ -198,10 +204,14 @@ def stack_magic(stack):
 
 
 def subclasses(start):
-    for sc in start.__subclasses__():
-        if sc is not None:
-            yield sc
-            yield from subclasses(sc)
+    try:
+        for sc in start.__subclasses__():
+            if sc is not None:
+                yield sc
+                yield from subclasses(sc)
+    except TypeError as e:
+        log.exception(e)
+
 
 
 def getSourceLine(cls):
@@ -314,8 +324,20 @@ def coln(n, iterable):
 
 
 def setPS1(script__file__):
-    text = 'Running ' + os.path.basename(script__file__)
-    os.sys.stdout.write('\x1b]2;{}\x07\n'.format(text))
+    """ set the title of the terminal window
+
+        This is in a try block because colorama (used by colorlog)
+        wraps redirected stdout to strip certain control codes which
+        can cause an
+        AttributeError: 'NoneType' object has no attribute 'set_title'
+        because colorama changes os.sys.stdout.write in a way that
+        removes the call to set_title """
+
+    try:
+        text = 'Running ' + os.path.basename(script__file__)
+        os.sys.stdout.write('\x1b]2;{}\x07\n'.format(text))
+    except AttributeError as e:
+        log.exception(e)
 
 
 def refile(script__file__, path):
