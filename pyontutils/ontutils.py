@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-#!/usr/bin/env python3
-=======
 #!/usr/bin/env python3.7
->>>>>>> upstream/master
 #!/usr/bin/env pypy3
 from pyontutils.config import devconfig
 __doc__ = f"""Common commands for ontology processes.

@@ -1,55 +1,5 @@
 #!/usr/bin/env python3.7
-<<<<<<< HEAD
-#!/usr/bin/env pypy3
-"""
-    Build lightweight slims from curie lists.
-    Used for sources that don't have an owl ontology floating.
-"""
-#TODO consider using some of the code from scr_sync.py???
-
-import os
-import gzip
-import json
-from io import BytesIO
-from pathlib import Path
-from datetime import date
-import rdflib
-import requests
-from lxml import etree
-from rdflib.extras import infixowl
-from pyontutils.core import makeGraph, createOntology, yield_recursive, build, qname
-from pyontutils.core import Ont, Source
-from pyontutils.utils import chunk_list, dictParse
-from pyontutils.utils_extra import memoryCheck
-from pyontutils.namespaces import SO, ilxtr, makePrefixes, replacedBy, hasPart, hasRole, PREFIXES as uPREFIXES
-from pyontutils.closed_namespaces import rdf, rdfs, owl, prov, oboInOwl
-from IPython import embed
-
-
-#ncbi_map = {
-    #'name':,
-    #'description':,
-    #'uid':,
-    #'organism':{''},
-    #'otheraliases':,
-    #'otherdesignations':,
-#}
-
-class ncbi(dictParse):
-    superclass = SO['0000110']  # sequence feature
-    def __init__(self, thing, graph):
-        self.g = graph
-        super().__init__(thing, order=['uid'])
-
-    def name(self, value):
-        self.g.add_trip(self.identifier, rdfs.label, value)
-
-    def description(self, value):
-        #if value:
-        self.g.add_trip(self.identifier, 'skos:prefLabel', value)
-=======
 """Generate slim ontology files
->>>>>>> upstream/master
 
 Usage:
     slimgen [options] (chebi|gene)...
@@ -111,17 +61,6 @@ def main():
 
     main()
 
-<<<<<<< HEAD
-    if False:
-        from pyontutils.qnamefix import cull_prefixes
-        with open('/tmp/chebi-debug.xml', 'wb') as f: ChebiOntSrc.raw.write(f)
-        #with open('/tmp/chebi-debug.ttl', 'wb') as f: f.write(ChebiOntSrc._data[2].serialize(format='nifttl'))
-        g = cull_prefixes(ChebiOntSrc._data[2])
-        g.filename = '/tmp/chebi-debug.ttl'
-        g.write()
-        embed()
-=======
->>>>>>> upstream/master
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-#!/usr/bin/env python3.7
-=======
->>>>>>> upstream/master
 import re
 import sys
 from decimal import Decimal
