@@ -40,6 +40,7 @@ setup(
         'flask',
         'nbconvert',
         'nbformat',
+        'networkx',
         'psutil',
         'pymysql',
         'pyontutils>=0.1.3',
