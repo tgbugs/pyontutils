@@ -19,10 +19,7 @@ from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
 import nest_asyncio
-try:
-    nest_asyncio.apply()
-except Exception as e
-    log.exception(e)
+
 
 def get_working_dir(script__file__):
     """ hardcoded sets the 'equivalent' working directory if not in git """
@@ -384,7 +381,11 @@ def deferred(function):
         return inner
     return wrapper
 
-
+try:
+    nest_asyncio.apply()
+except Exception as e
+    log.exception(e)
+    
 def Async(rate=None, debug=False, collector=None):  # ah conclib
 
     # FIXME can't break this with C-c
