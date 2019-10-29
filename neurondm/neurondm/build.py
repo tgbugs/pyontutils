@@ -846,7 +846,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
                         ng.add_hierarchy(sgt, p, s)
                         ng.g.remove((s, p, o_lit))
 
-                        label = t.label 
+                        label = t.label
                         ng.add_trip(sgt, rdflib.RDF.type, rdflib.OWL.Class)
                         ng.add_trip(sgt, rdflib.RDFS.label, label)
 
@@ -1301,7 +1301,7 @@ def make_devel():
             *(rf(ilxtr.hasMolecularPhenotype, m) for m in pv_members),
         )(pv_query)
 
-       
+
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
@@ -1479,4 +1479,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

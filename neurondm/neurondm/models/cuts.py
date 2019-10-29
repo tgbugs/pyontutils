@@ -303,7 +303,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
         writer = csv.writer(f, lineterminator='\n')
         writer.writerow(header)
         writer.writerows(rows)
-        
+
     return [header] + rows
 
 
@@ -335,7 +335,7 @@ def get_smatch(labels_set2):
             if match in l_rem and pheno:
                 l_rem = l_rem.replace(match, '').strip()
                 pes += (pheno if isinstance(pheno, tuple) else (pheno,))
-            
+
         if l_rem in exact_rules:
             pes += (exact_rules[l_rem],)
             l_rem = ''

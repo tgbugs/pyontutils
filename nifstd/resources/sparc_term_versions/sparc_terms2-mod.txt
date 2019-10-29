@@ -7379,11 +7379,6 @@ SparcILX
     Internal branch of superior laryngeal nerve	ILX:0738373
     External branch of superior laryngeal nerve	ILX:0738374
 Minimal information model (MIS)
-    Felis catus	NCBITaxon:9685
-    Homo sapiens	NCBITaxon:9606
-    Mus musculus	NCBITaxon:10090
-    Rattus norvegicus	NCBITaxon:10116
-    Suncus murinus	NCBITaxon:9378
     abdominal cavity	UBERON:0003684
     abdominal wall	UBERON:0003697
     adipose tissue	UBERON:0001013
@@ -7391,7 +7386,6 @@ Minimal information model (MIS)
     alimentary part of gastrointestinal system	UBERON:0005409
     arterial blood	UBERON:0013755
     biceps femoris	UBERON:0001374
-    bladder organ	UBERON:0018707
     blood	UBERON:0000178
     bolus of food	UBERON:0012113
     brainstem	UBERON:0002298
@@ -7402,38 +7396,50 @@ Minimal information model (MIS)
     common fibular nerve	UBERON:0001324
     connective tissue	UBERON:0002384
     diaphragm	UBERON:0001103
-    dorsal fin proximal radial element 1	UBERON:2101818
     dorsal root ganglion	UBERON:0000044
     duct	UBERON:0000058
     duct of salivary gland	UBERON:0001837
     esophagus	UBERON:0001043
     external carotid artery	UBERON:0001070
     fat pad	UBERON:0003916
+    Felis catus	NCBITaxon:9685
+    female	PATO:0000383
     fibular nerve	UBERON:0035652
+    Genetic assessment	BIRNLEX:3001
     heart	UBERON:0000948
-    heart left ventricle	UBERON:0002084
+    heart right ventricle	UBERON:0002080
+    Homo sapiens	NCBITaxon:9606
     hypodermis	UBERON:0002072
     inferior vagus X ganglion	UBERON:0005363
-    intestine	UBERON:0000160
     large intestine	UBERON:0000059
     liver	UBERON:0002107
     lung	UBERON:0002048
+    male	PATO:0000384
+    Mus musculus	NCBITaxon:10090
     nerve	UBERON:0001021
     obsolete sclerite	UBERON:0003148
+    ocular fundus	UBERON:0003951
     pancreas	UBERON:0001264
+    paralaminar part of medial dorsal nucleus	UBERON:0002650
     pia mater	UBERON:0002361
     post-juvenile adult stage	UBERON:0000113
     posterior hypothalamic region	UBERON:0002770
     pyloric sphincter	UBERON:0001202
+    Rattus norvegicus	NCBITaxon:10116
     scale	UBERON:0002542
     scalp	UBERON:0000403
+    scapula	UBERON:0006849
     sciatic nerve	UBERON:0001322
     sense organ	UBERON:0000020
+    small intestine	UBERON:0002108
     spleen	UBERON:0002106
+    Sprague Dawley	BIRNLEX:266
     stomach	UBERON:0000945
     submandibular ganglion	UBERON:0002059
     submandibular gland	UBERON:0001736
+    Suncus murinus	NCBITaxon:9378
     suprageniculate nucleus of thalamus	UBERON:0003033
+    Sus scrofa domesticus	NCBITaxon:9825
     suture	UBERON:4200215
     tibial nerve	UBERON:0001323
     tissue	UBERON:0000479
@@ -7444,11 +7450,92 @@ Minimal information model (MIS)
     vagus nerve	UBERON:0001759
     valve	UBERON:0003978
     white adipose tissue	UBERON:0001347
-    female	PATO:0000383
-    male	PATO:0000384
-    Genetic assessment	BIRNLEX:3001
-    Holtzman Sprague-Dawley rat	BIRNLEX:421
-    Sprague Dawley	BIRNLEX:266
+    	unit:meter
+    	unit:second
+    	unit:dimensionless
+    	unit:gram
+    	sparc:Protocol
+    	sparc:animalSubjectHasWeight
+    	sparc:firstName
+    	sparc:isContactPerson
+    	sparc:animalSubjectIsOfStrain
+    	sparc:spatialLocationOfModulator
+    	sparc:stimulatorUtilized
+    	sparc:Subject
+    	sparc:Resource
+    	sparc:hasORCIDId
+    	sparc:lastName
+    	sparc:animalSubjectIsOfSpecies
+    	sparc:Researcher
+    	sparc:Sample
+    	sparc:specimenHasIdentifier
+    	sparc:Measurement
+    	TEMP:localIdAlt
+    	TEMP:hasResponsiblePrincialInvestigator
+    	TEMP:Editor
+    	TEMP:hasHumanUri
+    	TEMP:hasNumberOfDirectories
+    	TEMP:hasUriApi
+    	TEMP:DataCollector
+    	TEMP:acknowledgements
+    	TEMP:protocolHasNumberOfSteps
+    	TEMP:collectionTitle
+    	TEMP:contributorTo
+    	TEMP:hasDigitalArtifactThatIsAboutIt
+    	TEMP:middleName
+    	TEMP:ProjectMember
+    	TEMP:hasSizeInBytes
+    	TEMP:RightsHolder
+    	TEMP:Other
+    	TEMP:hasNumberOfFiles
+    	TEMP:curationIndex
+    	TEMP:DataManager
+    	TEMP:subjectHasWeight
+    	TEMP:hasUriHuman
+    	TEMP:hasAge
+    	TEMP:hasRole
+    	TEMP:Distributor
+    	TEMP:Sponsor
+    	TEMP:hasUnit
+    	TEMP:wasDerivedFromSubject
+    	TEMP:hasAgeCategory
+    	TEMP:ProjectManager
+    	TEMP:submissionIndex
+    	TEMP:Researcher
+    	TEMP:PrincipalInvestigator
+    	TEMP:hasNumberOfContributors
+    	TEMP:hasNumberOfProtcurAnnotations
+    	TEMP:Supervisor
+    	TEMP:TODO
+    	TEMP:hasDigitalArtifactThatIsAboutItWithHash
+    	TEMP:subjectHasHeight
+    	TEMP:hasAssignedGroup
+    	TEMP:hasExperimentalModality
+    	TEMP:hasNumberOfSubjects
+    	TEMP:hasAffiliation
+    	TEMP:hasProtocol
+    	TEMP:RelatedPerson
+    	TEMP:hasNumberOfSamples
+    	TEMP:CoInvestigator
+    	TEMP:providerNote
+    	TEMP:DataCurator
+    	TEMP:FundedResearchProject
+    	TEMP:hasGenotype
+    	TEMP:wasAdministeredAnesthesia
+    	TEMP:IsDescribedBy
+    	TEMP:errorIndex
+    	TEMP:protocolExecutionDate
+    	TEMP:hasBiologicalSex
+    	TEMP:involvesAnatomicalRegion
+    	TEMP:hasBlackfynnUserId
+    	TEMP:HostingInstitution
+    	TEMP:localId
+    	TEMP:ProjectLeader
+    	TEMP:hasAwardNumber
+    	TEMP:ContactPerson
+    	TEMP:localExecutionNumber
+    	ilxtr:annotationValue
+    	ilxtr:hasAnnotation
 ApiNATOMY
     Diencephalon	UBERON:0001894
     Hypothalamus	UBERON:0001898

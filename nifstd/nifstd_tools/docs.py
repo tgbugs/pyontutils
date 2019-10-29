@@ -256,7 +256,7 @@ def get__doc__s():
 def docstrings(theme):
     docstr_file = 'docstrings.org'
     docstr_path = working_dir / docstr_file
-    title = 'Command line programs and libraries' 
+    title = 'Command line programs and libraries'
     authors = 'various'
     date = TODAY()
     docstr_kwargs = (working_dir, docstr_path,
@@ -628,7 +628,7 @@ def main():
     titles = {
         ###
         'Components':'Components',
-        'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  # 
+        'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  #
         'ontquery/README.html':'Introduction to ontquery',
         'pyontutils/README.html':'Introduction to pyontutils',
         'pyontutils/nifstd/README.html':'Introduction to nifstd-tools',
@@ -689,7 +689,7 @@ def main():
         'Other':'Other',
         'sparc-curation/README.html': 'sparc-curation readme',
     }
-        
+
     index = [
         '<b class="Components">Components</b>',
         '<b class="Developer docs">Developer docs</b>',

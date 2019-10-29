@@ -293,7 +293,7 @@ class OntMeta(OntRes):
         self._graph = self.Graph().parse(data=data, format=self.format)
 
     def _populate(self, graph, gen):
-        # we don't pop request headers or file metadata off in here 
+        # we don't pop request headers or file metadata off in here
         # because different loading processes may use that information
         # to dispatch different loading processes
 
@@ -421,11 +421,12 @@ class OntMetaIri(OntMeta, OntIdIri):
 
                 yield header_first_chunk
                 chunk = chunk[start_end_index:]
-                
+
             if searching and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
                 # FIXME edge case where a stop crosses a chunk boundary
                 # if stop is short enough it may make sense to do a naieve contains check
                 # to start things off ...
+
                 stop_end_index = chunk.index(stop) + len(stop)
                 header_last_chunk = chunk[:stop_end_index]
                 if yield_response_gen:
@@ -502,7 +503,7 @@ class OntResIri(OntIdIri, OntResOnt):
         return chain(header_chunks, gen)
 
     def _populate(self, graph, gen):
-        # we don't pop request headers or file metadata off in here 
+        # we don't pop request headers or file metadata off in here
         # because different loading processes may use that information
         # to dispatch different loading processes
 
@@ -862,7 +863,7 @@ class OntGraph(rdflib.Graph):
     def subjectIdentity(self, subject, *, debug=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
-            not quite 
+            not quite
         """
 
         pairs_triples = list(self.subjectGraph(subject))

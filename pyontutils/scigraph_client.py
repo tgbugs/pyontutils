@@ -166,7 +166,7 @@ class Analyzer(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
         requests_params = kwargs
@@ -623,7 +623,7 @@ class DynamicBase(restService):
             MATCH (phenotype)<-[:${target_predicate}]-(blank)
             // WHERE NOT (phenotype.iri =~ ".*_:.*")
             RETURN phenotype
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -661,7 +661,7 @@ class DynamicBase(restService):
             // RETURN phenotype, (phenotype)-[predicate]-(neuron) as e
             // WITH location, predicate, phenotype, neuron
             RETURN location, entrytype, neuron, predicate, phenotype
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -696,7 +696,7 @@ class DynamicBase(restService):
             -(artifact:Class{iri: "${artifact-id}"})
             WHERE label.iri <> "http://www.w3.org/2002/07/owl#Nothing"
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -731,7 +731,7 @@ class DynamicBase(restService):
             -[:ilxtr:isDefinedBy]->(a)<-[:subClassOf*0..2]
             -(artifact:Class{iri: "${artifact-id}"})
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -779,7 +779,7 @@ class DynamicBase(restService):
                     "http://purl.org/sig/ont/fma/fma7647",
                     "http://purl.org/sig/ont/fma/fma50801"]
             RETURN n
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -794,7 +794,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/organList').format(**kwargs)
         requests_params = kwargs
@@ -812,7 +812,7 @@ class DynamicBase(restService):
             -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..40]->(part)
             -[:fma:arterial_supply|fma:nerve_supply*0..1]->(sup)
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -848,7 +848,7 @@ class DynamicBase(restService):
             -[:ilxtr:isDefinedInTaxon]->(species)
             WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing"
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -863,7 +863,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts').format(**kwargs)
         requests_params = kwargs
@@ -884,7 +884,7 @@ class DynamicBase(restService):
             -[:subClassOf*0..2]->(parent)
             WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing"
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -931,7 +931,7 @@ class DynamicBase(restService):
                   AND NOT (label.iri =~ ".*_:.*") AND NOT (maybe.iri =~ ".*_:.*")
                   AND label.iri <> "http://www.w3.org/2002/07/owl#Nothing"
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -946,7 +946,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationGraph').format(**kwargs)
         requests_params = kwargs
@@ -971,7 +971,7 @@ class DynamicBase(restService):
             -[:subClassOf*0..2]->(parent)
             -[:ilxtr:isDefinedInTaxon]->(species)
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -986,7 +986,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots').format(**kwargs)
         requests_params = kwargs
@@ -1015,7 +1015,7 @@ class DynamicBase(restService):
             -[:ilxtr:isDefinedBy]->(artifact)
             -[:subClassOf*0..2]->(parent)
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1070,7 +1070,7 @@ class DynamicBase(restService):
             -[:ilxtr:isDefinedBy]->(artifact)
             -[:subClassOf*0..2]->(parent)
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1143,7 +1143,7 @@ class DynamicBase(restService):
             -[:ilxtr:isDefinedBy]->(artifact)
             -[:subClassOf*0..2]->(parent)
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1183,7 +1183,7 @@ class DynamicBase(restService):
                   AND NOT (label.iri =~ ".*_:.*") AND NOT (maybe.iri =~ ".*_:.*")
                   AND label.iri <> "http://www.w3.org/2002/07/owl#Nothing"
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1223,7 +1223,7 @@ class DynamicBase(restService):
                     "http://purl.obolibrary.org/obo/NCBITaxon_10090",
                     "http://purl.obolibrary.org/obo/NCBITaxon_10116"]
             RETURN n
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1238,7 +1238,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/speciesList').format(**kwargs)
         requests_params = kwargs
@@ -1261,7 +1261,7 @@ class DynamicBase(restService):
             WITH start, end
             MATCH path = shortestPath((start)-[:${relationship}*..${max_depth}]->(end))
             RETURN path
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -1816,7 +1816,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/categories').format(**kwargs)
         requests_params = kwargs
@@ -1852,7 +1852,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-        
+
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
         requests_params = kwargs
@@ -1922,4 +1922,3 @@ class Vocabulary(restService):
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
         return output if output else []
-

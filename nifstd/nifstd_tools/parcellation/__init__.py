@@ -146,7 +146,7 @@ class LabelRoot(Class):
 
     def __init__(self, *args, **kwargs):
         for it_name in ('definingArtifacts', 'definingArtifactsS'):  # TODO abstract to type
-            if it_name in kwargs: 
+            if it_name in kwargs:
                 kwargs[it_name] = tuple(set(kwargs[it_name]))
         super().__init__(*args, **kwargs)
 

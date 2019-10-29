@@ -14,10 +14,8 @@ setup(
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     install_requires=[
         'pandas',
@@ -28,9 +26,10 @@ setup(
     	'sqlalchemy',
         'pathlib',
     ],
-    entry_points={
-        'console_scripts': [
-            'interlex = ilxutils.cli: main',
-        ],
-    },
+    # TODO: add a get functionality thats more specific query
+    # entry_points={
+    #     'console_scripts': [
+    #         'ilxutils = ilxutils.cli: main',
+    #     ],
+    # },
 )

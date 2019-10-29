@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Find dead ids in an ontology and raise them to be owl:Classes again.
 Also build a list of classes that may be banished to the shadow realm
 of oboInOwl:hasAlternativeId in the near future.

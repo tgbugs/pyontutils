@@ -10,7 +10,7 @@ from test.test_neurons import TestRoundtrip
 # write the file manually to show the issue is not related to a previous write
 # this works with neurondm.lang or neurondm
 test_madness_py = '''
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 from neurondm import *
 
 class NeuronMarkram2015(NeuronEBM):

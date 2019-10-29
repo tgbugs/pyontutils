@@ -349,7 +349,7 @@ class LabelMaker:
                 return  # interneuron is already in the label
             elif phenotype.p == self.predicate_namespace['MotorPhenotype']:
                 return 'neuron'
-            else:  # principle, projection, etc. 
+            else:  # principle, projection, etc.
                 return 'neuron'
 
         # put interneuron last if it is in the phenotypes list
@@ -435,7 +435,7 @@ class OntTerm(bOntTerm, OntId):
             yield s, rdf.type, (_t if _t.__class__ == rdflib.URIRef else _t.u)
 
         if self.label:
-            _label = self.label 
+            _label = self.label
             label = rdflib.Literal(_label)
             yield s, rdfs.label, label
 
@@ -750,7 +750,7 @@ class Config:
         # because at the moment the code assumes that the superclass is invariant
         # this is not the case, and we need equality with and without the superclass
         # we are currently missing equality with the superclass
-        # we can probably us a conjuctive graph to 
+        # we can probably us a conjuctive graph to
         self.out_graph = graphBase.out_graph
         self.existing_pes = NeuronBase.existing_pes
 

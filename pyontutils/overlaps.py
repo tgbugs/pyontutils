@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """Report on overlaping triples between all pairs of ontology files.
 
 Usage:
@@ -48,4 +48,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
