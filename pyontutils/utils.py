@@ -381,13 +381,12 @@ def deferred(function):
         return inner
     return wrapper
 
-
-def Async(rate=None, debug=False, collector=None, use_nest_asyncio=False):  # ah conclib
-
-    # Breaks in SPARC Pipeline within windows/ubuntu subsystem for current unknown reasons
-    if use_nest_asyncio:
-        # Allows run_until_complete to check if there is an open loop already to append
-        nest_asyncio.apply()
+try:
+    nest_asyncio.apply()
+except Exception as e
+    log.exception(e)
+    
+def Async(rate=None, debug=False, collector=None):  # ah conclib
 
     # FIXME can't break this with C-c
     if rate:
