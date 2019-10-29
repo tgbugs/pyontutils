@@ -19,7 +19,10 @@ from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
 import nest_asyncio
-
+try:
+    nest_asyncio.apply()
+except Exception as e
+    log.exception(e)
 
 def get_working_dir(script__file__):
     """ hardcoded sets the 'equivalent' working directory if not in git """
@@ -382,12 +385,7 @@ def deferred(function):
     return wrapper
 
 
-def Async(rate=None, debug=False, collector=None, use_nest_asyncio=False):  # ah conclib
-
-    # Breaks in SPARC Pipeline within windows/ubuntu subsystem for current unknown reasons
-    if use_nest_asyncio:
-        # Allows run_until_complete to check if there is an open loop already to append
-        nest_asyncio.apply()
+def Async(rate=None, debug=False, collector=None):  # ah conclib
 
     # FIXME can't break this with C-c
     if rate:
