@@ -128,8 +128,8 @@ class ImportOntologyFromRawYMLDict:
 
     def __init__( self,
                   raw_yml: OrderedDict,
-                  sgg: oq.plugins.services.SciGraphRemote = sgg,
-                  ixr: oq.plugins.services.InterLexRemote = ixr, ) -> None:
+                  sgg: scigraph.Graph = None,
+                  ixr: oq.plugins.services.InterLexRemote = None, ) -> None:
         self.sgg = sgg # SciGraph | can check source using its apiEndpoint instance
         self.ixr = ixr # InterLexRemote | has to be seperate to minimize management confusion
         self.raw_yml = raw_yml # OrderedDict with lists for leaves (to maintain src order)

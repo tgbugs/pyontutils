@@ -383,7 +383,7 @@ def deferred(function):
 
 try:
     nest_asyncio.apply()
-except Exception as e
+except Exception as e:
     log.exception(e)
     
 def Async(rate=None, debug=False, collector=None):  # ah conclib
