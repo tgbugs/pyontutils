@@ -1,7 +1,7 @@
 import unittest
 from pyontutils.config import DevConfig
 
-devconfig = DevConfig(config_file='/tmp/fake-devconfig.yaml')
+devconfig = DevConfig(config_file='fake-devconfig.yaml')
 
 
 class TestConfig(unittest.TestCase):
