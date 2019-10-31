@@ -38,8 +38,9 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
-        'hyputils>=0.0.3',
-        'pyontutils>=0.1.2',
+        'hyputils>=0.0.4',
+        'ontquery>=0.2.0',  # pyontutils only needs >= 0.1.0 so this is temporary
+        'pyontutils>=0.1.4',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'test': tests_require,

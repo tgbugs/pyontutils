@@ -1,5 +1,6 @@
 recursive-include test *
 exclude bin/run-tests
+exclude docs/NeuronLangExample.ipynb
 exclude .coveragerc
 exclude .gitignore
 exclude .travis.yml

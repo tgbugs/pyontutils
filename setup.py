@@ -37,8 +37,8 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
-        'augpathlib>=0.0.2',
         'appdirs',
+        'augpathlib>=0.0.2',
         'colorlog',
         'docopt',
         'gitpython',
@@ -49,7 +49,7 @@ setup(
         'lxml',
         'nest_asyncio',
         'oauth2client',
-        'ontquery>=0.1.0',
+        'ontquery>=0.2.0',
         'pyyaml',
         'requests',
         'terminaltables',
