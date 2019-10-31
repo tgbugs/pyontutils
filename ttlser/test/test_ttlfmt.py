@@ -22,4 +22,4 @@ class TestTtlfmt(unittest.TestCase):
         try:
             main()
         except AttributeError as e:
-            raise AttributeError(f'failed with {self.argv}') from e
+            raise AttributeError('failed with ' + str(self.argv)) from e
