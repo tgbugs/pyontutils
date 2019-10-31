@@ -91,6 +91,7 @@ class Folders:
             self.recursive_clean(self.fake_local_repo)
 
 
+@pytest.mark.skip('Base class that should not be run directly')
 class _TestScriptsBase(unittest.TestCase):
     """ Import everything and run main() on a subset of those
         NOTE If you are debugging this. Most of the functions in this
@@ -297,6 +298,7 @@ class _TestScriptsBase(unittest.TestCase):
             cls.argv_orig = sys.argv
 
 
+@pytest.mark.skip('Base class that should not be run directly')
 class _TestCliBase(unittest.TestCase):
     commands = tuple()
 
