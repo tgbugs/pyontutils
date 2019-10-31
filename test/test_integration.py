@@ -3,9 +3,9 @@ import sys
 import unittest
 from pathlib import Path
 from importlib import import_module
-import git
+import pytest
 import pyontutils
-from pyontutils.utils import TermColors as tc, get_working_dir
+from pyontutils.utils import get_working_dir
 from pyontutils.config import devconfig
 from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
 
@@ -44,10 +44,15 @@ if working_dir is None:
     # a number of problems with references to local vs installed packages
     working_dir = Path(__file__).parent.parent
 
-devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
-ont_repo = Repo(devconfig.ontology_local_repo)
-post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
-post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+try:
+    devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
+    ont_repo = Repo(devconfig.ontology_local_repo)
+    post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+except devconfig.MissingRepoError as e:
+    TestScripts = pytest.mark.skip('No repo found skipping all integration tests.')(TestScripts)
+    post_load = lambda : None
+    post_main = lambda : None
 
 ### build mains
 
