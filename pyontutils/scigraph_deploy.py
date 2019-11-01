@@ -69,7 +69,7 @@ defaults.update({'<repo>':None,
                  '<services_host>':None})  # these don't need values
 combined_defaults = {**ontload_defaults, **defaults}
 
-USER = os.environ['USER']
+USER = os.environ.get('USER', None)
 HOST = socket.gethostname()
 
 AND = ' && '
