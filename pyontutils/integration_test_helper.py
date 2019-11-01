@@ -11,6 +11,16 @@ from pyontutils.utils import TermColors as tc
 from pyontutils.config import devconfig
 
 
+def simpleskipif(skip):
+    def inner(function):
+        if skip:
+            return lambda self: pytest.skip('skipping mains')
+        else:
+            return function
+
+    return inner
+
+
 class Repo(baseRepo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -155,9 +165,6 @@ class _TestScriptsBase(unittest.TestCase):
             mains = {k:v for k, v in mains.items() if k in only}
             print(mains)
 
-        if not do_mains:
-            mains = {}
-
         _do_mains = []
         _do_tests = []
         try:
@@ -232,6 +239,7 @@ class _TestScriptsBase(unittest.TestCase):
                 for j, argv in enumerate(argvs):
                     mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
                     #print('MPATH:  ', module_path)
+                    @simpleskipif(not do_mains)
                     def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
                         try:
                             script = self._modules[module_path]
