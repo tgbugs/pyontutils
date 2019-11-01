@@ -3,6 +3,7 @@ from pathlib import Path
 import rdflib
 import requests
 from ontquery.terms import OntCuries
+from pyontutils.utils import log
 from pyontutils.config import devconfig
 from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
@@ -66,6 +67,7 @@ def getCuries(curies_location):
         return curie_map
 
     except (FileNotFoundError, NotADirectoryError) as e:
+        log.exception(e)
         # retrieving stuff over the net is bad
         # but having stale curies seems worse?
 
