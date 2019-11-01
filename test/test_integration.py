@@ -49,10 +49,11 @@ try:
     ont_repo = Repo(devconfig.ontology_local_repo)
     post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
     post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    do_mains = True
 except devconfig.MissingRepoError as e:
-    TestScripts = pytest.mark.skip('No repo found skipping all integration tests.')(TestScripts)
     post_load = lambda : None
     post_main = lambda : None
+    do_mains = False
 
 ### build mains
 
@@ -119,4 +120,4 @@ if 'CI' not in os.environ:
 print(skip)
 TestScripts.populate_tests(pyontutils, working_dir, mains, skip=skip,
                            post_load=post_load, post_main=post_main,
-                           only=only, do_mains=True)
+                           only=only, do_mains=do_mains)
