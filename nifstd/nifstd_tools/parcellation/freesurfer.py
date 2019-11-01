@@ -104,8 +104,18 @@ class MNDBGLSrc(Source):
     #artifact = Artifacts.MNDBGL
 
     @classmethod
+    def _patch_init(cls):
+        # temporary fix for https://github.com/nipy/mindboggle/pull/187
+        repo = cls.repo_path.repo
+        remote = repo.remote()
+        if next(remote.urls) == cls.source:
+            remote.fetch('pull/187/head:pr-187')
+            repo.git.checkout('pr-187')
+
+    @classmethod
     def loadData(cls):
         sys.path.append(cls.repo_path.as_posix())
+        cls._patch_init()
         from mindboggle.mio.labels import DKTprotocol as dkt
         cls.dkt = dkt
         return dkt
