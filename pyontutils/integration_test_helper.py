@@ -91,7 +91,6 @@ class Folders:
             self.recursive_clean(self.fake_local_repo)
 
 
-@pytest.mark.skip('Base class that should not be run directly')
 class _TestScriptsBase(unittest.TestCase):
     """ Import everything and run main() on a subset of those
         NOTE If you are debugging this. Most of the functions in this
@@ -298,11 +297,10 @@ class _TestScriptsBase(unittest.TestCase):
             cls.argv_orig = sys.argv
 
 
-@pytest.mark.skip('Base class that should not be run directly')
 class _TestCliBase(unittest.TestCase):
     commands = tuple()
 
-    def test_cli(self):
+    def test_cli(self):  # note this will run itself in all cases, but that is ok
         # we still run these tests to make sure that the install process works as expected
         failed = []
         for command in self.commands:
