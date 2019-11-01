@@ -1,5 +1,4 @@
 recursive-include test *
-include nifstd/scigraph/curie_map.yaml
 exclude bin/run-tests
 exclude docs/NeuronLangExample.ipynb
 exclude .coveragerc
@@ -20,3 +19,5 @@ recursive-exclude ilxutils *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
+
+include nifstd/scigraph/curie_map.yaml
