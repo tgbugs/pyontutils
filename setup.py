@@ -60,8 +60,6 @@ setup(
                     'spell': ['hunspell'],
                     'test': tests_require,
                    },
-    #package_data
-    #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
     entry_points={
         'console_scripts': [
             'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
@@ -76,6 +74,7 @@ setup(
             'scig=pyontutils.scig:main',
         ],
     },
-    data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),
-    ],
+    #package_data
+    #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
+    #data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),],
 )
