@@ -8,8 +8,10 @@ import pyontutils
 from pyontutils.utils import get_working_dir
 from pyontutils.config import devconfig
 from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
+from .common import skipif_no_net
 
 
+@skipif_no_net
 class TestOntQuery(unittest.TestCase):
     """ ITs for ontquery """
 
@@ -22,7 +24,7 @@ class TestOntQuery(unittest.TestCase):
         self.OntTerm('UBERON:0000955')
 
     def test_query(self):
-        self.query('brain')
+        list(self.query('brain'))
 
 
 class TestScripts(Folders, _TestScriptsBase):

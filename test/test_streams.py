@@ -2,8 +2,10 @@ import unittest
 import rdflib
 from pyontutils.core import OntResIri, OntResPath, OntResGit, OntResAny
 from pyontutils.core import OntGraph, OntConjunctiveGraph
+from .common import skipif_no_net
 
 
+@skipif_no_net
 class TestOntResIri(unittest.TestCase):
     def setUp(self):
         # TODO localhost server running in thread ?
@@ -32,6 +34,7 @@ class TestOntResIri(unittest.TestCase):
         assert not [g for g in c.contexts() if not isinstance(g, OntGraph)]
 
 
+@skipif_no_net
 class TestOntResIriConsecutive(TestOntResIri):
     @classmethod
     def setUpClass(cls):
