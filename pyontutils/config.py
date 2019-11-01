@@ -1,4 +1,5 @@
 import os
+import sys
 import stat
 import yaml
 from pathlib import Path
@@ -15,9 +16,14 @@ if not pyontutils_config_path.parent.exists():
 
 default_config = pyontutils_config_path / 'devconfig.yaml'
 working_dir = get_working_dir(__file__)
+_data_curies_string = 'share/idlib/local-conventions/nifstd/curie_map.yaml'  # XXX
+system_curies_path = Path(sys.prefix) / _data_curies_string
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_curies = pyontutils_config_path / 'curie_map.yaml'
+    if not default_curies.exists():
+        log.warning(f'No curies found at {default_curies!r}')
+        default_curies = system_curies_path
     # hardcoding the default api here to avoid importing the scigraph client
     default_scigraph_api = 'https://scicrunch.org/api/1/scigraph'
 else:

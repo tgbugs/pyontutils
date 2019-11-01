@@ -76,4 +76,6 @@ setup(
             'scig=pyontutils.scig:main',
         ],
     },
+    data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),
+    ],
 )
