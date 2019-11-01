@@ -21,3 +21,4 @@ recursive-exclude * *.swp
 recursive-exclude * *.swo
 
 include nifstd/scigraph/curie_map.yaml
+include ttlser/test/nasty.ttl

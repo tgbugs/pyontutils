@@ -23,7 +23,6 @@ if working_dir is None:
     default_curies = pyontutils_config_path / 'curie_map.yaml'
     if not default_curies.exists():
         log.warning(f'No curies found at {default_curies!r}')
-        default_curies = system_curies_path
     # hardcoding the default api here to avoid importing the scigraph client
     default_scigraph_api = 'https://scicrunch.org/api/1/scigraph'
 else:
