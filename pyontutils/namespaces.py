@@ -80,7 +80,7 @@ def getCuries(curies_location):
         # solution, so write once to a known location
         if curies_location == devconfig.curies.default:
             master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
-            raw_path = '/nifstd/scigraph/curie_map.yaml?raw=true'
+            raw_path = 'nifstd/scigraph/curie_map.yaml?raw=true'
             curies_url = master_blob + raw_path
             resp = requests.get(curies_url)
             if resp.ok:
