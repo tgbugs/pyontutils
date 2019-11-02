@@ -8,7 +8,9 @@ by scigraph.py
 """
 import re
 import copy
+import inspect
 import builtins
+from urllib.parse import parse_qs
 import requests
 from ast import literal_eval
 from json import dumps
@@ -166,7 +168,7 @@ class Analyzer(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/analyzer/enrichment').format(**kwargs)
         requests_params = kwargs
@@ -563,9 +565,10 @@ class DynamicBase(restService):
             -[:subClassOf|${relationship}*]
             ->(end)
             RETURN path
+            
             /* // apparently broken
             MATCH (start:Class{iri: "${id}"})
-            -[:subClassOf*0..40]
+            -[:subClassOf*0..20]
             -(intermediate)
             -[${relationship}*]
             ->(end)
@@ -583,7 +586,7 @@ class DynamicBase(restService):
             -[:${relationship}*]->(superpart)
             RETURN superpart
             */
-            
+
             outputs:
                 application/json
                 application/graphson
@@ -774,8 +777,12 @@ class DynamicBase(restService):
                     "http://purl.org/sig/ont/fma/fma14543",
                     "http://purl.org/sig/ont/fma/fma7201",
                     "http://purl.org/sig/ont/fma/fma7200",
+                    "http://purl.org/sig/ont/fma/fma7199",
                     "http://purl.org/sig/ont/fma/fma15900",
                     "http://purl.org/sig/ont/fma/fma45659",
+                    "http://purl.org/sig/ont/fma/fma7157",
+                    "http://purl.org/sig/ont/fma/fma9903",
+                    "http://purl.org/sig/ont/fma/fma9906",
                     "http://purl.org/sig/ont/fma/fma7647",
                     "http://purl.org/sig/ont/fma/fma50801"]
             RETURN n
@@ -794,7 +801,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/organList').format(**kwargs)
         requests_params = kwargs
@@ -808,10 +815,85 @@ class DynamicBase(restService):
             id: ontology id of the organ
 
             Query:
+            // NOTE: continuous with seems like it is what we want, but it causes
+            // MASSIVE memory usage in creatTree :/
+            // all parts of and directly connected to organ or parts of organ
             MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..40]->(part)
-            -[:fma:arterial_supply|fma:nerve_supply*0..1]->(sup)
+            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            -[:fma:arterial_supply|fma:nerve_supply|fma:venous_drainage|fma:continuous_with*0..1]->(sup)
+            -[:fma:constitutional_part|fma:branch_of|fma:tributary_of|fma:branch*0..1]->(a_bit_more)
             RETURN path
+            UNION
+            // return the major artery for any arteries supplying the organ directly
+            MATCH path = (start:Class{iri: "${id}"})
+            -[:fma:arterial_supply|fma:venous_drainage]->(vessel)
+            -[:fma:branch_of|fma:tributary_of]->(more_vessel)
+            -[:fma:branch_of|fma:tributary_of|fma:regional_part_of]->(even_more_vessel)
+            RETURN path
+            //
+            //
+            //
+            //
+            //
+            //
+            /*
+            MATCH path = (start:Class{iri: "${id}"})
+            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
+            RETURN path
+            UNION
+            MATCH path = (start:Class{iri: "${id}"})
+            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            -[:fma:connected_to*1]->(thing)
+            RETURN path
+            UNION
+            MATCH ppath = (start:Class{iri: "${id}"})
+            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            // can't exclude here otherwise we miss nerves of the containing parts
+            // WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
+            WITH start, ppath, part
+            MATCH path = (part)
+            -[:fma:nerve_supply*1]->(nerve)
+            -[:fma:branch_of*0..20]->(more_nerve)
+            WHERE NOT (more_nerve)-[:fma:branch_of]->()
+            // WHERE more_nerve <> part
+            RETURN path
+            UNION
+            MATCH ppath = (start:Class{iri: "${id}"})
+            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            // can't exclude here otherwise we miss nerves of the containing parts
+            // WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
+            WITH start, ppath, part
+            MATCH path = (part)
+            -[:fma:arterial_supply*1]->(artery)
+            RETURN path
+            UNION
+            MATCH path = (start:Class{iri: "${id}"})
+            -[:fma:arterial_supply]->(artery)
+            -[:fma:branch_of]->(more_artery)
+            RETURN path
+            // UNION
+            // MATCH ppath = (start:Class{iri: "${id}"})
+            // -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
+            // -[:fma:arterial_supply*1]->(artery)
+            // WITH start, ppath, artery
+            // MATCH path = (artery)
+            // -[:fma:branch_of*1]->(more_artery)
+            // WHERE NOT more_artery IN nodes(ppath)
+            
+            // works but slow as fuck
+            // WHERE NOT (start)
+            // -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(more_artery)
+            
+            // WHERE NOT more_artery IN nodes(ppath)
+            // WHERE NOT more_artery IN nodes(path)[0..-2]
+            // WHERE more_artery <> part AND more_artery <> artery
+            // WHERE length([n IN nodes(path) WHERE more_artery = n]) < 2
+            // WHERE more_artery IS NOT NULL
+            // WHERE NONE (p in collect(part) WHERE more_artery.id = p.id)
+            // WHERE NOT more_artery IN collect(part)
+            // RETURN path
+            */
 
             outputs:
                 application/json
@@ -863,7 +945,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationArtifacts').format(**kwargs)
         requests_params = kwargs
@@ -946,7 +1028,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationGraph').format(**kwargs)
         requests_params = kwargs
@@ -986,7 +1068,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots').format(**kwargs)
         requests_params = kwargs
@@ -1091,7 +1173,7 @@ class DynamicBase(restService):
         kwargs = {'species_id': species_id, 'region_id': region_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species-id}/{region_id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRoots/{species_id}/{region_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -1164,7 +1246,7 @@ class DynamicBase(restService):
         kwargs = {'species_id': species_id, 'fma_id': fma_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
         param_rest = self._make_rest(None, **kwargs)
-        url = self._basePath + ('/dynamic/prod/sparc/parcellationRootsFMA/{species-id}/{fma_id}').format(**kwargs)
+        url = self._basePath + ('/dynamic/prod/sparc/parcellationRootsFMA/{species_id}/{fma_id}').format(**kwargs)
         requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
@@ -1238,7 +1320,7 @@ class DynamicBase(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/dynamic/prod/sparc/speciesList').format(**kwargs)
         requests_params = kwargs
@@ -1298,27 +1380,59 @@ class Dynamic(DynamicBase):
     def _path_function_arg(self, path):
         if '?' in path:
             path, query = path.split('?', 1)
+            kwargs = parse_qs(query)
+        else:
+            kwargs = {}
 
         if '.' in path:
             raise ValueError('extensions not supported directly please use output=mimetype')
 
         if ':' in path:  # curie FIXME way more potential arguments here ...
-            path, arg = path.rsplit('/', 1)
-            putative = self._path_to_id(path + '/{')
-            cands = [p for p in dir(self) if p.startswith(putative)]
-            fname = cands[0] if len(cands) == 1 else '___wat'
+            key = lambda s: len(s)
+            args = []
+            puts = []
+            while ':' in path:
+                path, arg = path.rsplit('/', 1)
+                args.append(arg)
+                base = self._path_to_id(path)
+                putative = self._path_to_id(path + '/{')
+                if ':' not in putative:
+                    puts.append(putative)
+
+            args.reverse()  # args are parsed backwards
+
+            cands = sorted([p for p in dir(self) if p.startswith(puts[0])], key=key)
+            if len(cands) > 1:
+                effs = [getattr(self, self._path_to_id(c)) for c in cands]
+                specs = [inspect.getargspec(f) for f in effs]
+                lens = [len(s.args) - 1 - len(s.defaults) for s in specs]
+                largs = len(args)
+                new_cands = []
+                for c, l in zip(cands, lens):
+                    if l == largs:
+                        new_cands.append(c)
+
+                if len(new_cands) > 1:
+                    raise TypeError('sigh')
+
+                cands = new_cands
+
+            fname = cands[0]
         else:
             arg = None
+            args = []
+
             fname = self._path_to_id(path)
 
         if not hasattr(self, fname):
             raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
 
-        return getattr(self, fname), arg
+        return getattr(self, fname), args, kwargs
 
     def dispatch(self, path, output='application/json', **kwargs):
-        f, a = self._path_function_arg(path)
-        return f(a, output=output, **kwargs) if a else f(output=output, **kwargs)
+        f, args, query_kwargs = self._path_function_arg(path)
+        kwargs.update(query_kwargs)
+        return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
 
 
 class GraphBase(restService):
@@ -1816,7 +1930,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/categories').format(**kwargs)
         requests_params = kwargs
@@ -1852,7 +1966,7 @@ class Vocabulary(restService):
         """
 
         kwargs = {}
-
+        # type caste not needed
         param_rest = self._make_rest(None, **kwargs)
         url = self._basePath + ('/vocabulary/prefixes').format(**kwargs)
         requests_params = kwargs
@@ -1922,3 +2036,4 @@ class Vocabulary(restService):
         requests_params = {k:v for k, v in kwargs.items() if k != 'term'}
         output = self._get('GET', url, requests_params, output)
         return output if output else []
+

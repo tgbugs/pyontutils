@@ -188,6 +188,7 @@ def _loadPrefixes():
         'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
         'npokb': str(npokb),
+        'tech': interlex_namespace('tgbugs/readable/technique/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
@@ -227,15 +228,16 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS
+ TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS, tech,
 ) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
-                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS')
+                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
+                   'tech',
+                  )
 
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
-tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 dim = rdflib.Namespace(asp[''] + 'dimension/')
 unit = rdflib.Namespace(asp[''] + 'unit/')
