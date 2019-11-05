@@ -55,7 +55,7 @@ def randomize_prefix_order(graph):
 
 def randomize_BNode_order(graph):
     replaced = {}
-    urn = [f'{i:0<6}' for i in range(999999)]
+    urn = ['{i:0<6}'.format(i=i) for i in range(999999)]
     shuffle(urn)
     def swap(t):
         if isinstance(t, rdflib.BNode):
@@ -84,26 +84,26 @@ class TestTtlser(unittest.TestCase):
     actualpath2 = 'test/actual2.ttl'
 
     def setUp(self):
-        with open((parent / self.goodpath), 'rb') as f:
+        with open((parent / self.goodpath).as_posix(), 'rb') as f:
             self.good = f.read()
 
         self.actual = self.serialize()
-        with open((parent / self.actualpath), 'wb') as f:
+        with open((parent / self.actualpath).as_posix(), 'wb') as f:
             f.write(self.actual)
 
     def make_ser(self):
-        header = ('import sys\n'
-                  'from io import BytesIO\n'
-                  'from random import shuffle\n'
-                  'from pathlib import Path\n'
-                  'import rdflib\n'
-                  f'from ttlser import {self.serializer.__name__}\n'
-                  f"rdflib.plugin.register({self.format!r}, rdflib.serializer.Serializer, "
-                  f"'ttlser', {self.serializer.__name__!r})\n"
-                  f'parent = Path("{parent.as_posix()}")\n'
-                  'class Thing:\n'
-                  f'    serializer = {self.serializer.__name__}\n'
-                  f'    badpath = {self.badpath!r}\n')
+        header = ('import sys\n' +
+                  'from io import BytesIO\n' +
+                  'from random import shuffle\n' +
+                  'from pathlib import Path\n' +
+                  'import rdflib\n' +
+                  ('from ttlser import ' + self.serializer.__name__ + '\n') +
+                  ("rdflib.plugin.register(" + repr(self.format) + ", rdflib.serializer.Serializer, ") +
+                  ("'ttlser', " + repr(self.serializer.__name__) + ")\n") +
+                  ('parent = Path("' + parent.as_posix() + '")\n') +
+                  'class Thing:\n' +
+                  ('    serializer = ' + self.serializer.__name__ + '\n') +
+                  ('    badpath = ' + repr(self.badpath) + '\n'))
         src0 = inspect.getsource(self.serialize)
         src1 = inspect.getsource(randomize_BNode_order)
         src2 = inspect.getsource(randomize_prefix_order)

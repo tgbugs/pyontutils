@@ -37,8 +37,8 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
-        'augpathlib>0.0.1',
         'appdirs',
+        'augpathlib>=0.0.2',
         'colorlog',
         'docopt',
         'gitpython',
@@ -47,8 +47,9 @@ setup(
         'ipython',
         'joblib>=0.14.0',
         'lxml',
+        'nest_asyncio',
         'oauth2client',
-        'ontquery>=0.1.0',
+        'ontquery>=0.2.0',
         'pyyaml',
         'requests',
         'terminaltables',
@@ -59,8 +60,6 @@ setup(
                     'spell': ['hunspell'],
                     'test': tests_require,
                    },
-    #package_data
-    #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
     entry_points={
         'console_scripts': [
             'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
@@ -75,4 +74,7 @@ setup(
             'scig=pyontutils.scig:main',
         ],
     },
+    #package_data
+    #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
+    #data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),],
 )

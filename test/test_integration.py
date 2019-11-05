@@ -3,13 +3,15 @@ import sys
 import unittest
 from pathlib import Path
 from importlib import import_module
-import git
+import pytest
 import pyontutils
-from pyontutils.utils import TermColors as tc, get_working_dir
+from pyontutils.utils import get_working_dir
 from pyontutils.config import devconfig
 from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
+from .common import skipif_no_net
 
 
+@skipif_no_net
 class TestOntQuery(unittest.TestCase):
     """ ITs for ontquery """
 
@@ -22,7 +24,7 @@ class TestOntQuery(unittest.TestCase):
         self.OntTerm('UBERON:0000955')
 
     def test_query(self):
-        self.query('brain')
+        list(self.query('brain'))
 
 
 class TestScripts(Folders, _TestScriptsBase):
@@ -44,10 +46,16 @@ if working_dir is None:
     # a number of problems with references to local vs installed packages
     working_dir = Path(__file__).parent.parent
 
-devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
-ont_repo = Repo(devconfig.ontology_local_repo)
-post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
-post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+try:
+    devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
+    ont_repo = Repo(devconfig.ontology_local_repo)
+    post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    do_mains = True
+except devconfig.MissingRepoError as e:
+    post_load = lambda : None
+    post_main = lambda : None
+    do_mains = False
 
 ### build mains
 
@@ -114,4 +122,4 @@ if 'CI' not in os.environ:
 print(skip)
 TestScripts.populate_tests(pyontutils, working_dir, mains, skip=skip,
                            post_load=post_load, post_main=post_main,
-                           only=only, do_mains=True)
+                           only=only, do_mains=do_mains)

@@ -497,12 +497,12 @@ def main():
     # import all ye submodules we have it sorted! LabelBase will find everything for us. :D
     if not args['--local']:
         from nifstd_tools.parcellation.aba import Artifacts as abaArts
-    #from nifstd_tools.parcellation.fsl import FSL  # Artifacts is attached to the class
-    #from nifstd_tools.parcellation.whs import Artifacts as whsArts
-    #from nifstd_tools.parcellation.berman import Artifacts as bermArts
-    #from nifstd_tools.parcellation.paxinos import Artifacts as paxArts
+    from nifstd_tools.parcellation.fsl import FSL  # Artifacts is attached to the class
+    from nifstd_tools.parcellation.whs import Artifacts as whsArts
+    from nifstd_tools.parcellation.berman import Artifacts as bermArts
+    from nifstd_tools.parcellation.paxinos import Artifacts as paxArts
     from nifstd_tools.parcellation.swanson import Artifacts as swArts
-    #from nifstd_tools.parcellation.freesurfer import Artifacts as fsArts
+    from nifstd_tools.parcellation.freesurfer import Artifacts as fsArts
     onts = getOnts()
     _ = *(print(ont) for ont in onts),
     out = build(*onts,

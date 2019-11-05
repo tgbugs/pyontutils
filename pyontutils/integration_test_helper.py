@@ -11,6 +11,16 @@ from pyontutils.utils import TermColors as tc
 from pyontutils.config import devconfig
 
 
+def simpleskipif(skip):
+    def inner(function):
+        if skip:
+            return lambda self: pytest.skip('skipping mains')
+        else:
+            return function
+
+    return inner
+
+
 class Repo(baseRepo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -155,9 +165,6 @@ class _TestScriptsBase(unittest.TestCase):
             mains = {k:v for k, v in mains.items() if k in only}
             print(mains)
 
-        if not do_mains:
-            mains = {}
-
         _do_mains = []
         _do_tests = []
         try:
@@ -216,7 +223,7 @@ class _TestScriptsBase(unittest.TestCase):
                 if stem in skip:
                     test_file = pytest.mark.skip()(test_file)
                 elif 'CI' in os.environ and stem in ci_skip:
-                    test_file = pytest.mark.skip(reason='Cannot tests this in CI right now.')(test_file)
+                    test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_file)
 
                 setattr(cls, fname, test_file)
 
@@ -232,6 +239,7 @@ class _TestScriptsBase(unittest.TestCase):
                 for j, argv in enumerate(argvs):
                     mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
                     #print('MPATH:  ', module_path)
+                    @simpleskipif(not do_mains)
                     def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
                         try:
                             script = self._modules[module_path]
@@ -267,7 +275,7 @@ class _TestScriptsBase(unittest.TestCase):
                     if stem in skip:
                         test_file = pytest.mark.skip()(test_main)
                     elif 'CI' in os.environ and stem in ci_skip:
-                        test_file = pytest.mark.skip(reason='Cannot tests this in CI right now.')(test_main)
+                        test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
 
                     setattr(cls, mname, test_main)
 
@@ -279,11 +287,17 @@ class _TestScriptsBase(unittest.TestCase):
             modpaths = [module_to_test.__name__ + '.' + modinfo.name
                         for modinfo in modinfos]
             for modpath in modpaths:
+                _, stem = modpath.rsplit('.', 1)
                 fname = 'test_' + modpath.replace('.', '_')
                 def test_file(self, modpath=modpath):
                     print(tc.ltyellow('IMPORTING:'), modpath)
                     module = import_module(modpath)
                     self._modules[modpath] = module
+
+                if stem in skip:
+                    test_file = pytest.mark.skip()(test_file)
+                elif 'CI' in os.environ and stem in ci_skip:
+                    test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
 
                 setattr(cls, fname, test_file)
 
@@ -294,7 +308,7 @@ class _TestScriptsBase(unittest.TestCase):
 class _TestCliBase(unittest.TestCase):
     commands = tuple()
 
-    def test_cli(self):
+    def test_cli(self):  # note this will run itself in all cases, but that is ok
         # we still run these tests to make sure that the install process works as expected
         failed = []
         for command in self.commands:

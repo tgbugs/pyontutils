@@ -9,8 +9,7 @@ from pyontutils.identity_bnode import bnodes, IdentityBNode
 class TestIBNode(unittest.TestCase):
     def setUp(self):
         self.graph1 = rdflib.Graph()
-        #file = Path(devconfig.ontology_local_repo) / 'ttl/BIRNLex_annotation_properties.ttl'
-        file = Path(devconfig.git_local_base, 'pyontutils/ttlser/test/nasty.ttl')
+        file = Path('ttlser/test/nasty.ttl')
         with open(file.as_posix(), 'rb') as f:
             self.ser1 = f.read()
 
@@ -19,7 +18,7 @@ class TestIBNode(unittest.TestCase):
         g2format = 'nt'
         # broken serialization :/ with full lenght prefixes
         self.ser2 = self.graph1.serialize(format=g2format)
-        with open('/tmp/test_ser2.ttl', 'wb') as f:
+        with open('test_ser2.ttl', 'wb') as f:
             f.write(self.ser2)
 
         self.graph2 = rdflib.Graph()

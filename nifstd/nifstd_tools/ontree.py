@@ -30,10 +30,20 @@ from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
 from urllib.parse import parse_qs
+import yaml
 import rdflib
 import htmlfn as hfn
 import ontquery as oq
-from flask import Flask, url_for, redirect, request, render_template, render_template_string, make_response, abort, current_app, send_from_directory
+from flask import (Flask,
+                   url_for,
+                   redirect,
+                   request,
+                   render_template,
+                   render_template_string,
+                   make_response,
+                   abort,
+                   current_app,
+                   send_from_directory)
 from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, atag, nbsp
 from htmlfn import render_table, table_style
@@ -47,11 +57,9 @@ from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as f
 from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import OntCuries
-from nifstd.development.sparc.sheets import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
 from typing import Union, Dict, List, Tuple, Generator
-from IPython import embed
-import yaml
-import networkx
+from nifstd_tools.sheets_sparc import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
+
 # Convienient Typing
 Semantic = Union[rdflib.URIRef, rdflib.Literal, rdflib.BNode]
 SemanticOptional = Union[Semantic, str, None]
@@ -118,134 +126,6 @@ uot =  (
 def time():
     ''' Get current time in a year-month-day:meta format '''
     return str(datetime.utcnow().isoformat()).replace('.', ',')
-
-class ImportOntologyFromRawYMLDict:
-    ''' Parses dictionary with each key having this format:
-        label + YML_DELIMITER + curie(s)
-        where curie(s) are also seperated by YML_DELIMITER
-
-        Note: I used the raw yml because nested curies complicated traversal '''
-
-    def __init__( self,
-                  raw_yml: OrderedDict,
-                  sgg: oq.plugins.services.SciGraphRemote = sgg,
-                  ixr: oq.plugins.services.InterLexRemote = ixr, ) -> None:
-        self.sgg = sgg # SciGraph | can check source using its apiEndpoint instance
-        self.ixr = ixr # InterLexRemote | has to be seperate to minimize management confusion
-        self.raw_yml = raw_yml # OrderedDict with lists for leaves (to maintain src order)
-        self._namespaces = OntCuries() # Awesome storage of known namespaces
-
-    def is_semantic(self, e: SemanticOptional) -> bool:
-        ''' Checks if element is a semantic type: URIRef, Literal, or BNode '''
-        return isinstance(e, rdflib.URIRef) or isinstance(e, rdflib.Literal) or isinstance(e, rdflib.BNode)
-
-    def is_iri(self, e: SemanticOptional) -> bool:
-        ''' Checks if element is a valid/known iri '''
-        # avoid weird initial typing
-        e = str(e)
-        has_no_space = (' ' not in e)
-        starts_as_url = (e.startswith('http://') or str(e).startswith('https://'))
-        return starts_as_url and has_no_space
-
-    def is_curie(self, s: SemanticOptional) -> bool:
-        ''' Checks if element is in a prefix:id version of a known iri '''
-        try:
-            if self.is_iri(s):
-                return
-            if self.is_semantic(s):
-                return
-            if ':' in s:
-                prefix, id_ = s.split(':', 1)
-                # triple elements can start with a prefix or known iri,
-                # but it's really just a sentence meant for a Literal type
-                # example: "UBERON:0001291 is rada rada."
-                if ' ' in id_:
-                    return
-                if self._namespaces.get(prefix):
-                    return True
-        except:
-            return
-
-    def give_sematic_type(self, e):
-        ''' Gives sematic type to element based on it's contents '''
-        if self.is_semantic(e):
-            pass
-        elif self.is_iri(e) or self.is_curie(e):
-            e = OntId(e).URIRef
-        else:
-            e = rdflib.Literal(e)
-        return e
-
-    def _get_triples_from_remote_reqs(self, remote_reqs: Tuple[str, Union[Generator, list]]) -> Generator:
-        ''' Exract predicate_objects from SciGraph Requests located in its meta key '''
-        for curie, node in remote_reqs: # TODO: create check if node exists?
-            if not node:
-                continue
-
-            ### SUBJECT LOGIC ###
-            subj = OntId(curie).URIRef
-
-            yield (subj, rdf.type, owl.Class)
-
-            # pull node meta that has iri keys only
-            # then check what to do with the values
-            try:
-                predicate_objects = node['nodes'][0]['meta']
-            except:
-                predicate_objects = list(node)[0]['predicates']
-            for pred, objects in predicate_objects.items():
-
-                ### PREDICATE LOGIC ###
-                if not self.is_iri(pred) and not self.is_curie(pred): # TODO: there has to be a better return from scigraph instead of this gibberish meta field
-                    continue
-                else:
-                    pred = OntId(pred).URIRef
-
-                ### OBJECT LOGIC ###
-                if not isinstance(objects, list):
-                    objects = [objects]
-                for obj in objects:
-                    obj = self.give_sematic_type(obj)
-
-                    yield (subj, pred, obj)
-
-    def make_graph(self):
-        ''' Create rdflib.Graph from nested OrderedDict with lists for leaves.
-            Each key is a label + curies where they are joined by the YML_DELIMITER '''
-        dict_ = self.raw_yml
-        nodes = networkx.DiGraph(dict_).nodes
-        g = OntGraph() # rdflib.Graph inheritor
-
-        external_curies = set()
-        interlex_curies = set()
-        for node in nodes:
-            label, *curies = node.split(YML_DELIMITER)
-            if curies:
-                # could be just strings bc some trees are a single table
-                # example: Nieuwenhuys
-                if ':' not in curies[0]:
-                    continue
-                for curie in curies:
-                    prefix = curie.split(':',1)[0]
-                    if prefix == 'ILX':
-                        interlex_curies.add(curie)
-                    else:
-                        external_curies.add(curie)
-
-        # For each iri make a Tuple(iri, node_from_scigraph_using_iri)
-        scigraph_gin = lambda curie: (curie, self.sgg.getNode(id=curie))
-        interlex_gin = lambda curie: (curie, self.ixr.query(curie=curie))
-
-        # Concurrently search SciGraphs
-        scigraph_reqs: Tuple[str, dict] = Async()(deferred(scigraph_gin)(curie) for curie in external_curies)
-        return scigraph_reqs
-        interlex_reqs: Tuple[str, Generator] = Async()(deferred(interlex_gin)(curie) for curie in interlex_curies)
-
-        triples = self._get_triples_from_remote_reqs(scigraph_reqs + interlex_reqs)
-        [g.add(t) for t in triples]
-        # add known namespaces we used
-        OntCuries.populate(g)
-        self.graph = g
 
 
 def graphFromGithub(link, verbose=False):
@@ -408,7 +288,8 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
             r = g.expand(root)
             for s in g.g.subjects():
                 if r == s:
-                    message = "No results. You are querying a ttl file directly, did you remember to set ?restriction=true?"
+                    message = ('No results. You are querying a ttl file directly, '
+                               'did you remember to set ?restriction=true?')
                     break
         else:
             message = 'Unknown root.'
@@ -482,6 +363,7 @@ examples = (
 )
 
 extra_examples = (
+    ('No tech?', a, 'ilxtr:technique'),
     ('Cell septum', a, 'GO:0044457'),
     ('Old NIFGA part of', hpp, 'BIRNLEX:796'),
     ('Cereberal cortex parts', po, 'UBERON:0002749'),
@@ -505,7 +387,8 @@ dynamic_examples = (
     ('Stomach parts', 'prod/sparc/organParts/FMA:7148', None),
     ('Parc graph', 'prod/sparc/parcellationGraph', '?direction=INCOMING'),
     ('Parc arts', 'prod/sparc/parcellationArtifacts/NCBITaxon:10116', '?direction=INCOMING'),
-    ('Parc arts', 'prod/sparc/parcellationRoots/NCBITaxon:10116', '?direction=INCOMING'),
+    ('Parc roots', 'prod/sparc/parcellationRoots/NCBITaxon:10116', '?direction=INCOMING'),
+    ('Parc region roots', 'prod/sparc/parcellationRoots/NCBITaxon:10116/UBERON:0000955', '?direction=INCOMING'),
 )
 
 demo_examples = (
@@ -513,7 +396,7 @@ demo_examples = (
     ('Neuron connectivity', '/trees/sparc/demos/isan2019/neuron-connectivity'),
 )
 
-def server(sgg, sgc, api_key=None, verbose=False):
+def server(api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
     if working_dir:
@@ -545,8 +428,6 @@ def server(sgg, sgc, api_key=None, verbose=False):
     # gsheets = GoogleSheets()
     sparc_view = open_custom_sparc_view_yml()
     # sparc_view_raw = open_custom_sparc_view_yml(False)
-    # importontology = ImportOntologyFromRawYMLDict(raw_yml=sparc_view_raw)
-    # importontology.make_graph()
 
     log.info('starting index load')
 
@@ -754,7 +635,6 @@ def server(sgg, sgc, api_key=None, verbose=False):
             format_ = None
 
         j = data_sgd.dispatch(path, **args)
-        #breakpoint()
         if not j['edges']:
             log.error(pprint(j))
             return abort(400)
@@ -804,6 +684,7 @@ def server(sgg, sgc, api_key=None, verbose=False):
         j = sgd.dispatch(path, **args)
         if not j['edges']:
             log.error(pprint(j))
+            log.debug(sgd._last_url)
             return abort(400)
 
         prov = [hfn.titletag(f'Dynamic query result for {path}'),
@@ -968,11 +849,6 @@ def server(sgg, sgc, api_key=None, verbose=False):
             #metas = ({'name':'date', 'content':time()},),
         #)
 
-    # @app.route(f'/{basename}/sparc/ttl', methods=['GET'])
-    # @app.route(f'/{basename}/sparc/ttl/', methods=['GET'])
-    # def route_ttl():
-    #     return render_template_string(importontology.graph.ttl_html)
-
     return app
 
 # for now hardcode
@@ -1059,7 +935,6 @@ test_terms = [OntId('UBERON:0001759'),
 def test():
     global request
     request = fakeRequest()
-    request.args['depth'] = 1
     app = server()
     (route_, route_docs, route_filequery, route_examples, route_iriquery,
      route_query, route_dynamic, route_sparc_demos_isan2019_flatmap_queries,
@@ -1077,42 +952,49 @@ def test():
     request = fakeRequest()
     route_sparc_demos_isan2019_neuron_connectivity()
 
-    return
-    for _, path, querystring in dynamic_examples:
-        log.info(f'ontree testing {path} {querystring}')
-        request = fakeRequest()
-        if querystring is not None:
-            request.args = {k:v[0] if len(v) == 1 else v
-                            for k,v in parse_qs(querystring.strip('?')).items()}
-        else:
-            request.args = {}
+    def test_dynamic():
+        for _, path, querystring in dynamic_examples:
+            log.info(f'ontree testing {path} {querystring}')
+            global request
+            request = fakeRequest()
+            if querystring is not None:
+                request.args = {k:v[0] if len(v) == 1 else v
+                                for k,v in parse_qs(querystring.strip('?')).items()}
+            else:
+                request.args = {}
 
-        resp = route_dynamic(path)
+            resp = route_dynamic(path)
 
-    for _, predicate, root, *_ in extra_examples + examples:
-        if root == 'UBERON:0001062':
-            continue  # too big
-        if root == 'PAXRAT:':
-            continue  # not an official curie yet
+    def test_examples():
+        for _, predicate, root, *_ in extra_examples + examples:
+            if root == 'UBERON:0001062':
+                continue  # too big
+            if root == 'PAXRAT:':
+                continue  # not an official curie yet
 
-        log.info(f'ontree testing {predicate} {root}')
-        if root.startswith('http'):
-            root = root.split('://')[-1]  # FIXME nginx behavior...
-            resp = route_iriquery(predicate, root)
-        else:
-            resp = route_query(predicate, root)
+            log.info(f'ontree testing {predicate} {root}')
+            if root.startswith('http'):
+                root = root.split('://')[-1]  # FIXME nginx behavior...
+                resp = route_iriquery(predicate, root)
+            else:
+                resp = route_query(predicate, root)
 
-        return
+    def test_file_examples():
+        for _, predicate, root, file, *args in file_examples:
+            log.info(f'ontree testing {predicate} {root} {file}')
+            if args and 'restriction' in args[0]:
+                request.args['restriction'] = 'true'
 
-    for _, predicate, root, file, *args in file_examples:
-        log.info(f'ontree testing {predicate} {root} {file}')
-        if args and 'restriction' in args[0]:
-            request.args['restriction'] = 'true'
+            resp = route_filequery(predicate, root, file)
 
-        resp = route_filequery(predicate, root, file)
+            if args and 'restriction' in args[0]:
+                request.args.pop('restriction')
 
-        if args and 'restriction' in args[0]:
-            request.args.pop('restriction')
+    test_dynamic()
+    request.args['depth'] = 1
+    #test_examples()
+    #test_file_examples()
+    request.args.pop('depth')
 
 
 def main():
@@ -1151,7 +1033,7 @@ def main():
             scs.api_key = api_key
             scs.setup(instrumented=OntTerm)
 
-        app = server(sgg, sgc, verbose=verbose)
+        app = server(verbose=verbose)
         # app.debug = False
         # app.run(host='localhost', port=args['--port'], threaded=True)  # nginxwoo
         # app.debug = True

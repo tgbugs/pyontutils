@@ -16,10 +16,10 @@ Options:
 
 """
 
+import re
 import copy
 import inspect
 import requests
-from  IPython import embed
 
 
 class restService:
@@ -259,27 +259,59 @@ class Dynamic(SUBCLASS):
     def _path_function_arg(self, path):
         if '?' in path:
             path, query = path.split('?', 1)
+            kwargs = parse_qs(query)
+        else:
+            kwargs = {}
 
         if '.' in path:
             raise ValueError('extensions not supported directly please use output=mimetype')
 
         if ':' in path:  # curie FIXME way more potential arguments here ...
-            path, arg = path.rsplit('/', 1)
-            putative = self._path_to_id(path + '/{')
-            cands = [p for p in dir(self) if p.startswith(putative)]
-            fname = cands[0] if len(cands) == 1 else '___wat'
+            key = lambda s: len(s)
+            args = []
+            puts = []
+            while ':' in path:
+                path, arg = path.rsplit('/', 1)
+                args.append(arg)
+                base = self._path_to_id(path)
+                putative = self._path_to_id(path + '/{')
+                if ':' not in putative:
+                    puts.append(putative)
+
+            args.reverse()  # args are parsed backwards
+
+            cands = sorted([p for p in dir(self) if p.startswith(puts[0])], key=key)
+            if len(cands) > 1:
+                effs = [getattr(self, self._path_to_id(c)) for c in cands]
+                specs = [inspect.getargspec(f) for f in effs]
+                lens = [len(s.args) - 1 - len(s.defaults) for s in specs]
+                largs = len(args)
+                new_cands = []
+                for c, l in zip(cands, lens):
+                    if l == largs:
+                        new_cands.append(c)
+
+                if len(new_cands) > 1:
+                    raise TypeError('sigh')
+
+                cands = new_cands
+
+            fname = cands[0]
         else:
             arg = None
+            args = []
+
             fname = self._path_to_id(path)
 
         if not hasattr(self, fname):
             raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
 
-        return getattr(self, fname), arg
+        return getattr(self, fname), args, kwargs
 
     def dispatch(self, path, output='application/json', **kwargs):
-        f, a = self._path_function_arg(path)
-        return f(a, output=output, **kwargs) if a else f(output=output, **kwargs)
+        f, args, query_kwargs = self._path_function_arg(path)
+        kwargs.update(query_kwargs)
+        return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
 
 
 class Graph(SUBCLASS):
@@ -349,7 +381,9 @@ class State:
         self.shebang = "#!/usr/bin/env python3\n"
         self.imports = ('import re\n'
                         'import copy\n'
+                        'import inspect\n'
                         'import builtins\n'
+                        'from urllib.parse import parse_qs\n'
                         'import requests\n'
                         'from ast import literal_eval\n'
                         'from json import dumps\n'
@@ -541,8 +575,9 @@ class State:
     def operation(self, api_dict):
         params, param_rest, param_docs, required, pkeys = self.make_params(api_dict['parameters'])
         dict_comp = (('kwargs = {k:dumps(v) if builtins.type(v) '
-                      'is dict else v for k, v in kwargs.items()}')  # json needs " not '
-                      if param_rest != '{}' else '')
+                      'is dict else v for k, v in kwargs.items()}')
+                      # json needs " not '
+                      if param_rest != '{}' else '# type caste not needed')
         empty_return_type = self.make_return(api_dict)
         nickname = api_dict['nickname']
         path = self._paths[nickname]
@@ -556,6 +591,7 @@ class State:
             _p = '{t}{t}{t}'.format(t=self.tab)
             _query = api_dict['x-query'].replace('\n', '\n' + _p)
             docstring += '\n\n{p}Query:\n{p}{q}'.format(p=_p, q=_query)
+            docstring = docstring.rstrip() + '\n'
 
         # handle whether required is in the url
         if required:
@@ -588,7 +624,7 @@ class State:
         method = api_dict['method']
 
         if '{' in path and '-' in path:  # FIXME hack
-            before, after = path.rsplit('{', 1)
+            before, after = path.split('{', 1)  # use split since there can be multiple paths
             path = before + '{' + after.replace('-', '_')
 
         formatted = operation_code.format(path=path, nickname=nickname, params=params, param_rest=param_rest,

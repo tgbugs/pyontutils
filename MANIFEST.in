@@ -1,5 +1,6 @@
 recursive-include test *
 exclude bin/run-tests
+exclude docs/NeuronLangExample.ipynb
 exclude .coveragerc
 exclude .gitignore
 exclude .travis.yml
@@ -18,3 +19,6 @@ recursive-exclude ilxutils *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
+
+include nifstd/scigraph/curie_map.yaml
+include ttlser/test/nasty.ttl

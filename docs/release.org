@@ -32,7 +32,7 @@ may be used in certain cases.
 
 Run the code block definitions to create the functions we will use.
 *NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
-# arg {(((( darned mismatched parens :/
+# arg {(((((( darned mismatched parens :/
 #+NAME: build-release
 #+BEGIN_SRC bash :eval never :exports code
 build-release () {
@@ -41,6 +41,7 @@ build-release () {
     # build_release tgbugs ontquery ontquery ontquery    0.0.8
 
     local POSITIONAL=()
+    local INTEGRATION_PACKAGES=()
     while [[ $# -gt 0 ]]
     do
     key="$1"
@@ -48,6 +49,11 @@ build-release () {
     case $key in
         -l|--local)
         local CLONEFROM="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -f|--artifact-folder)
+        local ARTIFACT_FOLDER="$2"
         shift # past argument
         shift # past value
         ;;
@@ -60,6 +66,11 @@ build-release () {
         local BRANCH="$2"
         shift # past argument
         shift # past value
+        ;;
+        -i|--install-package)
+        INTEGRATION_PACKAGES+=("$2")
+        shift
+        shift
         ;;
         --default)
         local DEFAULT=YES
@@ -90,7 +101,7 @@ build-release () {
 
     : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
 
-    echo $org $repo $folder $packagename $version $tag $CLONEFROM $BASE_PATH
+    echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
@@ -150,6 +161,9 @@ build-release () {
     fi
     pushd ${packagename}-${version}
     pipenv --rm  # clean any existing env
+    if [[ -n ${INTEGRATION_PACKAGES} ]]; then
+        pipenv run pip install ${INTEGRATION_PACKAGES[@]}
+    fi
     pipenv run pip install -e .[test]   # .[services] for ontquery full install
     PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
     # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
@@ -169,6 +183,14 @@ build-release () {
     popd
     if [[ -n ${FAILURE} ]]; then
         echo "$(color red)TESTS FAILED$(color off)";
+    fi
+
+    if [[ -n ${ARTIFACT_FOLDER} ]]; then
+        if [ ! -d "${ARTIFACT_FOLDER}" ]; then
+            mkdir -p "${ARTIFACT_FOLDER}"
+        fi
+        cp ${folder}/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}"
+        echo "build artifacts have been copied to ${ARTIFACT_FOLDER}"
     fi
 
     if [[ -n ${CLONEFROM} || ${BRANCH} ]]; then

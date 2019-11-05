@@ -3,6 +3,7 @@ from pathlib import Path
 import rdflib
 import requests
 from ontquery.terms import OntCuries
+from pyontutils.utils import log
 from pyontutils.config import devconfig
 from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
@@ -66,6 +67,7 @@ def getCuries(curies_location):
         return curie_map
 
     except (FileNotFoundError, NotADirectoryError) as e:
+        log.exception(e)
         # retrieving stuff over the net is bad
         # but having stale curies seems worse?
 
@@ -80,7 +82,7 @@ def getCuries(curies_location):
         # solution, so write once to a known location
         if curies_location == devconfig.curies.default:
             master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
-            raw_path = '/nifstd/scigraph/curie_map.yaml?raw=true'
+            raw_path = 'nifstd/scigraph/curie_map.yaml?raw=true'
             curies_url = master_blob + raw_path
             resp = requests.get(curies_url)
             if resp.ok:
@@ -186,6 +188,7 @@ def _loadPrefixes():
         'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
         'npokb': str(npokb),
+        'tech': interlex_namespace('tgbugs/readable/technique/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
@@ -225,15 +228,16 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS
+ TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS, tech,
 ) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
-                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS')
+                   'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
+                   'tech',
+                  )
 
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree
-tech = rdflib.Namespace(ilxtr[''] + 'technique/')
 asp = rdflib.Namespace(ilxtr[''] + 'aspect/')
 dim = rdflib.Namespace(asp[''] + 'dimension/')
 unit = rdflib.Namespace(asp[''] + 'unit/')
