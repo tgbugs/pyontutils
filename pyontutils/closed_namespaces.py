@@ -141,7 +141,11 @@ dcterms = ClosedNamespace(
 
 npoph = ClosedNamespace(
     uri=URIRef('http://uri.interlex.org/tgbugs/uris/readable/'),
-    terms=['hasAxonLocatedIn',
+    terms=['NeuronCUT',
+           'NeuronEBM',
+           'Phenotype',
+           'delineates',
+           'hasAxonLocatedIn',
            'hasAxonMorphologicalPhenotype',
            'hasAxonPhenotype',
            'hasAxonPresynapticElementIn',
