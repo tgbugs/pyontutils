@@ -33,8 +33,8 @@ Options:
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:/tmp/scigraph/]
 
-    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get('patch-config')}]
-    -u --curies=CURIEFILE           curie definition file       [default: {auth.get('curies')}]
+    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth._pathit(auth.get('patch-config'))}]
+    -u --curies=CURIEFILE           curie definition file       [default: {auth._pathit(auth.get('curies'))}]
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -p --patch                      retrieve ontologies to patch and modify import chain accordingly
@@ -43,7 +43,7 @@ Options:
     -d --debug                      call IPython embed when done
     -L --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
-    -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get('scigraph-graphload')}]
+    -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth._pathit(auth.get('scigraph-graphload'))}]
                                     only useful for `ontload config` ignored otherwise
 """
 import os
