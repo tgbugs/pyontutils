@@ -4,7 +4,7 @@ from pyontutils.config import auth
 scigraph_client.BASEPATH = auth.get('scigraph-api')
 
 # WARNING if you import this module anywhere in your program
-# and you change the BASEPATH from what it is in devconfig
+# and you change the BASEPATH from what it is in auth-config
 # you may LEAK YOUR API KEY !!!!!!! To avoid this import
 # from scigraph_client directly and do not import this
 

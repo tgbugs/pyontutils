@@ -30,24 +30,23 @@ from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
 from pyontutils.utils import byCol, log as _log
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 
 log = _log.getChild('sheets')
-spath = Path(devconfig.secrets_file).parent
 
 
 def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     if readonly:  # FIXME the division isn't so clean for drive ...
-        store_file = devconfig.secrets('google', 'api', 'store-file-readonly')
+        store_file = auth._pathit(auth.get('google-api-store-file-readonly'))
     else:
-        store_file = devconfig.secrets('google', 'api', 'store-file')
+        store_file = auth._pathit(auth.get('google-api-store-file'))
 
-    store = file.Storage((spath / store_file).as_posix())
+    store = file.Storage((store_file).as_posix())
     creds = store.get()
     if not creds or creds.invalid:
         # the first time you run this you will need to use the --noauth_local_webserver args
-        creds_file = devconfig.secrets('google', 'api', 'creds-file')
-        flow = client.flow_from_clientsecrets((spath / creds_file).as_posix(), SCOPES)
+        creds_file = auth.get('google-api-creds-file')
+        flow = client.flow_from_clientsecrets((creds_file).as_posix(), SCOPES)
         creds = tools.run_flow(flow, store)
 
     service = build(api, version, http=creds.authorize(Http()))
@@ -55,7 +54,7 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
 
 
 def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
-    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
         ss = service.spreadsheets()
@@ -85,7 +84,7 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None):
-    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
+    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
         ss = service.spreadsheets()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.core import devconfig
+from pyontutils.config import auth
 __doc__ = f"""Client library generator for SciGraph REST api.
 
 Usage:
@@ -8,7 +8,7 @@ Usage:
 Options:
     -o --output-file=FILE       save client library here    [default: /tmp/scigraph_client.py]
 
-    -a --api=API                API endpoint to build from  [default: {devconfig.scigraph_api}]
+    -a --api=API                API endpoint to build from  [default: {auth.get('scigraph-api')}]
     -v --scigraph-version=VER   API docs version            [default: 2]
 
     -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]

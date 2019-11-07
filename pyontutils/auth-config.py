@@ -12,14 +12,20 @@
   'patch-config': '../nifstd/patches/patches.yaml',
   'resources': '../nifstd/resources',
 
+  # google api
+  'google-api-store-file': None,
+  'google-api-store-file-readonly': None,
+  'google-api-creds-file': None,
+
   #'hypothesis-api-user': 'tgbugs',
   #'scigraph-api-user': 'tgbugs',
   #'hypothesis-api-key':
 
   'nifstd-checkout-ok': {'environment-variables': 'NIFSTD_CHECKOUT_OK'},
+  'scigraph-api': 'https://scicrunch.org/api/1/scigraph',
   'scigraph-api-key': {'environment-variables': 'SCIGRAPH_API_KEY SCICRUNCH_API_KEY'},
 
-  'scigraph-api': 'https://scicrunch.org/api/1/scigraph',
+  # scigraph build
   'scigraph-graphload': '../nifstd/scigraph/graphload.yaml',
   'scigraph-java': '../nifstd/scigraph/scigraph-services.conf',
   'scigraph-services': '../nifstd/scigraph/services.yaml',
