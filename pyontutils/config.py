@@ -5,12 +5,17 @@ from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 import appdirs
+import orthauth as oa
 from orthauth import Secrets
 from pyontutils.utils import TermColors as tc, log
 from pyontutils.utils import get_working_dir
 
-checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-pyontutils_config_path = Path(appdirs.user_config_dir(), 'pyontutils')
+auth = oa.configure(Path(__file__).parent / 'auth-config.py')
+
+#checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
+checkout_ok = auth.get('nifstd-checkout-ok')
+#pyontutils_config_path = Path(appdirs.user_config_dir(), 'pyontutils')
+pyontutils_config_path = auth.dynamic_config_path.parent
 if not pyontutils_config_path.parent.exists():
     log.warning(f'config path does not exist! Errors incoming! {pyontutils_config_path.parent}')
 

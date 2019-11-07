@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.core import devconfig
+from pyontutils.core import auth
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
 Remote imports are replaced with local imports.
 NIF -> http://ontology.neuinfo.org/NIF
@@ -15,14 +15,14 @@ Usage:
     ontload [options]
 
 Options:
-    -g --git-remote=GBASE           remote git hosting          [default: {devconfig.git_remote_base}]
-    -l --git-local=LBASE            local git folder            [default: {devconfig.git_local_base}]
-    -z --zip-location=ZIPLOC        local path for build files  [default: {devconfig.zip_location}]
+    -g --git-remote=GBASE           remote git hosting          [default: {auth.get('git-remote-base')}]
+    -l --git-local=LBASE            local git folder            [default: {auth.get('git-local-base')}]
+    -z --zip-location=ZIPLOC        local path for build files  [default: {auth.get('zip-location')}]
 
-    -t --graphload-config=CFG       graphload.yaml location     [default: {devconfig.scigraph_graphload}]
+    -t --graphload-config=CFG       graphload.yaml location     [default: {auth.get('scigraph-graphload')}]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
-    -o --org=ORG                    user/org for ontology       [default: {devconfig.ontology_org}]
+    -o --org=ORG                    user/org for ontology       [default: {auth.get('ontology-org')}]
     -b --branch=BRANCH              ontology branch to load     [default: master]
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
     -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
@@ -33,8 +33,8 @@ Options:
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:/tmp/scigraph/]
 
-    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {devconfig.patch_config}]
-    -u --curies=CURIEFILE           curie definition file       [default: {devconfig.curies}]
+    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get('patch-config')}]
+    -u --curies=CURIEFILE           curie definition file       [default: {auth.get('curies')}]
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -p --patch                      retrieve ontologies to patch and modify import chain accordingly
@@ -43,7 +43,7 @@ Options:
     -d --debug                      call IPython embed when done
     -L --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
-    -f --graph-config-out=GCO       output for graphload.yaml   [default: {devconfig.scigraph_graphload}]
+    -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get('scigraph-graphload')}]
                                     only useful for `ontload config` ignored otherwise
 """
 import os

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.core import devconfig
+from pyontutils.core import auth
 __doc__ = f"""Deploy SciGraph services and loaded graph.
 
 Usage:
@@ -17,13 +17,13 @@ Options:
     -A --services-latest-url=LAS        url to latest services  [default: file:///tmp/scigraph/LATEST]
     -F --graph-folder=DLOC              set graph location      [default: from-services-config]
     -V --services-folder=PATH           jars sent here          [default: /opt/scigraph-services/]
-    -T --services-config=SCFG           services.yaml location  [default: {devconfig.scigraph_services}]
+    -T --services-config=SCFG           services.yaml location  [default: {auth.get('scigraph-services')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config  [default: {devconfig.scigraph_systemd}]
+    -y --systemd-config=FILE            name of systemd config  [default: {auth.get('scigraph-systemd')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -j --java-config=FILE               name of java template   [default: {devconfig.scigraph_java}]
+    -j --java-config=FILE               name of java template   [default: {auth.get('scigraph-java')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
@@ -85,8 +85,8 @@ class Builder:
     """ Build and/or run the SciGraph build and deploy chain. """
     # filenames currently not set by options [default: ]
     scigraph_repo = 'SciGraph'
-    start_script = devconfig.scigraph_start  # FIXME remove?
-    stop_script = devconfig.scigraph_stop
+    start_script = auth.get('scigraph-start')  # FIXME remove?
+    stop_script = auth.get('scigraph-stop')
     services_jar = 'scigraph-services.jar'
     heap_dump = 'head.dump'
     garbage_collection_log = 'gc.log'

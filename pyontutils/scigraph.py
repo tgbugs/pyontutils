@@ -1,14 +1,17 @@
 from pyontutils import scigraph_client
-from pyontutils.config import devconfig, get_api_key
+from pyontutils.config import auth
 
-scigraph_client.BASEPATH = (f'{devconfig.scigraph_api}')
+scigraph_client.BASEPATH = auth.get('scigraph-api')
 
 # WARNING if you import this module anywhere in your program
 # and you change the BASEPATH from what it is in devconfig
 # you may LEAK YOUR API KEY !!!!!!! To avoid this import
 # from scigraph_client directly and do not import this
 
-scigraph_client.restService.api_key = get_api_key()
+_sapi = auth.get('scigraph-api')
+_need_api_key = 'https' in _sapi and 'scicrunch.org' in _sapi
+if _need_api_key:  # FIXME this is _the_ case for auth.monkey_patch(when=_need_api_key)
+    scigraph_client.restService.api_key = auth.get('scigraph-api-key')
 
 __all__ = [e for e in dir(scigraph_client)
            if type(getattr(scigraph_client, e)) == type and

@@ -4,7 +4,7 @@ import rdflib
 import requests
 from ontquery.terms import OntCuries
 from pyontutils.utils import log
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig, auth
 from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
 
@@ -106,7 +106,7 @@ def getCuries(curies_location):
 
 
 def _loadPrefixes():
-    curie_map = getCuries(devconfig.curies)
+    curie_map = getCuries(auth._pathit(auth.get('curies')))
     # holding place for values that are not in the curie map
     full = {
         # interlex predicates  PROVISIONAL

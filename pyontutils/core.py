@@ -19,13 +19,32 @@ from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
-from pyontutils.utils import refile, TODAY, UTCNOW, UTCNOWISO, getSourceLine, utcnowtz
-from pyontutils.utils import Async, deferred, TermColors as tc, log
+from pyontutils.utils import (refile,
+                              TODAY,
+                              UTCNOW,
+                              UTCNOWISO,
+                              getSourceLine,
+                              utcnowtz,
+                              Async,
+                              deferred,
+                              TermColors as tc,
+                              log)
 from pyontutils.utils_extra import check_value
-from pyontutils.config import get_api_key, devconfig, working_dir
-from pyontutils.namespaces import makePrefixes, makeNamespaces, makeURIs
-from pyontutils.namespaces import NIFRID, ilxtr, PREFIXES as uPREFIXES
-from pyontutils.namespaces import rdf, rdfs, owl, skos, dc, dcterms, prov, oboInOwl
+from pyontutils.config import working_dir, auth
+from pyontutils.namespaces import (makePrefixes,
+                                   makeNamespaces,
+                                   makeURIs,
+                                   NIFRID,
+                                   ilxtr,
+                                   PREFIXES as uPREFIXES,
+                                   rdf,
+                                   rdfs,
+                                   owl,
+                                   skos,
+                                   dc,
+                                   dcterms,
+                                   prov,
+                                   oboInOwl)
 from pyontutils.identity_bnode import IdentityBNode
 
 current_file = Path(__file__).absolute()
@@ -42,7 +61,7 @@ def relative_resources(pathstring, failover='nifstd/resources'):
     if working_dir is None:
         return Path(failover, pathstring).resolve()
     else:
-        return Path(devconfig.resources, pathstring).resolve().relative_to(working_dir.resolve())
+        return Path(auth.get('resources'), pathstring).resolve().relative_to(working_dir.resolve())
 
 
 def standard_checks(graph):
@@ -1583,7 +1602,7 @@ def createOntology(filename=    'temp-graph',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
     if local_base is None:  # get location at runtime
-        local_base = devconfig.ontology_local_repo
+        local_base = auth.get('ontology-local-repo')
     writeloc = Path(local_base) / path
     ontid = os.path.join(remote_base, path, filename + '.ttl') if filename else None
     prefixes.update(makePrefixes('', 'owl'))
@@ -1633,9 +1652,8 @@ IXR = oq.plugin.get('InterLex')
 for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
-sgr = SGR(apiEndpoint=devconfig.scigraph_api)
-sgr.api_key = get_api_key()
-ixr = IXR(host=devconfig.ilx_host, port=devconfig.ilx_port, apiEndpoint=None, readonly=True)
+sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
+ixr = IXR(host=auth.get('ilx-host'), port=auth.get('ilx-port'), apiEndpoint=None, readonly=True)
 ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
@@ -1871,7 +1889,7 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = aug.RepoPath(devconfig.git_local_base)
+                    glb = aug.RepoPath(auth.get('git-local-base'))
                     cls.repo_path = glb.clone_path(cls.sourceRepo)
                     print(cls.repo_path)
                     # TODO branch and commit as usual
@@ -2023,7 +2041,7 @@ class resSource(Source):
 class Ont:
     #rdf_type = owl.Ontology
     _debug = False
-    local_base = devconfig.ontology_local_repo
+    local_base = auth.get('ontology-local-repo')
     remote_base = 'http://ontology.neuinfo.org/NIF/'
     path = 'ttl/generated/'  # sane default
     filename = None
