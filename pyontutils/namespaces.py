@@ -106,7 +106,7 @@ def getCuries(curies_location):
 
 
 def _loadPrefixes():
-    curie_map = getCuries(auth.get_path(auth.get('curies')))
+    curie_map = getCuries(auth.get_path('curies'))
     # holding place for values that are not in the curie map
     full = {
         # interlex predicates  PROVISIONAL

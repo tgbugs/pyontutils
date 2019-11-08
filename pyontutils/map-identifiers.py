@@ -11,7 +11,7 @@ def main():
     from pathlib import Path
     from pyontutils.config import auth
 
-    index_graph = OntGraph(path=Path(auth.get('ontology-local-repo')
+    index_graph = OntGraph(path=Path(auth.get_path('ontology-local-repo')
                                      'ttl/generated/neurons/npokb-index.ttl'))
 
     if index_graph.path.exists():
@@ -24,7 +24,7 @@ def main():
 
     ios = []
     for eff in ('common-usage-types', 'huang-2017', 'markram-2015', 'allen-cell-types'):
-        path = Path(auth.get('ontology-local-repo'), f'ttl/generated/neurons/{eff}.ttl')
+        path = Path(auth.get_path('ontology-local-repo'), f'ttl/generated/neurons/{eff}.ttl')
         input_graph = OntGraph(path=path)
         input_graph.parse()
         output_graph = input_graph.mapTempToIndex(index_graph, npokb, TEMP)

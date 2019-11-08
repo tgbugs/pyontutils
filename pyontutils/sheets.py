@@ -37,15 +37,15 @@ log = _log.getChild('sheets')
 
 def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     if readonly:  # FIXME the division isn't so clean for drive ...
-        store_file = auth.get_path(auth.get('google-api-store-file-readonly'))
+        store_file = auth.get_path('google-api-store-file-readonly')
     else:
-        store_file = auth.get_path(auth.get('google-api-store-file'))
+        store_file = auth.get_path('google-api-store-file')
 
     store = file.Storage((store_file).as_posix())
     creds = store.get()
     if not creds or creds.invalid:
         # the first time you run this you will need to use the --noauth_local_webserver args
-        creds_file = auth.get('google-api-creds-file')
+        creds_file = auth.get_path('google-api-creds-file')
         flow = client.flow_from_clientsecrets((creds_file).as_posix(), SCOPES)
         creds = tools.run_flow(flow, store)
 

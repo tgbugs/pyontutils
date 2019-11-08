@@ -796,8 +796,8 @@ def main():
     from pyontutils.config import auth
     from IPython import embed
 
-    graph = rdflib.Graph().parse(auth.get('ontology-local-repo') + '/ttl/bridge/uberon-bridge.ttl', format='turtle')
-    graph.parse(auth.get('ontology-local-repo') + '/ttl/NIF-Neuron-Circuit-Role-Bridge.ttl', format='ttl')
+    graph = rdflib.Graph().parse(auth.get_path('ontology-local-repo') + '/ttl/bridge/uberon-bridge.ttl', format='turtle')
+    graph.parse(auth.get_path('ontology-local-repo') + '/ttl/NIF-Neuron-Circuit-Role-Bridge.ttl', format='ttl')
 
     ecgraph = rdflib.Graph()
     oec = EquivalentClass()

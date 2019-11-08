@@ -61,7 +61,7 @@ def relative_resources(pathstring, failover='nifstd/resources'):
     if working_dir is None:
         return Path(failover, pathstring).resolve()
     else:
-        return Path(auth.get('resources'), pathstring).resolve().relative_to(working_dir.resolve())
+        return Path(auth.get_path('resources'), pathstring).resolve().relative_to(working_dir.resolve())
 
 
 def standard_checks(graph):
@@ -1602,7 +1602,7 @@ def createOntology(filename=    'temp-graph',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
     if local_base is None:  # get location at runtime
-        local_base = auth.get('ontology-local-repo')
+        local_base = auth.get_path('ontology-local-repo')
     writeloc = Path(local_base) / path
     ontid = os.path.join(remote_base, path, filename + '.ttl') if filename else None
     prefixes.update(makePrefixes('', 'owl'))
@@ -1889,7 +1889,7 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = aug.RepoPath(auth.get('git-local-base'))
+                    glb = aug.RepoPath(auth.get_path('git-local-base'))
                     cls.repo_path = glb.clone_path(cls.sourceRepo)
                     print(cls.repo_path)
                     # TODO branch and commit as usual
@@ -2041,7 +2041,7 @@ class resSource(Source):
 class Ont:
     #rdf_type = owl.Ontology
     _debug = False
-    local_base = auth.get('ontology-local-repo')
+    local_base = auth.get_path('ontology-local-repo')
     remote_base = 'http://ontology.neuinfo.org/NIF/'
     path = 'ttl/generated/'  # sane default
     filename = None
