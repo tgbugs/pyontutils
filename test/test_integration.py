@@ -6,7 +6,7 @@ from importlib import import_module
 import pytest
 import pyontutils
 from pyontutils.utils import get_working_dir
-from pyontutils.config import devconfig
+from pyontutils.config import devconfig  # FIXME
 from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
 from .common import skipif_no_net
 
