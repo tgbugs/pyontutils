@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 import git
 import rdflib
 import ontquery as oq
+import orthauth as oa
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
@@ -20,7 +21,7 @@ from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
 from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
-from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
+from pyontutils.config import auth as pauth, working_dir
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
@@ -29,6 +30,8 @@ from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NI
 from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
+auth = oa.configure_relative('auth-config.py', include=pauth)
+ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
 _done = set()
@@ -609,18 +612,19 @@ class Config:
                  imports =              tuple(),  # iterable
                  import_as_local =      False,  # also load from local?
                  load_from_local =      True,
-                 branch =               devconfig.neurons_branch,
+                 branch =               auth.get('neurons-branch'),
                  sources =              tuple(),
                  source_file =          None,
                  ignore_existing =      False,
                  py_export_dir=         None,
-                 ttl_export_dir=        Path(devconfig.ontology_local_repo,  # FIXME neurondm.lang for this?
-                                             'ttl/generated/neurons'),  # subclass with defaults from cls?
+                 ttl_export_dir=        (auth.get_path('ontology-local-repo') /  # FIXME neurondm.lang for this?
+                                         'ttl/generated/neurons'),  # subclass with defaults from cls?
                  git_repo=              None,
                  file =                 None,
                  local_conventions =    False,
                 ):
 
+        olr = auth.get_path('ontology-local-repo')  # we get this again because it might have changed
         if ttl_export_dir is not None:
             if not isinstance(ttl_export_dir, Path):
                 ttl_export_dir = Path(ttl_export_dir).resolve()
@@ -672,7 +676,7 @@ class Config:
         remote_base = remote.iri.rsplit('/', 2)[0] if branch == 'master' else remote
 
         if local_base is None:
-            local = Path(devconfig.ontology_local_repo, 'ttl')
+            local = olr / 'ttl'
             local_base = local.parent
         else:
             local_base = Path(local_base).resolve()
@@ -1044,9 +1048,10 @@ class graphBase:
         """
 
         graphBase.local_conventions = local_conventions
+        olr = auth.get_path('ontology-local-repo')
 
         if local_base is None:
-            local_base = devconfig.ontology_local_repo
+            local_base = olr
         graphBase.local_base = Path(local_base).expanduser().resolve()
         graphBase.remote_base = remote_base
 
@@ -1072,7 +1077,7 @@ class graphBase:
         remote_out_paths = local_out_paths  # can't write to a remote server without magic
 
         if (not force_remote
-            and graphBase.local_base == Path(devconfig.ontology_local_repo)
+            and graphBase.local_base == olr
             and graphBase.local_base.exists()):
 
             repo = Repo(graphBase.local_base.as_posix())
@@ -1119,7 +1124,7 @@ class graphBase:
 
         # part of graph
         # FIXME hardcoded ...
-        partofpath = RepoPath(devconfig.ontology_local_repo, 'ttl/generated/part-of-self.ttl')
+        partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
         graphBase.part_of_graph = OntResAny(partofpath).graph
         graphBase.part_of_graph.path = partofpath  # FIXME why is this not passed by OntResAny?
         [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
@@ -2528,7 +2533,6 @@ class Neuron(NeuronBase):
                     if accounted_for >= len(phenos) - 1:
                         continue
 
-                breakpoint()
                 raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
 
         # species matched identifiers TODO

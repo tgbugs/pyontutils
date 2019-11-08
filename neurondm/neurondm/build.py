@@ -25,19 +25,30 @@ from rdflib.extras import infixowl
 from pyontutils.core import makeGraph, createOntology, OntId as OntId_, OntConjunctiveGraph
 from pyontutils.utils import TODAY, rowParse, refile, makeSimpleLogger, anyMembers
 from pyontutils.obo_io import OboFile
-from pyontutils.config import devconfig, working_dir
 from neurondm import _NEURON_CLASS, OntTerm
-from neurondm.core import OntTermOntologyOnly, log as _log
+from neurondm.core import OntTermOntologyOnly, log as _log, auth
 from pyontutils.scigraph import Graph, Vocabulary
-from pyontutils.namespaces import makePrefixes, makeNamespaces, TEMP, ilxtr, BFO, NIFRID, definition
-from pyontutils.closed_namespaces import rdf, rdfs, owl
-from IPython import embed
+from pyontutils.namespaces import (makePrefixes,
+                                   makeNamespaces,
+                                   TEMP,
+                                   ilxtr,
+                                   BFO,
+                                   NIFRID,
+                                   definition,
+                                   rdf,
+                                   rdfs,
+                                   owl)
 from itertools import chain
 from neurondm.indicators import PhenotypeIndicators
 
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
+
 log = _log.getChild('build')
 
-resources = Path(devconfig.resources)
+resources = auth.get_path('resources')
 
 NIFRAW, NIFTTL = makeNamespaces('NIFRAW', 'NIFTTL')
 
@@ -251,7 +262,8 @@ def phenotype_core_triples():
 def make_phenotypes():
     ilx_start = 50114
 
-    writeloc = Path(devconfig.ontology_local_repo, 'ttl')
+    olr = auth.get_path('ontology-local-repo')
+    writeloc = olr / 'ttl'
     graph = makeGraph('phenotype-core',
                       writeloc=writeloc,
                       prefixes=PREFIXES)
@@ -513,15 +525,16 @@ def make_phenotypes():
     return syn_mappings, pedges, ilx_start, inc, defined_graph
 
 def _rest_make_phenotypes():
+    glb = auth.get_path('git-local-base')
+    olr = auth.get_path('ontology-local-repo')
     #phenotype sources
-    neuroner = Path(devconfig.git_local_base,
+    neuroner = (glb /
                 'neuroNER/resources/bluima/neuroner/hbp_morphology_ontology.obo').as_posix()
-    neuroner1 = Path(devconfig.git_local_base,
+    neuroner1 = (glb /
                  'neuroNER/resources/bluima/neuroner/hbp_electrophysiology_ontology.obo').as_posix()
-    neuroner2 = Path(devconfig.git_local_base,
+    neuroner2 = (glb /
                  'neuroNER/resources/bluima/neuroner/hbp_electrophysiology-triggers_ontology.obo').as_posix()
-    nif_qual = Path(devconfig.ontology_local_repo,
-                    'ttl/NIF-Quality.ttl').as_posix()
+    nif_qual = (olr / 'ttl/NIF-Quality.ttl').as_posix()
 
     mo = OboFile(os.path.expanduser(neuroner))
     mo1 = OboFile(os.path.expanduser(neuroner1))
@@ -732,7 +745,7 @@ def _rest_make_phenotypes():
             log.error(f'duplicate synonym! {syn} {sub}')
         syn_mappings[syn] = sub
 
-    #embed()
+    #breakpoint()
     return syn_mappings, pedges, ilx_start
 
 def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
@@ -745,7 +758,8 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
                         prefixes=PREFIXES)
 
     #""" It seemed like a good idea at the time...
-    nif_cell = Path(devconfig.ontology_local_repo, 'ttl/NIF-Cell.ttl').as_posix()  # need to be on neurons branch
+    olr = auth.get_path('ontology-local-repo')
+    nif_cell = (olr, 'ttl/NIF-Cell.ttl').as_posix()  # need to be on neurons branch
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
@@ -772,8 +786,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
     #cg = None
     #"""
 
-    hbp_cell = Path(devconfig.ontology_local_repo,
-                    'ttl/generated/NIF-Neuron-HBP-cell-import.ttl').as_posix()  # need to be on neurons branch
+    hbp_cell = (olr / 'ttl/generated/NIF-Neuron-HBP-cell-import.ttl').as_posix()  # need to be on neurons branch
     _temp = rdflib.Graph()  # use a temp to strip nasty namespaces
     _temp.parse(os.path.expanduser(hbp_cell), format='turtle')
     for s, p, o in _temp.triples((None,None,None)):
@@ -894,7 +907,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
                     this.label = rdflib.Literal(true_o + ' neuron')
                     log.info(f'make_neurons ilx_start {ilx_start} {list(this.label)[0]}')
                     if not done:
-                        embed()
+                        breakpoint()
                         done = True
 
             elif not success:
@@ -1162,7 +1175,8 @@ def make_devel():
     # inefficient but thorough way to populate the subset of objects we need.
     terms = set()
 
-    n = Path(devconfig.ontology_local_repo, 'ttl/generated/neurons')
+    olr = auth.get_path('ontology-local-repo')
+    n = (olr / 'ttl/generated/neurons')
     fns =('allen-cell-types.ttl',
           'bolser-lewis.ttl',
           'common-usage-types.ttl',
@@ -1174,7 +1188,7 @@ def make_devel():
         fp = n / fn
         g.parse(fp.as_posix(), format='ttl')
 
-    _pi = Path(devconfig.ontology_local_repo, 'ttl/phenotype-indicators.ttl')
+    _pi = (olr / 'ttl/phenotype-indicators.ttl')
     g.parse(_pi.as_posix(), format='ttl')
 
     bads = ('TEMP', 'TEMPIND', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'BFO1SNAP', 'NLXANAT',

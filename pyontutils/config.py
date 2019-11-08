@@ -13,10 +13,8 @@ from pyontutils.utils import get_working_dir
 oa.utils.log.removeHandler(oa.utils.log.handlers[0])
 oa.utils.log.addHandler(log.handlers[0])
 
-auth = oa.configure(Path(__file__).parent / 'auth-config.py')
+auth = oa.configure_relative('auth-config.py')
 
-#checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-checkout_ok = auth.get('nifstd-checkout-ok')
 #pyontutils_config_path = Path(appdirs.user_config_dir(), 'pyontutils')
 pyontutils_config_path = auth.dynamic_config._path.parent
 if not pyontutils_config_path.parent.exists():

@@ -71,7 +71,7 @@ class Folders:
         #print('SET UP')
         #print(devconfig.ontology_local_repo)
         if devconfig.ontology_local_repo.isDefault:
-            self.fake_local_repo = Path(auth.get_path('git-local-base'), auth.get('ontology-repo'))
+            self.fake_local_repo = auth.get_path('git-local-base') / auth.get('ontology-repo')
             if not self.fake_local_repo.exists():  # do not klobber existing
                 self.folders = [(self.fake_local_repo / folder)
                                 for folder in self._folders]

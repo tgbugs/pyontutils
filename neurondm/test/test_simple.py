@@ -24,5 +24,3 @@ class TestSimple(unittest.TestCase):
                                  Phenotype('ilxtr:someValue', 'ilxtr:someDimension'))
 
         assert len(pc) == 1
-        breakpoint()
-

@@ -18,10 +18,10 @@ import rdflib
 import requests
 from pyontutils.utils import TermColors as tc, relative_path
 from pyontutils.core import simpleOnt, OntGraph
-from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, ilxtr, definition
 from pyontutils.namespaces import rdf, rdfs, owl, AIBSSPEC
 from pyontutils.combinators import annotation, allDifferent, distinctMembers
+from neurondm.core import auth
 from neurondm.lang import *
 from docopt import docopt, parse_defaults
 
@@ -33,7 +33,7 @@ class NeuronACT(NeuronEBM):
 
 class AllenCellTypes:
 
-    branch = devconfig.neurons_branch
+    branch = auth.get('neurons-branch')
 
     prefixes = {**{'JAX': 'http://jaxmice.jax.org/strain/',
                    'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',

@@ -3,12 +3,11 @@ from pathlib import Path
 import rdflib
 from pyontutils.core import makeGraph
 from pyontutils.utils import relative_path
-from pyontutils.config import devconfig
 from pyontutils.namespaces import makePrefixes, TEMP
 from pyontutils.namespaces import rdf, rdfs, owl
 from neurondm import *
 from neurondm.lang import *
-from neurondm.core import MeasuredNeuron, PHENO_ROOT, MOD_ROOT
+from neurondm.core import auth, MeasuredNeuron, PHENO_ROOT, MOD_ROOT
 
 
 def main():
@@ -21,7 +20,7 @@ def main():
     #EXISTING_GRAPH = rdflib.Graph()
     #graphBase.in_graph = EXISTING_GRAPH
     #graphBase.core_graph = EXISTING_GRAPH
-    local_prefix = Path(devconfig.ontology_local_repo, 'ttl')
+    local_prefix = auth.get_path('ontology-local-repo') / 'ttl'
     sources = (f'{local_prefix}/NIF-Neuron-Defined.ttl',
                f'{local_prefix}/NIF-Neuron.ttl',
                f'{local_prefix}/NIF-Neuron-Phenotype.ttl',

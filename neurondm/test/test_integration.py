@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 import pytest
 from pyontutils.utils import get_working_dir
-from pyontutils.config import devconfig, checkout_ok
+from pyontutils.config import auth
 from pyontutils.integration_test_helper import _TestScriptsBase, Folders, Repo
 import neurondm
 
@@ -27,13 +27,15 @@ neurons = ('neurondm/example',
            'neurondm/sheets',)
 
 skip = tuple()
-if Path(devconfig.ontology_local_repo).exists():
-    ont_repo = Repo(devconfig.ontology_local_repo)
+olr = auth.get_path('ontology-local-repo')
+if olr.exists():
+    ont_repo = Repo(olr)
     # FIXME these aren't called?
     post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
     post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 
     ### handle ontology branch behavior
+    checkout_ok = neurondm.core.ont_checkout_ok
     print('checkout ok:', checkout_ok)
     ont_branch = ont_repo.active_branch.name
     if not checkout_ok and ont_branch != 'neurons':

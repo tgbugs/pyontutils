@@ -5,8 +5,7 @@ from git.repo import Repo
 from rdflib import Graph, URIRef
 from neurondm import *
 from pyontutils.utils import subclasses
-from pyontutils.config import devconfig, checkout_ok as ont_checkout_ok
-from neurondm.core import NeuronBase  # FIXME temporary until we can rework the config
+from neurondm.core import NeuronBase, auth, ont_checkout_ok  # FIXME temporary until we can rework the config
 
 __all__ = [
     'AND',
@@ -35,8 +34,8 @@ __all__ = [
 
 # XXX deprecated kept around until other code can be refactored
 def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
-           local_base=        None,  # devconfig.ontology_local_repo by default
-           branch=            devconfig.neurons_branch,
+           local_base=        None,  # auth.get_path('ontology-local-repo') by default
+           branch=            auth.get('neurons-branch'),
            core_graph_paths= ['ttl/phenotype-core.ttl',
                               'ttl/phenotypes.ttl'],
            core_graph=        None,
@@ -47,7 +46,7 @@ def config(remote_base=       'https://raw.githubusercontent.com/SciCrunch/NIF-O
            prefixes=          tuple(),
            force_remote=      False,
            checkout_ok=       ont_checkout_ok,
-           scigraph=          None,  # defaults to devconfig.scigraph_api
+           scigraph=          None,  # defaults to auth.get('scigraph-api')
            iri=               None,
            sources=           tuple(),
            source_file=       None,
