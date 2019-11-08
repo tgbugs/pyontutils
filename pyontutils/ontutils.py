@@ -218,7 +218,7 @@ def get_spells(filename):
 
 def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=auth.get('scigraph-api')):
     # TODO use the api classes
-    with open((Path(auth.get_path('resources'')) / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
+    with open((auth.get_path('resources') / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
         urls = [os.path.join(scigraph, f'vocabulary/id/{curie.strip()}') for curie in f.readlines()]
     print(urls)
     url_blaster(urls, rate, timeout, verbose, debug)
