@@ -759,7 +759,7 @@ def make_neurons(syn_mappings, pedges, ilx_start_, defined_graph, old=False):
 
     #""" It seemed like a good idea at the time...
     olr = auth.get_path('ontology-local-repo')
-    nif_cell = (olr, 'ttl/NIF-Cell.ttl').as_posix()  # need to be on neurons branch
+    nif_cell = (olr / 'ttl/NIF-Cell.ttl').as_posix()  # need to be on neurons branch
     cg = rdflib.Graph()
     cg.parse(os.path.expanduser(nif_cell), format='turtle')
     missing = (
