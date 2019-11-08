@@ -3,8 +3,8 @@
 import rdflib
 from pathlib import Path
 from lxml import etree
-from pyontutils.core import makeGraph, createOntology
-from pyontutils.config import devconfig
+from pyontutils.core import makeGraph, createOntology, OntGraph
+from pyontutils.config import auth
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
 from IPython import embed
@@ -19,8 +19,12 @@ sgv = Vocabulary(cache=True)
 
 
 def main():
-    devconfig._check_resources()
-    devconfig._check_ontology_local_repo()
+    olr = auth.get_path('ontology-local-repo')
+    resources = auth.get_path('resources')
+    if not olr.exists():
+        raise FileNotFoundError(f'{olr} does not exist cannot continue')
+    if not resources.exists():
+        raise FileNotFoundError(f'{resources} does not exist cannot continue')
 
     PREFIXES = makePrefixes('definition',
                             'replacedBy',
@@ -31,7 +35,7 @@ def main():
                             'skos',
                             'oboInOwl')
     ug = makeGraph('utilgraph', prefixes=PREFIXES)
-    file = Path(devconfig.resources, 'chebi-subset-ids.txt')
+    file = resources / 'chebi-subset-ids.txt'
     with open(file.as_posix(), 'rt') as f:
         ids_raw = set((_.strip() for _ in f.readlines()))
         ids = sorted(set((ug.expand(_.strip()) for _ in ids_raw)))
@@ -56,27 +60,27 @@ def main():
         None, 'CHEBI:29105'  # zinc is ok
 
 
-    g = rdflib.Graph()
-    cg = rdflib.Graph()
-    cd = rdflib.Graph()
-    chemg = rdflib.Graph()
-    molg = rdflib.Graph()
+    g = OntGraph()
+    cg = OntGraph()
+    cd = OntGraph()
+    chemg = OntGraph()
+    molg = OntGraph()
 
-    cg.parse(devconfig.ontology_local_repo + '/ttl/generated/chebislim.ttl', format='turtle')
+    cg.parse(olr / 'ttl/generated/chebislim.ttl', format='turtle')
     list(g.add(t) for t in cg)
     a1 = check_chebis(g)
 
-    cd.parse(devconfig.ontology_local_repo + '/ttl/generated/chebi-dead.ttl', format='turtle')
+    cd.parse(olr / 'ttl/generated/chebi-dead.ttl', format='turtle')
     list(g.add(t) for t in cd)
     a2 = check_chebis(g)
 
-    chemg.parse(devconfig.ontology_local_repo + '/ttl/NIF-Chemical.ttl', format='turtle')
+    chemg.parse(olr / 'ttl/NIF-Chemical.ttl', format='turtle')
     chemgg = makeGraph('NIF-Chemical', graph=chemg)
     fixIons(chemg)
     list(g.add(t) for t in chemg)
     a3 = check_chebis(g)
 
-    molg.parse(devconfig.ontology_local_repo + '/ttl/NIF-Molecule.ttl', format='turtle')
+    molg.parse(olr / 'ttl/NIF-Molecule.ttl', format='turtle')
     molgg = makeGraph('NIF-Molecule', graph=molg)
     fixIons(molg)
     list(g.add(t) for t in molg)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 
 import sys
 import csv
@@ -19,7 +19,8 @@ from pyontutils.namespaces import makePrefixes, PREFIXES as uPREFIXES, ilxtr, NI
 from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 from IPython import embed
 
-gitf = Path(devconfig.git_local_base)
+gitf = auth.get_path('git-local-base')
+
 
 def _check_dupes(thing, known=tuple()):
     test = [t for t in thing if t not in known]

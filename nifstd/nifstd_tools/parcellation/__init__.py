@@ -21,7 +21,7 @@ from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Colle
 from pyontutils.core import build, relative_resources
 from pyontutils.utils import getSourceLine, subclasses
 from pyontutils.utils import TermColors as tc
-from pyontutils.config import devconfig, working_dir
+from pyontutils.config import auth, working_dir
 from pyontutils.namespaces import makePrefixes, nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, FSLATS
 from pyontutils.namespaces import paxmusver, paxratver, HCPMMP
@@ -489,8 +489,12 @@ def getOnts():
 
 
 def main():
-    devconfig._check_resources()
-    devconfig._check_ontology_local_repo()
+    olr = auth.get_path('ontology-local-repo')
+    resources = auth.get_path('resources')
+    if not olr.exists():
+        raise FileNotFoundError(f'{olr} does not exist cannot continue')
+    if not resources.exists():
+        raise FileNotFoundError(f'{resources} does not exist cannot continue')
 
     from docopt import docopt
     args = docopt(__doc__, version='parcellation 0.0.1')

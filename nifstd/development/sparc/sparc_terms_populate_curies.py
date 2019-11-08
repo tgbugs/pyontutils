@@ -2,13 +2,16 @@ from argparse import Namespace
 import json
 from pathlib import Path
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from typing import Union, Dict, List
 import yaml
 from IPython import embed
 
+resources = auth.get_path('resources')
+
+
 def  convert_view_text_to_dict() -> dict:
-    with open(Path(devconfig.resources, 'sparc_terms3.txt'), 'rt') as infile:
+    with open(resources / 'sparc_terms3.txt', 'rt') as infile:
         rawr_yaml = ''
         for line in infile.readlines()[:]:
             rawr_yaml += line.replace('\n', '').replace('\t', '\u1F4A9') + ':\n'
@@ -115,11 +118,11 @@ def main():
                     sparc_terms_with_bad_ids.append({**vars(term), 'searched_label':ont.label})
 
     # embed()
-    with open(Path(devconfig.resources, 'sparc_terms_populated3.txt'), 'w') as outfile:
+    with open(resources / 'sparc_terms_populated3.txt', 'w') as outfile:
         outfile.write(sparc_terms_text)
-    with open(Path(devconfig.resources, 'sparc_terms_unpopulated_terms3.txt'), 'w') as outfile:
+    with open(resources / 'sparc_terms_unpopulated_terms3.txt', 'w') as outfile:
         outfile.write('\n'.join(sorted(sparc_terms_bl)))
-    with open(Path(devconfig.resources, 'sparc_terms_with_bad_ids3.json'), 'w') as outfile:
+    with open(resources / 'sparc_terms_with_bad_ids3.json', 'w') as outfile:
         json.dump(sparc_terms_with_bad_ids, outfile, indent=4)
 
 if __name__ == '__main__':

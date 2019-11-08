@@ -6,7 +6,7 @@ from rdflib import Graph, URIRef, Literal, BNode, RDF, RDFS, OWL
 from sqlalchemy import create_engine, inspect, Table, Column
 from sqlalchemy.orm.session import sessionmaker
 from pyontutils import utils
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from typing import Dict, Tuple, List, Union
 
 
@@ -15,7 +15,8 @@ ilx_uri_base = 'http://uri.interlex.org/base'
 triple2annotation_bnode = {}
 g = Graph()
 
-output = Path(devconfig.ontology_local_repo, 'ttl/generated/neurolex_to_interlex_pmids.ttl')
+olr = auth.get_path('ontology-local-repo')
+output = olr / 'ttl/generated/neurolex_to_interlex_pmids.ttl'
 
 namespaces = {
     'ILX': 'http://uri.interlex.org/base/ilx_',

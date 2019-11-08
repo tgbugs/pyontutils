@@ -18,7 +18,7 @@ import csv
 from flask import url_for
 from itertools import zip_longest
 from pathlib import Path
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.sheets import Sheet
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
@@ -30,6 +30,8 @@ VERSION = '0.0.1'
 YML_DISPLAY_DELIMITER = '\t'
 YML_DELIMITER = '\u1F4A9'
 REC_DD = lambda: defaultdict(REC_DD)
+
+resources = auth.get_path('resources')
 
 
 def open_custom_sparc_view_yml(seperate_curies: bool = True) -> dict:
@@ -66,7 +68,7 @@ def open_custom_sparc_view_yml(seperate_curies: bool = True) -> dict:
 
         return graph
 
-    with open(Path(devconfig.resources)/'sparc_term_versions/sparc_terms2-mod.txt', 'rt') as infile:
+    with open(resources / 'sparc_term_versions/sparc_terms2-mod.txt', 'rt') as infile:
         raw_yaml = ''
         for line in infile.readlines()[1:]:
             # last line doesnt have newline so we cant just replace it
@@ -599,12 +601,12 @@ class GoogleSheets(SheetPlus):
 
 def main():
     gsheets = GoogleSheets()
-    with open(Path(devconfig.resources, 'sparc_term_versions/sparc_terms3.txt'), 'w') as outfile:
+    with open(resources / 'sparc_term_versions/sparc_terms3.txt', 'w') as outfile:
         outfile.write(f'### YAML DELIMITER  ==  {YML_DELIMITER} ###')
         outfile.write('\n')
         outfile.write('\n'.join(gsheets.get_rows()))
 
-    with open(Path(devconfig.resources, 'sparc_term_versions/sparc_terms3.csv'), "w") as csv_file:
+    with open(resources / 'sparc_term_versions/sparc_terms3.csv', "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=',', lineterminator='\n')
         csv_rows = gsheets.create_master_csv_rows()
         for line in csv_rows:

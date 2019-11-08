@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from lxml import etree
 import rdflib
 from pyontutils.core import resSource, LabelsBase, Collector, relative_resources
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from nifstd_tools.parcellation import parcCore, Atlas, LabelRoot, Label
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, BERCAT, nsExact
 from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL, makePrefixes
@@ -71,9 +71,10 @@ def get_legends(raw_text):
     return legends
 
 
-if devconfig.resources is not None:
+resources = auth.get_path('resources')
+if resources is not None:
     # FIXME TODO this is a bad way to handle this ...
-    with open(Path(devconfig.resources,  'brainmaps-cat-abbrevs.html'), 'rt') as f:
+    with open(resources/ 'brainmaps-cat-abbrevs.html', 'rt') as f:
         dat = f.read()
 
     asoup = BeautifulSoup(dat, 'lxml')

@@ -5,7 +5,7 @@ from os.path import expanduser
 from pathlib import Path
 import rdflib
 from pyontutils.utils import Async, deferred
-from pyontutils.config import devconfig, working_dir
+from pyontutils.config import auth
 from pyontutils.scigraph import Vocabulary, Graph
 from IPython import embed
 
@@ -13,17 +13,19 @@ dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
 
 def main():
-    devconfig._check_resources()
+    resources = auth.get_path('resources')
+    if not resources.exists():
+        raise FileNotFoundError(f'{resources} does not exist cannot continue')
 
-    with open(Path(devconfig.git_local_base,
-                   'entity_mapping/mappings/uberon-nervous').as_posix(), 'rt') as f:
+    with open((auth.get_path('git-local-base') /
+               'entity_mapping/mappings/uberon-nervous').as_posix(), 'rt') as f:
         brain_only = set([l.strip() for l in f.readlines()])
 
     sgv = Vocabulary(cache=True)
     sgg = Graph(cache=True)
 
     g = rdflib.Graph()
-    g.parse(Path(devconfig.ontology_local_repo,
+    g.parse((auth.get_path('ontology-local-repo') /
                  'ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
             format='turtle')
     sos = [so for so in g.subject_objects(rdflib.RDFS.label)]
@@ -127,12 +129,12 @@ def main():
     def lnc(string):
         return string.lower().replace(',',' ')  # matches the conv in NIF_conn
 
-    ccslim = rdflib.Graph().parse(Path(devconfig.ontology_local_repo,
-                                       'ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
+    ccslim = rdflib.Graph().parse((auth.get_path('ontology-local-repo') /
+                                   'ttl/generated/parcellation/cocomacslim.ttl').as_posix(),
                                   format='turtle')
     coco_all = [l for l in ccslim.objects(None, rdflib.RDFS.label)]
 
-    intcon = Path(devconfig.resources, 'NIF_conn_allcols_minimal_clean_filtered2.csv')
+    intcon = resources / 'NIF_conn_allcols_minimal_clean_filtered2.csv'
     with open(intcon.as_posix(), 'rt') as f:
         ber_rows = [r for r in csv.reader(f)]
 

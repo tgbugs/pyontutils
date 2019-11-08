@@ -15,7 +15,7 @@ Usage:
     ontload [options]
 
 Options:
-    -g --git-remote=GBASE           remote git hosting          [default: {auth.get_path('git-remote-base')}]
+    -g --git-remote=GBASE           remote git hosting          [default: {auth.get('git-remote-base')}]
     -l --git-local=LBASE            local git folder            [default: {auth.get_path('git-local-base')}]
     -z --zip-location=ZIPLOC        local path for build files  [default: {auth.get_path('zip-location')}]
 

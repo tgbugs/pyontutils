@@ -235,6 +235,8 @@ def makeURIs(*prefixes):
                    'tech',
                   )
 
+ilxb = interlex_namespace('base/')
+
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')
 proc = rdflib.Namespace(ilxtr[''] + 'process/')  # even though techniques are sco I don't force the tree

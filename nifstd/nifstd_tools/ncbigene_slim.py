@@ -9,7 +9,7 @@ from pathlib import Path
 import requests
 from pyontutils.core import createOntology
 from pyontutils.utils import chunk_list, dictParse
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.namespaces import SO, makePrefixes
 from pyontutils.namespaces import rdf, rdfs, owl
 
@@ -59,7 +59,7 @@ class ncbi(dictParse):
                 self.g.add_trip(self.identifier, 'NIFRID:synonym', synonym)
 
 def ncbigene_make():
-    IDS_FILE = Path(devconfig.resources, 'gene-subset-ids.txt')
+    IDS_FILE = auth.get_path('resources') / 'gene-subset-ids.txt'
     with open(IDS_FILE.as_posix(), 'rt') as f:  # this came from neuroNER
         ids = [l.split(':')[1].strip() for l in f.readlines()]
 

@@ -10,14 +10,14 @@ import rdflib
 import requests
 from pyontutils.core import makeGraph, yield_recursive, qname, build
 from pyontutils.core import Ont, Source
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole
 from pyontutils.namespaces import PREFIXES as uPREFIXES, ilxtr
 from pyontutils.namespaces import rdf, rdfs, owl, prov, oboInOwl
 
 
 class ChebiIdsSrc(Source):
-    source = Path(devconfig.resources, 'chebi-subset-ids.txt')
+    source = auth.get_path('resources') / 'chebi-subset-ids.txt'
     source_original = True
     @classmethod
     def loadData(cls):

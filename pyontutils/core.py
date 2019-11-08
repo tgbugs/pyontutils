@@ -742,6 +742,7 @@ class OntGraph(rdflib.Graph):
             mimetype, _ = mimetypes.guess_type(self.path.as_uri())
             return super().parse(self.path.as_posix(), format=mimetype)
         else:
+            args = [a.as_posix() if isinstance(a, Path) else a for a in args]
             return super().parse(*args, **kwargs)
 
     def _get_namespace_manager(self):

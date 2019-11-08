@@ -26,7 +26,7 @@ from nbconvert import HTMLExporter
 from augpathlib import RepoPath as Path
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, get_working_dir
-from pyontutils.config import devconfig, working_dir
+from pyontutils.config import auth, working_dir
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
@@ -351,8 +351,8 @@ def spell(filenames, debug=False):
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
 compile_org_file = ['emacs', '-q', '-l',
-                    Path(devconfig.git_local_base,
-                         'orgstrap/init.el').resolve().as_posix(),
+                    (auth.get_path('git-local-base') /
+                     'orgstrap/init.el').resolve().as_posix(),
                     '--batch', '-f', 'compile-org-file']
 
 
@@ -553,7 +553,8 @@ def main():
 
     BUILD = working_dir / 'doc_build'
     docs_dir = BUILD / 'docs'
-    theme_repo = Path(devconfig.git_local_base, 'org-html-themes')
+    glb = auth.get_path('git-local-base')
+    theme_repo = glb / 'org-html-themes'
     theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
     prepare_paths(BUILD, docs_dir, theme_repo, theme)
 
@@ -568,9 +569,8 @@ def main():
             f.write(rendered)
         return
 
-    glb = Path(devconfig.git_local_base)
     names = ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')
-    repo_paths = [Path(devconfig.ontology_local_repo),
+    repo_paths = [auth.get_path('ontology_local_repo'),
                   Path(working_dir)] + [glb / name for name in names]
     repos = [p.repo for p in repo_paths]
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
@@ -608,16 +608,6 @@ def main():
                        and f not in rskip.get(Path(repo.working_dir).name, et)]
 
     [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-
-    # doesn't work because read-from-minibuffer cannot block
-    #compile_org_forever = ['emacs', '-q', '-l',
-                           #Path(devconfig.git_local_base,
-                                #'orgstrap/init.el').resolve().as_posix(),
-                           #'--batch', '-f', 'compile-org-forever']
-    #org_compile_process = subprocess.Popen(compile_org_forever,
-                                           #stdin=subprocess.PIPE,
-                                           #stdout=subprocess.PIPE,
-                                           #stderr=subprocess.PIPE)
 
     if args['--spell']:
         spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
