@@ -1,6 +1,10 @@
 {'config-search-paths': ['{:user-config-path}/pyontutils/config.yaml',],
  'auth-variables':
- {'curies': '../nifstd/scigraph/curie_map.yaml',  # '{:user-config-path}/pyontutils/curie_map.yaml',
+ {'curies': ['../nifstd/scigraph/curie_map.yaml',  # git
+             '{:user-config-path}/pyontutils/curie_map.yaml',  # config
+             '{:prefix}/share/pyontutils/curie_map.yaml.example',  # system
+             '/usr/share/pyontutils/curie_map.yaml.example',  # pypy3
+             'share/pyontutils/curie_map.yaml.example',],  # ebuild testing
   'git-local-base': '../..',
   'git-remote-base': 'https://github.com/',
   'ilx-host': 'uri.interlex.org',
