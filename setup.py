@@ -50,6 +50,7 @@ setup(
         'nest_asyncio',
         'oauth2client',
         'ontquery>=0.2.0',
+        'orthauth',
         'pyyaml',
         'requests',
         'terminaltables',
