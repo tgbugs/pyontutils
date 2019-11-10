@@ -4,7 +4,7 @@ import rdflib
 import requests
 from ontquery.terms import OntCuries
 from pyontutils.utils import log
-from pyontutils.config import devconfig, auth
+from pyontutils.config import auth
 from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
 
@@ -80,7 +80,7 @@ def getCuries(curies_location):
         # in this repo at this commit is what
         # causes the issue, github is the best
         # solution, so write once to a known location
-        if curies_location == devconfig.curies.default:
+        if curies_location == Path(auth.get_default('curies')):
             master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
             raw_path = 'nifstd/scigraph/curie_map.yaml?raw=true'
             curies_url = master_blob + raw_path
@@ -100,7 +100,7 @@ def getCuries(curies_location):
                 raise requests.ConnectionError(resp.request, resp)
         else:
             raise TypeError(f'{curies_location} does not exist and '
-                            f'is not at the default {devconfig.curies.default} '
+                            f'is not at the default {auth.get("curies")} '
                             'so we will not write to it. You can update it '
                             'manually if you want to keep it at that location.')
 

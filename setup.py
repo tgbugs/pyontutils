@@ -49,8 +49,8 @@ setup(
         'lxml',
         'nest_asyncio',
         'oauth2client',
-        'ontquery>=0.2.0',
-        'orthauth',
+        'ontquery>=0.2.1',
+        'orthauth>=0.0.3',
         'pyyaml',
         'requests',
         'terminaltables',
@@ -78,4 +78,5 @@ setup(
     #package_data
     #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
     #data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),],
+    data_files=[('share/pyontutils/', ['nifstd/scigraph/curie_map.yaml']),],
 )
