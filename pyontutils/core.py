@@ -1654,7 +1654,7 @@ for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
-ixr = IXR(host=auth.get('ilx-host'), port=auth.get('ilx-port'), apiEndpoint=None, readonly=True)
+ixr = IXR(apiEndpoint=None, readonly=True)
 ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]

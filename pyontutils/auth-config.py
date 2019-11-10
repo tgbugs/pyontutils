@@ -7,8 +7,6 @@
              'share/pyontutils/curie_map.yaml.example',],  # ebuild testing
   'git-local-base': '../..',
   'git-remote-base': 'https://github.com/',
-  'ilx-host': 'uri.interlex.org',
-  'ilx-port': '',
   'ontology-local-repo': '../../NIF-Ontology',
   'ontology-org': 'SciCrunch',
   'ontology-repo': 'NIF-Ontology',
