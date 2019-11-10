@@ -25,7 +25,7 @@
   #'hypothesis-api-key':
 
   'nifstd-checkout-ok': {'environment-variables': 'NIFSTD_CHECKOUT_OK'},
-  'scigraph-api': {'default': 'https://scicrunch.org/api/1/scigraph'
+  'scigraph-api': {'default': 'https://scicrunch.org/api/1/scigraph',
                    'environment-variables': 'SCIGRAPH_API',},
   'scigraph-api-key': {'environment-variables': 'SCIGRAPH_API_KEY SCICRUNCH_API_KEY'},
 
