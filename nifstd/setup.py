@@ -43,7 +43,7 @@ setup(
         'networkx',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.3',
+        'pyontutils>=0.1.5',
         'robobrowser',
         'sqlalchemy',
     ],
