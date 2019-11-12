@@ -174,7 +174,7 @@ class TestTtlser(unittest.TestCase):
 
 
 class Simple:
-    actualpath = '/dev/null'
+    actualpath = 'NUL' if os.name == 'nt' else '/dev/null'
     def test_simple(self):
         self.serialize()
 
