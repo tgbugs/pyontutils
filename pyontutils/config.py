@@ -6,7 +6,6 @@ from tempfile import gettempdir
 from functools import wraps
 import appdirs
 import orthauth as oa
-from orthauth import Secrets
 from pyontutils.utils import TermColors as tc, log
 from pyontutils.utils import get_working_dir
 
@@ -115,7 +114,7 @@ class DevConfig:
     @property
     def secrets(self):
         try:
-            return Secrets(self.secrets_file)
+            return oa.stores.Secrets(self.secrets_file)
         except FileNotFoundError:
             log.warning(f'secrets file {self.secrets_file} does not exist. '
                         'You can set an alternate path under the secrets_file: '
