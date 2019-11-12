@@ -4,8 +4,14 @@ from pyontutils.utils import get_working_dir
 from nifstd_tools.docs import FixLinks
 
 working_dir = get_working_dir(__file__)
-base = ('/' + working_dir.name + '/nifstd/test' + '/')
+if working_dir is None:
+    name = 'pyontutils'
+else:
+    name = working_dir.name
+
+base = ('/' + name + '/nifstd/test' + '/')
 gitbase = 'https://github.com/tgbugs/pyontutils/blob/master/nifstd/test/'
+
 
 class TestFixLinks(unittest.TestCase):
     path_nasty_good = (
