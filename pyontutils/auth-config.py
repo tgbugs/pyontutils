@@ -8,11 +8,18 @@
              '{:cwd}/share/pyontutils/curie_map.yaml',],  # ebuild testing
   'git-local-base': '../..',
   'git-remote-base': 'https://github.com/',
-  'ontology-local-repo': '../../NIF-Ontology',
-  'ontology-org': 'SciCrunch',
-  'ontology-repo': 'NIF-Ontology',
-  'patch-config': '../nifstd/patches/patches.yaml',
-  'resources': '../nifstd/resources',
+  'ontology-local-repo': {'default': '../../NIF-Ontology',
+                          'environment-variables': ['PYONTUTILS_ONTOLOGY_LOCAL_REPO',
+                                                    'ONTOLOGY_LOCAL_REPO',
+                                                    'ONTOLOGY_REPO',]},
+  'ontology-org': {'default': 'SciCrunch',
+                   'environment-variables': 'NIFSTD_ONTOLOGY_ORG ONTOLOGY_ORG'},
+  'ontology-repo': {'default': 'NIF-Ontology',
+                    'environment-variables': 'ONTOLOGY_REPO_NAME ONTOLOGY_NAME'},
+  'patch-config': {'default': '../nifstd/patches/patches.yaml',
+                   'environment-variables': 'ONTOLOGY_PATCH_CONFIG PATCH_CONFIG'},
+  'resources': {'default': '../nifstd/resources',
+                'environment-variables': 'NIFSTD_RESOURCES ONTOLOGY_RESOURCES RESOURCES'},
 
   # google api
   'google-api-store-file': None,
@@ -26,7 +33,7 @@
   'nifstd-checkout-ok': {'environment-variables': 'NIFSTD_CHECKOUT_OK'},
   'scigraph-api': {'default': 'https://scicrunch.org/api/1/scigraph',
                    'environment-variables': 'SCIGRAPH_API',},
-  'scigraph-api-key': {'environment-variables': 'SCIGRAPH_API_KEY SCICRUNCH_API_KEY'},
+  'scigraph-api-key': {'environment-variables': 'SCICRUNCH_API_KEY SCIGRAPH_API_KEY'},
 
   # scigraph build
   'scigraph-graphload': '../nifstd/scigraph/graphload.yaml',
