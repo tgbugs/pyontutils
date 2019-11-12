@@ -35,6 +35,9 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Operating System :: POSIX :: Linux',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
     ],
     keywords='rdflib rdf deterministic turtle ttl',
     packages=['ttlser'],
@@ -58,4 +61,6 @@ setup(
             'rktttl = ttlser:CompactTurtleSerializer',
         ],
     },
+    data_files=[('share/ttlser/', ['test/nasty.ttl',
+                                   'test/good.ttl']),],
 )
