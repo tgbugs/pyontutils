@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.7
+import tempfile
 from pyontutils.core import auth
 __doc__ = f"""Deploy SciGraph services and loaded graph.
 
@@ -13,8 +14,8 @@ Options:
     -U --build-user=USER                build_user              [default: bamboo]
     -E --services-user=USER             services_user           [default: bamboo]
 
-    -G --graph-latest-url=LAG           url to latest graph     [default: file:///tmp/graph/LATEST]
-    -A --services-latest-url=LAS        url to latest services  [default: file:///tmp/scigraph/LATEST]
+    -G --graph-latest-url=LAG           url to latest graph     [default: file://{tempfile.tempdir}/graph/LATEST]
+    -A --services-latest-url=LAS        url to latest services  [default: file://{tempfile.tempdir}/scigraph/LATEST]
     -F --graph-folder=DLOC              set graph location      [default: from-services-config]
     -V --services-folder=PATH           jars sent here          [default: /opt/scigraph-services/]
     -T --services-config=SCFG           services.yaml location  [default: {auth.get_path('scigraph-services')}]
@@ -780,7 +781,7 @@ def run(args):
         return
 
     if b.debug:
-        FILE = '/tmp/test.sh'
+        FILE = f'{tempfile.tempdir}/test.sh'
         with open(FILE, 'wt') as f:
             f.write('#!/usr/bin/env bash\n' + code)
         os.system(f"emacs -batch {FILE} --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer")

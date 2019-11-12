@@ -1,6 +1,7 @@
 import os
 import sys
 import yaml
+import tempfile
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
@@ -340,7 +341,7 @@ class DevConfig:
     def scigraph_java(self):
         return self.config['scigraph_java']
 
-    @default('/tmp')
+    @default(tempfile.tempdir)
     def zip_location(self):
         return self.config['zip_location']
 

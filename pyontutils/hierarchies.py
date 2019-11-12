@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.7
 import os
+import tempfile
 from copy import deepcopy
 from html import escape as html_escape
 from urllib.parse import quote
@@ -666,7 +667,7 @@ def main():
     queries = uberon,
 
     uberon_flat = sorted(set(n for n in flatten(uberon_extra[0])))
-    with open('/tmp/uberon_partonomy_terms', 'wt') as f:
+    with open(f'{tempfile.tempdir}/uberon_partonomy_terms', 'wt') as f:
         f.writelines('\n'.join(uberon_flat))
 
     for query in queries:
@@ -674,7 +675,7 @@ def main():
         dematerialize(list(tree.keys())[0], tree)
         print(tree)
         #print(extra[0])
-        with open('/tmp/' + query.root, 'wt') as f:
+        with open(f'{tempfile.tempdir}/' + query.root, 'wt') as f:
             f.writelines(tree.print_tree())
 
         level_sizes = [len(levels(tree, i)) for i in range(11)]
@@ -713,7 +714,7 @@ def _main():
     #fma = Query('FMA:50801', 'None', 'INCOMING', 20)
     fma = Query('FMA:61817', 'None', 'INCOMING', 20)  # Cerebral hemisphere
     fma_tree, fma_extra = creatTree(*fma, json=json)
-    with open('/tmp/rc_combo_tree', 'wt') as f: f.write(str(fma_tree))
+    with open(f'{tempfile.tempdir}/rc_combo_tree', 'wt') as f: f.write(str(fma_tree))
 
     embed()
 

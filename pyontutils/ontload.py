@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.7
+import tempfile
 from pyontutils.core import auth
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
 Remote imports are replaced with local imports.
@@ -25,13 +26,13 @@ Options:
     -o --org=ORG                    user/org for ontology       [default: {auth.get('ontology-org')}]
     -b --branch=BRANCH              ontology branch to load     [default: master]
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
-    -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
+    -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:{tempfile.tempdir}/graph/]
 
     -i --build-scigraph             build scigraph codebase
     -O --scigraph-org=SORG          user/org for scigraph       [default: SciCrunch]
     -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:/tmp/scigraph/]
+    -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:{tempfile.tempdir}/scigraph/]
 
     -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get_path('patch-config')}]
     -u --curies=CURIEFILE           curie definition file       [default: {auth.get_path('curies')}]
@@ -47,9 +48,9 @@ Options:
                                     only useful for `ontload config` ignored otherwise
 """
 import os
-import shutil
 import json
 import yaml
+import shutil
 import subprocess
 from io import BytesIO
 from glob import glob
@@ -590,7 +591,7 @@ def for_burak(ng_):
 
 def deploy_scp(local_path, remote_spec):
     basename = os.path.basename(local_path)
-    if remote_spec == 'user@localhost:/tmp/':
+    if remote_spec == f'user@localhost:{tempfile.tempdir}/':
         print(f'Default so not scping {local_path}')
     else:
         ssh_target, remote_path = remote_spec.split(':', 1)  # XXX bad things?

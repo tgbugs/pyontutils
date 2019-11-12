@@ -2,6 +2,7 @@ import io
 import os
 import yaml
 import types
+import tempfile
 import mimetypes
 import subprocess
 import rdflib
@@ -1223,7 +1224,7 @@ mGraph = OntGraph
 class makeGraph:
     SYNONYM = 'NIFRID:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes=None, graph=None, writeloc='/tmp/'):
+    def __init__(self, name, prefixes=None, graph=None, writeloc=tempfile.tempdir):
         self.name = name
         self.writeloc = writeloc
         self.namespaces = {}
@@ -2329,7 +2330,7 @@ def displayTriples(triples, qname=qname):
              for t in sorted(triples)]
 
 def displayGraph(graph_,
-                 temp_path='/tmp',
+                 temp_path=tempfile.tempdir,
                  debug=False):
     from pyontutils.hierarchies import creatTree, Query, dematerialize
     graph = rdflib.Graph()

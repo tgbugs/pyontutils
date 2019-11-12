@@ -23,10 +23,11 @@ Options:
     -p --prefix=P...    filter by prefix
 
 """
+import tempfile
+from pathlib import Path
 import rdflib
 import htmlfn as hfn
 from docopt import docopt
-from pathlib import Path
 from pyontutils.core import qname, OntId
 from pyontutils.utils import TermColors as tc, getSourceLine, UTCNOWISO
 from pyontutils.utils import Async, deferred
@@ -93,10 +94,10 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
         self.html = html_all
         return html_all
 
-    def write_import_chain(self, location='/tmp/'):
+    def write_import_chain(self, location=tempfile.tempdir):
         html = self.make_html()
         if not html:
-            self.path = '/tmp/noimport.html'
+            self.path = f'{tempfile.tempdir}/noimport.html'
         else:
             self.name = Path(next(iter(self.tree.keys()))).name
             self.path = Path(location, f'{self.name}-import-closure.html')
