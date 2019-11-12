@@ -38,9 +38,7 @@ if working_dir is None:
     working_dir = module_parent
 
 olr = auth.get_path('ontology-local-repo')
-if not olr.exists():
-    raise FileNotFoundError(f'{olr} does not exist cannot continue')
-
+do_mains = olr.exists()
 ont_repo = Repo(olr)
 post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
 post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
@@ -49,4 +47,4 @@ TestScripts.populate_tests(nifstd_tools, working_dir, mains,
                            skip=skip, ci_skip=ci_skip,
                            module_parent=module_parent,
                            post_load=post_load, post_main=post_main,
-                           only=[], do_mains=True)
+                           only=[], do_mains=do_mains)
