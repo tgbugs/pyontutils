@@ -255,7 +255,11 @@ class OntRes(Stream):
         # to enable checksumming in one pass, however this will
         # require one more wrapper
         if not hasattr(self, '_graph'):
-            self._graph = self.Graph()
+            kwargs = {}
+            if hasattr(self, 'path'):
+                kwargs['path'] = self.path
+
+            self._graph = self.Graph(**kwargs)
             self.populate(self._graph)
 
         return self._graph
@@ -729,6 +733,16 @@ class OntGraph(rdflib.Graph):
 
         self.bind('owl', owl)
         self.path = path
+
+    @property
+    def path(self):
+        return self.__path
+
+    @path.setter
+    def path(self, path):
+        if path is not None and not isinstance(path, Path):
+            log.warning(f'Not a pathlib.Path! {path}')
+        self.__path = path
 
     # TODO id for graphs like this ... use InterLex IdentityBNode?
 
@@ -2086,18 +2100,23 @@ class Ont:
                               f'{cls.namespace} to {cls} as {prefix}'))
                 cls.prefixes[prefix] = iri_prefix  # sane default
 
+    @property
+    def working_dir(self):
+        return aug.RepoPath(getsourcefile(self.__class__))
+
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
+        working_dir = self.working_dir
+
         if hasattr(self, '_repo') and not self._repo or working_dir is None:
             commit = 'FAKE-COMMIT'
         else:
-            import git
             try:
-                repo = git.Repo(working_dir.as_posix())
+                repo = working_dir.repo
                 commit = next(repo.iter_commits()).hexsha
-            except git.exc.InvalidGitRepositoryError:
+            except aug.exceptions.NotInRepoError:
                 commit = 'FAKE-COMMIT'
 
         try:
