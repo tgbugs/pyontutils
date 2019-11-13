@@ -622,6 +622,7 @@ class Config:
                  git_repo=              None,
                  file =                 None,
                  local_conventions =    False,
+                 import_no_net =        False,  # ugh
                 ):
 
         olr = auth.get_path('ontology-local-repo')  # we get this again because it might have changed
@@ -685,17 +686,63 @@ class Config:
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
-        if import_as_local:
-            # NOTE: we currently do the translation more ... inelegantly inside of config so we
-            # have to keep the translation layer out here (sigh)
-            core_graph_paths = [(Path(local,
-                                     i.iri.replace(remote.iri, ''))
-                                 .relative_to(local_base).as_posix())
-                                if remote.iri in i.iri else
-                                i for i in imports]
-            log.debug(core_graph_paths)
+        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack
+        if import_as_local or import_no_net:
+            if local.exists():
+                # NOTE: we currently do the translation more ... inelegantly inside of config so we
+                # have to keep the translation layer out here (sigh)
+                log.debug('local ont')
+                core_graph_paths = [(Path(local,
+                                        i.iri.replace(remote.iri, ''))
+                                    .relative_to(local_base).as_posix())
+                                    if remote.iri in i.iri else
+                                    i for i in imports]
+
+                # part of graph
+                # FIXME hardcoded ...
+                partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
+                graphBase.part_of_graph = OntResAny(partofpath).graph
+                [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
+            else:
+                log.debug('local share')
+                udp = cfg._pathit('{:user-data-path}/neurondm/')
+                search_paths = [
+                    udp,
+                    cfg._pathit('{:prefix}/neurondm/'),
+                ]
+                for base in search_paths:
+                    if base.exists():
+                        core_graph_paths = [(base / Path(iri).name).as_posix() for iri in imports]
+
+                else:
+                    msg = '\n'.join([p.as_posix() for p in search_paths])
+                    raise ValueError(f'no core paths ... {msg}')
+
+                # part of graph
+                # FIXME hardcoded ...
+
+                partofpath = RepoPath(udp)
+                graphBase.part_of_graph = OntResAny(partofpath).graph
+                [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
         else:
+            log.debug('remote')
             core_graph_paths = imports
+
+            partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
+            graphBase.part_of_graph = OntResIri(partofpath).graph
+            if local.exists():
+                _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
+            else:
+                _writepath = cfg._pathit('{:user-data-path}/neurondm/part-of-self.ttl')
+                if not _writepath.parent.exists():
+                    _writepath.parent.mkdir()
+
+            graphBase.part_of_graph.path = _writepath
+            [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
+        log.debug(core_graph_paths)
 
         out_graph_path = (out_local_base / f'{name}.ttl')
 
@@ -1060,7 +1107,7 @@ class graphBase:
                       if '://' not in s else  # 'remote' is file:// or http[s]://
                       s for s in suffixes]
             # TODO the whole thing needs to be reworked to not use suffixes...
-            local = [(graphBase.local_base / s).as_posix()
+            local = [(graphBase.local_base / s).as_uri()
                      if '://' not in s else
                      ((graphBase.local_base / s.replace(graphBase.remote_base, '').strip('/')).as_uri()
                       if graphBase.remote_base in s else s)  # FIXME this breaks the semanics of local?
@@ -1121,13 +1168,6 @@ class graphBase:
                 # ideally remove _all_ of this code though because WOW
                 # it is a mess
                 graphBase.set_repo_state()
-
-        # part of graph
-        # FIXME hardcoded ...
-        partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
-        graphBase.part_of_graph = OntResAny(partofpath).graph
-        graphBase.part_of_graph.path = partofpath  # FIXME why is this not passed by OntResAny?
-        [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
 
         # core graph setup
         if core_graph is None:
@@ -3125,7 +3165,7 @@ should be implemented here. This is only in the case where the underlying
 rules cannot be implemented in a consistent way in the ontology. The ultimate
 objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
-Config()  # explicitly load the core graph TODO need a lighter weight way to do this
+Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
 OntologyGlobalConventions = _ogc = injective_dict(
     L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer'),
     L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer'),

@@ -2,6 +2,9 @@ import os
 import unittest
 from pathlib import Path
 from git import Repo
+from neurondm.core import log
+
+log.setLevel('DEBUG')
 
 testing_base = f'/tmp/.neurons-testing-base-{os.getpid()}'
 pyel = Path(testing_base, 'compiled')
