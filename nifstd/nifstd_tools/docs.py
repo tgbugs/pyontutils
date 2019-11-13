@@ -60,6 +60,7 @@ def makeOrgHeader(title, authors, date, theme):
 
 class FixLinks:
     link_pattern = re.compile(rb'\[\[(.*?)\]\[(.*?)\]\]', flags=re.S)  # non greedy . matches all
+    single_pattern = re.compile(rb'\[\[(file:.*?)\]\]')
 
     class MakeMeAnInlineSrcBlock(Exception):
         """ EVIL """
@@ -89,16 +90,23 @@ class FixLinks:
 
 
     def __call__(self, org):
-        if self.current_file.suffix.startswith('.md'):
-            org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
+        org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
+        org = re.sub(rb'\[\[\.\.\/', b'[[file:../', org)  # run this once at the start
 
         #print(org.decode())
         out = re.sub(self.link_pattern, self.process_matches, org)
+        out = re.sub(self.single_pattern, self.process_matches, out)
         #print(out.decode())
         return out
 
     def process_matches(self, match):
-        href, text = match.groups()
+        href, *text = match.groups()
+        if text:
+            text, = text
+        else:
+            log.debug(match)
+            text = href.replace(b'file:', b'')
+
         try:
             outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
         except self.MakeMeAnInlineSrcBlock as e:
@@ -178,7 +186,7 @@ class FixLinks:
                         rel = rel.with_suffix('.html')
                     rel_path = rel.as_posix() + rest
                     #print('aaaaaaaaaaa', suffix, rel, rel_path)
-                    return self.base  + rel_path
+                    return self.base + rel_path
                 elif name.startswith('$'):
                     raise self.MakeMeAnInlineSrcBlock(match.group())
                 else:
@@ -189,8 +197,12 @@ class FixLinks:
         #print('----------------------------------------')
         # TODO consider htmlifying these ourselves and serving them directly
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
+        # source file and/or code extensions regex
+        # TODO folders that simply end
+        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx)'
+                      r'|LICENSE|catalog-extras|authorized_keys|\.vimrc)')
         out0 = re.sub(r'^file:(.*)'
-                      r'(\.(?:py|ttl|graphml|yml|yaml|spec|example)|LICENSE|catalog-extras)'
+                      + code_regex +
                       r'(#.+)*$',
                       sub_github, out)
 
@@ -553,7 +565,7 @@ def main():
 
     BUILD = working_dir / 'doc_build'
     docs_dir = BUILD / 'docs'
-    glb = auth.get_path('git-local-base')
+    glb = Path(auth.get_path('git-local-base'))
     theme_repo = glb / 'org-html-themes'
     theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
     prepare_paths(BUILD, docs_dir, theme_repo, theme)
@@ -570,7 +582,7 @@ def main():
         return
 
     names = ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')
-    repo_paths = [auth.get_path('ontology_local_repo'),
+    repo_paths = [Path(auth.get_path('ontology-local-repo')),
                   Path(working_dir)] + [glb / name for name in names]
     repos = [p.repo for p in repo_paths]
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
