@@ -147,8 +147,7 @@ build-release () {
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
     PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
-    PYTHONPATH=''
-    echo PYTHONPATH should be empty? '->' ${PYTHONPATH}
+    unset PYTHONPATH
     cp dist/${packagename}-${version}* ${TEST_PATH}
 
     pushd ${TEST_PATH}
@@ -160,10 +159,20 @@ build-release () {
         return 1
     fi
     pushd ${packagename}-${version}
+
+    # pipenv --rm swears no venv exists, if no Pipfile
+    # exists even if adding a Pipfile will magically
+    # reveal that there was in fact a venv and thus that
+    # every other pipenv command knows about it but
+    # naieve little rm is kept in the dark, so we yell
+    # into the 'void' just to make sure
+    touch Pipfile
     pipenv --rm  # clean any existing env
     if [[ -n ${INTEGRATION_PACKAGES} ]]; then
-        pipenv run pip install ${INTEGRATION_PACKAGES[@]}
+        echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
+        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return 1
     fi
+    echo $(color yellow)installing$(color off) ${packagename}
     pipenv run pip install -e .[test]   # .[services] for ontquery full install
     PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
     # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
