@@ -17,6 +17,7 @@ pyel = testing_base / 'compiled'
 tel = testing_base
 
 
+@skipif_no_net
 class _TestNeuronsBase(unittest.TestCase):
     def setUp(self):
         if not pyel.exists():

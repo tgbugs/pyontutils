@@ -1,5 +1,8 @@
 import unittest
+from .common import skipif_no_net
 
+
+@skipif_no_net
 class TestWrite(unittest.TestCase):
     def test_load_huang(self):
         from neurondm import Config
