@@ -554,7 +554,7 @@ class OntIdPath(OntRes):
 
     @property
     def identifier(self):
-        return self.path
+        return self.path.as_posix()
 
     def _get(self):
         resp = requests.Response()

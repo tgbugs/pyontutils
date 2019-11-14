@@ -1,8 +1,10 @@
 import unittest
 from neurondm import simple
 from neurondm.simple import Phenotype, PhenotypeCollection
+from .common import skipif_no_net
 
 
+@skipif_no_net  # FIXME should not need this
 class TestSimple(unittest.TestCase):
     # TODO test_0_equality from test_neurons
 

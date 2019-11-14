@@ -10,6 +10,7 @@ from collections import defaultdict
 from urllib.error import HTTPError
 import git
 import rdflib
+import requests
 import ontquery as oq
 import orthauth as oa
 from rdflib.extras import infixowl
@@ -18,7 +19,7 @@ from ttlser import natsort
 from augpathlib import RepoPath
 from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
-from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri
+from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri, OntResPath
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
 from pyontutils.config import auth as pauth, working_dir
@@ -688,10 +689,10 @@ class Config:
 
         cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack
         if import_as_local or import_no_net:
-            if local.exists():
+            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
                 # NOTE: we currently do the translation more ... inelegantly inside of config so we
                 # have to keep the translation layer out here (sigh)
-                log.debug('local ont')
+                log.debug(f'local ont {local}')
                 core_graph_paths = [(Path(local,
                                         i.iri.replace(remote.iri, ''))
                                     .relative_to(local_base).as_posix())
@@ -710,20 +711,21 @@ class Config:
                 search_paths = [
                     udp,
                     cfg._pathit('{:prefix}/neurondm/'),
+                    Path('./share/neurondm/').absolute(),
                 ]
                 for base in search_paths:
                     if base.exists():
-                        core_graph_paths = [(base / Path(iri).name).as_posix() for iri in imports]
-
+                        core_graph_paths = [(base / Path(iri).name).as_uri() for iri in imports]
+                        break
                 else:
-                    msg = '\n'.join([p.as_posix() for p in search_paths])
+                    msg = '\n' + '\n'.join([p.as_posix() for p in search_paths])
                     raise ValueError(f'no core paths ... {msg}')
 
                 # part of graph
                 # FIXME hardcoded ...
 
-                partofpath = RepoPath(udp)
-                graphBase.part_of_graph = OntResAny(partofpath).graph
+                partofpath = base / 'part-of-self.ttl'
+                graphBase.part_of_graph = OntResPath(partofpath.as_posix()).graph  # FIXME temp fix for pyontutils 1.6.0
                 [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
 
         else:
@@ -1183,7 +1185,9 @@ class graphBase:
 
                 giri = ora.identifier_bound
                 core_graph.addN(((*t, giri) for t in ora.graph))
-            except (FileNotFoundError, HTTPError) as e:
+            except (FileNotFoundError,
+                    HTTPError,
+                    requests.exceptions.ConnectionError) as e:
                 # TODO failover to local if we were remote?
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
                 log.warning(f'no file found for core graph at {cg}')
