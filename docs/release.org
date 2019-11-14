@@ -203,6 +203,8 @@ build-release () {
         echo "build artifacts have been copied to ${ARTIFACT_FOLDER}"
     fi
 
+    # FIXME need multiple repos when packages share a repo
+    # basically a test for if [[ package == repo ]] or something
     if [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
         rm ${folder}/dist/${packagename}-${version}*
         if [[ -n ${CLONEFROM} ]]; then
