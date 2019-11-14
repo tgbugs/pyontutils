@@ -53,7 +53,7 @@ setup(
         'nest_asyncio',
         'oauth2client',
         'ontquery>=0.2.1',
-        'orthauth>=0.0.3',
+        'orthauth>=0.0.4',
         'pyyaml',
         'requests',
         'terminaltables',
