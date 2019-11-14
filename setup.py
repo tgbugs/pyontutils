@@ -41,7 +41,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'appdirs',
-        'augpathlib>=0.0.2',
+        'augpathlib>=0.0.3',
         'colorlog',
         'docopt',
         'gitpython',

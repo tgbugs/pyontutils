@@ -2102,7 +2102,9 @@ class Ont:
 
     @property
     def working_dir(self):
-        return aug.RepoPath(getsourcefile(self.__class__))
+        return (aug.RepoPath(getsourcefile(self.__class__))
+                .resolve()
+                .resolve())
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -2126,7 +2128,8 @@ class Ont:
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
-                file = Path(_file).resolve().absolute()
+                file = Path(_file)
+                file = file.resolve().resolve()
                 filepath = file.relative_to(working_dir).as_posix()
         except TypeError:  # emacs is silly
             line = '#Lnoline'

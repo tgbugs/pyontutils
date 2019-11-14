@@ -168,6 +168,7 @@ build-release () {
     # into the 'void' just to make sure
     touch Pipfile
     pipenv --rm  # clean any existing env
+    pipenv --python 3.7  # for some reason 3.6 lingers in some envs
     if [[ -n ${INTEGRATION_PACKAGES} ]]; then
         echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
         pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return 1
