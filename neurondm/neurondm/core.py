@@ -714,7 +714,7 @@ class Config:
                     Path('./share/neurondm/').absolute(),
                 ]
                 for base in search_paths:
-                    if base.exists():
+                    if (base / 'phenotypes.ttl').exists():
                         core_graph_paths = [(base / Path(iri).name).as_uri() for iri in imports]
                         break
                 else:
@@ -734,12 +734,12 @@ class Config:
 
             partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
             graphBase.part_of_graph = OntResIri(partofpath).graph
-            if local.exists():
+            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
                 _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
             else:
                 _writepath = cfg._pathit('{:user-data-path}/neurondm/part-of-self.ttl')
                 if not _writepath.parent.exists():
-                    _writepath.parent.mkdir()
+                    _writepath.parent.mkdir(parents=True)
 
             graphBase.part_of_graph.path = _writepath
             [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
