@@ -131,11 +131,12 @@ def _loadPrefixes():
         'ilx.hasDbXref': 'http://uri.interlex.org/base/ilx_0381360',
         'ilx.hasUnit': 'http://uri.interlex.org/base/ilx_0381384',
         'ilx.isAbout': 'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao
-        'ilx.hasLaterality':'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
-        'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
-        'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
+        'ilx.hasLaterality': 'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
+        'ilx.hasMeasurementType': 'http://uri.interlex.org/base/ilx_0381388',
+        'ilx.isMeasureOf': 'http://uri.interlex.org/base/ilx_0381389',
 
         'NINDS.CDE': str(rdflib.Namespace(interlex_namespace('NINDSCDE/uris/readable/'))),
+        'ilx.type': 'http://uri.interlex.org/base/readable/type/',
 
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
