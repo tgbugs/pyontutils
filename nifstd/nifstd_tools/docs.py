@@ -23,13 +23,14 @@ from git import Repo
 from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from augpathlib import RepoPath as Path
+from augpathlib import RepoPath as Path, exceptions as aexc
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, get_working_dir
-from pyontutils.config import auth, working_dir
+from pyontutils.config import auth
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
+working_dir = Path(__file__).resolve().working_dir
 
 try:
     import hunspell
@@ -46,7 +47,8 @@ def patch_theme_setup(theme):
         f.write(dat.replace('="styles/', '="/docs/styles/'))
 
 
-def makeOrgHeader(title, authors, date, theme):
+_org_edit_link_html = '#+HTML: <div align="right"><a href={edit_link}>Edit on GitHub</a></div>\n'
+def makeOrgHeader(title, authors, date, theme, edit_link=None):
     header = (f'#+TITLE: {title}\n'
               f'#+AUTHOR: {authors}\n'
               f'#+DATE: {date}\n'
@@ -54,7 +56,10 @@ def makeOrgHeader(title, authors, date, theme):
               f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
               #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
              )
-    #print(header)
+
+    if edit_link is not None:
+        header += _org_edit_link_html.format(edit_link=edit_link)
+
     return header
 
 
@@ -371,6 +376,12 @@ compile_org_file = ['emacs', '-q', '-l',
 @suffix('org')
 def renderOrg(path, **kwargs):
     orgfile = path.as_posix()
+    try:
+        ref = path.latest_commit.hexsha
+        github_link = path.remote_uri_human(ref=ref)
+    except aexc.NoCommitsForFile:
+        github_link = None
+
     #print(' '.join(compile_org_file))
     p = subprocess.Popen(compile_org_file,
                          stdin=subprocess.PIPE,
@@ -380,24 +391,32 @@ def renderOrg(path, **kwargs):
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
+        theme = kwargs['theme']
+        full_theme = theme.as_posix()
         if b'#+SETUPFILE:' not in org_in:
-            theme = kwargs['theme']
-            full_theme = theme.as_posix()
-            try:
+            insert = f'\n\n#+SETUPFILE: {full_theme}\n'.encode()
+        else:
+            insert = b''
+
+        if github_link is not None:
+            insert += _org_edit_link_html.format(edit_link=github_link).encode() + b'\n'
+
+        try:
+            if org_in.startswith(b'* '):
+                org = insert + org_in
+            else:
                 title_author_etc, rest = org_in.split(b'\n\n', 1)
                 org = (title_author_etc +
-                       f'\n\n#+SETUPFILE: {full_theme}\n'.encode() +
+                       insert +
                        rest)
-            except ValueError as e:
-                title = kwargs['title']
-                authors = kwargs['authors']
-                date = kwargs['date']
-                title_author_etc = makeOrgHeader(title, authors, date, theme)
-                org = title_author_etc.encode() + org_in
-                #raise ValueError(f'{orgfile!r}') from e
+        except ValueError as e:
+            title = kwargs['title']
+            authors = kwargs['authors']
+            date = kwargs['date']
+            title_author_etc = makeOrgHeader(title, authors, date, theme, github_link)
+            org = title_author_etc.encode() + org_in
+            #raise ValueError(f'{orgfile!r}') from e
 
-        else:
-            org = org_in
 
         # fix links
         fix_links = FixLinks(path)
@@ -413,6 +432,12 @@ def renderOrg(path, **kwargs):
 @suffix('md')
 def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
+    try:
+        ref = path.latest_commit.hexsha
+        github_link = path.remote_uri_human(ref=ref)
+    except aexc.NoCommitsForFile:
+        github_link = None
+
     # TODO fix relative links to point to github
 
     if pandoc_columns:
@@ -438,7 +463,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
                          stderr=subprocess.PIPE)  # DUH
     authors = ', '.join(authors)
     theme = kwargs['theme']
-    header = makeOrgHeader(title, authors, date, theme)
+    header = makeOrgHeader(title, authors, date, theme, github_link)
     out, err = s.communicate()
     #print(out.decode())
 
