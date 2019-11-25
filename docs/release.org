@@ -8,7 +8,7 @@ and the package contents are what we want and expect.
 Once they do tag it with the version that you set below
 so that everything is on the same page.
 
-#+CAPTION: .pypirc on the release host (only need to create once)
+#+CAPTION: [[file:~/.pypirc]] on the release host (only need to create once)
 #+BEGIN_SRC toml
 [distutils]
 index-servers =
@@ -18,7 +18,6 @@ index-servers =
 [pypi]
 repository: https://upload.pypi.org/legacy/
 username: your-username
-password: 
 
 [test]
 repository: https://test.pypi.org/legacy/
@@ -236,7 +235,7 @@ function push-release () {
     rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}{-,.tar}* ${software_releases_path}/ || return 1
     pushd ${software_releases_path}
     sha256sum ${packagename}-${version}{-,.tar}* >> hashes
-    twine upload --repository test ${packagename}-${version}{-,.tar}*
+    twine upload --repository test ${packagename}-${version}{-,.tar}* || return 1
     sleep 1
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
@@ -318,7 +317,7 @@ function final-release () {
 
     pushd ${software_releases_path}
 
-    twine upload --repository pypi ${packagename}-${version}{-,.tar}*  # enter password here
+    twine upload --repository pypi ${packagename}-${version}{-,.tar}* || return 1  # enter password here
 
     sleep 1
     echo "pypi hashes"
