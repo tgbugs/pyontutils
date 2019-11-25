@@ -41,7 +41,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'appdirs',
-        'augpathlib>=0.0.3',
+        'augpathlib>=0.0.4',
         'colorlog',
         'docopt',
         'gitpython',
@@ -53,7 +53,7 @@ setup(
         'nest_asyncio',
         'oauth2client',
         'ontquery>=0.2.1',
-        'orthauth>=0.0.4',
+        'orthauth>=0.0.5',
         'pyyaml',
         'requests',
         'terminaltables',
