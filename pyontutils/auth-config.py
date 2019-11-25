@@ -2,7 +2,7 @@
  'auth-variables':
  {'curies': ['../nifstd/scigraph/curie_map.yaml',  # git
              '{:user-config-path}/pyontutils/curie_map.yaml',  # config
-             '{:user-data-path}/share/pyontutils/curie_map.yaml',  # pip install --user
+             '{:user-data-path}/pyontutils/curie_map.yaml',  # pip install --user
              '{:prefix}/share/pyontutils/curie_map.yaml',  # system
              '/usr/share/pyontutils/curie_map.yaml',  # pypy3
              '{:cwd}/share/pyontutils/curie_map.yaml',],  # ebuild testing
