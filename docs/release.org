@@ -72,8 +72,8 @@ build-release () {
         shift
         shift
         ;;
-        --default)
-        local DEFAULT=YES
+        --tag-no-rename)
+        local TAG_NO_RENAME=YES
         shift # past argument
         ;;
         ,*)    # unknown option
@@ -91,7 +91,7 @@ build-release () {
     local REST=${POSITIONAL[@]:5}  # remaining position passed along
     echo $REST
 
-    if [[ ${folder} == ${packagename} ]]; then
+    if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
         local tag=${version}
     else
         local tag=${packagename}-${version}
