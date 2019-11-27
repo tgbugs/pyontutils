@@ -194,7 +194,7 @@ def _loadPrefixes():
         'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
         'npokb': str(npokb),
-        'tech': interlex_namespace('tgbugs/readable/technique/'),
+        'tech': interlex_namespace('tgbugs/uris/readable/technique/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
