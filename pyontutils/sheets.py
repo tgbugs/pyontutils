@@ -23,12 +23,13 @@ Options:
     -d --debug
 """
 # TODO decouple oauth group sheets library
+import pickle
 import socket
 import itertools
 from pathlib import Path
 from googleapiclient.discovery import build
-from httplib2 import Http
-from oauth2client import file, client, tools
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
 
@@ -41,15 +42,25 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     else:
         store_file = auth.get_path('google-api-store-file')
 
-    store = file.Storage((store_file).as_posix())
-    creds = store.get()
-    if not creds or creds.invalid:
-        # the first time you run this you will need to use the --noauth_local_webserver args
-        creds_file = auth.get_path('google-api-creds-file')
-        flow = client.flow_from_clientsecrets((creds_file).as_posix(), SCOPES)
-        creds = tools.run_flow(flow, store)
+    if store_file.exists():
+        with open(store_file, 'rb') as f:
+            creds = pickle.load(f)
+    else:
+        creds = None
 
-    service = build(api, version, http=creds.authorize(Http()))
+    if not creds or not creds.valid:
+        # the first time you run this you will need to use the --noauth_local_webserver args
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            creds_file = auth.get_path('google-api-creds-file')
+            flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
+            creds = flow.run_local_server(port=0)
+
+        with open(store_file, 'wb') as f:
+            pickle.dump(creds, f)
+
+    service = build(api, version, credentials=creds)
     return service
 
 
