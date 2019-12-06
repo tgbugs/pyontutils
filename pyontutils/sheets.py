@@ -37,6 +37,20 @@ log = _log.getChild('sheets')
 
 
 def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
+    if False:
+        class e:
+            execute = lambda : {'sheets':[],}
+        class v:
+            def get(range=None):
+                return []
+        class g:
+            def get(spreadsheetId=None, includeGridData=None, range=None):
+                return e
+            values = lambda : g
+        class s:
+            spreadsheets = lambda : g
+        return s
+
     if readonly:  # FIXME the division isn't so clean for drive ...
         store_file = auth.get_path('google-api-store-file-readonly')
     else:
