@@ -36,29 +36,41 @@ from pyontutils.config import auth
 log = _log.getChild('sheets')
 
 
-def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
-    if False:
-        class e:
-            execute = lambda : {'sheets':[],}
-        class v:
-            def get(range=None):
-                return []
-        class g:
-            def get(spreadsheetId=None, includeGridData=None, range=None):
-                return e
-            values = lambda : g
-        class s:
-            spreadsheets = lambda : g
-        return s
+def _FakeService():
+    """ use if you need a fake service from build """
 
+    class e:
+        execute = lambda : {'sheets':[],}
+    class v:
+        def get(range=None):
+            return []
+    class g:
+        def get(spreadsheetId=None, includeGridData=None, range=None):
+            return e
+        values = lambda : g
+    class s:
+        spreadsheets = lambda : g
+
+    return s
+
+
+def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     if readonly:  # FIXME the division isn't so clean for drive ...
-        store_file = auth.get_path('google-api-store-file-readonly')
+        _auth_var = 'google-api-store-file-readonly'
     else:
-        store_file = auth.get_path('google-api-store-file')
+        _auth_var = 'google-api-store-file'
+
+    store_file = auth.get_path(_auth_var)
 
     if store_file.exists():
         with open(store_file, 'rb') as f:
-            creds = pickle.load(f)
+            try:
+                creds = pickle.load(f)
+            except pickle.UnpicklingError as e:
+                # FIXME need better way to trace errors in a way
+                # that won't leak secrets by default
+                log.error(f'problem in file at path for {_auth_var}')
+                raise e
     else:
         creds = None
 
