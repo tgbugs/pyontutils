@@ -44,7 +44,7 @@ setup(
     python_requires='>=3.5',
     tests_require=tests_require,
     install_requires=[
-        'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
+        'neurdflib>=5.0.1',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'ttlfmt': ttlfmt_require,
