@@ -32,7 +32,6 @@ may be used in certain cases.
 
 Run the code block definitions to create the functions we will use.
 *NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
-# arg {(((((( darned mismatched parens :/
 #+NAME: build-release
 #+BEGIN_SRC bash :eval never :exports code
 build-release () {
@@ -46,6 +45,7 @@ build-release () {
     do
     key="$1"
 
+    # argh (((((((( darned mismatched parens :/
     case $key in
         -l|--local)
         local CLONEFROM="$2"
@@ -74,6 +74,10 @@ build-release () {
         ;;
         --tag-no-rename)
         local TAG_NO_RENAME=YES
+        shift # past argument
+        ;;
+        --keep-artifacts)
+        local KEEP_ARTIFACTS=YES
         shift # past argument
         ;;
         ,*)    # unknown option
@@ -142,6 +146,7 @@ build-release () {
 
     if [[ -n ${BRANCH} ]]; then
         git checkout ${BRANCH}
+        git pull  # in the event that a local branch already exists
     else
         git checkout -f master  # just like clean -dfx this should wipe changes just in case
     fi
@@ -205,7 +210,9 @@ build-release () {
 
     # FIXME need multiple repos when packages share a repo
     # basically a test for if [[ package == repo ]] or something
-    if [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
+    if [[ -n ${KEEP_ARTIFACTS} ]]; then
+        echo "$(color yellow)keeping artifacts$(color off)"
+    elif [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
         rm ${folder}/dist/${packagename}-${version}*
         if [[ -n ${CLONEFROM} ]]; then
             echo "$(color yellow)release build was cloned from a local source$(color off) ${CLONEFROM}"
