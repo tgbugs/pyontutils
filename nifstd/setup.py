@@ -43,7 +43,7 @@ setup(
         'nbformat',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.7',
+        'pyontutils>=0.1.11',
         'sqlalchemy',
     ],
     extras_require={'dev': ['mysql-connector',
