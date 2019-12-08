@@ -2,7 +2,6 @@ import unittest
 from pathlib import Path
 import rdflib
 from pyontutils.core import yield_recursive
-from pyontutils.config import devconfig
 from pyontutils.identity_bnode import bnodes, IdentityBNode
 
 

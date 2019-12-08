@@ -3,8 +3,9 @@
 * Python release process
 Release workflow.
 
-Don't tag a release on github until all the tests pass
-and the package contents are what we want and expect.
+Don't tag a release on github until all the tests pass,
+the package contents are what we want and expect, and
+you have run =push-release= to pypi testing and checked it.
 Once they do tag it with the version that you set below
 so that everything is on the same page.
 
