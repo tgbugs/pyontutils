@@ -57,7 +57,7 @@ setup(
         'pyyaml',
         'requests',
         'terminaltables',
-        'ttlser',
+        'ttlser>=1.1.0',
         'werkzeug',  # for IterIO which can probably just be copied one off
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
