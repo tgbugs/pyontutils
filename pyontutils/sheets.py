@@ -16,10 +16,6 @@ Options:
                                       photos.readonly
                                       readonly
                                       scripts
-    --noauth_local_webserver  passthrough for oauth
-    --auth_host_name=N        passthrough for oauth
-    --auth_host_port=P        passthrough for oauth
-    --logging_level=LL        passthrough for oauth
     -d --debug
 """
 # TODO decouple oauth group sheets library
@@ -81,7 +77,7 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
         else:
             creds_file = auth.get_path('google-api-creds-file')
             flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
 
         with open(store_file, 'wb') as f:
             pickle.dump(creds, f)
@@ -349,15 +345,6 @@ def main():
 
     from docopt import docopt, parse_defaults
     args = docopt(__doc__, version='clifun-demo 0.0.0')
-    passthrough = ('--noauth_local_webserver',
-                   '--auth_host_name',
-                   '--auth_host_port',
-                   '--logging_level')
-    to_pop = [arg for i, arg in enumerate(sys.argv)
-              if i and not [None for pt in passthrough if pt in arg]]
-    for arg in to_pop:
-        sys.argv.pop(sys.argv.index(arg))
-
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     options = Options(args, defaults)
     main = Main(options)
