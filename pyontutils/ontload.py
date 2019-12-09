@@ -196,6 +196,7 @@ class ReproLoader:
                 if check_built:
                     print('The graph has not been loaded.')
                     raise NotBuiltError('The graph has not been loaded.')
+                #breakpoint()
                 failure = os.system(load_command)
                 if failure:
                     if os.path.exists(graph_path):
@@ -222,7 +223,7 @@ class ReproLoader:
                               remote_base, local_base, zip_location,
                               config_path=None):
         # config graphload.yaml from template
-        graphload_config_template = graphload_config + '.template'
+        graphload_config_template = graphload_config.with_suffix(graphload_config.suffix + '.template')
         with open(graphload_config_template, 'rt') as f:
             config = yaml.safe_load(f)
 
@@ -641,9 +642,9 @@ def run(args):
 
     # options
     git_remote = args['--git-remote']
-    git_local = args['--git-local']
-    zip_location = args['--zip-location']
-    graphload_config = args['--graphload-config']
+    git_local = Path(args['--git-local']).resolve()
+    zip_location = Path(args['--zip-location']).resolve()
+    graphload_config = Path(args['--graphload-config']).resolve()
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
@@ -717,9 +718,9 @@ def run(args):
         if '--local' in args:
             return
     elif config:
-        graph_path = args['<graph_path>']
-        config_path = args['--graph-config-out']
-        local_base = jpth(git_local, repo_name)
+        graph_path = Path(args['<graph_path>']).resolve()
+        config_path = Path(args['--graph-config-out']).resolve()
+        local_base = Path(git_local, repo_name).resolve()
         ReproLoader.make_graphload_config(graphload_config, graph_path,
                                           remote_base, local_base,
                                           zip_location, config_path)
