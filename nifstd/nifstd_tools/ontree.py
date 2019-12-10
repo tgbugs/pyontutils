@@ -955,6 +955,9 @@ def test():
 
     def test_dynamic():
         for _, path, querystring in dynamic_examples:
+            if 'shortestSimple' in path:
+                log.warning('skipping test of shortestSimple')
+                continue
             log.info(f'ontree testing {path} {querystring}')
             global request
             request = fakeRequest()
