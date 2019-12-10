@@ -262,6 +262,8 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
 
     if not os.path.exists(local):
         repo = Repo.clone_from(remote + '.git', local)
+    elif not Path(local, '.git').exists():
+        repo = Repo.clone_from(remote + '.git', local)
     else:
         repo = Repo(local)
 
