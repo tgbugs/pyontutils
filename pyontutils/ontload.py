@@ -33,6 +33,7 @@ Options:
     -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:{tempfile.tempdir}/scigraph/]
+    -Q --scigraph-quiet             silence mvn log output
 
     -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get_path('patch-config')}]
     -u --curies=CURIEFILE           curie definition file       [default: {auth.get_path('curies')}]
@@ -41,7 +42,7 @@ Options:
     -p --patch                      retrieve ontologies to patch and modify import chain accordingly
     -K --check-built                check whether a local copy is present but do not build if it is not
 
-    -d --debug                      call IPython embed when done
+    -d --debug                      call breakpoint when done
     -L --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
     -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get_path('scigraph-graphload')}]
@@ -71,7 +72,10 @@ from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
@@ -243,7 +247,7 @@ class ReproLoader:
 
 
 def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
-                   clean=False, check_built=False, cleanup_later=False):
+                   clean=False, check_built=False, cleanup_later=False, quiet=False):
     COMMIT_LOG = 'last-built-commit.log'
     repo_name = 'SciGraph'
     remote = jpth(git_remote, org, repo_name)
@@ -294,10 +298,11 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
         # main
         if scigraph_commit != last_commit or clean:
             print('SciGraph not built at commit', commit, 'last built at', last_commit)
+            quiet = '--quiet ' if quiet else ''
             build_command = ('cd ' + local +
-                             '; mvn clean -DskipTests -DskipITs install'
+                             f'; mvn {quiet}clean -DskipTests -DskipITs install'
                              '; cd SciGraph-services'
-                             '; mvn -DskipTests -DskipITs package')
+                             f'; mvn {quiet}-DskipTests -DskipITs package')
             if check_built:
                 print('SciGraph has not been built.')
                 raise NotBuiltError('SciGraph has not been built.')
@@ -653,6 +658,7 @@ def run(args):
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
     sscp = args['--scigraph-scp-loc']
+    scigraph_quiet = args['--scigraph-quiet']
     patch_config = args['--patch-config']
     curies_location = args['--curies']
     patch = args['--patch']
@@ -683,7 +689,7 @@ def run(args):
              scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
                                                     git_local, sbranch, scommit,
                                                     check_built=check_built,
-                                                    cleanup_later=True)
+                                                    cleanup_later=True, quiet=scigraph_quiet)
         else:
             scigraph_commit = 'dev-9999'
             services_zip = 'None'
@@ -711,7 +717,8 @@ def run(args):
     elif scigraph:
         (scigraph_commit, load_base, services_zip,
          _) = scigraph_build(zip_location, git_remote, sorg, git_local,
-                             sbranch, scommit, check_built=check_built)
+                             sbranch, scommit, check_built=check_built,
+                             quiet=scigraph_quiet)
         if not check_built:
             deploy_scp(services_zip, sscp)
         print(services_zip)
@@ -753,7 +760,7 @@ def run(args):
                 f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
     if debug:
-        embed()
+        breakpoint()
 
 def main():
     from docopt import docopt
