@@ -26,7 +26,7 @@ def currentVMSKb():
 
 
 from pyontutils.core import OntId
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
@@ -45,7 +45,7 @@ def ncbigenemapping(may_need_ncbigene_added):
             print(u)
             done2[u] = requests.get(u)
 
-    base = Path(devconfig.resources, 'genesearch')
+    base = auth.get_path('resources') / 'genesearch'
     if not base.exists():
         base.mkdir()
 

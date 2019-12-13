@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import rdflib
 import yaml
-from pyontutils.core import devconfig
+from pyontutils.config import auth
 from IPython import embed
 
 def main():
-    with open(devconfig.curies, 'rt') as f:
+    with open(auth.get_path('curies'), 'rt') as f:
         curie_map = yaml.safe_load(f)
 
     curie_map['nlx_only'] = curie_map['']  # map nlx_only to 'http://uri.neuinfo.org/nif/nifstd/'

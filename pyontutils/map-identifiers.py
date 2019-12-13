@@ -9,10 +9,10 @@ from pyontutils.namespaces import TEMP, ilx, rdf, owl, ilxtr, npokb, OntCuries
 
 def main():
     from pathlib import Path
-    from pyontutils.config import devconfig
+    from pyontutils.config import auth
 
-    index_graph = OntGraph(path=Path(devconfig.ontology_local_repo,
-                                     'ttl/generated/neurons/npokb-index.ttl'))
+    index_graph = OntGraph(path=auth.get_path('ontology-local-repo') /
+                           'ttl/generated/neurons/npokb-index.ttl')
 
     if index_graph.path.exists():
         index_graph.parse()
@@ -24,7 +24,7 @@ def main():
 
     ios = []
     for eff in ('common-usage-types', 'huang-2017', 'markram-2015', 'allen-cell-types'):
-        path = Path(devconfig.ontology_local_repo, f'ttl/generated/neurons/{eff}.ttl')
+        path = auth.get_path('ontology-local-repo') / f'ttl/generated/neurons/{eff}.ttl'
         input_graph = OntGraph(path=path)
         input_graph.parse()
         output_graph = input_graph.mapTempToIndex(index_graph, npokb, TEMP)

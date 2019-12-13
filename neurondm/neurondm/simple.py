@@ -45,6 +45,17 @@ class OntTerm(OntTermBase):
     """ ask things about a term! """
     skip_for_instrumentation = True
 
+    def __new__(cls, *args, **kwargs):
+        self = OntId.__new__(cls, *args, **kwargs)
+        self._args = args
+        self._kwargs = kwargs
+        return self
+
+    def fetch(self):
+        newself = super().__new__(self.__class__, *self._args, **self._kwargs)
+        self.__dict__ = newself.__dict__
+        return self
+
     def isSubPropertyOf(self, property):
         return OntId(property) in self('rdfs:subPropertyOf',
                                        depth=20,
@@ -63,7 +74,7 @@ class OntTerm(OntTermBase):
     def isEphys(self): return self._isType('ephys')
 
 
-class PredicateTerm(OntTermBase):
+class PredicateTerm(OntTerm):
     skip_for_instrumentation = True
     __firsts = tuple()
     def _isType(self, name):
@@ -73,7 +84,7 @@ class PredicateTerm(OntTermBase):
         return self.isSubPropertyOf(property)
 
 
-class ObjectTerm(OntTermBase):
+class ObjectTerm(OntTerm):
     skip_for_instrumentation = True
     __firsts = tuple()
     def _isType(self, name):
@@ -98,6 +109,7 @@ class PhenotypeBase(tuple):
     def __repr__(self):
         p = f', {self.predicate}' if self.predicate != self._defaultPredicate else ''
         return self.__class__.__name__ + f'({self.object}{p})'
+
     @property
     def predicate(self):
         # yes this is backwards, but we want it to match the args

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 __doc__ = f"""Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
 
 Usage:
@@ -11,11 +11,11 @@ Options:
     -p --port=PORT                  [default: 3306]
     -d --database=DB                [default: nif_eelg]
 
-    -g --git-remote=GBASE           remote git hosting                          [default: {devconfig.git_remote_base}]
-    -l --git-local=LBASE            local path to look for ontology <repo>      [default: {devconfig.git_local_base}]
+    -g --git-remote=GBASE           remote git hosting                          [default: {auth.get('git-remote-base')}]
+    -l --git-local=LBASE            local path to look for ontology <repo>      [default: {auth.get_path('git-local-base')}]
 
-    -o --org=ORG                    user/org to clone/load ontology from        [default: {devconfig.ontology_org}]
-    -r --repo=REPO                  name of ontology repo                       [default: {devconfig.ontology_repo}]
+    -o --org=ORG                    user/org to clone/load ontology from        [default: {auth.get('ontology-org')}]
+    -r --repo=REPO                  name of ontology repo                       [default: {auth.get('ontology-repo')}]
 
     --test
 

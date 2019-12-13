@@ -21,7 +21,7 @@ ttlser needs to know about them so that it can do the reordering those cases app
 otherwise you will end up with situations where another tool reorders the serialization and
 ttlser has to assume that the ordering is semantically meaningful.  See
 [`symmetric_predicates`](https://github.com/tgbugs/pyontutils/blob/89789653f51b77b13e32dc4f27e231ab00769429/ttlser/ttlser/serializers.py#L234)
-in [serializers.py](ttlser/serializers.py).
+in [serializers.py](./ttlser/serializers.py).
 2. multiple prefixes: If there is more than one curie prefix for the same iri prefix
 then the one that is selected will depend on the dicationary ordering (which while
 stable in newer version of python is not guranteed to be the same based on the

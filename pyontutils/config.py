@@ -1,21 +1,22 @@
 import os
 import sys
 import yaml
+import tempfile
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
 import appdirs
 import orthauth as oa
-from orthauth import Secrets
 from pyontutils.utils import TermColors as tc, log
 from pyontutils.utils import get_working_dir
 
-auth = oa.configure(Path(__file__).parent / 'auth-config.py')
+oa.utils.log.removeHandler(oa.utils.log.handlers[0])
+oa.utils.log.addHandler(log.handlers[0])
 
-#checkout_ok = 'NIFSTD_CHECKOUT_OK' in os.environ
-checkout_ok = auth.get('nifstd-checkout-ok')
+auth = oa.configure_relative('auth-config.py')
+
 #pyontutils_config_path = Path(appdirs.user_config_dir(), 'pyontutils')
-pyontutils_config_path = auth.dynamic_config_path.parent
+pyontutils_config_path = auth.dynamic_config._path.parent
 if not pyontutils_config_path.parent.exists():
     log.warning(f'config path does not exist! Errors incoming! {pyontutils_config_path.parent}')
 
@@ -114,7 +115,7 @@ class DevConfig:
     @property
     def secrets(self):
         try:
-            return Secrets(self.secrets_file)
+            return oa.stores.Secrets(self.secrets_file)
         except FileNotFoundError:
             log.warning(f'secrets file {self.secrets_file} does not exist. '
                         'You can set an alternate path under the secrets_file: '
@@ -340,7 +341,7 @@ class DevConfig:
     def scigraph_java(self):
         return self.config['scigraph_java']
 
-    @default('/tmp')
+    @default(tempfile.tempdir)
     def zip_location(self):
         return self.config['zip_location']
 

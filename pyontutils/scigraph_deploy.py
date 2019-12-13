@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.7
+import tempfile
 from pyontutils.core import auth
 __doc__ = f"""Deploy SciGraph services and loaded graph.
 
@@ -13,17 +14,17 @@ Options:
     -U --build-user=USER                build_user              [default: bamboo]
     -E --services-user=USER             services_user           [default: bamboo]
 
-    -G --graph-latest-url=LAG           url to latest graph     [default: file:///tmp/graph/LATEST]
-    -A --services-latest-url=LAS        url to latest services  [default: file:///tmp/scigraph/LATEST]
+    -G --graph-latest-url=LAG           url to latest graph     [default: file://{tempfile.tempdir}/graph/LATEST]
+    -A --services-latest-url=LAS        url to latest services  [default: file://{tempfile.tempdir}/scigraph/LATEST]
     -F --graph-folder=DLOC              set graph location      [default: from-services-config]
     -V --services-folder=PATH           jars sent here          [default: /opt/scigraph-services/]
-    -T --services-config=SCFG           services.yaml location  [default: {auth.get('scigraph-services')}]
+    -T --services-config=SCFG           services.yaml location  [default: {auth.get_path('scigraph-services')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -y --systemd-config=FILE            name of systemd config  [default: {auth.get('scigraph-systemd')}]
+    -y --systemd-config=FILE            name of systemd config  [default: {auth.get_path('scigraph-systemd')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
-    -j --java-config=FILE               name of java template   [default: {auth.get('scigraph-java')}]
+    -j --java-config=FILE               name of java template   [default: {auth.get_path('scigraph-java')}]
                                         if only the filename is given assued to be in scigraph-config-folder
                                         will look for *.template version of the file
 
@@ -85,8 +86,8 @@ class Builder:
     """ Build and/or run the SciGraph build and deploy chain. """
     # filenames currently not set by options [default: ]
     scigraph_repo = 'SciGraph'
-    start_script = auth.get('scigraph-start')  # FIXME remove?
-    stop_script = auth.get('scigraph-stop')
+    start_script = auth.get_path('scigraph-start')  # FIXME remove?
+    stop_script = auth.get_path('scigraph-stop')
     services_jar = 'scigraph-services.jar'
     heap_dump = 'head.dump'
     garbage_collection_log = 'gc.log'
@@ -780,7 +781,7 @@ def run(args):
         return
 
     if b.debug:
-        FILE = '/tmp/test.sh'
+        FILE = f'{tempfile.tempdir}/test.sh'
         with open(FILE, 'wt') as f:
             f.write('#!/usr/bin/env bash\n' + code)
         os.system(f"emacs -batch {FILE} --eval '(indent-region (point-min) (point-max) nil)' -f save-buffer")

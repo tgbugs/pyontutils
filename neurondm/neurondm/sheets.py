@@ -17,8 +17,6 @@ try:
 except NameError:
     from IPython import embed as breakpoint
 
-log.setLevel('WARNING')
-
 def normalizeDoi(doi):
     if 'http' in doi:
         doi = '10.' + doi.split('.org/10.', 1)[-1]
@@ -516,4 +514,5 @@ def main():
 
 
 if __name__ == '__main__':
+    log.setLevel('WARNING')
     main()

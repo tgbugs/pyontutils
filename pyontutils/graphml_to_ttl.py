@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.7
-"""convert graphml files to ttl files
+import tempfile
+__doc__ = f"""convert graphml files to ttl files
 
 Usage:
     graphml-to-ttl [options] <file>
@@ -8,7 +9,7 @@ Usage:
     graphml-to-ttl paper [options] <file>
 
 Options:
-    -o --output-location=LOC    write converted files to [default: /tmp/]
+    -o --output-location=LOC    write converted files to [default: {tempfile.tempdir}/]
 
 """
 import os

@@ -35,13 +35,16 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Operating System :: POSIX :: Linux',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
     ],
     keywords='rdflib rdf deterministic turtle ttl',
     packages=['ttlser'],
     python_requires='>=3.5',
     tests_require=tests_require,
     install_requires=[
-        'neurdflib',  # really 5.0.0 if my changes go in but dev < 5
+        'neurdflib>=5.0.1',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'ttlfmt': ttlfmt_require,
@@ -58,4 +61,6 @@ setup(
             'rktttl = ttlser:CompactTurtleSerializer',
         ],
     },
+    data_files=[('share/ttlser/', ['test/nasty.ttl',
+                                   'test/good.ttl']),],
 )

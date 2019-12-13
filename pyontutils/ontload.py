@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.7
+import tempfile
 from pyontutils.core import auth
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.
 Remote imports are replaced with local imports.
@@ -16,40 +17,41 @@ Usage:
 
 Options:
     -g --git-remote=GBASE           remote git hosting          [default: {auth.get('git-remote-base')}]
-    -l --git-local=LBASE            local git folder            [default: {auth.get('git-local-base')}]
-    -z --zip-location=ZIPLOC        local path for build files  [default: {auth.get('zip-location')}]
+    -l --git-local=LBASE            local git folder            [default: {auth.get_path('git-local-base')}]
+    -z --zip-location=ZIPLOC        local path for build files  [default: {auth.get_path('zip-location')}]
 
-    -t --graphload-config=CFG       graphload.yaml location     [default: {auth.get('scigraph-graphload')}]
+    -t --graphload-config=CFG       graphload.yaml location     [default: {auth.get_path('scigraph-graphload')}]
                                     if only the filename is given assued to be in scigraph-config-folder
                                     will look for *.template version of the file
     -o --org=ORG                    user/org for ontology       [default: {auth.get('ontology-org')}]
     -b --branch=BRANCH              ontology branch to load     [default: master]
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
-    -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:/tmp/graph/]
+    -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:{tempfile.tempdir}/graph/]
 
     -i --build-scigraph             build scigraph codebase
     -O --scigraph-org=SORG          user/org for scigraph       [default: SciCrunch]
     -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
-    -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:/tmp/scigraph/]
+    -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:{tempfile.tempdir}/scigraph/]
+    -Q --scigraph-quiet             silence mvn log output
 
-    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get('patch-config')}]
-    -u --curies=CURIEFILE           curie definition file       [default: {auth.get('curies')}]
+    -P --patch-config=PATCHLOC      patchs.yaml location        [default: {auth.get_path('patch-config')}]
+    -u --curies=CURIEFILE           curie definition file       [default: {auth.get_path('curies')}]
                                     if only the filename is given assued to be in scigraph-config-folder
 
     -p --patch                      retrieve ontologies to patch and modify import chain accordingly
     -K --check-built                check whether a local copy is present but do not build if it is not
 
-    -d --debug                      call IPython embed when done
+    -d --debug                      call breakpoint when done
     -L --logfile=LOG                log output here             [default: ontload.log]
     -v --view-defaults              print out the currently configured default values
-    -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get('scigraph-graphload')}]
+    -f --graph-config-out=GCO       output for graphload.yaml   [default: {auth.get_path('scigraph-graphload')}]
                                     only useful for `ontload config` ignored otherwise
 """
 import os
-import shutil
 import json
 import yaml
+import shutil
 import subprocess
 from io import BytesIO
 from glob import glob
@@ -70,7 +72,10 @@ from pyontutils.namespaces import getCuries
 from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
@@ -195,6 +200,7 @@ class ReproLoader:
                 if check_built:
                     print('The graph has not been loaded.')
                     raise NotBuiltError('The graph has not been loaded.')
+                #breakpoint()
                 failure = os.system(load_command)
                 if failure:
                     if os.path.exists(graph_path):
@@ -221,7 +227,7 @@ class ReproLoader:
                               remote_base, local_base, zip_location,
                               config_path=None):
         # config graphload.yaml from template
-        graphload_config_template = graphload_config + '.template'
+        graphload_config_template = graphload_config.with_suffix(graphload_config.suffix + '.template')
         with open(graphload_config_template, 'rt') as f:
             config = yaml.safe_load(f)
 
@@ -241,7 +247,7 @@ class ReproLoader:
 
 
 def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
-                   clean=False, check_built=False, cleanup_later=False):
+                   clean=False, check_built=False, cleanup_later=False, quiet=False):
     COMMIT_LOG = 'last-built-commit.log'
     repo_name = 'SciGraph'
     remote = jpth(git_remote, org, repo_name)
@@ -255,6 +261,8 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
         '-Dexec.args="-c {config_path}"')
 
     if not os.path.exists(local):
+        repo = Repo.clone_from(remote + '.git', local)
+    elif not Path(local, '.git').exists():
         repo = Repo.clone_from(remote + '.git', local)
     else:
         repo = Repo(local)
@@ -292,10 +300,11 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
         # main
         if scigraph_commit != last_commit or clean:
             print('SciGraph not built at commit', commit, 'last built at', last_commit)
+            quiet = '--quiet ' if quiet else ''
             build_command = ('cd ' + local +
-                             '; mvn clean -DskipTests -DskipITs install'
+                             f'; mvn {quiet}clean -DskipTests -DskipITs install'
                              '; cd SciGraph-services'
-                             '; mvn -DskipTests -DskipITs package')
+                             f'; mvn {quiet}-DskipTests -DskipITs package')
             if check_built:
                 print('SciGraph has not been built.')
                 raise NotBuiltError('SciGraph has not been built.')
@@ -590,7 +599,7 @@ def for_burak(ng_):
 
 def deploy_scp(local_path, remote_spec):
     basename = os.path.basename(local_path)
-    if remote_spec == 'user@localhost:/tmp/':
+    if remote_spec == f'user@localhost:{tempfile.tempdir}/':
         print(f'Default so not scping {local_path}')
     else:
         ssh_target, remote_path = remote_spec.split(':', 1)  # XXX bad things?
@@ -640,9 +649,9 @@ def run(args):
 
     # options
     git_remote = args['--git-remote']
-    git_local = args['--git-local']
-    zip_location = args['--zip-location']
-    graphload_config = args['--graphload-config']
+    git_local = Path(args['--git-local']).resolve()
+    zip_location = Path(args['--zip-location']).resolve()
+    graphload_config = Path(args['--graphload-config']).resolve()
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
@@ -651,6 +660,7 @@ def run(args):
     sbranch = args['--scigraph-branch']
     scommit = args['--scigraph-commit']
     sscp = args['--scigraph-scp-loc']
+    scigraph_quiet = args['--scigraph-quiet']
     patch_config = args['--patch-config']
     curies_location = args['--curies']
     patch = args['--patch']
@@ -681,7 +691,7 @@ def run(args):
              scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
                                                     git_local, sbranch, scommit,
                                                     check_built=check_built,
-                                                    cleanup_later=True)
+                                                    cleanup_later=True, quiet=scigraph_quiet)
         else:
             scigraph_commit = 'dev-9999'
             services_zip = 'None'
@@ -709,16 +719,17 @@ def run(args):
     elif scigraph:
         (scigraph_commit, load_base, services_zip,
          _) = scigraph_build(zip_location, git_remote, sorg, git_local,
-                             sbranch, scommit, check_built=check_built)
+                             sbranch, scommit, check_built=check_built,
+                             quiet=scigraph_quiet)
         if not check_built:
             deploy_scp(services_zip, sscp)
         print(services_zip)
         if '--local' in args:
             return
     elif config:
-        graph_path = args['<graph_path>']
-        config_path = args['--graph-config-out']
-        local_base = jpth(git_local, repo_name)
+        graph_path = Path(args['<graph_path>']).resolve()
+        config_path = Path(args['--graph-config-out']).resolve()
+        local_base = Path(git_local, repo_name).resolve()
         ReproLoader.make_graphload_config(graphload_config, graph_path,
                                           remote_base, local_base,
                                           zip_location, config_path)
@@ -751,7 +762,7 @@ def run(args):
                 f.write(extra.html.replace('NIFTTL:', ''))  # much more readable
 
     if debug:
-        embed()
+        breakpoint()
 
 def main():
     from docopt import docopt

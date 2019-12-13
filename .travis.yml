@@ -13,6 +13,7 @@ branches:
 
 python:
   - 3.6
+  - 3.7
   # - pypy3.5  # issues with joblib and _pickle
 
 addons:
@@ -43,8 +44,7 @@ install:
 script:
   - ipython -c "__import__('pyontutils.config').config.bootstrap_config()"
   - export COVERAGE_FILE="$(pwd)/.coverage"
-  - export PYTHONWARNINGS=ignore
   - bin/run-tests
 
 after_success:
-  - if [[ $HAS_COVERALLS ]] ; then coveralls ; fi
+  - if [[ $HAS_COVERALLS && $TRAVIS_PYTHON_VERSION == 3.7 ]] ; then coveralls ; fi

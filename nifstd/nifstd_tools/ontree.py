@@ -52,7 +52,7 @@ from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
 from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
@@ -399,6 +399,7 @@ demo_examples = (
 def server(api_key=None, verbose=False):
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
+    resources = auth.get_path('resources')
     if working_dir:
         git_dir = working_dir / '.git'
     else:
@@ -840,8 +841,8 @@ def server(api_key=None, verbose=False):
         if p.exists():
             return send_from_directory(p.parent.as_posix(), p.name)
 
-        log.critical(f'{devconfig.resources}/sawg.org has not been published')
-        return send_from_directory(Path(devconfig.resources).as_posix(), 'sawg.org')
+        log.critical(f'{resources}/sawg.org has not been published')
+        return send_from_directory(resources.as_posix(), 'sawg.org')
         #return htmldoc(
             #atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
             #atag(url_for('route_sparc_index'), 'Index'),
@@ -954,6 +955,9 @@ def test():
 
     def test_dynamic():
         for _, path, querystring in dynamic_examples:
+            if 'shortestSimple' in path:
+                log.warning('skipping test of shortestSimple')
+                continue
             log.info(f'ontree testing {path} {querystring}')
             global request
             request = fakeRequest()

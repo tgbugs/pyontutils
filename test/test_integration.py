@@ -6,7 +6,7 @@ from importlib import import_module
 import pytest
 import pyontutils
 from pyontutils.utils import get_working_dir
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
 from .common import skipif_no_net
 
@@ -35,7 +35,7 @@ only = tuple()
 skip = tuple()
 ci_skip = tuple()
 
-if devconfig.scigraph_services is None:
+if auth.get_path('scigraph-services') is None:
     skip += ('scigraph_deploy',)  # this will fail # FIXME this should really only skip main not both main and import?
 
 working_dir = get_working_dir(__file__)
@@ -46,23 +46,24 @@ if working_dir is None:
     # a number of problems with references to local vs installed packages
     working_dir = Path(__file__).parent.parent
 
-try:
-    devconfig._check_ontology_local_repo()  # FIXME maybe we can be a bit less blunt about it?
-    ont_repo = Repo(devconfig.ontology_local_repo)
+glb = auth.get_path('git-local-base')
+olr = auth.get_path('ontology-local-repo')
+if olr.exists():
+    ont_repo = Repo(olr)
     post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
     post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
     do_mains = True
-except devconfig.MissingRepoError as e:
+else:
     post_load = lambda : None
     post_main = lambda : None
     do_mains = False
 
 ### build mains
 
-ban = Path(devconfig.ontology_local_repo, 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
-mba = Path(devconfig.ontology_local_repo, 'ttl/generated/parcellation/mbaslim.ttl').as_posix()
-nifttl = Path(devconfig.ontology_local_repo, 'ttl/nif.ttl').as_posix()
-nsmethodsobo = Path(devconfig.git_local_base, 'methodsOntology/source-material/ns_methods.obo').as_posix()
+ban = (olr / 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
+mba = (olr / 'ttl/generated/parcellation/mbaslim.ttl').as_posix()
+nifttl = (olr / 'ttl/nif.ttl').as_posix()
+nsmethodsobo = (glb / 'methodsOntology/source-material/ns_methods.obo').as_posix()
 zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
 mains = {'scigraph':None,
          'combinators':None,
@@ -86,7 +87,7 @@ mains = {'scigraph':None,
 'ontload':[['ontload', '--help'],
            ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
            ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
-           ['cd', devconfig.ontology_local_repo + '/ttl', '&&', 'git', 'checkout', ban]],
+           ['cd', olr.as_posix() + '/ttl', '&&', 'git', 'checkout', ban]],
 'ontutils':[['ontutils', '--help'],
             ['ontutils', 'deadlinks', nifttl],
             ['ontutils', 'version-iri', nifttl],

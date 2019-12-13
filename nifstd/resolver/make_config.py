@@ -1,12 +1,12 @@
 #!/usr/bin/env python3.7
-from pyontutils.core import devconfig
+from pyontutils.config import auth
 __doc__ = f""" Create nginx configs for resolver.
 
 Usage:
     make_config [options]
 
 Options:
-    -l --git-local=LBASE            local git folder            [default: {devconfig.git_local_base}]
+    -l --git-local=LBASE            local git folder    [default: {auth.get_path('git-local-base')}]
 
     -d --debug                      call IPython embed when done
 """

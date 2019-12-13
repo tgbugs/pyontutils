@@ -16,46 +16,78 @@ Options:
                                       photos.readonly
                                       readonly
                                       scripts
-    --noauth_local_webserver  passthrough for oauth
-    --auth_host_name=N        passthrough for oauth
-    --auth_host_port=P        passthrough for oauth
-    --logging_level=LL        passthrough for oauth
     -d --debug
 """
 # TODO decouple oauth group sheets library
+import pickle
 import socket
 import itertools
 from pathlib import Path
 from googleapiclient.discovery import build
-from httplib2 import Http
-from oauth2client import file, client, tools
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 
 log = _log.getChild('sheets')
-spath = Path(devconfig.secrets_file).parent
+
+
+def _FakeService():
+    """ use if you need a fake service from build """
+
+    class e:
+        execute = lambda : {'sheets':[],}
+    class v:
+        def get(range=None):
+            return []
+    class g:
+        def get(spreadsheetId=None, includeGridData=None, range=None):
+            return e
+        values = lambda : g
+    class s:
+        spreadsheets = lambda : g
+
+    return s
 
 
 def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     if readonly:  # FIXME the division isn't so clean for drive ...
-        store_file = devconfig.secrets('google', 'api', 'store-file-readonly')
+        _auth_var = 'google-api-store-file-readonly'
     else:
-        store_file = devconfig.secrets('google', 'api', 'store-file')
+        _auth_var = 'google-api-store-file'
 
-    store = file.Storage((spath / store_file).as_posix())
-    creds = store.get()
-    if not creds or creds.invalid:
+    store_file = auth.get_path(_auth_var)
+
+    if store_file.exists():
+        with open(store_file, 'rb') as f:
+            try:
+                creds = pickle.load(f)
+            except pickle.UnpicklingError as e:
+                # FIXME need better way to trace errors in a way
+                # that won't leak secrets by default
+                log.error(f'problem in file at path for {_auth_var}')
+                raise e
+    else:
+        creds = None
+
+    if not creds or not creds.valid:
         # the first time you run this you will need to use the --noauth_local_webserver args
-        creds_file = devconfig.secrets('google', 'api', 'creds-file')
-        flow = client.flow_from_clientsecrets((spath / creds_file).as_posix(), SCOPES)
-        creds = tools.run_flow(flow, store)
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            creds_file = auth.get_path('google-api-creds-file')
+            flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
+            creds = flow.run_console()
 
-    service = build(api, version, http=creds.authorize(Http()))
+        with open(store_file, 'wb') as f:
+            pickle.dump(creds, f)
+
+    service = build(api, version, credentials=creds)
     return service
 
 
 def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
-    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
         ss = service.spreadsheets()
@@ -85,7 +117,7 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None):
-    SPREADSHEET_ID = devconfig.secrets('google', 'sheets', spreadsheet_name)
+    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
         ss = service.spreadsheets()
@@ -313,15 +345,6 @@ def main():
 
     from docopt import docopt, parse_defaults
     args = docopt(__doc__, version='clifun-demo 0.0.0')
-    passthrough = ('--noauth_local_webserver',
-                   '--auth_host_name',
-                   '--auth_host_port',
-                   '--logging_level')
-    to_pop = [arg for i, arg in enumerate(sys.argv)
-              if i and not [None for pt in passthrough if pt in arg]]
-    for arg in to_pop:
-        sys.argv.pop(sys.argv.index(arg))
-
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     options = Options(args, defaults)
     main = Main(options)

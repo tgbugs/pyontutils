@@ -2,6 +2,7 @@ import io
 import os
 import yaml
 import types
+import tempfile
 import mimetypes
 import subprocess
 import rdflib
@@ -61,7 +62,7 @@ def relative_resources(pathstring, failover='nifstd/resources'):
     if working_dir is None:
         return Path(failover, pathstring).resolve()
     else:
-        return Path(auth.get('resources'), pathstring).resolve().relative_to(working_dir.resolve())
+        return Path(auth.get_path('resources'), pathstring).resolve().relative_to(working_dir.resolve())
 
 
 def standard_checks(graph):
@@ -254,7 +255,11 @@ class OntRes(Stream):
         # to enable checksumming in one pass, however this will
         # require one more wrapper
         if not hasattr(self, '_graph'):
-            self._graph = self.Graph()
+            kwargs = {}
+            if hasattr(self, 'path'):
+                kwargs['path'] = self.path
+
+            self._graph = self.Graph(**kwargs)
             self.populate(self._graph)
 
         return self._graph
@@ -549,7 +554,7 @@ class OntIdPath(OntRes):
 
     @property
     def identifier(self):
-        return self.path
+        return self.path.as_posix()
 
     def _get(self):
         resp = requests.Response()
@@ -729,6 +734,16 @@ class OntGraph(rdflib.Graph):
         self.bind('owl', owl)
         self.path = path
 
+    @property
+    def path(self):
+        return self.__path
+
+    @path.setter
+    def path(self, path):
+        if path is not None and not isinstance(path, Path):
+            log.warning(f'Not a pathlib.Path! {path}')
+        self.__path = path
+
     # TODO id for graphs like this ... use InterLex IdentityBNode?
 
     # TODO local_conventions aka curies
@@ -742,6 +757,7 @@ class OntGraph(rdflib.Graph):
             mimetype, _ = mimetypes.guess_type(self.path.as_uri())
             return super().parse(self.path.as_posix(), format=mimetype)
         else:
+            args = [a.as_posix() if isinstance(a, Path) else a for a in args]
             return super().parse(*args, **kwargs)
 
     def _get_namespace_manager(self):
@@ -1222,7 +1238,7 @@ mGraph = OntGraph
 class makeGraph:
     SYNONYM = 'NIFRID:synonym'  # dangerous with prefixes
 
-    def __init__(self, name, prefixes=None, graph=None, writeloc='/tmp/'):
+    def __init__(self, name, prefixes=None, graph=None, writeloc=tempfile.tempdir):
         self.name = name
         self.writeloc = writeloc
         self.namespaces = {}
@@ -1602,7 +1618,7 @@ def createOntology(filename=    'temp-graph',
                    remote_base= 'http://ontology.neuinfo.org/NIF/',
                    imports=     tuple()):
     if local_base is None:  # get location at runtime
-        local_base = auth.get('ontology-local-repo')
+        local_base = auth.get_path('ontology-local-repo')
     writeloc = Path(local_base) / path
     ontid = os.path.join(remote_base, path, filename + '.ttl') if filename else None
     prefixes.update(makePrefixes('', 'owl'))
@@ -1653,7 +1669,7 @@ for rc in (SGR, IXR):
     rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
 
 sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
-ixr = IXR(host=auth.get('ilx-host'), port=auth.get('ilx-port'), apiEndpoint=None, readonly=True)
+ixr = IXR(apiEndpoint=None, readonly=True)
 ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
@@ -1889,7 +1905,7 @@ class Source(tuple):
                     cls._type = 'git-remote'
                     cls.sourceRepo = cls.source
                     # TODO look for local, if not fetch, pull latest, get head commit
-                    glb = aug.RepoPath(auth.get('git-local-base'))
+                    glb = aug.RepoPath(auth.get_path('git-local-base'))
                     cls.repo_path = glb.clone_path(cls.sourceRepo)
                     print(cls.repo_path)
                     # TODO branch and commit as usual
@@ -2041,7 +2057,7 @@ class resSource(Source):
 class Ont:
     #rdf_type = owl.Ontology
     _debug = False
-    local_base = auth.get('ontology-local-repo')
+    local_base = auth.get_path('ontology-local-repo')
     remote_base = 'http://ontology.neuinfo.org/NIF/'
     path = 'ttl/generated/'  # sane default
     filename = None
@@ -2084,18 +2100,25 @@ class Ont:
                               f'{cls.namespace} to {cls} as {prefix}'))
                 cls.prefixes[prefix] = iri_prefix  # sane default
 
+    @property
+    def working_dir(self):
+        return (aug.RepoPath(getsourcefile(self.__class__))
+                .resolve()
+                .resolve())
+
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
             self.comment = ' '.join(_.strip() for _ in self.__doc__.split('\n'))
 
+        working_dir = self.working_dir
+
         if hasattr(self, '_repo') and not self._repo or working_dir is None:
             commit = 'FAKE-COMMIT'
         else:
-            import git
             try:
-                repo = git.Repo(working_dir.as_posix())
+                repo = working_dir.repo
                 commit = next(repo.iter_commits()).hexsha
-            except git.exc.InvalidGitRepositoryError:
+            except aug.exceptions.NotInRepoError:
                 commit = 'FAKE-COMMIT'
 
         try:
@@ -2105,7 +2128,8 @@ class Ont:
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
-                file = Path(_file).resolve().absolute()
+                file = Path(_file)
+                file = file.resolve().resolve()
                 filepath = file.relative_to(working_dir).as_posix()
         except TypeError:  # emacs is silly
             line = '#Lnoline'
@@ -2328,7 +2352,7 @@ def displayTriples(triples, qname=qname):
              for t in sorted(triples)]
 
 def displayGraph(graph_,
-                 temp_path='/tmp',
+                 temp_path=tempfile.tempdir,
                  debug=False):
     from pyontutils.hierarchies import creatTree, Query, dematerialize
     graph = rdflib.Graph()

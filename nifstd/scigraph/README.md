@@ -37,7 +37,7 @@ ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
 ```
 
 Post graph install stress testing is suggested to make sure that java is awake an alert.
-`ontutils scigraph-stress -r 0` with devconfig.scigraph_api pointing to `${scigraph_host}`.
+`ontutils scigraph-stress -r 0` with `auth.get('scigraph-api')` pointing to `${scigraph_host}`.
 
 Later installs from the 9999 version require the use of `reinstall`
 instead of `install`. If you want to have more than one service

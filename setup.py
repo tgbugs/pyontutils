@@ -31,6 +31,9 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Operating System :: POSIX :: Linux',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
     ],
     keywords='ontology scigraph rdflib turtle ttl OWL',
     packages=['pyontutils'],
@@ -38,22 +41,23 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'appdirs',
-        'augpathlib>=0.0.2',
+        'augpathlib>=0.0.4',
         'colorlog',
         'docopt',
         'gitpython',
         'google-api-python-client',
+        'google-auth-oauthlib',
         'htmlfn',
         'ipython',
         'joblib>=0.14.0',
         'lxml',
         'nest_asyncio',
-        'oauth2client',
-        'ontquery>=0.2.0',
+        'ontquery>=0.2.1',
+        'orthauth>=0.0.6',
         'pyyaml',
         'requests',
         'terminaltables',
-        'ttlser',
+        'ttlser>=1.1.0',
         'werkzeug',  # for IterIO which can probably just be copied one off
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
@@ -77,4 +81,5 @@ setup(
     #package_data
     #data_files=[('resources',['pyontutils/resources/chebi-subset-ids.txt',])],  # not part of distro
     #data_files=[('share/idlib/local-conventions/nifstd/', ['nifstd/scigraph/curie_map.yaml']),],
+    data_files=[('share/pyontutils/', ['nifstd/scigraph/curie_map.yaml']),],
 )

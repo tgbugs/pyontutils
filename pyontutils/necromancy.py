@@ -15,6 +15,7 @@ Options:
 """
 
 import os
+import tempfile
 import rdflib
 from docopt import docopt
 from pyontutils.core import makeGraph, createOntology
@@ -139,7 +140,7 @@ def main():
     from joblib import Parallel, delayed
     args = docopt(__doc__, version = "necromancy 0.5")
     files = args['<file-or-url>']
-    url_dest = [(f, '/tmp/' + os.path.basename(f)) if f.startswith('http://') or f.startswith('https://') else (f, f) for f in files]
+    url_dest = [(f, '{tempfile.tempdir}/' + os.path.basename(f)) if f.startswith('http://') or f.startswith('https://') else (f, f) for f in files]
     toget = [(u, t) for u, t in url_dest if u != t]
     if toget:
         import requests

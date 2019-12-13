@@ -6,11 +6,11 @@ import rdflib
 import ontquery as oq
 from pyontutils.utils import byCol, relative_path, noneMembers
 from pyontutils.core import resSource
-from pyontutils.config import devconfig
 from pyontutils.namespaces import OntCuries
 from pyontutils.namespaces import interlex_namespace, definition, NIFRID, NIFSTD
 from pyontutils.namespaces import rdfs
 # import these last so that graphBase resets (sigh)
+from neurondm.core import auth
 from neurondm.lang import *
 from neurondm import *
 from neurondm.phenotype_namespaces import BBP, CUT, Layers, Regions
@@ -271,7 +271,7 @@ def export_for_review(config, unmapped, partial, nlx_missing,
         return row
 
     #[n for n in neurons]
-    resources = Path(devconfig.resources)
+    resources = auth.get_path('resources')
     reviewcsv = resources / filename
     rows = [neuron_to_review_row(neuron) for neuron in neurons]
 
@@ -426,7 +426,7 @@ def ontneurons(remote):
 
 
 def main():
-    branch=devconfig.neurons_branch
+    branch=auth.get('neurons-branch')
     remote = OntId('NIFTTL:') if branch == 'master' else OntId(f'NIFRAW:{branch}/')
 
     ont_config = ontneurons(remote)
@@ -449,7 +449,7 @@ def main():
     ndl_config.load_existing()  # FIXME this is extremely slow
     ndl_neurons = sorted(ndl_config.neurons())
 
-    resources = Path(devconfig.resources)
+    resources = auth.get_path('resources')
     cutcsv = resources / 'common-usage-types.csv'
     with open(cutcsv.as_posix(), 'rt') as f:
         rows = [l for l in csv.reader(f)]

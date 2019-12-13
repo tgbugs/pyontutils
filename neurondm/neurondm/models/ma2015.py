@@ -158,8 +158,8 @@ class table1(rowParse):
 
 def main():
     import csv
-    from pyontutils.config import devconfig
-    with open(Path(devconfig.resources, '26451489 table 1.csv').as_posix(), 'rt') as f:
+    from neurondm.core import auth
+    with open((auth.get_path('resources') / '26451489 table 1.csv').as_posix(), 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
     config = Config('markram-2015', source_file=relative_path(__file__))

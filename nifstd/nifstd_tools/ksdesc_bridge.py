@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.7
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 """ Synchronize KnowledgeSpace definitions to the ontology
 """
 
@@ -11,7 +11,7 @@ from pyontutils.core import Ont, Source, build
 from pyontutils.namespaces import makePrefixes
 from pyontutils.closed_namespaces import skos
 
-gitf = Path(devconfig.git_local_base)
+gitf = auth.get_path('git-local-base')
 
 top_level = glob((gitf / 'ksdesc').as_posix() + '/*')
 

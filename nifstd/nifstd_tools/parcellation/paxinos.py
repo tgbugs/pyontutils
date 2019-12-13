@@ -96,7 +96,7 @@ class Artifacts(Collector):
     PaxRat7 = PaxRatAt(iri=ilx['paxinos/uris/rat/versions/7'],  # ilxtr.paxr7,
                        label='The Rat Brain in Stereotaxic Coordinates 7th Edition',
                        synonyms=('Paxinos Rat 7th',
-                                 'Paxinso and Watson\'s The Rat Brain in Stereotaxic Coordinates 7th Edition',  # branding >_<
+                                 'Paxinos and Watson\'s The Rat Brain in Stereotaxic Coordinates 7th Edition',  # branding >_<
                                 ),
                        abbrevs=tuple(),
                        shortname='PAXRAT7',  # TODO upper for atlas lower for label?

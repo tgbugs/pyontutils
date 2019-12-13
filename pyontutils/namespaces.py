@@ -4,7 +4,7 @@ import rdflib
 import requests
 from ontquery.terms import OntCuries
 from pyontutils.utils import log
-from pyontutils.config import devconfig, auth
+from pyontutils.config import auth
 from pyontutils.closed_namespaces import *  # EVIL but simplifies downstream imports
 
 
@@ -80,7 +80,7 @@ def getCuries(curies_location):
         # in this repo at this commit is what
         # causes the issue, github is the best
         # solution, so write once to a known location
-        if curies_location == devconfig.curies.default:
+        if curies_location == Path(auth.get_default('curies')):
             master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
             raw_path = 'nifstd/scigraph/curie_map.yaml?raw=true'
             curies_url = master_blob + raw_path
@@ -100,37 +100,43 @@ def getCuries(curies_location):
                 raise requests.ConnectionError(resp.request, resp)
         else:
             raise TypeError(f'{curies_location} does not exist and '
-                            f'is not at the default {devconfig.curies.default} '
+                            f'is not at the default {auth.get("curies")} '
                             'so we will not write to it. You can update it '
                             'manually if you want to keep it at that location.')
 
 
 def _loadPrefixes():
-    curie_map = getCuries(auth._pathit(auth.get('curies')))
+    curie_map = getCuries(auth.get_path('curies'))
     # holding place for values that are not in the curie map
     full = {
         # interlex predicates  PROVISIONAL
-        'ilx.federatesElement':'http://uri.interlex.org/base/ilx_0381445',
-        'ilx.relatedTo':'http://uri.interlex.org/base/ilx_0112796',
-        'ilx.hasRole':'http://uri.interlex.org/base/ilx_0112784',
-        'ilx.partOf':'http://uri.interlex.org/base/ilx_0112785',
-        'ilx.anno.hasConstraint':'http://uri.interlex.org/base/ilx_0115071',
-        'ilx.anno.filterElement':'http://uri.interlex.org/base/ilx_0381352',
-        'ilx.anno.required':'http://uri.interlex.org/base/ilx_0381353',
-        'ilx.anno.condition':'http://uri.interlex.org/base/ilx_0381354',
-        'ilx.anno.size':'http://uri.interlex.org/base/ilx_0381355',
-        'ilx.anno.minValue':'http://uri.interlex.org/base/ilx_0381356',
-        'ilx.anno.maxValue':'http://uri.interlex.org/base/ilx_0381357',
-        'ilx.anno.allowedTypes':'http://uri.interlex.org/base/ilx_0381358',
-        'ilx.anno.allowedValues':'http://uri.interlex.org/base/ilx_0381359',
-        'ilx.hasDbXref':'http://uri.interlex.org/base/ilx_0381360',
-        'ilx.hasUnit':'http://uri.interlex.org/base/ilx_0381384',
-        'ilx.isAbout':'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao
-        'ilx.hasLaterality':'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
-        'ilx.hasMeasurementType':'http://uri.interlex.org/base/ilx_0381388',
-        'ilx.isMeasureOf':'http://uri.interlex.org/base/ilx_0381389',
+        'ilx.includeForSPARC': 'http://uri.interlex.org/base/ilx_0738400',
+        'ilx.federatesElement': 'http://uri.interlex.org/base/ilx_0381445',
+        'ilx.relatedTo': 'http://uri.interlex.org/base/ilx_0112796',
+        'ilx.hasRole': 'http://uri.interlex.org/base/ilx_0112784',
+        'ilx.partOf': 'http://uri.interlex.org/base/ilx_0112785',
+        'ilx.anno.hasConstraint': 'http://uri.interlex.org/base/ilx_0115071',
+        'ilx.anno.filterElement': 'http://uri.interlex.org/base/ilx_0381352',
+        'ilx.anno.required': 'http://uri.interlex.org/base/ilx_0381353',
+        'ilx.anno.condition': 'http://uri.interlex.org/base/ilx_0381354',
+        'ilx.anno.size': 'http://uri.interlex.org/base/ilx_0381355',
+        'ilx.anno.minValue': 'http://uri.interlex.org/base/ilx_0381356',
+        'ilx.anno.maxValue': 'http://uri.interlex.org/base/ilx_0381357',
+        'ilx.anno.allowedTypes': 'http://uri.interlex.org/base/ilx_0381358',
+        'ilx.anno.allowedValues': 'http://uri.interlex.org/base/ilx_0381359',
+        'ilx.anno.hasExactSynonym': 'http://uri.interlex.org/base/ilx_0737161',
+        'ilx.anno.hasRelatedSynonym': 'http://uri.interlex.org/base/ilx_0737162',
+        'ilx.anno.hasNarrowSynonym': 'http://uri.interlex.org/base/ilx_0737163',
+        'ilx.anno.hasBroadSynonym': 'http://uri.interlex.org/base/ilx_0737164',
+        'ilx.hasDbXref': 'http://uri.interlex.org/base/ilx_0381360',
+        'ilx.hasUnit': 'http://uri.interlex.org/base/ilx_0381384',
+        'ilx.isAbout': 'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao
+        'ilx.hasLaterality': 'http://uri.interlex.org/base/ilx_0381387',  # FIXME being treated data property
+        'ilx.hasMeasurementType': 'http://uri.interlex.org/base/ilx_0381388',
+        'ilx.isMeasureOf': 'http://uri.interlex.org/base/ilx_0381389',
 
         'NINDS.CDE': str(rdflib.Namespace(interlex_namespace('NINDSCDE/uris/readable/'))),
+        'ilx.type': 'http://uri.interlex.org/base/readable/type/',
 
         #'':None,  # safety (now managed directly in the curies file)
         #'EHDAA2':'http://purl.obolibrary.org/obo/EHDAA2_',  # FIXME needs to go in curie map?
@@ -188,7 +194,7 @@ def _loadPrefixes():
         'TEMPIND': interlex_namespace('temp/uris/phenotype-indicators/'),
         'lex': str(lex),
         'npokb': str(npokb),
-        'tech': interlex_namespace('tgbugs/readable/technique/'),
+        'tech': interlex_namespace('tgbugs/uris/readable/technique/'),
         'FIXME':'http://FIXME.org/',
         'NIFRAW':'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/',
         'NIFTTL':'http://ontology.neuinfo.org/NIF/ttl/',
@@ -234,6 +240,8 @@ def makeURIs(*prefixes):
                    'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
                    'tech',
                   )
+
+ilxb = interlex_namespace('base/')
 
 # development namespaces
 prot = rdflib.Namespace(ilxtr[''] + 'protocol/')

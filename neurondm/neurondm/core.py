@@ -10,17 +10,19 @@ from collections import defaultdict
 from urllib.error import HTTPError
 import git
 import rdflib
+import requests
 import ontquery as oq
+import orthauth as oa
 from rdflib.extras import infixowl
 from git import Repo
 from ttlser import natsort
 from augpathlib import RepoPath
 from pyontutils import combinators as cmb
 from pyontutils.core import Ont, makeGraph, OntId as bOntId, OntTerm as bOntTerm
-from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri
+from pyontutils.core import OntConjunctiveGraph, OntResAny, OntResIri, OntResPath
 from pyontutils.utils import stack_magic, injective_dict, makeSimpleLogger, cacheout
 from pyontutils.utils import TermColors as tc, subclasses, get_working_dir
-from pyontutils.config import devconfig, working_dir, checkout_ok as ont_checkout_ok
+from pyontutils.config import auth as pauth, working_dir
 from pyontutils.scigraph import Graph, Vocabulary
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.annotation import AnnotationMixin
@@ -29,6 +31,8 @@ from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NI
 from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
+auth = oa.configure_relative('auth-config.py', include=pauth)
+ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
 _done = set()
@@ -609,18 +613,20 @@ class Config:
                  imports =              tuple(),  # iterable
                  import_as_local =      False,  # also load from local?
                  load_from_local =      True,
-                 branch =               devconfig.neurons_branch,
+                 branch =               auth.get('neurons-branch'),
                  sources =              tuple(),
                  source_file =          None,
                  ignore_existing =      False,
                  py_export_dir=         None,
-                 ttl_export_dir=        Path(devconfig.ontology_local_repo,  # FIXME neurondm.lang for this?
-                                             'ttl/generated/neurons'),  # subclass with defaults from cls?
+                 ttl_export_dir=        (auth.get_path('ontology-local-repo') /  # FIXME neurondm.lang for this?
+                                         'ttl/generated/neurons'),  # subclass with defaults from cls?
                  git_repo=              None,
                  file =                 None,
                  local_conventions =    False,
+                 import_no_net =        False,  # ugh
                 ):
 
+        olr = auth.get_path('ontology-local-repo')  # we get this again because it might have changed
         if ttl_export_dir is not None:
             if not isinstance(ttl_export_dir, Path):
                 ttl_export_dir = Path(ttl_export_dir).resolve()
@@ -672,7 +678,7 @@ class Config:
         remote_base = remote.iri.rsplit('/', 2)[0] if branch == 'master' else remote
 
         if local_base is None:
-            local = Path(devconfig.ontology_local_repo, 'ttl')
+            local = olr / 'ttl'
             local_base = local.parent
         else:
             local_base = Path(local_base).resolve()
@@ -681,17 +687,64 @@ class Config:
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
-        if import_as_local:
-            # NOTE: we currently do the translation more ... inelegantly inside of config so we
-            # have to keep the translation layer out here (sigh)
-            core_graph_paths = [(Path(local,
-                                     i.iri.replace(remote.iri, ''))
-                                 .relative_to(local_base).as_posix())
-                                if remote.iri in i.iri else
-                                i for i in imports]
-            log.debug(core_graph_paths)
+        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack
+        if import_as_local or import_no_net:
+            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+                # NOTE: we currently do the translation more ... inelegantly inside of config so we
+                # have to keep the translation layer out here (sigh)
+                log.debug(f'local ont {local}')
+                core_graph_paths = [(Path(local,
+                                        i.iri.replace(remote.iri, ''))
+                                    .relative_to(local_base).as_posix())
+                                    if remote.iri in i.iri else
+                                    i for i in imports]
+
+                # part of graph
+                # FIXME hardcoded ...
+                partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
+                graphBase.part_of_graph = OntResAny(partofpath).graph
+                [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
+            else:
+                log.debug('local share')
+                udp = cfg._pathit('{:user-data-path}/neurondm/')
+                search_paths = [
+                    udp,
+                    cfg._pathit('{:prefix}/neurondm/'),
+                    Path('./share/neurondm/').absolute(),
+                ]
+                for base in search_paths:
+                    if (base / 'phenotypes.ttl').exists():
+                        core_graph_paths = [(base / Path(iri).name).as_uri() for iri in imports]
+                        break
+                else:
+                    msg = '\n' + '\n'.join([p.as_posix() for p in search_paths])
+                    raise ValueError(f'no core paths ... {msg}')
+
+                # part of graph
+                # FIXME hardcoded ...
+
+                partofpath = base / 'part-of-self.ttl'
+                graphBase.part_of_graph = OntResPath(partofpath.as_posix()).graph  # FIXME temp fix for pyontutils 1.6.0
+                [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
         else:
+            log.debug('remote')
             core_graph_paths = imports
+
+            partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
+            graphBase.part_of_graph = OntResIri(partofpath).graph
+            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+                _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
+            else:
+                _writepath = cfg._pathit('{:user-data-path}/neurondm/part-of-self.ttl')
+                if not _writepath.parent.exists():
+                    _writepath.parent.mkdir(parents=True)
+
+            graphBase.part_of_graph.path = _writepath
+            [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
+
+        log.debug(core_graph_paths)
 
         out_graph_path = (out_local_base / f'{name}.ttl')
 
@@ -1044,9 +1097,10 @@ class graphBase:
         """
 
         graphBase.local_conventions = local_conventions
+        olr = auth.get_path('ontology-local-repo')
 
         if local_base is None:
-            local_base = devconfig.ontology_local_repo
+            local_base = olr
         graphBase.local_base = Path(local_base).expanduser().resolve()
         graphBase.remote_base = remote_base
 
@@ -1055,7 +1109,7 @@ class graphBase:
                       if '://' not in s else  # 'remote' is file:// or http[s]://
                       s for s in suffixes]
             # TODO the whole thing needs to be reworked to not use suffixes...
-            local = [(graphBase.local_base / s).as_posix()
+            local = [(graphBase.local_base / s).as_uri()
                      if '://' not in s else
                      ((graphBase.local_base / s.replace(graphBase.remote_base, '').strip('/')).as_uri()
                       if graphBase.remote_base in s else s)  # FIXME this breaks the semanics of local?
@@ -1072,7 +1126,7 @@ class graphBase:
         remote_out_paths = local_out_paths  # can't write to a remote server without magic
 
         if (not force_remote
-            and graphBase.local_base == Path(devconfig.ontology_local_repo)
+            and graphBase.local_base == olr
             and graphBase.local_base.exists()):
 
             repo = Repo(graphBase.local_base.as_posix())
@@ -1117,13 +1171,6 @@ class graphBase:
                 # it is a mess
                 graphBase.set_repo_state()
 
-        # part of graph
-        # FIXME hardcoded ...
-        partofpath = RepoPath(devconfig.ontology_local_repo, 'ttl/generated/part-of-self.ttl')
-        graphBase.part_of_graph = OntResAny(partofpath).graph
-        graphBase.part_of_graph.path = partofpath  # FIXME why is this not passed by OntResAny?
-        [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
-
         # core graph setup
         if core_graph is None:
             core_graph = OntConjunctiveGraph()
@@ -1138,7 +1185,9 @@ class graphBase:
 
                 giri = ora.identifier_bound
                 core_graph.addN(((*t, giri) for t in ora.graph))
-            except (FileNotFoundError, HTTPError) as e:
+            except (FileNotFoundError,
+                    HTTPError,
+                    requests.exceptions.ConnectionError) as e:
                 # TODO failover to local if we were remote?
                 #print(tc.red('WARNING:'), f'no file found for core graph at {cg}')
                 log.warning(f'no file found for core graph at {cg}')
@@ -2528,7 +2577,6 @@ class Neuron(NeuronBase):
                     if accounted_for >= len(phenos) - 1:
                         continue
 
-                breakpoint()
                 raise TypeError(f'Disjointness violated for {disjoint} due to {phenos}')
 
         # species matched identifiers TODO
@@ -3121,7 +3169,7 @@ should be implemented here. This is only in the case where the underlying
 rules cannot be implemented in a consistent way in the ontology. The ultimate
 objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
-Config()  # explicitly load the core graph TODO need a lighter weight way to do this
+Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
 OntologyGlobalConventions = _ogc = injective_dict(
     L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer'),
     L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer'),

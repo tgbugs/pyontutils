@@ -21,8 +21,8 @@ Usage:
 Options:
     -a --scigraph-api=API           SciGraph API endpoint   [default: {auth.get('scigraph-api')}]
     -o --output-file=FILE           output file
-    -l --git-local=LBASE            local git folder        [default: {auth.get('git-local-base')}]
-    -u --curies=CURIEFILE           curie definition file   [default: {auth.get('curies')}]
+    -l --git-local=LBASE            local git folder        [default: {auth.get_path('git-local-base')}]
+    -u --curies=CURIEFILE           curie definition file   [default: {auth.get_path('curies')}]
     -e --epoch=EPOCH                specify the epoch to use for versionIRI
     -r --rate=Hz                    rate in Hz for requests, zero is no limit  [default: 20]
     -t --timeout=SECONDS            timeout in seconds for deadlinks requests  [default: 5]
@@ -119,7 +119,7 @@ class ontologySection:
 # utils
 
 def catalog_extras(fetch=False):
-    path = Path(auth.get('ontology-local-repo'), 'ttl')
+    path = Path(auth.get_path('ontology-local-repo'), 'ttl')
     cat = (path / 'catalog-v001.xml').as_posix()
     with open((path / '../catalog-extras').as_posix(), 'rt') as ce, open(cat, 'rt') as c:
         clines = c.readlines()
@@ -218,7 +218,7 @@ def get_spells(filename):
 
 def scigraph_stress(rate, timeout=5, verbose=False, debug=False, scigraph=auth.get('scigraph-api')):
     # TODO use the api classes
-    with open((Path(auth.get('resources'')) / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
+    with open((auth.get_path('resources') / 'chebi-subset-ids.txt').as_posix(), 'rt') as f:
         urls = [os.path.join(scigraph, f'vocabulary/id/{curie.strip()}') for curie in f.readlines()]
     print(urls)
     url_blaster(urls, rate, timeout, verbose, debug)

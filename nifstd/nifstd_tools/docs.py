@@ -23,13 +23,14 @@ from git import Repo
 from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from augpathlib import RepoPath as Path
+from augpathlib import RepoPath as Path, exceptions as aexc
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, get_working_dir
-from pyontutils.config import devconfig, working_dir
+from pyontutils.config import auth
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
+working_dir = Path(__file__).resolve().working_dir
 
 try:
     import hunspell
@@ -46,7 +47,8 @@ def patch_theme_setup(theme):
         f.write(dat.replace('="styles/', '="/docs/styles/'))
 
 
-def makeOrgHeader(title, authors, date, theme):
+_org_edit_link_html = '#+HTML: <div align="right"><a href={edit_link}>Edit on GitHub</a></div>\n'
+def makeOrgHeader(title, authors, date, theme, edit_link=None):
     header = (f'#+TITLE: {title}\n'
               f'#+AUTHOR: {authors}\n'
               f'#+DATE: {date}\n'
@@ -54,12 +56,16 @@ def makeOrgHeader(title, authors, date, theme):
               f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
               #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
              )
-    #print(header)
+
+    if edit_link is not None:
+        header += _org_edit_link_html.format(edit_link=edit_link)
+
     return header
 
 
 class FixLinks:
     link_pattern = re.compile(rb'\[\[(.*?)\]\[(.*?)\]\]', flags=re.S)  # non greedy . matches all
+    single_pattern = re.compile(rb'\[\[(file:.*?)\]\]')
 
     class MakeMeAnInlineSrcBlock(Exception):
         """ EVIL """
@@ -89,16 +95,23 @@ class FixLinks:
 
 
     def __call__(self, org):
-        if self.current_file.suffix.startswith('.md'):
-            org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
+        org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
+        org = re.sub(rb'\[\[\.\.\/', b'[[file:../', org)  # run this once at the start
 
         #print(org.decode())
         out = re.sub(self.link_pattern, self.process_matches, org)
+        out = re.sub(self.single_pattern, self.process_matches, out)
         #print(out.decode())
         return out
 
     def process_matches(self, match):
-        href, text = match.groups()
+        href, *text = match.groups()
+        if text:
+            text, = text
+        else:
+            log.debug(match)
+            text = href.replace(b'file:', b'')
+
         try:
             outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
         except self.MakeMeAnInlineSrcBlock as e:
@@ -178,7 +191,7 @@ class FixLinks:
                         rel = rel.with_suffix('.html')
                     rel_path = rel.as_posix() + rest
                     #print('aaaaaaaaaaa', suffix, rel, rel_path)
-                    return self.base  + rel_path
+                    return self.base + rel_path
                 elif name.startswith('$'):
                     raise self.MakeMeAnInlineSrcBlock(match.group())
                 else:
@@ -189,8 +202,12 @@ class FixLinks:
         #print('----------------------------------------')
         # TODO consider htmlifying these ourselves and serving them directly
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
+        # source file and/or code extensions regex
+        # TODO folders that simply end
+        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx)'
+                      r'|LICENSE|catalog-extras|authorized_keys|\.vimrc)')
         out0 = re.sub(r'^file:(.*)'
-                      r'(\.(?:py|ttl|graphml|yml|yaml|spec|example)|LICENSE|catalog-extras)'
+                      + code_regex +
                       r'(#.+)*$',
                       sub_github, out)
 
@@ -351,14 +368,20 @@ def spell(filenames, debug=False):
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
 compile_org_file = ['emacs', '-q', '-l',
-                    Path(devconfig.git_local_base,
-                         'orgstrap/init.el').resolve().as_posix(),
+                    (auth.get_path('git-local-base') /
+                     'orgstrap/init.el').resolve().as_posix(),
                     '--batch', '-f', 'compile-org-file']
 
 
 @suffix('org')
 def renderOrg(path, **kwargs):
     orgfile = path.as_posix()
+    try:
+        ref = path.latest_commit.hexsha
+        github_link = path.remote_uri_human(ref=ref)
+    except aexc.NoCommitsForFile:
+        github_link = None
+
     #print(' '.join(compile_org_file))
     p = subprocess.Popen(compile_org_file,
                          stdin=subprocess.PIPE,
@@ -368,24 +391,32 @@ def renderOrg(path, **kwargs):
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
+        theme = kwargs['theme']
+        full_theme = theme.as_posix()
         if b'#+SETUPFILE:' not in org_in:
-            theme = kwargs['theme']
-            full_theme = theme.as_posix()
-            try:
+            insert = f'\n\n#+SETUPFILE: {full_theme}\n'.encode()
+        else:
+            insert = b''
+
+        if github_link is not None:
+            insert += _org_edit_link_html.format(edit_link=github_link).encode() + b'\n'
+
+        try:
+            if org_in.startswith(b'* '):
+                org = insert + org_in
+            else:
                 title_author_etc, rest = org_in.split(b'\n\n', 1)
                 org = (title_author_etc +
-                       f'\n\n#+SETUPFILE: {full_theme}\n'.encode() +
+                       insert +
                        rest)
-            except ValueError as e:
-                title = kwargs['title']
-                authors = kwargs['authors']
-                date = kwargs['date']
-                title_author_etc = makeOrgHeader(title, authors, date, theme)
-                org = title_author_etc.encode() + org_in
-                #raise ValueError(f'{orgfile!r}') from e
+        except ValueError as e:
+            title = kwargs['title']
+            authors = kwargs['authors']
+            date = kwargs['date']
+            title_author_etc = makeOrgHeader(title, authors, date, theme, github_link)
+            org = title_author_etc.encode() + org_in
+            #raise ValueError(f'{orgfile!r}') from e
 
-        else:
-            org = org_in
 
         # fix links
         fix_links = FixLinks(path)
@@ -401,6 +432,12 @@ def renderOrg(path, **kwargs):
 @suffix('md')
 def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     mdfile = path.as_posix()
+    try:
+        ref = path.latest_commit.hexsha
+        github_link = path.remote_uri_human(ref=ref)
+    except aexc.NoCommitsForFile:
+        github_link = None
+
     # TODO fix relative links to point to github
 
     if pandoc_columns:
@@ -426,7 +463,7 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
                          stderr=subprocess.PIPE)  # DUH
     authors = ', '.join(authors)
     theme = kwargs['theme']
-    header = makeOrgHeader(title, authors, date, theme)
+    header = makeOrgHeader(title, authors, date, theme, github_link)
     out, err = s.communicate()
     #print(out.decode())
 
@@ -553,7 +590,8 @@ def main():
 
     BUILD = working_dir / 'doc_build'
     docs_dir = BUILD / 'docs'
-    theme_repo = Path(devconfig.git_local_base, 'org-html-themes')
+    glb = Path(auth.get_path('git-local-base'))
+    theme_repo = glb / 'org-html-themes'
     theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
     prepare_paths(BUILD, docs_dir, theme_repo, theme)
 
@@ -568,9 +606,8 @@ def main():
             f.write(rendered)
         return
 
-    glb = Path(devconfig.git_local_base)
     names = ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')
-    repo_paths = [Path(devconfig.ontology_local_repo),
+    repo_paths = [Path(auth.get_path('ontology-local-repo')),
                   Path(working_dir)] + [glb / name for name in names]
     repos = [p.repo for p in repo_paths]
     skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
@@ -608,16 +645,6 @@ def main():
                        and f not in rskip.get(Path(repo.working_dir).name, et)]
 
     [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-
-    # doesn't work because read-from-minibuffer cannot block
-    #compile_org_forever = ['emacs', '-q', '-l',
-                           #Path(devconfig.git_local_base,
-                                #'orgstrap/init.el').resolve().as_posix(),
-                           #'--batch', '-f', 'compile-org-forever']
-    #org_compile_process = subprocess.Popen(compile_org_forever,
-                                           #stdin=subprocess.PIPE,
-                                           #stdout=subprocess.PIPE,
-                                           #stderr=subprocess.PIPE)
 
     if args['--spell']:
         spell((f.as_posix() for _, f, _ in wd_docs_kwargs))

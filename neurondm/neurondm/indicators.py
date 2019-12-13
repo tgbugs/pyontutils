@@ -3,7 +3,7 @@
 from pathlib import Path
 import rdflib
 from pyontutils.core import Ont, OntGraph
-from pyontutils.config import devconfig
+from pyontutils.config import auth
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import owl, rdf, rdfs, ilxtr, NIFRID, OntCuries, skos, makeNamespaces
 from neurondm import OntTerm, OntId
@@ -163,7 +163,7 @@ def main():
 
     #yield from PhenotypeIndicators().triples
     g = pi.asGraph()
-    g.write(Path(devconfig.ontology_local_repo, f'ttl/{pi.name}.ttl'))
+    g.write(auth.get_path('ontology-local-repo') / f'ttl/{pi.name}.ttl')
 
 
 if __name__ == '__main__':

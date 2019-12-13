@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from pyontutils.config import devconfig
 __doc__ = f"""Generate ttl/catalog-*.xml
 
 Usage:
@@ -14,26 +13,33 @@ Options:
 
 """
 import os
+import tempfile
 from glob import glob
 from pathlib import Path
 from git import Repo
 from pyontutils.utils import anyMembers
 from pyontutils.core import displayTriples
+from pyontutils.config import auth
 from pyontutils.ontload import local_imports
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
+
 
 def main():
     from docopt import docopt
     args = docopt(__doc__, version='ont-catalog 0.0.1')
     dobig = args['--big']
     remote_base = 'http://ontology.neuinfo.org/NIF/ttl/'
-    local_base = Path(devconfig.ontology_local_repo, 'ttl').as_posix() + '/'
+    olr = auth.get_path('ontology-local-repo')
+    local_base = (olr / 'ttl').as_posix() + '/'
 
     #list of all nif ontologies
     #onts = [f for f in fs if f.endswith('.ttl') or f.endswith('.owl') and 'NEMO_' not in f]
 
-    repo = Repo(devconfig.ontology_local_repo)
-    repo_path = Path(devconfig.ontology_local_repo)
+    repo = Repo(olr)
+    repo_path = Path(olr)
     tracked_files = [(repo_path / f).as_posix()
                      # FIXME missing scicrunch-registry.ttl
                      for f in repo.git.ls_files('--', 'ttl/').split('\n')
@@ -71,7 +77,7 @@ def main():
     [uriline.format(ontid=ont, filename=file) for ont,file in sorted(mapping)] + \
     ['</catalog>']
     xml = '\n'.join(xmllines)
-    with open('/tmp/nif-catalog-v001.xml','wt') as f:
+    with open(f'{tempfile.tempdir}/nif-catalog-v001.xml','wt') as f:
         f.write(xml)
 
     if args['--debug']:

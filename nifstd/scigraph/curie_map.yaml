@@ -76,6 +76,7 @@
 'DOID': 'http://purl.obolibrary.org/obo/DOID_'
 'MONDO': 'http://purl.obolibrary.org/obo/MONDO_'
 'PATO': 'http://purl.obolibrary.org/obo/PATO_'
+'EMAPA': 'http://purl.obolibrary.org/obo/EMAPA_'
 'PR': 'http://purl.obolibrary.org/obo/PR_' 
 'PW': 'http://purl.obolibrary.org/obo/PW_'
 'CL': 'http://purl.obolibrary.org/obo/CL_'
