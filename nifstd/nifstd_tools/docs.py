@@ -2,13 +2,14 @@
 """Compile all ontology related documentation.
 
 Usage:
-    ont-docs [options]
+    ont-docs [options] [--repo=<REPO>...]
 
 Options:
     -h --help            show this
     -s --spell           run hunspell on all docs
     -o --docstring-only  build docstrings only
     -j --jobs=NJOBS      number of jobs [default: 9]
+    -r --repo=<REPO>     additional repos to crawl for docs
 
 """
 import os
@@ -204,7 +205,7 @@ class FixLinks:
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
         # source file and/or code extensions regex
         # TODO folders that simply end
-        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx)'
+        code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx|svg)'
                       r'|LICENSE|catalog-extras|authorized_keys|\.vimrc)')
         out0 = re.sub(r'^file:(.*)'
                       + code_regex +
@@ -583,6 +584,14 @@ def prepare_paths(BUILD, docs_dir, theme_repo, theme):
 
     shutil.copytree(theme_styles_dir, doc_styles_dir)
 
+    # this is tricky
+    #images_dir = docs_dir / 'images'
+    #if images_dir.exists():
+        #shutil.rmtree(images_dir)
+
+    #images_dir.mkdir()
+    #shutil.copy(image, images_dir)
+
 
 def main():
     from docopt import docopt
@@ -606,7 +615,7 @@ def main():
             f.write(rendered)
         return
 
-    names = ('augpathlib', 'interlex', 'ontquery', 'sparc-curation')
+    names = ('augpathlib', 'interlex', 'ontquery', 'orthauth', 'sparc-curation') + tuple(args['--repo'])
     repo_paths = [Path(auth.get_path('ontology-local-repo')),
                   Path(working_dir)] + [glb / name for name in names]
     repos = [p.repo for p in repo_paths]
@@ -657,6 +666,7 @@ def main():
         'Components':'Components',
         'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  #
         'ontquery/README.html':'Introduction to ontquery',
+        'orthauth/README.html':'Introduction to orthauth',
         'pyontutils/README.html':'Introduction to pyontutils',
         'pyontutils/nifstd/README.html':'Introduction to nifstd-tools',
         'pyontutils/neurondm/README.html':'Introduction to neurondm',
@@ -682,6 +692,7 @@ def main():
         'pyontutils/docstrings.html': 'Command line programs',
         'NIF-Ontology/docs/external-sources.html': 'External sources for the ontology',  # Other
         'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
+        'orthauth/docs/guide.html': 'Orthauth guide',
 
         ###
         'Contributing':'Contributing',
