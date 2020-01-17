@@ -58,6 +58,7 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
 
     store_file = auth.get_path(_auth_var)
 
+    # TODO log which file it is writing to ...
     if store_file.exists():
         with open(store_file, 'rb') as f:
             try:
@@ -209,6 +210,16 @@ class Sheet:
         self.readonly = readonly
         self._setup()
         self.fetch()
+
+
+    @classmethod
+    def _sheet_id(cls):
+        return auth.dynamic_config.secrets('google', 'sheets', cls.name)
+
+    @classmethod
+    def _uri_human(cls):
+        # TODO sheet_name -> gid ??
+        return f'https://docs.google.com/spreadsheets/d/{cls._sheet_id()}/edit'
 
     def _setup(self):
         if self.readonly:
