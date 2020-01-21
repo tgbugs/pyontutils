@@ -1,0 +1,12 @@
+# configuration file for the ontree web server
+# permissions on this file should be set to 0600
+
+# gunicorn log level
+LOG_LEVEL=
+# scigraph configuration
+SCIGRAPH_API=
+SCIGRAPH_API_KEY=
+# log location
+LOG_LOC=/var/log/nifstd-tools
+# development settings
+PYTHONPATH=
