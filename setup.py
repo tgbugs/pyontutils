@@ -53,7 +53,7 @@ setup(
         'lxml',
         'nest_asyncio',
         'ontquery>=0.2.1',
-        'orthauth>=0.0.6',
+        'orthauth>=0.0.7',
         'pyyaml',
         'requests',
         'terminaltables',
