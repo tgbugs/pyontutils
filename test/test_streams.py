@@ -16,7 +16,7 @@ class TestOntResIri(unittest.TestCase):
         assert headers, 'no headers?'
 
     def test_2_metadata(self):
-        metadata = self.ori.metadata
+        metadata = self.ori.metadata()
         assert metadata, 'no metadata?'
 
     def test_3_data(self):

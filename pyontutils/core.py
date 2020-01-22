@@ -191,14 +191,14 @@ class OntRes(idlib.Stream):
 
     def _import_chain(self, done):
         imps = list(self.imports)
-        Async()(deferred(lambda r: r.metadata.graph)(_) for _ in imps)
+        Async()(deferred(lambda r: r.metadata().graph)(_) for _ in imps)
         for resource in imps:
             if resource in done:
                 continue
 
             done.add(resource)
             yield resource
-            yield from resource.metadata._import_chain(done)
+            yield from resource.metadata()._import_chain(done)
 
     def __eq__(self, other):
         raise NotImplementedError
@@ -252,10 +252,10 @@ class OntResOnt(OntRes):
     _metadata_class = None  # FIXME can we do this by dispatching OntMeta like Path?
 
     def __eq__(self, other):
-        return self.metadata.identifier_bound == other.metadata.identifier_bound
+        return self.metadata().identifier_bound == other.metadata().identifier_bound
 
     def __hash__(self):
-        return hash((self.__class__, self.metadata.identifier_bound))
+        return hash((self.__class__, self.metadata().identifier_bound))
 
 
 class OntIdIri(OntRes):
@@ -417,7 +417,7 @@ class OntResIri(OntIdIri, OntResOnt):
 
     @property
     def data(self):
-        format, *header_chunks, (resp, gen) = self.metadata._data(yield_response_gen=True)
+        format, *header_chunks, (resp, gen) = self.metadata()._data(yield_response_gen=True)
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible
@@ -508,7 +508,6 @@ class OntIdGit(OntIdPath):
 
         return self.ref + ':' + self.path.repo_relative_path.as_posix()
 
-    @property
     def metadata(self):
         if not hasattr(self, '_metadata'):
             self._metadata = self._metadata_class(self.path, ref=self.ref)
@@ -683,7 +682,6 @@ class OntGraph(rdflib.Graph):
         self.namespace_manager
         raise NotImplementedError('yet')
 
-    @property
     def metadata(self):
         """ the header/metadata/ontology section of an rdf file """
         raise NotImplementedError('yet')
@@ -1007,12 +1005,10 @@ class OntGraph(rdflib.Graph):
     def versionIdentifier(self):
         return next(self.versionIdentifiers)
 
-    @property
     def metadata(self):
         for bi in self.boundIdentifiers:
             yield from self.subjectGraph(bi)
 
-    @property
     def metadata_unnamed(self):
         yield from ((s, p, o) for s, p, o in self.metadata
                     if isinstance(s, rdflib.BNode))
@@ -1061,7 +1057,7 @@ class OntGraph(rdflib.Graph):
         datan_id = rdflib.URIRef(id + '?section=data_named')
         datau_id = rdflib.URIRef(id + '?section=data_unnamed')
         c = OntConjunctiveGraph(identifier=id)
-        [c.addN((*t, meta_id) for t in self.metadata)]
+        [c.addN((*t, meta_id) for t in self.metadata())]
         #[c.addN((*t, data_id)) for t in self.data]
         [c.addN((*t, datan_id) for t in self.data_named)]
         [c.addN((*t, datau_id) for t in self.data_unnamed)]
