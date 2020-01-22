@@ -654,7 +654,36 @@ def python_identifier(string):
 
 
 class byCol:
-    def __new__(cls, rows, header=None, to_index=tuple()):
+    # FIXME this class +is+ was unpickleable, lol python
+    def __init__(self, rows, header=None, to_index=tuple()):
+        # what I think is a pickleable version
+        if header is None:  # FIXME non None header might have bad names?
+            orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
+            header = [python_identifier(c) for i, c in enumerate(orig_header)]
+            #changes = {new:old for old, new in zip(rows[0], header) if old != new}
+            rows = rows[1:]
+        else:
+            orig_header = header
+
+        # normalize row lenght  # FIXME account for rows longer than header
+        rows = [row + [None] * (len(header) - len(row)) for row in rows]
+
+        # so apparently using namedtuple dynamically breaks pickle LOL PYTHON LOL
+        self.orig_header = orig_header
+        self.header = header
+        self.rows = rows
+        self.__indexes = {}
+        for col_name in to_index:
+            hindex = self.header.index(col_name)
+            ind = {r[hindex]:r for r in self.rows}
+            ind[col_name] = self.header  # the header
+            self.__indexes[col_name] = ind
+
+        for i, name in enumerate(header):
+            # so much for being dynamic!
+            setattr(self, name, [row[i] for row in self.rows])
+
+    def ___new__(cls, rows, header=None, to_index=tuple()):
         """ to_index should be a list of normalized column
             names that should be indexed for use in retrieving rows"""
 
@@ -697,7 +726,7 @@ class byCol:
         new_name = cls.__name__ + '_' + '_'.join(header)
         classTypeInstance = type(new_name,
                                  (cls,),
-                                 dict())
+                                 dict(__new__=object.__new__))
         return classTypeInstance
 
     @property

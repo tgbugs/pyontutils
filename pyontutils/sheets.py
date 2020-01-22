@@ -117,7 +117,23 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
     return response
 
 
-def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None):
+def default_filter_cell(cell):
+    remove = (
+        'userEnteredValue',
+        'effectiveValue',
+        'userEnteredFormat',
+        'effectiveFormat',
+        'padding',
+        'verticalAlignment',
+        'wrapStrategy',
+        'textFormat',
+    )
+    for k in remove:
+        cell.pop(k, None)
+
+
+def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
+                     filter_cell=default_filter_cell):
     SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
@@ -125,20 +141,43 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
     else:
         ss = spreadsheet_service
 
+    result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
+    values = result.get('values', [])
+
     if fetch_grid:
-        grid = ss.get(spreadsheetId=SPREADSHEET_ID, includeGridData=True).execute()
-        cells = get_cells_from_grid(grid, sheet_name)
+        def num_to_ab(n):
+            string = ''
+            while n > 0:
+                n, remainder = divmod(n - 1, 26)
+                string = chr(65 + remainder) + string
+            return string
+
+        rm = len(values)
+        cm = max([len(c) for c in values])
+        cml = num_to_ab(cm)
+        ranges = f'{sheet_name}!$A$1:${cml}'
+        #ranges = result['range']  # overshoots, which is bad for the 1000 cell case
+
+        grid = ss.get(spreadsheetId=SPREADSHEET_ID,
+                      ranges=ranges,
+                      includeGridData=True).execute()
+
+        for sheet in grid['sheets']:
+            sheet.pop('bandedRanges', None)
+            for d in sheet['data']:
+                d.pop('rowMetadata')
+                d.pop('columnMetadata')
+
+        cells = get_cells_from_grid(grid, sheet_name, filter_cell)
         cells_index = {(i, j):v for i, j, v in cells}
     else:
         grid = {}
         cells_index = {}
 
-    result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
-    values = result.get('values', [])
     return values, grid, cells_index
 
 
-def get_cells_from_grid(grid, title):
+def get_cells_from_grid(grid, title, filter_cell):
     for sheet in grid['sheets']:
         if sheet['properties']['title'] == title:
             for datum in sheet['data']:
@@ -146,6 +185,9 @@ def get_cells_from_grid(grid, title):
                     # if cell is blank it might not have values
                     if 'values' in row:
                         for j, cell in enumerate(row['values']):
+                            if filter_cell is not None:
+                                filter_cell(cell)
+
                             yield i, j, cell
 
 
@@ -197,7 +239,8 @@ class Sheet:
     fetch_grid = False
     index_columns = tuple()
 
-    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True):
+    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True,
+                 filter_cell=default_filter_cell):
         """ name to override in case the same pattern is used elsewhere """
         if name is not None:
             self.name = name
@@ -209,8 +252,7 @@ class Sheet:
 
         self.readonly = readonly
         self._setup()
-        self.fetch()
-
+        self.fetch(filter_cell=filter_cell)
 
     @classmethod
     def _sheet_id(cls):
@@ -236,14 +278,15 @@ class Sheet:
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
 
-    def fetch(self, fetch_grid=None):
+    def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
         values, grid, cells_index = get_sheet_values(self.name, self.sheet_name,
                                                      spreadsheet_service=self._spreadsheet_service,
-                                                     fetch_grid=fetch_grid)
+                                                     fetch_grid=fetch_grid,
+                                                     filter_cell=filter_cell)
 
         self.raw_values = values
         self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
@@ -258,6 +301,23 @@ class Sheet:
 
         self.grid = grid
         self.cells_index = cells_index
+
+        #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
+        #import copy
+        #self._lol_g, self._lol_c = copy.deepcopy(grid), copy.deepcopy(cells_index)  # as does this
+
+        #for sheet in grid['sheets']:
+
+        #self.grid = {}  # grid is BAD
+        #self.cells_index = {}  # cells_index is BAD
+
+        #_asdf = pickle.dumps(grid)
+        #print('grid', len(_asdf) / 1024 ** 2)
+        #_asdf = pickle.dumps(cells_index)
+        #print('cells_index', len(_asdf) / 1024 ** 2)
+
+        #_asdf = pickle.dumps(self)
+        #print(len(_asdf) / 1024 ** 2)
 
     def update(self, values):
         """ update all values at the same time """
@@ -288,7 +348,7 @@ class Sheet:
         try:
             return self.cells_index[row_index, column_index]
         except KeyError:
-            return None
+            return {}  # need to return the empty dict for type safety
         #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
         #rd = grid['data'][0]['rowData']
 
