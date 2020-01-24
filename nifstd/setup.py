@@ -63,4 +63,6 @@ setup(
             'slimgen=nifstd_tools.slimgen:main',
         ],
     },
+    data_files=[('share/nifstd/resources/sparc_term_versions/',
+                 ['resources/sparc_term_versions/sparc_terms2-mod.txt'])]
 )

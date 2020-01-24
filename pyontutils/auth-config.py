@@ -18,7 +18,11 @@
                     'environment-variables': 'ONTOLOGY_REPO_NAME ONTOLOGY_NAME'},
   'patch-config': {'default': '../nifstd/patches/patches.yaml',
                    'environment-variables': 'ONTOLOGY_PATCH_CONFIG PATCH_CONFIG'},
-  'resources': {'default': '../nifstd/resources',
+  'resources': {'default': ['../nifstd/resources',  # git
+                            '{:user-data-path}/nifstd/resources',  # pip install --user
+                            '{:prefix}/share/nifstd/resources',  # system
+                            '/usr/share/nifstd/resources',  # pypy3
+                            '{:cwd}/share/nifstd/resources',],  # ebuild testing
                 'environment-variables': 'NIFSTD_RESOURCES ONTOLOGY_RESOURCES RESOURCES'},
 
   # google api
