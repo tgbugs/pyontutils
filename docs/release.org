@@ -490,10 +490,10 @@ function push-release () {
     local version=$1
     shift
 
-    rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}{-,.tar}* ${software_releases_path}/ || return 1
+    rsync -a -v --ignore-existing ${folder}/dist/${packagename/-/*}-${version}{-,.tar}* ${software_releases_path}/ || return 1
     pushd ${software_releases_path}
-    sha256sum ${packagename}-${version}{-,.tar}* >> hashes
-    twine upload --repository test ${packagename}-${version}{-,.tar}* || return 1
+    sha256sum ${packagename/-/*}-${version}{-,.tar}* >> hashes
+    twine upload --repository test ${packagename/-/*}-${version}{-,.tar}* || return 1
     sleep 1
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
