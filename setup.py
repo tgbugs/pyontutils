@@ -41,7 +41,7 @@ setup(
     tests_require=tests_require,
     install_requires=[
         'appdirs',
-        'augpathlib>=0.0.4',
+        'augpathlib>=0.0.8',
         'colorlog',
         'docopt',
         'gitpython',
@@ -52,7 +52,7 @@ setup(
         'joblib>=0.14.0',
         'lxml',
         'nest_asyncio',
-        'ontquery>=0.2.1',
+        'ontquery>=0.2.2',
         'orthauth>=0.0.7',
         'pyyaml',
         'requests',
