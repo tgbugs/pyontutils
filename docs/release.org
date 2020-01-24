@@ -575,7 +575,7 @@ function final-release () {
 
     pushd ${software_releases_path}
 
-    twine upload --repository pypi ${packagename}-${version}{-,.tar}* || return 1  # enter password here
+    twine upload --repository pypi ${packagename/-/*}-${version}{-,.tar}* || return 1  # enter password here
 
     sleep 1
     echo "pypi hashes"
