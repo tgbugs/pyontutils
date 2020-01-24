@@ -59,6 +59,7 @@ from pyontutils.sheets import Sheet
 from pyontutils.namespaces import OntCuries
 from typing import Union, Dict, List, Tuple, Generator
 from nifstd_tools.sheets_sparc import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
+from nifstd_tools import __version__
 
 # Convienient Typing
 Semantic = Union[rdflib.URIRef, rdflib.Literal, rdflib.BNode]
@@ -413,7 +414,7 @@ def server(api_key=None, verbose=False):
                                            'rev-parse', 'HEAD'],
                                           stderr=subprocess.DEVNULL).decode().rstrip()
         else:
-            ver = nifstd_tools.__version__
+            ver = __version__
             if '+' in ver:
                 ref = ver.split('+', 1)[-1]
             else:
