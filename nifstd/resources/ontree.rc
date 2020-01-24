@@ -17,6 +17,7 @@ start_stop_daemon_args="
 --group ${SVCGROUP}
 --user ${SVCUSER}
 --wait 1000
+--env SCIGRAPH_API=${SCIGRAPH_API}
 --env SCIGRAPH_API_KEY=${SCIGRAPH_API_KEY}
 --env PYTHONPATH=${PYTHONPATH}
 "
