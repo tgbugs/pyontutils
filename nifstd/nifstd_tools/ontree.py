@@ -406,15 +406,24 @@ def server(api_key=None, verbose=False):
         git_dir = Path('/dev/null')
 
     try:
-        commit = subprocess.check_output(['git',
-                                          '--git-dir', git_dir.as_posix(),
-                                          '--work-tree', working_dir.as_posix(),
-                                          'rev-parse', 'HEAD'],
-                                         stderr=subprocess.DEVNULL).decode().rstrip()
+        if working_dir is not None:
+            ref = subprocess.check_output(['git',
+                                           '--git-dir', git_dir.as_posix(),
+                                           '--work-tree', working_dir.as_posix(),
+                                           'rev-parse', 'HEAD'],
+                                          stderr=subprocess.DEVNULL).decode().rstrip()
+        else:
+            ver = nifstd_tools.__version__
+            if '+' in ver:
+                ref = ver.split('+', 1)[-1]
+            else:
+                ref = ver
+
     except subprocess.CalledProcessError:
-        commit = 'master' # 'NO-REPO-AT-MOST-TODO-GET-LATEST-HASH'
+        ref = 'master' # 'NO-REPO-AT-MOST-TODO-GET-LATEST-HASH'
+
     wasGeneratedBy = ('https://github.com/tgbugs/pyontutils/blob/'
-                      f'{commit}/pyontutils/{f.name}'
+                      f'{ref}/pyontutils/{f.name}'
                       '#L{line}')
     line = getSourceLine(render)
     wgb = wasGeneratedBy.format(line=line)
