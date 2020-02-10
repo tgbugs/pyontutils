@@ -18,8 +18,19 @@ class TestTtlfmt(unittest.TestCase):
     def tearDown(self):
         sys.argv = self.oldargv
 
-    def test_multi_slow(self):
+    def test_run(self):
         try:
             main()
         except AttributeError as e:
             raise AttributeError('failed with ' + str(self.argv)) from e
+
+
+class TestXml(TestTtlfmt):
+    argv = ['ttlfmt', f1[0], '--outfmt', 'xml', '--output', 'test/good.owl']
+    argv2 = ['ttlfmt', 'test/good.owl', '--outfmt', 'ttl', '--output', 'test/good2.ttl']
+    def test_run(self):
+        super().test_run()
+        self.__class__.argv = self.argv2
+
+    def test_run_2(self):
+        super().test_run()
