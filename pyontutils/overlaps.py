@@ -14,7 +14,11 @@ import os
 import rdflib
 from docopt import docopt
 from pyontutils.core import makeGraph
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
+
 
 def common(a, b):
     return sorted(tuple(map(a.qname, (s, p, str(o.toPython()) if isinstance(o, rdflib.Literal) else o)))
@@ -37,7 +41,7 @@ def extract(files, graphs):
     results = comb(fn_graphs)
     overlaps = {k:v for k, v in results.items() if v}
     no_bri_inf = {k:v for k, v in overlaps.items() if '-Infe' not in k and '-Bridge' not in k}
-    embed()
+    breakpoint()
 
 def main():
     from joblib import Parallel, delayed

@@ -119,7 +119,7 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
 
 
 # ontology resource object
-from werkzeug.contrib.iterio import IterIO
+from .iterio import IterIO
 
 
 class OntRes(idlib.Stream):

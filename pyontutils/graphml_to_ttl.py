@@ -19,7 +19,6 @@ from collections import namedtuple, defaultdict
 from lxml import etree
 from docopt import docopt
 from rdflib import URIRef, BNode, Namespace, Graph
-from IPython import embed
 from pyontutils.core import makeGraph, cull_prefixes
 from pyontutils.namespaces import makePrefixes, TEMP, PREFIXES as uPREFIXES
 from pyontutils.combinators import restriction, restrictionN, allDifferent, distinctMembers, unionOf, oneOf

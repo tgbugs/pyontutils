@@ -9,7 +9,7 @@ Options:
     -b --big                    when creating catalog also import big files
                                 reccomend running this option with pypy3
     -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
-    -d --debug                  drop into IPython embed at the end
+    -d --debug                  break at the end
 
 """
 import os
@@ -81,7 +81,7 @@ def main():
         f.write(xml)
 
     if args['--debug']:
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

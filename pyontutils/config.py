@@ -390,7 +390,6 @@ def bootstrap_config():
 
 
 def main():
-    from IPython import embed
     print(repr(devconfig))
 
 if __name__ == '__main__':

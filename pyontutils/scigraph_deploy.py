@@ -59,7 +59,6 @@ from pyontutils.ontload import defaults as ontload_defaults
 from pyontutils.ontload import run as ontload_main
 from pyontutils.ontload import COMMIT_HASH_HEAD_LEN, NotBuiltError
 from pyontutils.namespaces import getCuries
-from IPython import embed
 
 ontload_defaults.update({'<repo>':None,
                          '<remote_base>':None})  # these don't need values
@@ -788,7 +787,7 @@ def run(args):
         print()
         with open(FILE, 'rt') as f:
             print(f.read())
-        #embed()
+        #breakpoint()
     if b.local:
         return
         #if b.check_built:

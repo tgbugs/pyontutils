@@ -794,7 +794,10 @@ def main():
     import rdflib
     from pyontutils.core import makeGraph, makePrefixes
     from pyontutils.config import auth
-    from IPython import embed
+    try:
+        breakpoint
+    except NameError:
+        from IPython import embed as breakpoint
 
     ub = auth.get_path('ontology-local-repo') / 'ttl/bridge/uberon-bridge.ttl'
     ncrb = auth.get_path('ontology-local-repo') / 'ttl/NIF-Neuron-Circuit-Role-Bridge.ttl'
@@ -818,7 +821,7 @@ def main():
     ecng = makeGraph('thing2', graph=ecgraph, prefixes=makePrefixes('owl', 'TEMP'))
     ecng.write()
     if __name__ == '__main__':
-        embed()
+        breakpoint()
         return
     r = Restriction(rdfs.subClassOf)#, scope=owl.allValuesFrom)#NIFRID.has_proper_part)
     l = tuple(r.parse(graph=graph))
@@ -853,7 +856,7 @@ def main():
     eng = makeGraph('thing1', graph=egraph, prefixes=makePrefixes('owl', 'TEMP'))
     eng.write()
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 
 if __name__ == '__main__':

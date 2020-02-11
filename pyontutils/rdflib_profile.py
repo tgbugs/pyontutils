@@ -131,14 +131,18 @@ def main():
         import shutil
         import requests
         from docopt import docopt
-        from IPython import embed
+        try:
+            breakpoint
+        except NameError:
+            from IPython import embed as breakpoint
+
         args = docopt(__doc__)
 
         if args['--local']:
             filenames = list(filenames_from_fetch(fetch, Path.cwd().parent))  # FIXME
             run(REPS, filenames=filenames, functions=functions)
             # check *.results
-            embed()
+            breakpoint()
             return
 
         filenames = list(filenames_from_fetch(fetch, Path.cwd()))
@@ -212,7 +216,7 @@ def main():
             asdf.append(z)
 
         print(asdf)
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()
