@@ -18,6 +18,7 @@ from collections import namedtuple
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
+from .clifun import python_identifier
 import nest_asyncio
 
 
@@ -625,32 +626,6 @@ class rowParse:
     def _end(self):
         """ Run this code after all rows have been parsed """
         pass
-
-
-def python_identifier(string):
-    """ pythonify a string for use as an identifier """
-    ident = (string.strip()
-             .replace('<', '')
-             .replace('>', '')
-             .replace('(', '')
-             .replace(')', '')
-             .replace(' ', '_')
-             .replace('+', '')
-             .replace('…','')
-             .replace('.','_')
-             .replace(',','_')
-             .replace('/', '_')
-             .replace('?', '_')
-             .replace('#', 'number')
-             .replace('-', '_')
-             .replace(':', '_')
-             .replace('\x83', '')  # FIXME should be stripped beforehand during format norm?
-             .lower()  # sigh
-                )
-    if ident and ident[0].isdigit():
-        ident = 'n_' + ident
-
-    return ident
 
 
 class byCol:
