@@ -10,6 +10,21 @@ except ImportError:
     greenlet = None
 
 
+def _mixed_join(iterable, sentinel):
+    """concatenate any string type in an intelligent way."""
+    iterator = iter(iterable)
+    first_item = next(iterator, sentinel)
+    if isinstance(first_item, bytes):
+        return first_item + b"".join(iterator)
+    return first_item + u"".join(iterator)
+
+
+def _newline(reference_string):
+    if isinstance(reference_string, bytes):
+        return b"\n"
+    return u"\n"
+
+
 class IterIO(object):
     """Instances of this object implement an interface compatible with the
     standard Python :class:`file` object.  Streams are either read-only or
