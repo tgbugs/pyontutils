@@ -49,7 +49,7 @@ setup(
         'google-auth-oauthlib',
         'htmlfn',
         'idlib',
-        'ipython',
+        "ipython; python_version < '3.7'",
         'joblib>=0.14.0',
         'lxml',
         'nest_asyncio',
@@ -58,8 +58,7 @@ setup(
         'pyyaml',
         'requests',
         'terminaltables',
-        'ttlser>=1.1.0',
-        'werkzeug',  # for IterIO which can probably just be copied one off
+        'ttlser>=1.1.1',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'spell': ['hunspell'],
