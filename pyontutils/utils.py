@@ -25,7 +25,7 @@ import nest_asyncio
 def get_working_dir(script__file__):
     """ hardcoded sets the 'equivalent' working directory if not in git """
     start = Path(script__file__).resolve()
-    _root = Path(start.root)
+    _root = Path(start.drive + start.root)  # posix + win
     working_dir = start
     while not list(working_dir.glob('.git')):
         if working_dir == _root:
