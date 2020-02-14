@@ -137,6 +137,116 @@ class _TestScriptsBase(unittest.TestCase):
 
 
     @classmethod
+    def make_test_file(cls, i_ind, ppath, post_load, module_parent, skip):
+        print('PPATH:  ', ppath)
+        pex = ppath.as_posix().replace('/', '_').replace('.', '_')
+        fname = f'test_{i_ind:0>3}_' + pex
+        stem = ppath.stem
+        #rp = ppath.relative_to(Path.cwd())#module_parent)
+        rp = ppath.relative_to(module_parent)
+        module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
+        print(module_path)
+        def test_file(self, module_path=module_path, stem=stem, fname=fname):
+            try:
+                print(tc.ltyellow('IMPORTING:'), module_path)
+                module = import_module(module_path)  # this returns the submod
+                self._modules[module_path] = module
+                if hasattr(module, '_CHECKOUT_OK'):
+                    print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
+                    setattr(module, '_CHECKOUT_OK', True)
+                    #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
+            #except BaseException as e:
+                # FIXME this does not work because collected tests cannot be uncollected
+                #suffix = fname.split('__', 1)[-1]
+                #for mn in dir(self):
+                    #if suffix in mn:
+                        #old_func = getattr(self, mn)
+                        #new_func = pytest.mark.xfail(raises=ModuleNotFoundError)(old_func)
+                        #setattr(self, mn, new_func)
+
+                #raise e
+            finally:
+                post_load()
+
+        if stem in skip:
+            test_file = pytest.mark.skip()(test_file)
+        elif 'CI' in os.environ and stem in ci_skip:
+            test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_file)
+
+        return pex, fname, stem, module_path, test_file
+
+    @classmethod
+    def make_test_main(cls, do_mains, post_main, module_path, argv, main, test, skip):
+        @simpleskipif(not do_mains)
+        def test_main(self, module_path=module_path, argv=argv, main=main, test=test):
+            try:
+                script = self._modules[module_path]
+            except KeyError as e:
+                # we have to raise here becuase we can't delete
+                # the test mfuncs once pytest has loaded them
+                pytest.skip(f'Import failed for {module_path}'
+                            ' cannot test main, skipping.')
+                return
+
+            if argv and argv[0] != script:
+                os.system(' '.join(argv))  # FIXME error on this?
+
+            try:
+                if argv is not None:
+                    sys.argv = argv
+                else:
+                    sys.argv = self.argv_orig
+
+                if main:
+                    print(tc.ltyellow('MAINING:'), module_path)
+                    script.main()
+                elif test:
+                    print(tc.ltyellow('TESTING:'), module_path)
+                    script.test()  # FIXME mutex and confusion
+            except BaseException as e:
+                if isinstance(e, SystemExit):
+                    return  # --help
+                raise e
+            finally:
+                post_main()
+
+        return test_main
+
+    @classmethod
+    def populate_from_paths(cls, repo, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip):
+        npaths = len(paths)
+        print(npaths)
+        for i_ind, path in enumerate(paths):
+            print(path)
+            ppath = Path(repo.working_dir, path).absolute()
+            (pex, fname, stem, module_path,
+             test_file) = cls.make_test_file(i_ind, ppath, post_load, module_parent, skip)
+            setattr(cls, fname, test_file)
+
+            if stem in mains:
+                argv = mains[stem]
+                if argv and type(argv[0]) == list:
+                    argvs = argv
+                else:
+                    argvs = argv,
+            else:
+                argvs = None,
+
+            for j_ind, argv in enumerate(argvs):
+                mname = f'test_{i_ind + npaths:0>3}_{j_ind:0>3}_' + pex
+                #print('MPATH:  ', module_path)
+                test_main = cls.make_test_main(do_mains, post_main, module_path, argv,
+                                               stem in mains, stem in tests, skip)
+
+                # FIXME do we need to setattr these test_files or no?
+                if stem in skip:
+                    test_file = pytest.mark.skip()(test_main)
+                elif 'CI' in os.environ and stem in ci_skip:
+                    test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
+
+                setattr(cls, mname, test_main)
+
+    @classmethod
     def populate_tests(cls, module_to_test, working_dir, mains=tuple(), tests=tuple(),
                        lasts=tuple(), skip=tuple(), ci_skip=tuple(), only=tuple(), do_mains=True,
                        post_load=lambda : None, post_main=lambda : None, module_parent=None):
@@ -165,8 +275,8 @@ class _TestScriptsBase(unittest.TestCase):
             mains = {k:v for k, v in mains.items() if k in only}
             print(mains)
 
-        _do_mains = []
-        _do_tests = []
+        #_do_mains = []
+        #_do_tests = []
         try:
             repo = git.Repo(working_dir)
             paths = sorted(f.rsplit('/', 1)[0] if '__main__' in f else f
@@ -185,99 +295,8 @@ class _TestScriptsBase(unittest.TestCase):
                     paths.remove(last)
                     paths.append(last)
 
-            npaths = len(paths)
-            print(npaths)
-            for i, path in enumerate(paths):
-                print(path)
-                ppath = Path(repo.working_dir, path).absolute()
-                print('PPATH:  ', ppath)
-                pex = ppath.as_posix().replace('/', '_').replace('.', '_')
-                fname = f'test_{i:0>3}_' + pex
-                stem = ppath.stem
-                #rp = ppath.relative_to(Path.cwd())#module_parent)
-                rp = ppath.relative_to(module_parent)
-                module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
-                print(module_path)
-                def test_file(self, module_path=module_path, stem=stem, fname=fname):
-                    try:
-                        print(tc.ltyellow('IMPORTING:'), module_path)
-                        module = import_module(module_path)  # this returns the submod
-                        self._modules[module_path] = module
-                        if hasattr(module, '_CHECKOUT_OK'):
-                            print(tc.blue('MODULE CHECKOUT:'), module, module._CHECKOUT_OK)
-                            setattr(module, '_CHECKOUT_OK', True)
-                            #print(tc.blue('MODULE'), tc.ltyellow('CHECKOUT:'), module, module._CHECKOUT_OK)
-                    #except BaseException as e:
-                        # FIXME this does not work because collected tests cannot be uncollected
-                        #suffix = fname.split('__', 1)[-1]
-                        #for mn in dir(self):
-                            #if suffix in mn:
-                                #old_func = getattr(self, mn)
-                                #new_func = pytest.mark.xfail(raises=ModuleNotFoundError)(old_func)
-                                #setattr(self, mn, new_func)
-
-                        #raise e
-                    finally:
-                        post_load()
-
-                if stem in skip:
-                    test_file = pytest.mark.skip()(test_file)
-                elif 'CI' in os.environ and stem in ci_skip:
-                    test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_file)
-
-                setattr(cls, fname, test_file)
-
-                if stem in mains:
-                    argv = mains[stem]
-                    if argv and type(argv[0]) == list:
-                        argvs = argv
-                    else:
-                        argvs = argv,
-                else:
-                    argvs = None,
-
-                for j, argv in enumerate(argvs):
-                    mname = f'test_{i + npaths:0>3}_{j:0>3}_' + pex
-                    #print('MPATH:  ', module_path)
-                    @simpleskipif(not do_mains)
-                    def test_main(self, module_path=module_path, argv=argv, main=stem in mains, test=stem in tests):
-                        try:
-                            script = self._modules[module_path]
-                        except KeyError as e:
-                            # we have to raise here becuase we can't delete
-                            # the test mfuncs once pytest has loaded them
-                            pytest.skip(f'Import failed for {module_path}'
-                                        ' cannot test main, skipping.')
-                            return
-
-                        if argv and argv[0] != script:
-                            os.system(' '.join(argv))  # FIXME error on this?
-
-                        try:
-                            if argv is not None:
-                                sys.argv = argv
-                            else:
-                                sys.argv = self.argv_orig
-
-                            if main:
-                                print(tc.ltyellow('MAINING:'), module_path)
-                                script.main()
-                            elif test:
-                                print(tc.ltyellow('TESTING:'), module_path)
-                                script.test()  # FIXME mutex and confusion
-                        except BaseException as e:
-                            if isinstance(e, SystemExit):
-                                return  # --help
-                            raise e
-                        finally:
-                            post_main()
-
-                    if stem in skip:
-                        test_file = pytest.mark.skip()(test_main)
-                    elif 'CI' in os.environ and stem in ci_skip:
-                        test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
-
-                    setattr(cls, mname, test_main)
+            cls.populate_from_paths(repo, paths, mains, tests,
+                                    do_mains, post_load, post_main, module_parent, skip)
 
         except git.exc.InvalidGitRepositoryError:  # testing elsewhere
             # FIXME TODO regularize this so that the same tests can run
@@ -286,6 +305,7 @@ class _TestScriptsBase(unittest.TestCase):
             modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
             modpaths = [module_to_test.__name__ + '.' + modinfo.name
                         for modinfo in modinfos]
+
             for modpath in modpaths:
                 _, stem = modpath.rsplit('.', 1)
                 fname = 'test_' + modpath.replace('.', '_')
