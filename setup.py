@@ -66,7 +66,7 @@ setup(
                    },
     entry_points={
         'console_scripts': [
-            'googapis=pyontutils.sheets:main',
+            'googapis=pyontutils.googapis:main',
             'graphml-to-ttl=pyontutils.graphml_to_ttl:main',
             'necromancy=pyontutils.necromancy:main',
             'ont-catalog=pyontutils.make_catalog:main',

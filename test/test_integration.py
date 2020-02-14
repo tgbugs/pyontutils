@@ -69,6 +69,7 @@ mains = {'scigraph':None,
          'combinators':None,
          'hierarchies':None,
          'closed_namespaces':None,
+         'googapis': None,
          #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
          'make_catalog':['ont-catalog', '--jobs', '1'],
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
