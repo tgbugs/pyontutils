@@ -311,27 +311,6 @@ class _TestScriptsBase(unittest.TestCase):
             modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
             ppaths = [modinfo_to_path(m) for m in modinfos]
 
-        except ImportError:  # hack to prevent from running
-            import pkgutil
-            modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
-            modpaths = [module_to_test.__name__ + '.' + modinfo.name
-                        for modinfo in modinfos]
-
-            for modpath in modpaths:
-                _, stem = modpath.rsplit('.', 1)
-                fname = 'test_' + modpath.replace('.', '_')
-                def test_file(self, modpath=modpath):
-                    print(tc.ltyellow('IMPORTING:'), modpath)
-                    module = import_module(modpath)
-                    self._modules[modpath] = module
-
-                if stem in skip:
-                    test_file = pytest.mark.skip()(test_file)
-                elif 'CI' in os.environ and stem in ci_skip:
-                    test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
-
-                setattr(cls, fname, test_file)
-
         cls.populate_from_paths(ppaths, mains, tests,
                                 do_mains, post_load, post_main, module_parent, skip)
 
