@@ -22,6 +22,10 @@ from ast import literal_eval
 from pathlib import Path
 from ttlser import CustomTurtleSerializer
 from rdflib.plugins.serializers.turtle import TurtleSerializer
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 
 class _prof:
@@ -131,10 +135,6 @@ def main():
         import shutil
         import requests
         from docopt import docopt
-        try:
-            breakpoint
-        except NameError:
-            from IPython import embed as breakpoint
 
         args = docopt(__doc__)
 

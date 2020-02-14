@@ -4,6 +4,10 @@ from ontquery.terms import OntId
 from pyontutils.utils_extra import check_value
 from pyontutils.namespaces import TEMP
 from pyontutils.closed_namespaces import rdf, rdfs, owl
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 
 def flattenTriples(triples):
@@ -794,10 +798,6 @@ def main():
     import rdflib
     from pyontutils.core import makeGraph, makePrefixes
     from pyontutils.config import auth
-    try:
-        breakpoint
-    except NameError:
-        from IPython import embed as breakpoint
 
     ub = auth.get_path('ontology-local-repo') / 'ttl/bridge/uberon-bridge.ttl'
     ncrb = auth.get_path('ontology-local-repo') / 'ttl/NIF-Neuron-Circuit-Role-Bridge.ttl'
