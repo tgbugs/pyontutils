@@ -21,6 +21,14 @@ def simpleskipif(skip):
     return inner
 
 
+def modinfo_to_path(mod):
+    p = Path(mod.module_finder.path, mod.name)
+    if mod.ispkg:
+        return p
+    else:
+        return p.with_suffix('.py')
+
+
 class Repo(baseRepo):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -213,14 +221,13 @@ class _TestScriptsBase(unittest.TestCase):
         return test_main
 
     @classmethod
-    def populate_from_paths(cls, repo, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip):
+    def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip):
         npaths = len(paths)
         print(npaths)
         for i_ind, path in enumerate(paths):
             print(path)
-            ppath = Path(repo.working_dir, path).absolute()
             (pex, fname, stem, module_path,
-             test_file) = cls.make_test_file(i_ind, ppath, post_load, module_parent, skip)
+             test_file) = cls.make_test_file(i_ind, path, post_load, module_parent, skip)
             setattr(cls, fname, test_file)
 
             if stem in mains:
@@ -295,12 +302,16 @@ class _TestScriptsBase(unittest.TestCase):
                     paths.remove(last)
                     paths.append(last)
 
-            cls.populate_from_paths(repo, paths, mains, tests,
-                                    do_mains, post_load, post_main, module_parent, skip)
+            ppaths = [Path(repo.working_dir, path).absolute() for path in paths]
 
         except git.exc.InvalidGitRepositoryError:  # testing elsewhere
             # FIXME TODO regularize this so that the same tests can run
             # when we are not in the repo ...
+            import pkgutil
+            modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
+            ppaths = [modinfo_to_path(m) for m in modinfos]
+
+        except ImportError:  # hack to prevent from running
             import pkgutil
             modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
             modpaths = [module_to_test.__name__ + '.' + modinfo.name
@@ -320,6 +331,9 @@ class _TestScriptsBase(unittest.TestCase):
                     test_file = pytest.mark.skip(reason='Cannot test this in CI right now.')(test_main)
 
                 setattr(cls, fname, test_file)
+
+        cls.populate_from_paths(ppaths, mains, tests,
+                                do_mains, post_load, post_main, module_parent, skip)
 
         if not hasattr(cls, 'argv_orig'):
             cls.argv_orig = sys.argv
