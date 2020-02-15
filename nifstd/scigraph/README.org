@@ -8,7 +8,18 @@ for deploying a variety of ontologies to production SciGraph instances.
 This readme consolidates everything that we have learned into what we
 considered to be one reasonably optimal workflow that avoids most of the
 hidden pitfalls.
-
+* Using this file
+You can either [[https://orgmode.org/worg/org-contrib/babel/how-to-use-Org-Babel-for-R.html][tangle]]
+this file in emacs using =C-c C-v t= or you can
+[[https://orgmode.org/manual/Extracting-Source-Code.html][export]]
+the whole file from the command line using with the following.
+#+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
+: ${THIS_FILE:="./README.org"}
+emacs --batch \
+      --load org \
+      --load ob-shell \
+      --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
+#+end_src
 * Setup
 :properties:
 :visibility: folded
