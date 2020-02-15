@@ -85,7 +85,7 @@ See the [[https://github.com/tgbugs/pyontutils/blob/master/nifstd/scigraph/scigr
 for details.
 
 #+NAME: dir-tramp-sudo
-#+HEADER: :noweb yes :results none 
+#+header: :noweb yes :results none
 #+begin_src emacs-lisp :exports none
 (defun :dir-tramp-sudo (ssh-config-hostname)
   (format "/ssh:%s|sudo:%s:" ssh-config-hostname ssh-config-hostname))
@@ -279,6 +279,7 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
 *** Build
 **** generic
+***** common
 Set =build-location-graph= here
 #+NAME: build-location-graph
 : /tmp/scigraph-build
@@ -290,29 +291,48 @@ Set =path-graphload-template= here
 #+name: folder-name-graph
 : graph
 
+# (((((
+#+name: *vars-load-graph
+#+begin_src bash :eval never :exports none
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --build-location)    local BUILD_LOCATION="${2}"; shift; shift ;;
+    --folder-name-graph) local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
+    --path-graphload)    local PATH_GRAPHLOAD="${2}"; shift; shift ;;
+    --path-ontologies)   local PATH_ONTOLOGIES="${2}"; shift; shift ;;
+    *) POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${PATH_GRAPHLOAD:="$(eval echo ${_PATH_GRAPHLOAD})"}
+: ${PATH_ONTOLOGIES:="$(eval echo ${_PATH_ONTOLOGIES})"}
+: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
+: ${FOLDER_NAME_GRAPH:="${_FOLDER_NAME_GRAPH}"}
+LOAD_GRAPH_PATH="${BUILD_LOCATION}/${FOLDER_NAME_GRAPH}"
+PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
+PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
+STAMPED="${FOLDER_NAME_GRAPH}-graph-$(date +%Y%m%dT%H%M%S)"
+ZIPNAME="${STAMPED}.zip"
+ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
+LATEST="${BUILD_LOCATION}/LATEST"
+echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES
+echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $ZIPNAME $ZIPPATH
+#+end_src
+
 #+name: load-graph
 #+header: :noweb yes :eval never
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_GRAPHLOAD=path-graphload-template()
-#+header: :var _PATH_ONTOLOGIES_SECTION=""
+#+header: :var _PATH_ONTOLOGIES=""
 #+header: :var _BUILD_LOCATION=build-location-graph()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph()
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph()
 #+begin_src bash :tangle ./bin/load-graph
-: ${PATH_GRAPHLOAD:="$(eval echo ${_PATH_GRAPHLOAD})"}
-: ${PATH_ONTOLOGIES_SECTION:="$(eval echo ${_PATH_ONTOLOGIES_SECTION})"}
-: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
-: ${GRAPH_FOLDER_NAME:="${_GRAPH_FOLDER_NAME}"}
-LOAD_GRAPH_PATH="${BUILD_LOCATION}/${GRAPH_FOLDER_NAME}"
-PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
-PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
-STAMPED="${GRAPH_FOLDER_NAME}-graph-$(date +%Y%m%dT%H%M%S)"
-ZIPNAME="${STAMPED}.zip"
-ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
-LATEST="${BUILD_LOCATION}/LATEST"
-echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES_SECTION
-echo $LOAD_GRAPH_PATH $GRAPH_FOLDER_NAME $STAMPED $ZIPNAME $ZIPPATH
+<<*vars-load-graph>>
 
-if [[ -z "${PATH_ONTOLOGIES_SECTION}" ]]; then
+if [[ -z "${PATH_ONTOLOGIES}" ]]; then
     echo no ontologies section specified
     exit 1
 fi
@@ -321,7 +341,7 @@ if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
     rm "${LOAD_GRAPH_PATH}" -r
 fi
 mkdir -p "${LOAD_GRAPH_PATH}"
-cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES_SECTION}" > "${PATH_CONFIG_YAML_RAW}"
+cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}"
 yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
       "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
 scigraph-load -c "${PATH_CONFIG_YAML}"
@@ -329,33 +349,17 @@ scigraph-load -c "${PATH_CONFIG_YAML}"
 pushd "${BUILD_LOCATION}"
 # mv prevents accidentally deploying the same graph twice
 # but use cp -r for development to avoid continual rebuild
-cp -r ${GRAPH_FOLDER_NAME} ${STAMPED}
+cp -r ${FOLDER_NAME_GRAPH} ${STAMPED}
 zip -r ${ZIPNAME} ${STAMPED}
 unlink "${LATEST}"
 ln -sT "${ZIPNAME}" "${LATEST}"
 popd
 #+end_src
-***** build
-***** build sparc
-Set =graph-folder-sparc= here
-#+name: graph-folder-sparc
-: sparc
+***** load sparc data
+Set =build-location-graph= here
+#+NAME: build-location-sparc-data
+: /tmp/scigraph-build/sparc-data
 
-=path-ontologies-sparc=
-#+name: path-ontologies-sparc
-: ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
-
-#+NAME: load-graph-sparc
-#+HEADER: :noweb yes :eval never :results output
-#+HEADER: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
-#+header: :var _PATH_ONTOLOGIES_SECTION=path-ontologies-sparc()
-#+header: :var _BUILD_LOCATION=build-location-graph()
-#+header: :var _GRAPH_FOLDER_NAME=graph-folder-sparc()
-#+begin_src bash :tangle ./bin/load-graph-sparc
-<<load-graph>>
-#+end_src
-***** build sparc data
 Set =folder-name-graph-sparc-data= here
 #+name: folder-name-graph-sparc-data
 : sparc-data
@@ -365,33 +369,55 @@ Set =folder-name-graph-sparc-data= here
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
 
 #+NAME: load-graph-sparc-data
-#+HEADER: :noweb yes :eval never :results output
-#+HEADER: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_GRAPHLOAD=path-graphload-template()
-#+header: :var _PATH_ONTOLOGIES_SECTION=path-ontologies-sparc-data()
-#+header: :var _BUILD_LOCATION=build-location-graph()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-sparc-data()
+#+header: :var _PATH_ONTOLOGIES=path-ontologies-sparc-data()
+#+header: :var _BUILD_LOCATION=build-location-sparc-data()
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph-sparc-data()
 #+begin_src bash :tangle ./bin/load-graph-sparc-data
 <<load-graph>>
 #+end_src
 
-**** ontology
+**** ontload
+***** common
 Set =path-graphload= here
 #+name: path-graphload
-: ./graphload.yaml
+: ~/git/pyontutils/nifstd/scigraph/graphload-base-template.yaml
 
-Set =build-location-ontology= here
-#+name: build-location-ontology
-: ./
+# sigh command line flags inside of flags
+# (((((((
+#+name: *vars-load-graph-ontload
+#+begin_src bash :eval never :exports none
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --build-location)  local BUILD_LOCATION="${2}"; shift; shift ;;
+    --path-graphload)  local PATH_GRAPHLOAD="${2}"; shift; shift ;;
+    --path-ontologies) local PATH_ONTOLOGIES="${2}"; shift; shift ;;
+    --zip-location)    local ZIP_LOCATION="${2}"; shift; shift ;;
+    --git-location)    local GIT_LOCATION="${2}"; shift; shift ;;
+    --git-ref)         local GIT_REF="${2}"; shift; shift ;;
+    *) POSITIONAL+=("$1"); shift ;;
+esac
+done
 
-#+name: load-graph-ontology-base
-#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+header: :var _PATH_GRAPHLOAD=path-graphload()
-#+header: :var _BUILD_LOCATION=build-location-ontology()
-#+BEGIN_SRC bash :tangle ./bin/load-graph-ontology-base 
-: ${PATH_GRAPHLOAD:="${_PATH_GRAPHLOAD}"}
+: ${PATH_GRAPHLOAD:="$(eval echo ${_PATH_GRAPHLOAD})"}
+: ${PATH_ONTOLOGIES:="$(eval echo ${_PATH_ONTOLOGIES})"}
 : ${ZIP_LOCATION:="${_BUILD_LOCATION}"}
 : ${GIT_LOCATION:="${_BUILD_LOCATION}"}
+: ${GIT_REF:="${_GIT_REF}"}
+#+end_src
+
+#+name: load-graph-ontload
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GIT_REF="master"
+#+begin_src bash :noweb yes :tangle ./bin/load-graph-ontload
+<<*vars-load-graph-ontload>>
 ontload graph \
 --org SciCrunch  ${IFS# github organization} \
 NIF-Ontology     ${IFS# repo name} \
@@ -399,29 +425,76 @@ NIF              ${IFS# pattern for remote base (e.g. http://) to swap for local
                    NIF automatically expands to http://ontology.neuinfo.org/NIF} \
 --zip-location ${ZIP_LOCATION}  ${IFS# output folder where the loaded graph zip will be exported} \
 --git-local ${GIT_LOCATION}     ${IFS# location where git repo will be cloned} \
---branch dev                    ${IFS# git ref (branch, commit, etc.) from which to build} \
---graphload-config ${PATH_GRAPHLOAD}  ${IFS# path to the graphload config
-                                        (only graphload.yaml.template needs to exist)} \
+--branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
+--graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
+--graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
 #+end_src
 
 If loading fails, then you probably need to patch something in which case you will
 need the following commands. See an example setup in [[../nifstd/patches/][nifstd/patches]].
 If =--patch= is enabled and the patch config cannot be found you will get an error.
 
-#+name: load-graph-patch
+#+name: load-graph-ontload-patch
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+begin_src bash :noweb yes :tangle ./bin/load-graph-patch
-<<load-graph-ontology-base>>
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GIT_REF="master"
+#+begin_src bash :noweb yes :tangle ./bin/load-graph-ontload-patch
+<<load-graph-ontload>>
 --patch                      ${IFS# do apply patches} \
 --patch-config patches.yaml  ${IFS# path to patche files}
 #+end_src
+***** load nifstd
+Set =build-location-nifstd= here
+#+name: build-location-nifstd
+: /tmp/scigraph-build/nifstd
 
-***** nifstd-tools only
+#+name: path-ontologies-nifstd
+: ~/git/pyontutils/nifstd/scigraph/ontologies-nifstd.yaml
+
+#+name: git-ref-nifstd
+: master
+
+#+name: load-graph-nifstd
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _PATH_ONTOLOGIES=path-ontologies-nifstd()
+#+header: :var _BUILD_LOCATION=build-location-nifstd()
+#+header: :var _GIT_REF=git-ref-nifstd()
+#+BEGIN_SRC bash :noweb yes :tangle ./bin/load-graph-nifstd
+<<load-graph-ontload>>
+#+end_src
+***** load sparc
+Set =build-location-sparc= here
+#+name: build-location-sparc
+: /tmp/scigraph-build/sparc
+
+=path-ontologies-sparc=
+#+name: path-ontologies-sparc
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
+
+#+name: git-ref-sparc
+: dev
+
+#+NAME: load-graph-sparc
+#+header: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _PATH_ONTOLOGIES=path-ontologies-sparc()
+#+header: :var _BUILD_LOCATION=build-location-sparc()
+#+header: :var _GIT_REF=git-ref-sparc()
+#+begin_src bash :tangle ./bin/load-graph-sparc
+<<load-graph-ontload>>
+#+end_src
+**** nifstd-tools only
 When loading using nifstd-tools without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[build-scigraph-git][build-scigraph-git]].
 
 #+name: load-graph-scigraph-git
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GIT_REF="master"
 #+begin_src bash :noweb yes :tangle ./bin/load-graph-scigraph-git
 <<load-graph-ontology-base>>
 --build-scigraph \
@@ -430,37 +503,58 @@ to use the version of SciGraph built from git in [[build-scigraph-git][build-sci
 #+end_src
 
 *** Deploy
-**** generic
+**** common
 #+name: localhost-deploy-command
 #+begin_src bash :eval never :exports code
 cp ${ZIPPATH} ${RUNTIME_LOCATION};
 pushd ${RUNTIME_LOCATION};
 unzip ${ZIPNAME};
-unlink ${GRAPH_FOLDER_NAME};
-ln -sT ${STAMPED} ${GRAPH_FOLDER_NAME};
+unlink ${FOLDER_NAME_GRAPH};
+ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH};
 popd
 #+end_src
 
+# ((((((
+#+name: *vars-deploy-graph
+#+begin_src bash
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --build-location)    local BUILD_LOCATION="${2}"; shift; shift ;;
+    --graph-folder-name) local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
+    --server)            local SERVER="${2}"; shift; shift ;;
+    --svc-user)          local SVC_USER="${2}"; shift; shift ;;
+    --runtime-location)  local RUNTIME_LOCATION="${2}"; shift; shift ;;
+    *) POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
+: ${FOLDER_NAME_GRAPH:="${_FOLDER_NAME_GRAPH}"}
+
+: ${SERVER:="${_SERVER}"}
+: ${RUNTIME_LOCATION:="${_RUNTIME_LOCATION}"}
+: ${SVC_USER:="${_SVC_USER}"}
+
+LATEST="${BUILD_LOCATION}/LATEST"
+ZIPNAME=$(readlink "${LATEST}")
+STAMPED="${ZIPNAME//.zip/}"
+ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
+echo $FOLDER_NAME_GRAPH $STAMPED $ZIPNAME $ZIPPATH
+#+end_src
+
 #+name: deploy-graph
-#+header: :noweb yes :eval never :results output
+#+header: :eval never :results output
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _SERVER="localhost"
 #+header: :var _RUNTIME_LOCATION="/var/lib/scigraph"
 #+header: :var _SVC_USER="scigraph"
 #+header: :var _BUILD_LOCATION=build-location-graph()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph()
-#+begin_src bash :tangle ./bin/deploy-graph
-: ${SERVER:="${_SERVER}"}
-: ${RUNTIME_LOCATION:="${_RUNTIME_LOCATION}"}
-: ${SVC_USER:="${_SVC_USER}"}
-
-: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
-: ${GRAPH_FOLDER_NAME:="${_GRAPH_FOLDER_NAME}"}
-LATEST="${BUILD_LOCATION}/LATEST"
-ZIPNAME=$(readlink "${LATEST}")
-STAMPED="${ZIPNAME//.zip/}"
-ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
-echo $GRAPH_FOLDER_NAME $STAMPED $ZIPNAME $ZIPPATH
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph()
+#+begin_src bash :noweb yes :tangle ./bin/deploy-graph
+<<*vars-deploy-graph>>
 if [ "${SERVER}" = "localhost" ]; then
     CMD="su - ${SVC_USER} -c \"
              <<localhost-deploy-command>>\""
@@ -469,20 +563,33 @@ else
     scigraph_host="${SERVER}-deploy"  # by convention
     scigraph_host_admin=${SERVER}
 
-    scp ${ZIPPATH} ${scigraph_host}:
-    ssh ${scigraph_host} "unzip ${ZIPNAME}"
+    scp ${ZIPPATH} "${scigraph_host}:${RUNTIME_LOCATION}"
+    ssh ${scigraph_host} "pushd \"${RUNTIME_LOCATION}\"; unzip \"${ZIPNAME}\""
 
     ssh ${scigraph_host_admin} "sudo systemctl stop scigraph"
 
-    ssh ${scigraph_host} "unlink /var/lib/scigraph/graph
-                          ln -sT /var/lib/scigraph/${STAMPED} /var/lib/scigraph/graph"
+    ssh ${scigraph_host} "unlink \"${RUNTIME_LOCATION}/graph\"
+                          ln -sT \"${RUNTIME_LOCATION}/${STAMPED}\" \"${RUNTIME_LOCATION}/graph\""
 
     ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
 fi
 #+end_src
+**** dev local
+#+begin_src bash
+./bin/deploy-graph
+#+end_src
+**** nifstd
+**** sparc
+#+begin_src bash
+./bin/deploy-graph --server aws-scigraph
+#+end_src
+**** sparc-data
+#+begin_src bash
+./bin/deploy-graph --server aws-scigraph-data
+#+end_src
 ** Config
 *** Build
-**** generic
+**** common
 #+name: path-services
 : ~/git/pyontutils/nifstd/scigraph/services-base-template.yaml
 
@@ -491,58 +598,113 @@ fi
 # FIXME rename to curies.yaml and be done with it
 
 #+name: build-location-services
-: ./
+: /tmp/scigraph-build/services
+
+#+name: file-stem-services-output
+: services
 
 #+name: folder-name-graph-services
 : graph
 
-# ugh what a mess, the fact that the scigraph yaml parser is a piece of crap doesn't help
-# template, raw, and expanded
-#+name: build-services
-#+HEADER: :noweb yes :eval never :results output
-#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+header: :var _PATH_CYPHER_RESOURCES="./cypher-resources.yaml"
-#+header: :var _PATH_SERVICES=path-services()
-#+header: :var _PATH_CURIES=path-curies()
-#+header: :var _BUILD_LOCATION=build-location-services()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services()
-#+header: :var _SVC_HOST="localhost"
-#+header: :var _SVC_PORT=9000
-#+begin_src bash :tangle ./bin/build-services
+# (((((((((
+#+name: *vars-build-services
+#+begin_src bash :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --build-location)        local BUILD_LOCATION="${2}"; shift; shift ;;
+    --folder-name-graph)     local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
+    --path-services)         local PATH_SERVICES="${2}"; shift; shift ;;
+    --path-cypher-resources) local PATH_CYPHER_RESOURCES="${2}"; shift; shift ;;
+    --path-curies)           local PATH_CURIES="${2}"; shift; shift ;;
+    --file-stem)             local FILE_STEM="${2}"; shift; shift ;;
+    --svc-host)              local SVC_HOST="${2}"; shift; shift ;;
+    --svc-port)              local SVC_PORT="${2}"; shift; shift ;;
+    *) POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+# FIXME I think we have one too many levels here use noweb for defaults instead?
+: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
+: ${FOLDER_NAME_GRAPH:="${_FOLDER_NAME_GRAPH}"}
 : ${PATH_SERVICES:="$(eval echo ${_PATH_SERVICES})"}
 : ${PATH_CYPHER_RESOURCES:="$(eval echo ${_PATH_CYPHER_RESOURCES})"}
 : ${PATH_CURIES:="$(eval echo ${_PATH_CURIES})"}
-: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
-: ${GRAPH_FOLDER_NAME:="${_GRAPH_FOLDER_NAME}"}
+: ${FILE_STEM="${_FILE_STEM}"}
 : ${SVC_HOST:="${_SVC_HOST}"}
 : ${SVC_PORT:="${_SVC_PORT}"}
 URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
 URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
 URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
-SERVICES_GRAPH_PATH="/var/lib/scigraph/${GRAPH_FOLDER_NAME}"
+SERVICES_GRAPH_PATH="/var/lib/scigraph/${FOLDER_NAME_GRAPH}"  # FIXME hardcoded assumption
+YAML=${FILE_STEM}-${DT}.yaml.raw
+YAML_RAW=${FILE_STEM}.yaml
 DT=$(date +%Y%m%dT%H%M%S)
-cat "${PATH_SERVICES}" > services-${DT}.yaml.raw
-cat "${PATH_CURIES}" | sed 's/^/    /' >> services-${DT}.yaml.raw
-cat "${PATH_CYPHER_RESOURCES}" >> services-${DT}.yaml.raw
-echo "# services-${DT}.yaml.raw" > services.yaml  # FIXME doesn't quite work with my gentoo setup
+#+end_src
+# ugh what a mess, the fact that the scigraph yaml parser is a piece of crap doesn't help
+# template, raw, and expanded
+#+name: build-services
+#+header: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_CYPHER_RESOURCES="./cypher-resources.yaml"
+#+header: :var _PATH_SERVICES=path-services()
+#+header: :var _PATH_CURIES=path-curies()
+#+header: :var _FILE_STEM=file-stem-services-output()
+#+header: :var _BUILD_LOCATION=build-location-services()
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph-services()
+#+header: :var _SVC_HOST="localhost"
+#+header: :var _SVC_PORT=9000
+#+begin_src bash :tangle ./bin/build-services
+<<*vars-build-services>>
+# make raw
+cat "${PATH_SERVICES}" > ${YAML_RAW}
+cat "${PATH_CURIES}" | sed 's/^/    /' >> ${YAML_RAW}
+cat "${PATH_CYPHER_RESOURCES}" >> ${YAML_RAW}
+
+# make services header
+echo "# ${YAML_RAW}" > ${YAML}
+
+# make services
 yq -Y ".graphConfiguration.location = \"${SERVICES_GRAPH_PATH}\" |
 .serviceMetadata.view.url = \"${URL_VIEW}\" |
 .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
-" services-${DT}.yaml.raw >> services.yaml
+" ${YAML_RAW} >> ${YAML}
+#+end_src
+**** nifstd
+#+name: cypher-resources-nifstd
+: ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
+
+#+name: build-services-nifstd
+#+header: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_CYPHER_RESOURCES=cypher-resources-nifstd()
+#+header: :var _PATH_SERVICES=path-services()
+#+header: :var _PATH_CURIES=path-curies()
+#+header: :var _BUILD_LOCATION=build-location-services()
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph-services()
+#+header: :var _SVC_HOST="localhost"
+#+header: :var _SVC_PORT=9000
+#+begin_src bash :tangle ./bin/build-services-nifstd
+<<build-services>>
 #+end_src
 **** sparc
 #+name: cypher-resources-sparc
 : ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
 
+#+name: host-services-sparc
+: scigraph.scicrunch.io
+
 #+name: build-services-sparc
-#+HEADER: :noweb yes :eval never :results output
+#+header: :noweb yes :eval never :results output
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_CYPHER_RESOURCES=cypher-resources-sparc()
 #+header: :var _PATH_SERVICES=path-services()
 #+header: :var _PATH_CURIES=path-curies()
 #+header: :var _BUILD_LOCATION=build-location-services()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services()
-#+header: :var _SVC_HOST="localhost"
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph-services()
+#+header: :var _SVC_HOST=host-services-sparc()
 #+header: :var _SVC_PORT=9000
 #+begin_src bash :tangle ./bin/build-services-sparc
 <<build-services>>
@@ -550,19 +712,26 @@ yq -Y ".graphConfiguration.location = \"${SERVICES_GRAPH_PATH}\" |
 **** TODO sparc data
 #+name: cypher-resources-sparc-data
 : ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
+# using the line below without a leading colon works, but it expands
+# in emacs, which has a chance of breaking the ability to use the script
+# as a user other than the one that tangled the file
+# [[file:~/git/sparc-curation/resources/scigraph/cypher-resources.yaml]]
 
 #+name: folder-name-graph-services-sparc-data
 : sparc-data
 
-#+name: build-services-sparc
-#+HEADER: :noweb yes :eval never :results output
+#+name: host-services-sparc-data
+: sparc-data.scicrunch.io
+
+#+name: build-services-sparc-data
+#+header: :noweb yes :eval never :results output
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_CYPHER_RESOURCES=cypher-resources-sparc-data()
 #+header: :var _PATH_SERVICES=path-services()
 #+header: :var _PATH_CURIES=path-curies()
 #+header: :var _BUILD_LOCATION=build-location-services()
-#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services-sparc-data()
-#+header: :var _SVC_HOST="localhost"
+#+header: :var _FOLDER_NAME_GRAPH=folder-name-graph-services-sparc-data()
+#+header: :var _SVC_HOST=host-services-sparc-data()
 #+header: :var _SVC_PORT=9000
 #+begin_src bash :tangle ./bin/build-services-sparc-data
 <<build-services>>
@@ -578,24 +747,24 @@ rsync {services.yaml,$(head -n 1 services.yaml | cut -b2-)} scigraph-host-deploy
 #+end_src
 
 #+NAME: test-scigraph-host
-#+HEADER: :results none
+#+header: :results none
 #+begin_src bash :var SERVER="localhost" :var PORT=9000
 ontutils scigraph-stress --scigraph-api http://${SERVER}:${PORT}/scigraph
 #+end_src
+**** asdf
 **** Gentoo
 # TODO ob-async ?
 #+NAME: restart-services-gentoo
-#+HEADER: :async t
+#+header: :async t
 #+begin_src bash :dir /ssh:hostname|su:root@hostname:
 /etc/init.d/scigraph-services restart
 #+end_src
 
 #+CALL: restart-services-gentoo() :dir /su:root@localhost: :eval never
 #+CALL: test-scigraph-host() :var SERVER="localhost" :eval never
-
 **** Amazon Linux 2
 #+NAME: restart-services-aws
-#+HEADER: :async t
+#+header: :async t
 #+begin_src bash :dir /ssh:hostname|sudo:hostname:
 systemctl restart scigraph
 journalctl -u scigraph.service -f | head -n 60

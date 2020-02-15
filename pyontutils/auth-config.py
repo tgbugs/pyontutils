@@ -40,11 +40,7 @@
   'scigraph-api-key': {'environment-variables': 'SCICRUNCH_API_KEY SCIGRAPH_API_KEY'},
 
   # scigraph build
-  'scigraph-graphload': '../nifstd/scigraph/graphload.yaml',
-  'scigraph-java': '../nifstd/scigraph/scigraph-services.conf',
-  'scigraph-services': '../nifstd/scigraph/services.yaml',
-  'scigraph-start': '../nifstd/scigraph/start.sh',
-  'scigraph-stop': '../nifstd/scigraph/stop.sh',
-  'scigraph-systemd': '../nifstd/scigraph/scigraph-services.service',
+  'scigraph-graphload': ['../nifstd/scigraph/graphload-base-template.yaml',],
+  'scigraph-services': ['../nifstd/scigraph/services-base-template.yaml',],
   'zip-location': '/tmp'}
 }
