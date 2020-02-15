@@ -1,0 +1,65 @@
+graphConfiguration:
+    location: /dev/null
+    neo4jConfig:
+      dump_configuration : true
+      dbms.pagecache.memory : 4G
+    indexedNodeProperties:
+      - label
+      - synonym
+      - curie
+      - acronym
+      - abbreviation
+      - category
+
+    exactNodeProperties:
+      - label
+      - synonym
+      - acronym
+      - abbreviation
+
+categories:
+    http://purl.obolibrary.org/obo/NCBITaxon_1 : organism
+    http://purl.obolibrary.org/obo/OBI_0100026 : organism
+    http://purl.obolibrary.org/obo/DOID_4 : disease
+    http://purl.obolibrary.org/obo/UBERON_0001062 : anatomical entity
+    http://purl.obolibrary.org/obo/CHEBI_23367 : molecular entity
+    #http://purl.obolibrary.org/obo/ERO_0000007 : technique
+    http://purl.obolibrary.org/obo/GO_0005623 : cell
+    http://uri.neuinfo.org/nif/nifstd/sao1813327414 : cell
+    http://purl.obolibrary.org/obo/GO_0008150 : biological process
+    http://purl.obolibrary.org/obo/GO_0005575 : subcellular entity
+    http://purl.obolibrary.org/obo/PATO_0000001 : quality
+    http://uri.neuinfo.org/nif/nifstd/nlx_63400 : Resource
+    http://uri.neuinfo.org/nif/nifstd/nlx_152328 : Resource
+    http://uri.neuinfo.org/nif/nifstd/birnlex_2085 : Institution
+    http://purl.obolibrary.org/obo/SO_0000704 : gene
+    http://purl.obolibrary.org/obo/SO_0000110 : sequence feature
+
+mappedProperties:
+  - name: label
+    properties:
+    - http://www.w3.org/2000/01/rdf-schema#label
+  - name: synonym
+    properties:
+    - http://www.w3.org/2004/02/skos/core#altLabel
+    - http://www.w3.org/2004/02/skos/core#prefLabel
+    - http://www.geneontology.org/formats/oboInOwl#hasExactSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym
+    - http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym
+    - http://purl.obolibrary.org/obo/go#systematic_synonym
+    - http://uri.neuinfo.org/nif/nifstd/readable/synonym
+    - http://purl.org/sig/ont/fma/synonym
+    - http://purl.org/sig/ont/fma/non-English_equivalent
+    - http://purl.org/sig/ont/fma/preferred_name
+  - name: acronym
+    properties:
+    - http://uri.neuinfo.org/nif/nifstd/readable/acronym
+  - name: abbreviation
+    properties:
+    - http://uri.neuinfo.org/nif/nifstd/readable/abbrev
+  - name: definition
+    properties:
+    - http://purl.obolibrary.org/obo/IAO_0000115
+    - http://www.w3.org/2004/02/skos/core#definition
+    - http://purl.org/sig/ont/fma/definition
