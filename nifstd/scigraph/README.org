@@ -20,6 +20,18 @@ emacs --batch \
       --load ob-shell \
       --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
 #+end_src
+* Workflows
+** ontology prod
+#+call: something() ...
+** ontology sparc
+#+call: something() ...
+*** config
+[[file:/ssh:aws-scigraph-deploy:services.yaml]]
+** data
+interlex build
+apinatomy build
+*** config
+[[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
 * Setup
 :properties:
 :visibility: folded
@@ -267,29 +279,25 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
 *** Build
 **** generic
-Set =build-location= here
-#+NAME: build-location
+Set =build-location-graph= here
+#+NAME: build-location-graph
 : /tmp/scigraph-build
-
-Set =graph-folder-name= here
-#+name: graph-folder-name
-: sparc-data
 
 Set =path-graphload-template= here
 #+name: path-graphload-template
 : ~/git/pyontutils/nifstd/scigraph/graphload-base-template.yaml
 
-=path-sparc-data-ontologies=
-#+name: path-sparc-data-ontologies
-: ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
+#+name: folder-name-graph
+: graph
 
-#+NAME: build
-#+HEADER: :eval never :noweb yes :tangle ./build :tangle-mode (identity #o755)
-#+HEADER: :shebang "#!/usr/bin/env bash"
+#+name: load-graph
+#+header: :noweb yes :eval never
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_GRAPHLOAD=path-graphload-template()
-#+header: :var _PATH_ONTOLOGIES_SECTION=path-sparc-data-ontologies()
-#+header: :var _BUILD_LOCATION=build-location() _GRAPH_FOLDER_NAME=graph-folder-name()
-#+begin_src bash :eval never :results output
+#+header: :var _PATH_ONTOLOGIES_SECTION=""
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph()
+#+begin_src bash :tangle ./bin/load-graph
 : ${PATH_GRAPHLOAD:="$(eval echo ${_PATH_GRAPHLOAD})"}
 : ${PATH_ONTOLOGIES_SECTION:="$(eval echo ${_PATH_ONTOLOGIES_SECTION})"}
 : ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
@@ -303,6 +311,11 @@ ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
 LATEST="${BUILD_LOCATION}/LATEST"
 echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES_SECTION
 echo $LOAD_GRAPH_PATH $GRAPH_FOLDER_NAME $STAMPED $ZIPNAME $ZIPPATH
+
+if [[ -z "${PATH_ONTOLOGIES_SECTION}" ]]; then
+    echo no ontologies section specified
+    exit 1
+fi
 
 if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
     rm "${LOAD_GRAPH_PATH}" -r
@@ -322,19 +335,60 @@ unlink "${LATEST}"
 ln -sT "${ZIPNAME}" "${LATEST}"
 popd
 #+end_src
+***** build
+***** build sparc
+Set =graph-folder-sparc= here
+#+name: graph-folder-sparc
+: sparc
+
+=path-ontologies-sparc=
+#+name: path-ontologies-sparc
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
+
+#+NAME: load-graph-sparc
+#+HEADER: :noweb yes :eval never :results output
+#+HEADER: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _PATH_ONTOLOGIES_SECTION=path-ontologies-sparc()
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GRAPH_FOLDER_NAME=graph-folder-sparc()
+#+begin_src bash :tangle ./bin/load-graph-sparc
+<<load-graph>>
+#+end_src
+***** build sparc data
+Set =folder-name-graph-sparc-data= here
+#+name: folder-name-graph-sparc-data
+: sparc-data
+
+=path-ontologies-sparc-data=
+#+name: path-ontologies-sparc-data
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
+
+#+NAME: load-graph-sparc-data
+#+HEADER: :noweb yes :eval never :results output
+#+HEADER: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _PATH_ONTOLOGIES_SECTION=path-ontologies-sparc-data()
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-sparc-data()
+#+begin_src bash :tangle ./bin/load-graph-sparc-data
+<<load-graph>>
+#+end_src
+
 **** ontology
 Set =path-graphload= here
 #+name: path-graphload
 : ./graphload.yaml
 
-Set =ontology-build-location= here
-#+name: ontology-build-location
+Set =build-location-ontology= here
+#+name: build-location-ontology
 : ./
 
-#+name: load-graph-common
+#+name: load-graph-ontology-base
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+header: :var _PATH_GRAPHLOAD=path-graphload() _BUILD_LOCATION=ontology-build-location()
-#+BEGIN_SRC bash :tangle ./bin/load-graph-common 
+#+header: :var _PATH_GRAPHLOAD=path-graphload()
+#+header: :var _BUILD_LOCATION=build-location-ontology()
+#+BEGIN_SRC bash :tangle ./bin/load-graph-ontology-base 
 : ${PATH_GRAPHLOAD:="${_PATH_GRAPHLOAD}"}
 : ${ZIP_LOCATION:="${_BUILD_LOCATION}"}
 : ${GIT_LOCATION:="${_BUILD_LOCATION}"}
@@ -357,7 +411,7 @@ If =--patch= is enabled and the patch config cannot be found you will get an err
 #+name: load-graph-patch
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/load-graph-patch
-<<load-graph-common>>
+<<load-graph-ontology-base>>
 --patch                      ${IFS# do apply patches} \
 --patch-config patches.yaml  ${IFS# path to patche files}
 #+end_src
@@ -369,13 +423,14 @@ to use the version of SciGraph built from git in [[build-scigraph-git][build-sci
 #+name: load-graph-scigraph-git
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/load-graph-scigraph-git
-<<load-graph-common>>
+<<load-graph-ontology-base>>
 --build-scigraph \
 --scigraph-org SciGraph \
 --scigraph-branch master
 #+end_src
 
 *** Deploy
+**** generic
 #+name: localhost-deploy-command
 #+begin_src bash :eval never :exports code
 cp ${ZIPPATH} ${RUNTIME_LOCATION};
@@ -386,12 +441,15 @@ ln -sT ${STAMPED} ${GRAPH_FOLDER_NAME};
 popd
 #+end_src
 
-#+NAME: deploy
-#+HEADER: :eval never :noweb yes :tangle ./deploy :tangle-mode (identity #o755)
-#+HEADER: :shebang "#!/usr/bin/env bash"
-#+HEADER: :var _SERVER="localhost" _RUNTIME_LOCATION="/var/lib/scigraph" _SVC_USER="scigraph"
-#+header: :var _BUILD_LOCATION=build-location() _GRAPH_FOLDER_NAME=graph-folder-name()
-#+begin_src bash :eval never :results output
+#+name: deploy-graph
+#+header: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _SERVER="localhost"
+#+header: :var _RUNTIME_LOCATION="/var/lib/scigraph"
+#+header: :var _SVC_USER="scigraph"
+#+header: :var _BUILD_LOCATION=build-location-graph()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph()
+#+begin_src bash :tangle ./bin/deploy-graph
 : ${SERVER:="${_SERVER}"}
 : ${RUNTIME_LOCATION:="${_RUNTIME_LOCATION}"}
 : ${SVC_USER:="${_SVC_USER}"}
@@ -424,6 +482,7 @@ fi
 #+end_src
 ** Config
 *** Build
+**** generic
 #+name: path-services
 : ~/git/pyontutils/nifstd/scigraph/services-base-template.yaml
 
@@ -431,20 +490,24 @@ fi
 : ~/git/pyontutils/nifstd/scigraph/curie_map.yaml
 # FIXME rename to curies.yaml and be done with it
 
-#+name: services-build-location
+#+name: build-location-services
 : ./
 
-#+name: services-graph-folder-name
+#+name: folder-name-graph-services
 : graph
 
 # ugh what a mess, the fact that the scigraph yaml parser is a piece of crap doesn't help
 # template, raw, and expanded
 #+name: build-services
+#+HEADER: :noweb yes :eval never :results output
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+header: :var _PATH_CYPHER_RESOURCES="./cypher-resources.yaml"
-#+header: :var _PATH_SERVICES=path-services() _PATH_CURIES=path-curies()
-#+header: :var _BUILD_LOCATION=services-build-location() _GRAPH_FOLDER_NAME=services-graph-folder-name()
-#+header: :var _SVC_HOST="localhost" _SVC_PORT=9000
+#+header: :var _PATH_SERVICES=path-services()
+#+header: :var _PATH_CURIES=path-curies()
+#+header: :var _BUILD_LOCATION=build-location-services()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services()
+#+header: :var _SVC_HOST="localhost"
+#+header: :var _SVC_PORT=9000
 #+begin_src bash :tangle ./bin/build-services
 : ${PATH_SERVICES:="$(eval echo ${_PATH_SERVICES})"}
 : ${PATH_CYPHER_RESOURCES:="$(eval echo ${_PATH_CYPHER_RESOURCES})"}
@@ -467,7 +530,43 @@ yq -Y ".graphConfiguration.location = \"${SERVICES_GRAPH_PATH}\" |
 .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
 " services-${DT}.yaml.raw >> services.yaml
 #+end_src
+**** sparc
+#+name: cypher-resources-sparc
+: ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
 
+#+name: build-services-sparc
+#+HEADER: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_CYPHER_RESOURCES=cypher-resources-sparc()
+#+header: :var _PATH_SERVICES=path-services()
+#+header: :var _PATH_CURIES=path-curies()
+#+header: :var _BUILD_LOCATION=build-location-services()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services()
+#+header: :var _SVC_HOST="localhost"
+#+header: :var _SVC_PORT=9000
+#+begin_src bash :tangle ./bin/build-services-sparc
+<<build-services>>
+#+end_src
+**** TODO sparc data
+#+name: cypher-resources-sparc-data
+: ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
+
+#+name: folder-name-graph-services-sparc-data
+: sparc-data
+
+#+name: build-services-sparc
+#+HEADER: :noweb yes :eval never :results output
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+header: :var _PATH_CYPHER_RESOURCES=cypher-resources-sparc-data()
+#+header: :var _PATH_SERVICES=path-services()
+#+header: :var _PATH_CURIES=path-curies()
+#+header: :var _BUILD_LOCATION=build-location-services()
+#+header: :var _GRAPH_FOLDER_NAME=folder-name-graph-services-sparc-data()
+#+header: :var _SVC_HOST="localhost"
+#+header: :var _SVC_PORT=9000
+#+begin_src bash :tangle ./bin/build-services-sparc-data
+<<build-services>>
+#+end_src
 *** Deploy
 # TODO
 Once =services.yaml= has been created scp the raw and expanded configs
@@ -504,18 +603,6 @@ journalctl -u scigraph.service -f | head -n 60
 
 # #+CALL: restart-services-aws() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
 # #+CALL: test-scigraph-host() :var SERVER="scigraph.scicrunch.io" :eval never
-* Workflows
-** ontology prod
-#+call: something() ...
-** ontology sparc
-#+call: something() ...
-*** config
-[[file:/ssh:aws-scigraph-deploy:services.yaml]]
-** data
-interlex build
-apinatomy build
-*** config
-[[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
 * Per operating system
 :properties:
 :visibility: folded
