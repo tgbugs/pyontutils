@@ -255,6 +255,63 @@ customize and put it in =/etc/systemd/system/scigraph.service.d/scigraph.conf=
 https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
 *** Build
+**** generic
+Set =build-location= here
+#+NAME: build-location
+: /tmp/scigraph-build
+
+Set =graph-folder-name= here
+#+name: graph-folder-name
+: sparc-data
+
+Set =path-graphload-template= here
+#+name: path-graphload-template
+: ~/git/pyontutils/nifstd/scigraph/graphload-base-template.yaml
+
+=path-sparc-data-ontologies=
+#+name: path-sparc-data-ontologies
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
+
+#+NAME: build
+#+HEADER: :eval never :noweb yes :tangle ./build :tangle-mode (identity #o755)
+#+HEADER: :shebang "#!/usr/bin/env bash"
+#+header: :var _PATH_GRAPHLOAD=path-graphload-template()
+#+header: :var _PATH_ONTOLOGIES_SECTION=path-sparc-data-ontologies()
+#+header: :var _BUILD_LOCATION=build-location() _GRAPH_FOLDER_NAME=graph-folder-name()
+#+begin_src bash :eval never :results output
+: ${PATH_GRAPHLOAD:="$(eval echo ${_PATH_GRAPHLOAD})"}
+: ${PATH_ONTOLOGIES_SECTION:="$(eval echo ${_PATH_ONTOLOGIES_SECTION})"}
+: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
+: ${GRAPH_FOLDER_NAME:="${_GRAPH_FOLDER_NAME}"}
+LOAD_GRAPH_PATH="${BUILD_LOCATION}/${GRAPH_FOLDER_NAME}"
+PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
+PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
+STAMPED="${GRAPH_FOLDER_NAME}-graph-$(date +%Y%m%dT%H%M%S)"
+ZIPNAME="${STAMPED}.zip"
+ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
+LATEST="${BUILD_LOCATION}/LATEST"
+echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES_SECTION
+echo $LOAD_GRAPH_PATH $GRAPH_FOLDER_NAME $STAMPED $ZIPNAME $ZIPPATH
+
+if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
+    rm "${LOAD_GRAPH_PATH}" -r
+fi
+mkdir -p "${LOAD_GRAPH_PATH}"
+cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES_SECTION}" > "${PATH_CONFIG_YAML_RAW}"
+yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
+      "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
+scigraph-load -c "${PATH_CONFIG_YAML}"
+
+pushd "${BUILD_LOCATION}"
+# mv prevents accidentally deploying the same graph twice
+# but use cp -r for development to avoid continual rebuild
+cp -r ${GRAPH_FOLDER_NAME} ${STAMPED}
+zip -r ${ZIPNAME} ${STAMPED}
+unlink "${LATEST}"
+ln -sT "${ZIPNAME}" "${LATEST}"
+popd
+#+end_src
+**** ontology
 Set =path-graphload= here
 #+name: path-graphload
 : ./graphload.yaml
@@ -294,7 +351,7 @@ If =--patch= is enabled and the patch config cannot be found you will get an err
 --patch-config patches.yaml  ${IFS# path to patche files}
 #+end_src
 
-**** nifstd-tools only
+***** nifstd-tools only
 When loading using nifstd-tools without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[build-scigraph-git][build-scigraph-git]].
 
@@ -308,9 +365,52 @@ to use the version of SciGraph built from git in [[build-scigraph-git][build-sci
 #+end_src
 
 *** Deploy
-#+begin_src bash
+#+name: localhost-deploy-command
+#+begin_src bash :eval never :exports code
+cp ${ZIPPATH} ${RUNTIME_LOCATION};
+pushd ${RUNTIME_LOCATION};
+unzip ${ZIPNAME};
+unlink ${GRAPH_FOLDER_NAME};
+ln -sT ${STAMPED} ${GRAPH_FOLDER_NAME};
+popd
 #+end_src
 
+#+NAME: deploy
+#+HEADER: :eval never :noweb yes :tangle ./deploy :tangle-mode (identity #o755)
+#+HEADER: :shebang "#!/usr/bin/env bash"
+#+HEADER: :var _SERVER="localhost" _RUNTIME_LOCATION="/var/lib/scigraph" _SVC_USER="scigraph"
+#+header: :var _BUILD_LOCATION=build-location() _GRAPH_FOLDER_NAME=graph-folder-name()
+#+begin_src bash :eval never :results output
+: ${SERVER:="${_SERVER}"}
+: ${RUNTIME_LOCATION:="${_RUNTIME_LOCATION}"}
+: ${SVC_USER:="${_SVC_USER}"}
+
+: ${BUILD_LOCATION:="${_BUILD_LOCATION}"}
+: ${GRAPH_FOLDER_NAME:="${_GRAPH_FOLDER_NAME}"}
+LATEST="${BUILD_LOCATION}/LATEST"
+ZIPNAME=$(readlink "${LATEST}")
+STAMPED="${ZIPNAME//.zip/}"
+ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
+echo $GRAPH_FOLDER_NAME $STAMPED $ZIPNAME $ZIPPATH
+if [ "${SERVER}" = "localhost" ]; then
+    CMD="su - ${SVC_USER} -c \"
+             <<localhost-deploy-command>>\""
+    su - root -c "${CMD}"
+else
+    scigraph_host="${SERVER}-deploy"  # by convention
+    scigraph_host_admin=${SERVER}
+
+    scp ${ZIPPATH} ${scigraph_host}:
+    ssh ${scigraph_host} "unzip ${ZIPNAME}"
+
+    ssh ${scigraph_host_admin} "sudo systemctl stop scigraph"
+
+    ssh ${scigraph_host} "unlink /var/lib/scigraph/graph
+                          ln -sT /var/lib/scigraph/${STAMPED} /var/lib/scigraph/graph"
+
+    ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
+fi
+#+end_src
 ** Config
 *** Build
 #+name: path-services
