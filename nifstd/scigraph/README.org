@@ -75,14 +75,14 @@ of all relevant variables for operation on RHEL-like systems.
 See the [[https://github.com/tgbugs/pyontutils/blob/master/nifstd/scigraph/scigraph.spec][spec file]]
 for details.
 
-#+NAME: dir-tramp-sudo
+#+name: dir-tramp-sudo
 #+header: :noweb yes :results none
 #+begin_src emacs-lisp :exports none
 (defun :dir-tramp-sudo (ssh-config-hostname)
   (format "/ssh:%s|sudo:%s:" ssh-config-hostname ssh-config-hostname))
 #+end_src
 
-#+NAME: aws-block
+#+name: aws-block
 #+begin_src bash :dir /ssh:hostname|sudo:hostname:
 yum install -y \
 python3 \
@@ -104,6 +104,16 @@ yq  # yq is usually only needed on config build systems
 This setup should be completed on the build host or on the ops host
 that talks to both the build host and the services host. Currently the
 build host and ops host are conflated.
+** git repos
+There are currently still a couple of repos that are needed for these workflows.
+Most are needed configuration files, but pyontutils is needed for this README as well.
+#+begin_src bash :eval never
+pushd ~/git
+git clone https://github.com/tgbugs/pyontutils.git
+git clone https://github.com/tgbugs/tgbugs-overlay.git
+git clone https://github.com/SciCrunch/sparc-curation.git
+popd
+#+end_src
 ** ssh config
 Set =ip-aws-scigraph= here
 #+name: ip-aws-scigraph
@@ -142,7 +152,7 @@ Set =user-jump-host= here
 : nobody
 
 Tangle this block after setting the requisite values above.
-#+begin_src conf :noweb yes :tangle ~/.ssh/config.scigraph.example
+#+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
 Host *
 ServerAliveInterval 60
@@ -202,6 +212,7 @@ chmod 0700 ~/.ssh_tmp
 :header-args: :mkdirp yes
 :END:
 
+Set =path-scigraph-functions= here
 #+name: path-scigraph-functions
 : ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh
 
@@ -215,22 +226,45 @@ source "$(eval echo <<path-scigraph-functions()>>)"
 :end:
 *** Build
 **** RPM
-#+begin_src sh
+The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
+[file:./scigraph.spec].
+
+To prevent =rmpbuild= from sitting in your home directory add the first line
+below to [[file:~/.rpmmacros]]. If you are building on a system that does not
+have an RPM based package manager then you will need the second bit to prevent
+builds from failing due to missing dependencies.
+# (
+#+name: rpmmacros
+#+BEGIN_SRC rpm-spec
+%_topdir %(echo $HOME)/files/rpmbuild
+
+%__arch_install_post \
+    [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
+    case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
+        echo no qa here
+    # /usr/lib/rpm/check-buildroot
+#+END_SRC
+
+If you have a default rpmbuild setup, and you have the
+
+#+name: run-compile-rpm
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :tangle ./bin/run-compile-rpm
+# link specs and other files so that rpmbuild can find them
 ln -s ~/git/pyontutils/nifstd/scigraph/scigraph.spec ~/files/rpmbuild/SPECS/scigraph.spec
-
 ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/scigraph.service \
-~/files/rpmbuild/SOURCES/scigraph.service
-
+      ~/files/rpmbuild/SOURCES/scigraph.service
 ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/xvfb.service \
-~/files/rpmbuild/SOURCES/xvfb.service
+      ~/files/rpmbuild/SOURCES/xvfb.service
 
+pushd ~/files/rpmbuild
+# build the rpm
 spectool -g -R SPECS/scigraph.spec
-
 rpmbuild -ba --nodeps SPECS/scigraph.spec
 
-scp RPMS/noarch/scigraph-9999-0.noarch.rpm scigraph.scicrunch.io:
-
+# inspect the preinstall script
 rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
+popd
 #+end_src
 
 **** ontload nifstd-tools only
@@ -268,7 +302,7 @@ done
 #+end_src
 #+name: compile-scigraph-git
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 # NOTE --path-zip and --git-local can be anywhere but both should exist
 # they can also be the same folder
 function compile-scigraph-git () {
@@ -285,8 +319,19 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 *** Deploy
 **** RPM
 source 1: [[file:~/git/pyontutils/nifstd/scigraph/README.md::# RPM builds]]
+#+name: rpm-install
 #+begin_src bash
-yum install -y scigraph*.rpm || yum reinstall -y scigraph*.rpm
+yum install -y scigraph*.rpm || \
+yum reinstall -y scigraph*.rpm
+#+end_src
+
+#+name: run-deploy-code-rpm
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-code-rpm
+# TODO backup the old rpm?
+scp ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${scigraph_host_admin}:
+ssh ${scigraph_host_admin} '
+    sudo <<rpm-install>>'
 #+end_src
 
 If you want to have more than one service or have a different name for =services.yaml=
@@ -308,6 +353,7 @@ Set =path-graphload-template= here
 #+name: path-graphload-template
 : ~/git/pyontutils/nifstd/scigraph/graphload-base-template.yaml
 
+Set =folder-name-graph= here
 #+name: folder-name-graph
 : graph
 
@@ -344,7 +390,7 @@ echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 
 #+name: load-graph
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function load-graph () {
     <<*vars-load-graph>>
 
@@ -400,7 +446,7 @@ done
 
 #+name: load-graph-ontload
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function load-graph-ontload () {
     <<*vars-load-graph-ontload>>
     ontload graph \
@@ -421,6 +467,7 @@ If loading fails, then you probably need to patch something in which case you wi
 need the following commands. See an example setup in [[../nifstd/patches/][nifstd/patches]].
 If =--patch= is enabled and the patch config cannot be found you will get an error.
 
+# TODO
 #+name: run-load-graph-ontload-patch
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-patch
@@ -433,6 +480,7 @@ load-graph-ontload \
 When loading using nifstd-tools without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[compile-scigraph-git][compile-scigraph-git]].
 
+# TODO
 #+name: run-load-graph-ontload-scigraph-git
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-scigraph-git
@@ -442,7 +490,6 @@ load-graph-ontload \
 --scigraph-org SciGraph \
 --scigraph-branch master
 #+end_src
-
 *** Deploy
 Set =path-runtime= here
 #+name: path-runtime
@@ -522,7 +569,7 @@ echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 
 #+name: deploy-graph
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function deploy-graph () {
     <<*vars-deploy-graph>>
     echo Will deploy graph to ${SERVER}:${PATH_RUNTIME}
@@ -547,16 +594,20 @@ function deploy-graph () {
 #+end_src
 ** Config
 *** Build
+Set =path-services= here
 #+name: path-services
 : ~/git/pyontutils/nifstd/scigraph/services-base-template.yaml
 
+Set =path-curies= here
 #+name: path-curies
 : ~/git/pyontutils/nifstd/scigraph/curie_map.yaml
 # FIXME rename to curies.yaml and be done with it
 
+Set =path-build-services= here
 #+name: path-build-services
-: /tmp/scigraph-build/services
+: ./
 
+Set =file-stem-services-output= here
 #+name: file-stem-services-output
 : services
 
@@ -601,11 +652,10 @@ YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
 PATH_YAML="${PATH_BUILD}/${YAML}"
 PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
 #+end_src
-# ugh what a mess, the fact that the scigraph yaml parser is a piece of crap doesn't help
-# template, raw, and expanded
+
 #+name: build-services
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function build-services () {
     <<*vars-build-services>>
     # make build location
@@ -690,7 +740,7 @@ echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
 
 #+name: deploy-services
 #+header: :comments noweb
-#+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function deploy-services () {
     # NOTE it is on YOU to make sure you are deploying the right config
     # to the right server, under normal circumstances you should
@@ -716,12 +766,8 @@ function deploy-services () {
     fi
 }
 #+end_src
-
-#+NAME: test-scigraph-host
-#+header: :results none
-#+begin_src bash :var SERVER="localhost" :var PORT=9000
-ontutils scigraph-stress --scigraph-api http://${SERVER}:${PORT}/scigraph
-#+end_src
+** Other processes
+*** Restart services
 **** Gentoo
 # TODO ob-async ?
 #+NAME: restart-services-gentoo
@@ -742,17 +788,28 @@ journalctl -u scigraph.service -f | head -n 60
 
 # #+CALL: restart-services-aws() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
 # #+CALL: test-scigraph-host() :var SERVER="scigraph.scicrunch.io" :eval never
+*** Testing
+#+name: test-scigraph-host
+#+header: :results none
+#+begin_src bash :var SERVER="localhost" :var PORT=9000
+ontutils scigraph-stress --scigraph-api http://${SERVER}:${PORT}/scigraph
+#+end_src
 * Deployments
 ** nifstd
 *** graph
 **** load
+:properties:
+:custom_id: nifstd-graph-load
+:end:
 Set =path-build-nifstd= here
 #+name: path-build-nifstd
 : /tmp/scigraph-build/nifstd
 
+Set =path-ontologies-nifstd= here
 #+name: path-ontologies-nifstd
 : ~/git/pyontutils/nifstd/scigraph/ontologies-nifstd.yaml
 
+Set =git-ref-nifstd= here
 #+name: git-ref-nifstd
 : master
 
@@ -764,13 +821,14 @@ load-graph-ontload \
 --path-build <<path-build-nifstd()>> \
 --folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-nifstd()>> \
---git-ref <<git-ref-nifstd()>>
+--git-ref <<git-ref-nifstd()>> \
 #+end_src
 **** deploy
 **** deploy from CI
 *** services config
 **** build
-#+name: cypher-resources-nifstd
+Set =path-cypher-resources-nifstd= here
+#+name: path-cypher-resources-nifstd
 : ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
 
 #+name: run-build-services-nifstd
@@ -779,7 +837,7 @@ load-graph-ontload \
 <<*source-scigraph-functions>>
 build-services \
 --path-build <<path-build-nifstd()>> \
---path-cypher-resources <<cypher-resources-nifstd()>>
+--path-cypher-resources <<path-cypher-resources-nifstd()>> \
 #+end_src
 **** deploy
 ** sparc
@@ -787,6 +845,9 @@ build-services \
 interlex build
 *** graph
 **** load
+:properties:
+:custom_id: sparc-graph-load
+:end:
 Set =path-build-sparc= here
 #+name: path-build-sparc
 : /tmp/scigraph-build/sparc
@@ -795,6 +856,7 @@ Set =path-ontologies-sparc= here
 #+name: path-ontologies-sparc
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
 
+Set =git-ref-sparc= here
 #+name: git-ref-sparc
 : dev
 
@@ -806,7 +868,7 @@ load-graph-ontload \
 --path-build <<path-build-sparc()>> \
 --folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-sparc()>> \
---git-ref <<git-ref-sparc()>>
+--git-ref <<git-ref-sparc()>> \
 #+end_src
 **** deploy
 #+name: run-deploy-graph-sparc
@@ -820,9 +882,11 @@ deploy-graph \
 **** deploy from CI
 *** services config
 **** build
-#+name: cypher-resources-sparc
+Set =path-cypher-resources-sparc= here
+#+name: path-cypher-resources-sparc
 : ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
 
+Set =host-services-sparc= here
 #+name: host-services-sparc
 : scigraph.scicrunch.io
 
@@ -833,7 +897,7 @@ deploy-graph \
 build-services \
 --path-build <<path-build-sparc()>> \
 --svc-host <<host-services-sparc()>> \
---path-cypher-resources <<cypher-resources-sparc()>>
+--path-cypher-resources <<path-cypher-resources-sparc()>> \
 #+end_src
 **** deploy
 [[file:/ssh:aws-scigraph-deploy:services.yaml]]
@@ -845,20 +909,31 @@ deploy-services \
 --config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph
 #+end_src
+**** build-deploy
+:properties:
+:custom_id: sparc-services-build-deploy
+:end:
+#+name: run-build-deploy-services-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc
+<<run-build-services-sparc>>
+|| exit 1
+<<run-deploy-services-sparc>>
+#+end_src
 ** sparc-data
 *** data
 apinatomy build
 *** graph
 **** load
 Set =path-build-sparc-data= here
-#+NAME: path-build-sparc-data
+#+name: path-build-sparc-data
 : /tmp/scigraph-build/sparc-data
 
 Set =folder-name-graph-sparc-data= here
 #+name: folder-name-graph-sparc-data
 : sparc-data
 
-=path-ontologies-sparc-data=
+Set =path-ontologies-sparc-data= here
 #+name: path-ontologies-sparc-data
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
 
@@ -869,7 +944,7 @@ Set =folder-name-graph-sparc-data= here
 load-graph \
 --path-build <<path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
---path-ontologies <<path-ontologies-sparc-data()>>
+--path-ontologies <<path-ontologies-sparc-data()>> \
 #+end_src
 
 **** deploy
@@ -884,9 +959,11 @@ deploy-graph \
 *** services config
 [[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
 **** build
-#+name: cypher-resources-sparc-data
+Set =path-cypher-resources-sparc-data= here
+#+name: path-cypher-resources-sparc-data
 : ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
 
+Set =host-services-sparc-data= here
 #+name: host-services-sparc-data
 : sparc-data.scicrunch.io
 
@@ -897,7 +974,7 @@ deploy-graph \
 build-services \
 --path-build <<path-build-sparc-data()>> \
 --svc-host <<host-services-sparc-data()>> \
---path-cypher-resources <<cypher-resources-sparc-data()>>
+--path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 #+end_src
 **** deploy
 #+name: run-deploy-services-sparc-data
@@ -909,6 +986,16 @@ deploy-services \
 --server aws-scigraph-data
 #+end_src
 **** build-deploy
+:properties:
+:custom_id: sparc-data-services-build-deploy
+:end:
+#+name: run-build-deploy-services-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc-data
+<<run-build-services-sparc-data>>
+|| exit 1
+<<run-deploy-services-sparc-data>>
+#+end_src
 ** dev local ontology
 *** graph
 **** deploy
@@ -928,6 +1015,7 @@ deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.
 ** dev local sparc-data
 *** graph
 **** deploy
+Set =folder-name-runtime-sparc-data-local= here
 #+name: folder-name-runtime-sparc-data-local
 : sparc-data
 
@@ -941,6 +1029,7 @@ deploy-graph \
 #+end_src
 *** services config
 **** build
+Set =file-stem-sparc-data-local= here
 #+name: file-stem-sparc-data-local
 : services-sparc
 
@@ -950,9 +1039,9 @@ deploy-graph \
 <<*source-scigraph-functions>>
 ./build-services \
 --path-build <<path-build-sparc-data()>> \
---path-cypher-resources <<cypher-resources-sparc-data()>> \
+--path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 --file-stem <<file-stem-sparc-data-local()>> \
---folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
+--folder-name-runtime <<folder-name-runtime-sparc-data-local()>> \
 #+end_src
 **** deploy
 #+name: run-deploy-services-sparc-data-local
