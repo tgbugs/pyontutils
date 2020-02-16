@@ -1051,16 +1051,18 @@ Set =file-stem-sparc-data-local= here
 deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
 #+end_src
 **** build-deploy
-* Per operating system
+* Per operating system :noexport:
 :properties:
 :visibility: folded
 :end:
+# Reminder that, sigh, it is impossible to use #+include: in the current doc build pipeline
+# because org mode cannot include from the current buffer
 ** Gentoo
 *** Setup
 **** Build host
-#+include: "./README.org::#Setup:Build host:Gentoo" :only-contents t
+# #+include: (concat (buffer-file-name) "::#Setup:Build host:Gentoo") :only-contents t
 **** Services host
-#+include: "./README.org::#Setup:Services host:Gentoo" :only-contents t
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:Gentoo") :only-contents t
 *** Code
 **** Build
 **** Deploy
@@ -1073,10 +1075,10 @@ deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-loca
 ** Ubuntu
 *** Setup
 **** Build host
-#+include: "./README.org::#Setup:Build host:Ubuntu" :only-contents t
+# #+include: (concat (buffer-file-name) "::#Setup:Build host:Ubuntu") :only-contents t
 # **** Services host
-# #+include: "./README.org::#Setup:Services host:Ubuntu" :only-contents t
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:Ubuntu") :only-contents t
 ** AWS Linux 2
 *** Setup
 **** Services host
-#+include: "./README.org::#Setup:Services host:AWS Linux 2" :only-contents t
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:AWS Linux 2") :only-contents t
