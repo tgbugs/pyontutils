@@ -254,28 +254,28 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --zip-location)    local ZIP_LOCATION="${2}"; shift; shift ;;
-    --git-location)    local GIT_LOCATION="${2}"; shift; shift ;;
-    --git-ref)         local GIT_REF="${2}"; shift; shift ;;
-    *) POSITIONAL+=("$1"); shift ;;
+    --path-zip) local PATH_ZIP="${2}"; shift; shift ;;
+    --path-git) local PATH_GIT="${2}"; shift; shift ;;
+    --git-ref)  local GIT_REF="${2}"; shift; shift ;;
+    *)          POSITIONAL+=("$1"); shift ;;
 esac
 done
 
-: ${ZIP_LOCATION:=<<build-location-graph()>>}
-: ${GIT_LOCATION:=<<build-location-graph()>>}
+: ${PATH_ZIP:=<<path-build-graph()>>}
+: ${PATH_GIT:=<<path-build-graph()>>}
 : ${GIT_REF:="master"}
 
 #+end_src
 #+name: compile-scigraph-git
 #+header: :comments noweb
 #+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
-# NOTE --zip-location and --git-local can be anywhere but both should exist
+# NOTE --path-zip and --git-local can be anywhere but both should exist
 # they can also be the same folder
 function compile-scigraph-git () {
     <<*vars-compile-scigraph-git>>
     ontload scigraph \
-    --zip-location ${ZIP_LOCATION}  ${IFS# build artifacts will be deposited here} \
-    --git-local ${GIT_LOCATION}     ${IFS# remote repos will be cloned here} \
+    --zip-location ${PATH_ZIP}  ${IFS# build artifacts will be deposited here} \
+    --git-local ${PATH_GIT}     ${IFS# remote repos will be cloned here} \
     --scigraph-org SciGraph \
     --scigraph-branch ${GIT_REF}
 }
@@ -300,8 +300,8 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
 *** Build
 **** scigraph-load
-Set =build-location-graph= here
-#+NAME: build-location-graph
+Set =path-build-graph= here
+#+NAME: path-build-graph
 : /tmp/scigraph-build
 
 Set =path-graphload-template= here
@@ -319,27 +319,27 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --build-location)    local BUILD_LOCATION="${2}"; shift; shift ;;
+    --path-build)        local PATH_BUILD="${2}"; shift; shift ;;
     --folder-name-graph) local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
     --path-graphload)    local PATH_GRAPHLOAD="${2}"; shift; shift ;;
     --path-ontologies)   local PATH_ONTOLOGIES="${2}"; shift; shift ;;
-    *) POSITIONAL+=("$1"); shift ;;
+    *)                   POSITIONAL+=("$1"); shift ;;
 esac
 done
 
 : ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
 : ${PATH_ONTOLOGIES:="./ontologies.yaml"}  # if missing will error
-: ${BUILD_LOCATION:=<<build-location-graph()>>}
+: ${PATH_BUILD:=<<path-build-graph()>>}
 : ${FOLDER_NAME_GRAPH:=<<folder-name-graph()>>}
-LOAD_GRAPH_PATH="${BUILD_LOCATION}/${FOLDER_NAME_GRAPH}"
+LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
 PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
 PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
 STAMPED="${FOLDER_NAME_GRAPH}-graph-$(date +%Y%m%dT%H%M%S)"
-ZIPNAME="${STAMPED}.zip"
-ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"
-LATEST="${BUILD_LOCATION}/LATEST"
+FILE_NAME_ZIP="${STAMPED}.zip"
+PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"
+LATEST="${PATH_BUILD}/LATEST"
 echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES
-echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $ZIPNAME $ZIPPATH
+echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+end_src
 
 #+name: load-graph
@@ -362,13 +362,13 @@ function load-graph () {
         "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
     scigraph-load -c "${PATH_CONFIG_YAML}"
 
-    pushd "${BUILD_LOCATION}"
+    pushd "${PATH_BUILD}"
     # mv prevents accidentally deploying the same graph twice
     # but use cp -r for development to avoid continual rebuild
     cp -r ${FOLDER_NAME_GRAPH} ${STAMPED}
-    zip -r ${ZIPNAME} ${STAMPED}
+    zip -r ${FILE_NAME_ZIP} ${STAMPED}
     unlink "${LATEST}"
-    ln -sT "${ZIPNAME}" "${LATEST}"
+    ln -sT "${FILE_NAME_ZIP}" "${LATEST}"
     popd
 }
 #+end_src
@@ -384,17 +384,17 @@ key="$1"
 case $key in
     --path-graphload)  local PATH_GRAPHLOAD="${2}"; shift; shift ;;
     --path-ontologies) local PATH_ONTOLOGIES="${2}"; shift; shift ;;
-    --zip-location)    local ZIP_LOCATION="${2}"; shift; shift ;;
-    --git-location)    local GIT_LOCATION="${2}"; shift; shift ;;
+    --path-zip)        local PATH_ZIP="${2}"; shift; shift ;;
+    --path-git)        local PATH_GIT="${2}"; shift; shift ;;
     --git-ref)         local GIT_REF="${2}"; shift; shift ;;
-    *) POSITIONAL+=("$1"); shift ;;
+    *)                 POSITIONAL+=("$1"); shift ;;
 esac
 done
 
 : ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
 : ${PATH_ONTOLOGIES:="./ontologies.yaml"}
-: ${ZIP_LOCATION:=<<build-location-graph()>>}
-: ${GIT_LOCATION:=<<build-location-graph()>>}
+: ${PATH_ZIP:=<<path-build-graph()>>}
+: ${PATH_GIT:=<<path-build-graph()>>}
 : ${GIT_REF:="master"}
 #+end_src
 
@@ -408,8 +408,8 @@ function load-graph-ontload () {
     NIF-Ontology     ${IFS# repo name} \
     NIF              ${IFS# pattern for remote base (e.g. http://) to swap for local file://,
                        NIF automatically expands to http://ontology.neuinfo.org/NIF} \
-    --zip-location ${ZIP_LOCATION}  ${IFS# output folder where the loaded graph zip will be exported} \
-    --git-local ${GIT_LOCATION}     ${IFS# location where git repo will be cloned} \
+    --zip-location ${PATH_ZIP}  ${IFS# output folder where the loaded graph zip will be exported} \
+    --git-local ${PATH_GIT}     ${IFS# location where git repo will be cloned} \
     --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
     --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
     --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
@@ -444,8 +444,8 @@ load-graph-ontload \
 #+end_src
 
 *** Deploy
-Set =runtime-location= here
-#+name: runtime-location
+Set =path-runtime= here
+#+name: path-runtime
 : /var/lib/scigraph
 
 Set =folder-name-runtime= here
@@ -459,7 +459,7 @@ read -p "Are you sure you want to deploy? y/N " -n 1 choice
 case "${choice}" in
     y|Y) echo ;;
     n|N) echo; echo "Not deploying."; return 1;;
-    '?')   echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
+    '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
     *)   echo; echo "Not deploying."; return 1;;
 esac
 echo "Deploying ..."
@@ -467,9 +467,9 @@ echo "Deploying ..."
 
 #+name: localhost-deploy-command
 #+begin_src bash :eval never :exports code
-cp ${ZIPPATH} ${RUNTIME_LOCATION};
-pushd ${RUNTIME_LOCATION};
-unzip ${ZIPNAME};
+cp ${PATH_ZIP} ${PATH_RUNTIME};
+pushd ${PATH_RUNTIME};
+unzip ${FILE_NAME_ZIP};
 unlink ${FOLDER_NAME_GRAPH};
 ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH};
 popd
@@ -483,41 +483,41 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --build-location)      local BUILD_LOCATION="${2}"; shift; shift ;;
+    --path-build)          local PATH_BUILD="${2}"; shift; shift ;;
     --server)              local SERVER="${2}"; shift; shift ;;
     --svc-user)            local SVC_USER="${2}"; shift; shift ;;
-    --runtime-location)    local RUNTIME_LOCATION="${2}"; shift; shift ;;
+    --path-runtime)        local PATH_RUNTIME="${2}"; shift; shift ;;
     --folder-name-runtime) local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
-    --zip-path)            local ZIPPATH="${2}"; shift; shift ;;
-    *) POSITIONAL+=("$1"); shift ;;
+    --path-zip)            local PATH_ZIP="${2}"; shift; shift ;;
+    *)                     POSITIONAL+=("$1"); shift ;;
 esac
 done
 
-: ${BUILD_LOCATION:=<<build-location-graph()>>}
+: ${PATH_BUILD:=<<path-build-graph()>>}
 
 : ${SERVER:=localhost}
 : ${SVC_USER:=scigraph}
-: ${RUNTIME_LOCATION:=<<runtime-location()>>}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
 : ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
 
-LATEST="${BUILD_LOCATION}/LATEST"
+LATEST="${PATH_BUILD}/LATEST"
 if [ ! -f "${LATEST}" ]; then
     echo $LATEST path does not exist.
     echo Did you actually build the graph?
     echo Not deploying.
     return 1
 fi
-ZIPNAME=$(readlink "${LATEST}")
-STAMPED="${ZIPNAME//.zip/}"
-: ${ZIPPATH="${BUILD_LOCATION}/${ZIPNAME}"}
-if [ ! -f "${ZIPPATH}" ]; then
-    echo $ZIPPATH path does not exist.
+FILE_NAME_ZIP=$(readlink "${LATEST}")
+STAMPED="${FILE_NAME_ZIP//.zip/}"
+: ${PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"}
+if [ ! -f "${PATH_ZIP}" ]; then
+    echo $PATH_ZIP path does not exist.
     echo Not deploying.
     return 1
 fi
 scigraph_host="${SERVER}-deploy"  # by convention
 scigraph_host_admin=${SERVER}
-echo $FOLDER_NAME_GRAPH $STAMPED $ZIPNAME $ZIPPATH
+echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+end_src
 
 #+name: deploy-graph
@@ -525,21 +525,21 @@ echo $FOLDER_NAME_GRAPH $STAMPED $ZIPNAME $ZIPPATH
 #+begin_src bash :noweb yes :tangle ./bin/scigraph-functions.sh
 function deploy-graph () {
     <<*vars-deploy-graph>>
-    echo Will deploy graph to ${SERVER}:${RUNTIME_LOCATION}
-    echo $ZIPPATH
+    echo Will deploy graph to ${SERVER}:${PATH_RUNTIME}
+    echo $PATH_ZIP
     <<*are-you-sure>>
     if [ "${SERVER}" = "localhost" ]; then
         CMD="su - ${SVC_USER} -c \"
                 <<localhost-deploy-command>>\""
         su - root -c "${CMD}"
     else
-        scp "${ZIPPATH}" "${scigraph_host}:${RUNTIME_LOCATION}"
-        ssh ${scigraph_host} "pushd \"${RUNTIME_LOCATION}\"; unzip \"${ZIPNAME}\""
+        scp "${PATH_ZIP}" "${scigraph_host}:${PATH_RUNTIME}"
+        ssh ${scigraph_host} "pushd \"${PATH_RUNTIME}\"; unzip \"${FILE_NAME_ZIP}\""
 
         ssh ${scigraph_host_admin} "sudo systemctl stop scigraph"
 
-        ssh ${scigraph_host} "unlink \"${RUNTIME_LOCATION}/${FOLDER_NAME_RUNTIME}\"
-                              ln -sT \"${RUNTIME_LOCATION}/${STAMPED}\" \"${RUNTIME_LOCATION}/${FOLDER_NAME_RUNTIME}\""
+        ssh ${scigraph_host} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
+                              ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\""
 
         ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
     fi
@@ -554,7 +554,7 @@ function deploy-graph () {
 : ~/git/pyontutils/nifstd/scigraph/curie_map.yaml
 # FIXME rename to curies.yaml and be done with it
 
-#+name: build-location-services
+#+name: path-build-services
 : /tmp/scigraph-build/services
 
 #+name: file-stem-services-output
@@ -568,8 +568,8 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --build-location)        local BUILD_LOCATION="${2}"; shift; shift ;;
-    --runtime-location)      local RUNTIME_LOCATION="${2}"; shift; shift ;;
+    --path-build)            local PATH_BUILD="${2}"; shift; shift ;;
+    --path-runtime)          local PATH_RUNTIME="${2}"; shift; shift ;;
     --folder-name-runtime)   local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
     --path-cypher-resources) local PATH_CYPHER_RESOURCES="${2}"; shift; shift ;;
     --path-services)         local PATH_SERVICES="${2}"; shift; shift ;;
@@ -581,8 +581,8 @@ case $key in
 esac
 done
 
-: ${BUILD_LOCATION:=<<build-location-services()>>}
-: ${RUNTIME_LOCATION:=<<runtime-location()>>}
+: ${PATH_BUILD:=<<path-build-services()>>}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
 : ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
 : ${PATH_CYPHER_RESOURCES:="./cypher-resources.yaml"}  # will fail on absense
 : ${PATH_SERVICES:=<<path-services()>>}
@@ -593,13 +593,13 @@ done
 URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
 URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
 URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
-SERVICES_GRAPH_PATH="${RUNTIME_LOCATION}/${FOLDER_NAME_GRAPH}"
+PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
 YAML="${FILE_STEM}.yaml"
 DT=$(date +%Y%m%dT%H%M%S)
 YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
 
-PATH_YAML="${BUILD_LOCATION}/${YAML}"
-PATH_YAML_RAW="${BUILD_LOCATION}/${YAML_RAW}"
+PATH_YAML="${PATH_BUILD}/${YAML}"
+PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
 #+end_src
 # ugh what a mess, the fact that the scigraph yaml parser is a piece of crap doesn't help
 # template, raw, and expanded
@@ -609,7 +609,7 @@ PATH_YAML_RAW="${BUILD_LOCATION}/${YAML_RAW}"
 function build-services () {
     <<*vars-build-services>>
     # make build location
-    mkdir -p "${BUILD_LOCATION}"
+    mkdir -p "${PATH_BUILD}"
 
     # TODO allow urls?
     # make raw
@@ -621,7 +621,7 @@ function build-services () {
     echo "# ${YAML_RAW}" > "${PATH_YAML}"
 
     # make services
-    yq -Y ".graphConfiguration.location = \"${SERVICES_GRAPH_PATH}\" |
+    yq -Y ".graphConfiguration.location = \"${PATH_SERVICES_GRAPH}\" |
     .serviceMetadata.view.url = \"${URL_VIEW}\" |
     .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
     " "${PATH_YAML_RAW}" >> "${PATH_YAML}"
@@ -631,7 +631,7 @@ function build-services () {
 # TODO
 Once =services.yaml= has been created scp the raw and expanded configs
 to the target host.
-# (((((
+# ((((
 #+name: *vars-deploy-services
 #+begin_src bash :noweb yes
 local POSITIONAL=()
@@ -639,10 +639,10 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --config)           local CONFIG="${2}"; shift; shift ;;
-    --server)           local SERVER="${2}"; shift; shift ;;
-    --runtime-location) local RUNTIME_LOCATION="${2}"; shift; shift ;;
-    *) POSITIONAL+=("$1"); shift ;;
+    --config)       local CONFIG="${2}"; shift; shift ;;
+    --server)       local SERVER="${2}"; shift; shift ;;
+    --path-runtime) local PATH_RUNTIME="${2}"; shift; shift ;;
+    *)              POSITIONAL+=("$1"); shift ;;
 esac
 done
 
@@ -653,7 +653,7 @@ fi
 
 # : ${CONFIG:=}
 : ${SERVER:=localhost}
-: ${RUNTIME_LOCATION:=<<runtime-location()>>}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
 
 YAML=$(basename "${CONFIG}")
 if [ ! -f "${CONFIG}" ]; then
@@ -664,14 +664,14 @@ if [ ! -f "${CONFIG}" ]; then
 fi
 YAML_RAW=$(head -n 1 "${CONFIG}" | cut -b3-)
 CONFIG_RAW="$(dirname ${CONFIG})/${YAML_RAW}"
-EXISTING="${RUNTIME_LOCATION}/${YAML}"
+EXISTING="${PATH_RUNTIME}/${YAML}"
 
 scigraph_host="${SERVER}-deploy"  # by convention
 scigraph_host_admin=${SERVER}
 if [ ${SERVER} = localhost ]; then
-    local TARGET="${RUNTIME_LOCATION}"
+    local TARGET="${PATH_RUNTIME}"
 else
-    local TARGET="${scigraph_host}:${RUNTIME_LOCATION}"
+    local TARGET="${scigraph_host}:${PATH_RUNTIME}"
 fi
 #+end_src
 
@@ -680,10 +680,10 @@ fi
 #+begin_src bash
 E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
 if [ -n "${E_YAML_RAW}" ]; then
-    YAML_BACKUP="'${RUNTIME_LOCATION}'/${E_YAML_RAW//.raw/}"
+    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
 else
     mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
-    YAML_BACKUP="'${RUNTIME_LOCATION}/${YAML}'-${mod_dt}"
+    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
 fi
 echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
 #+end_src
@@ -746,8 +746,8 @@ journalctl -u scigraph.service -f | head -n 60
 ** nifstd
 *** graph
 **** load
-Set =build-location-nifstd= here
-#+name: build-location-nifstd
+Set =path-build-nifstd= here
+#+name: path-build-nifstd
 : /tmp/scigraph-build/nifstd
 
 #+name: path-ontologies-nifstd
@@ -761,7 +761,7 @@ Set =build-location-nifstd= here
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-nifstd
 <<*source-scigraph-functions>>
 load-graph-ontload \
---build-location <<build-location-nifstd()>> \
+--path-build <<path-build-nifstd()>> \
 --folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-nifstd()>> \
 --git-ref <<git-ref-nifstd()>>
@@ -778,7 +778,7 @@ load-graph-ontload \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-nifstd
 <<*source-scigraph-functions>>
 build-services \
---build-location <<build-location-nifstd()>> \
+--path-build <<path-build-nifstd()>> \
 --path-cypher-resources <<cypher-resources-nifstd()>>
 #+end_src
 **** deploy
@@ -787,8 +787,8 @@ build-services \
 interlex build
 *** graph
 **** load
-Set =build-location-sparc= here
-#+name: build-location-sparc
+Set =path-build-sparc= here
+#+name: path-build-sparc
 : /tmp/scigraph-build/sparc
 
 Set =path-ontologies-sparc= here
@@ -803,7 +803,7 @@ Set =path-ontologies-sparc= here
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc
 <<*source-scigraph-functions>>
 load-graph-ontload \
---build-location <<build-location-sparc()>> \
+--path-build <<path-build-sparc()>> \
 --folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-sparc()>> \
 --git-ref <<git-ref-sparc()>>
@@ -815,7 +815,7 @@ load-graph-ontload \
 <<*source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph \
---build-location <<build-location-sparc()>>
+--path-build <<path-build-sparc()>>
 #+end_src
 **** deploy from CI
 *** services config
@@ -831,7 +831,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc
 <<*source-scigraph-functions>>
 build-services \
---build-location <<build-location-sparc()>> \
+--path-build <<path-build-sparc()>> \
 --svc-host <<host-services-sparc()>> \
 --path-cypher-resources <<cypher-resources-sparc()>>
 #+end_src
@@ -842,7 +842,7 @@ build-services \
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc
 <<*source-scigraph-functions>>
 deploy-services \
---config <<build-location-sparc()>>/<<file-stem-services-output()>>.yaml \
+--config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph
 #+end_src
 ** sparc-data
@@ -850,8 +850,8 @@ deploy-services \
 apinatomy build
 *** graph
 **** load
-Set =build-location-sparc-data= here
-#+NAME: build-location-sparc-data
+Set =path-build-sparc-data= here
+#+NAME: path-build-sparc-data
 : /tmp/scigraph-build/sparc-data
 
 Set =folder-name-graph-sparc-data= here
@@ -867,7 +867,7 @@ Set =folder-name-graph-sparc-data= here
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
 <<*source-scigraph-functions>>
 load-graph \
---build-location <<build-location-sparc-data()>> \
+--path-build <<path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
 --path-ontologies <<path-ontologies-sparc-data()>>
 #+end_src
@@ -879,7 +879,7 @@ load-graph \
 <<*source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph-data \
---build-location <<build-location-sparc-data()>>
+--path-build <<path-build-sparc-data()>>
 #+end_src
 *** services config
 [[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
@@ -895,7 +895,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data
 <<*source-scigraph-functions>>
 build-services \
---build-location <<build-location-sparc-data()>> \
+--path-build <<path-build-sparc-data()>> \
 --svc-host <<host-services-sparc-data()>> \
 --path-cypher-resources <<cypher-resources-sparc-data()>>
 #+end_src
@@ -905,7 +905,7 @@ build-services \
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data
 <<*source-scigraph-functions>>
 deploy-services \
---config <<build-location-sparc-data()>>/<<file-stem-services-output()>>.yaml \
+--config <<path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph-data
 #+end_src
 **** build-deploy
@@ -913,7 +913,7 @@ deploy-services \
 *** graph
 **** deploy
 #+begin_src bash :noweb yes
-./bin/deploy-graph --build-location
+./bin/deploy-graph --path-build
 #+end_src
 *** services config
 **** build
@@ -922,7 +922,7 @@ deploy-services \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-local
 <<*source-scigraph-functions>>
-deploy-services --config <<build-location-sparc()>>/<<file-stem-services-output()>>.yaml
+deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml
 #+end_src
 **** build-deploy
 ** dev local sparc-data
@@ -936,7 +936,7 @@ deploy-services --config <<build-location-sparc()>>/<<file-stem-services-output(
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data-local
 <<*source-scigraph-functions>>
 deploy-graph \
---build-location <<build-location-sparc-data()>> \
+--path-build <<path-build-sparc-data()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
 #+end_src
 *** services config
@@ -949,7 +949,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data-local
 <<*source-scigraph-functions>>
 ./build-services \
---build-location <<build-location-sparc-data()>> \
+--path-build <<path-build-sparc-data()>> \
 --path-cypher-resources <<cypher-resources-sparc-data()>> \
 --file-stem <<file-stem-sparc-data-local()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
@@ -959,7 +959,7 @@ deploy-graph \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data-local
 <<*source-scigraph-functions>>
-deploy-services --config <<build-location-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
+deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
 #+end_src
 **** build-deploy
 * Per operating system
