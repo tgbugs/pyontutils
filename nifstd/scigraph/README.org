@@ -1,3 +1,4 @@
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
 #+TITLE: Using SciGraph
 #+OPTIONS: num:nil
 #+STARTUP: showall

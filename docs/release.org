@@ -1,4 +1,4 @@
-# -*- org-adapt-indentation: nil; -*-  this prevents realignment to indentaiton level on =G
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
 
 * Python release process
 Release workflow.

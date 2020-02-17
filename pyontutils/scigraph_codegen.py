@@ -265,7 +265,9 @@ class Dynamic(SUBCLASS):
             kwargs = {}
 
         if '.' in path:
-            raise ValueError('extensions not supported directly please use output=mimetype')
+            # FIXME logic seems bad ...
+            if ':' not in path or path.index('.') > path.index(':'):
+                raise ValueError('extensions not supported directly please use output=mimetype')
 
         if ':' in path:  # curie FIXME way more potential arguments here ...
             key = lambda s: len(s)

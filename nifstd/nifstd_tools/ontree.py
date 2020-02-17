@@ -129,6 +129,13 @@ def time():
     return str(datetime.utcnow().isoformat()).replace('.', ',')
 
 
+def node_list(nodes):
+    pprint(nodes)
+    # FIXME why the heck are these coming in as lbl now?!?!
+    s = sorted([(n['lbl'], atag(n['id'], n['lbl'], new_tab=True)) for n in nodes])
+    return '<br>\n'.join([at for _, at in s])
+
+
 def graphFromGithub(link, verbose=False):
     # mmmm no validation
     # also caching probably
@@ -629,7 +636,8 @@ def server(api_key=None, verbose=False):
         eid = uot_lookup[end].curie
         #start = 'UBERON:0005157'
         #end = 'UBERON:0001255'
-        return redirect(f'/{basename}/sparc/dynamic/shortestSimple?start_id={sid}&end_id={eid}&direction=INCOMING&format=table')  # TODO
+        return redirect(f'/{basename}/sparc/dynamic/shortestSimple?start_id={sid}'
+                        f'&end_id={eid}&direction=INCOMING&format=table')  # TODO
         #return hfn.htmldoc(title='Connectivity view')
 
     @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
@@ -647,6 +655,8 @@ def server(api_key=None, verbose=False):
 
         j = data_sgd.dispatch(path, **args)
         if not j['edges']:
+            return node_list(j['nodes'])  # FIXME ... really should error?
+
             log.error(pprint(j))
             return abort(400)
 
@@ -657,7 +667,9 @@ def server(api_key=None, verbose=False):
                 f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
 
         kwargs = {'json': cleanBad(j),
-                  'html_head': prov}
+                  'html_head': prov,
+                  'prefixes': data_sgc.getCuries(),  # FIXME efficiency
+        }
         tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
         #print(extras.hierarhcy)
         #print(tree)
