@@ -957,6 +957,15 @@ deploy-graph \
 --server aws-scigraph-data \
 --path-build <<path-build-sparc-data()>>
 #+end_src
+
+**** load-deploy
+#+name: run-load-deploy-graph-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc-data
+<<run-load-graph-sparc-data>>
+|| exit 1
+<<run-deploy-graph-sparc-data>>
+#+end_src
 *** services config
 [[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
 **** build
