@@ -19,7 +19,7 @@ Options:
 
 """
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Counter
 import os
 import re
 import asyncio
@@ -187,6 +187,144 @@ def cleanBad(json):
     log.debug(len(edges))
     log.debug(len(json['edges']))
     return deep
+
+
+def pb(blob):
+    print(blob['sub'], blob['pred'], blob['obj'])
+
+def simplify(path, blob):
+    if 'housing-lyphs' in path:
+        collapse = [['apinatomy:conveys', 'apinatomy:source', 'apinatomy:rootOf'],
+                    ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:rootOf'],]
+        exclude = set(p for c in collapse for p in c)
+        excluded = [e for e in blob['edges'] if e['pred'] in exclude]
+        if excluded:  # on the off chance that there was nothing to exclude, however unlikely
+            pred_start = set(c[0] for c in collapse)
+            pred_end = set(c[-1] for c in collapse)
+
+            subjects = [e['sub'] for e in excluded]
+            objects = [e['obj'] for e in excluded]
+            cs = Counter(subjects).most_common()
+            co = Counter(objects).most_common()
+            # for 'OUTGOING' aka ttl serialization order
+            # objects should be unique, subjects might not be
+            # therefore construct +backwards+ forward since objects
+            # are gurantted to be unique
+            if co[0][1] > 1:
+                log.critical(f'objects were not unique for {path}')
+                return blob
+
+            # good enough for now
+            ends = [e for e in excluded if e['pred'] in pred_end]
+            other = [e for e in excluded if e['pred'] not in pred_end]
+            while other:
+                for o_blob in tuple(other):
+                    o_o = o_blob['obj']
+                    #pb(o_blob)
+                    for e_blob in ends:
+                        if o_o == e_blob['sub']:
+                            e_blob['sub'] = o_blob['sub']
+                            e_blob['pred'] = o_blob['pred'] + '-' + o_o + '-' + e_blob['pred']
+                            #pb(e_blob)
+                            if o_blob in other:
+                                # FIXME this assumes paths to the same node
+                                # always occur at the same depth otherwise
+                                # one path could be removed a step before
+                                # and connection will dangle for some edges
+                                other.remove(o_blob)
+
+            # FIXME this should work but seems to fail for some reason
+            '''
+            starts = [e for e in excluded if e['pred'] in pred_start]
+            other = [e for e in excluded if e['pred'] not in pred_start]
+            while other:
+                print(len(other))
+                for o_blob in tuple(other):
+                    o_sub = o_blob['sub']
+                    for s_blob in starts:
+                        if s_blob['obj'] == o_sub:
+                            s_blob['obj'] = o_blob['obj']
+                            s_blob['pred'] = s_blob['pred'] + '-' + o_sub + '-' + o_blob['pred']
+                            pb(o_blob)
+                            pb(s_blob)
+                            other.remove(o_blob)
+            '''
+
+            included = [e for e in blob['edges'] if e['pred'] not in exclude]
+            collapsed = ends
+            blob['edges'] = included + collapsed
+    else:
+        pass
+
+    return blob
+
+
+def sparc_dynamic(path, wgb, process=lambda x, y: y):
+    args = dict(request.args)
+    if 'direction' in args:
+        direction = args.pop('direction')
+    else:
+        direction = 'OUTGOING'  # should always be outgoing here since we can't specify?
+
+    if 'format' in args:
+        format_ = args.pop('format')
+    else:
+        format_ = None
+
+    if 'apinat' in path:  # FIXME bad hardcoded hack
+        _old_get = data_sgd._get
+        try:
+            data_sgd._get = data_sgd._normal_get
+            j = data_sgd.dispatch(path, **args)
+        finally:
+            data_sgd._get = _old_get
+    else:
+        j = data_sgd.dispatch(path, **args)
+
+    j = process(path, j)
+
+    if not j['edges']:
+        return node_list(j['nodes'])  # FIXME ... really should error?
+
+        log.error(pprint(j))
+        return abort(400)
+
+    if path.endswith('housing-lyphs-alt'):  # FIXME hack
+        root = 'CL:0000540'
+        #direction = 'INCOMING'
+    else:
+        root = None
+
+    prov = [hfn.titletag(f'Dynamic query result for {path}'),
+            f'<meta name="date" content="{UTCNOWISO()}">',
+            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+            '<meta name="representation" content="SciGraph">',
+            f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
+
+    kwargs = {'json': cleanBad(j),
+                'html_head': prov,
+                'prefixes': data_sgc.getCuries(),  # FIXME efficiency
+    }
+    tree, extras = creatTree(*Query(root, None, direction, None), **kwargs)
+    #print(extras.hierarhcy)
+    #print(tree)
+    if format_ is not None:
+        if format_ == 'table':
+            #breakpoint()
+            def nowrap(class_, tag=''):
+                return (f'{tag}.{class_}'
+                        '{ white-space: nowrap; }')
+
+            ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
+            #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
+            rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
+
+            return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                           styles=(hfn.table_style, nowrap('col-label', 'td')))
+
+    return htmldoc(extras.html,
+                   other=prov,
+                   styles=hfn.tree_styles)
 
 
 def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
@@ -583,6 +721,18 @@ def server(api_key=None, verbose=False):
                            title='Simulated flatmap query results',
         )
 
+    @app.route(f'/{basename}/sparc/demos/apinat', methods=['GET'])
+    @app.route(f'/{basename}/sparc/demos/apinat/', methods=['GET'])
+    def route_sparc_demos_apinat():
+        return 'apinat'
+
+    #@app.route(f'/{basename}/sparc/demos/apinat/housing-lyphs/<id>', methods=['GET'])
+    #def route_sparc_demos_apinat_housing_lyphs(id):
+        #('http://sparc-data.scicrunch.io:9000/scigraph/'
+         #'dynamic/demos/apinat/housing-lyphs/apin.bolew%3Asoma202')
+        #data = query
+        #return
+
     @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
     def route_sparc_connectivity_query():
         kwargs = request.args
@@ -640,56 +790,13 @@ def server(api_key=None, verbose=False):
                         f'&end_id={eid}&direction=INCOMING&format=table')  # TODO
         #return hfn.htmldoc(title='Connectivity view')
 
+    @app.route(f'/{basename}/sparc/simple/dynamic/<path:path>', methods=['GET'])
+    def route_sparc_simple_dynamic(path):
+        return sparc_dynamic(path, wgb, simplify)
+
     @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
     def route_sparc_dynamic(path):
-        args = dict(request.args)
-        if 'direction' in args:
-            direction = args.pop('direction')
-        else:
-            direction = 'OUTGOING'  # should always be outgoing here since we can't specify?
-
-        if 'format' in args:
-            format_ = args.pop('format')
-        else:
-            format_ = None
-
-        j = data_sgd.dispatch(path, **args)
-        if not j['edges']:
-            return node_list(j['nodes'])  # FIXME ... really should error?
-
-            log.error(pprint(j))
-            return abort(400)
-
-        prov = [hfn.titletag(f'Dynamic query result for {path}'),
-                f'<meta name="date" content="{UTCNOWISO()}">',
-                f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
-                '<meta name="representation" content="SciGraph">',
-                f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
-
-        kwargs = {'json': cleanBad(j),
-                  'html_head': prov,
-                  'prefixes': data_sgc.getCuries(),  # FIXME efficiency
-        }
-        tree, extras = creatTree(*Query(None, None, direction, None), **kwargs)
-        #print(extras.hierarhcy)
-        #print(tree)
-        if format_ is not None:
-            if format_ == 'table':
-                #breakpoint()
-                def nowrap(class_, tag=''):
-                    return (f'{tag}.{class_}'
-                            '{ white-space: nowrap; }')
-
-                ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
-                #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
-                rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
-
-                return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
-                               styles=(hfn.table_style, nowrap('col-label', 'td')))
-
-        return htmldoc(extras.html,
-                       other=prov,
-                       styles=hfn.tree_styles)
+        return sparc_dynamic(path, wgb)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
