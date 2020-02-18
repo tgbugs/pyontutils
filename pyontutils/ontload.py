@@ -695,9 +695,6 @@ def run(args):
     if remote_base == 'NIF':
         remote_base = 'http://ontology.neuinfo.org/NIF'
 
-    curies = getCuries(curies_location)
-    curie_prefixes = set(curies.values())
-
     itrips = None
 
     if repo_name is not None:
@@ -759,6 +756,8 @@ def run(args):
         itrips = local_imports(remote_base, local_base, ontologies, readonly=True)
     elif extra:
         from nifstd_tools.utils import memoryCheck
+        curies = getCuries(curies_location)
+        curie_prefixes = set(curies.values())
         memoryCheck(2665488384)
         graph = loadall(git_local, repo_name)
         mg, ng_ = normalize_prefixes(graph, curies)
