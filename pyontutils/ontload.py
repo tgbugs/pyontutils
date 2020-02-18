@@ -229,9 +229,13 @@ class ReproLoader:
                               config_path=None):
         config_n = 'graphload-' + TODAY() + '.yaml'
         config_raw = config_n + '.raw'
-        with open(graphload_config_template, 'rt') as f1, open(graphload_ontologies, 'rt') as f2, open(zip_location / config_raw, 'wt') as out:  # LOL PYTHON
-            out.write(f1.read())
-            out.write(f2.read())
+        if graph_ontologies is not None:
+            with open(graphload_config_template, 'rt') as f1, open(graphload_ontologies, 'rt') as f2, open(zip_location / config_raw, 'wt') as out:  # LOL PYTHON
+                out.write(f1.read())
+                out.write(f2.read())
+        else:  # nothing will load, but that's ok
+            with open(graphload_config_template, 'rt') as f1, open(zip_location / config_raw, 'wt') as out:  # LOL PYTHON
+                out.write(f1.read())
 
         # config graphload.yaml from template
         with open(zip_location / config_raw, 'rt') as f:
@@ -661,7 +665,11 @@ def run(args):
     zip_location = Path(args['--zip-location']).resolve()
     graphload_config = Path(args['--graphload-config']).resolve()
     graphload_config_template = graphload_config  # NOTE XXX
-    graphload_ontologies = Path(args['--graphload-ontologies']).resolve()
+    if args['--graphload-ontologies'] is not None:
+        graphload_ontologies = Path(args['--graphload-ontologies']).resolve()
+    else:
+        graphload_ontologies = None
+
     org = args['--org']
     branch = args['--branch']
     commit = args['--commit']
