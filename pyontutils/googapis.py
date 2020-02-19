@@ -84,7 +84,7 @@ class Main(Dispatcher):
 
 def main():
     from docopt import docopt, parse_defaults
-    args = docopt(__doc__, version='clifun-demo 0.0.0')
+    args = docopt(__doc__, version='googapis 0.0.0')
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     options = Options(args, defaults)
     main = Main(options)

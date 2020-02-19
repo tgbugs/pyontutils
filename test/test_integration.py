@@ -34,6 +34,18 @@ class TestScripts(Folders, _TestScriptsBase):
 only = tuple()
 skip = tuple()
 ci_skip = tuple()
+network_tests = (
+    'closed_namespaces',
+    'combinators',  # shouldn't matter
+    'hierarchies',
+    'make_catalog',
+    'necromancy',
+    'ontutils',
+    'qnamefix',
+    'scig',
+    'scigraph_codegen',
+)
+#requests.exceptions.SSLError
 
 if auth.get_path('scigraph-services') is None:
     skip += ('scigraph_deploy',)  # this will fail # FIXME this should really only skip main not both main and import?
@@ -44,7 +56,10 @@ if working_dir is None:
     # I'm pretty the split was only implemented because I was trying
     # to run all tests from the working_dir in one shot, but that has
     # a number of problems with references to local vs installed packages
-    working_dir = Path(__file__).parent.parent
+    import inspect
+    sf = inspect.getsourcefile(pyontutils)
+    working_dir = Path(sf).parent.parent
+    #working_dir = Path(__file__).parent.parent
 
 glb = auth.get_path('git-local-base')
 olr = auth.get_path('ontology-local-repo')
@@ -56,7 +71,7 @@ if olr.exists():
 else:
     post_load = lambda : None
     post_main = lambda : None
-    do_mains = False
+    do_mains = True
 
 ### build mains
 
@@ -68,10 +83,10 @@ zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
 mains = {'scigraph':None,
          'combinators':None,
          'hierarchies':None,
-         'closed_namespaces':None,
          'googapis': None,
+         'closed_namespaces':None,
          #'docs':['ont-docs'],  # can't seem to get this to work correctly on travis so leaving it out for now
-         'make_catalog':['ont-catalog', '--jobs', '1'],
+         'make_catalog':['ont-catalog', '--jobs', '1'],  # hits the network
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
          'obo_io':['obo-io', '--ttl', nsmethodsobo],
@@ -122,6 +137,7 @@ if 'CI' not in os.environ:
     mains['mapnlxilx'] = None  # requires db connection
 
 print(skip)
-TestScripts.populate_tests(pyontutils, working_dir, mains, skip=skip,
+TestScripts.populate_tests(pyontutils, working_dir, mains,
+                           skip=skip, network_tests=network_tests,
                            post_load=post_load, post_main=post_main,
                            only=only, do_mains=do_mains)

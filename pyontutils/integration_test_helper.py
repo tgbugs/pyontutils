@@ -2,13 +2,19 @@ import os
 import sys
 import unittest
 import subprocess
-from pathlib import Path
 from importlib import import_module
 import git
 import pytest
+from pathlib import Path
+#from augpathlib import AugmentedPath as Path
 from git import Repo as baseRepo
 from pyontutils.utils import TermColors as tc
 from pyontutils.config import devconfig
+
+
+SKIP_NETWORK = ('SKIP_NETWORK' in os.environ or
+                'FEATURES' in os.environ and 'network-sandbox' in os.environ['FEATURES'])
+skipif_no_net = pytest.mark.skipif(SKIP_NETWORK, reason='Skipping due to network requirement')
 
 
 def simpleskipif(skip):
@@ -143,7 +149,6 @@ class _TestScriptsBase(unittest.TestCase):
 
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
-
     @classmethod
     def make_test_file(cls, i_ind, ppath, post_load, module_parent, skip):
         print('PPATH:  ', ppath)
@@ -152,8 +157,8 @@ class _TestScriptsBase(unittest.TestCase):
         stem = ppath.stem
         #rp = ppath.relative_to(Path.cwd())#module_parent)
         rp = ppath.relative_to(module_parent)
+        #rp = ppath.relative_path_from(Path(module_parent))
         module_path = (rp.parent / rp.stem).as_posix().replace('/', '.')
-        print(module_path)
         def test_file(self, module_path=module_path, stem=stem, fname=fname):
             try:
                 print(tc.ltyellow('IMPORTING:'), module_path)
@@ -221,7 +226,7 @@ class _TestScriptsBase(unittest.TestCase):
         return test_main
 
     @classmethod
-    def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip):
+    def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip, network_tests):
         npaths = len(paths)
         print(npaths)
         for i_ind, path in enumerate(paths):
@@ -245,6 +250,9 @@ class _TestScriptsBase(unittest.TestCase):
                 test_main = cls.make_test_main(do_mains, post_main, module_path, argv,
                                                stem in mains, stem in tests, skip)
 
+                if stem in network_tests:
+                    skipif_no_net(test_main)
+
                 # FIXME do we need to setattr these test_files or no?
                 if stem in skip:
                     test_file = pytest.mark.skip()(test_main)
@@ -255,7 +263,8 @@ class _TestScriptsBase(unittest.TestCase):
 
     @classmethod
     def populate_tests(cls, module_to_test, working_dir, mains=tuple(), tests=tuple(),
-                       lasts=tuple(), skip=tuple(), ci_skip=tuple(), only=tuple(), do_mains=True,
+                       lasts=tuple(), skip=tuple(), ci_skip=tuple(), network_tests=tuple(),
+                       only=tuple(), do_mains=True,
                        post_load=lambda : None, post_main=lambda : None, module_parent=None):
 
         if module_parent is None:
@@ -267,7 +276,9 @@ class _TestScriptsBase(unittest.TestCase):
         if isinstance(module_parent, Path):
             module_parent = module_parent.as_posix()
 
-        relpath = Path(module_parent).relative_to(Path(working_dir)).as_posix()
+        p_wd = Path(working_dir)
+        p_mp = Path(module_parent)
+        relpath = p_mp.relative_to(p_wd).as_posix()
         if relpath == '.':
             relpath = ''
         else:
@@ -311,8 +322,8 @@ class _TestScriptsBase(unittest.TestCase):
             modinfos = list(pkgutil.iter_modules(module_to_test.__path__))
             ppaths = [modinfo_to_path(m) for m in modinfos]
 
-        cls.populate_from_paths(ppaths, mains, tests,
-                                do_mains, post_load, post_main, module_parent, skip)
+        cls.populate_from_paths(ppaths, mains, tests, do_mains, post_load, post_main,
+                                module_parent, skip, network_tests)
 
         if not hasattr(cls, 'argv_orig'):
             cls.argv_orig = sys.argv
@@ -330,6 +341,7 @@ class _TestCliBase(unittest.TestCase):
                                                  env=os.environ.copy(),
                                                  stderr=subprocess.STDOUT).decode().rstrip()
             except BaseException as e:
+                raise e
                 failed.append((command, e, e.stdout if hasattr(e, 'stdout') else '', ''))
 
         msg = '\n'.join('\n'.join(str(e) for e in f) for f in failed)
