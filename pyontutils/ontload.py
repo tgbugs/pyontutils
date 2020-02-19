@@ -229,7 +229,7 @@ class ReproLoader:
                               config_path=None):
         config_n = 'graphload-' + TODAY() + '.yaml'
         config_raw = config_n + '.raw'
-        if graph_ontologies is not None:
+        if graphload_ontologies is not None:
             with open(graphload_config_template, 'rt') as f1, open(graphload_ontologies, 'rt') as f2, open(zip_location / config_raw, 'wt') as out:  # LOL PYTHON
                 out.write(f1.read())
                 out.write(f2.read())
