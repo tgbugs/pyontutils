@@ -246,7 +246,11 @@ class ReproLoader:
             config['ontologies'] = []
 
         config['graphConfiguration']['location'] = graph_path.as_posix()
-        lbasposix = local_base.as_posix()
+        if isinstance(local_base, Path):
+            lbasposix = local_base.as_posix()
+        else:
+            lbasposix = local_base
+
         config['ontologies'] = [{k:v.replace(remote_base, lbasposix)
                                 if k == 'url'
                                 else v
