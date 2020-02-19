@@ -421,7 +421,7 @@ function load-graph () {
 #+end_src
 **** ontload
 # sigh command line flags inside of flags
-# ((((((
+# (((((((
 #+name: *vars-load-graph-ontload
 #+begin_src bash :eval never :exports none :noweb yes
 local POSITIONAL=()
@@ -431,6 +431,7 @@ key="$1"
 case $key in
     --path-graphload)  local PATH_GRAPHLOAD="${2}"; shift; shift ;;
     --path-ontologies) local PATH_ONTOLOGIES="${2}"; shift; shift ;;
+    --path-build)      local PATH_BUILD="${2}"; shift; shift ;;
     --path-zip)        local PATH_ZIP="${2}"; shift; shift ;;
     --path-git)        local PATH_GIT="${2}"; shift; shift ;;
     --git-ref)         local GIT_REF="${2}"; shift; shift ;;
@@ -438,10 +439,12 @@ case $key in
 esac
 done
 
+
 : ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
 : ${PATH_ONTOLOGIES:="./ontologies.yaml"}
-: ${PATH_ZIP:=<<path-build-graph()>>}
-: ${PATH_GIT:=<<path-build-graph()>>}
+: ${PATH_BUILD:=<<path-build-graph()>>}
+: ${PATH_ZIP:="${PATH_BUILD}"}
+: ${PATH_GIT:="${PATH_BUILD}"}
 : ${GIT_REF:="master"}
 #+end_src
 
@@ -820,7 +823,6 @@ Set =git-ref-nifstd= here
 <<*source-scigraph-functions>>
 load-graph-ontload \
 --path-build <<path-build-nifstd()>> \
---folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-nifstd()>> \
 --git-ref <<git-ref-nifstd()>> \
 #+end_src
@@ -867,7 +869,6 @@ Set =git-ref-sparc= here
 <<*source-scigraph-functions>>
 load-graph-ontload \
 --path-build <<path-build-sparc()>> \
---folder-name-graph <<folder-name-graph()>> \
 --path-ontologies <<path-ontologies-sparc()>> \
 --git-ref <<git-ref-sparc()>> \
 #+end_src
