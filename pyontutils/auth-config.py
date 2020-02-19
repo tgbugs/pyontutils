@@ -40,7 +40,8 @@
   'scigraph-api-key': {'environment-variables': 'SCICRUNCH_API_KEY SCIGRAPH_API_KEY'},
 
   # scigraph build
-  'scigraph-graphload': ['../nifstd/scigraph/graphload-base-template.yaml',],
+  'scigraph-graphload': ['../nifstd/scigraph/graphload-base-template.yaml',  # git
+                         '{:cwd}/nifstd/scigraph/graphload-base-template.yaml',],  # ebuild testing  # FIXME VERY BAD coupling between test and module location
   'scigraph-services': ['../nifstd/scigraph/services-base-template.yaml',],
   'zip-location': '/tmp'}
 }

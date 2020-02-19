@@ -101,8 +101,9 @@ mains = {'scigraph':None,
            ],
 'necromancy':['necromancy', ban],
 'ontload':[['ontload', '--help'],
-           ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
            ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
+           ['ontload', 'config', 'NIF-Ontology', 'NIF', '--zip-location', './', ban],  # FIXME cleanup created configs
+           ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
            ['cd', olr.as_posix() + '/ttl', '&&', 'git', 'checkout', ban]],
 'ontutils':[['ontutils', '--help'],
             ['ontutils', 'deadlinks', nifttl],

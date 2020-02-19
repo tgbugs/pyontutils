@@ -241,8 +241,13 @@ class ReproLoader:
         with open(zip_location / config_raw, 'rt') as f:
             config = yaml.safe_load(f)
 
+        if 'ontologies' not in config:
+            # FIXME log a warning?
+            config['ontologies'] = []
+
         config['graphConfiguration']['location'] = graph_path.as_posix()
-        config['ontologies'] = [{k:v.replace(remote_base, local_base)
+        lbasposix = local_base.as_posix()
+        config['ontologies'] = [{k:v.replace(remote_base, lbasposix)
                                 if k == 'url'
                                 else v
                                 for k, v in ont.items()}
