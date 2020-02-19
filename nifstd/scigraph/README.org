@@ -268,7 +268,7 @@ rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
 popd
 #+end_src
 
-**** ontload nifstd-tools only
+**** ontload only
 Set up a virtualenv if required.
 #+begin_src bash
 pushd venvs
@@ -276,7 +276,7 @@ mkdir scigraph-build
 pushd scigraph-build
 pipenv --python 3.7
 pipenv shell
-pip install nifstd-tools
+pip install pyontutils
 mkdir build
 #+end_src
 
@@ -477,8 +477,8 @@ load-graph-ontload \
 --patch                      ${IFS# do apply patches} \
 --patch-config patches.yaml  ${IFS# path to patche files}
 #+end_src
-**** ontload nifstd-tools only
-When loading using nifstd-tools without a dedicated SciGraph install include the following
+**** ontload only
+When loading using pyontutils without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[compile-scigraph-git][compile-scigraph-git]].
 
 # TODO
