@@ -463,7 +463,7 @@ function load-graph-ontload () {
     --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
     --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
     --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
-    ${POSITIONAL}  # pass any other unhandled arguments along
+    ${POSITIONAL}  ${IFS# pass any other unhandled arguments along}
 }
 #+end_src
 

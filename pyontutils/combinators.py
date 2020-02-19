@@ -796,11 +796,16 @@ class hasAspectChangeCombinator(_POCombinator):
 
 def main():
     import rdflib
-    from pyontutils.core import makeGraph, makePrefixes
+    from pyontutils.core import makeGraph, makePrefixes, log
     from pyontutils.config import auth
 
     ub = auth.get_path('ontology-local-repo') / 'ttl/bridge/uberon-bridge.ttl'
     ncrb = auth.get_path('ontology-local-repo') / 'ttl/NIF-Neuron-Circuit-Role-Bridge.ttl'
+    if not ub.exists() or not ncrb.exists():
+        # just skip this if we can't file the files
+        log.warning(f'missing file {ub} or {ncrb}')
+        return
+
     graph = rdflib.Graph()
     graph.parse(ub.as_posix(), format='turtle')
     graph.parse(ncrb.as_posix(), format='ttl')

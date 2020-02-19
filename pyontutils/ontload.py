@@ -110,6 +110,7 @@ def execute_regardless(function, only_exception=False):
         if not only_exception:
             function()
 
+
 def getBranch(repo, branch):
     try:
         return [b for b in repo.branches if b.name == branch][0]
@@ -117,12 +118,104 @@ def getBranch(repo, branch):
         branches = [b.name for b in repo.branches]
         raise ValueError('No branch %s found, options are %s' % (branch, branches))
 
+
 class ReproLoader:
     def __init__(self, zip_location, git_remote, org, git_local, repo_name, branch, commit,
                  remote_base, load_base, graphload_config_template, graphload_ontologies,
                  patch_config, patch, scigraph_commit, post_clone=lambda: None, check_built=False):
 
+        load_from_repo=True
         local_base = jpth(git_local, repo_name)
+        if load_from_repo:
+            repo, nob = self._set_up_repo_state(local_base,
+                                                git_remote,
+                                                org,
+                                                git_local,
+                                                repo_name,
+                                                branch,
+                                                commit,
+                                                post_clone)
+            ontology_commit = repo.head.object.hexsha[:COMMIT_HASH_HEAD_LEN]
+        else:
+            ontology_commit = 'NONE'
+
+        (graph_path, zip_path, zip_command,
+         wild_zip_path) = self._set_up_paths(zip_location, repo_name, branch,
+                                             scigraph_commit, ontology_commit)
+
+        (config, config_path,
+         ontologies) = self.make_graphload_config(graphload_config_template, graphload_ontologies,
+                                                  graph_path, remote_base, local_base, zip_location)
+
+        load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
+        print(load_command)
+
+        if load_from_repo:
+            # replace raw github imports with ontology.neuinfor iris to simplify import chain
+            # FIXME this is hardcoded and will not generalize ...
+            fix_imports = ("find " + local_base +
+                        (" -name '*.ttl' -exec sed -i"
+                            " 's/<http.\+\/ttl\//<http:\/\/ontology.neuinfo.org\/NIF\/ttl\//' {} \;"))
+            os.system(fix_imports)
+
+        if load_from_repo:
+            def reset_state(original_branch=nob):
+                repo.git.checkout('--', local_base)
+                original_branch.checkout()
+        else:
+            reset_state = lambda x:x
+
+        with execute_regardless(reset_state):  # FIXME start this immediately after we obtain nob?
+            # main
+            if load_from_repo:
+                if patch:
+                    # FIXME TODO XXX does scigraph load from the catalog!??!??
+                    # because it seems like doid loads correctly without using local_versions
+                    # which would be cool, if confusing
+                    local_versions = tuple(do_patch(patch_config, local_base))
+                else:
+                    local_versions = tuple()
+                itrips = local_imports(remote_base, local_base, ontologies,
+                                       local_versions=local_versions, dobig=True)  # SciGraph doesn't support catalog.xml
+                catalog = make_catalog(itrips)
+                with open(Path(local_base, 'catalog.xml'), 'wt') as f:
+                    f.write(catalog)
+            else:
+                itrips = []
+                pass
+
+            maybe_zip_path = glob(wild_zip_path)
+            if not maybe_zip_path:
+                if check_built:
+                    print('The graph has not been loaded.')
+                    raise NotBuiltError('The graph has not been loaded.')
+
+                #breakpoint()
+                failure = os.system(load_command)
+                if failure:
+                    if os.path.exists(graph_path):
+                        shutil.rmtree(graph_path)
+                else:
+                    os.rename(config_path,  # save the config for eaiser debugging
+                              graph_path / config_path.name)
+                    cpr = config_path.with_suffix(config_path.suffix + '.raw')
+                    os.rename(cpr, graph_path / cpr.name)
+                    failure = os.system(zip_command)  # graphload zip
+            else:
+                zip_path = maybe_zip_path[0]  # this way we get the actual date
+                print('Graph already loaded at', zip_path)
+
+            # this needs to be run when the branch is checked out
+            # FIXME might be worth adding this to the load config?
+            self.ontologies = [get_iri(load_header(rec['url'])) for rec in config['ontologies']]
+
+        self.zip_path = zip_path
+        self.itrips = itrips
+        self.config = config
+
+    @staticmethod
+    def _set_up_repo_state(local_base, git_remote, org, git_local,
+                           repo_name, branch, commit, post_clone):
         git_base = jpth(git_remote, org, repo_name)
         if not os.path.exists(local_base):
             repo = Repo.clone_from(git_base + '.git', local_base)
@@ -140,9 +233,12 @@ class ReproLoader:
         if commit != 'HEAD':
             repo.git.checkout(commit)
 
+        return repo, nob
+
+    @staticmethod
+    def _set_up_paths(zip_location, repo_name, branch, scigraph_commit, ontology_commit):
         # TODO consider dumping metadata in a file in the folder too?
         def folder_name(scigraph_commit, wild=False):
-            ontology_commit = repo.head.object.hexsha[:COMMIT_HASH_HEAD_LEN]
             return (repo_name +
                     '-' + branch +
                     '-graph' +
@@ -163,65 +259,7 @@ class ReproLoader:
 
         graph_path, zip_path, zip_command = make_folder_zip()
         wild_graph_path, wild_zip_path = make_folder_zip(wild=True)
-
-        (config, config_path,
-         ontologies) = self.make_graphload_config(graphload_config_template, graphload_ontologies,
-                                                  graph_path, remote_base, local_base, zip_location)
-
-        load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
-        print(load_command)
-
-
-        # replace raw github imports with ontology.neuinfor iris to simplify import chain
-        fix_imports = "find " + local_base + " -name '*.ttl' -exec sed -i 's/<http.\+\/ttl\//<http:\/\/ontology.neuinfo.org\/NIF\/ttl\//' {} \;"
-        os.system(fix_imports)
-
-        def reset_state(original_branch=nob):
-            repo.git.checkout('--', local_base)
-            original_branch.checkout()
-
-        with execute_regardless(reset_state):  # FIXME start this immediately after we obtain nob?
-            # main
-            if patch:
-                # FIXME TODO XXX does scigraph load from the catalog!??!??
-                # because it seems like doid loads correctly without using local_versions
-                # which would be cool, if confusing
-                local_versions = tuple(do_patch(patch_config, local_base))
-            else:
-                local_versions = tuple()
-            itrips = local_imports(remote_base, local_base, ontologies,
-                                   local_versions=local_versions, dobig=True)  # SciGraph doesn't support catalog.xml
-            catalog = make_catalog(itrips)
-            with open(Path(local_base, 'catalog.xml'), 'wt') as f:
-                f.write(catalog)
-
-            maybe_zip_path = glob(wild_zip_path)
-            if not maybe_zip_path:
-                if check_built:
-                    print('The graph has not been loaded.')
-                    raise NotBuiltError('The graph has not been loaded.')
-                #breakpoint()
-                failure = os.system(load_command)
-                if failure:
-                    if os.path.exists(graph_path):
-                        shutil.rmtree(graph_path)
-                else:
-                    os.rename(config_path,  # save the config for eaiser debugging
-                              graph_path / config_path.name)
-                    cpr = config_path.with_suffix('.raw')
-                    os.rename(cpr, graph_path / cpr.name)
-                    failure = os.system(zip_command)  # graphload zip
-            else:
-                zip_path = maybe_zip_path[0]  # this way we get the actual date
-                print('Graph already loaded at', zip_path)
-
-            # this needs to be run when the branch is checked out
-            # FIXME might be worth adding this to the load config?
-            self.ontologies = [get_iri(load_header(rec['url'])) for rec in config['ontologies']]
-
-        self.zip_path = zip_path
-        self.itrips = itrips
-        self.config = config
+        return graph_path, zip_path, zip_command, wild_zip_path
 
     @staticmethod
     def make_graphload_config(graphload_config_template, graphload_ontologies,

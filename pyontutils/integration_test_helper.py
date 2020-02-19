@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 import unittest
 import subprocess
 from importlib import import_module
@@ -25,6 +26,15 @@ def simpleskipif(skip):
             return function
 
     return inner
+
+
+def onerror_windows_readwrite_remove(action, name, exc):
+    """ helper for deleting readonly files on windows """
+    os.chmod(name, stat.S_IWRITE)
+    os.remove(name)
+
+
+onerror = onerror_windows_readwrite_remove if os.name == 'nt' else None
 
 
 def modinfo_to_path(mod):
@@ -122,6 +132,8 @@ class _TestScriptsBase(unittest.TestCase):
         find their code here. """
     # NOTE printing issues here have to do with nose not suppressing printing during coverage tests
 
+    temp_path = None
+
     def setUp(self):
         super().setUp()
         if not hasattr(self, '_modules'):
@@ -130,6 +142,14 @@ class _TestScriptsBase(unittest.TestCase):
         if not hasattr(self, '_do_mains'):
             self.__class__._do_mains = []
             self.__class__._do_tests = []
+
+        if self.temp_path is not None:
+            if not self.temp_path.exists():
+                self.temp_path.mkdir()
+
+    def tearDown(self):
+        if self.temp_path.exists():
+            shutil.rmtree(self.temp_path, onerror=onerror)
 
     def notest_mains(self):
         failed = []
@@ -227,6 +247,8 @@ class _TestScriptsBase(unittest.TestCase):
 
     @classmethod
     def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip, network_tests):
+        network_tests_prefix = [s for s in network_tests if not isinstance(s, str)]
+        network_tests = [s for s in network_tests if isinstance(s, str)]
         npaths = len(paths)
         print(npaths)
         for i_ind, path in enumerate(paths):
@@ -252,6 +274,13 @@ class _TestScriptsBase(unittest.TestCase):
 
                 if stem in network_tests:
                     skipif_no_net(test_main)
+
+                if network_tests_prefix and argv:
+                    for nt in network_tests_prefix:
+                        if len(argv) >= len(nt):
+                            if all(arg == prefix for arg, prefix
+                                   in zip(argv, nt)):
+                                skipif_no_net(test_main)
 
                 # FIXME do we need to setattr these test_files or no?
                 if stem in skip:

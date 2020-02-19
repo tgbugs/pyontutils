@@ -7,8 +7,8 @@ import pytest
 import pyontutils
 from pyontutils.utils import get_working_dir
 from pyontutils.config import auth
-from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders
-from .common import skipif_no_net
+from pyontutils.integration_test_helper import _TestScriptsBase, Repo, Folders, skipif_no_net
+from .common import temp_path_ap, temp_path
 
 
 @skipif_no_net
@@ -31,19 +31,21 @@ class TestScripts(Folders, _TestScriptsBase):
     """ woo ! """
 
 
+TestScripts.temp_path = temp_path
+
+
 only = tuple()
 skip = tuple()
 ci_skip = tuple()
-network_tests = (
+network_tests = (  # reminder that these only skip mains
     'closed_namespaces',
-    'combinators',  # shouldn't matter
     'hierarchies',
     'make_catalog',
-    'necromancy',
-    'ontutils',
-    'qnamefix',
     'scig',
     'scigraph_codegen',
+    ['ontload', 'graph'],
+    ['ontutils', 'deadlinks'],
+    ['ontutils', 'version-iri'],
 )
 #requests.exceptions.SSLError
 
@@ -75,11 +77,9 @@ else:
 
 ### build mains
 
-ban = (olr / 'ttl/BIRNLex_annotation_properties.ttl').as_posix()
-mba = (olr / 'ttl/generated/parcellation/mbaslim.ttl').as_posix()
+test_ttl = (Path(__file__).parent / 'graphload-test.ttl').as_posix()
 nifttl = (olr / 'ttl/nif.ttl').as_posix()
 nsmethodsobo = (glb / 'methodsOntology/source-material/ns_methods.obo').as_posix()
-zap = 'git checkout $(git ls-files {*,*/*,*/*/*}.ttl)'
 mains = {'scigraph':None,
          'combinators':None,
          'hierarchies':None,
@@ -89,26 +89,29 @@ mains = {'scigraph':None,
          'make_catalog':['ont-catalog', '--jobs', '1'],  # hits the network
          'graphml_to_ttl':['graphml-to-ttl', 'development/methods/methods_isa.graphml'],
 #['ilxcli', '--help'],
-         'obo_io':['obo-io', '--ttl', nsmethodsobo],
-'ttlfmt':[['ttlfmt', ban],
+         'obo_io':['obo-io', '--ttl', nsmethodsobo],  # this should also fail, but doesn't ?
+'ttlfmt':[['ttlfmt', test_ttl],
           ['ttlfmt', '--version'],
-          #[zap]
          ],
-'qnamefix':[['qnamefix', ban],
-            ['qnamefix', mba],
-            ['qnamefix', '-x', 'skos', mba],
-            #[zap]
+'qnamefix':[['qnamefix', test_ttl],
+            ['qnamefix', test_ttl],
+            ['qnamefix', '-x', 'skos', test_ttl],
            ],
-'necromancy':['necromancy', ban],
+'necromancy':['necromancy', '-l', temp_path_ap, '--mkdir', test_ttl],
 'ontload':[['ontload', '--help'],
-           ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl],  # this hits the network
-           ['ontload', 'config', 'NIF-Ontology', 'NIF', '--zip-location', './', ban],  # FIXME cleanup created configs
-           ['ontload', 'imports', 'NIF-Ontology', 'NIF', ban],
-           ['cd', olr.as_posix() + '/ttl', '&&', 'git', 'checkout', ban]],
+           ['ontload', 'chain', 'NIF-Ontology', 'NIF', nifttl,
+            '--zip-location', temp_path_ap],  # this hits the network, so why doesn't it fail in sandbox?
+           ['ontload', 'config', 'NIF-Ontology', 'NIF',
+            '--zip-location', temp_path_ap,],
+           ['ontload', 'graph', 'NIF-Ontology', 'NIF',
+            '--zip-location', temp_path_ap,
+            '--git-local', temp_path_ap,
+            '--graphload-ontologies', (Path(__file__).parent / 'ontologies-test.yaml').resolve().as_posix()],  # FIXME cleanup
+           ['ontload', 'imports', 'NIF-Ontology', 'NIF', test_ttl]],
 'ontutils':[['ontutils', '--help'],
             ['ontutils', 'deadlinks', nifttl],
             ['ontutils', 'version-iri', nifttl],
-            #['ontutils', 'spell', ban],  #  FIXME skipping for now due to huspell dependency
+            #['ontutils', 'spell', test_ttl],  #  FIXME skipping for now due to huspell dependency
             #['ontutils', 'diff', 'test/diff-before.ttl', 'test/diff-after.ttl', 'definition:', 'skos:definition'],
            ],
 'overlaps':['overlaps', '--help'],
