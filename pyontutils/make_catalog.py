@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pyontutils.config import auth
 __doc__ = f"""Generate ttl/catalog-*.xml
 
 Usage:
@@ -6,10 +7,11 @@ Usage:
     ont-catalog [options] <file> ...
 
 Options:
-    -b --big                    when creating catalog also import big files
-                                reccomend running this option with pypy3
-    -j --jobs=NJOBS             number of parallel jobs to run [default: 9]
-    -d --debug                  break at the end
+    -b --big                        when creating catalog also import big files
+                                    reccomend running this option with pypy3
+    -j --jobs=NJOBS                 number of parallel jobs to run [default: 9]
+    -d --debug                      break at the end
+    -l --ontology-local-repo=OLR    path to ontology [default: {auth.get_path('ontology-local-repo')}]
 
 """
 import os
@@ -19,7 +21,6 @@ from pathlib import Path
 from git import Repo
 from pyontutils.utils import anyMembers
 from pyontutils.core import displayTriples
-from pyontutils.config import auth
 from pyontutils.ontload import local_imports
 try:
     breakpoint
@@ -32,7 +33,7 @@ def main():
     args = docopt(__doc__, version='ont-catalog 0.0.1')
     dobig = args['--big']
     remote_base = 'http://ontology.neuinfo.org/NIF/ttl/'
-    olr = auth.get_path('ontology-local-repo')
+    olr = Path(args['--ontology-local-repo'])
     local_base = (olr / 'ttl').as_posix() + '/'
 
     #list of all nif ontologies

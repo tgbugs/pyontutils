@@ -323,10 +323,11 @@ def version_iri(filename, epoch):
 
 
 def make_version_iri_from_iri(iri, epoch):
-    pp = PurePath(iri)
+    head, tail = iri.split('/', 1)
+    pp = PurePath(tail)
     vp = (pp.with_suffix('') / 'version' / str(epoch) / pp.stem).with_suffix(pp.suffix)
-    versionIRI = rdflib.URIRef(str(vp))
-    print(versionIRI)
+    viri = head + str(vp)
+    versionIRI = rdflib.URIRef(viri)
     return rdflib.URIRef(versionIRI)
 
 

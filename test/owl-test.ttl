@@ -1,0 +1,7 @@
+@prefix : <file:///ERROR/EMPTY/PREFIX/BANNED/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+<http://ontology.neuinfo.org/NIF/ttl/nif.ttl> a owl:Ontology ;
+    :asdf <http://example.org/404> .
+
+### Serialized using the ttlser deterministic serializer v1.2.0

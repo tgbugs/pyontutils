@@ -17,7 +17,7 @@ from your local copy of this repo.
 1. [~/.config/pyontutils/config.yaml](${HOME}/.config/pyontutils/config.yaml).
 This file can be used to augment the varibles defined in [auth-config.py](./pyontutils/auth-config.py).
 For more details about the config see the [orthauth guide](https://github.com/tgbugs/orthauth/blob/master/docs/guide.org).
-2. [secrets.yaml](${HOME}/.config/pyontutils/secrets.yaml) that you can put wherever
+2. [secrets.yaml](${HOME}/.config/orthauth/secrets.yaml) that you can put wherever
 you want by editing the `auth-stores: secrets: path:` entry in [config.yaml](${HOME}/.config/pyontutils/config.yaml).
 The file mode needs to be set to `0600` so that only you can read and write it.
 It is also advisable to place it inside a folder with a mode set to `0700` since
