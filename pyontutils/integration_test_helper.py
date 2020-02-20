@@ -148,8 +148,9 @@ class _TestScriptsBase(unittest.TestCase):
                 self.temp_path.mkdir()
 
     def tearDown(self):
-        if self.temp_path.exists():
-            shutil.rmtree(self.temp_path, onerror=onerror)
+        if self.temp_path is not None:
+            if self.temp_path.exists():
+                shutil.rmtree(self.temp_path, onerror=onerror)
 
     def notest_mains(self):
         failed = []
