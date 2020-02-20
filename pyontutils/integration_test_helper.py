@@ -170,7 +170,7 @@ class _TestScriptsBase(unittest.TestCase):
         assert not failed, '\n'.join('\n'.join(str(e) for e in f) for f in failed)
 
     @classmethod
-    def make_test_file(cls, i_ind, ppath, post_load, module_parent, skip):
+    def make_test_file(cls, i_ind, ppath, post_load, module_parent, skip, ci_skip):
         print('PPATH:  ', ppath)
         pex = ppath.as_posix().replace('/', '_').replace('.', '_')
         fname = f'test_{i_ind:0>3}_' + pex
@@ -246,7 +246,7 @@ class _TestScriptsBase(unittest.TestCase):
         return test_main
 
     @classmethod
-    def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip, network_tests):
+    def populate_from_paths(cls, paths, mains, tests, do_mains, post_load, post_main, module_parent, skip, ci_skip, network_tests):
         network_tests_prefix = [s for s in network_tests if not isinstance(s, str)]
         network_tests = [s for s in network_tests if isinstance(s, str)]
         npaths = len(paths)
@@ -254,7 +254,7 @@ class _TestScriptsBase(unittest.TestCase):
         for i_ind, path in enumerate(paths):
             print(path)
             (pex, fname, stem, module_path,
-             test_file) = cls.make_test_file(i_ind, path, post_load, module_parent, skip)
+             test_file) = cls.make_test_file(i_ind, path, post_load, module_parent, skip, ci_skip)
             setattr(cls, fname, test_file)
 
             if stem in mains:
@@ -352,7 +352,7 @@ class _TestScriptsBase(unittest.TestCase):
             ppaths = [modinfo_to_path(m) for m in modinfos]
 
         cls.populate_from_paths(ppaths, mains, tests, do_mains, post_load, post_main,
-                                module_parent, skip, network_tests)
+                                module_parent, skip, ci_skip, network_tests)
 
         if not hasattr(cls, 'argv_orig'):
             cls.argv_orig = sys.argv
