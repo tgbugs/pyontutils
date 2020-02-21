@@ -402,6 +402,12 @@ build-release () {
     fi
     #git checkout ${version}  # only if all tests are go and release is tagged
     PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
+    if [ $? -ne 0 ]; then
+        echo "setup.py failed"
+        popd > /dev/null
+        return 1
+    fi
+
     unset PYTHONPATH
     cp dist/${packagename}-${version}* ${TEST_PATH}
 
@@ -409,8 +415,8 @@ build-release () {
     tar xvzf ${packagename}-${version}.tar.gz
     if [ $? -ne 0 ]; then
         echo "tar failed, probably due to a version mismatch"
-        popd
-        popd
+        popd > /dev/null
+        popd > /dev/null
         return 1
     fi
     pushd ${packagename}-${version}
