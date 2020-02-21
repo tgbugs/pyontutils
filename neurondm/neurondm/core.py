@@ -702,14 +702,22 @@ class Config:
                 # part of graph
                 # FIXME hardcoded ...
                 partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
-                if partofpath.repo.active_branch.name != branch:
+                repo = partofpath.repo
+                if repo.active_branch.name != branch and not ont_checkout_ok:
                     raise graphBase.GitRepoOnWrongBranch(
                         f'Local git repo not on {branch} branch!\n'
-                        f'It is on {partofpath.repo.active_branch} branch instead.\n'
+                        f'It is on {repo.active_branch} branch instead.\n'
                         f'Please run `git checkout {branch}` in '
-                        f'{partofpath.repo.working_dir}, '
+                        f'{repo.working_dir}, '
                         'set NIFSTD_CHECKOUT_OK= via export or '
                         'at runtime, or set checkout_ok=True.')
+
+                elif ont_checkout_ok:
+                    graphBase.repo = repo
+                    graphBase.working_branch = next(h for h in repo.heads
+                                                    if h.name == branch)
+                    graphBase.original_branch = repo.active_branch
+                    graphBase.set_repo_state()
 
                 graphBase.part_of_graph = OntResAny(partofpath).graph
                 [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
@@ -1158,6 +1166,7 @@ class graphBase:
                                                 if h.name == branch)
                 graphBase.original_branch = repo.active_branch
                 graphBase.set_repo_state()
+
             use_core_paths = local_core_paths
             use_in_paths = local_in_paths
         else:
