@@ -29,8 +29,30 @@ def _ontology_data_files():
                 'ttl/generated/part-of-self.ttl',]
     if RELEASE:
         from augpathlib import RepoPath as Path
-        from neurondm.core import auth
+        ### KILL IT WITH FIRE
+        try:
+            from neurondm.core import auth  ### this is ok
+        except ValueError:
+            import orthauth as oa
+            from pyontutils.config import auth as pauth
+            auth = oa.configure_relative('neurondm/auth-config.py',
+                                         include=pauth)
+        ###
+
         olr = Path(auth.get_path('ontology-local-repo'))
+
+        ### KILL IT WITH FIRE
+        if not olr.exists():
+            original = auth.get('ontology-local-repo')
+            raise FileNotFoundError(f'ontology local repo does not exist: {olr}'
+                                    f'path expanded from {original}')
+        elif olr.repo.active_branch.name != auth.get('neurons-branch'):
+            # FIXME yes indeed having to call Config in a way that is
+            # invoked at import time is REALLY REALLY BAD :/
+            raise ValueError('git is on the wrong branch!'
+                             f'{olr.repo.active_branch}')
+        ###
+
         resources = Path(resources)
         resources.mkdir()  # if we add resources to git, this will error before we delete by accident
         paths = [olr / rp for rp in relpaths]
@@ -72,6 +94,7 @@ try:
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
+            'orthauth>=0.0.9',  # temp, needed to work around include relative issue until pyontutils bumps the dep
             'hyputils>=0.0.4',
             'pyontutils>=0.1.7',
         ],
