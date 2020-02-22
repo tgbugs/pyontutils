@@ -11,4 +11,5 @@ recursive-exclude * *.swp
 recursive-exclude * *.swo
 recursive-include resources *.confd
 recursive-include resources *.rc
+recursive-include resources *.el
 recursive-include resources/sparc_term_versions *

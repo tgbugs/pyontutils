@@ -3,13 +3,11 @@
 #+OPTIONS: num:nil
 #+STARTUP: showall
 
-* Introduction
-Over the past 4 years we have employed multiple different workflows
-for deploying a variety of ontologies to production SciGraph instances.
-This readme consolidates everything that we have learned into what we
-considered to be one reasonably optimal workflow that avoids most of the
-hidden pitfalls.
-* Using this file
+This readme consolidates a number of different processes for deploying
+ontologies to SciGraph into a single workflow that avoids most of the
+hidden pitfalls we have encountered over the past 4 years.
+
+* Using this file :noexport:
 You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
 this file in emacs using =C-c C-v t= or you can tangle
 the whole file from the command line using with the following.
@@ -21,9 +19,8 @@ emacs --batch \
       --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
 #+end_src
 The core functionality is tangled to [[file:./bin/scigraph-functions.sh]].
-If you need to use the core functionality becuase one of the =run-*= commands
-does not meet your needs, just make sure to source that file so your will have
-the functions available.
+It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
+to make the functions defined in this file available for use.
 * Setup
 :properties:
 :visibility: folded
@@ -217,7 +214,7 @@ Set =path-scigraph-functions= here
 #+name: path-scigraph-functions
 : ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh
 
-#+name: *source-scigraph-functions
+#+name: &source-scigraph-functions
 #+begin_src bash :noweb yes
 source "$(eval echo <<path-scigraph-functions()>>)"
 #+end_src
@@ -282,7 +279,7 @@ mkdir build
 
 Compile SciGraph.
 # ((((
-#+name: *vars-compile-scigraph-git
+#+name: &vars-compile-scigraph-git
 #+begin_src bash :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -307,7 +304,7 @@ done
 # NOTE --path-zip and --git-local can be anywhere but both should exist
 # they can also be the same folder
 function compile-scigraph-git () {
-    <<*vars-compile-scigraph-git>>
+    <<&vars-compile-scigraph-git>>
     ontload scigraph \
     --zip-location ${PATH_ZIP}  ${IFS# build artifacts will be deposited here} \
     --git-local ${PATH_GIT}     ${IFS# remote repos will be cloned here} \
@@ -359,7 +356,7 @@ Set =folder-name-graph= here
 : graph
 
 # (((((
-#+name: *vars-load-graph
+#+name: &vars-load-graph
 #+begin_src bash :eval never :exports none :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -393,7 +390,7 @@ echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function load-graph () {
-    <<*vars-load-graph>>
+    <<&vars-load-graph>>
 
     if [[ -z "${PATH_ONTOLOGIES}" ]]; then
         echo no ontologies section specified
@@ -422,7 +419,7 @@ function load-graph () {
 **** ontload
 # sigh command line flags inside of flags
 # (((((((
-#+name: *vars-load-graph-ontload
+#+name: &vars-load-graph-ontload
 #+begin_src bash :eval never :exports none :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -452,7 +449,7 @@ done
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function load-graph-ontload () {
-    <<*vars-load-graph-ontload>>
+    <<&vars-load-graph-ontload>>
     ontload graph \
     --org SciCrunch  ${IFS# github organization} \
     NIF-Ontology     ${IFS# repo name} \
@@ -475,7 +472,7 @@ If =--patch= is enabled and the patch config cannot be found you will get an err
 #+name: run-load-graph-ontload-patch
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-patch
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 load-graph-ontload \
 --patch                      ${IFS# do apply patches} \
 --patch-config patches.yaml  ${IFS# path to patche files}
@@ -488,7 +485,7 @@ to use the version of SciGraph built from git in [[compile-scigraph-git][compile
 #+name: run-load-graph-ontload-scigraph-git
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-scigraph-git
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 load-graph-ontload \
 --build-scigraph \
 --scigraph-org SciGraph \
@@ -504,7 +501,7 @@ Set =folder-name-runtime= here
 : graph
 
 # ((((
-#+name: *are-you-sure
+#+name: &are-you-sure
 #+begin_src bash
 read -p "Are you sure you want to deploy? y/N " -n 1 choice
 case "${choice}" in
@@ -527,7 +524,7 @@ popd
 #+end_src
 
 # (((((((
-#+name: *vars-deploy-graph
+#+name: &vars-deploy-graph
 #+begin_src bash :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -575,10 +572,10 @@ echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function deploy-graph () {
-    <<*vars-deploy-graph>>
+    <<&vars-deploy-graph>>
     echo Will deploy graph to ${SERVER}:${PATH_RUNTIME}
     echo $PATH_ZIP
-    <<*are-you-sure>>
+    <<&are-you-sure>>
     if [ "${SERVER}" = "localhost" ]; then
         CMD="su - ${SVC_USER} -c \"
                 <<localhost-deploy-command>>\""
@@ -616,7 +613,7 @@ Set =file-stem-services-output= here
 : services
 
 # ((((((((((
-#+name: *vars-build-services
+#+name: &vars-build-services
 #+begin_src bash :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -661,7 +658,7 @@ PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function build-services () {
-    <<*vars-build-services>>
+    <<&vars-build-services>>
     # make build location
     mkdir -p "${PATH_BUILD}"
 
@@ -686,7 +683,7 @@ function build-services () {
 Once =services.yaml= has been created scp the raw and expanded configs
 to the target host.
 # ((((
-#+name: *vars-deploy-services
+#+name: &vars-deploy-services
 #+begin_src bash :noweb yes
 local POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -730,7 +727,7 @@ fi
 #+end_src
 
 # this block's quoting is funky because bash doesn't have anything like unquote
-#+name: *deploy-services-backup-config
+#+name: &deploy-services-backup-config
 #+begin_src bash
 E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
 if [ -n "${E_YAML_RAW}" ]; then
@@ -749,13 +746,13 @@ function deploy-services () {
     # NOTE it is on YOU to make sure you are deploying the right config
     # to the right server, under normal circumstances you should
     # be running a run-build-deploy-services-* command
-    <<*vars-deploy-services>>
+    <<&vars-deploy-services>>
     echo Will deploy services config to $TARGET
     echo $CONFIG_RAW
     echo $CONFIG
-    <<*are-you-sure>>
+    <<&are-you-sure>>
     CMD='
-        <<*deploy-services-backup-config>>'
+        <<&deploy-services-backup-config>>'
     if [ ${SERVER} = localhost ]; then
         echo $CONFIG_RAW $TARGET
         echo ${CMD}
@@ -820,7 +817,7 @@ Set =git-ref-nifstd= here
 #+name: run-load-graph-nifstd
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-nifstd
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 load-graph-ontload \
 --path-build <<path-build-nifstd()>> \
 --path-ontologies <<path-ontologies-nifstd()>> \
@@ -837,7 +834,7 @@ Set =path-cypher-resources-nifstd= here
 #+name: run-build-services-nifstd
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-nifstd
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 build-services \
 --path-build <<path-build-nifstd()>> \
 --path-cypher-resources <<path-cypher-resources-nifstd()>> \
@@ -866,7 +863,7 @@ Set =git-ref-sparc= here
 #+name: run-load-graph-sparc
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 load-graph-ontload \
 --path-build <<path-build-sparc()>> \
 --path-ontologies <<path-ontologies-sparc()>> \
@@ -876,7 +873,7 @@ load-graph-ontload \
 #+name: run-deploy-graph-sparc
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph \
 --path-build <<path-build-sparc()>>
@@ -895,7 +892,7 @@ Set =host-services-sparc= here
 #+name: run-build-services-sparc
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 build-services \
 --path-build <<path-build-sparc()>> \
 --svc-host <<host-services-sparc()>> \
@@ -906,7 +903,7 @@ build-services \
 #+name: run-deploy-services-sparc
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-services \
 --config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph
@@ -942,7 +939,7 @@ Set =path-ontologies-sparc-data= here
 #+name: run-load-graph-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 load-graph \
 --path-build <<path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
@@ -953,7 +950,7 @@ load-graph \
 #+name: run-deploy-graph-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph-data \
 --path-build <<path-build-sparc-data()>>
@@ -981,7 +978,7 @@ Set =host-services-sparc-data= here
 #+name: run-build-services-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 build-services \
 --path-build <<path-build-sparc-data()>> \
 --svc-host <<host-services-sparc-data()>> \
@@ -991,7 +988,7 @@ build-services \
 #+name: run-deploy-services-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-services \
 --config <<path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph-data
@@ -1019,7 +1016,7 @@ deploy-services \
 #+name: run-deploy-services-sparc-local
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-local
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml
 #+end_src
 **** build-deploy
@@ -1033,7 +1030,7 @@ Set =folder-name-runtime-sparc-data-local= here
 #+name: run-deploy-graph-sparc-data-local
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data-local
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-graph \
 --path-build <<path-build-sparc-data()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
@@ -1047,7 +1044,7 @@ Set =file-stem-sparc-data-local= here
 #+name: run-build-services-sparc-data-local
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data-local
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 ./build-services \
 --path-build <<path-build-sparc-data()>> \
 --path-cypher-resources <<path-cypher-resources-sparc-data()>> \
@@ -1058,7 +1055,7 @@ Set =file-stem-sparc-data-local= here
 #+name: run-deploy-services-sparc-data-local
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data-local
-<<*source-scigraph-functions>>
+<<&source-scigraph-functions>>
 deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
 #+end_src
 **** build-deploy

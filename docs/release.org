@@ -1,15 +1,62 @@
 # -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
+#+TITLE: Python release workflow
+#+OPTIONS: num:nil
 
+* Using this file :noexport:
+You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
+this file in emacs using =C-c C-v t= or you can tangle
+the whole file from the command line using with the following.
+#+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
+: ${THIS_FILE:="./release.org"}
+emacs --batch \
+      --load org \
+      --load ob-shell \
+      --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
+#+end_src
+
+The core functionality is tangled to [[file:./../bin/python-release-functions.sh]].
+It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
+to make the functions defined in this file available for use.
 * Python release process
 Release workflow.
 
-Don't tag a release on github until all the tests pass,
+Don't tag a release on GitHub until all the tests pass,
 the package contents are what we want and expect, and
 you have run =push-release= to pypi testing and checked it.
-Once they do tag it with the version that you set below
-so that everything is on the same page.
+Once they do, tag it with the version that you set below
+so that everything is on the same page. If there are multiple
+packages per repo the tag is usually prefixed with the module name.
 
-#+CAPTION: [[file:~/.pypirc]] on the release host (only need to create once)
+Note that if you use the =--local ~/path/to/my/working/repo= option as the source repo
+then =git pull= is called with =--force= since the assumption is that =git commit --amend=
+may be used in certain cases.
+
+*NEVER USE THESE FUNCTIONS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
+
+*WHEN YOU PUSH TO TEST*
+Inspect _everything_ at https://test.pypi.org/project/${packagename}.
+MAKE SURE THE HASHES MATCH (tail hashes vs curl output)
+You can also check https://test.pypi.org/project/ontquery/#files
+** Example release
+#+NAME: release-examples
+#+CAPTION: examples, this is horrible and dangerous, never do this this way run the 3 commands separately
+#+BEGIN_SRC bash :eval never :noweb yes
+source ~/git/pyontutils/bin/python-release-functions.sh
+SOMEVAR=some-value \
+build-release org repo folder packagename version --some-arg
+PYTHONPATH=~/git/pyontutils: SCICRUNCH_API_KEY=$(cat ~/ni/dev/secrets.yaml | grep tgbugs-travis | awk '{ print $2 }') \
+build-release tgbugs ontquery ontquery ontquery 0.1.0 --release
+exit  # if try to copy paste this block terminate here to prevent dumbs
+push-release ontquery ~/nas/software-releases ontquery 0.1.0
+# DO GitHub RELEASE HERE
+are-you-sure && \
+final-release ~/nas/software-releases ontquery 0.1.0
+#+END_SRC
+
+
+This is a reasonable time to tag the release on GitHub.
+* Config files
+#+CAPTION: [[file:${HOME}/.pypirc]] on the release host (only need to create once)
 #+BEGIN_SRC toml
 [distutils]
 index-servers =
@@ -25,265 +72,21 @@ repository: https://test.pypi.org/legacy/
 username: your-username
 password: set-this-one-for-simplicity
 #+END_SRC
-
-Note that if you use the =--local ~/path/to/my/working/repo= option as the source repo
-then =git pull= is called with =--force= since the assumption is that =git commit --amend=
-may be used in certain cases.
-
-Run the code block definitions to create the functions we will use.
-*NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
-
-#+NAME: release-next
-#+HEADER: :shebang "#!/usr/bin/env python3.7"
-#+begin_src python :tangle ./../bin/release-next :tangle-mode (identity #o755)
-import setuptools
-from distutils.version import LooseVersion
-import importlib.util
-from urllib.parse import urlparse
-import requests
-import augpathlib as aug
-
-
-last_output = [None]
-def fake_setup(*args, **kwargs):
-    last_output[0] = args, kwargs
-
-
-setuptools.setup = fake_setup
-
-
-class Version(LooseVersion):
-    def next(self, increment='current'):
-        nv = [_ for _ in self.version]
-        if increment == 'current':
-            nv[-1] = nv[-1] + 1
-
-        elif increment == 'minor':
-            if 'dev' in nv:
-                nv = nv[:3]
-            else:
-                if 'post' in nv:
-                   nv = nv[:3]
-
-                nv[-1] = nv[-1] + 1
-
-        elif increment == 'dev':
-            if 'post' in nv:
-                nv = nv[:3]
-
-            nv[-1] = nv[-1] + 1
-            if 'dev' not in nv:
-                nv.extend(['dev', 0])
-
-        elif increment == 'post':
-            raise NotImplementedError('TODO')
-
-        s = ''
-        oe = None
-        for e in nv:
-            if isinstance(oe, int):
-                s += '.'
-
-            oe = e
-            if isinstance(e, int):
-                e = str(e)
-                
-            s += e
-
-        return self.__class__(s)
-
-    def _cmp(self, other):
-        if isinstance(other, str):
-            other = LooseVersion(other)
-
-        sversion = [_ for _ in self.version]
-        oversion = [_ for _ in other.version]
-        ls = len(sversion)
-        lo = len(oversion)
-        # FIXME .post0 vs .1
-        if lo < ls:
-            oversion.extend([0] * (ls - lo))
-        elif ls < lo:
-            sversion.extend([0] * (lo - ls))
-
-        # 0.0.1.1 comes ... after 0.0.1.post1 ???
-        for v in [sversion, oversion]:
-            if 'dev' in v:
-                v[v.index('dev')] = -4
-            elif 'post' in v:
-                v[v.index('post')] = 1
-
-        if sversion == oversion:
-            return 0
-        if sversion < oversion:
-            return -1
-        if sversion > oversion:
-            return 1
-
-
-class SetupPath(aug.RepoPath):
-    # TODO get latest release info from github and pypi
-
-    @property
-    def setupfu(self):
-        with self.folder:
-            spec = importlib.util.spec_from_file_location('setup', self.setup_file)
-            setup = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(setup)
-            args, kwargs = last_output[0]
-            return setup, args, kwargs
-
-    @property
-    def setup_kwargs(self):
-        if not hasattr(self, '_setup_kwargs'):
-            mod, args, kwargs = self.setupfu
-            self._setup_kwargs = kwargs
-
-        return self._setup_kwargs
-
-    @property
-    def version_latest_pypi(self):
-        return Version(self.pypi_json['info']['version'])
-
-    @property
-    def version_latest_released(self):
-        # git, pypi, tag??
-        vers = sorted(Version(_) for _ in self.pypi_json['releases'])
-        return vers[-1]
-
-    def version_next(self, increment='current'):
-        # major middle minor dev post  # or something
-        # FIXME
-        return self.version_latest_pypi.next(increment=increment)
-
-    @property
-    def version_repo(self):
-        return Version(self.setup_kwargs['version'])
-
-    @property
-    def version_new(self):
-        # TODO cases dev normal
-        # want dev release but repo is at an unreleased normal
-        # want normal, already released this one
-        # want dev, already released this one
-        # want *, repo skips a version
-        return self.version_repo
-        raise NotImplementedError('TODO')
-
-    @property
-    def module_init_file(self):
-        return self.module / '__init__.py'
-
-    @property
-    def module(self):
-        kwargs = self.setup_kwargs
-        name = kwargs['name']
-        packages = kwargs['packages']
-        for package in packages:
-            if package == name:
-                return self.folder / name
-
-        raise NotImplementedError(f'Don\'t know how to release packages whose name does not match a package name. {name} {packages}')
-
-    @property
-    def setup_file(self):
-        return self.folder / 'setup.py'
-
-    @property
-    def folder(self):
-        if not self.is_absolute() or '..' in self.parts:
-            return self.resolve().folder
-
-        if self.is_dir():
-            for f in self.glob('setup.py'):
-                return self
-
-        return self.parent.folder
-
-    @property
-    def pypi_json(self):
-        if not hasattr(self, '_pypi_json'):
-            self._pypi_request = requests.get(f'https://pypi.org/pypi/{self.arg_packagename}/json')
-            self._pypi_json = self._pypi_request.json()
-
-        return self._pypi_json
-
-    @property
-    def arg_org(self):
-        u = urlparse(self.remote_uri_human())
-        _, org, repo, *_ = u.path.split('/')
-        return org
-
-    @property
-    def arg_repo(self):
-        u = urlparse(self.remote_uri_human())
-        _, org, repo, *_ = u.path.split('/')
-        return repo
-
-    @property
-    def arg_folder(self):
-        return self.folder.relative_to(self.working_dir.parent)
-
-    @property
-    def arg_packagename(self):
-        return self.setup_kwargs['name']
-
-    @property
-    def arg_rest(self):
-        # TODO
-        return ''
-
-    @property
-    def command(self):
-        rest = self.arg_rest
-        rest = ' ' + self.rest if rest else ''
-        return f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} {self.arg_packagename} {self.version_new}{rest}'
-
-
-SetupPath._bind_flavours()
-
-
-def main():
-   sp = SetupPath('.')  # options.path
-   print(sp.version_next())
-   print(sp.command)
-   spn = SetupPath('~/git/rdflib').expanduser()
-   asdf = sorted([Version(_) for _ in spn.pypi_json['releases'].keys()])
-   print(asdf)
-   print([v.next('current') for v in asdf])
-   print([v.next('dev') for v in asdf])
-   print([v.next('minor') for v in asdf])
-   #breakpoint()
-
-
-if __name__ == '__main__':
-    main()
-#+end_src
-
-#+NAME: release-next-old
-#+BEGIN_SRC bash :eval never :exports code
-release-next () {
-    # example
-    # release-next path/to/folder/module/__init__.py
-    # vs 
-    # release-next path/to/folder/module
-    # vs
-    # release-next path/to/folder
-
-    # behavior should probably be to search recursively up until we find a setup.py file ...
-    WORKING_DIR=$(git rev-parse --show-toplevel)
-    MODULE_PATH=$(dirname INIT_PATH)
-    FOLDER=$(dirname MODULE_PATH)
-    SETUP_PATH="${FOLDER}/setup.py"
-    ORG=
-    # get folder package name
-    # get version
-    # find setup.py
-}
+* Code
+** Python release functions
+Tangle this block so you can source [[file:./../bin/python-release-functions.sh]]
+#+NAME: all-blocks
+#+CAPTION: run this to export all the things
+#+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
+#+BEGIN_SRC bash :eval never :noweb yes
+<<build-release>>
+<<push-release>>
+# TODO github-release
+<<final-release>>
 #+END_SRC
-
+** Build release
 #+NAME: build-release
-#+BEGIN_SRC bash :eval never :exports code
+#+begin_src bash :eval never :exports code
 build-release () {
     # example
     # build-release org    repo     folder   packagename version
@@ -479,8 +282,9 @@ build-release () {
         echo "$(color ltyellow)accidental releases built from a private source$(color off)"
     fi
 }
-#+END_SRC
+#+end_src
 
+** Push release
 #+NAME: push-release
 #+BEGIN_SRC bash :eval never :exports code
 function push-release () {
@@ -510,9 +314,9 @@ function push-release () {
     popd
 }
 #+END_SRC
-  
+** TODO GitHub release
 #+NAME: github-release
-#+BEGIN_SRC python :eval never :var module=nil
+#+BEGIN_SRC python :eval never
 import requests
 from sparcur.utils
 #from sparcur.utils import mimetype  # FIXME or something like that
@@ -564,6 +368,7 @@ def github_release(org, repo, version, hashes, *assets, branch='master'):
     upload_assets(upload_base, *asset_paths)
 #+END_SRC
 
+** Final release
 #+NAME: final-release
 #+CAPTION: on the release host final upload from previous block
 #+CAPTION: you will need to enter your password
@@ -593,50 +398,273 @@ function final-release () {
     popd
 }
 #+END_SRC
+** TODO Next version                                               :noexport:
+#+NAME: release-next
+#+HEADER: :shebang "#!/usr/bin/env python3.7"
+#+begin_src python :tangle ./../bin/release-next :tangle-mode (identity #o755)
+import setuptools
+from distutils.version import LooseVersion
+import importlib.util
+from urllib.parse import urlparse
+import requests
+import augpathlib as aug
 
-Tangle this block so you can source [[../bin/python-release-functions.sh]]
-# FIXME WTF can only tangle sh not bash?!
-#+NAME: all-blocks
-#+CAPTION: run this to export all the things
-#+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
-#+BEGIN_SRC sh :eval never :noweb yes
-<<build-release>>
-<<push-release>>
-# TODO github-release
-<<final-release>>
-#+END_SRC
 
-You can also tangle this whole file by running the following from
-the working directory of this repository. You can then source the
-tangled file directly.
-#+begin_src bash :eval never
-emacs --batch -l org --eval '(org-babel-tangle-file "docs/release.org")'
-source bin/python-release-functions.sh
+last_output = [None]
+def fake_setup(*args, **kwargs):
+    last_output[0] = args, kwargs
+
+
+setuptools.setup = fake_setup
+
+
+class Version(LooseVersion):
+    def next(self, increment='current'):
+        nv = [_ for _ in self.version]
+        if increment == 'current':
+            nv[-1] = nv[-1] + 1
+
+        elif increment == 'minor':
+            if 'dev' in nv:
+                nv = nv[:3]
+            else:
+                if 'post' in nv:
+                   nv = nv[:3]
+
+                nv[-1] = nv[-1] + 1
+
+        elif increment == 'dev':
+            if 'post' in nv:
+                nv = nv[:3]
+
+            nv[-1] = nv[-1] + 1
+            if 'dev' not in nv:
+                nv.extend(['dev', 0])
+
+        elif increment == 'post':
+            raise NotImplementedError('TODO')
+
+        s = ''
+        oe = None
+        for e in nv:
+            if isinstance(oe, int):
+                s += '.'
+
+            oe = e
+            if isinstance(e, int):
+                e = str(e)
+
+            s += e
+
+        return self.__class__(s)
+
+    def _cmp(self, other):
+        if isinstance(other, str):
+            other = LooseVersion(other)
+
+        sversion = [_ for _ in self.version]
+        oversion = [_ for _ in other.version]
+        ls = len(sversion)
+        lo = len(oversion)
+        # FIXME .post0 vs .1
+        if lo < ls:
+            oversion.extend([0] * (ls - lo))
+        elif ls < lo:
+            sversion.extend([0] * (lo - ls))
+
+        # 0.0.1.1 comes ... after 0.0.1.post1 ???
+        for v in [sversion, oversion]:
+            if 'dev' in v:
+                v[v.index('dev')] = -4
+            elif 'post' in v:
+                v[v.index('post')] = 1
+
+        if sversion == oversion:
+            return 0
+        if sversion < oversion:
+            return -1
+        if sversion > oversion:
+            return 1
+
+
+class SetupPath(aug.RepoPath):
+    # TODO get latest release info from github and pypi
+
+    @property
+    def setupfu(self):
+        with self.folder:
+            spec = importlib.util.spec_from_file_location('setup', self.setup_file)
+            setup = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(setup)
+            args, kwargs = last_output[0]
+            return setup, args, kwargs
+
+    @property
+    def setup_kwargs(self):
+        if not hasattr(self, '_setup_kwargs'):
+            mod, args, kwargs = self.setupfu
+            self._setup_kwargs = kwargs
+
+        return self._setup_kwargs
+
+    @property
+    def version_latest_pypi(self):
+        return Version(self.pypi_json['info']['version'])
+
+    @property
+    def version_latest_released(self):
+        # git, pypi, tag??
+        vers = sorted(Version(_) for _ in self.pypi_json['releases'])
+        return vers[-1]
+
+    def version_next(self, increment='current'):
+        # major middle minor dev post  # or something
+        # FIXME
+        return self.version_latest_pypi.next(increment=increment)
+
+    @property
+    def version_repo(self):
+        return Version(self.setup_kwargs['version'])
+
+    @property
+    def version_new(self):
+        # TODO cases dev normal
+        # want dev release but repo is at an unreleased normal
+        # want normal, already released this one
+        # want dev, already released this one
+        # want *, repo skips a version
+        return self.version_repo
+        raise NotImplementedError('TODO')
+
+    @property
+    def module_init_file(self):
+        return self.module / '__init__.py'
+
+    @property
+    def module(self):
+        kwargs = self.setup_kwargs
+        name = kwargs['name']
+        packages = kwargs['packages']
+        for package in packages:
+            if package == name:
+                return self.folder / name
+
+        raise NotImplementedError(f'Don\'t know how to release packages whose name does not match a package name. {name} {packages}')
+
+    @property
+    def setup_file(self):
+        return self.folder / 'setup.py'
+
+    @property
+    def folder(self):
+        if not self.is_absolute() or '..' in self.parts:
+            return self.resolve().folder
+
+        if self.is_dir():
+            for f in self.glob('setup.py'):
+                return self
+
+        return self.parent.folder
+
+    @property
+    def pypi_json(self):
+        if not hasattr(self, '_pypi_json'):
+            self._pypi_request = requests.get(f'https://pypi.org/pypi/{self.arg_packagename}/json')
+            self._pypi_json = self._pypi_request.json()
+
+        return self._pypi_json
+
+    @property
+    def arg_org(self):
+        u = urlparse(self.remote_uri_human())
+        _, org, repo, *_ = u.path.split('/')
+        return org
+
+    @property
+    def arg_repo(self):
+        u = urlparse(self.remote_uri_human())
+        _, org, repo, *_ = u.path.split('/')
+        return repo
+
+    @property
+    def arg_folder(self):
+        return self.folder.relative_to(self.working_dir.parent)
+
+    @property
+    def arg_packagename(self):
+        return self.setup_kwargs['name']
+
+    @property
+    def arg_rest(self):
+        # TODO
+        return ''
+
+    @property
+    def command(self):
+        rest = self.arg_rest
+        rest = ' ' + self.rest if rest else ''
+        return f'build-release {self.arg_org} {self.arg_repo} {self.arg_folder} {self.arg_packagename} {self.version_new}{rest}'
+
+
+SetupPath._bind_flavours()
+
+
+def main():
+   sp = SetupPath('.')  # options.path
+   print(sp.version_next())
+   print(sp.command)
+   spn = SetupPath('~/git/rdflib').expanduser()
+   asdf = sorted([Version(_) for _ in spn.pypi_json['releases'].keys()])
+   print(asdf)
+   print([v.next('current') for v in asdf])
+   print([v.next('dev') for v in asdf])
+   print([v.next('minor') for v in asdf])
+   #breakpoint()
+
+
+if __name__ == '__main__':
+    main()
 #+end_src
 
-After defining those functions or sourcing the tangled file
-you can use them as we do in the example below.
+#+NAME: release-next-old
+#+BEGIN_SRC bash :eval never :exports neither
+release-next () {
+    # example
+    # release-next path/to/folder/module/__init__.py
+    # vs
+    # release-next path/to/folder/module
+    # vs
+    # release-next path/to/folder
 
-*WHEN YOU PUSH TO TEST*
-Inspect _everything_ at https://test.pypi.org/project/${packagename}.
-MAKE SURE THE HASHES MATCH (tail hashes vs curl output)
-You can also check https://test.pypi.org/project/ontquery/#files
-
-This is a reasonable time to tag the release on github.
-
-#+NAME: release-examples
-#+CAPTION: examples, this is horrible and dangerous, never do this this way run the 3 commands separately
-#+BEGIN_SRC bash :eval never
-unset PYTHONPATH
-SOMEVAR=some-value build-release org repo folder packagename version --some-arg
-PYTHONPATH=~/git/pyontutils: SCICRUNCH_API_KEY=$(cat ~/ni/dev/secrets.yaml | grep tgbugs-travis | awk '{ print $2 }') build-release tgbugs ontquery ontquery ontquery 0.1.0 --release
-exit  # if try to copy paste this block terminate here to prevent dumbs
-push-release ontquery ~/nas/software-releases ontquery 0.1.0
-read  -n 1 -p "Inspect everything and then hit a key to run final-release or ^C to break:"; echo "OK"
-final-release ~/nas/software-releases ontquery 0.1.0
+    # behavior should probably be to search recursively up until we find a setup.py file ...
+    WORKING_DIR=$(git rev-parse --show-toplevel)
+    MODULE_PATH=$(dirname INIT_PATH)
+    FOLDER=$(dirname MODULE_PATH)
+    SETUP_PATH="${FOLDER}/setup.py"
+    ORG=
+    # get folder package name
+    # get version
+    # find setup.py
+}
 #+END_SRC
-  
-** Examples
+
+** Utils
+#+name: &are-you-sure
+#+caption: also defined in [[file:../nifstd/scigraph/README.org::&are-you-sure][&are-you-sure]]
+#+begin_src bash :eval never
+function are-you-sure () {
+    read -p "Are you sure you want to push the final release? yes/N " -n 1 choice
+    # ((((
+    case "${choice}" in
+        yes|YES) echo ;;
+        n|N) echo; echo "Not pushing final release."; return 1;;
+        '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
+        ,*)   echo; echo "Not pushing final release."; return 1;;
+    esac
+    echo "Pushing final release ..."
+}
+#+end_src
+* Examples
 These are examples. They may be out of date and already finished.
 #+CAPTION: pyontutils examples
 #+BEGIN_SRC bash :eval never
@@ -675,7 +703,7 @@ pushd /tmp/release-testing
 find -name "*.tar.gz" -exec tar xvzf {} \;
 for f in {librdflib,htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f*/; pip install -e .[test]; python setup.py test; popd; done
 #+END_SRC
-  
+
 From inside /tmp/${repo}
 #+NAME: bdist_wheel-from-sdist
 #+CAPTION: build wheels from sdist never from repo directly

@@ -99,6 +99,7 @@ def makeSimpleLogger(name, color=True):
     # TODO use extra ...
 
     # remove any logging set by an inadvertent call to basicConfig
+    # FIXME probably not the friendliest thing to do ...
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
@@ -107,6 +108,9 @@ def makeSimpleLogger(name, color=True):
            '%(filename)16s:%(lineno)-4d - '
            '%(message)s')
     logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
     logger.setLevel(logging.DEBUG)
 
     cfmt = ('%(green)s[%(asctime)s]%(reset)s - '
@@ -128,16 +132,12 @@ def makeSimpleLogger(name, color=True):
                                  secondary_log_colors={},
                                  style='%')
 
-    if False:
-        coloredlogs.install(level=logging.DEBUG, logger=logger, fmt=fmt, milliseconds=True)
-    else:
-        if not color:
-            formatter = logging.Formatter(fmt)
+    if not color:
+        formatter = logging.Formatter(fmt)
 
-        ch = logging.StreamHandler()  # FileHander goes to disk
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-
+    ch = logging.StreamHandler()  # FileHander goes to disk
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
     return logger
 

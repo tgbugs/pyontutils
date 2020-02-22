@@ -10,12 +10,15 @@ Options:
     -o --docstring-only  build docstrings only
     -j --jobs=NJOBS      number of jobs [default: 9]
     -r --repo=<REPO>     additional repos to crawl for docs
+    --debug              redirect stderr to debug pipeline errors
 
 """
 import os
 import re
 import ast
 import shutil
+import logging
+import tempfile
 import subprocess
 from urllib.parse import urlparse
 from importlib import import_module
@@ -32,6 +35,7 @@ from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
 working_dir = Path(__file__).resolve().working_dir
+temp_path = Path(tempfile.tempdir)
 
 try:
     import hunspell
@@ -83,6 +87,11 @@ class FixLinks:
 
         duh = urlparse(self.remote_url)
         self.netloc = duh.netloc
+
+        if 'github' in self.netloc:
+            self.netloc_raw = 'raw.githubusercontent.com'
+        else:
+            raise NotImplementedError("don't know raw for: {self.remote_url}")
 
         if self.netloc.startswith('git@github.com'):
             _, self.group = self.netloc.split(':')
@@ -211,6 +220,14 @@ class FixLinks:
                       + code_regex +
                       r'(#.+)*$',
                       sub_github, out)
+
+        #print('----------------------------------------')
+        # FIXME for the future, can't hotlink to svg from github
+        #sub_github_raw = SubRel(f'https://{self.netloc_raw}/{self.group}/{self.working_dir.name}/master/')
+        #out0_5 = re.sub(r'^file:(.*)' +
+        #                r'(\.svg)' +
+        #                r'(#.+)*$',
+        #                sub_github_raw, out0)
 
         #print('----------------------------------------')
         # FIXME won't work if the outer folder does not match the github project name
@@ -368,14 +385,18 @@ def spell(filenames, debug=False):
 
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
-compile_org_file = ['emacs', '-q', '-l',
-                    (auth.get_path('git-local-base') /
-                     'orgstrap/init.el').resolve().as_posix(),
-                    '--batch', '-f', 'compile-org-file']
+orgstrap_init = (auth.get_path('git-local-base') / 'orgstrap/init.el').resolve().as_posix()
+docs_init = (working_dir / 'nifstd/resources/docs-init.el').resolve().as_posix()
+compile_org_file = ['emacs',
+                    '--batch',
+                    '--quick',
+                    '--load', orgstrap_init,
+                    '--load', docs_init,
+                    '--funcall', 'compile-org-file']
 
 
 @suffix('org')
-def renderOrg(path, **kwargs):
+def renderOrg(path, debug=False, **kwargs):
     orgfile = path.as_posix()
     try:
         ref = path.latest_commit.hexsha
@@ -426,12 +447,18 @@ def renderOrg(path, **kwargs):
         #org =  + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
         #print(org.decode())
         out, err = p.communicate(input=org)
+        if not out and not err:
+            log.critical(f'No output and no error for {path}\n'
+                         'Set --debug to dump to file.')
+            if debug:
+                with open(temp_path / f'debug-{path.name}', 'wb') as f:
+                    f.write(org)
 
     return out.decode()
 
 
 @suffix('md')
-def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
+def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwargs):
     mdfile = path.as_posix()
     try:
         ref = path.latest_commit.hexsha
@@ -461,7 +488,9 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     e = subprocess.Popen(compile_org_file,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)  # DUH
+                         stderr=(subprocess.STDOUT
+                                 if debug else
+                                 subprocess.PIPE))
     authors = ', '.join(authors)
     theme = kwargs['theme']
     header = makeOrgHeader(title, authors, date, theme, github_link)
@@ -499,11 +528,20 @@ def renderMarkdown(path, title=None, authors=None, date=None, **kwargs):
     #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(compile_org_file))
     #if b'[[img:' in out or not out or 'external-sources' in path.as_posix():
         #breakpoint()
-    err = err.strip(b'Created img link.\n')  # FIMXE lack of distinc STDERR is very annoying
+
     if e.returncode:
         # if this happens direct stderr to stdout to get the message
-        raise subprocess.CalledProcessError(e.returncode,
-                                            ' '.join(e.args) + f' {path.as_posix()}') from ValueError(err.decode())
+        if err is not None:
+            err = err.strip(b'Created img link.\n')  # FIXME lack of distinc STDERR is very annoying
+
+            raise subprocess.CalledProcessError(
+                e.returncode, ' '.join(e.args) +
+                f' failed for {path.as_posix()}') from ValueError(err.decode())
+        else:
+            raise subprocess.CalledProcessError(
+                e.returncode, ' '.join(e.args) +
+                f' failed for {path.as_posix()}') from ValueError(body.decode())
+
     if not body or b'*temp*' in body:
         raise ValueError(f'Output document for {path.as_posix()} '
                          'has no body! the input org was:\n'
@@ -520,11 +558,11 @@ def renderNotebook(path, **kwargs):
     body, resources = html_exporter.from_notebook_node(notebook)
     return body
 
-def renderDoc(path, **kwargs):
+def renderDoc(path, debug=False, **kwargs):
     # TODO add links back to github and additional prov for generation
     try:
         # renderMarkdown # renderOrg
-        return suffixFuncs[path.suffix](path, **kwargs)
+        return suffixFuncs[path.suffix](path, debug=debug, **kwargs)
     except KeyError as e:
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
 
@@ -550,17 +588,24 @@ def outFile(doc, working_dir, BUILD):
     return BUILD / 'docs' / relative_html
 
 
-def run_all(doc, wd, BUILD, **kwargs):
-    return outFile(doc, wd, BUILD), renderDoc(doc, **kwargs)
+def run_all(doc, wd, BUILD, debug=False, logfix=False, **kwargs):
+    # workaround for joblib 692 that only creates the logger once
+    # workaround for incorrect behavior in old versions of makeSimpleLogger
+    log = logging.getLogger('ont-docs')
+    if not log.handlers:
+        log = makeSimpleLogger('ont-docs')
+
+    return outFile(doc, wd, BUILD), renderDoc(doc, debug=debug, **kwargs)
 
 
-def render_docs(wd_docs_kwargs, BUILD, n_jobs=9):
+def render_docs(wd_docs_kwargs, BUILD, n_jobs=9, debug=False):
     if 'CI' in os.environ or n_jobs == 1:
-        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, **kwargs))
+        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, debug=debug, **kwargs))
                             for wd, doc, kwargs in wd_docs_kwargs]
     else:
-        outname_rendered = Parallel(n_jobs=n_jobs)(delayed(run_all)(doc, wd, BUILD, **kwargs)
-                                              for wd, doc, kwargs in wd_docs_kwargs)
+        outname_rendered = Parallel(n_jobs=n_jobs)(delayed(run_all)(doc, wd, BUILD,
+                                                                    debug=debug, logfix=not i, **kwargs)
+                                                   for i, (wd, doc, kwargs) in enumerate(wd_docs_kwargs))
     return outname_rendered
 
 
@@ -596,6 +641,7 @@ def prepare_paths(BUILD, docs_dir, theme_repo, theme):
 def main():
     from docopt import docopt
     args = docopt(__doc__)
+    debug = args['--debug']
 
     BUILD = working_dir / 'doc_build'
     docs_dir = BUILD / 'docs'
@@ -608,7 +654,7 @@ def main():
     wd_docs_kwargs = [docstring_kwargs]
     if args['--docstring-only']:
         [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-        outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1)[0]
+        outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1, debug=debug)[0]
         if not outname.parent.exists():
             outname.parent.mkdir(parents=True)
         with open(outname.as_posix(), 'wt') as f:
@@ -659,7 +705,7 @@ def main():
         spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
         return
 
-    outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']))
+    outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']), debug=debug)
 
     titles = {
         ###
