@@ -11,6 +11,7 @@ hidden pitfalls we have encountered over the past 4 years.
 You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
 this file in emacs using =C-c C-v t= or you can tangle
 the whole file from the command line using with the following.
+#+name: tangle-this-file
 #+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
 : ${THIS_FILE:="./README.org"}
 emacs --batch \
@@ -21,6 +22,14 @@ emacs --batch \
 The core functionality is tangled to [[file:./bin/scigraph-functions.sh]].
 It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
 to make the functions defined in this file available for use.
+
+You should also run =shellcheck= on the tangled file if you make any changes.
+You don't usually have to worry about green issues, and there are a number of
+false positives because we are dealing with some crazy local vs remote expansion.
+#+name: run-shellcheck
+#+begin_src bash :noweb yes :eval never
+shellcheck "<<path-scigraph-functions()>>"
+#+end_src
 * Setup
 :properties:
 :visibility: folded
@@ -171,7 +180,7 @@ IdentityFile <<path-target-identity-file()>>
 PreferredAuthentications publickey
 ProxyCommand ssh <<jump-host()>> -W %h:%p
 
-Host aws-scigraph-deploy
+Host aws-scigraph-scigraph
 HostName <<ip-aws-scigraph()>>
 User scigraph
 IdentityFile ~/.ssh/id_ed25519.aws.scigraph
@@ -185,7 +194,7 @@ IdentityFile <<path-target-identity-file()>>
 PreferredAuthentications publickey
 ProxyCommand ssh <<jump-host()>> -W %h:%p
 
-Host aws-scigraph-data-deploy
+Host aws-scigraph-data-scigraph
 HostName <<ip-aws-scigraph-data()>>
 User scigraph
 IdentityFile ~/.ssh/id_ed25519.aws.scigraph
@@ -194,16 +203,148 @@ ProxyCommand ssh <<jump-host()>> -W %h:%p
 #+end_src
 
 Create and deploy ssh key for the scigraph deploy user.
+
+# ((((
+#+name: &vars-ssh-keygen-deploy
 #+begin_src bash
-ssh-keygen -t ed25519 -N "" -C "${USER}@${HOSTNAME}" -f ~/.ssh/id_ed25519.aws.scigraph
-scp ~/.ssh/id_ed25519.aws.scigraph.pub aws-scigraph:${USER}.aws.scigraph.pub
-ssh aws-scigraph "sudo cat ${USER}.aws.scigraph.pub >> /var/lib/scigraph/.ssh/authorized_keys && rm ${USER}.aws.scigraph.pub"
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --server)   SERVER="${2}"; shift; shift ;;
+    --svc-user) SVC_USER="${2}"; shift; shift ;;
+    --keyname)  local KEYNAME="${2}"; shift; shift ;;
+    *)          POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+if [ -z $SERVER ]; then
+    echo '--server' is required
+    return 1
+elif [ -z $SVC_USER ]; then
+    echo '--svc-user' is required
+    return 1
+fi
+
+local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
+: ${KEYNAME:=${KEYNAME_DEFAULT}}
+local KEYTYPE=ed25519  # this is hardcoded for now
+KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
+SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
+#+end_src
+
+#+name: ssh-functions
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function ssh-keygen-simple () {
+    <<&vars-ssh-keygen-deploy>>
+
+    # test if the key already exists
+    if [ -f "${KEYPATH}" ]; then
+        echo "${KEYPATH}" already exists not running keygen and not deploying
+        unset KEYPATH SERVER SVC_USER SUDO_OR_SU
+        return 1
+    fi
+
+    # test that root access is available
+    # FIXME requires double password entry in the su case
+    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return 1
+
+    # generate the key
+    ssh-keygen -t ${KEYTYPE} -N "" -C "${USER}@${HOSTNAME}" -f "${KEYPATH}"
+
+    # all the relevant environment variables are left in the environment
+    # for the next step
+}
+
+function ssh-copy-id-simple () {
+    # note that &vars-ssh-keygen-deploy is written in such a way that
+    # the environment variables will persist if they are specified on
+    # ssh-keygen-simple and thus do not have to be set again in here
+    # they are included so that ssh-keygen-deploy can be used by itself
+    <<&vars-ssh-keygen-deploy>>
+    <<&command-ssh-copy-id-remote>>
+    # test that root access is available if HAVE_ROOT is not set
+    if [ -z $HAVE_ROOT ]; then
+        ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && \
+        export HAVE_ROOT=1 || return 1
+    fi
+
+    # copy the key to the host
+    TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
+    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return 1
+    # TODO option to deploy private key if the key is generated for a service user
+
+    # and today we learn about typeset, sigh
+    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f make-authorized-keys); make-authorized-keys ${SVC_USER} ${TEMP_RANDOM_NAME}.pub'"
+
+    local oops=$?
+    if [ $oops -ne 0 ]; then
+        echo FAILED so ${SERVER}:${TEMP_RANDOM_NAME}.pub is still present
+        return $oops
+    fi
+    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_RANDOM_NAME
+}
+#+end_src
+
+#+name: &command-ssh-copy-id-remote
+#+begin_src bash :eval never
+function make-authorized-keys () {
+    echo ${1} ${2}
+    SVC_USER=${1}
+    PUB_KEY=${2}
+    UHOME=$(eval echo ~${SVC_USER})
+    echo $UHOME
+    if [ ! -d ${UHOME}/.ssh ]; then
+        mkdir ${UHOME}/.ssh
+    fi
+    if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
+        touch ${UHOME}/.ssh/authorized_keys
+        chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
+    fi
+    cat ${PUB_KEY} >> \
+    ${UHOME}/.ssh/authorized_keys && \
+    chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
+    rm ${PUB_KEY};
+}
+#+end_src
+#+name: &command-ssh-copy-id-remote-bad
+#+begin_src bash :eval never
+export UHOME="'$(eval echo ~'"${SVC_USER}"')'"
+"'echo $UHOME'"
+${SUDO_OR_SU}"' \"
+if [ ! -d ${UHOME}/.ssh ]; then
+    mkdir ${UHOME}/.ssh
+fi
+if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
+    touch ${UHOME}/.ssh/authorized_keys
+    chown '"${SVC_USER}:${SVC_USER}"' ${UHOME}/.ssh/authorized_keys
+fi'"
+cat ${TEMP_RANDOM_NAME}.pub\" >> \
+"'${UHOME}/.ssh/authorized_keys'" && \
+rm ${TEMP_RANDOM_NAME}.pub
 #+end_src
 
 Make [[file:${HOME}/.ssh_tmp]] folder to hold multiplexed sockets.
 #+begin_src bash
 mkdir ~/.ssh_tmp
 chmod 0700 ~/.ssh_tmp
+#+end_src
+
+Once you have everything set up above run the following
+#+begin_src bash :eval never :noweb yes
+<<&source-scigraph-functions>>
+ssh-keygen-simple \
+--server aws-scigraph \
+--svc-user scigraph \
+--keyname aws.scigraph && \
+ssh-copy-id-simple
+
+ssh-copy-id-simple \
+--server aws-scigraph-data \
+--svc-user scigraph \
+--keyname aws.scigraph
 #+end_src
 * Components
 :PROPERTIES:
@@ -295,7 +436,7 @@ done
 
 : ${PATH_ZIP:=<<path-build-graph()>>}
 : ${PATH_GIT:=<<path-build-graph()>>}
-: ${GIT_REF:="master"}
+: ${GIT_REF:=master}
 
 #+end_src
 #+name: compile-scigraph-git
@@ -341,7 +482,7 @@ customize and put it in =/etc/systemd/system/scigraph.service.d/scigraph.conf=
 **** docker
 https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
-*** Build
+*** Load
 **** scigraph-load
 Set =path-build-graph= here
 #+NAME: path-build-graph
@@ -406,14 +547,14 @@ function load-graph () {
         "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
     scigraph-load -c "${PATH_CONFIG_YAML}"
 
-    pushd "${PATH_BUILD}"
+    pushd "${PATH_BUILD}" || return 1
     # mv prevents accidentally deploying the same graph twice
     # but use cp -r for development to avoid continual rebuild
     cp -r ${FOLDER_NAME_GRAPH} ${STAMPED}
     zip -r ${FILE_NAME_ZIP} ${STAMPED}
     unlink "${LATEST}"
     ln -sT "${FILE_NAME_ZIP}" "${LATEST}"
-    popd
+    popd > /dev/null || return 1
 }
 #+end_src
 **** ontload
@@ -500,19 +641,6 @@ Set =folder-name-runtime= here
 #+name: folder-name-runtime
 : graph
 
-# ((((
-#+name: &are-you-sure
-#+begin_src bash
-read -p "Are you sure you want to deploy? y/N " -n 1 choice
-case "${choice}" in
-    y|Y) echo ;;
-    n|N) echo; echo "Not deploying."; return 1;;
-    '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
-    *)   echo; echo "Not deploying."; return 1;;
-esac
-echo "Deploying ..."
-#+end_src
-
 #+name: localhost-deploy-command
 #+begin_src bash :eval never :exports code
 cp ${PATH_ZIP} ${PATH_RUNTIME};
@@ -548,23 +676,23 @@ done
 : ${PATH_RUNTIME:=<<path-runtime()>>}
 : ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
 
-LATEST="${PATH_BUILD}/LATEST"
+local LATEST="${PATH_BUILD}/LATEST"
 if [ ! -f "${LATEST}" ]; then
     echo $LATEST path does not exist.
     echo Did you actually build the graph?
     echo Not deploying.
     return 1
 fi
-FILE_NAME_ZIP=$(readlink "${LATEST}")
-STAMPED="${FILE_NAME_ZIP//.zip/}"
+local FILE_NAME_ZIP=$(readlink "${LATEST}")
+local STAMPED="${FILE_NAME_ZIP//.zip/}"
 : ${PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"}
 if [ ! -f "${PATH_ZIP}" ]; then
     echo $PATH_ZIP path does not exist.
     echo Not deploying.
     return 1
 fi
-scigraph_host="${SERVER}-deploy"  # by convention
-scigraph_host_admin=${SERVER}
+local scigraph_host="${SERVER}-scigraph"  # by convention
+local scigraph_host_admin=${SERVER}
 echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+end_src
 
@@ -576,6 +704,15 @@ function deploy-graph () {
     echo Will deploy graph to ${SERVER}:${PATH_RUNTIME}
     echo $PATH_ZIP
     <<&are-you-sure>>
+
+    local CMD_STOP='
+                <<&service-manager>>
+                service-manager scigraph stop'
+
+    local CMD_START='
+                <<&service-manager>>
+                service-manager scigraph start'
+
     if [ "${SERVER}" = "localhost" ]; then
         CMD="su - ${SVC_USER} -c \"
                 <<localhost-deploy-command>>\""
@@ -584,12 +721,12 @@ function deploy-graph () {
         scp "${PATH_ZIP}" "${scigraph_host}:${PATH_RUNTIME}"
         ssh ${scigraph_host} "pushd \"${PATH_RUNTIME}\"; unzip \"${FILE_NAME_ZIP}\""
 
-        ssh ${scigraph_host_admin} "sudo systemctl stop scigraph"
+        ssh -t ${scigraph_host_admin} "${CMD_STOP}"
 
         ssh ${scigraph_host} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
                               ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\""
 
-        ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
+        #ssh -t ${scigraph_host_admin} "${CMD_START}"
     fi
 }
 #+end_src
@@ -706,37 +843,24 @@ fi
 : ${SERVER:=localhost}
 : ${PATH_RUNTIME:=<<path-runtime()>>}
 
-YAML=$(basename "${CONFIG}")
+local YAML=$(basename "${CONFIG}")
 if [ ! -f "${CONFIG}" ]; then
     echo ${CONFIG} path does not exist.
     echo Did you actually build the config?
     echo Not deploying.
     return 1
 fi
-YAML_RAW=$(head -n 1 "${CONFIG}" | cut -b3-)
-CONFIG_RAW="$(dirname ${CONFIG})/${YAML_RAW}"
-EXISTING="${PATH_RUNTIME}/${YAML}"
+local YAML_RAW=$(head -n 1 "${CONFIG}" | cut -b3-)
+local CONFIG_RAW="$(dirname ${CONFIG})/${YAML_RAW}"
+local EXISTING="${PATH_RUNTIME}/${YAML}"
 
-scigraph_host="${SERVER}-deploy"  # by convention
-scigraph_host_admin=${SERVER}
+local scigraph_host="${SERVER}-scigraph"  # by convention
+local scigraph_host_admin=${SERVER}
 if [ ${SERVER} = localhost ]; then
     local TARGET="${PATH_RUNTIME}"
 else
     local TARGET="${scigraph_host}:${PATH_RUNTIME}"
 fi
-#+end_src
-
-# this block's quoting is funky because bash doesn't have anything like unquote
-#+name: &deploy-services-backup-config
-#+begin_src bash
-E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
-if [ -n "${E_YAML_RAW}" ]; then
-    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
-else
-    mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
-    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
-fi
-echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
 #+end_src
 
 #+name: deploy-services
@@ -751,40 +875,93 @@ function deploy-services () {
     echo $CONFIG_RAW
     echo $CONFIG
     <<&are-you-sure>>
-    CMD='
+    local CMD='
         <<&deploy-services-backup-config>>'
+    local CMD_RESTART='
+                <<&service-manager>>
+                service-manager scigraph restart'
+    echo $CONFIG_RAW $TARGET
     if [ ${SERVER} = localhost ]; then
-        echo $CONFIG_RAW $TARGET
-        echo ${CMD}
-        echo cp "${CONFIG_RAW}" "${TARGET}"
-        echo cp "${CONFIG}" "${TARGET}"
+        ${CMD} || return 1
+        cp "${CONFIG_RAW}" "${TARGET}" || return 1
+        cp "${CONFIG}" "${TARGET}" || return 1
+        ${CMD_RESTART} || return 1
     else
-        echo "${CMD}"
-        ssh ${scigraph_host} "${CMD}"
-        echo scp "${CONFIG_RAW}" "${TARGET}"  # if only we could rsync
-        echo scp "${CONFIG}" "${TARGET}"
-        echo ssh ${scigraph_host_admin} "sudo systemctl start scigraph"
+        # if only we could rsync
+        ssh ${scigraph_host} "${CMD}" || return 1
+        scp "${CONFIG_RAW}" "${TARGET}" || return 1
+        scp "${CONFIG}" "${TARGET}" || return 1
+        ssh -t ${scigraph_host_admin} "${CMD_RESTART}" || return 1
     fi
 }
 #+end_src
-** Other processes
-*** Restart services
-**** Gentoo
-# TODO ob-async ?
-#+NAME: restart-services-gentoo
-#+header: :async t
-#+begin_src bash :dir /ssh:hostname|su:root@hostname:
-/etc/init.d/scigraph-services restart
+
+# this block's quoting is funky because bash doesn't have anything like unquote
+#+name: &deploy-services-backup-config
+#+begin_src bash :eval never
+E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
+if [ -n "${E_YAML_RAW}" ]; then
+    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
+else
+    mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
+    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
+fi
+echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
 #+end_src
 
-#+CALL: restart-services-gentoo() :dir /su:root@localhost: :eval never
-#+CALL: test-scigraph-host() :var SERVER="localhost" :eval never
+** Other processes
+*** Confirm action
+# ((((
+#+name: &are-you-sure
+#+begin_src bash
+read -r -p "Are you sure you want to deploy? y/N " -n 1 choice
+case "${choice}" in
+    y|Y) echo ;;
+    n|N) echo; echo "Not deploying."; return 1;;
+    '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
+    *)   echo; echo "Not deploying."; return 1;;
+esac
+echo "Deploying ..."
+#+end_src
+*** Restart services
+**** service-manager
+A bash function that implements a portable =service-manager= command.
+#+name: &service-manager
+#+begin_src bash :eval never
+function service-manager () {
+    SVCNAME=${1}
+    ACTION=${2}
+    if [ $(command -v systemctl) ]; then
+        local CMD="systemctl ${ACTION} ${SVCNAME}"
+        local CMD_POST="systemctl status ${SVCNAME}"
+    elif [ $(command -v rc-service) ]; then
+        local CMD="rc-service ${SVCNAME} ${ACTION}"
+        local CMD_POST=""
+    else
+        echo unknown service-manager
+        return 1
+    fi
+
+    if [[ $EUID = 0 ]]; then
+        ${CMD} || return $?
+    elif [ $(command -v sudo) ]; then
+        sudo ${CMD} || return $?
+    else
+        echo For su on ${HOSTNAME}
+        su -c "${CMD}" || return $?
+    fi
+
+    if [ -n "${CMD_POST}" ]; then
+       sleep 5
+       $CMD_POST
+    fi
+}
+#+end_src
 **** Amazon Linux 2
 #+NAME: restart-services-aws
 #+header: :async t
 #+begin_src bash :dir /ssh:hostname|sudo:hostname:
 systemctl restart scigraph
-journalctl -u scigraph.service -f | head -n 60
 #+end_src
 
 # #+CALL: restart-services-aws() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
@@ -843,6 +1020,9 @@ build-services \
 ** sparc
 *** data
 interlex build
+#+begin_src bash
+interlex server alt
+#+end_src
 *** graph
 **** load
 :properties:
