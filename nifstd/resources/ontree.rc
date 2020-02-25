@@ -1,0 +1,60 @@
+#!/sbin/openrc-run
+# Copyright 1999-2020 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+: ${LOG_LEVEL:=info}
+: ${SVCGROUP:=nifstd-tools}
+: ${SVCUSER:=nifstd-tools}
+: ${LOG_LOC:="/var/log/nifstd-tools"}
+
+run_dir=${run_dir:-/run}
+LOG="${LOG_LOC}/${SVCNAME}.log"
+
+socket="unix:/run/${SVCNAME}/socket"
+
+pidfile="${run_dir}/${SVCNAME}/pid"
+start_stop_daemon_args="
+--group ${SVCGROUP}
+--user ${SVCUSER}
+--wait 1000
+--env SCIGRAPH_API=${SCIGRAPH_API}
+--env SCIGRAPH_API_KEY=${SCIGRAPH_API_KEY}
+--env PYTHONPATH=${PYTHONPATH}
+"
+command="/usr/bin/gunicorn"
+command_args="--bind ${socket}
+--daemon
+--pid ${pidfile}
+--name ontree
+--workers 4
+--worker-class gevent
+--timeout 30
+--group ${SVCGROUP}
+--user ${SVCUSER}
+--log-level ${LOG_LEVEL}
+--log-file ${LOG}
+nifstd_tools.ontree_server:app"
+retry='TERM/30/KILL/5'
+
+command_owner="${SVCUSER}:${SVCGROUP}"
+
+depend() {
+    after net
+}
+
+start_pre() {
+    OOPS=0
+    if [ -z "${SCIGRAPH_API}" ]; then
+        eend 1 "SCIGRAPH_API is not set in /etc/conf.d/${SVCNAME}"
+        OOPS=1
+    fi
+    if [[ "${SCIRGRAPH_API}" == *"scicrunch"* ]] && [ -z "${SCIGRAPH_API_KEY}" ]; then
+        eend 1 "SCIGRAPH_API requires SCIGRAPH_API_KEY not set in /etc/conf.d/${SVCNAME}"
+        OOPS=1
+    fi
+    if [ ${OOPS} -ne 0 ]; then
+        return 1
+    fi
+    checkpath --directory --owner ${command_owner} --mode 0775 "/run/${SVCNAME}"
+    checkpath --directory --owner ${command_owner} --mode 0775 "${LOG_LOC}"
+}

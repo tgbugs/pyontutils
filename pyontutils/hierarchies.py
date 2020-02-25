@@ -13,7 +13,10 @@ from pyontutils.utils import TermColors as tc
 from ttlser import natsort
 from pyontutils.scigraph import Graph
 from pyontutils.namespaces import PREFIXES as uPREFIXES
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 BLANK = '   '
 LEAF = '──'
@@ -538,7 +541,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
         html_hierarchy = htmlTree(hierarchy)
     except KeyError as e:
         log.exception(e)
-        embed()
+        breakpoint()
         raise e
 
     def sub_prefixes(h):
@@ -659,7 +662,7 @@ def main():
                         parent_nodes.append(node)  # should have dupes
 
 
-        embed()
+        breakpoint()
         return
 
     uberon = Query('UBERON:0000955', 'BFO:0000050', 'INCOMING', 40)
@@ -686,7 +689,7 @@ def main():
 
     return
 
-    embed()
+    breakpoint()
 
 def _main():
     rtco = 'http://purl.org/sig/ont/fma/constitutional_part_of'
@@ -708,7 +711,7 @@ def _main():
     #json['edges'].extend(json_c['edges'])
     #json['nodes'].extend(json_r['nodes'])
     #json['edges'].extend(json_r['edges'])
-    #embed()
+    #breakpoint()
 
 
     #fma = Query('FMA:50801', 'None', 'INCOMING', 20)
@@ -716,7 +719,7 @@ def _main():
     fma_tree, fma_extra = creatTree(*fma, json=json)
     with open(f'{tempfile.tempdir}/rc_combo_tree', 'wt') as f: f.write(str(fma_tree))
 
-    embed()
+    breakpoint()
 
 if __name__ == '__main__':
     main()

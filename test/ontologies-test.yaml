@@ -1,0 +1,6 @@
+ontologies:
+  - url: test/graphload-test.ttl
+    reasonerConfiguration:
+      factory: org.semanticweb.elk.owlapi.ElkReasonerFactory
+      addDirectInferredEdges: true
+      removeUnsatisfiableClasses: true

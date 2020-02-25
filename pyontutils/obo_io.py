@@ -7,7 +7,7 @@ Usage:
 
 Options:
     -h --help             show this
-    -d --debug            embed after parsing
+    -d --debug            break after parsing
     -t --out-format=FMT   output to this format
                           options are obo or ttl [default: obo]
     -w --write            write the output
@@ -76,7 +76,10 @@ from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makeNamespaces, NIFRID, definition
 from pyontutils.namespaces import TEMP, PREFIXES as uPREFIXES
 from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 log = makeSimpleLogger('obo-io')
 
@@ -623,7 +626,7 @@ class TVPairStore:
             try:
                 self.__dict__[dict_tag].append(tvpair)
             except KeyError as e:
-                embed()
+                breakpoint()
                 raise e
         else:
             self.__dict__[dict_tag] = tvpair
@@ -657,7 +660,7 @@ class TVPairStore:
             if type(tvp) == list:
                 out.extend(sorted(tvp))
             elif type(tvp) == property:
-                embed()
+                breakpoint()
             else:
                 out.append(tvp)
 
@@ -696,7 +699,7 @@ class TVPairStore:
                     try:
                         tags.append(tvp.tag)
                     except AttributeError as e:
-                        embed()
+                        breakpoint()
                         raise e
             else:
                 raise AttributeError('Tag %s has no values!' % tag)
@@ -1351,7 +1354,7 @@ def main():
         of.write(outfilename, type_=args['--out-format'])
 
     if args['--debug']:
-        embed()
+        breakpoint()
 
 
 if __name__ == '__main__':

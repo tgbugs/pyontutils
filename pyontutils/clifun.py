@@ -7,27 +7,29 @@ Options:
     -d --debug
 """
 
+import re
 from types import GeneratorType
+from keyword import kwlist
 from terminaltables import AsciiTable
 
 
 def python_identifier(string):
-    """ pythonify docopt args keywords for use as identifiers """
-    ident = (string.strip()
-             .replace('<', '')
-             .replace('>', '')
-             .replace('.','_')
-             .replace(',','_')
-             .replace('/', '_')
-             .replace('?', '_')
-             .replace('-', '_')
-             .replace(':', '_')
-             .lower()  # sigh
-                )
-    if ident[0].isdigit():
-        ident = 'n_' + ident
+    """ pythonify a string for use as an identifier """
+    to_empty = r'[<>\(\)\+…\x83]'
+    s = string.strip()
+    s = re.sub(to_empty, '', s)
+    s = s.replace('#', 'number')
+    s = re.sub('[^0-9a-zA-Z_]', '_', s)
+    if s and s[0].isdigit():
+        s = 'n_' + s
+    s = re.sub('^[^a-zA-Z_]+', '_', s)
+    s = s.lower()
+    if s in kwlist:
+        # avoid syntax errors and provide a consistent rule
+        # for how to convert keywords into safe identifiers
+        s = s + '_'
 
-    return ident
+    return s
 
 
 class Options:
@@ -55,7 +57,7 @@ class Options:
     def commands(self):
         for k, v in self.args.items():
             if v and not any(k.startswith(c) for c in ('-', '<')):
-                yield k
+                yield python_identifier(k)
 
     def __repr__(self):
         def key(kv, counter=[0]):
@@ -83,6 +85,10 @@ class Dispatcher:
     port_attrs = tuple()  # request from above
     child_port_attrs = tuple()  # force on below
     parent = None
+
+    class _CommandNotFoundError(Exception):
+        """ Oops! """
+
     def __init__(self, options_or_parent, port_attrs=tuple()):
         if isinstance(options_or_parent, Dispatcher):
             parent = options_or_parent
@@ -108,20 +114,26 @@ class Dispatcher:
         else:
             self.options = options_or_parent
 
-    def __call__(self):
+    def _oops(self):
+        raise self._CommandNotFoundError
+
+    def __call__(self, previous_command=None):
         # FIXME this might fail to run annos -> shell correctly
-        first = self.parent is not None
         for command in self.options.commands:
-            if first:
-                first = False
-                # FIXME this only works for 1 level
-                continue  # skip the parent argument which we know will be true
+            if command == previous_command:
+                continue
 
-            value = getattr(self, command)()
-            if isinstance(value, GeneratorType):
-                list(value)
+            try:
+                value = getattr(self, command, self._oops)()
+                if isinstance(value, GeneratorType):
+                    list(value)
 
-            return
+                return
+            except self._CommandNotFoundError:
+                # this is a hack to not have to deal with command ordering 
+                # basically the structure of the subdispatchers should take
+                # care of this automatically regardless of the dict ordering
+                continue
 
         else:
             self.default()

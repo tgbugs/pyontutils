@@ -1,0 +1,1272 @@
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
+#+TITLE: Using SciGraph
+#+OPTIONS: num:nil
+#+STARTUP: showall
+
+This readme consolidates a number of different processes for deploying
+ontologies to SciGraph into a single workflow that avoids most of the
+hidden pitfalls we have encountered over the past 4 years.
+
+* Using this file :noexport:
+You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
+this file in emacs using =C-c C-v t= or you can tangle
+the whole file from the command line using with the following.
+#+name: tangle-this-file
+#+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
+: ${THIS_FILE:="./README.org"}
+emacs --batch \
+      --load org \
+      --load ob-shell \
+      --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
+#+end_src
+The core functionality is tangled to [[file:./bin/scigraph-functions.sh]].
+It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
+to make the functions defined in this file available for use.
+
+You should also run =shellcheck= on the tangled file if you make any changes.
+You don't usually have to worry about green issues, and there are a number of
+false positives because we are dealing with some crazy local vs remote expansion.
+#+name: run-shellcheck
+#+begin_src bash :noweb yes :eval never
+shellcheck "<<path-scigraph-functions()>>"
+#+end_src
+* Setup
+:properties:
+:visibility: folded
+:end:
+** Build host
+*** Gentoo
+:PROPERTIES:
+:CUSTOM_ID: Setup:Build host:Gentoo
+:END:
+#+begin_src bash
+layman -a tgbugs-overlay
+
+emerge \
+pyontutils \
+rpmdevtools \
+scigraph-bin
+#+end_src
+*** Ubuntu
+:PROPERTIES:
+:CUSTOM_ID: Setup:Build host:Ubuntu
+:END:
+#+begin_src bash
+apt install \
+rpm \
+python3-dev \
+python3-pip
+
+pip install --user \
+pyontutils
+#+end_src
+** Services host
+*** Gentoo
+:PROPERTIES:
+:CUSTOM_ID: Setup:Services host:Gentoo
+:END:
+#+begin_src bash
+layman -a tgbugs-overlay
+
+emerge \
+scigraph-bin \
+yq
+#+end_src
+*** AWS Linux 2
+:PROPERTIES:
+:CREATED:  [2020-01-06 Mon 14:27]
+:CUSTOM_ID: Setup:Services host:AWS Linux 2
+:END:
+Installing the scigraph RPM also handles the creation and configuration
+of all relevant variables for operation on RHEL-like systems.
+See the [[https://github.com/tgbugs/pyontutils/blob/master/nifstd/scigraph/scigraph.spec][spec file]]
+for details.
+
+#+name: dir-tramp-sudo
+#+header: :noweb yes :results none
+#+begin_src emacs-lisp :exports none
+(defun :dir-tramp-sudo (ssh-config-hostname)
+  (format "/ssh:%s|sudo:%s:" ssh-config-hostname ssh-config-hostname))
+#+end_src
+
+#+name: aws-block
+#+begin_src bash :dir /ssh:hostname|sudo:hostname:
+yum install -y \
+python3 \
+python3-pip
+
+pip3 install \
+yq  # yq is usually only needed on config build systems
+    # however if something goes wrong and an in place change
+    # needs to be made then editing the raw and regenerating
+    # is the preferred course of action
+#+end_src
+
+# #+CALL: aws-block() :dir /ssh:aws-scigraph|sudo:aws-scigraph: :eval never
+# #+CALL: aws-block() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
+* User setup
+:properties:
+:visibility: folded
+:end:
+This setup should be completed on the build host or on the ops host
+that talks to both the build host and the services host. Currently the
+build host and ops host are conflated.
+** git repos
+There are currently still a couple of repos that are needed for these workflows.
+Most are needed configuration files, but pyontutils is needed for this README as well.
+#+begin_src bash :eval never
+pushd ~/git
+git clone https://github.com/tgbugs/pyontutils.git
+git clone https://github.com/tgbugs/tgbugs-overlay.git
+git clone https://github.com/SciCrunch/sparc-curation.git
+popd
+#+end_src
+** ssh config
+Set =ip-aws-scigraph= here
+#+name: ip-aws-scigraph
+: 127.0.0.1
+
+Set =ip-aws-scigraph-data= here
+#+name: ip-aws-scigraph-data
+: 127.0.0.1
+
+Set =path-target-identity-file= here
+#+name: path-target-identity-file
+: /dev/null
+
+# NOTE: it is good practice to require any computer wanting to connect
+# to have two keys, one for the bastion and one for the target host
+# that way if the bastion is compromised the keys to get to the protected
+# hosts cannot be obtained from that machine alone
+# if a user's machine is compromised then access to the bastion can be
+# shut down for just that user and if the jump key is shared, then
+# it can be rotated under less time pressure
+
+Set =path-jump-identity-file= here
+#+name: path-jump-identity-file
+: /dev/null
+
+Set =jump-host= aka bastion server name here
+#+name: jump-host
+: localhost
+
+Set =ip-jump-host= here
+#+name: ip-jump-host
+: 127.0.0.1
+
+Set =user-jump-host= here
+#+name: user-jump-host
+: nobody
+
+Tangle this block after setting the requisite values above.
+#+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
+# enable connection multiplexing for all hosts
+Host *
+ServerAliveInterval 60
+ControlMaster auto
+ControlPath ~/.ssh_tmp/master-%r@%h:%p
+
+# jump host should be whitelisted in the target firewall
+Host <<jump-host()>>
+HostName <<ip-jump-host()>>
+User <<user-jump-host()>>
+IdentityFile <<path-jump-identity-file()>>
+PreferredAuthentications publickey
+
+Host aws-scigraph
+HostName <<ip-aws-scigraph()>>
+User ec2-user
+IdentityFile <<path-target-identity-file()>>
+PreferredAuthentications publickey
+ProxyCommand ssh <<jump-host()>> -W %h:%p
+
+Host aws-scigraph-scigraph
+HostName <<ip-aws-scigraph()>>
+User scigraph
+IdentityFile ~/.ssh/id_ed25519.aws.scigraph
+PreferredAuthentications publickey
+ProxyCommand ssh <<jump-host()>> -W %h:%p
+
+Host aws-scigraph-data
+HostName <<ip-aws-scigraph-data()>>
+User ec2-user
+IdentityFile <<path-target-identity-file()>>
+PreferredAuthentications publickey
+ProxyCommand ssh <<jump-host()>> -W %h:%p
+
+Host aws-scigraph-data-scigraph
+HostName <<ip-aws-scigraph-data()>>
+User scigraph
+IdentityFile ~/.ssh/id_ed25519.aws.scigraph
+PreferredAuthentications publickey
+ProxyCommand ssh <<jump-host()>> -W %h:%p
+#+end_src
+
+Create and deploy ssh key for the scigraph deploy user.
+
+# ((((
+#+name: &vars-ssh-keygen-deploy
+#+begin_src bash
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --server)   SERVER="${2}"; shift; shift ;;
+    --svc-user) SVC_USER="${2}"; shift; shift ;;
+    --keyname)  local KEYNAME="${2}"; shift; shift ;;
+    *)          POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+if [ -z $SERVER ]; then
+    echo '--server' is required
+    return 1
+elif [ -z $SVC_USER ]; then
+    echo '--svc-user' is required
+    return 1
+fi
+
+local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
+: ${KEYNAME:=${KEYNAME_DEFAULT}}
+local KEYTYPE=ed25519  # this is hardcoded for now
+KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
+SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
+#+end_src
+
+#+name: ssh-functions
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function ssh-keygen-simple () {
+    <<&vars-ssh-keygen-deploy>>
+
+    # test if the key already exists
+    if [ -f "${KEYPATH}" ]; then
+        echo "${KEYPATH}" already exists not running keygen and not deploying
+        unset KEYPATH SERVER SVC_USER SUDO_OR_SU
+        return 1
+    fi
+
+    # test that root access is available
+    # FIXME requires double password entry in the su case
+    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return 1
+
+    # generate the key
+    ssh-keygen -t ${KEYTYPE} -N "" -C "${USER}@${HOSTNAME}" -f "${KEYPATH}"
+
+    # all the relevant environment variables are left in the environment
+    # for the next step
+}
+
+function ssh-copy-id-simple () {
+    # note that &vars-ssh-keygen-deploy is written in such a way that
+    # the environment variables will persist if they are specified on
+    # ssh-keygen-simple and thus do not have to be set again in here
+    # they are included so that ssh-keygen-deploy can be used by itself
+    <<&vars-ssh-keygen-deploy>>
+    <<&command-ssh-copy-id-remote>>
+    # test that root access is available if HAVE_ROOT is not set
+    if [ -z $HAVE_ROOT ]; then
+        ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && \
+        export HAVE_ROOT=1 || return 1
+    fi
+
+    # copy the key to the host
+    TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
+    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return 1
+    # TODO option to deploy private key if the key is generated for a service user
+
+    # and today we learn about typeset, sigh
+    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f make-authorized-keys); make-authorized-keys ${SVC_USER} ${TEMP_RANDOM_NAME}.pub'"
+
+    local oops=$?
+    if [ $oops -ne 0 ]; then
+        echo FAILED so ${SERVER}:${TEMP_RANDOM_NAME}.pub is still present
+        return $oops
+    fi
+    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_RANDOM_NAME
+}
+#+end_src
+
+#+name: &command-ssh-copy-id-remote
+#+begin_src bash :eval never
+function make-authorized-keys () {
+    echo ${1} ${2}
+    SVC_USER=${1}
+    PUB_KEY=${2}
+    UHOME=$(eval echo ~${SVC_USER})
+    echo $UHOME
+    if [ ! -d ${UHOME}/.ssh ]; then
+        mkdir ${UHOME}/.ssh
+    fi
+    if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
+        touch ${UHOME}/.ssh/authorized_keys
+        chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
+    fi
+    cat ${PUB_KEY} >> \
+    ${UHOME}/.ssh/authorized_keys && \
+    chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
+    rm ${PUB_KEY};
+}
+#+end_src
+#+name: &command-ssh-copy-id-remote-bad
+#+begin_src bash :eval never
+export UHOME="'$(eval echo ~'"${SVC_USER}"')'"
+"'echo $UHOME'"
+${SUDO_OR_SU}"' \"
+if [ ! -d ${UHOME}/.ssh ]; then
+    mkdir ${UHOME}/.ssh
+fi
+if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
+    touch ${UHOME}/.ssh/authorized_keys
+    chown '"${SVC_USER}:${SVC_USER}"' ${UHOME}/.ssh/authorized_keys
+fi'"
+cat ${TEMP_RANDOM_NAME}.pub\" >> \
+"'${UHOME}/.ssh/authorized_keys'" && \
+rm ${TEMP_RANDOM_NAME}.pub
+#+end_src
+
+Make [[file:${HOME}/.ssh_tmp]] folder to hold multiplexed sockets.
+#+begin_src bash
+mkdir ~/.ssh_tmp
+chmod 0700 ~/.ssh_tmp
+#+end_src
+
+Once you have everything set up above run the following
+#+begin_src bash :eval never :noweb yes
+<<&source-scigraph-functions>>
+ssh-keygen-simple \
+--server aws-scigraph \
+--svc-user scigraph \
+--keyname aws.scigraph && \
+ssh-copy-id-simple
+
+ssh-copy-id-simple \
+--server aws-scigraph-data \
+--svc-user scigraph \
+--keyname aws.scigraph
+#+end_src
+* Components
+:PROPERTIES:
+:header-args: :mkdirp yes
+:END:
+
+Set =path-scigraph-functions= here
+#+name: path-scigraph-functions
+: ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh
+
+#+name: &source-scigraph-functions
+#+begin_src bash :noweb yes
+source "$(eval echo <<path-scigraph-functions()>>)"
+#+end_src
+** Code
+:properties:
+:visibility: folded
+:end:
+*** Build
+**** RPM
+The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
+[file:./scigraph.spec].
+
+To prevent =rmpbuild= from sitting in your home directory add the first line
+below to [[file:~/.rpmmacros]]. If you are building on a system that does not
+have an RPM based package manager then you will need the second bit to prevent
+builds from failing due to missing dependencies.
+# (
+#+name: rpmmacros
+#+BEGIN_SRC rpm-spec
+%_topdir %(echo $HOME)/files/rpmbuild
+
+%__arch_install_post \
+    [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
+    case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
+        echo no qa here
+    # /usr/lib/rpm/check-buildroot
+#+END_SRC
+
+If you have a default rpmbuild setup, and you have the
+
+#+name: run-compile-rpm
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :tangle ./bin/run-compile-rpm
+# link specs and other files so that rpmbuild can find them
+ln -s ~/git/pyontutils/nifstd/scigraph/scigraph.spec ~/files/rpmbuild/SPECS/scigraph.spec
+ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/scigraph.service \
+      ~/files/rpmbuild/SOURCES/scigraph.service
+ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/xvfb.service \
+      ~/files/rpmbuild/SOURCES/xvfb.service
+
+pushd ~/files/rpmbuild
+# build the rpm
+spectool -g -R SPECS/scigraph.spec
+rpmbuild -ba --nodeps SPECS/scigraph.spec
+
+# inspect the preinstall script
+rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
+popd
+#+end_src
+
+**** ontload only
+Set up a virtualenv if required.
+#+begin_src bash
+pushd venvs
+mkdir scigraph-build
+pushd scigraph-build
+pipenv --python 3.7
+pipenv shell
+pip install pyontutils
+mkdir build
+#+end_src
+
+Compile SciGraph.
+# ((((
+#+name: &vars-compile-scigraph-git
+#+begin_src bash :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-zip) local PATH_ZIP="${2}"; shift; shift ;;
+    --path-git) local PATH_GIT="${2}"; shift; shift ;;
+    --git-ref)  local GIT_REF="${2}"; shift; shift ;;
+    *)          POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${PATH_ZIP:=<<path-build-graph()>>}
+: ${PATH_GIT:=<<path-build-graph()>>}
+: ${GIT_REF:=master}
+
+#+end_src
+#+name: compile-scigraph-git
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+# NOTE --path-zip and --git-local can be anywhere but both should exist
+# they can also be the same folder
+function compile-scigraph-git () {
+    <<&vars-compile-scigraph-git>>
+    ontload scigraph \
+    --zip-location ${PATH_ZIP}  ${IFS# build artifacts will be deposited here} \
+    --git-local ${PATH_GIT}     ${IFS# remote repos will be cloned here} \
+    --scigraph-org SciGraph \
+    --scigraph-branch ${GIT_REF}
+}
+#+end_src
+**** docker
+https://github.com/SciGraph/SciGraph/tree/master/docker
+*** Deploy
+**** RPM
+source 1: [[file:~/git/pyontutils/nifstd/scigraph/README.md::# RPM builds]]
+#+name: rpm-install
+#+begin_src bash
+yum install -y scigraph*.rpm || \
+yum reinstall -y scigraph*.rpm
+#+end_src
+
+#+name: run-deploy-code-rpm
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-code-rpm
+# TODO backup the old rpm?
+scp ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${scigraph_host_admin}:
+ssh ${scigraph_host_admin} '
+    sudo <<rpm-install>>'
+#+end_src
+
+If you want to have more than one service or have a different name for =services.yaml=
+then take a look at =/lib/systemd/system/scigraph.service= and take what you want to
+customize and put it in =/etc/systemd/system/scigraph.service.d/scigraph.conf=
+(retaining the section hearders).
+
+**** git
+**** docker
+https://github.com/SciGraph/SciGraph/tree/master/docker
+** Graph
+*** Load
+**** scigraph-load
+Set =path-build-graph= here
+#+NAME: path-build-graph
+: /tmp/scigraph-build
+
+Set =path-graphload-template= here
+#+name: path-graphload-template
+: ~/git/pyontutils/nifstd/scigraph/graphload-base-template.yaml
+
+Set =folder-name-graph= here
+#+name: folder-name-graph
+: graph
+
+# (((((
+#+name: &vars-load-graph
+#+begin_src bash :eval never :exports none :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-build)        local PATH_BUILD="${2}"; shift; shift ;;
+    --folder-name-graph) local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
+    --path-graphload)    local PATH_GRAPHLOAD="${2}"; shift; shift ;;
+    --path-ontologies)   local PATH_ONTOLOGIES="${2}"; shift; shift ;;
+    *)                   POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
+: ${PATH_ONTOLOGIES:="./ontologies.yaml"}  # if missing will error
+: ${PATH_BUILD:=<<path-build-graph()>>}
+: ${FOLDER_NAME_GRAPH:=<<folder-name-graph()>>}
+LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
+PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
+PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
+STAMPED="${FOLDER_NAME_GRAPH}-graph-$(date +%Y%m%dT%H%M%S)"
+FILE_NAME_ZIP="${STAMPED}.zip"
+PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"
+LATEST="${PATH_BUILD}/LATEST"
+echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES
+echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
+#+end_src
+
+#+name: load-graph
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function load-graph () {
+    <<&vars-load-graph>>
+
+    if [[ -z "${PATH_ONTOLOGIES}" ]]; then
+        echo no ontologies section specified
+        exit 1
+    fi
+
+    if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
+        rm "${LOAD_GRAPH_PATH}" -r
+    fi
+    mkdir -p "${LOAD_GRAPH_PATH}"
+    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}"
+    yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
+        "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
+    scigraph-load -c "${PATH_CONFIG_YAML}"
+
+    pushd "${PATH_BUILD}" || return 1
+    # mv prevents accidentally deploying the same graph twice
+    # but use cp -r for development to avoid continual rebuild
+    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED}
+    zip -r ${FILE_NAME_ZIP} ${STAMPED}
+    unlink "${LATEST}"
+    ln -sT "${FILE_NAME_ZIP}" "${LATEST}"
+    popd > /dev/null || return 1
+}
+#+end_src
+**** ontload
+# sigh command line flags inside of flags
+# (((((((
+#+name: &vars-load-graph-ontload
+#+begin_src bash :eval never :exports none :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-graphload)  local PATH_GRAPHLOAD="${2}"; shift; shift ;;
+    --path-ontologies) local PATH_ONTOLOGIES="${2}"; shift; shift ;;
+    --path-build)      local PATH_BUILD="${2}"; shift; shift ;;
+    --path-zip)        local PATH_ZIP="${2}"; shift; shift ;;
+    --path-git)        local PATH_GIT="${2}"; shift; shift ;;
+    --git-ref)         local GIT_REF="${2}"; shift; shift ;;
+    *)                 POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+
+: ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
+: ${PATH_ONTOLOGIES:="./ontologies.yaml"}
+: ${PATH_BUILD:=<<path-build-graph()>>}
+: ${PATH_ZIP:="${PATH_BUILD}"}
+: ${PATH_GIT:="${PATH_BUILD}"}
+: ${GIT_REF:="master"}
+#+end_src
+
+#+name: load-graph-ontload
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function load-graph-ontload () {
+    <<&vars-load-graph-ontload>>
+    ontload graph \
+    --org SciCrunch  ${IFS# github organization} \
+    NIF-Ontology     ${IFS# repo name} \
+    NIF              ${IFS# pattern for remote base (e.g. http://) to swap for local file://,
+                       NIF automatically expands to http://ontology.neuinfo.org/NIF} \
+    --zip-location ${PATH_ZIP}  ${IFS# output folder where the loaded graph zip will be exported} \
+    --git-local ${PATH_GIT}     ${IFS# location where git repo will be cloned} \
+    --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
+    --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
+    --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
+    ${POSITIONAL}  ${IFS# pass any other unhandled arguments along}
+}
+#+end_src
+
+If loading fails, then you probably need to patch something in which case you will
+need the following commands. See an example setup in [[../nifstd/patches/][nifstd/patches]].
+If =--patch= is enabled and the patch config cannot be found you will get an error.
+
+# TODO
+#+name: run-load-graph-ontload-patch
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-patch
+<<&source-scigraph-functions>>
+load-graph-ontload \
+--patch                      ${IFS# do apply patches} \
+--patch-config patches.yaml  ${IFS# path to patche files}
+#+end_src
+**** ontload only
+When loading using pyontutils without a dedicated SciGraph install include the following
+to use the version of SciGraph built from git in [[compile-scigraph-git][compile-scigraph-git]].
+
+# TODO
+#+name: run-load-graph-ontload-scigraph-git
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-scigraph-git
+<<&source-scigraph-functions>>
+load-graph-ontload \
+--build-scigraph \
+--scigraph-org SciGraph \
+--scigraph-branch master
+#+end_src
+*** Deploy
+Set =path-runtime= here
+#+name: path-runtime
+: /var/lib/scigraph
+
+Set =folder-name-runtime= here
+#+name: folder-name-runtime
+: graph
+
+#+name: localhost-deploy-command
+#+begin_src bash :eval never :exports code
+cp ${PATH_ZIP} ${PATH_RUNTIME};
+pushd ${PATH_RUNTIME};
+unzip ${FILE_NAME_ZIP};
+unlink ${FOLDER_NAME_GRAPH};
+ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH};
+popd
+#+end_src
+
+# (((((((
+#+name: &vars-deploy-graph
+#+begin_src bash :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-build)          local PATH_BUILD="${2}"; shift; shift ;;
+    --server)              local SERVER="${2}"; shift; shift ;;
+    --svc-user)            local SVC_USER="${2}"; shift; shift ;;
+    --path-runtime)        local PATH_RUNTIME="${2}"; shift; shift ;;
+    --folder-name-runtime) local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
+    --path-zip)            local PATH_ZIP="${2}"; shift; shift ;;
+    *)                     POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${PATH_BUILD:=<<path-build-graph()>>}
+
+: ${SERVER:=localhost}
+: ${SVC_USER:=scigraph}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
+: ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
+
+local LATEST="${PATH_BUILD}/LATEST"
+if [ ! -f "${LATEST}" ]; then
+    echo $LATEST path does not exist.
+    echo Did you actually build the graph?
+    echo Not deploying.
+    return 1
+fi
+local FILE_NAME_ZIP=$(readlink "${LATEST}")
+local STAMPED="${FILE_NAME_ZIP//.zip/}"
+: ${PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"}
+if [ ! -f "${PATH_ZIP}" ]; then
+    echo $PATH_ZIP path does not exist.
+    echo Not deploying.
+    return 1
+fi
+local scigraph_host="${SERVER}-scigraph"  # by convention
+local scigraph_host_admin=${SERVER}
+echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
+#+end_src
+
+#+name: deploy-graph
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function deploy-graph () {
+    <<&vars-deploy-graph>>
+    echo Will deploy graph to ${SERVER}:${PATH_RUNTIME}
+    echo $PATH_ZIP
+    <<&are-you-sure>>
+
+    local CMD_STOP='
+                <<&service-manager>>
+                service-manager scigraph stop'
+
+    local CMD_START='
+                <<&service-manager>>
+                service-manager scigraph start'
+
+    if [ "${SERVER}" = "localhost" ]; then
+        CMD="su - ${SVC_USER} -c \"
+                <<localhost-deploy-command>>\""
+        su - root -c "${CMD}"
+    else
+        scp "${PATH_ZIP}" "${scigraph_host}:${PATH_RUNTIME}"
+        ssh ${scigraph_host} "pushd \"${PATH_RUNTIME}\"; unzip \"${FILE_NAME_ZIP}\""
+
+        ssh -t ${scigraph_host_admin} "${CMD_STOP}"
+
+        ssh ${scigraph_host} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
+                              ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\""
+
+        #ssh -t ${scigraph_host_admin} "${CMD_START}"
+    fi
+}
+#+end_src
+** Config
+*** Build
+Set =path-services= here
+#+name: path-services
+: ~/git/pyontutils/nifstd/scigraph/services-base-template.yaml
+
+Set =path-curies= here
+#+name: path-curies
+: ~/git/pyontutils/nifstd/scigraph/curie_map.yaml
+# FIXME rename to curies.yaml and be done with it
+
+Set =path-build-services= here
+#+name: path-build-services
+: ./
+
+Set =file-stem-services-output= here
+#+name: file-stem-services-output
+: services
+
+# ((((((((((
+#+name: &vars-build-services
+#+begin_src bash :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-build)            local PATH_BUILD="${2}"; shift; shift ;;
+    --path-runtime)          local PATH_RUNTIME="${2}"; shift; shift ;;
+    --folder-name-runtime)   local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
+    --path-cypher-resources) local PATH_CYPHER_RESOURCES="${2}"; shift; shift ;;
+    --path-services)         local PATH_SERVICES="${2}"; shift; shift ;;
+    --path-curies)           local PATH_CURIES="${2}"; shift; shift ;;
+    --file-stem)             local FILE_STEM="${2}"; shift; shift ;;
+    --svc-host)              local SVC_HOST="${2}"; shift; shift ;;
+    --svc-port)              local SVC_PORT="${2}"; shift; shift ;;
+    *) POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+: ${PATH_BUILD:=<<path-build-services()>>}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
+: ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
+: ${PATH_CYPHER_RESOURCES:="./cypher-resources.yaml"}  # will fail on absense
+: ${PATH_SERVICES:=<<path-services()>>}
+: ${PATH_CURIES:=<<path-curies()>>}
+: ${FILE_STEM=<<file-stem-services-output()>>}
+: ${SVC_HOST:=localhost}
+: ${SVC_PORT:=9000}
+URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
+URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
+URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
+PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
+YAML="${FILE_STEM}.yaml"
+DT=$(date +%Y%m%dT%H%M%S)
+YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
+
+PATH_YAML="${PATH_BUILD}/${YAML}"
+PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
+#+end_src
+
+#+name: build-services
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function build-services () {
+    <<&vars-build-services>>
+    # make build location
+    mkdir -p "${PATH_BUILD}"
+
+    # TODO allow urls?
+    # make raw
+    cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}"
+    cat "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}"
+    cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}"
+
+    # make services header
+    echo "# ${YAML_RAW}" > "${PATH_YAML}"
+
+    # make services
+    yq -Y ".graphConfiguration.location = \"${PATH_SERVICES_GRAPH}\" |
+    .serviceMetadata.view.url = \"${URL_VIEW}\" |
+    .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
+    " "${PATH_YAML_RAW}" >> "${PATH_YAML}"
+}
+#+end_src
+*** Deploy
+# TODO
+Once =services.yaml= has been created scp the raw and expanded configs
+to the target host.
+# ((((
+#+name: &vars-deploy-services
+#+begin_src bash :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --config)       local CONFIG="${2}"; shift; shift ;;
+    --server)       local SERVER="${2}"; shift; shift ;;
+    --path-runtime) local PATH_RUNTIME="${2}"; shift; shift ;;
+    *)              POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+if [ -z $CONFIG ]; then
+    echo '--config' is required
+    return 1
+fi
+
+# : ${CONFIG:=}
+: ${SERVER:=localhost}
+: ${PATH_RUNTIME:=<<path-runtime()>>}
+
+local YAML=$(basename "${CONFIG}")
+if [ ! -f "${CONFIG}" ]; then
+    echo ${CONFIG} path does not exist.
+    echo Did you actually build the config?
+    echo Not deploying.
+    return 1
+fi
+local YAML_RAW=$(head -n 1 "${CONFIG}" | cut -b3-)
+local CONFIG_RAW="$(dirname ${CONFIG})/${YAML_RAW}"
+local EXISTING="${PATH_RUNTIME}/${YAML}"
+
+local scigraph_host="${SERVER}-scigraph"  # by convention
+local scigraph_host_admin=${SERVER}
+if [ ${SERVER} = localhost ]; then
+    local TARGET="${PATH_RUNTIME}"
+else
+    local TARGET="${scigraph_host}:${PATH_RUNTIME}"
+fi
+#+end_src
+
+#+name: deploy-services
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function deploy-services () {
+    # NOTE it is on YOU to make sure you are deploying the right config
+    # to the right server, under normal circumstances you should
+    # be running a run-build-deploy-services-* command
+    <<&vars-deploy-services>>
+    echo Will deploy services config to $TARGET
+    echo $CONFIG_RAW
+    echo $CONFIG
+    <<&are-you-sure>>
+    local CMD='
+        <<&deploy-services-backup-config>>'
+    local CMD_RESTART='
+                <<&service-manager>>
+                service-manager scigraph restart'
+    echo $CONFIG_RAW $TARGET
+    if [ ${SERVER} = localhost ]; then
+        ${CMD} || return 1
+        cp "${CONFIG_RAW}" "${TARGET}" || return 1
+        cp "${CONFIG}" "${TARGET}" || return 1
+        ${CMD_RESTART} || return 1
+    else
+        # if only we could rsync
+        ssh ${scigraph_host} "${CMD}" || return 1
+        scp "${CONFIG_RAW}" "${TARGET}" || return 1
+        scp "${CONFIG}" "${TARGET}" || return 1
+        ssh -t ${scigraph_host_admin} "${CMD_RESTART}" || return 1
+    fi
+}
+#+end_src
+
+# this block's quoting is funky because bash doesn't have anything like unquote
+#+name: &deploy-services-backup-config
+#+begin_src bash :eval never
+E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
+if [ -n "${E_YAML_RAW}" ]; then
+    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
+else
+    mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
+    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
+fi
+echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
+#+end_src
+
+** Other processes
+*** Confirm action
+# ((((
+#+name: &are-you-sure
+#+begin_src bash
+read -r -p "Are you sure you want to deploy? y/N " -n 1 choice
+case "${choice}" in
+    y|Y) echo ;;
+    n|N) echo; echo "Not deploying."; return 1;;
+    '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
+    *)   echo; echo "Not deploying."; return 1;;
+esac
+echo "Deploying ..."
+#+end_src
+*** Restart services
+**** service-manager
+A bash function that implements a portable =service-manager= command.
+#+name: &service-manager
+#+begin_src bash :eval never
+function service-manager () {
+    SVCNAME=${1}
+    ACTION=${2}
+    if [ $(command -v systemctl) ]; then
+        local CMD="systemctl ${ACTION} ${SVCNAME}"
+        local CMD_POST="systemctl status ${SVCNAME}"
+    elif [ $(command -v rc-service) ]; then
+        local CMD="rc-service ${SVCNAME} ${ACTION}"
+        local CMD_POST=""
+    else
+        echo unknown service-manager
+        return 1
+    fi
+
+    if [[ $EUID = 0 ]]; then
+        ${CMD} || return $?
+    elif [ $(command -v sudo) ]; then
+        sudo ${CMD} || return $?
+    else
+        echo For su on ${HOSTNAME}
+        su -c "${CMD}" || return $?
+    fi
+
+    if [ -n "${CMD_POST}" ]; then
+       sleep 5
+       $CMD_POST
+    fi
+}
+#+end_src
+**** Amazon Linux 2
+#+NAME: restart-services-aws
+#+header: :async t
+#+begin_src bash :dir /ssh:hostname|sudo:hostname:
+systemctl restart scigraph
+#+end_src
+
+# #+CALL: restart-services-aws() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
+# #+CALL: test-scigraph-host() :var SERVER="scigraph.scicrunch.io" :eval never
+*** Testing
+#+name: test-scigraph-host
+#+header: :results none
+#+begin_src bash :var SERVER="localhost" :var PORT=9000
+ontutils scigraph-stress --scigraph-api http://${SERVER}:${PORT}/scigraph
+#+end_src
+* Deployments
+** nifstd
+*** graph
+**** load
+:properties:
+:custom_id: nifstd-graph-load
+:end:
+Set =path-build-nifstd= here
+#+name: path-build-nifstd
+: /tmp/scigraph-build/nifstd
+
+Set =path-ontologies-nifstd= here
+#+name: path-ontologies-nifstd
+: ~/git/pyontutils/nifstd/scigraph/ontologies-nifstd.yaml
+
+Set =git-ref-nifstd= here
+#+name: git-ref-nifstd
+: master
+
+#+name: run-load-graph-nifstd
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-nifstd
+<<&source-scigraph-functions>>
+load-graph-ontload \
+--path-build <<path-build-nifstd()>> \
+--path-ontologies <<path-ontologies-nifstd()>> \
+--git-ref <<git-ref-nifstd()>> \
+#+end_src
+**** deploy
+**** deploy from CI
+*** services config
+**** build
+Set =path-cypher-resources-nifstd= here
+#+name: path-cypher-resources-nifstd
+: ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
+
+#+name: run-build-services-nifstd
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-services-nifstd
+<<&source-scigraph-functions>>
+build-services \
+--path-build <<path-build-nifstd()>> \
+--path-cypher-resources <<path-cypher-resources-nifstd()>> \
+#+end_src
+**** deploy
+** sparc
+*** data
+interlex build
+#+begin_src bash
+interlex server alt
+#+end_src
+*** graph
+**** load
+:properties:
+:custom_id: sparc-graph-load
+:end:
+Set =path-build-sparc= here
+#+name: path-build-sparc
+: /tmp/scigraph-build/sparc
+
+Set =path-ontologies-sparc= here
+#+name: path-ontologies-sparc
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc.yaml
+
+Set =git-ref-sparc= here
+#+name: git-ref-sparc
+: dev
+
+#+name: run-load-graph-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc
+<<&source-scigraph-functions>>
+load-graph-ontload \
+--path-build <<path-build-sparc()>> \
+--path-ontologies <<path-ontologies-sparc()>> \
+--git-ref <<git-ref-sparc()>> \
+#+end_src
+**** deploy
+#+name: run-deploy-graph-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc
+<<&source-scigraph-functions>>
+deploy-graph \
+--server aws-scigraph \
+--path-build <<path-build-sparc()>>
+#+end_src
+**** deploy from CI
+*** services config
+**** build
+Set =path-cypher-resources-sparc= here
+#+name: path-cypher-resources-sparc
+: ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
+
+Set =host-services-sparc= here
+#+name: host-services-sparc
+: scigraph.scicrunch.io
+
+#+name: run-build-services-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc
+<<&source-scigraph-functions>>
+build-services \
+--path-build <<path-build-sparc()>> \
+--svc-host <<host-services-sparc()>> \
+--path-cypher-resources <<path-cypher-resources-sparc()>> \
+#+end_src
+**** deploy
+[[file:/ssh:aws-scigraph-deploy:services.yaml]]
+#+name: run-deploy-services-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc
+<<&source-scigraph-functions>>
+deploy-services \
+--config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml \
+--server aws-scigraph
+#+end_src
+**** build-deploy
+:properties:
+:custom_id: sparc-services-build-deploy
+:end:
+#+name: run-build-deploy-services-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc
+<<run-build-services-sparc>>
+|| exit 1
+<<run-deploy-services-sparc>>
+#+end_src
+** sparc-data
+*** data
+apinatomy build
+*** graph
+**** load
+Set =path-build-sparc-data= here
+#+name: path-build-sparc-data
+: /tmp/scigraph-build/sparc-data
+
+Set =folder-name-graph-sparc-data= here
+#+name: folder-name-graph-sparc-data
+: sparc-data
+
+Set =path-ontologies-sparc-data= here
+#+name: path-ontologies-sparc-data
+: ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
+
+#+name: run-load-graph-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
+<<&source-scigraph-functions>>
+load-graph \
+--path-build <<path-build-sparc-data()>> \
+--folder-name-graph <<folder-name-graph-sparc-data()>> \
+--path-ontologies <<path-ontologies-sparc-data()>> \
+#+end_src
+
+**** deploy
+#+name: run-deploy-graph-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data
+<<&source-scigraph-functions>>
+deploy-graph \
+--server aws-scigraph-data \
+--path-build <<path-build-sparc-data()>>
+#+end_src
+
+**** load-deploy
+#+name: run-load-deploy-graph-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc-data
+<<run-load-graph-sparc-data>>
+|| exit 1
+<<run-deploy-graph-sparc-data>>
+#+end_src
+*** services config
+[[file:/ssh:aws-scigraph-data-deploy:services.yaml]]
+**** build
+Set =path-cypher-resources-sparc-data= here
+#+name: path-cypher-resources-sparc-data
+: ~/git/sparc-curation/resources/scigraph/cypher-resources.yaml
+
+Set =host-services-sparc-data= here
+#+name: host-services-sparc-data
+: sparc-data.scicrunch.io
+
+#+name: run-build-services-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data
+<<&source-scigraph-functions>>
+build-services \
+--path-build <<path-build-sparc-data()>> \
+--svc-host <<host-services-sparc-data()>> \
+--path-cypher-resources <<path-cypher-resources-sparc-data()>> \
+#+end_src
+**** deploy
+#+name: run-deploy-services-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data
+<<&source-scigraph-functions>>
+deploy-services \
+--config <<path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
+--server aws-scigraph-data
+#+end_src
+**** build-deploy
+:properties:
+:custom_id: sparc-data-services-build-deploy
+:end:
+#+name: run-build-deploy-services-sparc-data
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc-data
+<<run-build-services-sparc-data>>
+|| exit 1
+<<run-deploy-services-sparc-data>>
+#+end_src
+** dev local ontology
+*** graph
+**** deploy
+#+begin_src bash :noweb yes
+./bin/deploy-graph --path-build
+#+end_src
+*** services config
+**** build
+**** deploy
+#+name: run-deploy-services-sparc-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-local
+<<&source-scigraph-functions>>
+deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.yaml
+#+end_src
+**** build-deploy
+** dev local sparc-data
+*** graph
+**** deploy
+Set =folder-name-runtime-sparc-data-local= here
+#+name: folder-name-runtime-sparc-data-local
+: sparc-data
+
+#+name: run-deploy-graph-sparc-data-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data-local
+<<&source-scigraph-functions>>
+deploy-graph \
+--path-build <<path-build-sparc-data()>> \
+--folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
+#+end_src
+*** services config
+**** build
+Set =file-stem-sparc-data-local= here
+#+name: file-stem-sparc-data-local
+: services-sparc
+
+#+name: run-build-services-sparc-data-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data-local
+<<&source-scigraph-functions>>
+./build-services \
+--path-build <<path-build-sparc-data()>> \
+--path-cypher-resources <<path-cypher-resources-sparc-data()>> \
+--file-stem <<file-stem-sparc-data-local()>> \
+--folder-name-runtime <<folder-name-runtime-sparc-data-local()>> \
+#+end_src
+**** deploy
+#+name: run-deploy-services-sparc-data-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data-local
+<<&source-scigraph-functions>>
+deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
+#+end_src
+**** build-deploy
+* Per operating system :noexport:
+:properties:
+:visibility: folded
+:end:
+# Reminder that, sigh, it is impossible to use #+include: in the current doc build pipeline
+# because org mode cannot include from the current buffer
+** Gentoo
+*** Setup
+**** Build host
+# #+include: (concat (buffer-file-name) "::#Setup:Build host:Gentoo") :only-contents t
+**** Services host
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:Gentoo") :only-contents t
+*** Code
+**** Build
+**** Deploy
+*** Graph
+**** Build
+**** Deploy
+*** Config
+**** Build
+**** Deploy
+** Ubuntu
+*** Setup
+**** Build host
+# #+include: (concat (buffer-file-name) "::#Setup:Build host:Ubuntu") :only-contents t
+# **** Services host
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:Ubuntu") :only-contents t
+** AWS Linux 2
+*** Setup
+**** Services host
+# #+include: (concat (buffer-file-name) "::#Setup:Services host:AWS Linux 2") :only-contents t

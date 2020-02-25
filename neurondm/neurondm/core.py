@@ -687,7 +687,7 @@ class Config:
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
-        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack
+        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack to expand paths
         if import_as_local or import_no_net:
             if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
                 # NOTE: we currently do the translation more ... inelegantly inside of config so we
@@ -702,6 +702,23 @@ class Config:
                 # part of graph
                 # FIXME hardcoded ...
                 partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
+                repo = partofpath.repo
+                if repo.active_branch.name != branch and not ont_checkout_ok:
+                    raise graphBase.GitRepoOnWrongBranch(
+                        f'Local git repo not on {branch} branch!\n'
+                        f'It is on {repo.active_branch} branch instead.\n'
+                        f'Please run `git checkout {branch}` in '
+                        f'{repo.working_dir}, '
+                        'set NIFSTD_CHECKOUT_OK= via export or '
+                        'at runtime, or set checkout_ok=True.')
+
+                elif ont_checkout_ok:
+                    graphBase.repo = repo
+                    graphBase.working_branch = next(h for h in repo.heads
+                                                    if h.name == branch)
+                    graphBase.original_branch = repo.active_branch
+                    graphBase.set_repo_state()
+
                 graphBase.part_of_graph = OntResAny(partofpath).graph
                 [_done.add(s) for s, o in graphBase.part_of_graph[:rdfs.subClassOf:]]
 
@@ -719,6 +736,11 @@ class Config:
                         break
                 else:
                     msg = '\n' + '\n'.join([p.as_posix() for p in search_paths])
+                    # has to be a ValueError because the way imports are set up is awful
+                    # fortunately we only have to deal with this for building a release
+                    # or, unfortunately if someone tries to build from git without
+                    # reading the instructions that they need the NIF-Ontology installed
+                    # in order to do the build :/
                     raise ValueError(f'no core paths ... {msg}')
 
                 # part of graph
@@ -1137,12 +1159,14 @@ class graphBase:
                     'set NIFSTD_CHECKOUT_OK= via export or '
                     'at runtime, or set checkout_ok=True.'
                     % (branch, branch, repo.working_dir))
+
             elif checkout_ok:
                 graphBase.repo = repo
                 graphBase.working_branch = next(h for h in repo.heads
                                                 if h.name == branch)
                 graphBase.original_branch = repo.active_branch
                 graphBase.set_repo_state()
+
             use_core_paths = local_core_paths
             use_in_paths = local_in_paths
         else:

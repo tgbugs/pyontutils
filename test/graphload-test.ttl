@@ -1,0 +1,101 @@
+@prefix A: <http://Z.org/prefix_> .
+@prefix a: <http://a.org/prefix_> .
+@prefix B: <http://X.org/prefix_> .
+@prefix b: <http://b.org/prefix_> .
+@prefix blx: <http://uri.binterlex.org/base/> .
+@prefix BLX: <http://uri.binterlex.org/base/blx_> .
+@prefix obo: <http://purl.obolibrary.org/obo/> .
+@prefix oboInOwl: <http://www.geneontology.org/formats/oboInOwl#> .
+@prefix other: <http://FIXME.org/other_> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sco: <http://sco.lol/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://testurl.org/filename.ttl> a owl:Ontology ;
+    rdfs:label "U WOT M8" .
+
+sco:1 a owl:Ontology .
+
+### Object Properties
+
+BLX:18 a owl:ObjectProperty .
+
+BLX:19 a owl:ObjectProperty .
+
+BLX:20 a owl:ObjectProperty ;
+    owl:oneOf (
+            BLX:18
+            BLX:19
+            BLX:20 ),
+        (
+            BLX:18
+            BLX:21 ),
+        (
+            BLX:19
+            BLX:20 ),
+        (
+            BLX:20
+            BLX:21 ) .
+
+### Classes
+
+A:1 a owl:Class ;
+    skos:prefLabel "Tuberomammillary nucleus, ventral part" .
+
+a:1 a owl:Class .
+
+B:1 a owl:Class .
+
+b:1 a owl:Class ;
+    owl:deprecated true .
+
+BLX:2 a owl:Class ;
+    rdfs:subClassOf BLX:1234567,
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:1 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:a1 ;
+            owl:someValuesFrom other:2 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:3 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:allValuesFrom other:4 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:5 ],
+        [ a owl:Restriction ;
+            owl:onProperty other:b1 ;
+            owl:someValuesFrom other:6 ] .
+
+BLX:3 a owl:Class ;
+    owl:disjointUnionOf (
+            A:1
+            A:2
+            A:3
+            A:4
+            A:5
+            B:1
+            B:2
+            B:3
+            B:4
+            B:5
+            BLX:AA
+            BLX:aA
+            blx:Aa
+            blx:aa ) .
+
+### Axioms
+
+[] a owl:Axiom ;
+    owl:annotatedSource obo:DOID_11394 ;
+    owl:annotatedProperty oboInOwl:hasExactSynonym ;
+    owl:annotatedTarget "ARDS"^^xsd:string ;
+    oboInOwl:hasDbXref "CSP2005:2596-8861"^^xsd:string .
+
+### Serialized using the ttlser deterministic serializer v1.2.0

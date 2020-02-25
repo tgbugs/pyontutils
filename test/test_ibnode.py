@@ -3,6 +3,7 @@ from pathlib import Path
 import rdflib
 from pyontutils.core import yield_recursive
 from pyontutils.identity_bnode import bnodes, IdentityBNode
+from .common import temp_path
 
 
 class TestIBNode(unittest.TestCase):
@@ -115,7 +116,7 @@ class TestIBNode(unittest.TestCase):
         try:
             assert s1 == s2
         except AssertionError as e:
-            with open('/tmp/f1.ttl', 'wb') as f1, open('/tmp/f2.ttl', 'wb') as f2:
+            with open(temp_path / 'f1.ttl', 'wb') as f1, open(temp_path / 'f2.ttl', 'wb') as f2:
                 f1.write(s1)
                 f2.write(s2)
             raise e

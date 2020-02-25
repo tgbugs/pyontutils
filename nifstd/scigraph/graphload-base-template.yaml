@@ -1,5 +1,5 @@
 graphConfiguration:
-    location: /var/scigraph-services/graph
+    location: /dev/null
     neo4jConfig:
       dump_configuration : true
       dbms.pagecache.memory : 4G
@@ -17,15 +17,6 @@ graphConfiguration:
       - acronym
       - abbreviation
 
-ontologies:
-  - url: http://ontology.neuinfo.org/NIF/scicrunch-registry.ttl
-  - url: http://ontology.neuinfo.org/NIF/ttl/nif.ttl
-    reasonerConfiguration:
-      factory: org.semanticweb.elk.owlapi.ElkReasonerFactory
-      addDirectInferredEdges: true
-      removeUnsatisfiableClasses: true
-
-
 categories:
     http://purl.obolibrary.org/obo/NCBITaxon_1 : organism
     http://purl.obolibrary.org/obo/OBI_0100026 : organism
@@ -41,19 +32,26 @@ categories:
     http://uri.neuinfo.org/nif/nifstd/nlx_63400 : Resource
     http://uri.neuinfo.org/nif/nifstd/nlx_152328 : Resource
     http://uri.neuinfo.org/nif/nifstd/birnlex_2085 : Institution
-    
+    http://purl.obolibrary.org/obo/SO_0000704 : gene
+    http://purl.obolibrary.org/obo/SO_0000110 : sequence feature
+
 mappedProperties:
   - name: label
     properties:
     - http://www.w3.org/2000/01/rdf-schema#label
   - name: synonym
     properties:
+    - http://www.w3.org/2004/02/skos/core#altLabel
+    - http://www.w3.org/2004/02/skos/core#prefLabel
     - http://www.geneontology.org/formats/oboInOwl#hasExactSynonym
     - http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym
     - http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym
     - http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym
     - http://purl.obolibrary.org/obo/go#systematic_synonym
     - http://uri.neuinfo.org/nif/nifstd/readable/synonym
+    - http://purl.org/sig/ont/fma/synonym
+    - http://purl.org/sig/ont/fma/non-English_equivalent
+    - http://purl.org/sig/ont/fma/preferred_name
   - name: acronym
     properties:
     - http://uri.neuinfo.org/nif/nifstd/readable/acronym
@@ -64,4 +62,4 @@ mappedProperties:
     properties:
     - http://purl.obolibrary.org/obo/IAO_0000115
     - http://www.w3.org/2004/02/skos/core#definition
-
+    - http://purl.org/sig/ont/fma/definition

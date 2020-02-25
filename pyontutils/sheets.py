@@ -1,26 +1,4 @@
-#!/usr/bin/env python3.7
-""" api access for google sheets (and friends)
-Usage:
-    googapis auth (sheets|docs|drive)... [options] [--drive-scope=<SCOPE>...]
-
-Examples:
-    googapis auth sheets
-
-Options:
-    -n --readonly             set the readonly scope
-    --drive-scope=<SCOPE>...  add drive scopes (overrides readonly)
-                              values: appdata
-                                      file
-                                      metadata
-                                      metadata.readonly
-                                      photos.readonly
-                                      readonly
-                                      scripts
-    -d --debug
-"""
-# TODO decouple oauth group sheets library
 import pickle
-import socket
 import itertools
 from pathlib import Path
 from googleapiclient.discovery import build
@@ -28,6 +6,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
+
+# TODO decouple oauth group sheets library
 
 log = _log.getChild('sheets')
 
@@ -58,6 +38,7 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
 
     store_file = auth.get_path(_auth_var)
 
+    # TODO log which file it is writing to ...
     if store_file.exists():
         with open(store_file, 'rb') as f:
             try:
@@ -116,7 +97,23 @@ def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_servic
     return response
 
 
-def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None):
+def default_filter_cell(cell):
+    remove = (
+        'userEnteredValue',
+        'effectiveValue',
+        'userEnteredFormat',
+        'effectiveFormat',
+        'padding',
+        'verticalAlignment',
+        'wrapStrategy',
+        'textFormat',
+    )
+    for k in remove:
+        cell.pop(k, None)
+
+
+def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
+                     filter_cell=default_filter_cell):
     SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
     if spreadsheet_service is None:
         service = get_oauth_service()
@@ -124,20 +121,43 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
     else:
         ss = spreadsheet_service
 
+    result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
+    values = result.get('values', [])
+
     if fetch_grid:
-        grid = ss.get(spreadsheetId=SPREADSHEET_ID, includeGridData=True).execute()
-        cells = get_cells_from_grid(grid, sheet_name)
+        def num_to_ab(n):
+            string = ''
+            while n > 0:
+                n, remainder = divmod(n - 1, 26)
+                string = chr(65 + remainder) + string
+            return string
+
+        rm = len(values)
+        cm = max([len(c) for c in values])
+        cml = num_to_ab(cm)
+        ranges = f'{sheet_name}!$A$1:${cml}'
+        #ranges = result['range']  # overshoots, which is bad for the 1000 cell case
+
+        grid = ss.get(spreadsheetId=SPREADSHEET_ID,
+                      ranges=ranges,
+                      includeGridData=True).execute()
+
+        for sheet in grid['sheets']:
+            sheet.pop('bandedRanges', None)
+            for d in sheet['data']:
+                d.pop('rowMetadata')
+                d.pop('columnMetadata')
+
+        cells = get_cells_from_grid(grid, sheet_name, filter_cell)
         cells_index = {(i, j):v for i, j, v in cells}
     else:
         grid = {}
         cells_index = {}
 
-    result = ss.values().get(spreadsheetId=SPREADSHEET_ID, range=sheet_name).execute()
-    values = result.get('values', [])
     return values, grid, cells_index
 
 
-def get_cells_from_grid(grid, title):
+def get_cells_from_grid(grid, title, filter_cell):
     for sheet in grid['sheets']:
         if sheet['properties']['title'] == title:
             for datum in sheet['data']:
@@ -145,6 +165,9 @@ def get_cells_from_grid(grid, title):
                     # if cell is blank it might not have values
                     if 'values' in row:
                         for j, cell in enumerate(row['values']):
+                            if filter_cell is not None:
+                                filter_cell(cell)
+
                             yield i, j, cell
 
 
@@ -196,7 +219,8 @@ class Sheet:
     fetch_grid = False
     index_columns = tuple()
 
-    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True):
+    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True,
+                 filter_cell=default_filter_cell):
         """ name to override in case the same pattern is used elsewhere """
         if name is not None:
             self.name = name
@@ -208,7 +232,16 @@ class Sheet:
 
         self.readonly = readonly
         self._setup()
-        self.fetch()
+        self.fetch(filter_cell=filter_cell)
+
+    @classmethod
+    def _sheet_id(cls):
+        return auth.dynamic_config.secrets('google', 'sheets', cls.name)
+
+    @classmethod
+    def _uri_human(cls):
+        # TODO sheet_name -> gid ??
+        return f'https://docs.google.com/spreadsheets/d/{cls._sheet_id()}/edit'
 
     def _setup(self):
         if self.readonly:
@@ -225,14 +258,15 @@ class Sheet:
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
 
-    def fetch(self, fetch_grid=None):
+    def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
         values, grid, cells_index = get_sheet_values(self.name, self.sheet_name,
                                                      spreadsheet_service=self._spreadsheet_service,
-                                                     fetch_grid=fetch_grid)
+                                                     fetch_grid=fetch_grid,
+                                                     filter_cell=filter_cell)
 
         self.raw_values = values
         self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
@@ -247,6 +281,23 @@ class Sheet:
 
         self.grid = grid
         self.cells_index = cells_index
+
+        #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
+        #import copy
+        #self._lol_g, self._lol_c = copy.deepcopy(grid), copy.deepcopy(cells_index)  # as does this
+
+        #for sheet in grid['sheets']:
+
+        #self.grid = {}  # grid is BAD
+        #self.cells_index = {}  # cells_index is BAD
+
+        #_asdf = pickle.dumps(grid)
+        #print('grid', len(_asdf) / 1024 ** 2)
+        #_asdf = pickle.dumps(cells_index)
+        #print('cells_index', len(_asdf) / 1024 ** 2)
+
+        #_asdf = pickle.dumps(self)
+        #print(len(_asdf) / 1024 ** 2)
 
     def update(self, values):
         """ update all values at the same time """
@@ -277,83 +328,9 @@ class Sheet:
         try:
             return self.cells_index[row_index, column_index]
         except KeyError:
-            return None
+            return {}  # need to return the empty dict for type safety
         #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
         #rd = grid['data'][0]['rowData']
 
     def cell_object(self, row_index, column_index):
         return Cell(self, row_index, column_index)
-
-
-def main():
-    import sys
-    from pyontutils.clifun import Dispatcher, Options as BaseOptions
-    class Options(BaseOptions):
-        drive_scopes = (
-            'appdata',
-            'file',
-            'metadata',
-            'metadata.readonly',
-            'photos.readonly',
-            'readonly',
-            'scripts',)
-        def __new__(cls, args, defaults):
-            bads = []
-            for scope in args['--drive-scope']:
-                if scope not in cls.drive_scopes:
-                    bads.append(scope)
-
-            if bads:
-                log.error(f'Invalid scopes! {bads}')
-                sys.exit(1)
-
-            return super().__new__(cls, args, defaults)
-
-    class Main(Dispatcher):
-        @property
-        def _scopes(self):
-            base = 'https://www.googleapis.com/auth/'
-            suffix = '.readonly' if self.options.readonly else ''
-            if self.options.sheets:
-                yield base + 'spreadsheets' + suffix
-
-            if self.options.docs:
-                yield base + 'doccuments' + suffix
-
-            if self.options.drive:
-                suffixes = []
-                if suffix:
-                    suffixes.append(suffix)
-
-                suffixes += ['.' + s for s in self.options.drive_scope]
-
-                if not suffixes:
-                    suffixes = '',
-
-                for suffix in suffixes:
-                    yield base + 'drive' + suffix
-
-        def auth(self):
-            newline = '\n'
-            scopes = list(self._scopes)
-            if self.options.debug:
-                log.debug(f'requesting for scopes:\n{newline.join(scopes)}')
-
-            service = get_oauth_service(readonly=self.options.readonly, SCOPES=scopes)
-            # FIXME decouple this ...
-            log.info(f'Auth finished successfully for scopes:\n{newline.join(scopes)}')
-
-    from docopt import docopt, parse_defaults
-    args = docopt(__doc__, version='clifun-demo 0.0.0')
-    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
-    options = Options(args, defaults)
-    main = Main(options)
-    if main.options.debug:
-        log.setLevel('DEBUG')
-        print(main.options)
-
-    main()
-
-
-if __name__ == '__main__':
-    main()

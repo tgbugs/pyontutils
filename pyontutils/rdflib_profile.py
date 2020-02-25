@@ -22,6 +22,10 @@ from ast import literal_eval
 from pathlib import Path
 from ttlser import CustomTurtleSerializer
 from rdflib.plugins.serializers.turtle import TurtleSerializer
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 
 class _prof:
@@ -131,14 +135,14 @@ def main():
         import shutil
         import requests
         from docopt import docopt
-        from IPython import embed
+
         args = docopt(__doc__)
 
         if args['--local']:
             filenames = list(filenames_from_fetch(fetch, Path.cwd().parent))  # FIXME
             run(REPS, filenames=filenames, functions=functions)
             # check *.results
-            embed()
+            breakpoint()
             return
 
         filenames = list(filenames_from_fetch(fetch, Path.cwd()))
@@ -212,7 +216,7 @@ def main():
             asdf.append(z)
 
         print(asdf)
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

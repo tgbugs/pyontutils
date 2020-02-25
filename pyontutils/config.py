@@ -27,8 +27,8 @@ system_curies_path = Path(sys.prefix) / _data_curies_string
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_curies = pyontutils_config_path / 'curie_map.yaml'
-    if not default_curies.exists():
-        log.warning(f'No curies found at {default_curies!r}')
+    #if not default_curies.exists():
+        #log.warning(f'No curies found at {default_curies!r}')
     # hardcoding the default api here to avoid importing the scigraph client
     default_scigraph_api = 'https://scicrunch.org/api/1/scigraph'
 else:
@@ -390,7 +390,6 @@ def bootstrap_config():
 
 
 def main():
-    from IPython import embed
     print(repr(devconfig))
 
 if __name__ == '__main__':

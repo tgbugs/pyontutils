@@ -1,0 +1,71 @@
+server:
+  type: simple
+  applicationContextPath: /scigraph
+  adminContextPath: /admin
+  connector:
+    type: http
+    port: 9000
+
+logging:
+  level: INFO
+
+applicationContextPath: scigraph
+
+apiConfiguration:
+  apikeyParameter: apikey
+  defaultApikey: default
+  authenticationCachePolicy: maximumSize=10000, expireAfterAccess=10m
+  authenticationQuery: select APIKEY from USERS where APIKEY = ?
+  roleQuery: select ROLES from USERS where APIKEY = ?
+  permissionQuery: select PERMISSION from ROLES where ROLE = ?
+  authDataSourceFactory:
+    # the name of your JDBC driver
+    driverClass: org.hsqldb.jdbc.JDBCDriver
+    # the username
+    user:
+    # the password
+    password:
+    # the JDBC URL
+    url: jdbc:hsqldb:res:/users/users
+    # any properties specific to your JDBC driver:
+    properties:
+      charSet: UTF-8
+    # the maximum amount of time to wait on an empty pool before throwing an exception
+    maxWaitForConnection: 1s
+    # the SQL query to run when validating a connections liveness
+    validationQuery: /* MyService Health Check */ SELECT 1 FROM INFORMATION_SCHEMA.SYSTEM_USERS
+    # the minimum number of connections to keep open
+    minSize: 8
+    # the maximum number of connections to keep open
+    maxSize: 32
+    # whether or not idle connections should be validated
+    checkConnectionWhileIdle: false
+
+serviceMetadata:
+  name: NIF Reconciliation Service
+  identifierSpace: http://neuinfo.org/
+  schemaSpace: http://neuinfo.org/
+  view:
+    url: http://{HOSTNAME}:{PORT}/scigraph/refine/view/{{id}}
+  preview:
+    url: http://{HOSTNAME}:{PORT}/scigraph/refine/preview/{{id}}
+    width: 400
+    height: 400
+
+graphConfiguration:
+  location: /dev/null  # /var/lib/scigraph/graph a favourite
+  exactNodeProperties:
+  - label
+  - synonym
+  - acronym
+  - abbreviation
+  indexedNodeProperties:
+  - label
+  - synonym
+  - curie
+  - acronym
+  - abbreviation
+  neo4jConfig:
+    dbms.pagecache.memory: 4g
+    dump_configuration: true
+  curies:

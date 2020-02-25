@@ -18,7 +18,11 @@
                     'environment-variables': 'ONTOLOGY_REPO_NAME ONTOLOGY_NAME'},
   'patch-config': {'default': '../nifstd/patches/patches.yaml',
                    'environment-variables': 'ONTOLOGY_PATCH_CONFIG PATCH_CONFIG'},
-  'resources': {'default': '../nifstd/resources',
+  'resources': {'default': ['../nifstd/resources',  # git
+                            '{:user-data-path}/nifstd/resources',  # pip install --user
+                            '{:prefix}/share/nifstd/resources',  # system
+                            '/usr/share/nifstd/resources',  # pypy3
+                            '{:cwd}/share/nifstd/resources',],  # ebuild testing
                 'environment-variables': 'NIFSTD_RESOURCES ONTOLOGY_RESOURCES RESOURCES'},
 
   # google api
@@ -36,11 +40,8 @@
   'scigraph-api-key': {'environment-variables': 'SCICRUNCH_API_KEY SCIGRAPH_API_KEY'},
 
   # scigraph build
-  'scigraph-graphload': '../nifstd/scigraph/graphload.yaml',
-  'scigraph-java': '../nifstd/scigraph/scigraph-services.conf',
-  'scigraph-services': '../nifstd/scigraph/services.yaml',
-  'scigraph-start': '../nifstd/scigraph/start.sh',
-  'scigraph-stop': '../nifstd/scigraph/stop.sh',
-  'scigraph-systemd': '../nifstd/scigraph/scigraph-services.service',
+  'scigraph-graphload': ['../nifstd/scigraph/graphload-base-template.yaml',  # git
+                         '{:cwd}/nifstd/scigraph/graphload-base-template.yaml',],  # ebuild testing  # FIXME VERY BAD coupling between test and module location
+  'scigraph-services': ['../nifstd/scigraph/services-base-template.yaml',],
   'zip-location': '/tmp'}
 }

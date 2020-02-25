@@ -1,15 +1,62 @@
-# -*- org-adapt-indentation: nil; -*-  this prevents realignment to indentaiton level on =G
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
+#+TITLE: Python release workflow
+#+OPTIONS: num:nil
 
+* Using this file :noexport:
+You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
+this file in emacs using =C-c C-v t= or you can tangle
+the whole file from the command line using with the following.
+#+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
+: ${THIS_FILE:="./release.org"}
+emacs --batch \
+      --load org \
+      --load ob-shell \
+      --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
+#+end_src
+
+The core functionality is tangled to [[file:./../bin/python-release-functions.sh]].
+It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
+to make the functions defined in this file available for use.
 * Python release process
 Release workflow.
 
-Don't tag a release on github until all the tests pass,
+Don't tag a release on GitHub until all the tests pass,
 the package contents are what we want and expect, and
 you have run =push-release= to pypi testing and checked it.
-Once they do tag it with the version that you set below
-so that everything is on the same page.
+Once they do, tag it with the version that you set below
+so that everything is on the same page. If there are multiple
+packages per repo the tag is usually prefixed with the module name.
 
-#+CAPTION: [[file:~/.pypirc]] on the release host (only need to create once)
+Note that if you use the =--local ~/path/to/my/working/repo= option as the source repo
+then =git pull= is called with =--force= since the assumption is that =git commit --amend=
+may be used in certain cases.
+
+*NEVER USE THESE FUNCTIONS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
+
+*WHEN YOU PUSH TO TEST*
+Inspect _everything_ at https://test.pypi.org/project/${packagename}.
+MAKE SURE THE HASHES MATCH (tail hashes vs curl output)
+You can also check https://test.pypi.org/project/ontquery/#files
+** Example release
+#+NAME: release-examples
+#+CAPTION: examples, this is horrible and dangerous, never do this this way run the 3 commands separately
+#+BEGIN_SRC bash :eval never :noweb yes
+source ~/git/pyontutils/bin/python-release-functions.sh
+SOMEVAR=some-value \
+build-release org repo folder packagename version --some-arg
+PYTHONPATH=~/git/pyontutils: SCICRUNCH_API_KEY=$(cat ~/ni/dev/secrets.yaml | grep tgbugs-travis | awk '{ print $2 }') \
+build-release tgbugs ontquery ontquery ontquery 0.1.0 --release
+exit  # if try to copy paste this block terminate here to prevent dumbs
+push-release ontquery ~/nas/software-releases ontquery 0.1.0
+# DO GitHub RELEASE HERE
+are-you-sure && \
+final-release ~/nas/software-releases ontquery 0.1.0
+#+END_SRC
+
+
+This is a reasonable time to tag the release on GitHub.
+* Config files
+#+CAPTION: [[file:${HOME}/.pypirc]] on the release host (only need to create once)
 #+BEGIN_SRC toml
 [distutils]
 index-servers =
@@ -25,14 +72,333 @@ repository: https://test.pypi.org/legacy/
 username: your-username
 password: set-this-one-for-simplicity
 #+END_SRC
+* Code
+** Python release functions
+Tangle this block so you can source [[file:./../bin/python-release-functions.sh]]
+#+NAME: all-blocks
+#+CAPTION: run this to export all the things
+#+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
+#+BEGIN_SRC bash :eval never :noweb yes
+<<build-release>>
+<<push-release>>
+# TODO github-release
+<<final-release>>
+#+END_SRC
+** Build release
+#+NAME: build-release
+#+begin_src bash :eval never :exports code
+build-release () {
+    # example
+    # build-release org    repo     folder   packagename version
+    # build-release tgbugs ontquery ontquery ontquery    0.0.8
 
-Note that if you use the =--local ~/path/to/my/working/repo= option as the source repo
-then =git pull= is called with =--force= since the assumption is that =git commit --amend=
-may be used in certain cases.
+    local POSITIONAL=()
+    local INTEGRATION_PACKAGES=()
+    while [[ $# -gt 0 ]]
+    do
+    key="$1"
 
-Run the code block definitions to create the functions we will use.
-*NEVER USE THESE SCRIPTS ON YOUR WORKING REPO, YOU WILL LOOSE ANY STASHED WORK OR UNTRACKED FILES*
+    # argh (((((((( darned mismatched parens :/
+    case $key in
+        -l|--local)
+        local CLONEFROM="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -f|--artifact-folder)
+        local ARTIFACT_FOLDER="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -p|--base-path)
+        local BASE_PATH="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -b|--branch)
+        local BRANCH="$2"
+        shift # past argument
+        shift # past value
+        ;;
+        -i|--install-package)
+        INTEGRATION_PACKAGES+=("$2")
+        shift
+        shift
+        ;;
+        --tag-no-rename)
+        local TAG_NO_RENAME=YES
+        shift # past argument
+        ;;
+        --keep-artifacts)
+        local KEEP_ARTIFACTS=YES
+        shift # past argument
+        ;;
+        ,*)    # unknown option
+        POSITIONAL+=("$1") # save it in an array for later
+        shift # past argument
+        ;;
+    esac
+    done
 
+    local org=${POSITIONAL[0]}
+    local repo=${POSITIONAL[1]}
+    local folder=${POSITIONAL[2]}
+    local packagename=${POSITIONAL[3]}
+    local version=${POSITIONAL[4]}
+    local REST=${POSITIONAL[@]:5}  # remaining position passed along
+    echo $REST
+
+    if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
+        local tag=${version}
+    else
+        local tag=${packagename}-${version}
+    fi
+
+    # TODO make sure no vars are null
+
+    : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
+
+    echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
+
+    cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
+
+    TEST_PATH=${BASE_PATH}/release-testing/${packagename}  # allow multiple builds at the same time
+
+    if [ -d ${repo} ]; then
+        rm -r ${TEST_PATH}
+    fi
+    mkdir -p ${TEST_PATH}
+
+    if [ -d ${repo} ]; then
+        pushd ${repo}
+        rurl="$(git remote get-url origin)"
+        if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
+            git remote set-url origin https://github.com/${org}/${repo}.git
+        elif [[ -n ${CLONEFROM} && $rurl =~ "https://" || $rurl =~ "git@" ]]; then
+            git remote set-url origin ${CLONEFROM}
+        fi
+        git fetch
+        git reset --hard origin/master
+        git clean -dfx
+        popd
+    else
+        if [[ -n ${CLONEFROM} ]]; then
+            git clone ${CLONEFROM} ${repo}
+        else
+            git clone https://github.com/${org}/${repo}.git
+        fi
+    fi
+    # TODO __version__ check against ${version}
+
+    pushd ${folder} || return 1  # or subfolder
+
+    if [[ $(git tag -l ${tag}) ]]; then
+        echo "${tag} has already been released for this repo!"
+        return 1
+    fi
+
+    if [[ -n ${BRANCH} ]]; then
+        git checkout ${BRANCH}
+        git pull  # in the event that a local branch already exists
+    else
+        git checkout -f master  # just like clean -dfx this should wipe changes just in case
+    fi
+    #git checkout ${version}  # only if all tests are go and release is tagged
+    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
+    if [ $? -ne 0 ]; then
+        echo "setup.py failed"
+        popd > /dev/null
+        return 1
+    fi
+
+    unset PYTHONPATH
+    cp dist/${packagename}-${version}* ${TEST_PATH}
+
+    pushd ${TEST_PATH}
+    tar xvzf ${packagename}-${version}.tar.gz
+    if [ $? -ne 0 ]; then
+        echo "tar failed, probably due to a version mismatch"
+        popd > /dev/null
+        popd > /dev/null
+        return 1
+    fi
+    pushd ${packagename}-${version}
+
+    # pipenv --rm swears no venv exists, if no Pipfile
+    # exists even if adding a Pipfile will magically
+    # reveal that there was in fact a venv and thus that
+    # every other pipenv command knows about it but
+    # naieve little rm is kept in the dark, so we yell
+    # into the 'void' just to make sure
+    touch Pipfile
+    pipenv --rm  # clean any existing env
+    pipenv --python 3.7  # for some reason 3.6 lingers in some envs
+    if [[ -n ${INTEGRATION_PACKAGES} ]]; then
+        echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
+        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return 1
+    fi
+    echo $(color yellow)installing$(color off) ${packagename}
+    pipenv run pip install -e .[test]   # .[services] for ontquery full install
+    PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
+    # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
+    # everything should pass if not, keep going until it does
+    popd
+    popd
+    # build the wheel from the sdist NOT from the repo
+    pushd dist/
+    tar xvzf ${packagename}-${version}.tar.gz
+    pushd ./${packagename}-${version}/
+    python setup.py bdist_wheel $@
+    mv dist/*.whl ../
+    popd
+    rm ./${packagename}-${version}/ -r
+    popd
+    # background here to twine?
+    popd
+    if [[ -n ${FAILURE} ]]; then
+        echo "$(color red)TESTS FAILED$(color off)";
+    fi
+
+    if [[ -n ${ARTIFACT_FOLDER} ]]; then
+        if [ ! -d "${ARTIFACT_FOLDER}" ]; then
+            mkdir -p "${ARTIFACT_FOLDER}"
+        fi
+        cp ${folder}/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}"
+        echo "build artifacts have been copied to ${ARTIFACT_FOLDER}"
+    fi
+
+    # FIXME need multiple repos when packages share a repo
+    # basically a test for if [[ package == repo ]] or something
+    if [[ -n ${KEEP_ARTIFACTS} ]]; then
+        echo "$(color yellow)keeping artifacts$(color off)"
+    elif [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
+        rm ${folder}/dist/${packagename}-${version}*
+        if [[ -n ${CLONEFROM} ]]; then
+            echo "$(color yellow)release build was cloned from a local source$(color off) ${CLONEFROM}"
+        else
+            echo "$(color yellow)release build was cloned from a specific branch$(color off) ${BRANCH}"
+        fi
+        echo "$(color ltyellow)therefore removing the build artifacts to prevent$(color off)"
+        echo "$(color ltyellow)accidental releases built from a private source$(color off)"
+    fi
+}
+#+end_src
+
+** Push release
+#+NAME: push-release
+#+BEGIN_SRC bash :eval never :exports code
+function push-release () {
+    # example
+    # push-release folder   software_releases_path    packagename version
+    # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
+    local folder=$1
+    shift
+    local software_releases_path=$1
+    shift
+    local packagename=$1
+    shift
+    local version=$1
+    shift
+
+    rsync -a -v --ignore-existing ${folder}/dist/${packagename/-/*}-${version}{-,.tar}* ${software_releases_path}/ || return 1
+    pushd ${software_releases_path}
+    sha256sum ${packagename/-/*}-${version}{-,.tar}* >> hashes
+    twine upload --repository test ${packagename/-/*}-${version}{-,.tar}* || return 1
+    sleep 1
+    echo "test pypi hashes"
+    curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
+    echo "local hashes"
+    tail -n2 hashes
+    echo go inspect https://test.pypi.org/project/${packagename}
+    echo and go do the github release
+    popd
+}
+#+END_SRC
+** TODO GitHub release
+#+NAME: github-release
+#+BEGIN_SRC python :eval never
+import requests
+from sparcur.utils
+#from sparcur.utils import mimetype  # FIXME or something like that
+# TODO api token
+
+suffix_to_mime = {
+    '.whl': 'application/octet-stream',  # technically zip ...
+    '.gz': 'application/gzip',
+    '.zip': 'application/zip',
+}
+
+
+class BadAssetSuffixError(Exception):
+    """ u wot m8 !? """
+
+
+def upload_assets(upload_base, version, *asset_paths):
+    for asset in asset_paths:
+        name = asset.name
+        requests.post()
+
+
+def github_release(org, repo, version, hashes, *assets, branch='master'):
+    """ hashes should be the output of sha256sum {packagename}-{version} """
+    # FIXME pyontutils violates some assumptions about 1:1 ness here
+
+    asset_paths = tuple(Path(a).resolve() for a in assets)
+    bads = [p.suffix  for p in asset_paths if p.suffix not in suffix_to_mime]
+    if bads:
+        raise BadAssetSuffixError(' '.join(bads))
+
+    base = 'https://api.github.com'
+    path = f'/repos/{org}/{repo}/releases'
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    json_data = {'tag_name': version,
+                 'target_commitish': branch,
+                 'name': version,
+                 'body': hashes,
+                 'draft': False,  # ok because we can add assets later
+                 'prerelease': False}
+
+    url = base + path
+    resp = requests.post(url, headers=headers, json=json_data)
+    rel_J = resp.json()
+    uu = rel_j['upload_url']
+
+    upload_base = uu.replace('{?name,label}', '')
+
+    upload_assets(upload_base, *asset_paths)
+#+END_SRC
+
+** Final release
+#+NAME: final-release
+#+CAPTION: on the release host final upload from previous block
+#+CAPTION: you will need to enter your password
+#+BEGIN_SRC bash :eval never :exports code
+function final-release () {
+    # example
+    # final-release software_releases_path    packagename version
+    # final-release ~/nas/software-releases   ontquery    0.0.8
+    local software_releases_path=$1
+    shift
+    local packagename=$1
+    shift
+    local version=$1
+    shift
+
+    pushd ${software_releases_path}
+
+    twine upload --repository pypi ${packagename/-/*}-${version}{-,.tar}* || return 1  # enter password here
+
+    sleep 1
+    echo "pypi hashes"
+    curl https://pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
+    echo "local hashes"
+    tail -n2 hashes
+    echo go inspect https://pypi.org/project/${packagename}
+
+    popd
+}
+#+END_SRC
+** TODO Next version                                               :noexport:
 #+NAME: release-next
 #+HEADER: :shebang "#!/usr/bin/env python3.7"
 #+begin_src python :tangle ./../bin/release-next :tangle-mode (identity #o755)
@@ -87,7 +453,7 @@ class Version(LooseVersion):
             oe = e
             if isinstance(e, int):
                 e = str(e)
-                
+
             s += e
 
         return self.__class__(s)
@@ -261,11 +627,11 @@ if __name__ == '__main__':
 #+end_src
 
 #+NAME: release-next-old
-#+BEGIN_SRC bash :eval never :exports code
+#+BEGIN_SRC bash :eval never :exports neither
 release-next () {
     # example
     # release-next path/to/folder/module/__init__.py
-    # vs 
+    # vs
     # release-next path/to/folder/module
     # vs
     # release-next path/to/folder
@@ -282,355 +648,23 @@ release-next () {
 }
 #+END_SRC
 
-#+NAME: build-release
-#+BEGIN_SRC bash :eval never :exports code
-build-release () {
-    # example
-    # build-release org    repo     folder   packagename version
-    # build-release tgbugs ontquery ontquery ontquery    0.0.8
-
-    local POSITIONAL=()
-    local INTEGRATION_PACKAGES=()
-    while [[ $# -gt 0 ]]
-    do
-    key="$1"
-
-    # argh (((((((( darned mismatched parens :/
-    case $key in
-        -l|--local)
-        local CLONEFROM="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -f|--artifact-folder)
-        local ARTIFACT_FOLDER="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -p|--base-path)
-        local BASE_PATH="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -b|--branch)
-        local BRANCH="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -i|--install-package)
-        INTEGRATION_PACKAGES+=("$2")
-        shift
-        shift
-        ;;
-        --tag-no-rename)
-        local TAG_NO_RENAME=YES
-        shift # past argument
-        ;;
-        --keep-artifacts)
-        local KEEP_ARTIFACTS=YES
-        shift # past argument
-        ;;
-        ,*)    # unknown option
-        POSITIONAL+=("$1") # save it in an array for later
-        shift # past argument
-        ;;
-    esac
-    done
-
-    local org=${POSITIONAL[0]}
-    local repo=${POSITIONAL[1]}
-    local folder=${POSITIONAL[2]}
-    local packagename=${POSITIONAL[3]}
-    local version=${POSITIONAL[4]}
-    local REST=${POSITIONAL[@]:5}  # remaining position passed along
-    echo $REST
-
-    if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
-        local tag=${version}
-    else
-        local tag=${packagename}-${version}
-    fi
-
-    # TODO make sure no vars are null
-
-    : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
-
-    echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
-
-    cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
-
-    TEST_PATH=${BASE_PATH}/release-testing/${packagename}  # allow multiple builds at the same time
-
-    if [ -d ${repo} ]; then
-        rm -r ${TEST_PATH}
-    fi
-    mkdir -p ${TEST_PATH}
-
-    if [ -d ${repo} ]; then
-        pushd ${repo}
-        rurl="$(git remote get-url origin)"
-        if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
-            git remote set-url origin https://github.com/${org}/${repo}.git
-        elif [[ -n ${CLONEFROM} && $rurl =~ "https://" || $rurl =~ "git@" ]]; then
-            git remote set-url origin ${CLONEFROM}
-        fi
-        git fetch
-        git reset --hard origin/master
-        git clean -dfx
-        popd
-    else
-        if [[ -n ${CLONEFROM} ]]; then
-            git clone ${CLONEFROM} ${repo}
-        else
-            git clone https://github.com/${org}/${repo}.git
-        fi
-    fi
-    # TODO __version__ check against ${version}
-
-    pushd ${folder} || return 1  # or subfolder
-
-    if [[ $(git tag -l ${tag}) ]]; then
-        echo "${tag} has already been released for this repo!"
-        return 1
-    fi
-
-    if [[ -n ${BRANCH} ]]; then
-        git checkout ${BRANCH}
-        git pull  # in the event that a local branch already exists
-    else
-        git checkout -f master  # just like clean -dfx this should wipe changes just in case
-    fi
-    #git checkout ${version}  # only if all tests are go and release is tagged
-    PYTHONPATH=${PYTHONPATH}$(realpath .) python setup.py sdist $REST  # pass $REST along eg for --release
-    unset PYTHONPATH
-    cp dist/${packagename}-${version}* ${TEST_PATH}
-
-    pushd ${TEST_PATH}
-    tar xvzf ${packagename}-${version}.tar.gz
-    if [ $? -ne 0 ]; then
-        echo "tar failed, probably due to a version mismatch"
-        popd
-        popd
-        return 1
-    fi
-    pushd ${packagename}-${version}
-
-    # pipenv --rm swears no venv exists, if no Pipfile
-    # exists even if adding a Pipfile will magically
-    # reveal that there was in fact a venv and thus that
-    # every other pipenv command knows about it but
-    # naieve little rm is kept in the dark, so we yell
-    # into the 'void' just to make sure
-    touch Pipfile
-    pipenv --rm  # clean any existing env
-    pipenv --python 3.7  # for some reason 3.6 lingers in some envs
-    if [[ -n ${INTEGRATION_PACKAGES} ]]; then
-        echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
-        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return 1
-    fi
-    echo $(color yellow)installing$(color off) ${packagename}
-    pipenv run pip install -e .[test]   # .[services] for ontquery full install
-    PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
-    # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
-    # everything should pass if not, keep going until it does
-    popd
-    popd
-    # build the wheel from the sdist NOT from the repo
-    pushd dist/
-    tar xvzf ${packagename}-${version}.tar.gz
-    pushd ./${packagename}-${version}/
-    python setup.py bdist_wheel $@
-    mv dist/*.whl ../
-    popd
-    rm ./${packagename}-${version}/ -r
-    popd
-    # background here to twine?
-    popd
-    if [[ -n ${FAILURE} ]]; then
-        echo "$(color red)TESTS FAILED$(color off)";
-    fi
-
-    if [[ -n ${ARTIFACT_FOLDER} ]]; then
-        if [ ! -d "${ARTIFACT_FOLDER}" ]; then
-            mkdir -p "${ARTIFACT_FOLDER}"
-        fi
-        cp ${folder}/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}"
-        echo "build artifacts have been copied to ${ARTIFACT_FOLDER}"
-    fi
-
-    # FIXME need multiple repos when packages share a repo
-    # basically a test for if [[ package == repo ]] or something
-    if [[ -n ${KEEP_ARTIFACTS} ]]; then
-        echo "$(color yellow)keeping artifacts$(color off)"
-    elif [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
-        rm ${folder}/dist/${packagename}-${version}*
-        if [[ -n ${CLONEFROM} ]]; then
-            echo "$(color yellow)release build was cloned from a local source$(color off) ${CLONEFROM}"
-        else
-            echo "$(color yellow)release build was cloned from a specific branch$(color off) ${BRANCH}"
-        fi
-        echo "$(color ltyellow)therefore removing the build artifacts to prevent$(color off)"
-        echo "$(color ltyellow)accidental releases built from a private source$(color off)"
-    fi
-}
-#+END_SRC
-
-#+NAME: push-release
-#+BEGIN_SRC bash :eval never :exports code
-function push-release () {
-    # example
-    # push-release folder   software_releases_path    packagename version
-    # push-release ontquery ~/nas/software-releases   ontquery    0.0.8
-    local folder=$1
-    shift
-    local software_releases_path=$1
-    shift
-    local packagename=$1
-    shift
-    local version=$1
-    shift
-
-    rsync -a -v --ignore-existing ${folder}/dist/${packagename}-${version}{-,.tar}* ${software_releases_path}/ || return 1
-    pushd ${software_releases_path}
-    sha256sum ${packagename}-${version}{-,.tar}* >> hashes
-    twine upload --repository test ${packagename}-${version}{-,.tar}* || return 1
-    sleep 1
-    echo "test pypi hashes"
-    curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
-    echo "local hashes"
-    tail -n2 hashes
-    echo go inspect https://test.pypi.org/project/${packagename}
-    echo and go do the github release
-    popd
-}
-#+END_SRC
-  
-#+NAME: github-release
-#+BEGIN_SRC python :eval never :var module=nil
-import requests
-from sparcur.utils
-#from sparcur.utils import mimetype  # FIXME or something like that
-# TODO api token
-
-suffix_to_mime = {
-    '.whl': 'application/octet-stream',  # technically zip ...
-    '.gz': 'application/gzip',
-    '.zip': 'application/zip',
-}
-
-
-class BadAssetSuffixError(Exception):
-    """ u wot m8 !? """
-
-
-def upload_assets(upload_base, version, *asset_paths):
-    for asset in asset_paths:
-        name = asset.name
-        requests.post()
-
-
-def github_release(org, repo, version, hashes, *assets, branch='master'):
-    """ hashes should be the output of sha256sum {packagename}-{version} """
-    # FIXME pyontutils violates some assumptions about 1:1 ness here
-
-    asset_paths = tuple(Path(a).resolve() for a in assets)
-    bads = [p.suffix  for p in asset_paths if p.suffix not in suffix_to_mime]
-    if bads:
-        raise BadAssetSuffixError(' '.join(bads))
-
-    base = 'https://api.github.com'
-    path = f'/repos/{org}/{repo}/releases'
-    headers = {'Accept': 'application/vnd.github.v3+json'}
-    json_data = {'tag_name': version,
-                 'target_commitish': branch,
-                 'name': version,
-                 'body': hashes,
-                 'draft': False,  # ok because we can add assets later
-                 'prerelease': False}
-
-    url = base + path
-    resp = requests.post(url, headers=headers, json=json_data)
-    rel_J = resp.json()
-    uu = rel_j['upload_url']
-
-    upload_base = uu.replace('{?name,label}', '')
-
-    upload_assets(upload_base, *asset_paths)
-#+END_SRC
-
-#+NAME: final-release
-#+CAPTION: on the release host final upload from previous block
-#+CAPTION: you will need to enter your password
-#+BEGIN_SRC bash :eval never :exports code
-function final-release () {
-    # example
-    # final-release software_releases_path    packagename version
-    # final-release ~/nas/software-releases   ontquery    0.0.8
-    local software_releases_path=$1
-    shift
-    local packagename=$1
-    shift
-    local version=$1
-    shift
-
-    pushd ${software_releases_path}
-
-    twine upload --repository pypi ${packagename}-${version}{-,.tar}* || return 1  # enter password here
-
-    sleep 1
-    echo "pypi hashes"
-    curl https://pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
-    echo "local hashes"
-    tail -n2 hashes
-    echo go inspect https://pypi.org/project/${packagename}
-
-    popd
-}
-#+END_SRC
-
-Tangle this block so you can source [[../bin/python-release-functions.sh]]
-# FIXME WTF can only tangle sh not bash?!
-#+NAME: all-blocks
-#+CAPTION: run this to export all the things
-#+HEADER: :tangle ../bin/python-release-functions.sh :comments noweb
-#+BEGIN_SRC sh :eval never :noweb yes
-<<build-release>>
-<<push-release>>
-# TODO github-release
-<<final-release>>
-#+END_SRC
-
-You can also tangle this whole file by running the following from
-the working directory of this repository. You can then source the
-tangled file directly.
+** Utils
+#+name: &are-you-sure
+#+caption: also defined in [[file:../nifstd/scigraph/README.org::&are-you-sure][&are-you-sure]]
 #+begin_src bash :eval never
-emacs --batch -l org --eval '(org-babel-tangle-file "docs/release.org")'
-source bin/python-release-functions.sh
+function are-you-sure () {
+    read -p "Are you sure you want to push the final release? yes/N " -n 1 choice
+    # ((((
+    case "${choice}" in
+        yes|YES) echo ;;
+        n|N) echo; echo "Not pushing final release."; return 1;;
+        '?') echo; echo "$(set -o posix; set | grep -v '^_')"; return 1;;
+        ,*)   echo; echo "Not pushing final release."; return 1;;
+    esac
+    echo "Pushing final release ..."
+}
 #+end_src
-
-After defining those functions or sourcing the tangled file
-you can use them as we do in the example below.
-
-*WHEN YOU PUSH TO TEST*
-Inspect _everything_ at https://test.pypi.org/project/${packagename}.
-MAKE SURE THE HASHES MATCH (tail hashes vs curl output)
-You can also check https://test.pypi.org/project/ontquery/#files
-
-This is a reasonable time to tag the release on github.
-
-#+NAME: release-examples
-#+CAPTION: examples, this is horrible and dangerous, never do this this way run the 3 commands separately
-#+BEGIN_SRC bash :eval never
-unset PYTHONPATH
-SOMEVAR=some-value build-release org repo folder packagename version --some-arg
-PYTHONPATH=~/git/pyontutils: SCICRUNCH_API_KEY=$(cat ~/ni/dev/secrets.yaml | grep tgbugs-travis | awk '{ print $2 }') build-release tgbugs ontquery ontquery ontquery 0.1.0 --release
-exit  # if try to copy paste this block terminate here to prevent dumbs
-push-release ontquery ~/nas/software-releases ontquery 0.1.0
-read  -n 1 -p "Inspect everything and then hit a key to run final-release or ^C to break:"; echo "OK"
-final-release ~/nas/software-releases ontquery 0.1.0
-#+END_SRC
-  
-** Examples
+* Examples
 These are examples. They may be out of date and already finished.
 #+CAPTION: pyontutils examples
 #+BEGIN_SRC bash :eval never
@@ -669,7 +703,7 @@ pushd /tmp/release-testing
 find -name "*.tar.gz" -exec tar xvzf {} \;
 for f in {librdflib,htmlfn,ttlser,pyontutils,neurondm,nifstd}; do pushd $f*/; pip install -e .[test]; python setup.py test; popd; done
 #+END_SRC
-  
+
 From inside /tmp/${repo}
 #+NAME: bdist_wheel-from-sdist
 #+CAPTION: build wheels from sdist never from repo directly

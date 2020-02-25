@@ -43,7 +43,7 @@ setup(
         'nbformat',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.11',
+        'pyontutils>=0.1.20',
         'sqlalchemy',
     ],
     extras_require={'dev': ['mysql-connector',
@@ -63,4 +63,6 @@ setup(
             'slimgen=nifstd_tools.slimgen:main',
         ],
     },
+    data_files=[('share/nifstd/resources/sparc_term_versions/',
+                 ['resources/sparc_term_versions/sparc_terms2-mod.txt'])]
 )

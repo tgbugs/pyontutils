@@ -132,7 +132,7 @@ def convert(file_or_list_or_stream, outpath=None, stream=False,
         file_or_stream = file_or_list_or_stream
         serialize(*parse(**prepare(file_or_stream, outpath, stream),
                          infmt=infmt),
-                  debug=debug, profile=profile)
+                  outfmt=outfmt, debug=debug, profile=profile)
     else:
         # file list is used here because this allows is to merge files
         # without any additional code if we pass it more than one file

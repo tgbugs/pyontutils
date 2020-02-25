@@ -18,13 +18,14 @@ from collections import namedtuple
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from colorlog import ColoredFormatter
+from .clifun import python_identifier
 import nest_asyncio
 
 
 def get_working_dir(script__file__):
     """ hardcoded sets the 'equivalent' working directory if not in git """
     start = Path(script__file__).resolve()
-    _root = Path(start.root)
+    _root = Path(start.drive + start.root)  # posix + win
     working_dir = start
     while not list(working_dir.glob('.git')):
         if working_dir == _root:
@@ -98,6 +99,7 @@ def makeSimpleLogger(name, color=True):
     # TODO use extra ...
 
     # remove any logging set by an inadvertent call to basicConfig
+    # FIXME probably not the friendliest thing to do ...
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
@@ -106,6 +108,9 @@ def makeSimpleLogger(name, color=True):
            '%(filename)16s:%(lineno)-4d - '
            '%(message)s')
     logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
     logger.setLevel(logging.DEBUG)
 
     cfmt = ('%(green)s[%(asctime)s]%(reset)s - '
@@ -127,16 +132,12 @@ def makeSimpleLogger(name, color=True):
                                  secondary_log_colors={},
                                  style='%')
 
-    if False:
-        coloredlogs.install(level=logging.DEBUG, logger=logger, fmt=fmt, milliseconds=True)
-    else:
-        if not color:
-            formatter = logging.Formatter(fmt)
+    if not color:
+        formatter = logging.Formatter(fmt)
 
-        ch = logging.StreamHandler()  # FileHander goes to disk
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-
+    ch = logging.StreamHandler()  # FileHander goes to disk
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
     return logger
 
@@ -627,34 +628,37 @@ class rowParse:
         pass
 
 
-def python_identifier(string):
-    """ pythonify a string for use as an identifier """
-    ident = (string.strip()
-             .replace('<', '')
-             .replace('>', '')
-             .replace('(', '')
-             .replace(')', '')
-             .replace(' ', '_')
-             .replace('+', '')
-             .replace('…','')
-             .replace('.','_')
-             .replace(',','_')
-             .replace('/', '_')
-             .replace('?', '_')
-             .replace('#', 'number')
-             .replace('-', '_')
-             .replace(':', '_')
-             .replace('\x83', '')  # FIXME should be stripped beforehand during format norm?
-             .lower()  # sigh
-                )
-    if ident and ident[0].isdigit():
-        ident = 'n_' + ident
-
-    return ident
-
-
 class byCol:
-    def __new__(cls, rows, header=None, to_index=tuple()):
+    # FIXME this class +is+ was unpickleable, lol python
+    def __init__(self, rows, header=None, to_index=tuple()):
+        # what I think is a pickleable version
+        if header is None:  # FIXME non None header might have bad names?
+            orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
+            header = [python_identifier(c) for i, c in enumerate(orig_header)]
+            #changes = {new:old for old, new in zip(rows[0], header) if old != new}
+            rows = rows[1:]
+        else:
+            orig_header = header
+
+        # normalize row lenght  # FIXME account for rows longer than header
+        rows = [row + [None] * (len(header) - len(row)) for row in rows]
+
+        # so apparently using namedtuple dynamically breaks pickle LOL PYTHON LOL
+        self.orig_header = orig_header
+        self.header = header
+        self.rows = rows
+        self.__indexes = {}
+        for col_name in to_index:
+            hindex = self.header.index(col_name)
+            ind = {r[hindex]:r for r in self.rows}
+            ind[col_name] = self.header  # the header
+            self.__indexes[col_name] = ind
+
+        for i, name in enumerate(header):
+            # so much for being dynamic!
+            setattr(self, name, [row[i] for row in self.rows])
+
+    def ___new__(cls, rows, header=None, to_index=tuple()):
         """ to_index should be a list of normalized column
             names that should be indexed for use in retrieving rows"""
 
@@ -697,7 +701,7 @@ class byCol:
         new_name = cls.__name__ + '_' + '_'.join(header)
         classTypeInstance = type(new_name,
                                  (cls,),
-                                 dict())
+                                 dict(__new__=object.__new__))
         return classTypeInstance
 
     @property
