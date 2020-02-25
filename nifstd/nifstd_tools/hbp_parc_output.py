@@ -9,7 +9,6 @@ from pyontutils.utils import TermColors as tc
 from pyontutils.namespaces import  NIFRID, ilxtr
 from pyontutils.combinators import restriction, annotation
 from pyontutils.closed_namespaces import owl, rdf, rdfs, skos
-from IPython import embed
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent

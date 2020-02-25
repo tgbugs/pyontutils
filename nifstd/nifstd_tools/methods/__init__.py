@@ -3115,17 +3115,14 @@ testbt(methods_core)
 testbt(methods)
 
 #assert not any(intersection.values()), f'duplicate namespace issue {intersection!r}'
-#from IPython import embed
-#embed()
 
 def halp():
     import rdflib
-    from IPython import embed
     trips = sorted(flattenTriples(triples))
     graph = rdflib.Graph()
     *(graph.add(t) for t in trips),
     *(print(tuple(qname(e) if not isinstance(e, rdflib.BNode) else e[:5] for e in t)) for t in trips),
-    embed()
+    breakpoint()
     return trips
 #trips = halp()
 

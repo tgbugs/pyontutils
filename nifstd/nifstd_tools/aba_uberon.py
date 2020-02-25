@@ -8,7 +8,10 @@ import requests
 from pyontutils.scigraph import Vocabulary, Graph
 from pyontutils.obo_io import OboFile, Header, Term, TVPair
 from pyontutils.core import makePrefixes, createOntology
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
@@ -128,7 +131,7 @@ def main():
             h = Header('format-version: 1.2\nontology: %s\n' % f.filename)
             h.append_to_obofile(f)
             f.write(f.filename)
-        #embed()
+        #breakpoint()
 
     #obo_output()
 
@@ -174,7 +177,7 @@ def main():
 
     ubridge.write()
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

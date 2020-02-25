@@ -7,7 +7,10 @@ import requests
 from pyontutils.utils import rowParse
 from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.namespaces import makePrefixes, TEMP
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 def main():
     source = 'https://raw.githubusercontent.com/BlueBrain/nat/master/nat/data/modelingDictionary.csv'
@@ -44,7 +47,7 @@ def main():
     asdf = nat(rows, header)
     graph.write()
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

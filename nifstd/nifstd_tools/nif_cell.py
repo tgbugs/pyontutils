@@ -2,7 +2,11 @@
 import rdflib
 import yaml
 from pyontutils.config import auth
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
+
 
 def main():
     with open(auth.get_path('curies'), 'rt') as f:
@@ -26,7 +30,7 @@ def main():
         print(predicate)
 
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

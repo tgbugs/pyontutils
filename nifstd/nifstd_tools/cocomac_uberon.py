@@ -7,7 +7,6 @@ import rdflib
 from pyontutils.utils import Async, deferred
 from pyontutils.config import auth
 from pyontutils.scigraph import Vocabulary, Graph
-from IPython import embed
 
 dbx = 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 

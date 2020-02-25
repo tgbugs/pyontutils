@@ -7,7 +7,10 @@ from pathlib import Path
 import rdflib
 from pyontutils.utils import rowParse, async_getter
 from pyontutils.scigraph import Graph, Vocabulary
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 current_file = Path(__file__).absolute()
 gitf = current_file.parent.parent.parent
@@ -40,7 +43,7 @@ def main():
 
     matched = [rows[0] + ['e_curie', 'e_label']] + async_getter(async_func, [(r,) for r in rows[1:]])
 
-    embed()
+    breakpoint()
 
 if __name__ == '__main__':
     main()

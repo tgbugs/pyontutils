@@ -23,7 +23,6 @@ from pyontutils.sheets import Sheet
 from pyontutils.core import makeGraph, qname, OntId, OntTerm
 from htmlfn import htmldoc, titletag, atag, ptag, nbsp
 from typing import Union, Dict, List
-from IPython import embed
 from sys import exit
 import yaml
 VERSION = '0.0.1'

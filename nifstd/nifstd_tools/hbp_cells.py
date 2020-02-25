@@ -10,7 +10,10 @@ from pyontutils.core import makeGraph
 from pyontutils.config import auth
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 olr = auth.get_path('ontology-local-repo')
 
@@ -98,7 +101,7 @@ def clean_hbp_cell():
     #old graph
     g = rdflib.Graph()
     if __name__ == '__main__':
-        embed()
+        breakpoint()
     path = (auth.get_path('git-local-base') /
             'methodsOntology/ttl/hbp_cell_ontology.ttl')
     if not path.exists():
