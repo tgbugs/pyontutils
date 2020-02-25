@@ -322,7 +322,7 @@ class CutsV1(Cuts):
             neuron.batchAnnotateByObject(object_notes)
             neuron.batchAnnotate(other_notes)
         except AttributeError as e:
-            #embed()
+            #breakpoint()
             log.exception(e) #'something very strage has happened\n', e)
             pass  # FIXME FIXME FIXME
 

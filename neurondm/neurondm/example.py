@@ -5,7 +5,10 @@ import neurondm
 from pyontutils.utils import TermColors as tc
 from neurondm import *
 from neurondm import phenotype_namespaces as phns
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 config = Config('neurons-example-script')
 
@@ -121,7 +124,7 @@ print(repr(pv))
 print(config.neurons())
 
 if __name__ == '__main__':
-    embed()
+    breakpoint()
 
 # XXX these have to be called inside this module or the state persists in graphBase FIXME
 resetLocalNames()
