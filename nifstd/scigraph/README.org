@@ -158,7 +158,9 @@ Set =user-jump-host= here
 #+name: user-jump-host
 : nobody
 
-Tangle this block after setting the requisite values above.
+Tangle this block after setting the requisite values above. Then
+open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
+and copy the sections into [[file:${HOME}/.ssh/config][your ssh config file]].
 #+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
 Host *
@@ -166,7 +168,7 @@ ServerAliveInterval 60
 ControlMaster auto
 ControlPath ~/.ssh_tmp/master-%r@%h:%p
 
-# jump host should be whitelisted in the target firewall
+# jump host should be whitelisted in the target's firewall
 Host <<jump-host()>>
 HostName <<ip-jump-host()>>
 User <<user-jump-host()>>
@@ -202,137 +204,14 @@ PreferredAuthentications publickey
 ProxyCommand ssh <<jump-host()>> -W %h:%p
 #+end_src
 
-Create and deploy ssh key for the scigraph deploy user.
-
-# ((((
-#+name: &vars-ssh-keygen-deploy
-#+begin_src bash
-local POSITIONAL=()
-while [[ $# -gt 0 ]]
-do
-key="$1"
-case $key in
-    --server)   SERVER="${2}"; shift; shift ;;
-    --svc-user) SVC_USER="${2}"; shift; shift ;;
-    --keyname)  local KEYNAME="${2}"; shift; shift ;;
-    *)          POSITIONAL+=("$1"); shift ;;
-esac
-done
-
-if [ -z $SERVER ]; then
-    echo '--server' is required
-    return 1
-elif [ -z $SVC_USER ]; then
-    echo '--svc-user' is required
-    return 1
-fi
-
-local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
-: ${KEYNAME:=${KEYNAME_DEFAULT}}
-local KEYTYPE=ed25519  # this is hardcoded for now
-KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
-SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
-#+end_src
-
-#+name: ssh-functions
-#+header: :comments noweb
-#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
-function ssh-keygen-simple () {
-    <<&vars-ssh-keygen-deploy>>
-
-    # test if the key already exists
-    if [ -f "${KEYPATH}" ]; then
-        echo "${KEYPATH}" already exists not running keygen and not deploying
-        unset KEYPATH SERVER SVC_USER SUDO_OR_SU
-        return 1
-    fi
-
-    # test that root access is available
-    # FIXME requires double password entry in the su case
-    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return 1
-
-    # generate the key
-    ssh-keygen -t ${KEYTYPE} -N "" -C "${USER}@${HOSTNAME}" -f "${KEYPATH}"
-
-    # all the relevant environment variables are left in the environment
-    # for the next step
-}
-
-function ssh-copy-id-simple () {
-    # note that &vars-ssh-keygen-deploy is written in such a way that
-    # the environment variables will persist if they are specified on
-    # ssh-keygen-simple and thus do not have to be set again in here
-    # they are included so that ssh-keygen-deploy can be used by itself
-    <<&vars-ssh-keygen-deploy>>
-    <<&command-ssh-copy-id-remote>>
-    # test that root access is available if HAVE_ROOT is not set
-    if [ -z $HAVE_ROOT ]; then
-        ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && \
-        export HAVE_ROOT=1 || return 1
-    fi
-
-    # copy the key to the host
-    TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
-    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return 1
-    # TODO option to deploy private key if the key is generated for a service user
-
-    # and today we learn about typeset, sigh
-    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f make-authorized-keys); make-authorized-keys ${SVC_USER} ${TEMP_RANDOM_NAME}.pub'"
-
-    local oops=$?
-    if [ $oops -ne 0 ]; then
-        echo FAILED so ${SERVER}:${TEMP_RANDOM_NAME}.pub is still present
-        return $oops
-    fi
-    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_RANDOM_NAME
-}
-#+end_src
-
-#+name: &command-ssh-copy-id-remote
-#+begin_src bash :eval never
-function make-authorized-keys () {
-    echo ${1} ${2}
-    SVC_USER=${1}
-    PUB_KEY=${2}
-    UHOME=$(eval echo ~${SVC_USER})
-    echo $UHOME
-    if [ ! -d ${UHOME}/.ssh ]; then
-        mkdir ${UHOME}/.ssh
-    fi
-    if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
-        touch ${UHOME}/.ssh/authorized_keys
-        chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
-    fi
-    cat ${PUB_KEY} >> \
-    ${UHOME}/.ssh/authorized_keys && \
-    chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
-    rm ${PUB_KEY};
-}
-#+end_src
-#+name: &command-ssh-copy-id-remote-bad
-#+begin_src bash :eval never
-export UHOME="'$(eval echo ~'"${SVC_USER}"')'"
-"'echo $UHOME'"
-${SUDO_OR_SU}"' \"
-if [ ! -d ${UHOME}/.ssh ]; then
-    mkdir ${UHOME}/.ssh
-fi
-if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
-    touch ${UHOME}/.ssh/authorized_keys
-    chown '"${SVC_USER}:${SVC_USER}"' ${UHOME}/.ssh/authorized_keys
-fi'"
-cat ${TEMP_RANDOM_NAME}.pub\" >> \
-"'${UHOME}/.ssh/authorized_keys'" && \
-rm ${TEMP_RANDOM_NAME}.pub
-#+end_src
-
 Make [[file:${HOME}/.ssh_tmp]] folder to hold multiplexed sockets.
 #+begin_src bash
 mkdir ~/.ssh_tmp
 chmod 0700 ~/.ssh_tmp
 #+end_src
 
-Once you have everything set up above run the following
+Once you have everything above configured you can run the following
+to create and deploy ssh key for the scigraph deploy user.
 #+begin_src bash :eval never :noweb yes
 <<&source-scigraph-functions>>
 ssh-keygen-simple \
@@ -346,6 +225,7 @@ ssh-copy-id-simple \
 --svc-user scigraph \
 --keyname aws.scigraph
 #+end_src
+For the implementation of the =*-simple= commands see [[#ssh-setup][ssh setup]].
 * Components
 :PROPERTIES:
 :header-args: :mkdirp yes
@@ -356,15 +236,15 @@ Set =path-scigraph-functions= here
 : ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh
 
 #+name: &source-scigraph-functions
-#+begin_src bash :noweb yes
+#+begin_src bash :noweb yes :exports neither
 source "$(eval echo <<path-scigraph-functions()>>)"
 #+end_src
 ** Code
+*** Build
+**** RPM
 :properties:
 :visibility: folded
 :end:
-*** Build
-**** RPM
 The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
 [file:./scigraph.spec].
 
@@ -405,8 +285,10 @@ rpmbuild -ba --nodeps SPECS/scigraph.spec
 rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
 popd
 #+end_src
-
 **** ontload only
+:properties:
+:visibility: folded
+:end:
 #+name: path-build-scigraph
 : /tmp/scigraph-build/scigraph
 
@@ -479,9 +361,15 @@ function compile-scigraph-git () {
 }
 #+end_src
 **** docker
+:properties:
+:visibility: folded
+:end:
 https://github.com/SciGraph/SciGraph/tree/master/docker
 *** Deploy
 **** RPM
+:properties:
+:visibility: folded
+:end:
 source 1: [[file:~/git/pyontutils/nifstd/scigraph/README.md::# RPM builds]]
 #+name: rpm-install
 #+begin_src bash
@@ -502,13 +390,18 @@ If you want to have more than one service or have a different name for =services
 then take a look at =/lib/systemd/system/scigraph.service= and take what you want to
 customize and put it in =/etc/systemd/system/scigraph.service.d/scigraph.conf=
 (retaining the section hearders).
-
 **** git
 **** docker
+:properties:
+:visibility: folded
+:end:
 https://github.com/SciGraph/SciGraph/tree/master/docker
 ** Graph
 *** Load
 **** scigraph-load
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 Set =path-build-graph= here
 #+NAME: path-build-graph
 : /tmp/scigraph-build
@@ -583,6 +476,9 @@ function load-graph () {
 }
 #+end_src
 **** ontload
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 # sigh command line flags inside of flags
 # (((((((
 #+name: &vars-load-graph-ontload
@@ -644,6 +540,9 @@ load-graph-ontload \
 $@
 #+end_src
 **** ontload only
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 When loading using pyontutils without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[compile-scigraph-git][compile-scigraph-git]].
 
@@ -657,6 +556,9 @@ need to do this unless you are doing this to test a specific version of SciGraph
 run-load-graph-sparc --path-build-scigraph <<path-build-scigraph()>>
 #+end_src
 *** Deploy
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 Set =path-runtime= here
 #+name: path-runtime
 : /var/lib/scigraph
@@ -756,6 +658,9 @@ function deploy-graph () {
 #+end_src
 ** Config
 *** Build
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 Set =path-services= here
 #+name: path-services
 : ~/git/pyontutils/nifstd/scigraph/services-base-template.yaml
@@ -840,6 +745,9 @@ function build-services () {
 }
 #+end_src
 *** Deploy
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 # TODO
 Once =services.yaml= has been created scp the raw and expanded configs
 to the target host.
@@ -932,9 +840,119 @@ else
 fi
 echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
 #+end_src
-
 ** Other processes
+*** ssh setup
+:PROPERTIES:
+:CUSTOM_ID: ssh-setup
+:VISIBILITY: folded
+:END:
+# ((((
+#+name: &vars-ssh-keygen-deploy
+#+begin_src bash
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --server)   SERVER="${2}"; shift; shift ;;
+    --svc-user) SVC_USER="${2}"; shift; shift ;;
+    --keyname)  local KEYNAME="${2}"; shift; shift ;;
+    *)          POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+if [ -z $SERVER ]; then
+    echo '--server' is required
+    return 1
+elif [ -z $SVC_USER ]; then
+    echo '--svc-user' is required
+    return 1
+fi
+
+local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
+: ${KEYNAME:=${KEYNAME_DEFAULT}}
+local KEYTYPE=ed25519  # this is hardcoded for now
+KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
+SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
+#+end_src
+
+#+name: ssh-functions
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function ssh-keygen-simple () {
+    <<&vars-ssh-keygen-deploy>>
+
+    # test if the key already exists
+    if [ -f "${KEYPATH}" ]; then
+        echo "${KEYPATH}" already exists not running keygen and not deploying
+        unset KEYPATH SERVER SVC_USER SUDO_OR_SU
+        return 1
+    fi
+
+    # test that root access is available
+    # FIXME requires double password entry in the su case
+    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return 1
+
+    # generate the key
+    ssh-keygen -t ${KEYTYPE} -N "" -C "${USER}@${HOSTNAME}" -f "${KEYPATH}"
+
+    # all the relevant environment variables are left in the environment
+    # for the next step
+}
+
+function ssh-copy-id-simple () {
+    # note that &vars-ssh-keygen-deploy is written in such a way that
+    # the environment variables will persist if they are specified on
+    # ssh-keygen-simple and thus do not have to be set again in here
+    # they are included so that ssh-keygen-deploy can be used by itself
+    <<&vars-ssh-keygen-deploy>>
+    <<&command-ssh-copy-id-remote>>
+    # test that root access is available if HAVE_ROOT is not set
+    if [ -z $HAVE_ROOT ]; then
+        ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && \
+        export HAVE_ROOT=1 || return 1
+    fi
+
+    # copy the key to the host
+    TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
+    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return 1
+    # TODO option to deploy private key if the key is generated for a service user
+
+    # and today we learn about typeset, sigh
+    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f copy-id-to-user-authorized-keys); copy-id-to-user-authorized-keys ${TEMP_RANDOM_NAME}.pub ${SVC_USER}'"
+
+    local oops=$?
+    if [ $oops -ne 0 ]; then
+        echo FAILED so ${SERVER}:${TEMP_RANDOM_NAME}.pub is still present
+        return $oops
+    fi
+    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_RANDOM_NAME
+}
+#+end_src
+
+#+name: &command-ssh-copy-id-remote
+#+begin_src bash :eval never
+function copy-id-to-user-authorized-keys () {
+    PUB_KEY=${1}
+    SVC_USER=${2}
+    UHOME=$(eval echo ~${SVC_USER})
+    if [ ! -d ${UHOME}/.ssh ]; then
+        mkdir ${UHOME}/.ssh
+    fi
+    if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
+        touch ${UHOME}/.ssh/authorized_keys
+        chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
+    fi
+    cat ${PUB_KEY} >> \
+    ${UHOME}/.ssh/authorized_keys && \
+    chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
+    rm ${PUB_KEY};
+}
+#+end_src
 *** Confirm action
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 # ((((
 #+name: &are-you-sure
 #+begin_src bash
@@ -948,6 +966,9 @@ esac
 echo "Deploying ..."
 #+end_src
 *** Restart services
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 **** service-manager
 A bash function that implements a portable =service-manager= command.
 #+name: &service-manager
@@ -981,7 +1002,10 @@ function service-manager () {
     fi
 }
 #+end_src
-**** Amazon Linux 2
+**** Amazon Linux 2 :noexport:
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 #+NAME: restart-services-aws
 #+header: :async t
 #+begin_src bash :dir /ssh:hostname|sudo:hostname:
@@ -991,6 +1015,9 @@ systemctl restart scigraph
 # #+CALL: restart-services-aws() :dir (:dir-tramp-sudo "aws-scigraph") :eval never
 # #+CALL: test-scigraph-host() :var SERVER="scigraph.scicrunch.io" :eval never
 *** Testing
+:PROPERTIES:
+:VISIBILITY: folded
+:END:
 #+name: test-scigraph-host
 #+header: :results none
 #+begin_src bash :var SERVER="localhost" :var PORT=9000
@@ -1093,7 +1120,6 @@ deploy-graph \
 || exit 1
 <<run-deploy-graph-sparc>>
 #+end_src
-
 **** deploy from CI
 *** services config
 **** build
@@ -1173,7 +1199,6 @@ deploy-graph \
 --server aws-scigraph-data \
 --path-build <<path-build-sparc-data()>>
 #+end_src
-
 **** load-deploy
 #+name: run-load-deploy-graph-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
