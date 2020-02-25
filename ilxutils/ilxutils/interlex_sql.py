@@ -73,7 +73,7 @@ class IlxSql():
             return self.terms
         engine = create_engine(self.db_url)
         data = """
-            SELECT t.id as tid, t.ilx, t.label, t.definition, t.type, t.comment, t.version, t.uid, t.time
+            SELECT t.id as tid, t.ilx, t.label, t.definition, t.type, t.comment, t.version, t.uid, t.cid, t.time, t.status
             FROM terms t
             GROUP BY t.ilx
         """
@@ -118,7 +118,7 @@ class IlxSql():
             return self.existing_ids
         engine = create_engine(self.db_url)
         data = """
-            SELECT tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.label, t.definition
+            SELECT tei.tid, tei.curie, tei.iri, tei.preferred, t.ilx, t.label, t.definition, t.status
             FROM (
                 SELECT *
                 FROM terms
@@ -140,24 +140,27 @@ class IlxSql():
         engine = create_engine(self.db_url)
         data = """
            SELECT
-               t1.id as term1_tid, t1.ilx AS term1_ilx, t1.type as term1_type,
-               t2.id as term2_tid, t2.ilx AS term2_ilx, t2.type as term2_type,
+               t1.id as term1_tid, t1.ilx AS term1_ilx, t1.type as term1_type, t1.label as term1_label,
+               t2.id as term2_tid, t2.ilx AS term2_ilx, t2.type as term2_type, t2.label as term2_label,
                t3.id as relationship_tid, t3.ilx AS relationship_ilx, t3.label as relationship_label
            FROM term_relationships AS tr
            JOIN (
                SELECT *
                FROM terms
                GROUP BY terms.ilx
+               HAVING terms.status = '0'
            ) t1 ON t1.id = tr.term1_id
            JOIN (
                SELECT *
                FROM terms
                GROUP BY terms.ilx
+               HAVING terms.status = '0'
            ) AS t2 ON t2.id = tr.term2_id
            JOIN (
                SELECT *
                FROM terms
                GROUP BY terms.ilx
+               HAVING terms.status = '0'
            ) AS t3 ON t3.id = tr.relationship_tid
         """
         self.relationships = pd.read_sql(data, engine)

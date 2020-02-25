@@ -1,4 +1,4 @@
-from interlex_sql import IlxSql
+from .interlex_sql import IlxSql
 import os
 
 def production_sql(from_backup=True):

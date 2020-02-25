@@ -137,7 +137,8 @@ def sentence_similarity(sentence1, sentence2, ignore_integers=False):
     tokens2 = word_tokenize(sentence2)
     tokens1 = clean_tokens(tokens1, ignore_integers)
     tokens2 = clean_tokens(tokens2, ignore_integers)
-
+    print(tokens1)
+    print(tokens2)
     # tag
     sentence1 = pos_tag(tokens1)
     sentence2 = pos_tag(tokens2)
