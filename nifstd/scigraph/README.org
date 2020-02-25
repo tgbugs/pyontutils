@@ -246,7 +246,7 @@ source "$(eval echo <<path-scigraph-functions()>>)"
 :visibility: folded
 :end:
 The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
-[file:./scigraph.spec].
+[[file:./scigraph.spec]].
 
 To prevent =rmpbuild= from sitting in your home directory add the first line
 below to [[file:${HOME}/.rpmmacros][~/.rpmmacros]]. If you are building on a system that does not
@@ -317,7 +317,7 @@ file in your personal [[file:${HOME}/bin]] folder or add =/tmp/scigraph-build/sc
 to your path. You can move the jar file that it points to, if you do just make sure
 to update the =scigraph-load= script to point to the new location.
 #+name: scigraph-load-linking-options
-#+begin_src bash
+#+begin_src bash :noweb yes
 cp <<path-build-scigraph()>>/bin/scigraph-load ~/bin
 # OR
 ln -s <<path-build-scigraph()>>/bin/scigraph-load ~/bin
