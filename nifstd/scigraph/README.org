@@ -249,7 +249,7 @@ The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
 [file:./scigraph.spec].
 
 To prevent =rmpbuild= from sitting in your home directory add the first line
-below to [[file:~/.rpmmacros]]. If you are building on a system that does not
+below to [[file:${HOME}/.rpmmacros][~/.rpmmacros]]. If you are building on a system that does not
 have an RPM based package manager then you will need the second bit to prevent
 builds from failing due to missing dependencies.
 # (
@@ -370,7 +370,6 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 :properties:
 :visibility: folded
 :end:
-source 1: [[file:~/git/pyontutils/nifstd/scigraph/README.md::# RPM builds]]
 #+name: rpm-install
 #+begin_src bash
 yum install -y scigraph*.rpm || \
