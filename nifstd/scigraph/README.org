@@ -407,6 +407,9 @@ popd
 #+end_src
 
 **** ontload only
+#+name: path-build-scigraph
+: /tmp/scigraph-build/scigraph
+
 Set up a virtualenv if required.
 #+begin_src bash
 pushd venvs
@@ -419,7 +422,28 @@ mkdir build
 #+end_src
 
 Compile SciGraph.
-# ((((
+#+name: run-compile-scigraph-dev
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-compile-scigraph-dev
+<<&source-scigraph-functions>>
+compile-scigraph-git
+#+end_src
+
+By default this will install scigraph-load in
+[[file:/tmp/scigraph-build/scigraph/bin/]]. You should be able to link that
+file in your personal [[file:${HOME}/bin]] folder or add =/tmp/scigraph-build/scigraph/bin/=
+to your path. You can move the jar file that it points to, if you do just make sure
+to update the =scigraph-load= script to point to the new location.
+#+name: scigraph-load-linking-options
+#+begin_src bash
+cp <<path-build-scigraph()>>/bin/scigraph-load ~/bin
+# OR
+ln -s <<path-build-scigraph()>>/bin/scigraph-load ~/bin
+# OR
+export PATH=<<path-build-scigraph()>>/bin:${PATH}
+#+end_src
+
+# (((((
 #+name: &vars-compile-scigraph-git
 #+begin_src bash :noweb yes
 local POSITIONAL=()
@@ -427,30 +451,31 @@ while [[ $# -gt 0 ]]
 do
 key="$1"
 case $key in
-    --path-zip) local PATH_ZIP="${2}"; shift; shift ;;
-    --path-git) local PATH_GIT="${2}"; shift; shift ;;
-    --git-ref)  local GIT_REF="${2}"; shift; shift ;;
-    *)          POSITIONAL+=("$1"); shift ;;
+    --path-build) local PATH_BUILD="${2}"; shift; shift ;;
+    --path-zip)   local PATH_ZIP="${2}"; shift; shift ;;
+    --path-git)   local PATH_GIT="${2}"; shift; shift ;;
+    --git-ref)    local GIT_REF="${2}"; shift; shift ;;
+    *)            POSITIONAL+=("$1"); shift ;;
 esac
 done
 
-: ${PATH_ZIP:=<<path-build-graph()>>}
-: ${PATH_GIT:=<<path-build-graph()>>}
+: ${PATH_BUILD:=<<path-build-scigraph()>>}
+: ${PATH_ZIP:=${PATH_BUILD}}
+: ${PATH_GIT:=${PATH_BUILD}}
 : ${GIT_REF:=master}
 
 #+end_src
+
 #+name: compile-scigraph-git
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
-# NOTE --path-zip and --git-local can be anywhere but both should exist
-# they can also be the same folder
 function compile-scigraph-git () {
     <<&vars-compile-scigraph-git>>
     ontload scigraph \
     --zip-location ${PATH_ZIP}  ${IFS# build artifacts will be deposited here} \
     --git-local ${PATH_GIT}     ${IFS# remote repos will be cloned here} \
-    --scigraph-org SciGraph \
-    --scigraph-branch ${GIT_REF}
+    --scigraph-branch ${GIT_REF} \
+    ${POSITIONAL[*]}
 }
 #+end_src
 **** docker
@@ -577,7 +602,6 @@ case $key in
 esac
 done
 
-
 : ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
 : ${PATH_ONTOLOGIES:="./ontologies.yaml"}
 : ${PATH_BUILD:=<<path-build-graph()>>}
@@ -601,7 +625,7 @@ function load-graph-ontload () {
     --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
     --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
     --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
-    ${POSITIONAL}  ${IFS# pass any other unhandled arguments along}
+    ${POSITIONAL[*]}  ${IFS# pass any other unhandled arguments along}
 }
 #+end_src
 
@@ -616,21 +640,21 @@ If =--patch= is enabled and the patch config cannot be found you will get an err
 <<&source-scigraph-functions>>
 load-graph-ontload \
 --patch                      ${IFS# do apply patches} \
---patch-config patches.yaml  ${IFS# path to patche files}
+--patch-config patches.yaml  ${IFS# path to patche files} \
+$@
 #+end_src
 **** ontload only
 When loading using pyontutils without a dedicated SciGraph install include the following
 to use the version of SciGraph built from git in [[compile-scigraph-git][compile-scigraph-git]].
 
-# TODO
+Any of the =run-load-graph-*= commands defined below can be run with one additional argument
+to use =scigraph-load= built from git. If you have moved =scigraph-load= to =~/bin= you do not
+need to do this unless you are doing this to test a specific version of SciGraph or similar.
+
 #+name: run-load-graph-ontload-scigraph-git
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-ontload-scigraph-git
-<<&source-scigraph-functions>>
-load-graph-ontload \
---build-scigraph \
---scigraph-org SciGraph \
---scigraph-branch master
+run-load-graph-sparc --path-build-scigraph <<path-build-scigraph()>>
 #+end_src
 *** Deploy
 Set =path-runtime= here
@@ -973,6 +997,7 @@ systemctl restart scigraph
 ontutils scigraph-stress --scigraph-api http://${SERVER}:${PORT}/scigraph
 #+end_src
 * Deployments
+*NOTE: By default any additional arguments to a =load-deploy= command are passed to the =load= NOT to =deploy=.*
 ** nifstd
 *** graph
 **** load
@@ -999,6 +1024,7 @@ load-graph-ontload \
 --path-build <<path-build-nifstd()>> \
 --path-ontologies <<path-ontologies-nifstd()>> \
 --git-ref <<git-ref-nifstd()>> \
+$@ \
 #+end_src
 **** deploy
 **** deploy from CI
@@ -1048,6 +1074,7 @@ load-graph-ontload \
 --path-build <<path-build-sparc()>> \
 --path-ontologies <<path-ontologies-sparc()>> \
 --git-ref <<git-ref-sparc()>> \
+$@ \
 #+end_src
 **** deploy
 #+name: run-deploy-graph-sparc
@@ -1058,6 +1085,15 @@ deploy-graph \
 --server aws-scigraph \
 --path-build <<path-build-sparc()>>
 #+end_src
+**** load-deploy
+#+name: run-load-deploy-graph-sparc
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc
+<<run-load-graph-sparc>>
+|| exit 1
+<<run-deploy-graph-sparc>>
+#+end_src
+
 **** deploy from CI
 *** services config
 **** build
@@ -1101,7 +1137,9 @@ deploy-services \
 #+end_src
 ** sparc-data
 *** data
-apinatomy build
+See [[https://github.com/SciCrunch/sparc-curation/master/docs/apinatomy.org]] for
+instructions about converting exporting and deploying ApiNATOMY graphs for loading
+into SciGraph.
 *** graph
 **** load
 Set =path-build-sparc-data= here
@@ -1124,8 +1162,8 @@ load-graph \
 --path-build <<path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
 --path-ontologies <<path-ontologies-sparc-data()>> \
+$@ \
 #+end_src
-
 **** deploy
 #+name: run-deploy-graph-sparc-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
