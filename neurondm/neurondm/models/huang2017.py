@@ -492,10 +492,22 @@ Neuron.out_graph.add((NeuronHuang2017.owlClass,
                       OntId('https://doi.org/10.1016/j.cell.2017.08.032').u))
 Neuron.write()
 Neuron.write_python()
+
+
+def wrap_query(l):
+    # FIXME evil hack to work around bad ontquery implementation decision
+    try:
+        res_gen = OntTerm.query(label=l.toPython())
+        for res in res_gen:
+            yield res
+    except NotImplementedError:
+        pass
+
+
 res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
        OntTerm(s).curie.startswith('ilxtr:')
-       for r in OntTerm.query(label=l.toPython()) if
-       r.curie.startswith('ilxtr:')]
+       for r in wrap_query(l) if
+       r is not None and r.curie.startswith('ilxtr:')]
 mapped = [r for s, l in Neuron.out_graph[:rdfs.label:] if
           OntTerm(s).curie.startswith('ilxtr:')
           for r in OntTerm.query(label=l.toPython()) if
