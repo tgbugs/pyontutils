@@ -510,8 +510,8 @@ res = [r for s, l in Neuron.out_graph[:rdfs.label:] if
        r is not None and r.curie.startswith('ilxtr:')]
 mapped = [r for s, l in Neuron.out_graph[:rdfs.label:] if
           OntTerm(s).curie.startswith('ilxtr:')
-          for r in OntTerm.query(label=l.toPython()) if
-          not r.curie.startswith('ilxtr:')]
+          for r in wrap_query(l) if
+          r is not None and not r.curie.startswith('ilxtr:')]
 
 
 def ncbigene():
