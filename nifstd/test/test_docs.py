@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 from pyontutils.utils import get_working_dir
@@ -13,8 +14,19 @@ base = ('/' + name + '/nifstd/test' + '/')
 gitbase = 'https://github.com/tgbugs/pyontutils/blob/master/nifstd/test/'
 
 
+class TestRegex(unittest.TestCase):
+    def test_regex(self):
+        tomatch = b'[[file:${HOME}/.ssh/config][your ssh config file]]'
+        ml = re.match(FixLinks.link_pattern, tomatch)
+        ms = re.match(FixLinks.single_pattern, tomatch)
+        assert len(ml.groups()) == 2, ml
+
+
 class TestFixLinks(unittest.TestCase):
     path_nasty_good = (
+        (Path(__file__), '[[file:${HOME}/.ssh/config][your ssh config file]]', '=${HOME}/.ssh/config='),
+        (Path(__file__), '[[file:${HOME}/.ssh/config][~/.ssh/config]]', '=~/.ssh/config='),
+        (Path(__file__), '[[file:${HOME}/.ssh_tmp]]', '=${HOME}/.ssh_tmp='),
         (Path(__file__), '[[http://example.org/test-1][text\ntext]]', '[[http://example.org/test-1][text text]]'),
         (Path(__file__), '[[][text-2]]', '[[][text-2]]'),
 
@@ -37,7 +49,7 @@ class TestFixLinks(unittest.TestCase):
         #(Path(__file__), '[[../a-docs-file.md#section][text]]', '[[../a-docs-file.md#section][text]]'),  # FIXME warn error or what?
     )
 
-    def test_all(self):
+    def test_fix_links(self):
         bads = ['\n' + '\n'.join((good, actual.decode()))
                 for path, nasty, good in self.path_nasty_good
                 for actual in (FixLinks(path)(nasty.encode()),)
