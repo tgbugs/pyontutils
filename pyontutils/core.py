@@ -602,11 +602,19 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         yield from self.namespaces()
 
     def qname(self, iri):
+        # a version of normalizeUri that fails if no prefix is available
         prefix, namespace, name = self.compute_qname(iri, generate=False)
         if prefix == "":
             return name
         else:
             return ":".join((prefix, name))
+
+    def normalizeUri(self, iri):
+        # FIXME the core rdflib normalizeUri implementation is incorrect now ...
+        try:
+            return self.qname(iri)
+        except KeyError:
+            return f'<{iri}>'
 
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
@@ -717,6 +725,8 @@ class OntGraph(rdflib.Graph):
         return out
 
     def debug(self):
+        """ don't call this from other code
+            you won't be able to find the call site """
         print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
