@@ -233,20 +233,9 @@ For the implementation of the =*-simple= commands see [[#ssh-setup][ssh setup]].
 *** graph
 **** load
 :properties:
+:visibility: folded
 :custom_id: nifstd-graph-load
 :end:
-Set =path-build-nifstd= here
-#+name: path-build-nifstd
-: /tmp/scigraph-build/nifstd
-
-Set =path-ontologies-nifstd= here
-#+name: path-ontologies-nifstd
-: ~/git/pyontutils/nifstd/scigraph/ontologies-nifstd.yaml
-
-Set =git-ref-nifstd= here
-#+name: git-ref-nifstd
-: master
-
 #+name: run-load-graph-nifstd
 #+caption: run-load-graph-nifstd
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
@@ -262,10 +251,9 @@ $@ \
 **** deploy from CI
 *** services config
 **** build
-Set =path-cypher-resources-nifstd= here
-#+name: path-cypher-resources-nifstd
-: ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
-
+:properties:
+:visibility: folded
+:end:
 #+name: run-build-services-nifstd
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-nifstd
@@ -275,6 +263,25 @@ build-services \
 --path-cypher-resources <<path-cypher-resources-nifstd()>> \
 #+end_src
 **** deploy
+*** variables                                                      :noexport:
+:properties:
+:visibility: folded
+:end:
+Set =path-build-nifstd= here
+#+name: path-build-nifstd
+: /tmp/scigraph-build/nifstd
+
+Set =path-ontologies-nifstd= here
+#+name: path-ontologies-nifstd
+: ~/git/pyontutils/nifstd/scigraph/ontologies-nifstd.yaml
+
+Set =git-ref-nifstd= here
+#+name: git-ref-nifstd
+: master
+
+Set =path-cypher-resources-nifstd= here
+#+name: path-cypher-resources-nifstd
+: ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
 ** sparc
 *** data
 :properties:
