@@ -614,7 +614,10 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         try:
             return self.qname(iri)
         except KeyError:
-            return f'<{iri}>'
+            if isinstance(iri, Variable):
+                return f'?{iri}'
+            else:
+                return f'<{iri}>'
 
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
@@ -749,8 +752,8 @@ class OntGraph(rdflib.Graph):
 
     def diffFromReplace(self, replace_graph, *, new_replaces_old=True):
         """ compute add, remove, same graphs based on a graph
-            the contains triples of the form `new replaces old`
-            where replaces can be any predicate set new_replaces_old=False
+            that contains triples of the form `new replaces old`
+            where `replaces` can be any predicate, set new_replaces_old=False
             if the add_and_replace graph is of the form `old replacedBy new`
         """
         if new_replaces_old:
@@ -768,6 +771,21 @@ class OntGraph(rdflib.Graph):
                 add.add(nt), rem.add(t)
             else:
                 same.add(t)
+
+        return add, rem, same
+
+    def diffFromGraph(self, graph):
+        # FIXME extremely inefficient
+        add, rem, same = [self.__class__() for _ in range(3)]
+        for t in self:
+            if t in graph:
+                same.add(t)
+            else:
+                rem.add(t)
+
+        for t in graph:
+            if t not in self:
+                add.add(t)
 
         return add, rem, same
 
