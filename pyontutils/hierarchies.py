@@ -243,11 +243,18 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
                 self.__class__.current_parent = key
                 v = value.print_tree(level + 1, html)  # recurse here XXX
-                if html and v and not first_occurance:
-                    ds = '<details><summary>'
+
+                if html and v:
+                    if first_occurance:
+                        ds = '<details open=""><summary>'
+                    else:
+                        ds = '<details><summary>'
+
                     key += ' ... <br></summary>'
                     v += '</details>'
+
                 self.__class__.prefix[-1] = cend
+
             else:
                 v = str(value)
 
@@ -321,15 +328,25 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
             if splitter:
                 prefix, suffix = line.split(splitter)
-                prefix = prefix.replace(' ', '\xa0')  # nbsp
+                if 'summary>' in line:
+                    pre_splitter = 'summary>'
+                    pre_prefix, prefix = prefix.split(pre_splitter)
+                    _prefix = prefix.replace(' ', '\xa0')  # nbsp
+                    prefix = pre_splitter.join((pre_prefix, _prefix))
+                else:
+                    prefix = prefix.replace(' ', '\xa0')  # nbsp
+
                 line = splitter.join((prefix, suffix))
             new_lines.append(line)
+
+        # you would think that adding an permanent margin at the
+        # bottom of the window would be easy ... you would be wrong
         output = '\n'.join(new_lines)
         output = output.replace('\n', ' <br>\n')
         output = output.replace('</summary> <br>', '</summary>')
         output = output.replace('</details> <br>', '</details>')
-        html_head = '\n    '.join(self.html_head)
         return output
+        html_head = '\n    '.join(self.html_head)
         output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
                   '"http://www.w3.org/TR/html4/loose.dtd">\n'
                   '<html>\n'
@@ -455,8 +472,13 @@ def process_nodes(j, root, direction, verbose):
     if root not in nodes and root is not None:
         root = OntId(root).curie
 
-    if direction == 'OUTGOING' or direction == 'BOTH':  # flip for the tree  # FIXME BOTH needs help!
+    if direction == 'OUTGOING':  # flip for the tree
         objects, subjects = subjects, objects
+    elif direction == 'BOTH':  # FIXME BOTH needs help!
+        from pprint import pprint
+        pprint(subjects)
+        pprint(objects)
+        pass
 
     # something is wrong with how we are doing subClassOf, see PAXRAT: INCOMING
     if root is not None:
