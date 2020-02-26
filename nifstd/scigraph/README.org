@@ -651,11 +651,11 @@ function deploy-graph () {
         ssh ${scigraph_host} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
                               ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\""
 
-        #ssh -t ${scigraph_host_admin} "${CMD_START}"
+        ssh -t ${scigraph_host_admin} "${CMD_START}"
     fi
 }
 #+end_src
-** Config
+** Services Config
 *** Build
 :PROPERTIES:
 :VISIBILITY: folded
