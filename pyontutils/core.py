@@ -614,7 +614,7 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
         try:
             return self.qname(iri)
         except KeyError:
-            if isinstance(iri, Variable):
+            if isinstance(iri, rdflib.term.Variable):
                 return f'?{iri}'
             else:
                 return f'<{iri}>'
