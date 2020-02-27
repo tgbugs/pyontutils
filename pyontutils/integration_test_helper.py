@@ -172,7 +172,7 @@ class _TestScriptsBase(unittest.TestCase):
 
     @classmethod
     def make_test_file(cls, i_ind, ppath, post_load, module_parent, skip, ci_skip):
-        print('PPATH:  ', ppath)
+        #print('PPATH:  ', ppath)
         pex = ppath.as_posix().replace('/', '_').replace('.', '_')
         fname = f'test_{i_ind:0>3}_' + pex
         stem = ppath.stem
