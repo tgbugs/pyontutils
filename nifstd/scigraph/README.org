@@ -303,6 +303,7 @@ popd
 #+end_src
 
 Make any manual changes, commit, and push.
+You will also need to merge sparc into dev for the changes to be included in the SciGraph load.
 *** code
 *** graph
 **** load
