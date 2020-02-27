@@ -287,10 +287,22 @@ Set =path-cypher-resources-nifstd= here
 :properties:
 :visibility: folded
 :end:
-interlex build
-#+begin_src bash
-interlex server alt
+Run this block
+#+name: sparc-community-terms-update
+#+caption: running =interlex-alt= is really all that is required, the url is for simplicity
+#+begin_src bash :results output
+pushd ~/git/NIF-Ontology/ttl
+git checkout sparc || exit 1  # can fail if your working copy has stuff saved
+git pull || exit 1
+curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit 1  # FIXME TEMP url
+# FIXME update to production url: http://uri.interlex.org/sparc/ontologies/community-terms.ttl
+git add sparc-community-terms.ttl
+git commit -m "update to latest version of sparc-community-terms"
+git diff HEAD~1 HEAD | tee sct-diff.patch
+popd
 #+end_src
+
+Make any manual changes, commit, and push.
 *** code
 *** graph
 **** load
