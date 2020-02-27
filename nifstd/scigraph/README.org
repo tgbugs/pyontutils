@@ -823,7 +823,7 @@ function load-graph () {
     fi
     mkdir -p "${LOAD_GRAPH_PATH}"
     cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}"
-    yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
+    yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \  # FIXME I think this line is bugged
         "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
     scigraph-load -c "${PATH_CONFIG_YAML}"
 
