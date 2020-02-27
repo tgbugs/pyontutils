@@ -598,8 +598,15 @@ def makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root):
                                    #root_iri.replace('/','%2F').replace('#','%23'))
             elif sgg is not None and local:
                 url = os.path.join(sgg._basePath, 'vocabulary', 'id', k)
+            elif prefix == '_' and v is None:
+                log.warning(f'BLANK NODES HAVE ENTERED THE DATABASE {root_iri}')
+                v = 'BLANK NODE'
             else:
-                url = str(prefixes[prefix]) + suffix
+                try:
+                    url = str(prefixes[prefix]) + suffix
+                except KeyError as e:
+                    log.exception(e)
+                    url = k
         else:
             if sgg is not None and local:
                 url = os.path.join(sgg._basePath, 'vocabulary', 'id',
@@ -607,6 +614,7 @@ def makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root):
                                    #k.replace('/','%2F').replace('#','%23'))
             else:
                 url = k
+
         if v is None:  # if there is no label fail over to the url
             v = f'<{url}>'
         htmlNodes[k] = '<a target="_blank" href="{}">{}</a>'.format(url, html_escape(v))
