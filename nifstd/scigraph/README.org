@@ -45,7 +45,8 @@ layman -a tgbugs-overlay
 emerge \
 pyontutils \
 rpmdevtools \
-scigraph-bin
+scigraph-bin \
+yq
 #+end_src
 *** Ubuntu
 :PROPERTIES:
@@ -58,7 +59,8 @@ python3-dev \
 python3-pip
 
 pip install --user \
-pyontutils
+pyontutils \
+yq
 #+end_src
 ** Services host
 *** Gentoo
@@ -827,8 +829,9 @@ function load-graph () {
     fi
     mkdir -p "${LOAD_GRAPH_PATH}" || return 1
     cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return 1
-    yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \  # FIXME I think this line is bugged
-        "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}" || return 1
+    yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
+        "${PATH_CONFIG_YAML_RAW}" > "${PATH_CONFIG_YAML}" || return 1
+        # FIXME I think this line is bugged YES BUT ALSO BY THE VERY COMMENT ITSELF
     scigraph-load -c "${PATH_CONFIG_YAML}" || return 1
 
     pushd "${PATH_BUILD}" || return 1
@@ -836,7 +839,7 @@ function load-graph () {
     # but use cp -r for development to avoid continual rebuild
     cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return 1
     zip -r ${FILE_NAME_ZIP} ${STAMPED} || return 1
-    unlink "${LATEST}" || return 1
+    unlink "${LATEST}"
     ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return 1
     popd > /dev/null || return 1
 }
