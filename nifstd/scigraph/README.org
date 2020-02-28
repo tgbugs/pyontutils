@@ -825,19 +825,19 @@ function load-graph () {
     if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
         rm "${LOAD_GRAPH_PATH}" -r
     fi
-    mkdir -p "${LOAD_GRAPH_PATH}"
-    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}"
+    mkdir -p "${LOAD_GRAPH_PATH}" || return 1
+    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return 1
     yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \  # FIXME I think this line is bugged
-        "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}"
-    scigraph-load -c "${PATH_CONFIG_YAML}"
+        "${PATH_CONFIG_YAML_RAW}"> "${PATH_CONFIG_YAML}" || return 1
+    scigraph-load -c "${PATH_CONFIG_YAML}" || return 1
 
     pushd "${PATH_BUILD}" || return 1
     # mv prevents accidentally deploying the same graph twice
     # but use cp -r for development to avoid continual rebuild
-    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED}
-    zip -r ${FILE_NAME_ZIP} ${STAMPED}
-    unlink "${LATEST}"
-    ln -sT "${FILE_NAME_ZIP}" "${LATEST}"
+    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return 1
+    zip -r ${FILE_NAME_ZIP} ${STAMPED} || return 1
+    unlink "${LATEST}" || return 1
+    ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return 1
     popd > /dev/null || return 1
 }
 #+end_src
