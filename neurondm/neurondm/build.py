@@ -1458,7 +1458,7 @@ def main():
         nns = [n.asUndeprecated() for n in cnrns]
         config.write()
         config.write_python()
-        embed()
+        breakpoint()
         return
 
     if indicators:
@@ -1488,7 +1488,7 @@ def main():
         make_bridge()
 
     if __name__ == '__main__':
-        #embed()
+        #breakpoint()
         pass
 
 if __name__ == '__main__':

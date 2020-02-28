@@ -123,9 +123,18 @@ class FixLinks:
             text = href.replace(b'file:', b'')
 
         try:
-            outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
+            if b'][' in href:  # was already matched by link pattern
+                outlink = b'[[' + href + b']]'
+            else:
+                outlink = b'[[' + self.fix_href(href) + b'][' + self.fix_text(text, href) + b']]'
         except self.MakeMeAnInlineSrcBlock as e:
-            outlink = f'={href.decode().replace("file:", "")}='.encode()
+            if text and text.startswith(b'~'):
+                tolink = text
+            else:
+                tolink = href
+
+            outlink = f'={tolink.decode().replace("file:", "")}='.encode()
+
 
         #if b'md#' in outlink:
         #if match.group() != outlink:
@@ -209,6 +218,10 @@ class FixLinks:
                     return match.group()  # rel_path = name + ext + rest
 
 
+        # tirgger the $ error in the stupidest posible way
+        sub_nothing = SubRel(f"we're off to see the inline src block maker")
+        out_m1 = re.sub(r'^file:(\$)(.*)(#.+)*$', sub_nothing, out)
+
         #print('----------------------------------------')
         # TODO consider htmlifying these ourselves and serving them directly
         sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
@@ -219,7 +232,7 @@ class FixLinks:
         out0 = re.sub(r'^file:(.*)'
                       + code_regex +
                       r'(#.+)*$',
-                      sub_github, out)
+                      sub_github, out_m1)
 
         #print('----------------------------------------')
         # FIXME for the future, can't hotlink to svg from github
@@ -243,6 +256,7 @@ class FixLinks:
             log.warning(f'Potentially relative path {out!r} does not have a known good start in {self.current_file}')
 
         return out.encode()
+
 
 def get__doc__s():
     repo = Repo(working_dir.as_posix())
@@ -518,12 +532,18 @@ def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwa
 
     #print(org.decode())
 
+    #if b'hrefl:' in org or b'img:' in org:
+        #with open(temp_path / (f'debug-{path.as_posix().replace("/", "-")}' + '.org'), 'wb') as f:
+            #f.write(org)
+
     # debug debug
     #with open(path.with_suffix('.org').as_posix(), 'wb') as f:
         #f.write(org)
     # there is not satisfactory way to fix this issue right now
     # but it might also be a bug in pandoc's org exporter
+
     body, err = e.communicate(input=org)
+
     # debug
     #print(' '.join(pandoc), '|', ' '.join(sed), '|', ' '.join(compile_org_file))
     #if b'[[img:' in out or not out or 'external-sources' in path.as_posix():
@@ -546,7 +566,9 @@ def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwa
         raise ValueError(f'Output document for {path.as_posix()} '
                          'has no body! the input org was:\n'
                          f'{org.decode()}')
+
     return body.decode().replace('Table of Contents', title)
+
 
 @suffix('ipynb')
 def renderNotebook(path, **kwargs):
@@ -678,6 +700,7 @@ def main():
             'docs/developer-guide.org',
             'docs/notes.org',
             'test/apinatomy/README.org',
+            'resources/scigraph/README.org',  # replaced by the nifstd scigraph readme
         ),
         'interlex': (
             'README.md',  # insubstantial
@@ -731,14 +754,12 @@ def main():
         'interlex/docs/setup.html': '',  # present but not visibly listed
         'interlex/docs/implementation.html': '',  # present but not visibly listed
 
-        'pyontutils/nifstd/scigraph/README.html': 'Ontology SciGraph setup',
-        'sparc-curation/resources/scigraph/README.html': 'SPARC SciGraph setup',
-        'sparc-curation/resources/scigraph/data/build.html': 'SPARC SciGraph data setup',
+        'pyontutils/nifstd/scigraph/README.html': 'SciGraph user guide',
 
         'pyontutils/docstrings.html': 'Command line programs',
         'NIF-Ontology/docs/external-sources.html': 'External sources for the ontology',  # Other
         'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
-        'orthauth/docs/guide.html': 'Orthauth guide',
+        'orthauth/docs/guide.html': 'Orthauth user guide',
 
         ###
         'Contributing':'Contributing',

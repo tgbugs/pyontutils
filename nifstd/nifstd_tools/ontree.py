@@ -812,7 +812,7 @@ def server(api_key=None, verbose=False):
             format_ = None
 
         j = sgd.dispatch(path, **args)
-        if not j['edges']:
+        if j is None or 'edges' not in j or not j['edges']:
             log.error(pprint(j))
             log.debug(sgd._last_url)
             return abort(400)
@@ -1098,6 +1098,13 @@ def test():
 
             resp = route_dynamic(path)
 
+    def test_dynamic_negative():
+        try:
+            resp = route_dynamic('this/endpoint/does/not/exist')
+            assert False, 'should have failed'
+        except TypeError:
+            pass
+
     def test_examples():
         for _, predicate, root, *_ in extra_examples + examples:
             if root == 'UBERON:0001062':
@@ -1124,6 +1131,7 @@ def test():
                 request.args.pop('restriction')
 
     test_dynamic()
+    test_dynamic_negative()
     request.args['depth'] = 1
     #test_examples()
     #test_file_examples()

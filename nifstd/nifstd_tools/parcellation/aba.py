@@ -8,7 +8,6 @@ from pyontutils.namespaces import HBA, MBA, DHBA, DMBA, ilxHBA, ilxMBA, ilxDHBA,
 from pyontutils.combinators import restriction
 from nifstd_tools.parcellation import parcCore, LabelRoot, Label, Terminology
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
-from IPython import embed
 
 # TODO! there is way more metadata that we need to provide here...
 # proof that staging is a good idea -- we can can reuse allen's numbers

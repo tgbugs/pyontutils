@@ -229,7 +229,8 @@ def deadlinks(filenames, rate, timeout=5, verbose=False, debug=False):
     url_blaster(urls, rate, timeout, verbose, debug)
 
 
-def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head', fail=False, negative=False):
+def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head',
+                fail=False, negative=False, ok_test=lambda r: r.ok):
     shuffle(urls)  # try to distribute timeout events evenly across workers
     if verbose:
         [print(u) for u in sorted(urls)]
@@ -250,7 +251,7 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
     collector = [] if debug else None
     all_ = Async(rate=rate, debug=verbose, collector=collector)(deferred(method_timeout)(url) for url in urls)
     o = time()
-    not_ok = [_.url for _ in all_ if not _.ok]
+    not_ok = [_.url for _ in all_ if not ok_test(_)]
     d = o - s
     print(f'Actual time: {d}    Effective rate: {len(urls) / d}Hz    diff: {(len(urls) / d) / rate if rate else 1}')
     print('Failed:')
@@ -270,6 +271,7 @@ def url_blaster(urls, rate, timeout=5, verbose=False, debug=False, method='head'
 
     else:
         print(f'OK. All {len(urls)} urls passed! :D')
+
     if debug:
         from matplotlib.pyplot import plot, savefig, figure, show, legend, title
         from collections import defaultdict

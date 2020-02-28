@@ -17,7 +17,10 @@ from pyontutils.qnamefix import cull_prefixes
 from pyontutils.scigraph import Vocabulary, Graph as sGraph
 from pyontutils.namespaces import makePrefixes, PREFIXES as uPREFIXES, ilxtr, NIFRID, NIFSTD, ilxb
 from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
 
 gitf = auth.get_path('git-local-base')
 
@@ -39,7 +42,7 @@ def main():
     insp = inspect(engine)
     terms = [c['name'] for c in insp.get_columns('terms')]
     term_existing_ids = [c['name'] for c in insp.get_columns('term_existing_ids')]
-    #embed()
+    #breakpoint()
     #sys.exit()
 
     query = engine.execute('SELECT * FROM term_existing_ids as teid JOIN terms as t ON t.id = teid.tid WHERE t.type != "cde"')
@@ -374,7 +377,7 @@ def main():
         return ndata[nheader.index(head)]
 
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 ###
 #   ============================ crazy curation below seek no reason here
@@ -555,7 +558,7 @@ def would_you_like_to_know_more_question_mark():
     #  http://pharmrev.aspetjournals.org/content/50/2/271.long  IUPHAR receptor codes were dumped WTF
     #  no one seems to be using them WHY DO WE HAVE THEM IN THE ONTOLOGY *screaming*
 
-    #embed()
+    #breakpoint()
 
 # would_you_like_to_know_more_question_mark()
 

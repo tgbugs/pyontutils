@@ -18,7 +18,6 @@ import requests
 from pyontutils.core import makeGraph, makePrefixes
 from pyontutils.combinators import annotation
 from docopt import docopt
-from IPython import embed
 
 
 class AllenTransgenicLines:

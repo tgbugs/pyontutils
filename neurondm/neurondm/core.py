@@ -1046,8 +1046,7 @@ class graphBase:
                     if Path(graphBase.repo.working_dir).exists():
                         graphBase.repo.git.checkout('-f', ob)
                 except BaseException as e:
-                    #from IPython import embed
-                    #embed()
+                    # breakpoint()
                     raise e
 
             if graphBase.original_branch != graphBase.working_branch:
@@ -2490,8 +2489,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         try:
             return repr(self.pes) < repr(other.pes)
         except AttributeError as e:
-            from IPython import embed
-            embed()
+            breakpoint()
             raise e
 
     def __gt__(self, other):
@@ -2816,7 +2814,7 @@ class Neuron(NeuronBase):
         intersection = infixowl.BooleanClass(members=members, graph=graph)  # FIXME dupes
         #existing = list(self.Class.equivalentClass)
         #if existing or str(pe.pLabel) == 'Htr3a':
-            #embed()
+            #breakpoint()
         ec = [intersection]
         self.Class.equivalentClass = ec
         return self.Class

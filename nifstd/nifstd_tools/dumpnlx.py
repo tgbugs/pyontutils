@@ -4,7 +4,11 @@ import pickle
 from os.path import expanduser
 import requests
 from pyontutils.utils import chunk_list
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed as breakpoint
+
 
 def main():
 
@@ -34,7 +38,7 @@ def main():
                 data = requests.get(furl(url))
             except:
                 print('FAILED on URL =', furl(url))
-                #embed()
+                #breakpoint()
                 # data is already defined it will just duplicated the previous block
             reader = csv.reader(data.text.splitlines())
             rows = [r for r in reader]
@@ -65,7 +69,7 @@ def main():
         writer = csv.writer(f)
         writer.writerows(full_rows)
 
-    embed()
+    breakpoint()
 
 if __name__ == '__main__':
     main()

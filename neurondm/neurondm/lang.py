@@ -98,7 +98,7 @@ try:
         python_magic('-m pyontutils.scig ' + ' '.join(vals), '')
     ip.register_magic_function(scig_func, 'line', 'scig')
 except NameError:
-    pass  # not in an IPython environment so can't register magics
+    pass  # not in an ipython environment so can't register magics
 
 
 if __name__ == '__main__':

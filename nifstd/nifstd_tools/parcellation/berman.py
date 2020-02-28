@@ -11,7 +11,6 @@ from nifstd_tools.parcellation import parcCore, Atlas, LabelRoot, Label
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP, BERCAT, nsExact
 from pyontutils.namespaces import NCBITaxon, UBERON, NIFTTL, makePrefixes
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
-from IPython import embed
 
 
 class Artifacts(Collector):
@@ -286,7 +285,7 @@ def main():
     b = BermanLabels.setup()
     b.make()
     bs = BermanSrc(dry_run=True)
-    embed()
+    breakpoint()
 
 
 if __name__ == '__main__':

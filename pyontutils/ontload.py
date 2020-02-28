@@ -29,9 +29,9 @@ Options:
     -c --commit=COMMIT              ontology commit to load     [default: HEAD]
     -s --scp-loc=SCP                scp zipped graph here       [default: user@localhost:{tempfile.tempdir}/graph/]
 
-    -i --build-scigraph             build scigraph codebase
-    -O --scigraph-org=SORG          user/org for scigraph       [default: SciCrunch]
-    -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: upstream]
+    -i --path-build-scigraph=PBS    build scigraph at path
+    -O --scigraph-org=SORG          user/org for scigraph       [default: SciGraph]
+    -B --scigraph-branch=SBRANCH    scigraph branch to build    [default: master]
     -C --scigraph-commit=SCOMMIT    scigraph commit to build    [default: HEAD]
     -S --scigraph-scp-loc=SGSCP     scp zipped services here    [default: user@localhost:{tempfile.tempdir}/scigraph/]
     -Q --scigraph-quiet             silence mvn log output
@@ -80,7 +80,7 @@ except NameError:
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
-COMMIT_HASH_HEAD_LEN = 7
+COMMIT_HASH_HEAD_LEN = 8
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -313,12 +313,6 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
     local = jpth(git_local, repo_name)
     commit_log_path = jpth(local, COMMIT_LOG)
 
-    load_base = (
-        'cd {}; '.format(jpth(local, 'SciGraph-core')) +
-        'mvn exec:java '
-        '-Dexec.mainClass="io.scigraph.owlapi.loader.BatchOwlLoader" '
-        '-Dexec.args="-c {config_path}"')
-
     if not os.path.exists(local):
         repo = Repo.clone_from(remote + '.git', local)
     elif not Path(local, '.git').exists():
@@ -343,13 +337,21 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
     if commit != 'HEAD':
         repo.git.checkout(commit)
     scigraph_commit = repo.head.object.hexsha
+    scigraph_commit_short = scigraph_commit[:COMMIT_HASH_HEAD_LEN]
+
+    bin_location = zip_location / 'bin'
+    os.environ['PATH'] = bin_location.as_posix() + ':' + os.environ.get('PATH', '')
+    if not bin_location.exists():
+        bin_location.mkdir()
+        # hack to make the scigraph-load we are about to create available as a command
+        # so that it matches the usual scigraph-load behavior
 
     def zip_name(wild=False):
         return (repo_name +
                 '-' + branch +
                 '-services' +
                 '-' + ('*' if wild else TODAY()) +
-                '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
+                '-' + scigraph_commit_short +
                 '.zip')
 
     def reset_state(original_branch=sob):
@@ -361,9 +363,16 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
             print('SciGraph not built at commit', commit, 'last built at', last_commit)
             quiet = '--quiet ' if quiet else ''
             build_command = ('cd ' + local +
+	                     f';export HASH={scigraph_commit_short}'
+	                     ';sed -i "/<name>SciGraph<\/name>/{N;s/<version>.\+<\/version>/<version>${HASH}<\/version>/}" pom.xml'
+	                     ';sed -i "/<artifactId>scigraph<\/artifactId>/{N;s/<version>.\+<\/version>/<version>${HASH}<\/version>/}" SciGraph-analysis/pom.xml'
+	                     ';sed -i "/<groupId>io.scigraph<\/groupId>/{N;s/<version>.\+<\/version>/<version>${HASH}<\/version>/}" SciGraph-core/pom.xml'
+	                     ';sed -i "/<artifactId>scigraph<\/artifactId>/{N;s/<version>.\+<\/version>/<version>${HASH}<\/version>/}" SciGraph-entity/pom.xml'
+	                     ';sed -i "/<groupId>io.scigraph<\/groupId>/{N;s/<version>.\+<\/version>/<version>${HASH}<\/version>/}" SciGraph-services/pom.xml'
                              f'; mvn {quiet}clean -DskipTests -DskipITs install'
                              '; cd SciGraph-services'
                              f'; mvn {quiet}-DskipTests -DskipITs package')
+
             if check_built:
                 print('SciGraph has not been built.')
                 raise NotBuiltError('SciGraph has not been built.')
@@ -378,17 +387,29 @@ def scigraph_build(zip_location, git_remote, org, git_local, branch, commit,
             wildcard = jpth(zip_location, zip_name(wild=True))
             try:
                 services_zip = glob(wildcard)[0]  # this will error if the zip was moved
-                return scigraph_commit, load_base, services_zip, reset_state
+                return scigraph_commit, services_zip, reset_state
             except IndexError:
                 pass  # we need to copy the zip out again
 
         # services zip
-        zip_filename =  'scigraph-services-*-SNAPSHOT.zip'
-        services_zip_temp = glob(jpth(local, 'SciGraph-services', 'target', zip_filename))[0]
+        zip_filename =  f'scigraph-services-{scigraph_commit_short}.zip'
+        services_zip_temp = Path(local, 'SciGraph-services', 'target', zip_filename)
         services_zip = jpth(zip_location, zip_name())
         shutil.copy(services_zip_temp, services_zip)
 
-    return scigraph_commit, load_base, services_zip, reset_state
+        core_jar = Path(local, 'SciGraph-core', 'target', f'scigraph-core-{scigraph_commit_short}-jar-with-dependencies.jar')
+        scigraph_load = f'''#!/usr/bin/env sh
+/usr/bin/java \\
+-cp "{core_jar.as_posix()}" \\
+io.scigraph.owlapi.loader.BatchOwlLoader $@'''
+        slf = bin_location / 'scigraph-load'
+        with open(slf, 'wt') as f:
+            f.write(scigraph_load)
+
+        os.chmod(slf, 0o0755)
+
+    return scigraph_commit, services_zip, reset_state
+
 
 def do_patch(patch_config, local_base):
     repo_base = Path(local_base)
@@ -733,6 +754,8 @@ def run(args):
     debug = args['--debug']
     log = args['--logfile']  # TODO
 
+    load_base = 'scigraph-load -c {config_path}'  # now _this_ is easier
+
     if args['--view-defaults']:
         for k, v in defaults.items():
             print(f'{k:<22} {v}')
@@ -748,16 +771,16 @@ def run(args):
         local_base = jpth(git_local, repo_name)
 
     if graph:
-        if args['--build-scigraph']:
-            (scigraph_commit, load_base, services_zip,
-             scigraph_reset_state) = scigraph_build(zip_location, git_remote, sorg,
-                                                    git_local, sbranch, scommit,
+        if args['--path-build-scigraph']:  # path-build-scigraph
+            path_build_scigraph = Path(args['--path-build-scigraph'])
+            (scigraph_commit, services_zip,
+             scigraph_reset_state) = scigraph_build(path_build_scigraph, git_remote, sorg,
+                                                    path_build_scigraph, sbranch, scommit,
                                                     check_built=check_built,
                                                     cleanup_later=True, quiet=scigraph_quiet)
         else:
             scigraph_commit = 'dev-9999'
             services_zip = 'None'
-            load_base = 'scigraph-load -c {config_path}'  # now _this_ is easier
             scigraph_reset_state = lambda : None
         with execute_regardless(scigraph_reset_state):
             rl = ReproLoader(zip_location, git_remote, org,
@@ -778,8 +801,9 @@ def run(args):
         print(rl.zip_path)
         if '--local' in args:
             return
+
     elif scigraph:
-        (scigraph_commit, load_base, services_zip,
+        (scigraph_commit, services_zip,
          _) = scigraph_build(zip_location, git_remote, sorg, git_local,
                              sbranch, scommit, check_built=check_built,
                              quiet=scigraph_quiet)

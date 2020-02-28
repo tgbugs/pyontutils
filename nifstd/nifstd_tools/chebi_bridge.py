@@ -7,7 +7,10 @@ from pyontutils.core import makeGraph, createOntology, OntGraph
 from pyontutils.config import auth
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import makePrefixes
-from IPython import embed
+try:
+    breakpoint
+except NameError:
+    from IPython import embed
 
 # extract existing chebi classes from NIF-Chemical and NIF-Molecule
 # replace identiferis that are in chebi-dead with their new id
@@ -269,7 +272,7 @@ def main():
     molgg.write()
 
     if __name__ == '__main__':
-        embed()
+        breakpoint()
 
 if __name__ == '__main__':
     main()

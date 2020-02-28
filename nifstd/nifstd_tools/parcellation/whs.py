@@ -7,7 +7,6 @@ from pyontutils.namespaces import makePrefixes, NCBITaxon, UBERON, nsExact
 from pyontutils.combinators import restriction
 from nifstd_tools.parcellation import parcCore, resSource, LabelRoot, Label, Terminology
 from pyontutils.closed_namespaces import rdf, rdfs, owl, dc, dcterms, skos, prov
-from IPython import embed
 
 
 class Artifacts(Collector):
