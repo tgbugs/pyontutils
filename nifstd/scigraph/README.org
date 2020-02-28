@@ -227,6 +227,9 @@ ssh-copy-id-simple \
 #+end_src
 For the implementation of the =*-simple= commands see [[#ssh-setup][ssh setup]].
 * Deployments
+:PROPERTIES:
+:header-args: :mkdirp yes
+:END:
 *NOTE: By default any additional arguments to a =load-deploy= command are passed to the =load= NOT to =deploy=.*
 ** nifstd
 *** code
