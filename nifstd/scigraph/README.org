@@ -1236,13 +1236,13 @@ function deploy-services () {
         <<&deploy-services-backup-config>>'
     echo $CONFIG_RAW $TARGET
     if [ ${SERVER} = localhost ]; then
-        ${CMD} || return $?
+        backup-services-config "${EXISTING}" "${PATH_RUNTIME}" "${YAML}" || return $?
         cp "${CONFIG_RAW}" "${TARGET}" || return $?
         cp "${CONFIG}" "${TARGET}" || return $?
         ${CMD_RESTART} || return $?
     else
         # if only we could rsync
-        ssh ${SERVER_AS_SCIGRAPH} "${CMD}" || return $?
+        ssh ${SERVER_AS_SCIGRAPH} "$(typeset backup-services-config) backup-services-config ${EXISTING} ${PATH_RUNTIME} ${YAML}" || return $?
         scp "${CONFIG_RAW}" "${TARGET}" || return $?
         scp "${CONFIG}" "${TARGET}" || return $?
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph restart" || return $?
@@ -1251,16 +1251,22 @@ function deploy-services () {
 #+end_src
 
 # this block's quoting is funky because bash doesn't have anything like unquote
-#+name: &deploy-services-backup-config
-#+begin_src bash :eval never
-E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
-if [ -n "${E_YAML_RAW}" ]; then
-    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
-else
-    mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
-    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
-fi
-echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
+#+name: backup-services-config
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function backup-services-config () {
+    local EXISTING=${1}
+    local PATH_RUNTIME=${2}
+    local YAML=${3}
+    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b2-)
+    if [ -n "${E_YAML_RAW}" ]; then
+        local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
+    else
+        local mod_dt=$(stat -c %y "${EXISTING}" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")
+        local YAML_BACKUP="${PATH_RUNTIME}/${YAML}-${mod_dt}"
+    fi
+    cp -a "${EXISTING}" "${YAML_BACKUP}"
+}
 #+end_src
 *** variables                                                      :noexport:
 :PROPERTIES:
