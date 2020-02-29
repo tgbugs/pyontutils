@@ -3,6 +3,8 @@
 #+OPTIONS: num:nil
 #+STARTUP: showall
 
+# [[file:./README.html]]
+
 This readme consolidates a number of different processes for deploying
 ontologies to SciGraph into a single workflow that avoids most of the
 hidden pitfalls we have encountered over the past 4 years.
@@ -38,7 +40,7 @@ shellcheck "<<path-scigraph-functions()>>"
 #+end_src
 * Setup
 :properties:
-:custom_id: setup
+:CUSTOM_ID: setup
 :visibility: folded
 :end:
 ** Build host
@@ -133,44 +135,10 @@ popd
 ~/git/orgstrap/orgstrap --user  # needed to obtain newer version of org-mode
 #+end_src
 ** ssh config
-Set =ip-aws-scigraph= here
-#+name: ip-aws-scigraph
-: 127.0.0.1
-
-Set =ip-aws-scigraph-data= here
-#+name: ip-aws-scigraph-data
-: 127.0.0.1
-
-Set =path-target-identity-file= here
-#+name: path-target-identity-file
-: /dev/null
-
-# NOTE: it is good practice to require any computer wanting to connect
-# to have two keys, one for the bastion and one for the target host
-# that way if the bastion is compromised the keys to get to the protected
-# hosts cannot be obtained from that machine alone
-# if a user's machine is compromised then access to the bastion can be
-# shut down for just that user and if the jump key is shared, then
-# it can be rotated under less time pressure
-
-Set =path-jump-identity-file= here
-#+name: path-jump-identity-file
-: /dev/null
-
-Set =jump-host= aka bastion server name here
-#+name: jump-host
-: localhost
-
-Set =ip-jump-host= here
-#+name: ip-jump-host
-: 127.0.0.1
-
-Set =user-jump-host= here
-#+name: user-jump-host
-: nobody
-
-Tangle this block after setting the requisite values above. Then
-open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
+When viewing this file in emacs tangle this block after setting
+the requisite values below in the variables section (not exported).
+Alternately, copy the block as is an make the changes manually.
+Then open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
 and copy the sections into [[file:${HOME}/.ssh/config][your ssh config file]].
 #+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
@@ -237,6 +205,49 @@ ssh-copy-id-simple \
 --keyname aws.scigraph
 #+end_src
 For the implementation of the =*-simple= commands see [[#ssh-setup][ssh setup]].
+*** variables                                                      :noexport:
+:properties:
+:custom_id: ssh-variables
+:visibility: folded
+:end:
+
+# NOTE :noexport: + a reference == cannot find reference (duh)
+
+Set =ip-aws-scigraph= here
+#+name: ip-aws-scigraph
+: 127.0.0.1
+
+Set =ip-aws-scigraph-data= here
+#+name: ip-aws-scigraph-data
+: 127.0.0.1
+
+Set =path-target-identity-file= here
+#+name: path-target-identity-file
+: /dev/null
+
+# NOTE: it is good practice to require any computer wanting to connect
+# to have two keys, one for the bastion and one for the target host
+# that way if the bastion is compromised the keys to get to the protected
+# hosts cannot be obtained from that machine alone
+# if a user's machine is compromised then access to the bastion can be
+# shut down for just that user and if the jump key is shared, then
+# it can be rotated under less time pressure
+
+Set =path-jump-identity-file= here
+#+name: path-jump-identity-file
+: /dev/null
+
+Set =jump-host= aka bastion server name here
+#+name: jump-host
+: localhost
+
+Set =ip-jump-host= here
+#+name: ip-jump-host
+: 127.0.0.1
+
+Set =user-jump-host= here
+#+name: user-jump-host
+: nobody
 * Deployments
 :PROPERTIES:
 :header-args: :mkdirp yes
