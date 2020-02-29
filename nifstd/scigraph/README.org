@@ -1242,7 +1242,7 @@ function deploy-services () {
         ${CMD_RESTART} || return $?
     else
         # if only we could rsync
-        ssh ${SERVER_AS_SCIGRAPH} "$(typeset backup-services-config) backup-services-config ${EXISTING} ${PATH_RUNTIME} ${YAML}" || return $?
+        ssh ${SERVER_AS_SCIGRAPH} "$(typeset -f backup-services-config); backup-services-config ${EXISTING} ${PATH_RUNTIME} ${YAML}" || return $?
         scp "${CONFIG_RAW}" "${TARGET}" || return $?
         scp "${CONFIG}" "${TARGET}" || return $?
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph restart" || return $?
@@ -1250,7 +1250,6 @@ function deploy-services () {
 }
 #+end_src
 
-# this block's quoting is funky because bash doesn't have anything like unquote
 #+name: backup-services-config
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
@@ -1268,6 +1267,7 @@ function backup-services-config () {
     cp -a "${EXISTING}" "${YAML_BACKUP}"
 }
 #+end_src
+
 *** variables                                                      :noexport:
 :PROPERTIES:
 :VISIBILITY: folded
