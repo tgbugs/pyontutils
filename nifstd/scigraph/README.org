@@ -8,6 +8,8 @@ ontologies to SciGraph into a single workflow that avoids most of the
 hidden pitfalls we have encountered over the past 4 years.
 
 * Using this file
+Before you can use this file you will need to complete the [[#setup][Setup section]]. \\
+
 You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
 this file in emacs using =C-c C-v t= or you can tangle
 the whole file from the command line using with the following.
@@ -15,7 +17,7 @@ the whole file from the command line using with the following.
 #+name: tangle-this-file
 #+header: :results none
 #+begin_src bash :var THIS_FILE=(let ((home (expand-file-name "~")) (bfn (buffer-file-name))) (when (string-prefix-p home bfn) (concat "~" (substring bfn (length home) nil)))) :noweb yes
-: ${THIS_FILE:="README.org"}
+: ${THIS_FILE:="README.org"}    # set to the local path to this file
 emacs --batch \
       --load org \
       --load ob-shell \
@@ -36,6 +38,7 @@ shellcheck "<<path-scigraph-functions()>>"
 #+end_src
 * Setup
 :properties:
+:custom_id: setup
 :visibility: folded
 :end:
 ** Build host
@@ -122,10 +125,12 @@ There are currently still a couple of repos that are needed for these workflows.
 Most are needed configuration files, but pyontutils is needed for this README as well.
 #+begin_src bash :eval never
 pushd ~/git
+git clone https://github.com/tgbugs/orgstrap.git
 git clone https://github.com/tgbugs/pyontutils.git
 git clone https://github.com/tgbugs/tgbugs-overlay.git
 git clone https://github.com/SciCrunch/sparc-curation.git
 popd
+~/git/orgstrap/orgstrap --user  # needed to obtain newer version of org-mode
 #+end_src
 ** ssh config
 Set =ip-aws-scigraph= here
