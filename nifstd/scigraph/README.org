@@ -372,7 +372,7 @@ you can run both blocks together with =run-load-deploy-graph-sparc=
 #+end_src
 **** deploy from CI
 *** services config
-[[file:/ssh:aws-scigraph-scigraph:services.yaml]]
+[[tramp:/ssh:aws-scigraph-scigraph:services.yaml]]
 **** build
 :properties:
 :visibility: folded
@@ -482,7 +482,7 @@ deploy-graph \
 <<run-deploy-graph-sparc-data>>
 #+end_src
 *** services config
-[[file:/ssh:aws-scigraph-data-scigraph:services.yaml]]
+[[tramp:/ssh:aws-scigraph-data-scigraph:services.yaml]]
 **** build
 :properties:
 :visibility: folded
