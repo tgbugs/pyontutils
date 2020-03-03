@@ -2,7 +2,6 @@
 
 import rdflib
 from rdflib import RDF as rdf, RDFS as rdfs
-from rdflib.plugin import PluginException
 
 __all__ = [
     'dc',
@@ -532,6 +531,10 @@ skos = rdflib.namespace.ClosedNamespace(
 ###
 
 def main():
+    from rdflib.plugin import PluginException
+    from rdflib.plugins.parsers.notation3 import BadSyntax
+    from urllib.error import URLError
+
     # use to populate terms
     uris = {
         'oboInOwl': 'http://www.geneontology.org/formats/oboInOwl#',
@@ -569,8 +572,10 @@ def main():
                 break
             except PluginException:
                 continue
-            except rdflib.plugins.parsers.notation3.BadSyntax:
+            except BadSyntax:
                 continue
+            except URLError as e:
+                raise URLError(args[0]) from e
 
         if name in alternate_prefixs:
             uri = alternate_prefixs[name]
