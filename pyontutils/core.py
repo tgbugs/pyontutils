@@ -496,6 +496,17 @@ class OntIdGit(OntIdPath):
         self.path = path
         self.ref = ref
 
+    @classmethod
+    def fromRepoAndId(cls, repo_path, id):
+        ref, rel_path = id.split(':', 1)  # FIXME ref handling
+        path = repo_path / rel_path
+
+        return cls(path, ref)
+
+    def asDeRef(self):
+        """ return the dereferenced form of this resource """
+        return self.__class__(self.path, self.path.latest_commit(self.ref))
+
     @property
     def identifier(self):
         # FIXME this doesn't quite conform because it is a local identifier
@@ -506,7 +517,7 @@ class OntIdGit(OntIdPath):
         if self.ref is None:
             return self.path.as_posix()
 
-        return self.ref + ':' + self.path.repo_relative_path.as_posix()
+        return str(self.ref) + ':' + self.path.repo_relative_path.as_posix()
 
     def metadata(self):
         if not hasattr(self, '_metadata'):
@@ -1845,7 +1856,7 @@ class Source(tuple):
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
                         if not dry_run:  # dry_run means data may not be present
-                            file_commit = cls.repo_path.latest_commit.hexsha
+                            file_commit = cls.repo_path.latest_commit().hexsha
                             #file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
                             commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                             print(commit_path)
@@ -1870,7 +1881,7 @@ class Source(tuple):
                 cls.source = aug.RepoPath(cls.source)
                 try:
                     cls.source.repo
-                    file_commit = cls.source.latest_commit
+                    file_commit = cls.source.latest_commit()
                     if file_commit is not None:
                         cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
                                                 + cls.source.repo_relative_path.as_posix())
