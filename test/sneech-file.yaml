@@ -1,6 +1,6 @@
-index: interlex
-namespaces: ilxtr
-raw-paths:
+referenceHost: uri.interlex.org
+namespaces: http://uri.interlex.org/tgbugs/uris/readable/
+include:
   - path: ~/git/NIF-Ontology/ttl/phenotype-core.ttl
     ref: dev
   - path: ~/git/NIF-Ontology/ttl/phenotypes.ttl
