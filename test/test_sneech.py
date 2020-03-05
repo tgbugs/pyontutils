@@ -10,8 +10,28 @@ from .common import temp_path
 temp_path_aug = aug.AugmentedPath(temp_path)
 
 class TestFile(unittest.TestCase):
-    def test(self):
-        pass
+    @classmethod
+    def setUpClass(cls):
+        if temp_path_aug.exists():  # in case someone else forgot to clean up after themselves
+            temp_path.rmtree()
+
+        temp_path_aug.mkdir()
+        rp = temp_path / 'sneechenator'
+        cls.wrangler = snch.SneechWrangler(rp)
+        path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+
+    @classmethod
+    def tearDownClass(cls):
+        temp_path_aug.rmtree()
+
+    def test_write(self):
+        tt = self.wrangler.dir_process / 'test-target'
+        tt.mkdir()
+        snchf = snch.SnchFile.fromYaml(pl.Path(__file__).parent / 'sneech-file.yaml')
+        tf = tt / 'sneeeeeeeeeeeeeeeeeeeeeeeeeech.ttl'
+        g = snchf.writeTtl(tf)
+        g.debug()
+        assert False
 
 
 class TestWrangler(unittest.TestCase):
@@ -54,11 +74,13 @@ class TestInterLex(unittest.TestCase):
     def test_yaml(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromYaml(pl.Path(__file__).parent / 'sneech-file.yaml')
-        a = snchf.COMMENCE(snchr)
-        b = snchr.COMMENCE(sneech_file=snchf)
+        of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
+        a = snchf.COMMENCE(snchr, out_file=of)
+        b = snchr.COMMENCE(sneech_file=snchf, out_file=of)
 
     def test_ttl(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromTtl(pl.Path(__file__).parent / 'sneech-file.ttl')
-        a = snchf.COMMENCE(snchr)
-        b = snchr.COMMENCE(sneech_file=snchf)
+        of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
+        a = snchf.COMMENCE(snchr, out_file=of)
+        b = snchr.COMMENCE(sneech_file=snchf, out_file=of)

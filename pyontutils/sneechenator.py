@@ -55,12 +55,12 @@ class SnchFile:
             blob = yaml.safe_load(f)
 
         if 'include' in blob:
-            orgs = [OntResGit(path=aug.RepoPath(subblob['path']).expanduser(),
-                                ref=subblob['ref'])
+            orgs = [OntResGit(path=aug.RepoPath(subblob['path']),
+                              ref=subblob['ref'])
                     for subblob in blob['include']]
         else:
-            orgs = [OntResGit(path=aug.RepoPath(subblob['path']).expanduser(),
-                                ref=subblob['ref'])
+            orgs = [OntResGit(path=aug.RepoPath(subblob['path']),
+                              ref=subblob['ref'])
                     for subblob in blob['paths']]
 
         if not orgs:
@@ -169,9 +169,10 @@ class SnchFile:
         return out_path
 
     def writeTtl(self, path=None):
-        g = OntGraph()
+        g = OntGraph(path=path)
         self.populate(g)
         g.write(format='nifttl')
+        return g
 
     def debug(self):
         g = OntGraph()
@@ -180,6 +181,9 @@ class SnchFile:
         g.debug()
 
     def populate(self, graph):
+        graph.bind('snchn', str(snchn))  # FIXME -> curies probably
+        graph.bind('sncho', str(sncho))  # FIXME -> curies probably
+        graph.bind('h', str(sghashes))  # FIXME -> curies probably
         for t in self.triples_metadata(graph.path):
             graph.add(t)
 
@@ -207,7 +211,13 @@ class SnchFile:
             if path is not None:
                 iri = org.metadata().identifier_bound
                 yield b, snchn.iri, iri
-                yield iri, snchn.hasLocalPath, org.path.relative_path_from(path)
+                if org.path.parts[0] == '~':
+                    _o = org.path
+                else:
+                    _o = org.path.relative_path_from(path)
+
+                o = rdflib.Literal(_o.as_posix())
+                yield iri, snchn.hasLocalPath, o
             else:
                 yield b, snchn.path, rdflib.Literal(org.path.as_posix())
 
@@ -223,15 +233,19 @@ class SnchFile:
                 'namespaces': self.namespaces,
                 'paths': paths}
 
-    def COMMENCE(self, sneechenator):
+    def COMMENCE(self, sneechenator, out_file=None):
         # FIXME sneechenator needs the whole file ...
         if not self.orgs:
             raise TypeError('no orgs, something as gone wrong!')
 
+        if out_file is None and False:  # TODO the logic for this
+            out_file = self
+
         return sneechenator.COMMENCE(namespaces=self.namespaces,
                                      orgs=self.orgs,
                                      referenceHost=self.referenceHost,
-                                     sneech_file=self)
+                                     sneech_file=self,
+                                     out_file=out_file,)
 
 
 class SneechWrangler:
@@ -410,9 +424,9 @@ class Sneechenator:
         # and need to be passed in making the sneechenator identical with the index ?
         pass
 
-    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, **kwargs):
+    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, out_path=None, **kwargs):
         if sneech_file is not None and not orgs:
-            return sneech_file.COMMENCE(self)
+            return sneech_file.COMMENCE(self, out_path)
 
         if not orgs:
             raise TypeError('orgs cannot be empty!')
@@ -423,9 +437,9 @@ class Sneechenator:
 
         #derp = g.namespace_manager.store.namespace
         #namespaces = [derp(p) for p in prefixes]  # FIXME prefix vs namespace
-        rg, maybe_sneeches = self.sneechReviewGraph(namespaces, source_graph,  sneech_file)
+        rg, maybe_sneeches = self.sneechReviewGraph(namespaces, source_graph,  sneech_file, out_path)
         # TODO I think we commit here ?
-        breakpoint()
+        #breakpoint()
 
     def CONTINUE(self, path_sneech_file):
         pass
@@ -447,7 +461,7 @@ class Sneechenator:
         could_map = list(set(source_graph.couldMapEntities(*namespaces,
                                                            ignore_predicates=(self.mapping_predicate,))))
 
-        already = self.alreadyMapped(namespaces, could_map)
+        already = self.alreadyMapped(could_map)
         maybe = [e for e in could_map if e not in already]
         return already, maybe
 
@@ -492,19 +506,21 @@ class Sneechenator:
         # synonyms
         raise NotImplementedError('implement in subclasses')
 
-    def sneechReviewGraph(self, namespaces, source_graph, sneech_file=None):
+    def sneechReviewGraph(self, namespaces, source_graph, sneech_file=None, out_path=None):
         # TODO cache
         (already, cannot, maybe, sneeches, maybe_sneeches
         )= self.preSneech(namespaces, source_graph)
         # TODO not entirely sure about the best place to put this ...
         self.reView(source_graph, maybe_sneeches)  # FIXME dump and commit
 
-        review_graph = OntGraph()
+        review_graph = OntGraph(path=out_path)
         oq.OntCuries.populate(review_graph)
         review_graph.bind('snchn', str(snchn))  # FIXME -> curies probably
         review_graph.bind('sncho', str(sncho))  # FIXME -> curies probably
         review_graph.bind('h', str(sghashes))  # FIXME -> curies probably
-        sneech_file.populate(review_graph)
+        if sneech_file:
+            sneech_file.populate(review_graph)
+
         gen = self.triples_review(already, cannot, maybe, sneeches, sneech_file)
         [review_graph.add(t) for t in gen]
         # TODO hasReport -> maybe_sneeches report / reView
@@ -546,10 +562,12 @@ class InterLexSneechenator(Sneechenator):
         self.wrangler = SneechWrangler(path_wrangler)
         super().__init__(*args, **kwargs)
 
-    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, referenceHost=None):
+    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(),
+                 sneech_file=None, out_file=None,
+                 referenceHost=None):
         # TODO set up index and stuff
         if sneech_file is not None and not orgs:
-            return sneech_file.COMMENCE(self)
+            return sneech_file.COMMENCE(self, out_file=out_file)
 
         if self.referenceHost != str(referenceHost):
             raise TypeError(f'{self.referenceHost} != {referenceHost}')
@@ -559,7 +577,8 @@ class InterLexSneechenator(Sneechenator):
 
         return super().COMMENCE(namespaces=namespaces,
                                 orgs=orgs,
-                                sneech_file=sneech_file)
+                                sneech_file=sneech_file,
+                                out_file=out_file)
 
     def CONTINUE(self, path_sneech_file):
         raise NotImplementedError('TODO')
@@ -572,7 +591,7 @@ class InterLexSneechenator(Sneechenator):
 
         return {s:match for s, match in Async(rate=10)(deferred(fetch)(s) for s in squares)}
 
-    def alreadyMapped(self, namespaces, could_map):
+    def alreadyMapped(self, could_map):
         # TODO should be able to check existing ids without using a local index
         # this definitely has to implemented efficiently for {group}/uris/ mappings
         # iirc the spec is already such that it will be since it is a single check
