@@ -151,19 +151,27 @@ class OntRes(idlib.Stream):
         # TODO if self.header ...
         self._populate(graph, self.data)
 
+    #@oq.utils.mimicArgs(data_next)  # TODO
+    def populate_next(self, graph, *args, **kwargs):
+        self._populate(graph, self.data_next(**kwargs))
+
     @property
     def graph(self, cypher=None):
+        return self.graph_next()
+
+    #@oq.utils.mimicArgs(data_next)  # TODO
+    def graph_next(self, **kwargs):
         # FIXME transitions to other streams should be functions
         # and it also allows passing an explicit cypher argument
         # to enable checksumming in one pass, however this will
         # require one more wrapper
         if not hasattr(self, '_graph'):
-            kwargs = {}
+            gkwargs = {}
             if hasattr(self, 'path'):
-                kwargs['path'] = self.path
+                gkwargs['path'] = self.path
 
-            self._graph = self.Graph(**kwargs)
-            self.populate(self._graph)
+            self._graph = self.Graph(**gkwargs)
+            self.populate_next(self._graph, **kwargs)
 
         return self._graph
 
@@ -263,15 +271,20 @@ class OntIdIri(OntRes):
         self.iri = iri
         # TODO version iris etc.
 
-    def _get(self):
-        return requests.get(self.iri, stream=True, headers={'Accept': 'text/turtle'})  # worth a shot ...
+    def _get(self, *, send_data=None, send_successor={'Accept': 'text/turtle'}):
+        if send_data is None:
+            return requests.get(self.iri, stream=True, headers=send_successor)  # worth a shot ...
+        else:
+            return requests.post(self.iri, stream=True,
+                                 headers=send_successor,
+                                 data=send_data)
 
     @property
     def identifier(self):
         return self.iri
 
     @property
-    def headers(self):
+    def headers(self):  # FIXME vs get vs post
         """ request headers """
         if not hasattr(self, '_headers'):
             resp = requests.head(self.identifier)  # TODO status handling for all these
@@ -287,12 +300,22 @@ class OntIdIri(OntRes):
 class OntMetaIri(OntMeta, OntIdIri):
 
     @property
-    def data(self):
+    def data(self):  # FIXME design flaw
+                     # .data() should always be a function to allow post style communication
         gen = self._data()
         format = next(gen)  # advance to set self.format in _data
         return gen
 
     def _data(self, yield_response_gen=False):
+        yield from self.data_next(yield_response_gen=yield_response_gen)
+
+    def data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None,
+                  # FIXME probably all we need are
+                  # the inversion of the streams
+                  # data meta local_conventions stuff_successor_stream_needs
+                  # or something like that
+                  yield_response_gen=False):
+
         if self.identifier.endswith('.zip'):
             # TODO use Content-Range to retrieve only the central directory
             # after we get the header here
@@ -301,7 +324,7 @@ class OntMetaIri(OntMeta, OntIdIri):
             # as well ...
             pass
 
-        resp = self._get()
+        resp = self._get(send_data=send_data)
         self.headers = resp.headers
         # TODO consider yielding headers here as well?
         gen = resp.iter_content(chunk_size=4096)
@@ -316,6 +339,7 @@ class OntMetaIri(OntMeta, OntIdIri):
 
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
+            # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
             stop = b' .\n'  # FIXME can be fooled by strings
             sentinel = b'### Annotations'  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
@@ -415,6 +439,50 @@ class OntResIri(OntIdIri, OntResOnt):
 
     _metadata_class = OntMetaIri
 
+    def _data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None):
+        raise NotImplementedError('this is a template')
+
+    @oq.utils.mimicArgs(_data_next)
+    def data_next(self, *args, **kwargs):
+        """ an alternate implementation of data """
+        # there is this nasty tradeoff where if you implement this in this way
+        # where data can take arguments, then _any_ downstream artifact that you
+        # want also has to take those arguments as well, clearly undesireable
+        # in cases where you would like to be able to do the transformation
+        # without having to haul a bunch of stuff around with you
+        # what this means is that either you have to accept a set of defaults that
+        # are sane and will get you what you want, you identifier is incomplete and
+        # thus you add arguments to your function to flesh it out, or
+        # you have to drop down a level, configure your argument ahead of time
+        # and then make the request again with slightly differen types
+
+        # allowing the underlying abstraction to bubble up into optional kwarsg
+        # frankly seems like a pretty good option, if it werent for the fact that
+        # it is an absolute pain to maintain in the absense of mimicArgs
+        # I feel like cl generics could make this much easier ...
+
+        # OR OR OR the graph is successor stream of the actual instantiation of this stream
+        # which means that ... the extra args would go in at init time??? no
+        # that doesn't seem like the right tradeoff, any successor streams
+        # basically have to present kwargs for any variables that cannot be
+        # set to a sane default within the scope of the identifier system (sigh)
+        # or at least in cases where it hasn't been demostrated that the variables
+        # are simply a matter of representaiton, not differences in information
+        # (i.e. that there isn't a function that can 1:1 interconvert)
+
+        breakpoint()
+        format, *header_chunks, (resp, gen) = self.metadata().data_next(yield_response_gen=True, **kwargs)
+        self.headers = resp.headers
+        self.format = format
+        # TODO populate header graph? not sure this is actually possible
+        # maybe need to double wrap so that the header chunks always get
+        # consumbed by the header object ?
+        if self.format == 'application/rdf+xml':
+            resp.close()
+            return None
+
+        return chain(header_chunks, gen)
+
     @property
     def data(self):
         format, *header_chunks, (resp, gen) = self.metadata()._data(yield_response_gen=True)
@@ -459,7 +527,7 @@ class OntIdPath(OntRes):
     def identifier(self):
         return self.path.as_posix()
 
-    def _get(self):
+    def _get(self, *args, **kwargs):  # some functions that go back the other way can't use more info
         resp = requests.Response()
         with open(self.path, 'rb') as f:
             resp.raw = io.BytesIO(f.read())  # FIXME streaming file read should be possible ...
@@ -525,7 +593,7 @@ class OntIdGit(OntIdPath):
 
         return self._metadata
 
-    def _get(self):
+    def _get(self, *args, **kwargs):  # TODO mimicArgs
         resp = requests.Response()
         if self.ref is None:
             with open(self.path, 'rb') as f:
@@ -542,11 +610,13 @@ class OntIdGit(OntIdPath):
 class OntMetaGit(OntIdGit, OntMeta):
     data = OntMetaIri.data
     _data = OntMetaIri._data
+    data_next = OntMetaIri.data_next
 
 
 class OntResGit(OntIdGit, OntResOnt):
     _metadata_class = OntMetaGit
     data = OntResIri.data
+    data_next = OntResIri.data_next
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
@@ -727,6 +797,14 @@ class OntGraph(rdflib.Graph):
 
         with open(path, 'wb') as f:
             self.serialize(f, format=format)
+
+    def asMimetype(self, mimetype):
+        if mimetype in ('text/turtle+html', 'text/html'):
+            return self.serialize(format='htmlttl')
+        elif mimetype == 'text/turtle':
+            return self.serialize(format='nifttl')
+        else:
+            return self.serialize(format=mimetype)
 
     @property
     def ttl(self):
@@ -1111,6 +1189,24 @@ class OntGraph(rdflib.Graph):
             c.add((datan_id, rdf.type, ilxtr.StreamSection, datan_id))
             c.add((datau_id, rdf.type, ilxtr.StreamSection, datau_id))
         return c
+
+    def populate(self, graph):
+        for t in self:
+            graph.add(t)
+
+        return graph
+
+    def populate_from(self, graph):
+        for t in graph:
+            self.add(t)
+
+        return self
+
+    def populate_from_triples(self, generator):
+        for t in generator:
+            self.add(t)
+
+        return self
 
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):

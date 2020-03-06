@@ -9,6 +9,7 @@ from .common import temp_path
 
 temp_path_aug = aug.AugmentedPath(temp_path)
 
+
 class TestFile(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -75,12 +76,12 @@ class TestInterLex(unittest.TestCase):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromYaml(pl.Path(__file__).parent / 'sneech-file.yaml')
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
-        a = snchf.COMMENCE(snchr, out_file=of)
-        b = snchr.COMMENCE(sneech_file=snchf, out_file=of)
+        a = snchf.COMMENCE(snchr, path_out=of)
+        b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
 
     def test_ttl(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromTtl(pl.Path(__file__).parent / 'sneech-file.ttl')
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
-        a = snchf.COMMENCE(snchr, out_file=of)
-        b = snchr.COMMENCE(sneech_file=snchf, out_file=of)
+        a = snchf.COMMENCE(snchr, path_out=of)
+        b = snchr.COMMENCE(sneech_file=snchf, path_out=of)

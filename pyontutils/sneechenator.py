@@ -8,7 +8,8 @@ import yaml
 import rdflib
 import ontquery as oq
 import augpathlib as aug
-from pyontutils.core import OntGraph, OntTerm, OntResGit
+from ttlser import CustomTurtleSerializer
+from pyontutils.core import OntGraph, OntTerm, OntResGit, OntResIri
 from pyontutils.utils import Async, deferred, log
 from pyontutils.config import auth
 from pyontutils.identity_bnode import IdentityBNode
@@ -28,6 +29,9 @@ snchn = rdflib.Namespace('https://uilx.org/sneechenator/u/r/')
 sncho = rdflib.Namespace('https://uilx.org/sneechenator/o/u/')
 # ontology hash resolver w/ filter by group
 sghashes = rdflib.Namespace('https://uilx.org/sneechenator/o/h/')
+CustomTurtleSerializer.addTopClasses(snchn.IndexGraph,
+                                     snchn.PartialIndexGraph)
+
 
 IXR = oq.plugin.get('InterLex')
 rdfl = oq.plugin.get('rdflib')
@@ -98,9 +102,9 @@ class SnchFile:
             self.referenceHost = rdflib.Literal(referenceHost)
             self.namespaces = [rdflib.URIRef(ns) for ns in namespaces]
             #self.base_path = base_path # FIXME source might be from anywhere an we would have to copy
-            #self.out_path = aug.RepoPath(base_path.stem).with_suffix('.deref.yaml')
+            #self.path_out = aug.RepoPath(base_path.stem).with_suffix('.deref.yaml')
             # FIXME this is an awful way to do this
-            #same_file = self.base_path.resolve() == self.out_path.resolve()
+            #same_file = self.base_path.resolve() == self.path_out.resolve()
             dereforgs = [org.asDeRef() for org in orgs]
             # TODO change detection
             #if same_file and orgs != dereforgs:
@@ -161,12 +165,12 @@ class SnchFile:
         # TODO path is really parent path
         # TODO probably also copy base_path if we don't have a record of it?
         # don't both with that?
-        out_path = path / self.out_path
-        blob = self.asBlob(out_path)
-        with open(out_path, 'wt') as f:
+        path_out = path / self.path_out
+        blob = self.asBlob(path_out)
+        with open(path_out, 'wt') as f:
             yaml.dump(blob, f)
 
-        return out_path
+        return path_out
 
     def writeTtl(self, path=None):
         g = OntGraph(path=path)
@@ -197,8 +201,10 @@ class SnchFile:
 
         return s
 
-    def triples_metadata(self, path=None):
-        s = self.s
+    def triples_metadata(self, path=None, s=None):
+        if s is None:
+            s = self.s
+
         yield s, rdf.type, snchn.SneechFile
         yield s, snchn.referenceHost, self.referenceHost
         for ns in self.namespaces:
@@ -233,19 +239,19 @@ class SnchFile:
                 'namespaces': self.namespaces,
                 'paths': paths}
 
-    def COMMENCE(self, sneechenator, out_file=None):
+    def COMMENCE(self, sneechenator, path_out=None):
         # FIXME sneechenator needs the whole file ...
         if not self.orgs:
             raise TypeError('no orgs, something as gone wrong!')
 
-        if out_file is None and False:  # TODO the logic for this
-            out_file = self
+        if path_out is None and False:  # TODO the logic for this
+            path_out = self
 
         return sneechenator.COMMENCE(namespaces=self.namespaces,
                                      orgs=self.orgs,
                                      referenceHost=self.referenceHost,
                                      sneech_file=self,
-                                     out_file=out_file,)
+                                     path_out=path_out,)
 
 
 class SneechWrangler:
@@ -424,9 +430,9 @@ class Sneechenator:
         # and need to be passed in making the sneechenator identical with the index ?
         pass
 
-    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, out_path=None, **kwargs):
+    def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, path_out=None, **kwargs):
         if sneech_file is not None and not orgs:
-            return sneech_file.COMMENCE(self, out_path)
+            return sneech_file.COMMENCE(self, path_out)
 
         if not orgs:
             raise TypeError('orgs cannot be empty!')
@@ -437,7 +443,7 @@ class Sneechenator:
 
         #derp = g.namespace_manager.store.namespace
         #namespaces = [derp(p) for p in prefixes]  # FIXME prefix vs namespace
-        rg, maybe_sneeches = self.sneechReviewGraph(namespaces, source_graph,  sneech_file, out_path)
+        rg, maybe_sneeches = self.sneechReviewGraph(namespaces, source_graph,  sneech_file, path_out)
         # TODO I think we commit here ?
         #breakpoint()
 
@@ -458,11 +464,22 @@ class Sneechenator:
 
     def preSquare(self, namespaces, source_graph):
         # TODO remove use of self where possible
-        could_map = list(set(source_graph.couldMapEntities(*namespaces,
-                                                           ignore_predicates=(self.mapping_predicate,))))
+        already = []
+        maybe = []
+        for namespace in namespaces:
+            could_map = list(set(
+                source_graph.couldMapEntities(namespace,
+                                              ignore_predicates=(self.mapping_predicate,))))
 
-        already = self.alreadyMapped(could_map)
-        maybe = [e for e in could_map if e not in already]
+            # yes we are trading off more network roundtrips as
+            # a function of namespaces right now, internally we can
+            # rework this as needed since it is an implementation detail
+            # FIXME already_mapped in this case is actually the
+            # remote index graph and should probably be passed along ??
+            already_mapped = self.alreadyMapped(namespace, could_map)
+            already += [s for s, p, o in already_mapped]
+            maybe += [e for e in could_map if e not in already]
+
         return already, maybe
 
     def preSneech(self, namespaces, source_graph):
@@ -506,14 +523,14 @@ class Sneechenator:
         # synonyms
         raise NotImplementedError('implement in subclasses')
 
-    def sneechReviewGraph(self, namespaces, source_graph, sneech_file=None, out_path=None):
+    def sneechReviewGraph(self, namespaces, source_graph, sneech_file=None, path_out=None):
         # TODO cache
         (already, cannot, maybe, sneeches, maybe_sneeches
         )= self.preSneech(namespaces, source_graph)
         # TODO not entirely sure about the best place to put this ...
         self.reView(source_graph, maybe_sneeches)  # FIXME dump and commit
 
-        review_graph = OntGraph(path=out_path)
+        review_graph = OntGraph(path=path_out)
         oq.OntCuries.populate(review_graph)
         review_graph.bind('snchn', str(snchn))  # FIXME -> curies probably
         review_graph.bind('sncho', str(sncho))  # FIXME -> curies probably
@@ -563,11 +580,11 @@ class InterLexSneechenator(Sneechenator):
         super().__init__(*args, **kwargs)
 
     def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(),
-                 sneech_file=None, out_file=None,
+                 sneech_file=None, path_out=None,
                  referenceHost=None):
         # TODO set up index and stuff
         if sneech_file is not None and not orgs:
-            return sneech_file.COMMENCE(self, out_file=out_file)
+            return sneech_file.COMMENCE(self, path_out=path_out)
 
         if self.referenceHost != str(referenceHost):
             raise TypeError(f'{self.referenceHost} != {referenceHost}')
@@ -578,11 +595,10 @@ class InterLexSneechenator(Sneechenator):
         return super().COMMENCE(namespaces=namespaces,
                                 orgs=orgs,
                                 sneech_file=sneech_file,
-                                out_file=out_file)
+                                path_out=path_out)
 
     def CONTINUE(self, path_sneech_file):
         raise NotImplementedError('TODO')
-
 
     @staticmethod
     def searchSquares(squares):
@@ -591,18 +607,23 @@ class InterLexSneechenator(Sneechenator):
 
         return {s:match for s, match in Async(rate=10)(deferred(fetch)(s) for s in squares)}
 
-    def alreadyMapped(self, could_map):
+    def _alreadyMapped(self, could_map):
         # TODO should be able to check existing ids without using a local index
         # this definitely has to implemented efficiently for {group}/uris/ mappings
         # iirc the spec is already such that it will be since it is a single check
         # against the names index
         '''
-        SELECT t.s, t.p, t.o from triples as t WHERE t.p = {self.mapping_predicate} AND t.s IN {could_map}
+        SELECT t.s, t.p, t.o FROM triples as t WHERE t.p = {self.mapping_predicate} AND t.s IN {could_map}
         '''
         index_graph = self.wrangler.index_graph(self.referenceHost)
         return set((s, self.mapping_predicate, o)
                    for s in could_map
                    for o in index_graph[s:self.mapping_predicate:])
+
+    def alreadyMapped(self, namespace, could_map):
+        ori = OntResIri(f'http://localhost:8515/base/external/mapped?iri={namespace}')
+        ori.graph_next(send_data='\n'.join(str(m) for m in could_map))
+        breakpoint()
 
 
 def test():
