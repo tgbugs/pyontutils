@@ -36,7 +36,16 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     else:
         _auth_var = 'google-api-store-file'
 
-    store_file = auth.get_path(_auth_var)
+    try:
+        store_file = auth.get_path(_auth_var)
+    except KeyError as e:
+        _msg = (f'No value found for {_auth_var} in {auth._path}\n'
+                'See the previous error for more details about the cause.')
+        raise ValueError(_msg) from e
+
+    if store_file is None:
+        msg = (f'No file exists at the path specified by {_auth_var} in {auth._path}')
+        raise ValueError(msg)
 
     # TODO log which file it is writing to ...
     if store_file.exists():
@@ -50,6 +59,11 @@ def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
                 raise e
     else:
         creds = None
+        if SCOPES is None:
+            raise TypeError('SCOPES has not been set, possibly because this is\n'
+                            'being called by a function that expects the store file\n'
+                            'to already exist. Please run `googapis auth` with the\n'
+                            'appropriate scope.')
 
     if not creds or not creds.valid:
         # the first time you run this you will need to use the --noauth_local_webserver args

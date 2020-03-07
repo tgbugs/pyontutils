@@ -20,8 +20,11 @@ Options:
 """
 
 import sys
+from pyontutils.utils import log
 from pyontutils.clifun import Dispatcher, Options as BaseOptions
 from pyontutils.sheets import get_oauth_service
+
+log = log.getChild('googapis')
 
 
 class Options(BaseOptions):
