@@ -30,7 +30,15 @@ def _FakeService():
     return s
 
 
-def get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
+def get_oauth_service(api='sheets', version='v4', readonly=True):
+    """ outward facing API for accessing oauth creds """
+    return _get_oauth_service(api=api, sheets=sheets, version=version, readonly=readonly)
+
+
+def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
+    """ Inner implementation for get oauth. If you see this function used directly
+        anywhere other than in googapis it is almost certainly a mistake. """
+
     if readonly:  # FIXME the division isn't so clean for drive ...
         _auth_var = 'google-api-store-file-readonly'
     else:

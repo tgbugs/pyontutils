@@ -85,7 +85,7 @@ errors = {
 
 def do_test(expect, SCOPES='https://www.googleapis.com/auth/spreadsheets.readonly'):
     try:
-        s = sheets.get_oauth_service(SCOPES=SCOPES)
+        s = sheets._get_oauth_service(SCOPES=SCOPES)
     except BaseException as e:
         if not expect(e):
             raise e
