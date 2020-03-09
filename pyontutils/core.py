@@ -470,7 +470,6 @@ class OntResIri(OntIdIri, OntResOnt):
         # are simply a matter of representaiton, not differences in information
         # (i.e. that there isn't a function that can 1:1 interconvert)
 
-        breakpoint()
         format, *header_chunks, (resp, gen) = self.metadata().data_next(yield_response_gen=True, **kwargs)
         self.headers = resp.headers
         self.format = format
