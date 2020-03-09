@@ -4,7 +4,6 @@ language: python
 env:
   global:
     - NIFSTD_CHECKOUT_OK=1
-    - PIPENV_VENV_IN_PROJECT=1
 branches:
   only:
     - master
@@ -14,6 +13,7 @@ branches:
 python:
   - 3.6
   - 3.7
+  - 3.8
   # - pypy3.5  # issues with joblib and _pickle
 
 addons:
@@ -30,7 +30,15 @@ before_install:
   - git clone --depth=1 https://github.com/tgbugs/entity_mapping.git
   - git clone --depth=1 https://github.com/tgbugs/orgstrap.git
   - git clone --depth=1 https://github.com/SciCrunch/NIF-Ontology.git
-  - orgstrap/orgstrap
+  - >
+    orgstrap/orgstrap
+    powershell
+    racket-mode
+    rpm-spec-mode
+    ssh-config-mode
+    toml-mode
+    vimrc-mode
+    yaml-mode
   - pushd NIF-Ontology
   - git fetch origin neurons:neurons --depth=1
   - popd
@@ -39,7 +47,12 @@ before_install:
 install:
   - pip install --upgrade pytest pytest-cov
   - pip install coverage coveralls && export HAS_COVERALLS=1
-  - for f in {htmlfn,ttlser,.,neurondm,nifstd}; do pushd $f; pip install --pre --editable . ; popd; done  # --user doesn't work in these virtualenvs
+  - >
+    for f in {htmlfn,ttlser,.,neurondm,nifstd}; do
+        pushd $f;
+        pip install --pre --editable . ;  # --user doesn't work in these venvs
+        popd;
+    done
 
 script:
   - export COVERAGE_FILE="$(pwd)/.coverage"

@@ -250,6 +250,13 @@ class CustomTurtleSerializer(TurtleSerializer):
     symmetric_predicates = [OWL.disjointWith,  # TODO source externally depending on resource semantics?
                            ]
 
+    @classmethod
+    def addTopClasses(cls, *uris):
+        for uri in uris:
+            if uri not in cls.topClasses:
+                cls.topClasses = [uri] + cls.topClasses
+                cls.SECTIONS = ('',) + cls.SECTIONS
+
     def __init__(self, store, reset=True):
         setattr(store.__class__, 'qname', qname_mp)  # monkey patch to fix generate=True
         if reset:

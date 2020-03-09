@@ -20,8 +20,11 @@ Options:
 """
 
 import sys
+from pyontutils.utils import log
 from pyontutils.clifun import Dispatcher, Options as BaseOptions
-from pyontutils.sheets import get_oauth_service
+from pyontutils.sheets import _get_oauth_service
+
+log = log.getChild('googapis')
 
 
 class Options(BaseOptions):
@@ -77,7 +80,7 @@ class Main(Dispatcher):
         if self.options.debug:
             log.debug(f'requesting for scopes:\n{newline.join(scopes)}')
 
-        service = get_oauth_service(readonly=self.options.readonly, SCOPES=scopes)
+        service = _get_oauth_service(readonly=self.options.readonly, SCOPES=scopes)
         # FIXME decouple this ...
         log.info(f'Auth finished successfully for scopes:\n{newline.join(scopes)}')
 

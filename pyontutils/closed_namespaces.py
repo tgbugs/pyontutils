@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from rdflib import Graph, URIRef, RDF as rdf, RDFS as rdfs
-from rdflib.plugin import PluginException
-from rdflib.namespace import ClosedNamespace
+import rdflib
+from rdflib import RDF as rdf, RDFS as rdfs
 
 __all__ = [
     'dc',
@@ -18,8 +17,8 @@ __all__ = [
 
 ###
 
-dc = ClosedNamespace(
-    uri=URIRef('http://purl.org/dc/elements/1.1/'),
+dc = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://purl.org/dc/elements/1.1/'),
     terms=['contributor',
            'coverage',
            'creator',
@@ -37,8 +36,8 @@ dc = ClosedNamespace(
            'type']
 )
 
-dcterms = ClosedNamespace(
-    uri=URIRef('http://purl.org/dc/terms/'),
+dcterms = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://purl.org/dc/terms/'),
     terms=['Agent',
            'AgentClass',
            'BibliographicResource',
@@ -139,8 +138,8 @@ dcterms = ClosedNamespace(
            'valid']
 )
 
-npoph = ClosedNamespace(
-    uri=URIRef('http://uri.interlex.org/tgbugs/uris/readable/'),
+npoph = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://uri.interlex.org/tgbugs/uris/readable/'),
     terms=['NeuronCUT',
            'NeuronEBM',
            'Phenotype',
@@ -205,8 +204,8 @@ npoph = ClosedNamespace(
            'phenotypeOf']
 )
 
-oboInOwl = ClosedNamespace(
-    uri=URIRef('http://www.geneontology.org/formats/oboInOwl#'),
+oboInOwl = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://www.geneontology.org/formats/oboInOwl#'),
     terms=['DbXref',
            'Definition',
            'ObsoleteClass',
@@ -238,8 +237,8 @@ oboInOwl = ClosedNamespace(
            'savedBy']
 )
 
-owl = ClosedNamespace(
-    uri=URIRef('http://www.w3.org/2002/07/owl#'),
+owl = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://www.w3.org/2002/07/owl#'),
     terms=['AllDifferent',
            'AllDisjointClasses',
            'AllDisjointProperties',
@@ -319,8 +318,8 @@ owl = ClosedNamespace(
            'withRestrictions']
 )
 
-prov = ClosedNamespace(
-    uri=URIRef('http://www.w3.org/ns/prov#'),
+prov = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://www.w3.org/ns/prov#'),
     terms=['Accept',
            'Activity',
            'ActivityInfluence',
@@ -493,8 +492,8 @@ prov = ClosedNamespace(
            'wasUsedInDerivation']
 )
 
-skos = ClosedNamespace(
-    uri=URIRef('http://www.w3.org/2004/02/skos/core#'),
+skos = rdflib.namespace.ClosedNamespace(
+    uri=rdflib.URIRef('http://www.w3.org/2004/02/skos/core#'),
     terms=['Collection',
            'Concept',
            'ConceptScheme',
@@ -532,6 +531,10 @@ skos = ClosedNamespace(
 ###
 
 def main():
+    from rdflib.plugin import PluginException
+    from rdflib.plugins.parsers.notation3 import BadSyntax
+    from urllib.error import URLError
+
     # use to populate terms
     uris = {
         'oboInOwl': 'http://www.geneontology.org/formats/oboInOwl#',
@@ -565,12 +568,14 @@ def main():
 
         for args, kwargs in args_list:
             try:
-                g = Graph().parse(*args, **kwargs)
+                g = rdflib.Graph().parse(*args, **kwargs)
                 break
             except PluginException:
                 continue
-            except rdflib.plugins.parsers.notation3.BadSyntax:
+            except BadSyntax:
                 continue
+            except URLError as e:
+                raise URLError(args[0]) from e
 
         if name in alternate_prefixs:
             uri = alternate_prefixs[name]
@@ -581,8 +586,8 @@ def main():
                            for s in g.subjects()
                            if uri in s and uri != s.toPython() and sep in s))
         block = ('\n'
-                 '{name} = ClosedNamespace(\n'
-                 "{tab}uri=URIRef('{uri}'),\n"
+                 '{name} = rdflib.namespace.ClosedNamespace(\n'
+                 "{tab}uri=rdflib.URIRef('{uri}'),\n"
                  '{tab}' + "terms=['{t}',\n".format(t=terms[0]) + ''
                  '{ind}' + ',\n{ind}'.join("'{t}'".format(t=t)  # watch out for order of operations issues
                                            for t in terms[1:]) + ']\n'

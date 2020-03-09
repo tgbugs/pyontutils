@@ -323,8 +323,6 @@ class _TestScriptsBase(unittest.TestCase):
             mains = {k:v for k, v in mains.items() if k in only}
             print(mains)
 
-        #_do_mains = []
-        #_do_tests = []
         try:
             repo = git.Repo(working_dir)
             paths = sorted(f.rsplit('/', 1)[0] if '__main__' in f else f

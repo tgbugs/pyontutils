@@ -3,26 +3,34 @@
 #+OPTIONS: num:nil
 #+STARTUP: showall
 
+# [[file:./README.html]]
+
 This readme consolidates a number of different processes for deploying
 ontologies to SciGraph into a single workflow that avoids most of the
 hidden pitfalls we have encountered over the past 4 years.
 
-* Using this file :noexport:
+* Using this file
+Before you can use this file you will need to complete the [[#setup][Setup section]]. \\
+
 You can either [[https://orgmode.org/manual/Extracting-Source-Code.html][tangle]]
 this file in emacs using =C-c C-v t= or you can tangle
 the whole file from the command line using with the following.
+
 #+name: tangle-this-file
-#+begin_src bash :var THIS_FILE=(buffer-file-name) :results none
-: ${THIS_FILE:="./README.org"}
+#+header: :results none
+#+begin_src bash :var THIS_FILE=(let ((home (expand-file-name "~")) (bfn (buffer-file-name))) (when (string-prefix-p home bfn) (concat "~" (substring bfn (length home) nil)))) :noweb yes
+: ${THIS_FILE:="README.org"}    # set to the local path to this file
 emacs --batch \
       --load org \
       --load ob-shell \
+      --eval "(unless ((lambda (a b) (or (string> a b) (string= a b))) (org-version) \"9.3\") (message (format \"your org is too old! %s < 9.3 \" (org-version))) (kill-emacs 1))" \
       --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
 #+end_src
-The core functionality is tangled to [[file:./bin/scigraph-functions.sh]].
-It can be sourced in a shell or from a script using =source path/to/bin/python-release-functions.sh=
+The core functionality is tangled to [[file:./bin/scigraph-functions.sh]]. \\
+It can be sourced in a shell or from a script by running \\
+=source ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh= \\
 to make the functions defined in this file available for use.
-
+** Developing this file                                            :noexport:
 You should also run =shellcheck= on the tangled file if you make any changes.
 You don't usually have to worry about green issues, and there are a number of
 false positives because we are dealing with some crazy local vs remote expansion.
@@ -32,6 +40,7 @@ shellcheck "<<path-scigraph-functions()>>"
 #+end_src
 * Setup
 :properties:
+:CUSTOM_ID: setup
 :visibility: folded
 :end:
 ** Build host
@@ -118,50 +127,18 @@ There are currently still a couple of repos that are needed for these workflows.
 Most are needed configuration files, but pyontutils is needed for this README as well.
 #+begin_src bash :eval never
 pushd ~/git
+git clone https://github.com/tgbugs/orgstrap.git
 git clone https://github.com/tgbugs/pyontutils.git
 git clone https://github.com/tgbugs/tgbugs-overlay.git
 git clone https://github.com/SciCrunch/sparc-curation.git
 popd
+~/git/orgstrap/orgstrap --user  # needed to obtain newer version of org-mode
 #+end_src
 ** ssh config
-Set =ip-aws-scigraph= here
-#+name: ip-aws-scigraph
-: 127.0.0.1
-
-Set =ip-aws-scigraph-data= here
-#+name: ip-aws-scigraph-data
-: 127.0.0.1
-
-Set =path-target-identity-file= here
-#+name: path-target-identity-file
-: /dev/null
-
-# NOTE: it is good practice to require any computer wanting to connect
-# to have two keys, one for the bastion and one for the target host
-# that way if the bastion is compromised the keys to get to the protected
-# hosts cannot be obtained from that machine alone
-# if a user's machine is compromised then access to the bastion can be
-# shut down for just that user and if the jump key is shared, then
-# it can be rotated under less time pressure
-
-Set =path-jump-identity-file= here
-#+name: path-jump-identity-file
-: /dev/null
-
-Set =jump-host= aka bastion server name here
-#+name: jump-host
-: localhost
-
-Set =ip-jump-host= here
-#+name: ip-jump-host
-: 127.0.0.1
-
-Set =user-jump-host= here
-#+name: user-jump-host
-: nobody
-
-Tangle this block after setting the requisite values above. Then
-open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
+When viewing this file in emacs tangle this block after setting
+the requisite values below in the variables section (not exported).
+Alternately, copy the block as is an make the changes manually.
+Then open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
 and copy the sections into [[file:${HOME}/.ssh/config][your ssh config file]].
 #+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
@@ -228,6 +205,49 @@ ssh-copy-id-simple \
 --keyname aws.scigraph
 #+end_src
 For the implementation of the =*-simple= commands see [[#ssh-setup][ssh setup]].
+*** variables                                                      :noexport:
+:properties:
+:custom_id: ssh-variables
+:visibility: folded
+:end:
+
+# NOTE :noexport: + a reference == cannot find reference (duh)
+
+Set =ip-aws-scigraph= here
+#+name: ip-aws-scigraph
+: 127.0.0.1
+
+Set =ip-aws-scigraph-data= here
+#+name: ip-aws-scigraph-data
+: 127.0.0.1
+
+Set =path-target-identity-file= here
+#+name: path-target-identity-file
+: /dev/null
+
+# NOTE: it is good practice to require any computer wanting to connect
+# to have two keys, one for the bastion and one for the target host
+# that way if the bastion is compromised the keys to get to the protected
+# hosts cannot be obtained from that machine alone
+# if a user's machine is compromised then access to the bastion can be
+# shut down for just that user and if the jump key is shared, then
+# it can be rotated under less time pressure
+
+Set =path-jump-identity-file= here
+#+name: path-jump-identity-file
+: /dev/null
+
+Set =jump-host= aka bastion server name here
+#+name: jump-host
+: localhost
+
+Set =ip-jump-host= here
+#+name: ip-jump-host
+: 127.0.0.1
+
+Set =user-jump-host= here
+#+name: user-jump-host
+: nobody
 * Deployments
 :PROPERTIES:
 :header-args: :mkdirp yes
@@ -352,7 +372,7 @@ you can run both blocks together with =run-load-deploy-graph-sparc=
 #+end_src
 **** deploy from CI
 *** services config
-[[file:/ssh:aws-scigraph-scigraph:services.yaml]]
+[[tramp:/ssh:aws-scigraph-scigraph:services.yaml]]
 **** build
 :properties:
 :visibility: folded
@@ -462,7 +482,7 @@ deploy-graph \
 <<run-deploy-graph-sparc-data>>
 #+end_src
 *** services config
-[[file:/ssh:aws-scigraph-data-scigraph:services.yaml]]
+[[tramp:/ssh:aws-scigraph-data-scigraph:services.yaml]]
 **** build
 :properties:
 :visibility: folded
@@ -687,11 +707,52 @@ to your path. You can move the jar file that it points to, if you do just make s
 to update the =scigraph-load= script to point to the new location.
 #+name: scigraph-load-linking-options
 #+begin_src bash :noweb yes
-cp <<path-build-scigraph()>>/bin/scigraph-load ~/bin
+mkdir ~/bin  # copy and paste insurance
+export PATH=~/bin:${PATH}  # should be set in ~/.bashrc or similar
+cp <<path-build-scigraph()>>/bin/scigraph-load ~/bin/
 # OR
-ln -s <<path-build-scigraph()>>/bin/scigraph-load ~/bin
+ln -s <<path-build-scigraph()>>/bin/scigraph-load ~/bin/
 # OR
 export PATH=<<path-build-scigraph()>>/bin:${PATH}
+#+end_src
+
+#+name: zsh-fix
+#+header: :comments noweb
+#+begin_src bash :exports none :tangle ./bin/scigraph-functions.sh
+if [ $ZSH_VERSION ] && [[ ! -o shwordsplit ]]; then
+    echo WARNING: you have sourced this script into a zsh shell
+    echo when you are done you need to run '`unsetopt shwordsplit`'
+    echo otherwise your shell is likely to be broken in strange ways
+    echo since we set '`setopt shwordsplit`' to avoid IFS issues
+    setopt shwordsplit
+    unset IFS  # otherwise ${IFS# style comments break}
+fi
+#+end_src
+
+#+name: &check-path
+#+header: :comments noweb
+#+begin_src bash :exports none :tangle ./bin/scigraph-functions.sh
+function check-file () {
+    local FAIL=
+    for f in $@; do
+        if [ ! -f $f ]; then
+            FAIL=1
+            echo $f does not exist!
+        fi
+    done
+    [ -z $FAIL ] || return 1
+}
+
+function check-dir () {
+    local FAIL=
+    for d in $@; do
+        if [ ! -d $d ]; then
+            FAIL=1
+            echo $d does not exist!
+        fi
+    done
+    [ -z $FAIL ] || return 1
+}
 #+end_src
 
 # (((((
@@ -710,13 +771,14 @@ case $key in
 esac
 done
 
-: ${PATH_BUILD:=<<path-build-scigraph()>>}
-: ${PATH_ZIP:=${PATH_BUILD}}
-: ${PATH_GIT:=${PATH_BUILD}}
-: ${GIT_REF:=master}
+local PATH_BUILD=${PATH_BUILD:-<<path-build-scigraph()>>}
+local PATH_ZIP=${PATH_ZIP:-${PATH_BUILD}}
+local PATH_GIT=${PATH_GIT:-${PATH_BUILD}}
+local GIT_REF=${GIT_REF:-master}
 
 #+end_src
 
+The definition of =compile-scigraph-git= for reference.
 #+name: compile-scigraph-git
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
@@ -748,7 +810,7 @@ yum reinstall -y scigraph*.rpm
 
 #+begin_src bash
 function run-deploy-scigraph-rpm () {
-    
+    echo TODO
 }
 #+end_src
 
@@ -798,19 +860,19 @@ case $key in
 esac
 done
 
-: ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
-: ${PATH_ONTOLOGIES:="./ontologies.yaml"}  # if missing will error
-: ${PATH_BUILD:=<<path-build-graph()>>}
-: ${FOLDER_NAME_GRAPH:=<<folder-name-graph()>>}
-LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
-PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
-PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
-STAMPED="${FOLDER_NAME_GRAPH}-graph-$(date +%Y%m%dT%H%M%S)"
-FILE_NAME_ZIP="${STAMPED}.zip"
-PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"
-LATEST="${PATH_BUILD}/LATEST"
-echo $PATH_GRAPHLOAD $PATH_ONTOLOGIES
+local PATH_GRAPHLOAD=${PATH_GRAPHLOAD:-<<path-graphload-template()>>}
+local PATH_ONTOLOGIES=${PATH_ONTOLOGIES:-"./ontologies.yaml"}  # if missing will error
+local PATH_BUILD=${PATH_BUILD:-<<path-build-graph()>>}
+local FOLDER_NAME_GRAPH=${FOLDER_NAME_GRAPH:-<<folder-name-graph()>>}
+local LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
+local PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
+local PATH_CONFIG_YAML_RAW="${PATH_CONFIG_YAML}.raw"
+local STAMPED="${FOLDER_NAME_GRAPH}-graph-$(date +%Y%m%dT%H%M%S)"
+local FILE_NAME_ZIP="${STAMPED}.zip"
+local PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"
+local LATEST="${PATH_BUILD}/LATEST"
 echo $LOAD_GRAPH_PATH $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
+check-file $PATH_GRAPHLOAD $PATH_ONTOLOGIES || return $?
 #+end_src
 
 #+name: load-graph
@@ -867,12 +929,13 @@ case $key in
 esac
 done
 
-: ${PATH_GRAPHLOAD:=<<path-graphload-template()>>}
-: ${PATH_ONTOLOGIES:="./ontologies.yaml"}
-: ${PATH_BUILD:=<<path-build-graph()>>}
-: ${PATH_ZIP:="${PATH_BUILD}"}
-: ${PATH_GIT:="${PATH_BUILD}"}
-: ${GIT_REF:="master"}
+local PATH_GRAPHLOAD=${PATH_GRAPHLOAD:-<<path-graphload-template()>>}
+local PATH_ONTOLOGIES=${PATH_ONTOLOGIES:-"./ontologies.yaml"}
+local PATH_BUILD=${PATH_BUILD:-<<path-build-graph()>>}
+local PATH_ZIP=${PATH_ZIP:-"${PATH_BUILD}"}
+local PATH_GIT=${PATH_GIT:-"${PATH_BUILD}"}
+local GIT_REF=${GIT_REF:-"master"}
+check-file $PATH_GRAPHLOAD $PATH_ONTOLOGIES || return $?
 #+end_src
 
 #+name: load-graph-ontload
@@ -928,15 +991,18 @@ run-load-graph-sparc --path-build-scigraph <<path-build-scigraph()>>
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
-#+name: &localhost-deploy-command
-#+caption: &localhost-deploy-command
-#+begin_src bash :eval never :exports none
-cp ${PATH_ZIP} ${PATH_RUNTIME};
-pushd ${PATH_RUNTIME};
-unzip ${FILE_NAME_ZIP};
-unlink ${FOLDER_NAME_GRAPH};
-ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH};
-popd
+#+name: deploy-graph-localhost
+#+caption: deploy-graph-localhost
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function deploy-graph-localhost () {
+    cp ${PATH_ZIP} ${PATH_RUNTIME} || return $?
+    pushd ${PATH_RUNTIME} || return $?
+    unzip -n ${FILE_NAME_ZIP} || return $?
+    unlink ${FOLDER_NAME_GRAPH} || return $?
+    ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH} || return $?
+    popd
+}
 #+end_src
 
 # (((((((
@@ -957,12 +1023,12 @@ case $key in
 esac
 done
 
-: ${PATH_BUILD:=<<path-build-graph()>>}
+local PATH_BUILD=${PATH_BUILD:-<<path-build-graph()>>}
 
-: ${SERVER:=localhost}
-: ${SVC_USER:=scigraph}
-: ${PATH_RUNTIME:=<<path-runtime()>>}
-: ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
+local SERVER=${SERVER:-localhost}
+local SVC_USER=${SVC_USER:-scigraph}
+local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
+local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
 
 local LATEST="${PATH_BUILD}/LATEST"
 if [ ! -f "${LATEST}" ]; then
@@ -973,15 +1039,14 @@ if [ ! -f "${LATEST}" ]; then
 fi
 local FILE_NAME_ZIP=$(readlink "${LATEST}")
 local STAMPED="${FILE_NAME_ZIP//.zip/}"
-: ${PATH_ZIP="${PATH_BUILD}/${FILE_NAME_ZIP}"}
+local PATH_ZIP=${PATH_ZIP:-"${PATH_BUILD}/${FILE_NAME_ZIP}"}
 if [ ! -f "${PATH_ZIP}" ]; then
     echo $PATH_ZIP path does not exist.
     echo Not deploying.
     return 1
 fi
-local scigraph_host="${SERVER}-scigraph"  # by convention
-local scigraph_host_admin=${SERVER}
-echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
+local SERVER_AS_SCIGRAPH="${SERVER}-scigraph"  # by convention
+#echo $FOLDER_NAME_GRAPH $STAMPED $FILE_NAME_ZIP $PATH_ZIP
 #+end_src
 
 #+name: deploy-graph
@@ -993,28 +1058,19 @@ function deploy-graph () {
     echo $PATH_ZIP
     <<&are-you-sure>>
 
-    local CMD_STOP='
-                <<&service-manager>>
-                service-manager scigraph stop'
-
-    local CMD_START='
-                <<&service-manager>>
-                service-manager scigraph start'
-
     if [ "${SERVER}" = "localhost" ]; then
-        CMD="su - ${SVC_USER} -c \"
-                <<&localhost-deploy-command>>\""
-        su - root -c "${CMD}"
+        CMD="su - ${SVC_USER} -c \"$(typeset -f deploy-graph-localhost) deploy-graph-localhost\""
+        su - root -c "${CMD}" || $?
     else
-        scp "${PATH_ZIP}" "${scigraph_host}:${PATH_RUNTIME}"
-        ssh ${scigraph_host} "pushd \"${PATH_RUNTIME}\"; unzip \"${FILE_NAME_ZIP}\""
+        scp "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
+        ssh ${SERVER_AS_SCIGRAPH} "pushd \"${PATH_RUNTIME}\"; unzip -n \"${FILE_NAME_ZIP}\"" || return $?
 
-        ssh -t ${scigraph_host_admin} "${CMD_STOP}"
+        ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph stop" || return $?
 
-        ssh ${scigraph_host} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
-                              ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\""
+        ssh ${SERVER_AS_SCIGRAPH} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
+                              ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"" || echo relink failed
 
-        ssh -t ${scigraph_host_admin} "${CMD_START}"
+        ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph start"
     fi
 }
 #+end_src
@@ -1041,7 +1097,6 @@ Set =path-runtime= here
 Set =folder-name-runtime= here
 #+name: folder-name-runtime
 : graph
-
 ** Services Config
 *** Build
 :PROPERTIES:
@@ -1068,25 +1123,26 @@ case $key in
 esac
 done
 
-: ${PATH_BUILD:=<<path-build-services()>>}
-: ${PATH_RUNTIME:=<<path-runtime()>>}
-: ${FOLDER_NAME_RUNTIME:=<<folder-name-runtime()>>}
-: ${PATH_CYPHER_RESOURCES:="./cypher-resources.yaml"}  # will fail on absense
-: ${PATH_SERVICES:=<<path-services()>>}
-: ${PATH_CURIES:=<<path-curies()>>}
-: ${FILE_STEM=<<file-stem-services-output()>>}
-: ${SVC_HOST:=localhost}
-: ${SVC_PORT:=9000}
-URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
-URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
-URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
-PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
-YAML="${FILE_STEM}.yaml"
-DT=$(date +%Y%m%dT%H%M%S)
-YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
+local PATH_BUILD=${PATH_BUILD:-<<path-build-services()>>}
+local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
+local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
+local PATH_CYPHER_RESOURCES=${PATH_CYPHER_RESOURCES:-"./cypher-resources.yaml"}  # will fail on absense
+local PATH_SERVICES=${PATH_SERVICES:-<<path-services()>>}
+local PATH_CURIES=${PATH_CURIES:-<<path-curies()>>}
+local FILE_STEM=${FILE_STEM:-<<file-stem-services-output()>>}
+local SVC_HOST=${SVC_HOST:-localhost}
+local SVC_PORT=${SVC_PORT:-9000}
+local URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
+local URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
+local URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
+local PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
+local YAML="${FILE_STEM}.yaml"
+local DT=$(date +%Y%m%dT%H%M%S)
+local YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
 
-PATH_YAML="${PATH_BUILD}/${YAML}"
-PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
+local PATH_YAML="${PATH_BUILD}/${YAML}"
+local PATH_YAML_RAW="${PATH_BUILD}/${YAML_RAW}"
+check-file $PATH_CYPHER_RESOURCES $PATH_SERVICES $PATH_CURIES || return $?
 #+end_src
 
 #+name: build-services
@@ -1099,9 +1155,9 @@ function build-services () {
 
     # TODO allow urls?
     # make raw
-    cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}"
-    cat "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}"
-    cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}"
+    cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}" || return $?
+    cat "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
+    cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}" || return $?
 
     # make services header
     echo "# ${YAML_RAW}" > "${PATH_YAML}"
@@ -1110,7 +1166,7 @@ function build-services () {
     yq -Y ".graphConfiguration.location = \"${PATH_SERVICES_GRAPH}\" |
     .serviceMetadata.view.url = \"${URL_VIEW}\" |
     .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
-    " "${PATH_YAML_RAW}" >> "${PATH_YAML}"
+    " "${PATH_YAML_RAW}" >> "${PATH_YAML}" || return $?
 }
 #+end_src
 *** Deploy
@@ -1140,9 +1196,9 @@ if [ -z $CONFIG ]; then
     return 1
 fi
 
-# : ${CONFIG:=}
-: ${SERVER:=localhost}
-: ${PATH_RUNTIME:=<<path-runtime()>>}
+local CONFIG=${CONFIG:-}
+local SERVER=${SERVER:-localhost}
+local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
 
 local YAML=$(basename "${CONFIG}")
 if [ ! -f "${CONFIG}" ]; then
@@ -1155,12 +1211,12 @@ local YAML_RAW=$(head -n 1 "${CONFIG}" | cut -b3-)
 local CONFIG_RAW="$(dirname ${CONFIG})/${YAML_RAW}"
 local EXISTING="${PATH_RUNTIME}/${YAML}"
 
-local scigraph_host="${SERVER}-scigraph"  # by convention
-local scigraph_host_admin=${SERVER}
+local SERVER_AS_SCIGRAPH="${SERVER}-scigraph"  # by convention
+local SERVER=${SERVER}
 if [ ${SERVER} = localhost ]; then
     local TARGET="${PATH_RUNTIME}"
 else
-    local TARGET="${scigraph_host}:${PATH_RUNTIME}"
+    local TARGET="${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}"
 fi
 #+end_src
 
@@ -1178,37 +1234,40 @@ function deploy-services () {
     <<&are-you-sure>>
     local CMD='
         <<&deploy-services-backup-config>>'
-    local CMD_RESTART='
-                <<&service-manager>>
-                service-manager scigraph restart'
     echo $CONFIG_RAW $TARGET
     if [ ${SERVER} = localhost ]; then
-        ${CMD} || return 1
-        cp "${CONFIG_RAW}" "${TARGET}" || return 1
-        cp "${CONFIG}" "${TARGET}" || return 1
-        ${CMD_RESTART} || return 1
+        backup-services-config "${EXISTING}" "${PATH_RUNTIME}" "${YAML}" || return $?
+        cp "${CONFIG_RAW}" "${TARGET}" || return $?
+        cp "${CONFIG}" "${TARGET}" || return $?
+        ${CMD_RESTART} || return $?
     else
         # if only we could rsync
-        ssh ${scigraph_host} "${CMD}" || return 1
-        scp "${CONFIG_RAW}" "${TARGET}" || return 1
-        scp "${CONFIG}" "${TARGET}" || return 1
-        ssh -t ${scigraph_host_admin} "${CMD_RESTART}" || return 1
+        ssh ${SERVER_AS_SCIGRAPH} "$(typeset -f backup-services-config); backup-services-config ${EXISTING} ${PATH_RUNTIME} ${YAML}" || return $?
+        scp "${CONFIG_RAW}" "${TARGET}" || return $?
+        scp "${CONFIG}" "${TARGET}" || return $?
+        ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph restart" || return $?
     fi
 }
 #+end_src
 
-# this block's quoting is funky because bash doesn't have anything like unquote
-#+name: &deploy-services-backup-config
-#+begin_src bash :eval never
-E_YAML_RAW=$(head -n 1 "'${EXISTING}'" | grep "^#" | cut -b2-)  # on remote
-if [ -n "${E_YAML_RAW}" ]; then
-    YAML_BACKUP="'${PATH_RUNTIME}'/${E_YAML_RAW//.raw/}"
-else
-    mod_dt=$(stat -c %y "'${EXISTING}'" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")  # on remote
-    YAML_BACKUP="'${PATH_RUNTIME}/${YAML}'-${mod_dt}"
-fi
-echo cp -a "'${EXISTING}'" "${YAML_BACKUP}"
+#+name: backup-services-config
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function backup-services-config () {
+    local EXISTING=${1}
+    local PATH_RUNTIME=${2}
+    local YAML=${3}
+    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b2-)
+    if [ -n "${E_YAML_RAW}" ]; then
+        local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
+    else
+        local mod_dt=$(stat -c %y "${EXISTING}" | cut -d "." -f1 | sed "s/[-\:]//g" | sed "s/\ /T/")
+        local YAML_BACKUP="${PATH_RUNTIME}/${YAML}-${mod_dt}"
+    fi
+    cp -a "${EXISTING}" "${YAML_BACKUP}"
+}
 #+end_src
+
 *** variables                                                      :noexport:
 :PROPERTIES:
 :VISIBILITY: folded
@@ -1259,7 +1318,7 @@ elif [ -z $SVC_USER ]; then
 fi
 
 local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
-: ${KEYNAME:=${KEYNAME_DEFAULT}}
+local KEYNAME=${KEYNAME:-${KEYNAME_DEFAULT}}
 local KEYTYPE=ed25519  # this is hardcoded for now
 KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
 SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
@@ -1280,7 +1339,7 @@ function ssh-keygen-simple () {
 
     # test that root access is available
     # FIXME requires double password entry in the su case
-    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return 1
+    ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && export HAVE_ROOT=1 || return $?
 
     # generate the key
     ssh-keygen -t ${KEYTYPE} -N "" -C "${USER}@${HOSTNAME}" -f "${KEYPATH}"
@@ -1299,12 +1358,12 @@ function ssh-copy-id-simple () {
     # test that root access is available if HAVE_ROOT is not set
     if [ -z $HAVE_ROOT ]; then
         ssh -t ${SERVER} "${SUDO_OR_SU} \"echo we have root access\"" && \
-        export HAVE_ROOT=1 || return 1
+        export HAVE_ROOT=1 || return $?
     fi
 
     # copy the key to the host
     TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
-    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return 1
+    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return $?
     # TODO option to deploy private key if the key is generated for a service user
 
     # and today we learn about typeset, sigh
@@ -1345,7 +1404,12 @@ function copy-id-to-user-authorized-keys () {
 # ((((
 #+name: &are-you-sure
 #+begin_src bash
-read -r -p "Are you sure you want to deploy? y/N " -n 1 choice
+printf "Are you sure you want to deploy? y/N "
+if [ $ZSH_VERSION ]; then
+    read -r -k 1 choice
+else
+    read -r -n 1 choice
+fi
 case "${choice}" in
     y|Y) echo ;;
     n|N) echo; echo "Not deploying."; return 1;;
@@ -1361,13 +1425,21 @@ echo "Deploying ..."
 **** service-manager
 A bash function that implements a portable =service-manager= command.
 #+name: &service-manager
-#+begin_src bash :eval never
+#+header: :comments noweb
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function service-manager () {
     SVCNAME=${1}
     ACTION=${2}
     if [ $(command -v systemctl) ]; then
         local CMD="systemctl ${ACTION} ${SVCNAME}"
-        local CMD_POST="systemctl status ${SVCNAME}"
+        if [ "${ACTION}" = "start" ]; then
+            local CMD_POST="systemctl status ${SVCNAME}"
+        else
+            # if we are stopping then status will return a non-zero value
+            # which will confuses the signal we want which would be if
+            # the program failed to stop, not is stopped
+            local CMD_POST=""
+        fi
     elif [ $(command -v rc-service) ]; then
         local CMD="rc-service ${SVCNAME} ${ACTION}"
         local CMD_POST=""
@@ -1375,6 +1447,8 @@ function service-manager () {
         echo unknown service-manager
         return 1
     fi
+
+    echo ${CMD}
 
     if [[ $EUID = 0 ]]; then
         ${CMD} || return $?

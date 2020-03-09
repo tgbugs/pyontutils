@@ -413,7 +413,7 @@ compile_org_file = ['emacs',
 def renderOrg(path, debug=False, **kwargs):
     orgfile = path.as_posix()
     try:
-        ref = path.latest_commit.hexsha
+        ref = path.latest_commit().hexsha
         github_link = path.remote_uri_human(ref=ref)
     except aexc.NoCommitsForFile:
         github_link = None
@@ -475,7 +475,7 @@ def renderOrg(path, debug=False, **kwargs):
 def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwargs):
     mdfile = path.as_posix()
     try:
-        ref = path.latest_commit.hexsha
+        ref = path.latest_commit().hexsha
         github_link = path.remote_uri_human(ref=ref)
     except aexc.NoCommitsForFile:
         github_link = None
