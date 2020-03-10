@@ -809,6 +809,11 @@ class State2(State):
                 operationId = Dynamic._path_to_id(path)
 
                 xq = path_dict.pop('x-query')
+                for k in tuple(path_dict):
+                    if k.startswith('x-'):
+                        print(f'Removed unknown key: {k}')
+                        path_dict.pop(k)
+
                 for method_dict in path_dict.values():
                     method_dict['operationId'] = operationId
                     method_dict['x-query'] = xq
