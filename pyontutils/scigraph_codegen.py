@@ -314,7 +314,10 @@ class Dynamic(SUBCLASS):
     def dispatch(self, path, output='application/json', **kwargs):
         f, args, query_kwargs = self._path_function_arg(path)
         kwargs.update(query_kwargs)
-        return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        try:
+            return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        except TypeError as e:
+            raise TypeError('Did you remember to set parameters in the services config?') from e
 
 
 class Graph(SUBCLASS):
