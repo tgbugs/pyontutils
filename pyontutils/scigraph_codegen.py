@@ -875,6 +875,21 @@ class State2(State):
         return None, ''
 
 
+def moduleDirect(api_url, basepath, module_name):
+    """ Avoid the need for dynamics altogether """
+    s = state(api_url, basepath)
+    code = s.code()
+    return importDirect(code, module_name)
+
+
+def importDirect(code, module_name):
+    from types import ModuleType
+    compiled = compile(code, '', 'exec')
+    module = ModuleType(module_name)
+    exec(compiled, module.__dict__)
+    return module
+
+
 def main():
     from docopt import docopt
     from docopt import parse_defaults
