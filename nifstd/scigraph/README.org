@@ -1135,7 +1135,7 @@ local SVC_PORT=${SVC_PORT:-9000}
 local URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
 local URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
 local URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
-local PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
+local PATH_RUNTIME_FOLDER_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}"
 local YAML="${FILE_STEM}.yaml"
 local DT=$(date +%Y%m%dT%H%M%S)
 local YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
@@ -1163,7 +1163,7 @@ function build-services () {
     echo "# ${YAML_RAW}" > "${PATH_YAML}"
 
     # make services
-    yq -Y ".graphConfiguration.location = \"${PATH_SERVICES_GRAPH}\" |
+    yq -Y ".graphConfiguration.location = \"${PATH_RUNTIME_FOLDER_GRAPH}\" |
     .serviceMetadata.view.url = \"${URL_VIEW}\" |
     .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
     " "${PATH_YAML_RAW}" >> "${PATH_YAML}" || return $?
@@ -1257,7 +1257,7 @@ function backup-services-config () {
     local EXISTING=${1}
     local PATH_RUNTIME=${2}
     local YAML=${3}
-    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b2-)
+    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b3-)
     if [ -n "${E_YAML_RAW}" ]; then
         local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
     else
