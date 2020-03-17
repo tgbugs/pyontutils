@@ -1156,7 +1156,7 @@ function build-services () {
     # TODO allow urls?
     # make raw
     cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}" || return $?
-    cat "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
+    yq -Sy '' "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
     cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}" || return $?
 
     # make services header
