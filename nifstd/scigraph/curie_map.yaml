@@ -152,3 +152,9 @@ NIFNEURBR2: http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Brain
 NIFNEURCIR: http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Circuit-Role-Bridge.owl#
 NIFNEURMOR: http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-Morphology-Bridge.owl#
 NIFNEURNT:  http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-NT-Bridge.owl#
+
+# ApiNATOMY
+apinatomy:          https://apinatomy.org/uris/readable/
+apinatomy.elements: https://apinatomy.org/uris/elements/
+apinm.bolew:        https://apinatomy.org/uris/models/bolserLewisNew/ids/
+apinm.keast:        https://apinatomy.org/uris/models/keastSpinalTest/ids/
