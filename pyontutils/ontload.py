@@ -677,30 +677,6 @@ def for_burak(ng_):
     with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
               json.dump(records, f, sort_keys=True, indent=2)
 
-def deploy_scp(local_path, remote_spec):
-    basename = os.path.basename(local_path)
-    if remote_spec == f'user@localhost:{tempfile.tempdir}/':
-        print(f'Default so not scping {local_path}')
-    else:
-        ssh_target, remote_path = remote_spec.split(':', 1)  # XXX bad things?
-        remote_folder = os.path.dirname(remote_path)
-        remote_latest = jpth(remote_folder, 'LATEST')
-        if 'localhost' in remote_spec:
-            if '~' in remote_path:
-                remote_path = os.path.expanduser(remote_path)
-                remote_latest = os.path.expanduser(remote_latest)
-            remote_spec = remote_path
-            copy_command = 'cp'
-            update_latest = f'echo {basename} > {remote_latest}'
-        else:
-            copy_command = 'scp'
-            update_latest = f'ssh {ssh_target} "echo {basename} > {remote_latest}"'
-        command = f'{copy_command} {local_path} {remote_spec}'
-        print(command)
-        print(update_latest)
-        #os.system(command)
-        #os.system(update_latest)
-
 
 def make_post_clone(git_local, repo_name, remote_base):
     local_go = jpth(git_local, repo_name, 'ttl/external/go.owl')
@@ -712,6 +688,7 @@ def make_post_clone(git_local, repo_name, remote_base):
     else:
         post_clone = lambda: None
     return post_clone
+
 
 def run(args):
     # modes
@@ -792,9 +769,6 @@ def run(args):
 
         itrips, config = rl.itrips, rl.config
 
-        if not check_built:
-            deploy_scp(services_zip, sscp)
-            deploy_scp(rl.zip_path, scp)
         if not ontologies:
             ontologies = rl.ontologies
         print(services_zip)
@@ -807,8 +781,6 @@ def run(args):
          _) = scigraph_build(zip_location, git_remote, sorg, git_local,
                              sbranch, scommit, check_built=check_built,
                              quiet=scigraph_quiet)
-        if not check_built:
-            deploy_scp(services_zip, sscp)
         print(services_zip)
         if '--local' in args:
             return
