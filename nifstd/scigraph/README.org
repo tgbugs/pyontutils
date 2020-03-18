@@ -312,21 +312,35 @@ Set =path-cypher-resources-nifstd= here
 :properties:
 :visibility: folded
 :end:
+#+name: &materialize-ifsu
+#+begin_src python :exports code :eval never
+import pathlib as pl
+from pyontutils.core import OntGraph
+from pyontutils.namespaces import ilxtr, ILX
+g = OntGraph(path=pl.Path('~/git/NIF-Ontology/ttl/sparc-community-terms.ttl').expanduser()).parse()
+[g.add((o, ilxtr.includedForSPARCUnder, s)) for s, o in g[:ILX['0738400']:]]
+g.write()
+#+end_src
+
 Run this block
 #+name: sparc-community-terms-update
 #+caption: running =interlex-alt= is really all that is required, the url is for simplicity
-#+begin_src bash :results output
+#+begin_src bash :results output :noweb no-export
 pushd ~/git/NIF-Ontology/ttl
-git checkout sparc || exit 1  # can fail if your working copy has stuff saved
-git pull || exit 1
-curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit 1  # FIXME TEMP url
+git checkout sparc || exit $?  # can fail if your working copy has stuff saved
+git pull || exit $?
+curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit $?  # FIXME TEMP url
 # FIXME update to production url: http://uri.interlex.org/sparc/ontologies/community-terms.ttl
+{ python || exit $?; } <<EOF
+<<&materialize-ifsu>>
+EOF
 git add sparc-community-terms.ttl
 git commit -m "update to latest version of sparc-community-terms"
 git diff HEAD~1 HEAD | tee sct-diff.patch
 popd
 #+end_src
 
+Review the output of this block or [[file:${HOME}/git/NIF-Ontology/ttl/sct-diff.patch]]
 Make any manual changes, commit, and push.
 You will also need to merge sparc into dev for the changes to be included in the SciGraph load.
 *** code
