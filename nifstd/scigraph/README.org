@@ -308,9 +308,10 @@ Set =path-cypher-resources-nifstd= here
 #+name: path-cypher-resources-nifstd
 : ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
 ** sparc
-*** data
+*** ontology
 :properties:
 :visibility: folded
+:custom_id: sparc-ontology
 :end:
 #+name: &materialize-ifsu
 #+begin_src python :exports code :eval never
@@ -449,7 +450,7 @@ Set =host-services-sparc= here
 #+name: host-services-sparc
 : scigraph.scicrunch.io
 ** sparc-data
-*** data
+*** ontology
 :properties:
 :visibility: folded
 :end:
