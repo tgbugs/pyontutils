@@ -963,8 +963,8 @@ function load-graph-ontload () {
     NIF-Ontology     ${IFS# repo name} \
     NIF              ${IFS# pattern for remote base (e.g. http://) to swap for local file://,
                        NIF automatically expands to http://ontology.neuinfo.org/NIF} \
-    --zip-location ${PATH_ZIP}  ${IFS# output folder where the loaded graph zip will be exported} \
-    --git-local ${PATH_GIT}     ${IFS# location where git repo will be cloned} \
+    --zip-location ${PATH_ZIP}      ${IFS# output folder where the loaded graph zip will be exported} \
+    --git-local ${PATH_GIT}         ${IFS# location where git repo will be cloned} \
     --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
     --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
     --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \

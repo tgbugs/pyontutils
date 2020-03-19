@@ -759,6 +759,7 @@ def run(args):
             scigraph_commit = 'dev-9999'
             services_zip = 'None'
             scigraph_reset_state = lambda : None
+
         with execute_regardless(scigraph_reset_state):
             rl = ReproLoader(zip_location, git_remote, org,
                              git_local, repo_name, branch,
@@ -767,10 +768,18 @@ def run(args):
                              patch_config, patch, scigraph_commit,
                              check_built=check_built)
 
+        FILE_NAME_ZIP = Path(rl.zip_path).name
+        LATEST = Path(zip_location) / 'LATEST'
+        if LATEST.exists() and LATEST.is_symlink():
+            LATEST.unlink()
+
+        LATEST.symlink_to(FILE_NAME_ZIP)
+
         itrips, config = rl.itrips, rl.config
 
         if not ontologies:
             ontologies = rl.ontologies
+
         print(services_zip)
         print(rl.zip_path)
         if '--local' in args:
@@ -784,6 +793,7 @@ def run(args):
         print(services_zip)
         if '--local' in args:
             return
+
     elif config:
         graph_path = Path(args['<graph_path>']).resolve()
         config_path = Path(args['--graph-config-out']).resolve()
@@ -823,6 +833,7 @@ def run(args):
 
     if debug:
         breakpoint()
+
 
 def main():
     from docopt import docopt
