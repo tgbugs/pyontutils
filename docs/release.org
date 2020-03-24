@@ -174,8 +174,8 @@ build-release () {
         rurl="$(git remote get-url origin)"
         if [[ -z ${CLONEFROM} && ! $rurl =~ "https://" && ! $rurl =~ "git@" ]]; then
             git remote set-url origin https://github.com/${org}/${repo}.git
-        elif [[ -n ${CLONEFROM} && $rurl =~ "https://" || $rurl =~ "git@" ]]; then
-            git remote set-url origin ${CLONEFROM}
+        elif [[ -n ${CLONEFROM} && "$rurl" != "${CLONEFROM}" ]]; then
+            git remote set-url origin "${CLONEFROM}"
         fi
         git fetch
         git reset --hard origin/master

@@ -308,25 +308,40 @@ Set =path-cypher-resources-nifstd= here
 #+name: path-cypher-resources-nifstd
 : ~/git/pyontutils/nifstd/scigraph/cypher-resources.yaml
 ** sparc
-*** data
+*** ontology
 :properties:
 :visibility: folded
+:custom_id: sparc-ontology
 :end:
+#+name: &materialize-ifsu
+#+begin_src python :exports code :eval never
+import pathlib as pl
+from pyontutils.core import OntGraph
+from pyontutils.namespaces import ilxtr, ILX
+g = OntGraph(path=pl.Path('~/git/NIF-Ontology/ttl/sparc-community-terms.ttl').expanduser()).parse()
+[g.add((o, ilxtr.includedForSPARCUnder, s)) for s, o in g[:ILX['0738400']:]]
+g.write()
+#+end_src
+
 Run this block
 #+name: sparc-community-terms-update
 #+caption: running =interlex-alt= is really all that is required, the url is for simplicity
-#+begin_src bash :results output
+#+begin_src bash :results output :noweb no-export
 pushd ~/git/NIF-Ontology/ttl
-git checkout sparc || exit 1  # can fail if your working copy has stuff saved
-git pull || exit 1
-curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit 1  # FIXME TEMP url
+git checkout sparc || exit $?  # can fail if your working copy has stuff saved
+git pull || exit $?
+curl https://alt.olympiangods.org/sparc/ontologies/community-terms.ttl -o sparc-community-terms.ttl || exit $?  # FIXME TEMP url
 # FIXME update to production url: http://uri.interlex.org/sparc/ontologies/community-terms.ttl
+{ python || exit $?; } <<EOF
+<<&materialize-ifsu>>
+EOF
 git add sparc-community-terms.ttl
 git commit -m "update to latest version of sparc-community-terms"
 git diff HEAD~1 HEAD | tee sct-diff.patch
 popd
 #+end_src
 
+Review the output of this block or [[file:${HOME}/git/NIF-Ontology/ttl/sct-diff.patch]]
 Make any manual changes, commit, and push.
 You will also need to merge sparc into dev for the changes to be included in the SciGraph load.
 *** code
@@ -435,7 +450,7 @@ Set =host-services-sparc= here
 #+name: host-services-sparc
 : scigraph.scicrunch.io
 ** sparc-data
-*** data
+*** ontology
 :properties:
 :visibility: folded
 :end:
@@ -948,8 +963,8 @@ function load-graph-ontload () {
     NIF-Ontology     ${IFS# repo name} \
     NIF              ${IFS# pattern for remote base (e.g. http://) to swap for local file://,
                        NIF automatically expands to http://ontology.neuinfo.org/NIF} \
-    --zip-location ${PATH_ZIP}  ${IFS# output folder where the loaded graph zip will be exported} \
-    --git-local ${PATH_GIT}     ${IFS# location where git repo will be cloned} \
+    --zip-location ${PATH_ZIP}      ${IFS# output folder where the loaded graph zip will be exported} \
+    --git-local ${PATH_GIT}         ${IFS# location where git repo will be cloned} \
     --branch ${GIT_REF}             ${IFS# git ref (branch, commit, etc.) from which to build} \
     --graphload-config ${PATH_GRAPHLOAD}       ${IFS# path to graphload-base-template.yaml} \
     --graphload-ontologies ${PATH_ONTOLOGIES}  ${IFS# path to ontologies-graph-name.yaml} \
@@ -1135,7 +1150,7 @@ local SVC_PORT=${SVC_PORT:-9000}
 local URL_BASE="http://${SVC_HOST}:${SVC_PORT}"
 local URL_VIEW="${URL_BASE}/scigraph/refine/view/{{id}}"
 local URL_PREVIEW="${URL_BASE}/scigraph/refine/preview/{{id}}"
-local PATH_SERVICES_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_GRAPH}"
+local PATH_RUNTIME_FOLDER_GRAPH="${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}"
 local YAML="${FILE_STEM}.yaml"
 local DT=$(date +%Y%m%dT%H%M%S)
 local YAML_RAW="${FILE_STEM}-${DT}.yaml.raw"
@@ -1156,14 +1171,14 @@ function build-services () {
     # TODO allow urls?
     # make raw
     cat "${PATH_SERVICES}" > "${PATH_YAML_RAW}" || return $?
-    cat "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
+    yq -Sy '' "${PATH_CURIES}" | sed 's/^/    /' >> "${PATH_YAML_RAW}" || return $?
     cat "${PATH_CYPHER_RESOURCES}" >> "${PATH_YAML_RAW}" || return $?
 
     # make services header
     echo "# ${YAML_RAW}" > "${PATH_YAML}"
 
     # make services
-    yq -Y ".graphConfiguration.location = \"${PATH_SERVICES_GRAPH}\" |
+    yq -Y ".graphConfiguration.location = \"${PATH_RUNTIME_FOLDER_GRAPH}\" |
     .serviceMetadata.view.url = \"${URL_VIEW}\" |
     .serviceMetadata.preview.url = \"${URL_PREVIEW}\"
     " "${PATH_YAML_RAW}" >> "${PATH_YAML}" || return $?
@@ -1257,7 +1272,7 @@ function backup-services-config () {
     local EXISTING=${1}
     local PATH_RUNTIME=${2}
     local YAML=${3}
-    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b2-)
+    local E_YAML_RAW=$(head -n 1 "${EXISTING}" | grep "^#" | cut -b3-)
     if [ -n "${E_YAML_RAW}" ]; then
         local YAML_BACKUP="${PATH_RUNTIME}/${E_YAML_RAW//.raw/}"
     else

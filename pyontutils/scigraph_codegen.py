@@ -314,7 +314,10 @@ class Dynamic(SUBCLASS):
     def dispatch(self, path, output='application/json', **kwargs):
         f, args, query_kwargs = self._path_function_arg(path)
         kwargs.update(query_kwargs)
-        return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        try:
+            return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        except TypeError as e:
+            raise TypeError('Did you remember to set parameters in the services config?') from e
 
 
 class Graph(SUBCLASS):
@@ -806,6 +809,11 @@ class State2(State):
                 operationId = Dynamic._path_to_id(path)
 
                 xq = path_dict.pop('x-query')
+                for k in tuple(path_dict):
+                    if k.startswith('x-'):
+                        print(f'Removed unknown key: {k}')
+                        path_dict.pop(k)
+
                 for method_dict in path_dict.values():
                     method_dict['operationId'] = operationId
                     method_dict['x-query'] = xq
@@ -870,6 +878,21 @@ class State2(State):
 
     def tags(self, list_):
         return None, ''
+
+
+def moduleDirect(api_url, basepath, module_name):
+    """ Avoid the need for dynamics altogether """
+    s = state(api_url, basepath)
+    code = s.code()
+    return importDirect(code, module_name)
+
+
+def importDirect(code, module_name):
+    from types import ModuleType
+    compiled = compile(code, '', 'exec')
+    module = ModuleType(module_name)
+    exec(compiled, module.__dict__)
+    return module
 
 
 def main():

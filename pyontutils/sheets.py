@@ -32,7 +32,7 @@ def _FakeService():
 
 def get_oauth_service(api='sheets', version='v4', readonly=True):
     """ outward facing API for accessing oauth creds """
-    return _get_oauth_service(api=api, sheets=sheets, version=version, readonly=readonly)
+    return _get_oauth_service(api=api, version=version, readonly=readonly)
 
 
 def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
