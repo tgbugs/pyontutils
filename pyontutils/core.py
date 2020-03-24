@@ -880,8 +880,19 @@ class OntGraph(rdflib.Graph):
     def subjectGraph(self, subject):
         # some days I am smart, as in years ago when working on neuron stuff
         # TODO do we need to check for duplicates and cycels?
+        # some days I am dumb, and didn't cut at bnodes, but do now
+        seen = set()
         def f(triple, graph):
-            subject, predicate, object = triple
+            _, predicate, object = triple
+            if object in seen:
+                return
+            else:
+                seen.add(object)
+
+            if object != subject and isinstance(object, rdflib.URIRef) or isinstance(object, rdflib.Literal):
+                # cut the graph when we run out of bnodes
+                return
+
             for p, o in graph[object]:
                 yield object, p, o
 
@@ -1166,6 +1177,7 @@ class OntGraph(rdflib.Graph):
         # TODO a version of this that can populate
         # from OntRes directly if conjunctive graph is requested or similar
         # since the individual graphs are already separate (though possibly incorrect)
+        # TODO assert len() triples match
         id = self.boundIdentifier
         #curies = rdflib.URIRef(id + '?section=localConventions')
         meta_id = rdflib.URIRef(id + '?section=metadata')
@@ -1703,6 +1715,7 @@ for rc in (SGR, IXR):
 
 sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
 ixr = IXR(apiEndpoint=None, readonly=True)
+#ixr.port = None
 ixr.Graph = OntGraph
 OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
 [OntTerm.repr_level(verbose=False) for _ in range(2)]
