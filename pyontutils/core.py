@@ -153,7 +153,8 @@ class OntRes(idlib.Stream):
 
     #@oq.utils.mimicArgs(data_next)  # TODO
     def populate_next(self, graph, *args, **kwargs):
-        self._populate(graph, self.data_next(**kwargs))
+        gen = self.data_next(**kwargs)
+        self._populate(graph, gen)
 
     @property
     def graph(self, cypher=None):
@@ -246,6 +247,10 @@ class OntMeta(OntRes):
             itio.name = self.identifier  # some rdflib parses need a name
             graph.parse(file=itio, format=self.format)
 
+    def populate_next(self, graph, *args, **kwargs):
+        format, *header_chunks, (resp, gen) = self.data_next(**kwargs)
+        self._populate(graph, chain(header_chunks, gen))
+
     def __eq__(self, other):
         # FIXME this is ... complicated
         return self.identifier_bound == other.identifier_bound
@@ -310,6 +315,7 @@ class OntMetaIri(OntMeta, OntIdIri):
         yield from self.data_next(yield_response_gen=yield_response_gen)
 
     def data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None,
+                  conventions_type=None,  # expect header detection conventions
                   # FIXME probably all we need are
                   # the inversion of the streams
                   # data meta local_conventions stuff_successor_stream_needs
@@ -331,7 +337,21 @@ class OntMetaIri(OntMeta, OntIdIri):
         first = next(gen)
         # TODO better type detection
 
-        if first.startswith(b'<?xml'):
+        if conventions_type is not None:
+            # in the case where the type is known/assumed in advance
+            # failure to match conventions is a good thing because
+            # it signals that something unexpected has happened
+            self.format = conventions_type.format
+            start = conventions_type.start
+            stop = conventions_type.stop
+            sentinel = conventions_type.sentinel
+            # FIXME TODO another way around this would be to use
+            # local conventions in a _standard_ way to allow multiple
+            # different values to have the same _surface_ representation
+            # making it easier to parse ... HRM this seems like it might
+            # be a more robust approach ... though annoying for the greppers
+
+        elif first.startswith(b'<?xml'):
             start = b'<owl:Ontology'
             stop = b'</owl:Ontology>'
             sentinel = b'TODO'
@@ -340,20 +360,24 @@ class OntMetaIri(OntMeta, OntIdIri):
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
             # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
-            stop = b' .\n'  # FIXME can be fooled by strings
-            sentinel = b'### Annotations'  # FIXME only works for ttlser
+            stop = b'\ \.$'  # FIXME can be fooled by strings
+            sentinel = b'^###\ '  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
             # also needs to be a regex that ends in [^owl:Ontology]
             self.format = 'text/turtle'
 
         elif first.startswith(b'Prefix(:='):
+            # FIXME regex will likely cause issues here
             start = b'\nOntology'
             stop = b')\n\n'  # FIXME I don't think owl functional syntax actually has a proper header :/
-            sentient = b'TODO'
+            sentinel = b'TODO'
             self.format = 'text/owl-functional'
         else:
             'text/owl-manchester'
             raise ValueError(first.decode())
+
+        if conventions_type is None:
+            conventions_type = idlib.conventions.type.ConvTypeBytesHeader(format, start, stop, sentinel)
 
         yield self.format  # we do this because self.format needs to be accessible before loading the graph
 
@@ -361,78 +385,98 @@ class OntMetaIri(OntMeta, OntIdIri):
         searching = False
         header_data = b''
         for chunk in chain((first,), gen):
-            if start in chunk:
-                searching = True
-                # yield content prior to start since it may include a stop
-                # that we don't actually want to stop at
-                start_end_index = chunk.index(start) + len(start)
-                header_first_chunk = chunk[:start_end_index]
-                if yield_response_gen:
-                    header_data += header_first_chunk
+            if not searching:
+                start_end_index = conventions_type.findStart(chunk)
+                if start_end_index is not None:
+                    searching = True
+                    # yield content prior to start since it may include a stop
+                    # that we don't actually want to stop at
+                    header_first_chunk = chunk[:start_end_index]
+                    if yield_response_gen:
+                        header_data += header_first_chunk
 
-                yield header_first_chunk
-                chunk = chunk[start_end_index:]
+                    yield header_first_chunk
+                    chunk = chunk[start_end_index:]
 
-            if searching and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
-                # FIXME edge case where a stop crosses a chunk boundary
-                # if stop is short enough it may make sense to do a naieve contains check
-                # to start things off ...
+            if searching: #and stop in chunk:  # or test_chunk_ends_with_start_of_stop(stop, chunk)
+                stop_end_index = conventions_type.findStop(chunk)
+                if stop_end_index is not None:
+                    # FIXME edge case where a stop crosses a chunk boundary
+                    # if stop is short enough it may make sense to do a naieve contains check
+                    # to start things off ...
 
-                stop_end_index = chunk.index(stop) + len(stop)
-                header_last_chunk = chunk[:stop_end_index]
-                if yield_response_gen:
-                    header_data += header_last_chunk
+                    #stop_end_index = chunk.index(stop) + len(stop)
+                    header_last_chunk = chunk[:stop_end_index]
+                    if yield_response_gen:
+                        header_data += header_last_chunk
 
-                yield header_last_chunk
-                if yield_response_gen:
-                    if self.format == 'application/rdf+xml':
-                        header_data += close_rdf
+                    yield header_last_chunk
+                    if yield_response_gen:
+                        if self.format == 'application/rdf+xml':
+                            header_data += close_rdf
 
-                    self._graph_sideload(header_data)
-                    chunk = chunk[stop_end_index:]
-                    yield resp, chain((chunk,), gen)
+                        self._graph_sideload(header_data)
+                        chunk = chunk[stop_end_index:]
+                        yield resp, chain((chunk,), gen)
 
-                else:
-                    # if we are not continuing then close the xml tags
-                    if self.format == 'application/rdf+xml':
-                        yield close_rdf
+                    else:
+                        # if we are not continuing then close the xml tags
+                        if self.format == 'application/rdf+xml':
+                            yield close_rdf
 
-                    resp.close()
+                        resp.close()
 
-                return
+                    return
 
-            elif not searching and sentinel in chunk:
-                sent_end_index = chunk.index(sentinel) + len(sentinel)
-                header_last_chunk = chunk[:sent_end_index]
-                if yield_response_gen:
-                    header_data += header_last_chunk
+                else:  # I LOVE CODE DUPLICATION DON'T YOU?
+                    # FIXME TODO need a sentinel value where there isn't a header
+                    # so that we can infer that there is no header, or at least
+                    # no headerish data at the head of the file
+                    if yield_response_gen:
+                        header_data += chunk
 
-                yield header_last_chunk
-                if yield_response_gen:
-                    if self.format == 'application/rdf+xml':
-                        header_data += close_rdf
+                    yield chunk
 
-                    self._graph_sideload(header_data)
-                    chunk = chunk[sent_end_index:]
-                    yield resp, chain((chunk,), gen)
+            else:  # and this is why you need the walrus operator :/ but then no < 3.8 >_<
+                sent_end_index = conventions_type.findSentinel(chunk)
+                if sent_end_index is not None:
+                    #sent_end_index = chunk.index(sentinel) + len(sentinel)
+                    header_last_chunk = chunk[:sent_end_index]
+                    if yield_response_gen:
+                        header_data += header_last_chunk
 
-                else:
-                    # if we are not continuing then close the xml tags
-                    if self.format == 'application/rdf+xml':
-                        yield close_rdf
+                    yield header_last_chunk
+                    if yield_response_gen:
+                        if self.format == 'application/rdf+xml':
+                            header_data += close_rdf
 
-                    resp.close()
+                        self._graph_sideload(header_data)
+                        chunk = chunk[sent_end_index:]
+                        yield resp, chain((chunk,), gen)
 
-                return
+                    else:
+                        # if we are not continuing then close the xml tags
+                        if self.format == 'application/rdf+xml':
+                            yield close_rdf
 
-            else:
-                # FIXME TODO need a sentinel value where there isn't a header
-                # so that we can infer that there is no header, or at least
-                # no headerish data at the head of the file
-                if yield_response_gen:
-                    header_data += chunk
+                        resp.close()
 
-                yield chunk
+                    return
+
+                else:  # I LOVE CODE DUPLICATION DON'T YOU?
+                    # FIXME TODO need a sentinel value where there isn't a header
+                    # so that we can infer that there is no header, or at least
+                    # no headerish data at the head of the file
+                    if yield_response_gen:
+                        header_data += chunk
+
+                    yield chunk
+
+        else:
+            # the case where there is no header so we don't return inside the loop
+            log.warning('missed sentinel')
+            yield resp, gen
+            return
 
 
 class OntResIri(OntIdIri, OntResOnt):
@@ -470,7 +514,9 @@ class OntResIri(OntIdIri, OntResOnt):
         # are simply a matter of representaiton, not differences in information
         # (i.e. that there isn't a function that can 1:1 interconvert)
 
-        format, *header_chunks, (resp, gen) = self.metadata().data_next(yield_response_gen=True, **kwargs)
+        generator = self.metadata().data_next(yield_response_gen=True, **kwargs)
+        l = list(generator)
+        format, *header_chunks, (resp, gen) = l
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible
