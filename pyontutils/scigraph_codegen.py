@@ -887,8 +887,16 @@ class State2(State):
         return None, ''
 
 
-def moduleDirect(api_url, basepath, module_name):
+def moduleDirect(basepath, module_name, *, version=2):
     """ Avoid the need for dynamics altogether """
+    if version < 2:
+        state = State
+        docs_path = 'api-docs'
+    else:
+        state = State2
+        docs_path = 'swagger.json'
+
+    api_url = f'{basepath}/{docs_path}'
     s = state(api_url, basepath)
     code = s.code()
     return importDirect(code, module_name)
