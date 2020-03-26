@@ -55,17 +55,6 @@ oq.utils.log.addHandler(log.handlers[0])
 
 # common funcs
 
-def relative_resources(pathstring, failover='nifstd/resources'):
-    """ relative paths to resources in this repository
-        `failover` matches the location relative to the
-        github location (usually for prov purposes) """
-
-    if working_dir is None:
-        return Path(failover, pathstring).resolve()
-    else:
-        return Path(auth.get_path('resources'), pathstring).resolve().relative_to(working_dir.resolve())
-
-
 def standard_checks(graph):
     def cardinality(predicate, card=1):
         for subject in sorted(set(graph.subjects())):

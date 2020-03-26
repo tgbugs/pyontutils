@@ -1,7 +1,8 @@
 import sys
 from lxml import etree
-from pyontutils.core import Source, LabelsBase, Collector, relative_resources
+from pyontutils.core import Source, LabelsBase, Collector
 from pyontutils.utils import Async, deferred
+from pyontutils.config import auth
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, WHSSD
 from pyontutils.namespaces import makePrefixes, NCBITaxon, UBERON, nsExact
 from pyontutils.combinators import restriction
@@ -40,7 +41,7 @@ class Artifacts(Collector):
 
 
 class WHSSDSrc(resSource):
-    sourceFile = lambda v: relative_resources(f'WHS_SD_rat_atlas_v{v}.label')
+    sourceFile = lambda v: auth.get_path('resources') / f'WHS_SD_rat_atlas_v{v}.label'
     source_original = True
     artifact = lambda v: getattr(Artifacts, f'WHSSD{v}')
 
@@ -72,7 +73,7 @@ class WHSSDSrc2(WHSSDSrc):
 
 
 class WHSSDilfSrc(resSource):
-    sourceFile = lambda v: relative_resources(f'WHS_SD_rat_atlas_v{v}_labels.ilf')
+    sourceFile = lambda v: auth.get_path('resources') / f'WHS_SD_rat_atlas_v{v}_labels.ilf'
     source_original = True
     artifact = lambda v: getattr(Artifacts, f'WHSSD{v}')
     predicates = lambda v: {ilxtr.labelPartOf: ilxtr[f'labelPartOf-whssd-{v}']}  # FIXME

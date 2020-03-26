@@ -2,7 +2,8 @@ import re
 from collections import defaultdict, Counter
 from ttlser import natsort
 from pyontutils.core import LabelsBase, Collector, Source, resSource, ParcOnt
-from pyontutils.core import makePrefixes, relative_resources
+from pyontutils.core import makePrefixes
+from pyontutils.config import auth
 from pyontutils.namespaces import nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP
 from pyontutils.namespaces import NCBITaxon, UBERON
@@ -105,7 +106,7 @@ class Artifacts(Collector):
 
 
 class PaxSr_6(resSource):
-    sourceFile = relative_resources('paxinos09names.txt')
+    sourceFile = auth.get_path('resources') / 'paxinos09names.txt'
     artifact = Artifacts.PaxRat6
 
     @classmethod
@@ -264,22 +265,22 @@ class PaxSrAr(resSource):
 
 
 class PaxSrAr_4(PaxSrAr):
-    sourceFile = relative_resources('pax-4th-ed-indexes.txt')
+    sourceFile = auth.get_path('resources') / 'pax-4th-ed-indexes.txt'
     artifact = Artifacts.PaxRat4
 
 
 class PaxSrAr_6(PaxSrAr):
-    sourceFile = relative_resources('pax-6th-ed-indexes.txt')
+    sourceFile = auth.get_path('resources') / 'pax-6th-ed-indexes.txt'
     artifact = Artifacts.PaxRat6
 
 
 class PaxMSrAr_2(PaxSrAr):
-    sourceFile = relative_resources('paxm-2nd-ed-indexes.txt')
+    sourceFile = auth.get_path('resources') / 'paxm-2nd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse2
 
 
 class PaxMSrAr_3(PaxSrAr):
-    sourceFile = relative_resources('paxm-3rd-ed-indexes.txt')
+    sourceFile = auth.get_path('resources') / 'paxm-3rd-ed-indexes.txt'
     artifact = Artifacts.PaxMouse3
 
 

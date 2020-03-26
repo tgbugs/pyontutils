@@ -18,7 +18,7 @@ from pathlib import Path
 from git import Repo
 from rdflib import Graph, URIRef
 from pyontutils.core import Class, Source, resSource, ParcOnt, LabelsBase, Collector, OntTerm
-from pyontutils.core import build, relative_resources
+from pyontutils.core import build
 from pyontutils.utils import getSourceLine, subclasses
 from pyontutils.utils import TermColors as tc
 from pyontutils.config import auth, working_dir
@@ -413,7 +413,7 @@ class LocalSource(Source):
 
 
 class HCPMMPSrc(resSource):
-    sourceFile = relative_resources('human_connectome_project_2016.csv')
+    sourceFile = auth.get_path('resources') / 'human_connectome_project_2016.csv'
     source_original = True
     artifact = Artifacts.HCPMMP
 
