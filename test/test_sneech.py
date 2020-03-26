@@ -32,7 +32,6 @@ class TestFile(unittest.TestCase):
         tf = tt / 'sneeeeeeeeeeeeeeeeeeeeeeeeeech.ttl'
         g = snchf.writeTtl(tf)
         g.debug()
-        assert False
 
 
 class TestWrangler(unittest.TestCase):

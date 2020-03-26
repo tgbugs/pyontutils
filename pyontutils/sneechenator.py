@@ -5,6 +5,7 @@
 
 from urllib.parse import urlparse
 import yaml
+import idlib
 import rdflib
 import ontquery as oq
 import augpathlib as aug
@@ -622,8 +623,13 @@ class InterLexSneechenator(Sneechenator):
 
     def alreadyMapped(self, namespace, could_map):
         ori = OntResIri(f'http://localhost:8515/base/external/mapped?iri={namespace}')
-        ori.graph_next(send_data='\n'.join(str(m) for m in could_map))
-        breakpoint()
+        ct = idlib.conventions.type.ConvTypeBytesHeader(
+            format='text/turtle',
+            start=b'\ (?:snchn)?:(PartialIndexGraph)',
+            stop=b'\ \.$',
+            sentinel=b'^###\ ')
+        g = ori.graph_next(send_data='\n'.join(str(m) for m in could_map), conventions_type=ct)
+        return g
 
 
 def test():
