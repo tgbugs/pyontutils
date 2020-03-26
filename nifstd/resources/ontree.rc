@@ -33,6 +33,7 @@ command_args="--bind ${socket}
 --user ${SVCUSER}
 --log-level ${LOG_LEVEL}
 --log-file ${LOG}
+--capture-output
 nifstd_tools.ontree_server:app"
 retry='TERM/30/KILL/5'
 

@@ -25,7 +25,7 @@ import re
 import asyncio
 import subprocess
 from copy import deepcopy
-from pprint import pprint
+from pprint import pformat
 from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
@@ -33,6 +33,7 @@ from urllib.parse import parse_qs
 import yaml
 import rdflib
 import htmlfn as hfn
+import networkx as nx
 import ontquery as oq
 from flask import (Flask,
                    url_for,
@@ -47,8 +48,10 @@ from flask import (Flask,
 from docopt import docopt, parse_defaults
 from htmlfn import htmldoc, atag, nbsp
 from htmlfn import render_table, table_style
+from rdflib.extras import external_graph_libs as egl
+from requests.exceptions import HTTPError as rHTTPError
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm
+from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
@@ -75,7 +78,7 @@ sgd = scigraph.Dynamic(cache=False, verbose=True)
 # data endpoint
 #_dataBP = 'https://sparc.olympiangods.org/scigraph'
 _dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
-data_sgd = scigraph.Dynamic(cache=True, verbose=True)
+data_sgd = scigraph.Dynamic(cache=True, verbose=True, do_error=True)
 data_sgd._basePath = _dataBP
 data_sgc = scigraph.Cypher(cache=True, verbose=True)
 data_sgc._basePath = _dataBP
@@ -130,7 +133,7 @@ def time():
 
 
 def node_list(nodes):
-    pprint(nodes)
+    log.debug(pformat(nodes))
     # FIXME why the heck are these coming in as lbl now?!?!
     s = sorted([(n['lbl'], atag(n['id'], n['lbl'], new_tab=True)) for n in nodes])
     return '<br>\n'.join([at for _, at in s])
@@ -192,71 +195,174 @@ def cleanBad(json):
 def pb(blob):
     print(blob['sub'], blob['pred'], blob['obj'])
 
+
+class Edge(tuple):
+    @classmethod
+    def fromNx(cls, edge):
+        s, o, p = [e.toPython() if isinstance(e, rdflib.URIRef) else e
+                   for e in edge]  # FIXME need to curie here or elsewhere?
+        return cls((s, p, o))
+
+    @classmethod
+    def fromOboGraph(cls, blob, curies=None):
+        t = blob['sub'], blob['pred'], blob['obj']
+        if curies:
+            t = [expand(e) for e in t]  # FIXME sigh OntId OntCuries etc etc local conventions etc ...
+
+        self = cls(t)
+        self._blob = blob
+        return self
+
+    @property
+    def s(self): return self[0]
+    @property
+    def p(self): return self[1]
+    @property
+    def o(self): return self[2]
+    subject = s
+    predicate = p
+    object = o
+
+    def asTuple(self):
+        return (*self,)
+        #return self.s, self.p, self.o
+
+    def asRdf(self, curies=None):
+        return rdflib.URIRef(self.s), rdflib.URIRef(self.p), rdflib.URIRef(self.o)
+
+    def asOboGraph(self):
+        if not hasattr(self, '_blob'):
+            self._blob = {'sub': self[0],
+                          'pred': self[1],
+                          'obj': self[2]}
+
+        return self._blob
+
+
+def listIn(container, maybe_contained, *, strict=True):
+    """ strictly sublists no equality here """
+    lc = len(container)
+    lmc = len(maybe_contained)
+    if lc > lmc or not strict and lc == lmc:
+        z = maybe_contained[0]
+        if z in container:
+            substart = container.index(z)
+            subcontained = maybe_contained[1:]
+            if not subcontained:
+                return substart
+
+            ssp1 = substart + 1 
+            subcontainer = container[ssp1:]
+            maybe = listIn(subcontainer, subcontained, strict=False)
+            if maybe is None or maybe > 0:
+                maybe = listIn(subcontainer, maybe_contained, strict=False)
+                if maybe is not None:
+                    return ssp1 + maybe
+            else:
+                return substart
+
+
+def zap(ordered_nodes, predicates, oe2, blob):
+    """ don't actually zap, wait until the end so that all
+        deletions happen after all additions """
+
+    e = Edge((ordered_nodes[0].toPython(),
+            '-'.join(predicates),
+            ordered_nodes[-1].toPython()))
+    new_e = e.asOboGraph()
+    blob['edges'].append(new_e)
+    to_remove = [e.asOboGraph() for e in oe2]
+    return to_remove
+
+
 def simplify(path, blob):
-    if 'housing-lyphs' in path:
-        collapse = [['apinatomy:conveys', 'apinatomy:source', 'apinatomy:rootOf'],
-                    ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:rootOf'],]
-        exclude = set(p for c in collapse for p in c)
-        excluded = [e for e in blob['edges'] if e['pred'] in exclude]
-        if excluded:  # on the off chance that there was nothing to exclude, however unlikely
-            pred_start = set(c[0] for c in collapse)
-            pred_end = set(c[-1] for c in collapse)
+    if 'housing-lyphs' in path or 'bundles' in path or 'soma-processes' in path:
+        collapse = [
+            # apparently annotates breaks this for some reason?
+            #['apinatomy:annotates', 'apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
+            #['apinatomy:annotates', 'apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],
+            #['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
+            #['apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],  # FIXME apparently the 2nd round here fails ?!?!
 
-            subjects = [e['sub'] for e in excluded]
-            objects = [e['obj'] for e in excluded]
-            cs = Counter(subjects).most_common()
-            co = Counter(objects).most_common()
-            # for 'OUTGOING' aka ttl serialization order
-            # objects should be unique, subjects might not be
-            # therefore construct +backwards+ forward since objects
-            # are gurantted to be unique
-            if co[0][1] > 1:
-                log.critical(f'objects were not unique for {path}')
-                return blob
+            ['apinatomy:conveys', 'apinatomy:source'],
+            ['apinatomy:conveys', 'apinatomy:target'],
 
-            # good enough for now
-            ends = [e for e in excluded if e['pred'] in pred_end]
-            other = [e for e in excluded if e['pred'] not in pred_end]
-            while other:
-                for o_blob in tuple(other):
-                    o_o = o_blob['obj']
-                    #pb(o_blob)
-                    for e_blob in ends:
-                        if o_o == e_blob['sub']:
-                            e_blob['sub'] = o_blob['sub']
-                            e_blob['pred'] = o_blob['pred'] + '-' + o_o + '-' + e_blob['pred']
-                            #pb(e_blob)
-                            if o_blob in other:
-                                # FIXME this assumes paths to the same node
-                                # always occur at the same depth otherwise
-                                # one path could be removed a step before
-                                # and connection will dangle for some edges
-                                other.remove(o_blob)
+            ['apinatomy:fasciculatesIn', 'apinatomy:external'],
 
-            # FIXME this should work but seems to fail for some reason
-            '''
-            starts = [e for e in excluded if e['pred'] in pred_start]
-            other = [e for e in excluded if e['pred'] not in pred_start]
-            while other:
-                print(len(other))
-                for o_blob in tuple(other):
-                    o_sub = o_blob['sub']
-                    for s_blob in starts:
-                        if s_blob['obj'] == o_sub:
-                            s_blob['obj'] = o_blob['obj']
-                            s_blob['pred'] = s_blob['pred'] + '-' + o_sub + '-' + o_blob['pred']
-                            pb(o_blob)
-                            pb(s_blob)
-                            other.remove(o_blob)
-            '''
+            # FIXME should this be showing up in the query results at all?
+            ['apinatomy:fasciculatesIn', 'apinatomy:supertype', 'apinatomy:external'],
 
-            included = [e for e in blob['edges'] if e['pred'] not in exclude]
-            collapsed = ends
-            blob['edges'] = included + collapsed
-    else:
-        pass
+            # why are some of these missing external but in the graph ?!? the answer is that the previous coll was missing
+            # FIXME sub collapses happen simultaneously so those edges will still be added and you will get doubling
+            #['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype'],
+            ['apinatomy:fasciculatesIn', 'apinatomy:layerIn', 'apinatomy:external'],
 
-    return blob
+            # can't include next it destroys this due to inducing everything to be weakly connected (urg)
+            # since next is the linker along the tree we definitely cannot collapse that
+            ['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype', 'apinatomy:external'],
+
+            ['<skip1'],
+            ['skip1>', 'end'],
+            ['skip2>', 'end'],
+            ['skip3>', 'skip4>', 'end'],
+
+            #['apinatomy:root', 'apinatomy:internalIn', 'apinatomy:cloneOf', 'apinatomy:supertype'],
+            #['apinatomy:supertype', 'apinatomy:cloneOf', 'apinatomy:internalIn', 'apinatomy:root'],
+        ]
+
+        to_remove = []
+        for coll in collapse:
+            exclude = set(p for p in coll)
+            candidates = [e for e in blob['edges'] if e['pred'] in exclude]
+            for c in candidates:
+                # make sure we can remove the edges later
+                # if they have meta the match will fail
+                if 'meta' in c:
+                    c.pop('meta')
+
+            if candidates:
+                edges = [Edge.fromOboGraph(c) for c in candidates]
+                g = OntGraph().populate_from_triples(e.asRdf() for e in edges)
+                nxg = egl.rdflib_to_networkx_multidigraph(g)
+                connected = list(nx.weakly_connected_components(nxg))  # FIXME may not be minimal
+                ends = [e.asRdf()[-1] for e in edges if e.p == coll[-1]]
+                for c in connected:
+                    #log.debug('\n' + pformat(c))
+                    nxgt = nx.MultiDiGraph()
+                    nxgt.add_edges_from(nxg.edges(c, keys=True))
+                    ordered_nodes = list(nx.topological_sort(nxgt))
+                    paths = [p
+                             for n in nxgt.nodes()
+                             for e in ends
+                             for p in list(nx.all_simple_paths(nxgt, n, e))
+                             if len(p) == len(coll) + 1]
+
+                    for path in sorted(paths):
+                        ordered_edges = nxgt.edges(path, keys=True)
+                        oe2 = [Edge.fromNx(e) for e in ordered_edges]
+                        predicates = [e.p for e in oe2]
+                        #log.debug('\n' + pformat(oe2))
+                        if predicates == coll: #in collapse:
+                            to_remove.extend(zap(path, predicates, oe2, blob))
+                        else:  # have to retain this branch to handle cases where the end predicate is duplicated
+                            log.error('\n' + pformat(predicates) +
+                                      '\n' + pformat(coll))
+                            for preds in [coll]:
+                                sublist_start = listIn(predicates, preds)
+                                if sublist_start is not None:
+                                    i = sublist_start
+                                    j = i + len(preds)
+                                    npath = path[i:j + 1]  # + 1 to include final node
+                                    oe2 = oe2[i:j]
+                                    predicates = predicates[i:j]
+                                    to_remove.extend(zap(npath, predicates, oe2, blob))
+
+    for r in to_remove:
+        if r in blob['edges']:
+            blob['edges'].remove(r)
+
+    #log.debug('\n' + pformat(blob['edges']))
+    return blob  # note that this is in place modification so sort of supruflous
 
 
 def sparc_dynamic(path, wgb, process=lambda x, y: y):
@@ -276,21 +382,35 @@ def sparc_dynamic(path, wgb, process=lambda x, y: y):
         try:
             data_sgd._get = data_sgd._normal_get
             j = data_sgd.dispatch(path, **args)
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
         finally:
             data_sgd._get = _old_get
     else:
-        j = data_sgd.dispatch(path, **args)
+        try:
+            j = data_sgd.dispatch(path, **args)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
 
     j = process(path, j)
 
-    if not j['edges']:
-        return node_list(j['nodes'])  # FIXME ... really should error?
-
-        log.error(pprint(j))
+    if j is None or 'edges' not in j:
+        log.error(pformat(j))
         return abort(400)
 
-    if path.endswith('housing-lyphs-alt'):  # FIXME hack
-        root = 'CL:0000540'
+    elif not j['edges']:
+        return node_list(j['nodes'])  # FIXME ... really should error?
+
+    if path.endswith('housing-lyphs'):  # FIXME hack
+        root = 'NLX:154731'
         #direction = 'INCOMING'
     else:
         root = None
@@ -811,9 +931,17 @@ def server(api_key=None, verbose=False):
         else:
             format_ = None
 
-        j = sgd.dispatch(path, **args)
+        try:
+            j = sgd.dispatch(path, **args)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
+
         if j is None or 'edges' not in j or not j['edges']:
-            log.error(pprint(j))
+            log.error(pformat(j))
             log.debug(sgd._last_url)
             return abort(400)
 
@@ -1068,12 +1196,13 @@ def test():
     app = server()
     (route_, route_docs, route_filequery, route_examples, route_iriquery,
      route_query, route_dynamic, route_sparc_demos_isan2019_flatmap_queries,
-     route_sparc_demos_isan2019_neuron_connectivity,
+     route_sparc_demos_isan2019_neuron_connectivity, route_sparc_dynamic,
     ) = (app.view_functions[k]
          for k in ('route_', 'route_docs', 'route_filequery',
                    'route_examples', 'route_iriquery', 'route_query',
                    'route_dynamic', 'route_sparc_demos_isan2019_flatmap_queries',
                    'route_sparc_demos_isan2019_neuron_connectivity',
+                   'route_sparc_dynamic',
          ))
 
     #for name, path in demo_examples:
@@ -1102,8 +1231,11 @@ def test():
         try:
             resp = route_dynamic('this/endpoint/does/not/exist')
             assert False, 'should have failed'
-        except TypeError:
+        except ValueError:
             pass
+
+    def test_simple_dynamic():
+        resp = route_sparc_dynamic('demos/apinat/housing-lyphs')
 
     def test_examples():
         for _, predicate, root, *_ in extra_examples + examples:
@@ -1130,6 +1262,8 @@ def test():
             if args and 'restriction' in args[0]:
                 request.args.pop('restriction')
 
+    test_simple_dynamic()
+    return
     test_dynamic()
     test_dynamic_negative()
     request.args['depth'] = 1
