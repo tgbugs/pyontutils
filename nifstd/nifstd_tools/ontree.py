@@ -60,6 +60,7 @@ from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as f
 from pyontutils.closed_namespaces import rdfs, rdf, owl
 from pyontutils.sheets import Sheet
 from pyontutils.namespaces import OntCuries
+from pyontutils.scigraph_codegen import moduleDirect
 from typing import Union, Dict, List, Tuple, Generator
 from nifstd_tools.sheets_sparc import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
 from nifstd_tools import __version__
@@ -70,18 +71,11 @@ SemanticOptional = Union[Semantic, str, None]
 
 log = makeSimpleLogger('ontree')
 
+# FIXME these will go to network which is :/
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
 sgc = scigraph.Cypher(cache=False, verbose=True)
 sgd = scigraph.Dynamic(cache=False, verbose=True)
-
-# data endpoint
-#_dataBP = 'https://sparc.olympiangods.org/scigraph'
-_dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
-data_sgd = scigraph.Dynamic(cache=True, verbose=True, do_error=True)
-data_sgd._basePath = _dataBP
-data_sgc = scigraph.Cypher(cache=True, verbose=True)
-data_sgc._basePath = _dataBP
 
 # This was for ttl creation extension for sparc view
 # ixr.setup(instrumented=OntTerm)
@@ -365,7 +359,7 @@ def simplify(path, blob):
     return blob  # note that this is in place modification so sort of supruflous
 
 
-def sparc_dynamic(path, wgb, process=lambda x, y: y):
+def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
     args = dict(request.args)
     if 'direction' in args:
         direction = args.pop('direction')
@@ -663,6 +657,15 @@ demo_examples = (
 )
 
 def server(api_key=None, verbose=False):
+    # data endpoint
+    #_dataBP = 'https://sparc.olympiangods.org/scigraph'
+    _dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
+    scigraphd = moduleDirect(_dataBP, 'scigraphd')
+    data_sgd = scigraphd.Dynamic(cache=True, verbose=True, do_error=True)
+    data_sgd._basePath = _dataBP
+    data_sgc = scigraphd.Cypher(cache=True, verbose=True)
+    data_sgc._basePath = _dataBP
+
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
     resources = auth.get_path('resources')
@@ -912,11 +915,11 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/sparc/simple/dynamic/<path:path>', methods=['GET'])
     def route_sparc_simple_dynamic(path):
-        return sparc_dynamic(path, wgb, simplify)
+        return sparc_dynamic(data_sgd, data_sgc, path, wgb, simplify)
 
     @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
     def route_sparc_dynamic(path):
-        return sparc_dynamic(path, wgb)
+        return sparc_dynamic(data_sgd, data_sgc, path, wgb)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
