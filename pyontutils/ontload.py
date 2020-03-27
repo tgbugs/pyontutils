@@ -67,10 +67,9 @@ from git.repo import Repo
 from docopt import parse_defaults
 from joblib import Parallel, delayed
 from ttlser import CustomTurtleSerializer
-from pyontutils.core import makeGraph
+from pyontutils.core import OntGraph
 from pyontutils.utils import noneMembers, TODAY, setPS1, refile, TermColors as tc
-from pyontutils.namespaces import getCuries
-from pyontutils.namespaces import makePrefixes, definition  # TODO make prefixes needs an all...
+from pyontutils.namespaces import getCuries, OntCuries
 from pyontutils.hierarchies import creatTree
 from pyontutils.closed_namespaces import rdf, rdfs, owl, skos, oboInOwl, dc
 try:
@@ -459,7 +458,7 @@ def load_header(filepath, remote=False):
             raw = f.read()
 
     if oo in raw:  # we only care if there are imports or an ontology iri
-        scratch = rdflib.Graph()
+        scratch = OntGraph()
         if infmt == 'turtle':
             data, rest = raw.split(b'###', 1)
         elif infmt == None:  # assume xml
@@ -519,7 +518,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                         # not add to them (at least in pyontutils land)
                         raw = b''
             if oo in raw:  # we only care if there are imports or an ontology iri
-                scratch = rdflib.Graph()
+                scratch = OntGraph()
                 if infmt == 'turtle':
                     data, rest = raw.split(b'###', 1)
                 elif infmt == None:  # assume xml
@@ -587,7 +586,7 @@ def loadall(git_local, repo_name, local=False, dobig=False):
 
     done = []
     filenames = [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
-    graph = rdflib.Graph()
+    graph = OntGraph()
     for f in filenames:
         print(f)
         done.append(os.path.basename(f))
@@ -618,40 +617,37 @@ def loadall(git_local, repo_name, local=False, dobig=False):
     return graph
 
 def normalize_prefixes(graph, curies):
-    mg = makeGraph('nifall', makePrefixes('owl', 'skos', 'oboInOwl'), graph=graph)
-    mg.del_namespace('')
-
-    old_namespaces = list(graph.namespaces())
-    ng_ = makeGraph('', prefixes=makePrefixes('oboInOwl', 'skos'))
-    [ng_.g.add(t) for t in mg.g]
-    [ng_.add_namespace(n, p) for n, p in curies.items() if n != '']
-    #[mg.add_namespace(n, p) for n, p in old_namespaces if n.startswith('ns') or n.startswith('default')]
-    #[mg.del_namespace(n) for n in list(mg.namespaces)]
-    #graph.namespace_manager.reset()
-    #[mg.add_namespace(n, p) for n, p in wat.items() if n != '']
-    return mg, ng_
+    new_graph = OntGraph()
+    oc = OntCuries.new()
+    curies.pop('', None)
+    curies['rdf'] = str(rdf)
+    curies['rdfs'] = str(rdfs)
+    oc(curies)
+    oc.populate(new_graph)
+    [new_graph.add(t) for t in graph]
+    return new_graph
 
 def import_tree(graph, ontologies, **kwargs):
     for ontology in ontologies:
         thisfile = Path(ontology).name
         print(thisfile)
-        mg = makeGraph('', graph=graph)
-        mg.add_known_namespaces('owl', 'obo', 'dc', 'dcterms', 'dctypes', 'skos', 'NIFTTL')
-        j = mg.make_scigraph_json('owl:imports', direct=True)
+        OntCuries.populate(graph)
+        j = graph.asOboGraph('owl:imports', restriction=False)
         try:
-            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=mg.namespaces, **kwargs)
+            t, te = creatTree(*Query(f'NIFTTL:{thisfile}', 'owl:imports', 'OUTGOING', 30), json=j, prefixes=dict(graph.namespace_manager), **kwargs)
             #print(t)
             yield t, te
         except KeyError:
             print(tc.red('WARNING:'), 'could not find', ontology, 'in import chain')  # TODO zap onts w/o imports
 
-def for_burak(ng_):
-    syn_predicates = (ng_.expand('OBOANN:synonym'),
-                      ng_.expand('OBOANN:acronym'),
-                      ng_.expand('OBOANN:abbrev'),
-                      ng_.expand('NIFRID:synonym'),
-                      ng_.expand('NIFRID:acronym'),
-                      ng_.expand('NIFRID:abbrev'),
+def for_burak(graph):
+    nm = graph.namespace_manager
+    syn_predicates = (nm.expand('OBOANN:synonym'),
+                      nm.expand('OBOANN:acronym'),
+                      nm.expand('OBOANN:abbrev'),
+                      nm.expand('NIFRID:synonym'),
+                      nm.expand('NIFRID:acronym'),
+                      nm.expand('NIFRID:abbrev'),
                       oboInOwl.hasExactSynonym,
                       oboInOwl.hasNarrowSynonym,
                       oboInOwl.hasBroadSynonym,
@@ -660,20 +656,19 @@ def for_burak(ng_):
                       rdflib.URIRef('http://purl.obolibrary.org/obo/go#systematic_synonym'),
                      )
     lab_predicates = rdfs.label,
-    def inner(ng):
-        graph = ng.g
-        for s in graph.subjects(rdf.type, owl.Class):
+    def inner(graph):
+        for s in graph[:rdf.type:owl.Class]:
             if not isinstance(s, rdflib.BNode):
-                curie = ng.qname(s)
-                labels = [o for p in lab_predicates for o in graph.objects(s, p)
+                curie = nm._qhrm(s)  # FIXME
+                labels = [o for p in lab_predicates for o in graph[s:p]
                           if not isinstance(o, rdflib.BNode)]
-                synonyms = [o for p in syn_predicates for o in graph.objects(s, p)
+                synonyms = [o for p in syn_predicates for o in graph[s:p]
                             if not isinstance(o, rdflib.BNode)]
-                parents = [ng.qname(o) for o in graph.objects(s, rdfs.subClassOf)
+                parents = [nm._qhrm(o) for o in graph[s:rdfs.subClassOf]  # FIXME
                            if not isinstance(o, rdflib.BNode)]
                 yield [curie, labels, synonyms, parents]
 
-    records = {c:[l, s, p] for c, l, s, p in inner(ng_) if l or s}
+    records = {c:[l, s, p] for c, l, s, p in inner(graph) if l or s}
     with open(os.path.expanduser('~/files/ontology-classes-with-labels-synonyms-parents.json'), 'wt') as f:
               json.dump(records, f, sort_keys=True, indent=2)
 
@@ -813,9 +808,8 @@ def run(args):
         curie_prefixes = set(curies.values())
         memoryCheck(2665488384)
         graph = loadall(git_local, repo_name)
-        mg, ng_ = normalize_prefixes(graph, curies)
-        ng_.add_known_namespaces('NIFRID')  # not officially in the curies yet...
-        for_burak(ng_)
+        new_graph = normalize_prefixes(graph, curies)
+        for_burak(new_graph)
         debug = True
     elif patch:
         local_base = jpth(git_local, repo_name)
@@ -824,7 +818,7 @@ def run(args):
         raise BaseException('How did we possibly get here docopt?')
 
     if itrips:
-        import_graph = rdflib.Graph()
+        import_graph = OntGraph()
         [import_graph.add(t) for t in itrips]
         for tree, extra in import_tree(import_graph, ontologies):
             name = Path(next(iter(tree.keys()))).name

@@ -69,7 +69,7 @@ psname = 'Brain parcellation scheme concept'
 PARC_SUPER = ilxtr.parcellationLabel
 
 def check_hierarchy(graph, root, edge, label_edge=None):
-    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.make_scigraph_json(edge, label_edge))
+    a, b = creatTree(*Query(root, edge, 'INCOMING', 10), json=graph.g.asOboGraph(edge, label_edge))
     print(a)
 
 def add_ops(graph):

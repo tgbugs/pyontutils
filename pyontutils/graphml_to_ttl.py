@@ -562,7 +562,7 @@ def main():
             mgraph.add_trip(source, 'rdfs:label', clabel)
 
         Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
-        json = mgraph.make_scigraph_json('rdfs:subClassOf', direct=True)
+        json = mgraph.g.asOboGraph('rdfs:subClassOf', restriction=False)
         t, te = creatTree(*Query('FIXME:n0', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # methods
         t, te = creatTree(*Query('FIXME:n236', 'rdfs:subClassOf', 'INCOMING', 20), json=json)  # techniques
         print(t)
