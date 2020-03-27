@@ -19,55 +19,41 @@ Options:
 
 """
 
-from collections import defaultdict, OrderedDict, Counter
 import os
-import re
 import asyncio
 import subprocess
-from copy import deepcopy
 from pprint import pformat
 from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
 from urllib.parse import parse_qs
-import yaml
-import rdflib
 import htmlfn as hfn
-import networkx as nx
-import ontquery as oq
 from flask import (Flask,
                    url_for,
                    redirect,
                    request,
-                   render_template,
-                   render_template_string,
-                   make_response,
                    abort,
                    current_app,
                    send_from_directory)
-from docopt import docopt, parse_defaults
-from htmlfn import htmldoc, atag, nbsp
-from htmlfn import render_table, table_style
-from rdflib.extras import external_graph_libs as egl
 from requests.exceptions import HTTPError as rHTTPError
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm, OntGraph
+from pyontutils.core import OntId, OntTerm, OntGraph
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import auth
-from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
-from pyontutils.closed_namespaces import rdfs, rdf, owl
-from pyontutils.sheets import Sheet
-from pyontutils.namespaces import OntCuries
+from pyontutils.hierarchies import (Query,
+                                    creatTree,
+                                    dematerialize,
+                                    flatten as flatten_tree)
+from pyontutils.namespaces import rdfs, OntCuries
 from pyontutils.scigraph_codegen import moduleDirect
-from typing import Union, Dict, List, Tuple, Generator
-from nifstd_tools.sheets_sparc import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
+from nifstd_tools.sheets_sparc import (hyperlink_tree,
+                                       tag_row,
+                                       open_custom_sparc_view_yml,
+                                       YML_DELIMITER)
+from nifstd_tools.simplify import simplify, cleanBad
 from nifstd_tools import __version__
-
-# Convienient Typing
-Semantic = Union[rdflib.URIRef, rdflib.Literal, rdflib.BNode]
-SemanticOptional = Union[Semantic, str, None]
 
 log = makeSimpleLogger('ontree')
 
@@ -129,7 +115,8 @@ def time():
 def node_list(nodes):
     log.debug(pformat(nodes))
     # FIXME why the heck are these coming in as lbl now?!?!
-    s = sorted([(n['lbl'], atag(n['id'], n['lbl'], new_tab=True)) for n in nodes])
+    s = sorted([(n['lbl'], hfn.atag(n['id'], n['lbl'], new_tab=True))
+                for n in nodes])
     return '<br>\n'.join([at for _, at in s])
 
 
@@ -138,225 +125,10 @@ def graphFromGithub(link, verbose=False):
     # also caching probably
     if verbose:
         log.info(link)
-    return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
 
-
-def connectivity_query(relationship=None, start=None, end=None):
-    j = sgd.dispatch('/dynamic/shortestSimple?'
-                     'start_id={start.quoted}&'
-                     'end_id={end.quoted}&'
-                     'relationship={relationship}')
-
-    kwargs['json'] = j
-    tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
-    return htmldoc(extras.html, styles=hfn.tree_styles)
-
-
-def cleanBad(json):
-    deep = deepcopy(json)
-    bads = 'fma:continuous_with',
-    edges = deep['edges']
-    putative_bads = [e for e in edges if e['pred'] in bads]
-    skip = []
-    for e in tuple(putative_bads):
-        if e not in skip:
-            rev = {'sub': e['obj'], 'pred': e['pred'], 'obj':e['sub'], 'meta': e['meta']}
-            if rev in putative_bads:
-                skip.append(rev)
-                edges.remove(e)
-
-    remed = []
-    for e in skip:
-        for ae in tuple(edges):
-            if ae not in remed and ae != e:
-                if (
-                        e['sub'] == ae['sub'] or
-                        e['obj'] == ae['obj'] or
-                        e['obj'] == ae['sub'] or
-                        e['sub'] == ae['obj']
-                ):
-                    # there is already another edge that pulls in one of the
-                    # members of this edge so discard the bad edge
-                    edges.remove(e)
-                    remed.append(e)
-                    break
-
-    log.debug(len(edges))
-    log.debug(len(json['edges']))
-    return deep
-
-
-def pb(blob):
-    print(blob['sub'], blob['pred'], blob['obj'])
-
-
-class Edge(tuple):
-    @classmethod
-    def fromNx(cls, edge):
-        s, o, p = [e.toPython() if isinstance(e, rdflib.URIRef) else e
-                   for e in edge]  # FIXME need to curie here or elsewhere?
-        return cls((s, p, o))
-
-    @classmethod
-    def fromOboGraph(cls, blob, curies=None):
-        t = blob['sub'], blob['pred'], blob['obj']
-        if curies:
-            t = [expand(e) for e in t]  # FIXME sigh OntId OntCuries etc etc local conventions etc ...
-
-        self = cls(t)
-        self._blob = blob
-        return self
-
-    @property
-    def s(self): return self[0]
-    @property
-    def p(self): return self[1]
-    @property
-    def o(self): return self[2]
-    subject = s
-    predicate = p
-    object = o
-
-    def asTuple(self):
-        return (*self,)
-        #return self.s, self.p, self.o
-
-    def asRdf(self, curies=None):
-        return rdflib.URIRef(self.s), rdflib.URIRef(self.p), rdflib.URIRef(self.o)
-
-    def asOboGraph(self):
-        if not hasattr(self, '_blob'):
-            self._blob = {'sub': self[0],
-                          'pred': self[1],
-                          'obj': self[2]}
-
-        return self._blob
-
-
-def listIn(container, maybe_contained, *, strict=True):
-    """ strictly sublists no equality here """
-    lc = len(container)
-    lmc = len(maybe_contained)
-    if lc > lmc or not strict and lc == lmc:
-        z = maybe_contained[0]
-        if z in container:
-            substart = container.index(z)
-            subcontained = maybe_contained[1:]
-            if not subcontained:
-                return substart
-
-            ssp1 = substart + 1 
-            subcontainer = container[ssp1:]
-            maybe = listIn(subcontainer, subcontained, strict=False)
-            if maybe is None or maybe > 0:
-                maybe = listIn(subcontainer, maybe_contained, strict=False)
-                if maybe is not None:
-                    return ssp1 + maybe
-            else:
-                return substart
-
-
-def zap(ordered_nodes, predicates, oe2, blob):
-    """ don't actually zap, wait until the end so that all
-        deletions happen after all additions """
-
-    e = Edge((ordered_nodes[0].toPython(),
-            '-'.join(predicates),
-            ordered_nodes[-1].toPython()))
-    new_e = e.asOboGraph()
-    blob['edges'].append(new_e)
-    to_remove = [e.asOboGraph() for e in oe2]
-    return to_remove
-
-
-def simplify(path, blob):
-    if 'housing-lyphs' in path or 'bundles' in path or 'soma-processes' in path:
-        collapse = [
-            # apparently annotates breaks this for some reason?
-            #['apinatomy:annotates', 'apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
-            #['apinatomy:annotates', 'apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],
-            #['apinatomy:conveys', 'apinatomy:source', 'apinatomy:sourceOf'],
-            #['apinatomy:conveys', 'apinatomy:target', 'apinatomy:sourceOf'],  # FIXME apparently the 2nd round here fails ?!?!
-
-            ['apinatomy:conveys', 'apinatomy:source'],
-            ['apinatomy:conveys', 'apinatomy:target'],
-
-            ['apinatomy:fasciculatesIn', 'apinatomy:external'],
-
-            # FIXME should this be showing up in the query results at all?
-            ['apinatomy:fasciculatesIn', 'apinatomy:supertype', 'apinatomy:external'],
-
-            # why are some of these missing external but in the graph ?!? the answer is that the previous coll was missing
-            # FIXME sub collapses happen simultaneously so those edges will still be added and you will get doubling
-            #['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype'],
-            ['apinatomy:fasciculatesIn', 'apinatomy:layerIn', 'apinatomy:external'],
-
-            # can't include next it destroys this due to inducing everything to be weakly connected (urg)
-            # since next is the linker along the tree we definitely cannot collapse that
-            ['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype', 'apinatomy:external'],
-
-            ['<skip1'],
-            ['skip1>', 'end'],
-            ['skip2>', 'end'],
-            ['skip3>', 'skip4>', 'end'],
-
-            #['apinatomy:root', 'apinatomy:internalIn', 'apinatomy:cloneOf', 'apinatomy:supertype'],
-            #['apinatomy:supertype', 'apinatomy:cloneOf', 'apinatomy:internalIn', 'apinatomy:root'],
-        ]
-
-        to_remove = []
-        for coll in collapse:
-            exclude = set(p for p in coll)
-            candidates = [e for e in blob['edges'] if e['pred'] in exclude]
-            for c in candidates:
-                # make sure we can remove the edges later
-                # if they have meta the match will fail
-                if 'meta' in c:
-                    c.pop('meta')
-
-            if candidates:
-                edges = [Edge.fromOboGraph(c) for c in candidates]
-                g = OntGraph().populate_from_triples(e.asRdf() for e in edges)
-                nxg = egl.rdflib_to_networkx_multidigraph(g)
-                connected = list(nx.weakly_connected_components(nxg))  # FIXME may not be minimal
-                ends = [e.asRdf()[-1] for e in edges if e.p == coll[-1]]
-                for c in connected:
-                    #log.debug('\n' + pformat(c))
-                    nxgt = nx.MultiDiGraph()
-                    nxgt.add_edges_from(nxg.edges(c, keys=True))
-                    ordered_nodes = list(nx.topological_sort(nxgt))
-                    paths = [p
-                             for n in nxgt.nodes()
-                             for e in ends
-                             for p in list(nx.all_simple_paths(nxgt, n, e))
-                             if len(p) == len(coll) + 1]
-
-                    for path in sorted(paths):
-                        ordered_edges = nxgt.edges(path, keys=True)
-                        oe2 = [Edge.fromNx(e) for e in ordered_edges]
-                        predicates = [e.p for e in oe2]
-                        #log.debug('\n' + pformat(oe2))
-                        if predicates == coll: #in collapse:
-                            to_remove.extend(zap(path, predicates, oe2, blob))
-                        else:  # have to retain this branch to handle cases where the end predicate is duplicated
-                            log.error('\n' + pformat(predicates) +
-                                      '\n' + pformat(coll))
-                            for preds in [coll]:
-                                sublist_start = listIn(predicates, preds)
-                                if sublist_start is not None:
-                                    i = sublist_start
-                                    j = i + len(preds)
-                                    npath = path[i:j + 1]  # + 1 to include final node
-                                    oe2 = oe2[i:j]
-                                    predicates = predicates[i:j]
-                                    to_remove.extend(zap(npath, predicates, oe2, blob))
-
-    for r in to_remove:
-        if r in blob['edges']:
-            blob['edges'].remove(r)
-
-    #log.debug('\n' + pformat(blob['edges']))
-    return blob  # note that this is in place modification so sort of supruflous
+    g = OntGraph().parse(f'{link}?raw=true', format='turtle')
+    OntCuries.populate(g)
+    return g
 
 
 def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
@@ -409,11 +181,13 @@ def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
     else:
         root = None
 
-    prov = [hfn.titletag(f'Dynamic query result for {path}'),
-            f'<meta name="date" content="{UTCNOWISO()}">',
-            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
-            '<meta name="representation" content="SciGraph">',
-            f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
+    prov = [
+        hfn.titletag(f'Dynamic query result for {path}'),
+        f'<meta name="date" content="{UTCNOWISO()}">',
+        f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+        '<meta name="representation" content="SciGraph">',
+        ('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+         f'href="{data_sgd._last_url}">')]
 
     kwargs = {'json': cleanBad(j),
                 'html_head': prov,
@@ -429,35 +203,42 @@ def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
                 return (f'{tag}.{class_}'
                         '{ white-space: nowrap; }')
 
-            ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
+            ots = [OntTerm(n)
+                   for n in flatten_tree(extras.hierarchy)
+                   if 'CYCLE' not in n]
             #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
-            rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
+            rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition]
+                    for ot in ots]
 
-            return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
-                           styles=(hfn.table_style, nowrap('col-label', 'td')))
+            return hfn.htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                               styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-    return htmldoc(extras.html,
-                   other=prov,
-                   styles=hfn.tree_styles)
+    return hfn.htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
-           restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False,):
+def render(pred, root, direction=None, depth=10, local_filepath=None,
+           branch='master', restriction=False, wgb='FIXME', local=False,
+           verbose=False, flatten=False,):
 
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
-        github_link = f'https://github.com/SciCrunch/NIF-Ontology/raw/{branch}/{local_filepath}'
-        prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{github_link}">')
-        g = graphFromGithub(github_link, verbose)
-        labels_index = {g.qname(s):str(o) for s, o in g.g[:rdfs.label:]}
+        github_link = ('https://github.com/SciCrunch/NIF-Ontology/raw/'
+                       f'{branch}/{local_filepath}')
+        prov.append('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+                    f'href="{github_link}">')
+        graph = graphFromGithub(github_link, verbose)
+        qname = graph.namespace_manager._qhrm  # FIXME
+        labels_index = {qname(s):str(o) for s, o in graph[:rdfs.label:]}
         if pred == 'subClassOf':
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
         elif pred == 'subPropertyOf':
             pred = 'rdfs:subPropertyOf'
         try:
-            kwargs['json'] = g.make_scigraph_json(pred, direct=not restriction)
-            kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}
+            kwargs['json'] = graph.asOboGraph(pred, restriction=restriction)
+            kwargs['prefixes'] = {k:str(v) for k, v in graph.namespace_manager}
         except KeyError as e:
             if verbose:
                 log.error(str(e))
@@ -468,12 +249,14 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         # and it should not be calculated every time anyway!
         # oh look, here we are needed a class again
         if False:
-            versionIRI = [e['obj']
-                        for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
-                                                  'NIF/ttl/nif.ttl')['edges']
-                        if e['pred'] == 'versionIRI'][0]
+            versionIRI = [
+                e['obj']
+                for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
+                                          'NIF/ttl/nif.ttl')['edges']
+                if e['pred'] == 'versionIRI'][0]
             #print(versionIRI)
-            prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
+            prov.append('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+                        f'href="{versionIRI}">')  # FIXME wrong and wont resolve
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
@@ -542,23 +325,21 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         if verbose:
             log.error(f'{type(e)} {e}')
         if sgg.getNode(root):
-            message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
+            # FIXME distinguish these cases...
+            message = 'Unknown predicate or no results.'
         elif 'json' in kwargs:
             message = 'Unknown root.'
-            r = g.expand(root)
-            for s in g.g.subjects():
+            r = graph.namespace_manager.expand(root)
+            for s in graph.subjects():
                 if r == s:
-                    message = ('No results. You are querying a ttl file directly, '
+                    message = ('No results. '
+                               'You are querying a ttl file directly, '
                                'did you remember to set ?restriction=true?')
                     break
         else:
             message = 'Unknown root.'
 
         return abort(422, message)
-
-
-class fakeRequest:
-    args = {}
 
 
 def getArgs(request):
@@ -722,11 +503,11 @@ def server(api_key=None, verbose=False):
         d = url_for('route_docs')
         e = url_for('route_examples')
         i = url_for('route_import_chain')
-        return htmldoc(atag(d, 'Docs'),
+        return hfn.htmldoc(hfn.atag(d, 'Docs'),
                        '<br>',
-                       atag(e, 'Examples'),
+                       hfn.atag(e, 'Examples'),
                        '<br>',
-                       atag(i, 'Import chain'),
+                       hfn.atag(i, 'Import chain'),
                        title='NIF ontology hierarchies')
 
     @app.route(f'/{basename}/docs', methods=['GET'])
@@ -735,28 +516,34 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/examples', methods=['GET'])
     def route_examples():
-        links = render_table([[name,
-                               atag(url_for("route_query", pred=pred, root=root) + (args[0] if args else ''),
-                                    f'../query/{pred}/{root}{args[0] if args else ""}')]
-                              for name, pred, root, *args in examples],
-                             'Root class', '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false',
-                             halign='left')
+        links = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_query", pred=pred, root=root) + (args[0] if args else ''),
+                   f'../query/{pred}/{root}{args[0] if args else ""}')]
+             for name, pred, root, *args in examples],
+            'Root class',
+            '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false',
+            halign='left')
 
-        flinks = render_table([[name,
-                                atag(url_for("route_filequery", pred=pred, root=root, file=file) + (args[0] if args else ''),
-                                     f'../query/{pred}/{root}/{file}{args[0] if args else ""}')]
-                               for name, pred, root, file, *args in file_examples],
-                              'Root class', '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
-                              halign='left')
+        flinks = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_filequery", pred=pred, root=root, file=file) + (args[0] if args else ''),
+                       f'../query/{pred}/{root}/{file}{args[0] if args else ""}')]
+             for name, pred, root, file, *args in file_examples],
+            'Root class',
+            '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
+            halign='left')
 
-        dlinks = render_table([[name,
-                                atag(url_for("route_dynamic", path=path) + (querystring if querystring else ''),
-                                     f'../query/dynamic/{path}{querystring if querystring else ""}')]
-                               for name, path, querystring in dynamic_examples],
-                              'Root class', '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
-                              halign='left')
+        dlinks = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_dynamic", path=path) + (querystring if querystring else ''),
+                       f'../query/dynamic/{path}{querystring if querystring else ""}')]
+             for name, path, querystring in dynamic_examples],
+            'Root class',
+            '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
+            halign='left')
 
-        return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
+        return hfn.htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
 
     @app.route(f'/{basename}/sparc/demos/isan2019/neuron-connectivity', methods=['GET'])
     def route_sparc_demos_isan2019_neuron_connectivity():
@@ -848,13 +635,6 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/demos/apinat/', methods=['GET'])
     def route_sparc_demos_apinat():
         return 'apinat'
-
-    #@app.route(f'/{basename}/sparc/demos/apinat/housing-lyphs/<id>', methods=['GET'])
-    #def route_sparc_demos_apinat_housing_lyphs(id):
-        #('http://sparc-data.scicrunch.io:9000/scigraph/'
-         #'dynamic/demos/apinat/housing-lyphs/apin.bolew%3Asoma202')
-        #data = query
-        #return
 
     @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
     def route_sparc_connectivity_query():
@@ -970,12 +750,12 @@ def server(api_key=None, verbose=False):
                 #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
                 rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
 
-                return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
-                               styles=(hfn.table_style, nowrap('col-label', 'td')))
+                return hfn.htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                                   styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html,
-                       other=prov,
-                       styles=hfn.tree_styles)
+        return hfn.htmldoc(extras.html,
+                           other=prov,
+                           styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
     def route_import_chain():
@@ -1042,8 +822,8 @@ def server(api_key=None, verbose=False):
 
         hyp_rows = hyperlink_tree(journey)
 
-        return htmldoc(
-            render_table(hyp_rows),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
             metas = ({'name':'date', 'content':time()},),
         )
@@ -1052,7 +832,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/view/', methods=['GET'])
     def route_sparc_view():
         hyp_rows = []
-        spaces = nbsp * 8
+        spaces = hfn.nbsp * 8
         for tier1, tier2_on in sorted(sparc_view.items()):
             url = url_for('route_sparc_view_query', tier1=tier1)
             tier1_row = tier1.split(YML_DELIMITER)
@@ -1076,19 +856,19 @@ def server(api_key=None, verbose=False):
                 if len(list(sparc_view[tier1_row[0]][tier2_row[0]].keys())) == 1:
                     tagged_tier2_row[0] = spaces+tier2_row[0]
                 hyp_rows.append(tagged_tier2_row)
-        return htmldoc(
-            render_table(hyp_rows),
-            title = 'Main Page Sparc',
-            styles = ["p {margin: 0px; padding: 0px;}"],
-            metas = ({'name':'date', 'content':time()},),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
+            title= 'Main Page Sparc',
+            styles= ["p {margin: 0px; padding: 0px;}"],
+            metas= ({'name':'date', 'content':time()},),
         )
 
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
         hyp_rows = hyperlink_tree(sparc_view)
-        return htmldoc(
-            render_table(hyp_rows),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
             title = 'SPARC Anatomical terms index',
             metas = ({'name':'date', 'content':time()},),
         )
@@ -1103,7 +883,7 @@ def server(api_key=None, verbose=False):
 
         log.critical(f'{resources}/sawg.org has not been published')
         return send_from_directory(resources.as_posix(), 'sawg.org')
-        #return htmldoc(
+        #return hfn.htmldoc(
             #atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
             #atag(url_for('route_sparc_index'), 'Index'),
             #title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
@@ -1193,6 +973,10 @@ test_terms = [OntId('UBERON:0001759'),
               OntId('ILX:0738374')]
 
 
+class fakeRequest:
+    args = {}
+
+
 def test():
     global request
     request = fakeRequest()
@@ -1276,7 +1060,7 @@ def test():
 
 
 def main():
-    from docopt import docopt
+    from docopt import docopt, parse_defaults
     args = docopt(__doc__, version='ontree 0.0.0')
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     verbose = args['--verbose']

@@ -1,6 +1,5 @@
 import unittest
 from nifstd_tools.ontree import simplify
-from nifstd_tools.ontree import listIn
 
 
 def mkt(*t):
@@ -108,13 +107,3 @@ class TestSimplify(unittest.TestCase):
             tb = {'nodes': [], 'edges': t}
             s = simplify('bundles', tb)
             assert s['edges'] == tv, 'oops'
-
-
-class TestListIn(unittest.TestCase):
-    def test(self):
-        assert listIn([1, 2], [1]) == 0
-        assert listIn([1, 2], [2]) == 1
-        assert listIn([1, 2, 3, 4], [2, 3]) == 1
-        assert listIn([2, 2, 3], [2, 3]) == 1
-        assert listIn([2, 2, 3, 3], [2, 3]) == 1
-        assert listIn(['skip1>', 'skip1>', 'end', 'end'], ['skip1>', 'end']) == 1

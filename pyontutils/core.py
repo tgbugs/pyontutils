@@ -708,6 +708,78 @@ class OntResInterLex(OntResOnt):
     _metadata_class = OntMetaInterLex
 
 
+class Edge(tuple):
+    """ Expansion of curies must happen before construction if it is going to
+        happen at all. The expansion rule must be known beforehand. """
+
+    @classmethod
+    def fromNx(cls, edge, namespace_manager=None):
+        s, o, p = [e.toPython() if isinstance(e, rdflib.URIRef) else e
+                   for e in edge]  # FIXME need to curie here or elsewhere?
+
+        t = (s, p, o)
+        if namespace_manager is not None:  # FIXME I think we store the string format natively here? or no? what do we do ...
+            t = [namespace_manager.expand(e) for e in t]  # FIXME sigh OntId OntCuries etc etc local conventions etc ...
+
+        self = cls(t)
+        if namespace_manager is not None:
+            self._namespace_manager = namespace_manager
+
+        return self
+
+    @classmethod
+    def fromOboGraph(cls, blob, namespace_manager=None):
+        t = blob['sub'], blob['pred'], blob['obj']
+        if namespace_manager is not None:  # FIXME I think we store the string format natively here? or no? what do we do ...
+            t = [namespace_manager.expand(e) for e in t]  # FIXME sigh OntId OntCuries etc etc local conventions etc ...
+
+        self = cls(t)
+        self._blob = blob
+        if namespace_manager is not None:
+            self._namespace_manager = namespace_manager
+
+        return self
+
+    @property
+    def s(self): return self[0]
+    @property
+    def p(self): return self[1]
+    @property
+    def o(self): return self[2]
+    subject = s
+    predicate = p
+    object = o
+
+    def asTuple(self):
+        return (*self,)
+        #return self.s, self.p, self.o
+
+    def asRdf(self):
+        """ Note that no expansion may be done at this time. """
+        t = tuple(e if isinstance(e, rdflib.URIRef) else rdflib.URIRef(e) for e in self)
+        return t
+
+    def asOboGraph(self, namespace_manager=None):
+        """ namespace manager here is provided only for compaction """
+
+        nm = namespace_manager
+        if nm is None and hasattr(self, '_namespace_manager'):
+            nm = self._namespace_manager
+
+        if namespace_manager is not None:
+            return {k:e for k, e in zip(('sub', 'pred', 'obj'),
+                                        [nm._qhrm(e) for e in self])}
+
+        elif not hasattr(self, '_blob'):
+            self._blob = {k:e for k, e in
+                          zip(('sub', 'pred', 'obj'),
+                              [hm._qhrm(e) for e in self]
+                              if nm is not None else
+                              self)}
+
+        return self._blob
+
+
 class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
     def __call__(self, **kwargs):
         """ set prefixes """
@@ -715,6 +787,34 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 
     def __iter__(self):
         yield from self.namespaces()
+
+    def expand(self, curie):
+        # I'm still not sure that this is the right way to do it
+        # but there are SO many cases where we need this that
+        # can't use OntId as a drop in replacement
+        if ':' not in curie:
+            raise ValueError(f'{curie} is not a curie!')
+
+        prefix, suffix = curie.split(':', 1)
+        namespace = self.store.namespace(prefix)
+        if namespace is None:
+            return  # TODO do we want to raise an error here? probably?
+
+        return namespace + suffix
+
+    def _qhrm(self, node):  # FIXME what the heck is this thing ... asPython????
+        """ WARNING experimental """
+        if isinstance(node, rdflib.BNode):
+            return node.n3()
+
+        elif isinstance(node, rdflib.URIRef):
+            try:
+                return self.qname(node)
+            except (KeyError, ValueError):
+                return node.toPython()
+
+        else:
+            raise TypeError(f'unhandled type {type(node)} for {node}')
 
     def qname(self, iri):
         # a version of normalizeUri that fails if no prefix is available
@@ -856,6 +956,7 @@ class OntGraph(rdflib.Graph):
         print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
+        """ find all uris that have namespace as their prefix """
         # FIXME can't we hit the cache for these?
         sns = str(namespace)
         for s, p, o in self:
@@ -1253,6 +1354,68 @@ class OntGraph(rdflib.Graph):
             self.add(t)
 
         return self
+
+    def _genNodesEdges(self, triples_gen, label_predicate):
+        nodes = []
+        edges = []
+        done = set()
+        for t in triples_gen:
+            edge = Edge(t)
+            edges.append(edge.asOboGraph(self.namespace_manager))
+            for e in t:
+                if e in done:
+                    continue
+
+                done.add(e)
+
+                try:
+                    lbl = next(self[e:label_predicate]).toPython()
+                except StopIteration:
+                    lbl = e.toPython()
+
+                meta = {owl.deprecated.toPython():o.toPython() for o in self[e:owl.deprecated]}
+                node = {'id': self.namespace_manager._qhrm(e),
+                        'lbl': lbl, 'meta': meta}
+                nodes.append(node)
+
+        return nodes, edges
+
+    def asOboGraph(self, predicate=None, label_predicate=None, restriction=True):
+        """ supply a predicate to restrict the exported graph """
+        if label_predicate is None:
+            label_predicate = rdfs.label
+        else:
+            label_predicate = self.namespace_manager.expand(label_predicate)  # FIXME oh boy this will break stuff
+
+        restriction = predicate is not None and restriction
+
+        if isinstance(predicate, rdflib.URIRef):
+            pass
+        elif predicate == 'isDefinedBy':
+            predicate = self.namespace_manager.expand('rdfs:isDefinedBy')
+        else:
+            predicate = self.namespace_manager.expand(predicate)
+
+        if not restriction:
+            if predicate is None:
+                # FIXME this needs to implement the full conversion rules
+                # otherwise the bnodes flood everything, this is probably
+                # the real use case for the combinators
+                gen = (t for t in self
+                       if not isinstance(t[-1], rdflib.Literal))
+            else:
+                gen = ((s, predicate, o) for s, o in self[:predicate:]
+                       if not [e for e in (s, o) if isinstance(e, rdflib.BNode)])
+        else:
+            # TODO consider using the combinators here ?
+            gen = ((s, predicate, o)
+                   for s_bnode in self[:owl.onProperty:predicate]
+                   for s in self[:rdfs.subClassOf:s_bnode]
+                   for p in (owl.someValuesFrom,)  # I don't think we would want all values from?
+                   for o in self[s_bnode:p])
+
+        nodes, edges = self._genNodesEdges(gen, label_predicate)
+        return {'nodes': nodes, 'edges': edges}
 
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
@@ -2495,7 +2658,7 @@ def displayGraph(graph_,
         try: next(graph.subjects(pred, root))
         except StopIteration: continue
 
-        j = g.make_scigraph_json(pred, direct=True)
+        j = g.g.asOboGraph(pred, restriction=False)
         if debug: print(j)
         prefixes = {k:str(v) for k, v in g.namespaces.items()}
         start = g.qname(root)

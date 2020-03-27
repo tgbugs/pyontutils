@@ -1,5 +1,5 @@
 import unittest
-from pyontutils.utils import injective_dict, Async, deferred
+from pyontutils.utils import injective_dict, Async, deferred, listIn
 
 
 class TestInjectiveDict(unittest.TestCase):
@@ -59,3 +59,13 @@ class TestAsync(unittest.TestCase):
 
     def test_rate_empty(self):
         out = Async(rate=20)(deferred(lambda a:a)('lol') for _ in range(0))
+
+
+class TestListIn(unittest.TestCase):
+    def test(self):
+        assert listIn([1, 2], [1]) == 0
+        assert listIn([1, 2], [2]) == 1
+        assert listIn([1, 2, 3, 4], [2, 3]) == 1
+        assert listIn([2, 2, 3], [2, 3]) == 1
+        assert listIn([2, 2, 3, 3], [2, 3]) == 1
+        assert listIn(['skip1>', 'skip1>', 'end', 'end'], ['skip1>', 'end']) == 1
