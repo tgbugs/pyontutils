@@ -1,5 +1,5 @@
 import unittest
-from nifstd_tools.ontree import simplify
+from nifstd_tools.simplify import simplify
 
 
 def mkt(*t):
