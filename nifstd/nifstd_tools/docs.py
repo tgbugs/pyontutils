@@ -400,7 +400,8 @@ def spell(filenames, debug=False):
 
 # NOTE if emacs does not point to /usr/bin/emacs or similar this will fail
 orgstrap_init = (auth.get_path('git-local-base') / 'orgstrap/init.el').resolve().as_posix()
-docs_init = (working_dir / 'nifstd/resources/docs-init.el').resolve().as_posix()
+docs_init = (auth.get_path('resources') / 'docs-init.el').resolve().as_posix()
+
 compile_org_file = ['emacs',
                     '--batch',
                     '--quick',
