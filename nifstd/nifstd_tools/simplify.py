@@ -1,4 +1,5 @@
 from copy import deepcopy
+from pprint import pformat
 import rdflib
 import networkx as nx
 from rdflib.extras import external_graph_libs as egl
