@@ -100,10 +100,17 @@ t8 = mkt(
 
 tests = [t8, t5, t6, t1, t2, t3, t4, t7]
 
+collapse = [
+    ['<skip1'],
+    ['skip1>', 'end'],
+    ['skip2>', 'end'],
+    ['skip3>', 'skip4>', 'end'],
+]
+
 
 class TestSimplify(unittest.TestCase):
     def test(self):
         for t, tv in tests:
             tb = {'nodes': [], 'edges': t}
-            s = simplify('bundles', tb)
+            s = simplify(collapse, tb)
             assert s['edges'] == tv, 'oops'

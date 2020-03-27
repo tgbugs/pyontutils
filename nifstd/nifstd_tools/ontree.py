@@ -131,7 +131,23 @@ def graphFromGithub(link, verbose=False):
     return g
 
 
-def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
+collapse_apinat = [  # FIXME config?
+    ['apinatomy:conveys', 'apinatomy:source'],
+    ['apinatomy:conveys', 'apinatomy:target'],
+    ['apinatomy:conveys', 'apinatomy:source',
+     # FIXME if the final external is missing the rendering
+     # halts at layerIn and doesn't show the subtree
+     'apinatomy:internalIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:conveys', 'apinatomy:target',
+     'apinatomy:internalIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:supertype', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype', 'apinatomy:external'],
+]
+
+
+def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda coll, blob: blob):
     args = dict(request.args)
     if 'direction' in args:
         direction = args.pop('direction')
@@ -166,7 +182,7 @@ def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda x, y: y):
             log.exception(e)
             abort(404)
 
-    j = process(path, j)
+    j = process(collapse_apinat, j)
 
     if j is None or 'edges' not in j:
         log.error(pformat(j))
