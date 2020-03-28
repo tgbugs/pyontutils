@@ -74,7 +74,7 @@ from pyontutils.core import OntId
 from pyontutils.utils import makeSimpleLogger
 from pyontutils.qnamefix import cull_prefixes
 from pyontutils.namespaces import makeNamespaces, NIFRID, definition
-from pyontutils.namespaces import TEMP, PREFIXES as uPREFIXES
+from pyontutils.namespaces import TEMP, PREFIXES as uPREFIXES, OntCuries
 from pyontutils.closed_namespaces import rdf, rdfs, owl, oboInOwl
 try:
     breakpoint
@@ -108,10 +108,15 @@ obo_tag_to_ttl = {
 def id_fix(value):
     """ fix @prefix values for ttl """
     if value.startswith('KSC_M'):
-        pass
+        if 'KSC_M' not in OntCuries:
+            OntCuries({'KSC_M': 'http://uri.interlex.org/fakeobo/uris/obo/KSC_M_'})
     else:
         value = value.replace(':','_')
-        if value.startswith('ERO') or value.startswith('OBI') or value.startswith('GO') or value.startswith('UBERON') or value.startswith('IAO'):
+        if (value.startswith('ERO') or
+            value.startswith('OBI') or
+            value.startswith('GO') or
+            value.startswith('UBERON') or
+            value.startswith('IAO')):
             value = 'obo:' + value
         elif value.startswith('birnlex') or value.startswith('nlx'):
             value = 'NIFSTD:' + value
@@ -235,12 +240,13 @@ class OboFile:
         if hasattr(self.header, 'idspace'):
             for tvp in self.header.idspace:
                 prefix, iri, *comment = tvp.value.split(' ')
-                argh.append((prefix, iri))
+                namespace = iri + '_'  # http://www.obofoundry.org/id-policy.html
+                argh.append((prefix, namespace))
         else:
             argh.append(('TEMP', TEMP))
  
-        for prefix, iri in argh:
-            g.bind(prefix, iri)
+        for prefix, namespace in argh:
+            g.bind(prefix, namespace)
 
         [g.add(t) for t in self.triples()]
          
