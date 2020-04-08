@@ -15,14 +15,19 @@ ci_skip = (
     'cocomac_uberon',  # lookups too slow when using remote scigraph
     'chebi_bridge',  # too slow generally
 )
+network_tests = (  # reminder that these only skip mains
+    'methods',
+    'ontree',
+    'parcellation',
+)
 
 mains = {'methods': None,
          'nif_cell': None,
-         'hbp_cells': None,
+         'hbp_cells': None,  # needs methodsOntology
          'nif_neuron': None,
          'chebi_bridge': None,
          'gen_nat_models': None,
-         'cocomac_uberon': None,
+         'cocomac_uberon': None,  # needs entity_mapping
          'ontree': ['ontree', '--test'],
          'parcellation': ['parcellation', '--jobs', '1'],
          'scr_sync': ['registry-sync', '--test'],
@@ -39,12 +44,17 @@ if working_dir is None:
 
 olr = auth.get_path('ontology-local-repo')
 do_mains = olr.exists()
-ont_repo = Repo(olr)
-post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
-post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+if olr.exists():
+    ont_repo = Repo(olr)
+    post_load = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+    post_main = lambda : (ont_repo.remove_diff_untracked(), ont_repo.checkout_diff_tracked())
+else:
+    post_load = lambda : None
+    post_main = lambda : None
 
 TestScripts.populate_tests(nifstd_tools, working_dir, mains,
                            skip=skip, ci_skip=ci_skip,
+                           network_tests=network_tests,
                            module_parent=module_parent,
                            post_load=post_load, post_main=post_main,
                            only=[], do_mains=do_mains)
