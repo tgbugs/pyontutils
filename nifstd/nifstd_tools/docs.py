@@ -78,9 +78,18 @@ class FixLinks:
     def __init__(self, current_file):
         print('========================================')
         print(current_file)
-        self.current_file = current_file
-        self.working_dir = get_working_dir(self.current_file)
-        self.repo = Repo(self.working_dir)
+        self.current_file = Path(current_file).resolve()
+        self.working_dir = self.current_file.working_dir
+        if self.working_dir is None:
+            # cannot proceed without git
+            raise FileNotFoundError(f'No working directory found for {self.current_file}')
+            #self.repo_name = 'NOREPO'
+            #self.netloc = 'NOWHERE'
+            #self.netloc_raw = 'NOWHERE'
+            #self.group = 'NOGROUP'
+
+        self.repo = self.working_dir.repo
+        self.repo_name = self.working_dir.name
         self.remote_url = next(self.repo.remote().urls)
         if self.remote_url.startswith('git@'):
             self.remote_url = 'ssh://' + self.remote_url
@@ -101,8 +110,6 @@ class FixLinks:
             _, self.group, *rest = duh.path.split('/')
         else:
             raise NotImplementedError(self.remote_url)
-
-
 
     def __call__(self, org):
         org = re.sub(rb'\[\[\.\/', b'[[file:', org)  # run this once at the start
@@ -199,15 +206,20 @@ class FixLinks:
                     rest = ''
 
                 if not any(name.startswith(p) for p in ('$', '#')):
-                    try:
-                        rel = (self.current_file.parent /
-                            (name + suffix)).resolve().relative_to(self.working_dir)
-                    except ValueError as e:
-                        log.error('path went outside current repo')
-                        return name + suffix + rest
+                    if self.working_dir is None:
+                        log.warning('no working directory found, you will have broken links')
+                        rel = Path(name + suffix)
+                    else:
+                        try:
+                            rel = ((self.current_file.parent / (name + suffix)).resolve()
+                                   .relative_to(self.working_dir))
+                        except ValueError as e:
+                            log.error('path went outside current repo')
+                            return name + suffix + rest
 
                     if suffix in ('.md', '.org', '.ipynb'):
                         rel = rel.with_suffix('.html')
+
                     rel_path = rel.as_posix() + rest
                     #print('aaaaaaaaaaa', suffix, rel, rel_path)
                     return self.base + rel_path
@@ -222,9 +234,12 @@ class FixLinks:
         sub_nothing = SubRel(f"we're off to see the inline src block maker")
         out_m1 = re.sub(r'^file:(\$)(.*)(#.+)*$', sub_nothing, out)
 
+        if self.working_dir is None:
+            log.warning('no working directory found, you will have broken links')
+
         #print('----------------------------------------')
         # TODO consider htmlifying these ourselves and serving them directly
-        sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.working_dir.name}/blob/master/')
+        sub_github = SubRel(f'https://{self.netloc}/{self.group}/{self.repo_name}/blob/master/')
         # source file and/or code extensions regex
         # TODO folders that simply end
         code_regex = (r'(\.(?:el|py|sh|ttl|graphml|yml|yaml|spec|example|xlsx|svg)'
@@ -236,7 +251,7 @@ class FixLinks:
 
         #print('----------------------------------------')
         # FIXME for the future, can't hotlink to svg from github
-        #sub_github_raw = SubRel(f'https://{self.netloc_raw}/{self.group}/{self.working_dir.name}/master/')
+        #sub_github_raw = SubRel(f'https://{self.netloc_raw}/{self.group}/{self.repo_name}/master/')
         #out0_5 = re.sub(r'^file:(.*)' +
         #                r'(\.svg)' +
         #                r'(#.+)*$',
@@ -244,7 +259,7 @@ class FixLinks:
 
         #print('----------------------------------------')
         # FIXME won't work if the outer folder does not match the github project name
-        sub_docs = SubRel(f'hrefl:/docs/{self.working_dir.name}/')
+        sub_docs = SubRel(f'hrefl:/docs/{self.repo_name}/')
         out1 = re.sub(r'^file:(.*)'
                       r'(\.(?:md|org|ipynb))'
                       r'(#.+)*$', sub_docs, out0)
