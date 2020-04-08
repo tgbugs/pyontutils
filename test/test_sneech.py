@@ -4,10 +4,24 @@ import ontquery as oq
 import augpathlib as aug
 from pyontutils import sneechenator as snch
 from pyontutils.core import OntGraph
+from pyontutils.config import auth
 from pyontutils.namespaces import rdf
 from .common import temp_path
 
 temp_path_aug = aug.AugmentedPath(temp_path)
+sfy = pl.Path(__file__).parent / 'sneech-file.yaml'
+sft = pl.Path(__file__).parent / 'sneech-file.ttl'
+
+
+def fix_file(path):
+    with open(path, 'rt') as f:
+        sin = f.read()
+
+    sout = sin.replace('~/git/NIF-Ontology',
+                       auth.get_path('ontology-local-repo').resolve()
+                       .as_posix())
+    with open(path, 'wt') as f:
+        f.write(sout)
 
 
 class TestFile(unittest.TestCase):
@@ -20,15 +34,19 @@ class TestFile(unittest.TestCase):
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
         path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        for p in (sfy, sft):
+            fix_file(p)
 
     @classmethod
     def tearDownClass(cls):
         temp_path_aug.rmtree()
+        #for p in (sfy, sft):
+            #p.checkout()  # FIXME TODO not implemented yet
 
     def test_write(self):
         tt = self.wrangler.dir_process / 'test-target'
         tt.mkdir()
-        snchf = snch.SnchFile.fromYaml(pl.Path(__file__).parent / 'sneech-file.yaml')
+        snchf = snch.SnchFile.fromYaml(sfy)
         tf = tt / 'sneeeeeeeeeeeeeeeeeeeeeeeeeech.ttl'
         g = snchf.writeTtl(tf)
         g.debug()
@@ -66,21 +84,25 @@ class TestInterLex(unittest.TestCase):
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
         path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        for p in (sfy, sft):
+            fix_file(p)
 
     @classmethod
     def tearDownClass(cls):
         temp_path_aug.rmtree()
+        #for p in (sfy, sft):
+            #p.checkout()  # FIXME TODO not implemented yet
 
     def test_yaml(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
-        snchf = snch.SnchFile.fromYaml(pl.Path(__file__).parent / 'sneech-file.yaml')
+        snchf = snch.SnchFile.fromYaml(sfy)
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
         a = snchf.COMMENCE(snchr, path_out=of)
         b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
 
     def test_ttl(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
-        snchf = snch.SnchFile.fromTtl(pl.Path(__file__).parent / 'sneech-file.ttl')
+        snchf = snch.SnchFile.fromTtl(sft)
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
         a = snchf.COMMENCE(snchr, path_out=of)
         b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
