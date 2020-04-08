@@ -1,5 +1,9 @@
 recursive-include test *
 exclude MANIFEST.in
+exclude nifstd_tools/cocomac_uberon.py
+exclude nifstd_tools/hbp_cells.py
+recursive-exclude nifstd_tools/parcellation *
+recursive-exclude nifstd_tools/methods *
 recursive-exclude complete *
 recursive-exclude development *
 recursive-exclude patches *
