@@ -6,6 +6,7 @@ from pyontutils import sneechenator as snch
 from pyontutils.core import OntGraph
 from pyontutils.config import auth
 from pyontutils.namespaces import rdf
+from pyontutils.integration_test_helper import Repo
 from .common import temp_path
 
 temp_path_aug = aug.AugmentedPath(temp_path)
@@ -23,6 +24,8 @@ def fix_file(path):
     with open(path, 'wt') as f:
         f.write(sout)
 
+    return sin
+
 
 class TestFile(unittest.TestCase):
     @classmethod
@@ -34,14 +37,17 @@ class TestFile(unittest.TestCase):
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
         path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        cls.sins = {}
         for p in (sfy, sft):
-            fix_file(p)
+            sin = fix_file(p)
+            cls.sins[p] = sin
 
     @classmethod
     def tearDownClass(cls):
         temp_path_aug.rmtree()
-        #for p in (sfy, sft):
-            #p.checkout()  # FIXME TODO not implemented yet
+        for p, sin in cls.sins.items():
+            with open(p, 'wt') as f:
+                f.write(sin)
 
     def test_write(self):
         tt = self.wrangler.dir_process / 'test-target'
@@ -84,14 +90,17 @@ class TestInterLex(unittest.TestCase):
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
         path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        cls.sins = {}
         for p in (sfy, sft):
-            fix_file(p)
+            sin = fix_file(p)
+            cls.sins[p] = sin
 
     @classmethod
     def tearDownClass(cls):
         temp_path_aug.rmtree()
-        #for p in (sfy, sft):
-            #p.checkout()  # FIXME TODO not implemented yet
+        for p, sin in cls.sins.items():
+            with open(p, 'wt') as f:
+                f.write(sin)
 
     def test_yaml(self):
         snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
