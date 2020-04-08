@@ -41,6 +41,7 @@ before_install:
     yaml-mode
   - pushd NIF-Ontology
   - git fetch origin neurons:neurons --depth=1
+  - git fetch origin dev:dev --depth=1
   - popd
   - popd
 
