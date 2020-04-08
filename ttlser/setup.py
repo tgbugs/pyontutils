@@ -44,7 +44,7 @@ setup(
     python_requires='>=3.5',
     tests_require=tests_require,
     install_requires=[
-        'neurdflib>=5.0.1',
+        'rdflib>=5.0.0.dev0',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'ttlfmt': ttlfmt_require,
