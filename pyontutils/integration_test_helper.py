@@ -238,8 +238,10 @@ class _TestScriptsBase(unittest.TestCase):
                     print(tc.ltyellow('TESTING:'), module_path)
                     script.test()  # FIXME mutex and confusion
             except BaseException as e:
-                if type(e) == SystemExit:  # docopt exit is a subclass of SystemExit, and we need that to fail
-                    return  # --help
+                # docopt exit is a subclass of SystemExit
+                # and we need that to fail
+                if type(e) == SystemExit and '--help' in argv:
+                    return
 
                 print(f'failed to run {argv}')
                 raise e
