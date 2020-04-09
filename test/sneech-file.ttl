@@ -1,7 +1,7 @@
 @prefix : <https://uilx.org/sneechenator/u/r/> .
 @prefix ilxtr: <http://uri.interlex.org/tgbugs/uris/readable/> .
 [] a :SneechFile ;
-    :referenceHost "uri.interlex.org" ;
+    :referenceIndex "uri.interlex.org" ;
     :namespaces ilxtr: ;
     :include
     [ :path "~/git/NIF-Ontology/ttl/phenotype-core.ttl" ;

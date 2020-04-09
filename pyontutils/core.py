@@ -1255,7 +1255,7 @@ class OntGraph(rdflib.Graph):
             yield from self[:rdf.type:type]
 
     @property
-    def boundIdentifier(self):
+    def boundIdentifier(self):  # FIXME regularize naming ...
         return next(self.boundIdentifiers)
 
     @property

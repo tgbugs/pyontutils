@@ -1,5 +1,7 @@
+import os
 import unittest
 import pathlib as pl
+import pytest
 import ontquery as oq
 import augpathlib as aug
 from pyontutils import sneechenator as snch
@@ -27,6 +29,13 @@ def fix_file(path):
     return sin
 
 
+class SneechenatorTest(snch.Sneechenator):
+    @staticmethod
+    def searchSquares(squares):
+        """ No matches because no remote index """
+        return {s:tuple() for s in squares}
+
+
 class TestFile(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -36,7 +45,7 @@ class TestFile(unittest.TestCase):
         temp_path_aug.mkdir()
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
-        path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        path_index = cls.wrangler.new_index('uri.interlex.org')
         cls.sins = {}
         for p in (sfy, sft):
             sin = fix_file(p)
@@ -71,7 +80,7 @@ class TestWrangler(unittest.TestCase):
     def test_new_index(self):
         rp = temp_path / 'sneechenator'
         wrangler = snch.SneechWrangler(rp)
-        path_index = wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        path_index = wrangler.new_index('uri.interlex.org')
         assert path_index.exists(), 'wat'
         g = OntGraph(path=path_index).parse()
         try:
@@ -80,7 +89,9 @@ class TestWrangler(unittest.TestCase):
             assert False, g.debug()
 
 
-class TestInterLex(unittest.TestCase):
+class TestSneechenator(unittest.TestCase):
+    _test_class = SneechenatorTest
+
     @classmethod
     def setUpClass(cls):
         if temp_path_aug.exists():  # in case someone else forgot to clean up after themselves
@@ -89,7 +100,7 @@ class TestInterLex(unittest.TestCase):
         temp_path_aug.mkdir()
         rp = temp_path / 'sneechenator'
         cls.wrangler = snch.SneechWrangler(rp)
-        path_index = cls.wrangler.new_index('uri.interlex.org', '/tgbugs/uris/')
+        path_index = cls.wrangler.new_index(cls._test_class.referenceIndex)
         cls.sins = {}
         for p in (sfy, sft):
             sin = fix_file(p)
@@ -102,15 +113,35 @@ class TestInterLex(unittest.TestCase):
             with open(p, 'wt') as f:
                 f.write(sin)
 
+
     def test_yaml(self):
-        snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
+        snchr = self._test_class(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromYaml(sfy)
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
         a = snchf.COMMENCE(snchr, path_out=of)
         b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
 
     def test_ttl(self):
-        snchr = snch.InterLexSneechenator(path_wrangler=self.wrangler.rp_sneech)
+        snchr = self._test_class(path_wrangler=self.wrangler.rp_sneech)
+        snchf = snch.SnchFile.fromTtl(sft)
+        of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
+        a = snchf.COMMENCE(snchr, path_out=of)
+        b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
+
+
+@pytest.mark.skipif('CI' in os.environ, reason='alt mapped endpoint not available in prod')
+class TestInterLex(TestSneechenator):
+    _test_class = snch.InterLexSneechenator
+
+    def test_yaml(self):
+        snchr = self._test_class(path_wrangler=self.wrangler.rp_sneech)
+        snchf = snch.SnchFile.fromYaml(sfy)
+        of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
+        a = snchf.COMMENCE(snchr, path_out=of)
+        b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
+
+    def test_ttl(self):
+        snchr = self._test_class(path_wrangler=self.wrangler.rp_sneech)
         snchf = snch.SnchFile.fromTtl(sft)
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
         a = snchf.COMMENCE(snchr, path_out=of)
