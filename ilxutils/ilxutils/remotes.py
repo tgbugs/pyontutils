@@ -8,7 +8,7 @@ def remote(server=''):
     InterLexRemote = oq.plugin.get('InterLex')
 
     if server:
-    server = server if server.endswith('.') else server + '.'
+        server = server if server.endswith('.') else server + '.'
     endpoint = f'https://{server}scicrunch.org/api/1/'
 
     #

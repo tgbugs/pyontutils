@@ -1,16 +1,26 @@
 import json
-import requests
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Tuple
 from urllib.parse import urljoin
 
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import nest_asyncio
+nest_asyncio.apply()
 
-class ScicrunchSession:
+from pyontutils.utils import Async, deferred
+
+
+class SciCrunchSession:
     """ Boiler plate for SciCrunch server responses. """
 
     def __init__(self,
                  key: str,
-                 host: str = 'scicrunch.org',
-                 auth: tuple = (None, None)) -> None:
+                 host: str = 'scicrunch.org', # MAIN TEST -> test3.scicrunch.org
+                 auth: tuple = ('scicrunch', 'perl22(query)'),
+                 retries: int = 3,
+                 backoff_factor: float = 1.0,
+                 status_forcelist: tuple = (400, 500, 502, 504),) -> None:
         """ Initialize Session with SciCrunch Server.
 
         :param str key: API key for SciCrunch [should work for test hosts].
@@ -30,6 +40,16 @@ class ScicrunchSession:
         self.session = requests.Session()
         self.session.auth = auth
         self.session.headers.update({'Content-type': 'application/json'})
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist, # 400 for no ILX ID generated.
+        )
+        # adapter = HTTPAdapter(max_retries=retry)
+        # self.session.mount('http://', adapter)
+        # self.session.mount('https://', adapter)
 
     def __session_shortcut(self, endpoint: str, data: dict, session_type: str = 'GET') -> dict:
         """ Short for both GET and POST.
@@ -46,7 +66,13 @@ class ScicrunchSession:
                 raise ValueError('request session data must be of type dictionary')
             return json.dumps(data)
 
+        # urljoin bug; .com/ap1/1/ + /test/ != .com/ap1/1/test/ but .com/test/
+        # HOWEVER .com/ap1/1/ + test/ == .com/ap1/1/test/
+        endpoint = endpoint[1:] if endpoint.startswith('/') else endpoint
         url = urljoin(self.api, endpoint)
+        if data:
+            for key, value in data.items():
+                url = url.format(**{key:value})
         data = _prepare_data(data)
         try:
             # TODO: Could use a Request here to shorten code.
@@ -55,20 +81,83 @@ class ScicrunchSession:
             else:
                 response = self.session.post(url, data=data)
             # crashes if success on the server side is False
-            if not response.json()['success']:
-                raise ValueError(response.text + f' -> STATUS CODE: {response.status_code}')
+            if response.json()['success'] == False:
+                # Need to retry if server fails to create the ILX ID.
+                if response.json().get('errormsg') == 'could not generate ILX identifier':
+                    return response.json()
+                raise ValueError(response.text + f' -> STATUS CODE: {response.status_code} @ URL: {response.url}')
             response.raise_for_status()
         # crashes if the server couldn't use it or it never made it.
-        except requests.exceptions.HTTPError as error:
-            raise error
+        except:
+            raise requests.exceptions.HTTPError(f'{response.text} {response.status_code}')
 
-        # {'data':{}, 'success':bool}
+        # response.json() == {'data':{}, 'success':bool}
         return response.json()['data']
 
-    def get(self, endpoint: str, data: dict = None) -> dict:
+    def _get(self, endpoint: str, data: dict = None) -> dict:
         """ Quick GET for SciCrunch. """
         return self.__session_shortcut(endpoint, data, 'GET')
 
-    def post(self, endpoint: str , data: dict = None) -> dict:
+    def _post(self, endpoint: str , data: dict = None) -> dict:
         """ Quick POST for SciCrunch. """
         return self.__session_shortcut(endpoint, data, 'POST')
+
+    def get(self, func, data_list=None) -> List[Tuple[str, dict]]:
+        if not data_list:
+            return self._get(endpoint)
+        # worker
+        gin = lambda data: self._get(endpoint, data)
+        # Builds futures dynamically
+        return Async()(deferred(gin)(data) for data in data_list)
+
+    def post(self, func: object, data_list: list) -> List[Tuple[str, dict]]:
+        # worker; return server_response first then initial data input
+        gin = lambda data: (data, func(data))
+
+        # Builds futures dynamically
+        responses = Async()(deferred(gin)(data) for data in data_list)
+
+        # BUG: ilx_ids are created on the PHP side and are slow. Duplicates
+        # are known to be created "func hit at same time" so we need to a new
+        # session and try again.
+        number_of_batch_retries = 0
+        while number_of_batch_retries < 10:
+            data_queue = []
+            for response in responses:
+                data, server_response = response
+                print(server_response)
+                if server_response.get('errormsg') == 'could not generate ILX identifier':
+                    data_queue.append(data)
+            if data_queue == []:
+                break
+            responses = Async()(deferred(gin)(data) for data in data_queue)
+            number_of_batch_retries += 1
+        return
+
+    def get(self, urls, limit=5):
+
+        async def get_single(url, session, auth):
+            async with session.get(url) as response:
+                try:
+                    output = await response.json()
+                except:
+                    output = await response.text()
+                    ValueError(f'{output} with status code [{response.status}]')
+                return output
+
+        async def get_all(urls, connector, loop):
+            tasks = []
+            async with ClientSession(connector=connector, loop=loop,
+                                     auth=self.auth, raise_for_status=True) as session:
+                for i, url in enumerate(urls):
+                    task = asyncio.ensure_future(get_single(url, session, self.auth))
+                    tasks.append(task)
+                return (await asyncio.gather(*tasks))
+
+        # rate limiter; should be between 20 and 80; 100 maxed out server
+        connector = TCPConnector(limit=limit)
+        loop = asyncio.get_event_loop()  # event loop initialize
+         # tasks to do; data is in json format [{},]
+        future = asyncio.ensure_future(get_all(urls, connector, loop))
+        outputs = loop.run_until_complete(future)  # loop until done
+        return {k: v for keyval in outputs for k, v in keyval.items()}
