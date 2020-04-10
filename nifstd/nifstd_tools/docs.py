@@ -1,16 +1,25 @@
 #!/usr/bin/env python3.7
-"""Compile all ontology related documentation.
+import tempfile
+from pyontutils.config import auth
+from augpathlib import RepoPath as Path
+temp_path = Path(tempfile.tempdir)
+_ddconf = auth.get_path('resources') / 'docs-config.yaml'
+_ddpath = temp_path / 'build-ont-docs' / 'docs'
+__doc__ = f"""Compile all documentation from git repos.
 
 Usage:
     ont-docs [options] [--repo=<REPO>...]
 
 Options:
-    -h --help            show this
-    -s --spell           run hunspell on all docs
-    -o --docstring-only  build docstrings only
-    -j --jobs=NJOBS      number of jobs [default: 9]
-    -r --repo=<REPO>     additional repos to crawl for docs
-    --debug              redirect stderr to debug pipeline errors
+    -h --help             show this
+    -c --config=<PATH>    path to doc-index.yaml [default: {_ddconf}]
+    -o --out-path=<PATH>  base path inside which docs will be built [default: {_ddpath}]
+    -b --html-root=<REL>  relative path to the html root [default: ..]
+    -s --spell            run hunspell on all docs
+    -d --docstring-only   build docstrings only
+    -j --jobs=NJOBS       number of jobs [default: 9]
+    -r --repo=<REPO>      additional repos to crawl for docs
+    --debug               redirect stderr to debug pipeline errors
 
 """
 import os
@@ -18,24 +27,23 @@ import re
 import ast
 import shutil
 import logging
-import tempfile
 import subprocess
 from urllib.parse import urlparse
 from importlib import import_module
+import yaml
+import htmlfn as hfn
 import nbformat
 from git import Repo
-from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from augpathlib import RepoPath as Path, exceptions as aexc
+from augpathlib import exceptions as aexc
+from pyontutils import clifun as clif
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
 from pyontutils.utils import TermColors as tc, get_working_dir
-from pyontutils.config import auth
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
 working_dir = Path(__file__).resolve().working_dir
-temp_path = Path(tempfile.tempdir)
 
 try:
     import hunspell
@@ -676,168 +684,122 @@ def prepare_paths(BUILD, docs_dir, theme_repo, theme):
     #shutil.copy(image, images_dir)
 
 
+def only(repo, file):
+    """ for debugging specific files """
+    #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
+    #and Path(repo.working_dir).name == 'pyontutils' and f == 'README.md'  # DEBUG
+    #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
+    return True
+
+
+class Options(clif.Options):
+
+    @property
+    def jobs(self):
+        return int(self.args['--jobs'])
+
+    @property
+    def out_path(self):
+        return Path(self.args['--out-path'])
+
+    @property
+    def BUILD(self):
+        return (self.out_path / self.html_root).resolve()
+
+
+class Main(clif.Dispatcher):
+
+    def default(self):
+        docs_dir = self.options.out_path
+        BUILD = self.options.BUILD
+
+        glb = Path(auth.get_path('git-local-base'))
+        theme_repo = glb / 'org-html-themes'
+        theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
+        prepare_paths(BUILD, docs_dir, theme_repo, theme)
+
+        docstring_kwargs = docstrings(theme)
+        wd_docs_kwargs = [docstring_kwargs]
+        if self.options.docstring_only:
+            [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
+            outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1,
+                                            debug=self.options.debug)[0]
+            if not outname.parent.exists():
+                outname.parent.mkdir(parents=True)
+            with open(outname.as_posix(), 'wt') as f:
+                f.write(rendered)
+            return
+
+        path_docs_config = Path(self.options.config)
+        with open(path_docs_config, 'rt') as f:
+            docs_config = yaml.safe_load(f)
+
+        for docs_for, doc_config in (('ontology', docs_config['ontology']),):  # HACK
+            names = tuple(doc_config['repos']) + tuple(self.options.repo)  # TODO fetch if missing ?
+            repo_paths = [Path(auth.get_path('ontology-local-repo')),
+                        Path(working_dir)] + [glb / name for name in names]
+            repos = [p.repo for p in repo_paths]
+            skip_folders = doc_config['skip-folders']
+            rskip = doc_config['skip']
+
+            et = tuple()
+            # TODO move this into run_all
+            wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
+                                Path(repo.working_dir, f).resolve(),
+                                makeKwargs(repo, f))
+                            for repo in repos
+                            for f in repo.git.ls_files().split('\n')
+                            if Path(f).suffix in suffixFuncs
+                            and only(repo, f)
+                            and noneMembers(f, *skip_folders)
+                            and f not in rskip.get(Path(repo.working_dir).name, et)]
+
+            [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
+
+            if self.options.spell:
+                spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
+                return
+
+            outname_rendered = render_docs(wd_docs_kwargs, BUILD,
+                                           self.options.jobs,
+                                           debug=self.options.debug)
+
+            titles = doc_config['titles']
+            index = [f'<b class="{heading}">{heading}</b>'
+                    for heading in doc_config['index']]
+
+            for outname, rendered in outname_rendered:
+                apath = outname.relative_to(BUILD / 'docs')
+                title = titles.get(apath.as_posix(), None)
+                # TODO parse out/add titles
+                value = hfn.atag(apath) if title is None else hfn.atag(apath, title)
+                index.append(value)
+                if not outname.parent.exists():
+                    outname.parent.mkdir(parents=True)
+
+                with open(outname.as_posix(), 'wt') as f:
+                    f.write(rendered)
+
+            lt  = list(titles)
+            def title_key(a):
+                return lt.index(a.split('"')[1])
+
+            index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] +
+                                       sorted(index, key=title_key))
+            with open((BUILD / 'docs/index.html').as_posix(), 'wt') as f:
+                f.write(hfn.htmldoc(index_body,
+                                    title='NIF Ontology documentation index'))
+
+
 def main():
-    from docopt import docopt
+    from docopt import docopt, parse_defaults
     args = docopt(__doc__)
+    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     debug = args['--debug']
+    options = Options(args, defaults)
+    main = Main(options)
+    main()
 
-    BUILD = working_dir / 'doc_build'
-    docs_dir = BUILD / 'docs'
-    glb = Path(auth.get_path('git-local-base'))
-    theme_repo = glb / 'org-html-themes'
-    theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
-    prepare_paths(BUILD, docs_dir, theme_repo, theme)
-
-    docstring_kwargs = docstrings(theme)
-    wd_docs_kwargs = [docstring_kwargs]
-    if args['--docstring-only']:
-        [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-        outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1, debug=debug)[0]
-        if not outname.parent.exists():
-            outname.parent.mkdir(parents=True)
-        with open(outname.as_posix(), 'wt') as f:
-            f.write(rendered)
-        return
-
-    names = ('augpathlib', 'interlex', 'ontquery', 'orthauth', 'sparc-curation') + tuple(args['--repo'])
-    repo_paths = [Path(auth.get_path('ontology-local-repo')),
-                  Path(working_dir)] + [glb / name for name in names]
-    repos = [p.repo for p in repo_paths]
-    skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
-    rskip = {
-        'pyontutils': (
-            'docs/NeuronLangExample.ipynb',  # exact skip due to moving file
-            'ilxutils/ilx-playground.ipynb',
-            'nifstd/resources/sawg.org',  # published via another workflow
-        ),
-        'sparc-curation': (
-            'README.md',  # insubstantial
-            'docs/apinatomy.org',
-            'docs/developer-guide.org',
-            'docs/notes.org',
-            'test/apinatomy/README.org',
-            'resources/scigraph/README.org',  # replaced by the nifstd scigraph readme
-        ),
-        'interlex': (
-            'README.md',  # insubstantial
-            'docs/explaining.org',  # not ready
-        ),}
-
-    et = tuple()
-    # TODO move this into run_all
-    #wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
-    wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
-                        Path(repo.working_dir, f).resolve(),
-                        makeKwargs(repo, f))
-                       for repo in repos
-                       for f in repo.git.ls_files().split('\n')
-                       if Path(f).suffix in suffixFuncs
-                       #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
-                       #and Path(repo.working_dir).name == 'pyontutils' and f == 'README.md'  # DEBUG
-                       #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
-                       and noneMembers(f, *skip_folders)
-                       and f not in rskip.get(Path(repo.working_dir).name, et)]
-
-    [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-
-    if args['--spell']:
-        spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
-        return
-
-    outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']), debug=debug)
-
-    titles = {
-        ###
-        'Components':'Components',
-        'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  #
-        'ontquery/README.html':'Introduction to ontquery',
-        'orthauth/README.html':'Introduction to orthauth',
-        'pyontutils/README.html':'Introduction to pyontutils',
-        'pyontutils/nifstd/README.html':'Introduction to nifstd-tools',
-        'pyontutils/neurondm/README.html':'Introduction to neurondm',
-        'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
-
-        ###
-        'Developer docs':'Developer docs',
-        'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
-        'NIF-Ontology/docs/development-setup.html': 'Ontology development setup',  # HOWTO
-        'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
-        'pyontutils/docs/release.html': 'Python library packaging and release process',
-        'NIF-Ontology/docs/import-chain.html': 'Ontology import chain',  # Documentation
-
-        'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
-        'interlex/alt/README.html': 'InterLex alternate resolver',  # TODO
-        'interlex/docs/setup.html': '',  # present but not visibly listed
-        'interlex/docs/implementation.html': '',  # present but not visibly listed
-
-        'pyontutils/nifstd/scigraph/README.html': 'SciGraph user guide',
-
-        'pyontutils/docstrings.html': 'Command line programs',
-        'NIF-Ontology/docs/external-sources.html': 'External sources for the ontology',  # Other
-        'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
-        'orthauth/docs/guide.html': 'Orthauth user guide',
-
-        ###
-        'Contributing':'Contributing',
-        'pyontutils/nifstd/development/README.html':'Contributing to the ontology',
-        'pyontutils/nifstd/development/community/README.html':'Contributing term lists to the ontology',
-        'pyontutils/neurondm/neurondm/models/README.html':'Contributing neuron terminology to the ontology',
-
-        ###
-        'Ontology content':'Ontology content',
-        'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
-        'pyontutils/nifstd/development/methods/README.html':'Methods and techniques',  # Ontology content
-        'NIF-Ontology/docs/Neurons.html':'Neuron Lang overview',
-        'pyontutils/neurondm/docs/NeuronLangExample.html':'Neuron Lang examples',
-        'pyontutils/neurondm/docs/neurons_notebook.html':'Neuron Lang setup',
-
-        ###
-        'Specifications':'Specifications',
-        'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
-        'pyontutils/ttlser/docs/ttlser.html':'Deterministic turtle specification',
-
-        ###
-        'Other':'Other',
-        'augpathlib/README.html': 'augpathlib readme',
-        'pyontutils/htmlfn/README.html': 'htmlfn readme',
-        'pyontutils/ttlser/README.html': 'ttlser readme',
-        'sparc-curation/docs/background.html': '',  # present but not visibly listed
-    }
-
-    titles_sparc = {  # TODO abstract this out ...
-        'Background': 'Background',
-        'sparc-curation/docs/background.html': 'SPARC curation background',
-        'Other':'Other',
-        'sparc-curation/README.html': 'sparc-curation readme',
-    }
-
-    index = [
-        '<b class="Components">Components</b>',
-        '<b class="Developer docs">Developer docs</b>',
-        '<b class="Contributing">Contributing</b>',
-        '<b class="Ontology content">Ontology content</b>',
-        '<b class="Specifications">Specifications</b>',
-        '<b class="Other">Other</b>',
-    ]
-    for outname, rendered in outname_rendered:
-        apath = outname.relative_to(BUILD / 'docs')
-        title = titles.get(apath.as_posix(), None)
-        # TODO parse out/add titles
-        value = atag(apath) if title is None else atag(apath, title)
-        index.append(value)
-        if not outname.parent.exists():
-            outname.parent.mkdir(parents=True)
-        with open(outname.as_posix(), 'wt') as f:
-            f.write(rendered)
-
-    lt  = list(titles)
-    def title_key(a):
-        return lt.index(a.split('"')[1])
-
-    index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] + sorted(index, key=title_key))
-    with open((BUILD / 'docs/index.html').as_posix(), 'wt') as f:
-        f.write(htmldoc(index_body,
-                        title='NIF Ontology documentation index'))
 
 if __name__ == '__main__':
     main()
