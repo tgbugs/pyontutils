@@ -222,7 +222,7 @@ class _TestScriptsBase(unittest.TestCase):
                             ' cannot test main, skipping.')
                 return
 
-            if argv and argv[0] != script:
+            if argv and argv[0] != script.__name__.rsplit('.', 1)[-1]:
                 os.system(' '.join(argv))  # FIXME error on this?
 
             try:
@@ -238,8 +238,12 @@ class _TestScriptsBase(unittest.TestCase):
                     print(tc.ltyellow('TESTING:'), module_path)
                     script.test()  # FIXME mutex and confusion
             except BaseException as e:
-                if isinstance(e, SystemExit):
-                    return  # --help
+                # docopt exit is a subclass of SystemExit
+                # and we need that to fail
+                if type(e) == SystemExit and '--help' in argv:
+                    return
+
+                print(f'failed to run {argv}')
                 raise e
             finally:
                 post_main()
@@ -269,6 +273,9 @@ class _TestScriptsBase(unittest.TestCase):
 
             for j_ind, argv in enumerate(argvs):
                 mname = f'test_{i_ind + npaths:0>3}_{j_ind:0>3}_' + pex
+                if argv:
+                    mname += '_' + '_'.join(argv).replace('-', '_')
+
                 #print('MPATH:  ', module_path)
                 test_main = cls.make_test_main(do_mains, post_main, module_path, argv,
                                                stem in mains, stem in tests, skip)

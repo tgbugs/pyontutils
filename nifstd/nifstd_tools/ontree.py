@@ -19,66 +19,49 @@ Options:
 
 """
 
-from collections import defaultdict, OrderedDict, Counter
 import os
-import re
 import asyncio
 import subprocess
-from copy import deepcopy
-from pprint import pprint
+from pprint import pformat
 from pathlib import Path
 from datetime import datetime
 from urllib.error import HTTPError
 from urllib.parse import parse_qs
-import yaml
-import rdflib
 import htmlfn as hfn
-import ontquery as oq
 from flask import (Flask,
                    url_for,
                    redirect,
                    request,
-                   render_template,
-                   render_template_string,
-                   make_response,
                    abort,
                    current_app,
                    send_from_directory)
-from docopt import docopt, parse_defaults
-from htmlfn import htmldoc, atag, nbsp
-from htmlfn import render_table, table_style
+from requests.exceptions import HTTPError as rHTTPError
 from pyontutils import scigraph
-from pyontutils.core import makeGraph, qname, OntId, OntTerm
+from pyontutils.core import OntId, OntTerm, OntGraph
 from pyontutils.scig import ImportChain, makeProv
 from pyontutils.utils import getSourceLine, get_working_dir, makeSimpleLogger
 from pyontutils.utils import Async, deferred, UTCNOWISO
 from pyontutils.config import auth
-from pyontutils.hierarchies import Query, creatTree, dematerialize, flatten as flatten_tree
-from pyontutils.closed_namespaces import rdfs, rdf, owl
-from pyontutils.sheets import Sheet
-from pyontutils.namespaces import OntCuries
-from typing import Union, Dict, List, Tuple, Generator
-from nifstd_tools.sheets_sparc import hyperlink_tree, tag_row, open_custom_sparc_view_yml, YML_DELIMITER
+from pyontutils.hierarchies import (Query,
+                                    creatTree,
+                                    dematerialize,
+                                    flatten as flatten_tree)
+from pyontutils.namespaces import rdfs, OntCuries
+from pyontutils.scigraph_codegen import moduleDirect
+from nifstd_tools.sheets_sparc import (hyperlink_tree,
+                                       tag_row,
+                                       open_custom_sparc_view_yml,
+                                       YML_DELIMITER)
+from nifstd_tools.simplify import simplify, cleanBad
 from nifstd_tools import __version__
-
-# Convienient Typing
-Semantic = Union[rdflib.URIRef, rdflib.Literal, rdflib.BNode]
-SemanticOptional = Union[Semantic, str, None]
 
 log = makeSimpleLogger('ontree')
 
+# FIXME these will go to network which is :/
 sgg = scigraph.Graph(cache=False, verbose=True)
 sgv = scigraph.Vocabulary(cache=False, verbose=True)
 sgc = scigraph.Cypher(cache=False, verbose=True)
 sgd = scigraph.Dynamic(cache=False, verbose=True)
-
-# data endpoint
-#_dataBP = 'https://sparc.olympiangods.org/scigraph'
-_dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
-data_sgd = scigraph.Dynamic(cache=True, verbose=True)
-data_sgd._basePath = _dataBP
-data_sgc = scigraph.Cypher(cache=True, verbose=True)
-data_sgc._basePath = _dataBP
 
 # This was for ttl creation extension for sparc view
 # ixr.setup(instrumented=OntTerm)
@@ -130,9 +113,10 @@ def time():
 
 
 def node_list(nodes):
-    pprint(nodes)
+    log.debug(pformat(nodes))
     # FIXME why the heck are these coming in as lbl now?!?!
-    s = sorted([(n['lbl'], atag(n['id'], n['lbl'], new_tab=True)) for n in nodes])
+    s = sorted([(n['lbl'], hfn.atag(n['id'], n['lbl'], new_tab=True))
+                for n in nodes])
     return '<br>\n'.join([at for _, at in s])
 
 
@@ -141,125 +125,29 @@ def graphFromGithub(link, verbose=False):
     # also caching probably
     if verbose:
         log.info(link)
-    return makeGraph('', graph=rdflib.Graph().parse(f'{link}?raw=true', format='turtle'))
+
+    g = OntGraph().parse(f'{link}?raw=true', format='turtle')
+    OntCuries.populate(g)
+    return g
 
 
-def connectivity_query(relationship=None, start=None, end=None):
-    j = sgd.dispatch('/dynamic/shortestSimple?'
-                     'start_id={start.quoted}&'
-                     'end_id={end.quoted}&'
-                     'relationship={relationship}')
-
-    kwargs['json'] = j
-    tree, extras = creatTree(*Query(root, pred, direction, depth), **kwargs)
-    return htmldoc(extras.html, styles=hfn.tree_styles)
-
-
-def cleanBad(json):
-    deep = deepcopy(json)
-    bads = 'fma:continuous_with',
-    edges = deep['edges']
-    putative_bads = [e for e in edges if e['pred'] in bads]
-    skip = []
-    for e in tuple(putative_bads):
-        if e not in skip:
-            rev = {'sub': e['obj'], 'pred': e['pred'], 'obj':e['sub'], 'meta': e['meta']}
-            if rev in putative_bads:
-                skip.append(rev)
-                edges.remove(e)
-
-    remed = []
-    for e in skip:
-        for ae in tuple(edges):
-            if ae not in remed and ae != e:
-                if (
-                        e['sub'] == ae['sub'] or
-                        e['obj'] == ae['obj'] or
-                        e['obj'] == ae['sub'] or
-                        e['sub'] == ae['obj']
-                ):
-                    # there is already another edge that pulls in one of the
-                    # members of this edge so discard the bad edge
-                    edges.remove(e)
-                    remed.append(e)
-                    break
-
-    log.debug(len(edges))
-    log.debug(len(json['edges']))
-    return deep
+collapse_apinat = [  # FIXME config?
+    ['apinatomy:conveys', 'apinatomy:source'],
+    ['apinatomy:conveys', 'apinatomy:target'],
+    ['apinatomy:conveys', 'apinatomy:source',
+     # FIXME if the final external is missing the rendering
+     # halts at layerIn and doesn't show the subtree
+     'apinatomy:internalIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:conveys', 'apinatomy:target',
+     'apinatomy:internalIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:layerIn', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:supertype', 'apinatomy:external'],
+    ['apinatomy:fasciculatesIn', 'apinatomy:cloneOf', 'apinatomy:supertype', 'apinatomy:external'],
+]
 
 
-def pb(blob):
-    print(blob['sub'], blob['pred'], blob['obj'])
-
-def simplify(path, blob):
-    if 'housing-lyphs' in path:
-        collapse = [['apinatomy:conveys', 'apinatomy:source', 'apinatomy:rootOf'],
-                    ['apinatomy:conveys', 'apinatomy:target', 'apinatomy:rootOf'],]
-        exclude = set(p for c in collapse for p in c)
-        excluded = [e for e in blob['edges'] if e['pred'] in exclude]
-        if excluded:  # on the off chance that there was nothing to exclude, however unlikely
-            pred_start = set(c[0] for c in collapse)
-            pred_end = set(c[-1] for c in collapse)
-
-            subjects = [e['sub'] for e in excluded]
-            objects = [e['obj'] for e in excluded]
-            cs = Counter(subjects).most_common()
-            co = Counter(objects).most_common()
-            # for 'OUTGOING' aka ttl serialization order
-            # objects should be unique, subjects might not be
-            # therefore construct +backwards+ forward since objects
-            # are gurantted to be unique
-            if co[0][1] > 1:
-                log.critical(f'objects were not unique for {path}')
-                return blob
-
-            # good enough for now
-            ends = [e for e in excluded if e['pred'] in pred_end]
-            other = [e for e in excluded if e['pred'] not in pred_end]
-            while other:
-                for o_blob in tuple(other):
-                    o_o = o_blob['obj']
-                    #pb(o_blob)
-                    for e_blob in ends:
-                        if o_o == e_blob['sub']:
-                            e_blob['sub'] = o_blob['sub']
-                            e_blob['pred'] = o_blob['pred'] + '-' + o_o + '-' + e_blob['pred']
-                            #pb(e_blob)
-                            if o_blob in other:
-                                # FIXME this assumes paths to the same node
-                                # always occur at the same depth otherwise
-                                # one path could be removed a step before
-                                # and connection will dangle for some edges
-                                other.remove(o_blob)
-
-            # FIXME this should work but seems to fail for some reason
-            '''
-            starts = [e for e in excluded if e['pred'] in pred_start]
-            other = [e for e in excluded if e['pred'] not in pred_start]
-            while other:
-                print(len(other))
-                for o_blob in tuple(other):
-                    o_sub = o_blob['sub']
-                    for s_blob in starts:
-                        if s_blob['obj'] == o_sub:
-                            s_blob['obj'] = o_blob['obj']
-                            s_blob['pred'] = s_blob['pred'] + '-' + o_sub + '-' + o_blob['pred']
-                            pb(o_blob)
-                            pb(s_blob)
-                            other.remove(o_blob)
-            '''
-
-            included = [e for e in blob['edges'] if e['pred'] not in exclude]
-            collapsed = ends
-            blob['edges'] = included + collapsed
-    else:
-        pass
-
-    return blob
-
-
-def sparc_dynamic(path, wgb, process=lambda x, y: y):
+def sparc_dynamic(data_sgd, data_sgc, path, wgb, process=lambda coll, blob: blob):
     args = dict(request.args)
     if 'direction' in args:
         direction = args.pop('direction')
@@ -276,30 +164,46 @@ def sparc_dynamic(path, wgb, process=lambda x, y: y):
         try:
             data_sgd._get = data_sgd._normal_get
             j = data_sgd.dispatch(path, **args)
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
         finally:
             data_sgd._get = _old_get
     else:
-        j = data_sgd.dispatch(path, **args)
+        try:
+            j = data_sgd.dispatch(path, **args)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
 
-    j = process(path, j)
+    j = process(collapse_apinat, j)
 
-    if not j['edges']:
-        return node_list(j['nodes'])  # FIXME ... really should error?
-
-        log.error(pprint(j))
+    if j is None or 'edges' not in j:
+        log.error(pformat(j))
         return abort(400)
 
-    if path.endswith('housing-lyphs-alt'):  # FIXME hack
-        root = 'CL:0000540'
+    elif not j['edges']:
+        return node_list(j['nodes'])  # FIXME ... really should error?
+
+    if path.endswith('housing-lyphs'):  # FIXME hack
+        root = 'NLX:154731'
         #direction = 'INCOMING'
     else:
         root = None
 
-    prov = [hfn.titletag(f'Dynamic query result for {path}'),
-            f'<meta name="date" content="{UTCNOWISO()}">',
-            f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
-            '<meta name="representation" content="SciGraph">',
-            f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{data_sgd._last_url}">']
+    prov = [
+        hfn.titletag(f'Dynamic query result for {path}'),
+        f'<meta name="date" content="{UTCNOWISO()}">',
+        f'<link rel="http://www.w3.org/ns/prov#wasGeneratedBy" href="{wgb}">',
+        '<meta name="representation" content="SciGraph">',
+        ('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+         f'href="{data_sgd._last_url}">')]
 
     kwargs = {'json': cleanBad(j),
                 'html_head': prov,
@@ -315,35 +219,42 @@ def sparc_dynamic(path, wgb, process=lambda x, y: y):
                 return (f'{tag}.{class_}'
                         '{ white-space: nowrap; }')
 
-            ots = [OntTerm(n) for n in flatten_tree(extras.hierarchy) if 'CYCLE' not in n]
+            ots = [OntTerm(n)
+                   for n in flatten_tree(extras.hierarchy)
+                   if 'CYCLE' not in n]
             #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
-            rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
+            rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition]
+                    for ot in ots]
 
-            return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
-                           styles=(hfn.table_style, nowrap('col-label', 'td')))
+            return hfn.htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                               styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-    return htmldoc(extras.html,
-                   other=prov,
-                   styles=hfn.tree_styles)
+    return hfn.htmldoc(extras.html,
+                       other=prov,
+                       styles=hfn.tree_styles)
 
 
-def render(pred, root, direction=None, depth=10, local_filepath=None, branch='master',
-           restriction=False, wgb='FIXME', local=False, verbose=False, flatten=False,):
+def render(pred, root, direction=None, depth=10, local_filepath=None,
+           branch='master', restriction=False, wgb='FIXME', local=False,
+           verbose=False, flatten=False,):
 
     kwargs = {'local':local, 'verbose':verbose}
     prov = makeProv(pred, root, wgb)
     if local_filepath is not None:
-        github_link = f'https://github.com/SciCrunch/NIF-Ontology/raw/{branch}/{local_filepath}'
-        prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{github_link}">')
-        g = graphFromGithub(github_link, verbose)
-        labels_index = {g.qname(s):str(o) for s, o in g.g[:rdfs.label:]}
+        github_link = ('https://github.com/SciCrunch/NIF-Ontology/raw/'
+                       f'{branch}/{local_filepath}')
+        prov.append('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+                    f'href="{github_link}">')
+        graph = graphFromGithub(github_link, verbose)
+        qname = graph.namespace_manager._qhrm  # FIXME
+        labels_index = {qname(s):str(o) for s, o in graph[:rdfs.label:]}
         if pred == 'subClassOf':
             pred = 'rdfs:subClassOf'  # FIXME qname properly?
         elif pred == 'subPropertyOf':
             pred = 'rdfs:subPropertyOf'
         try:
-            kwargs['json'] = g.make_scigraph_json(pred, direct=not restriction)
-            kwargs['prefixes'] = {k:str(v) for k, v in g.namespaces.items()}
+            kwargs['json'] = graph.asOboGraph(pred, restriction=restriction)
+            kwargs['prefixes'] = {k:str(v) for k, v in graph.namespace_manager}
         except KeyError as e:
             if verbose:
                 log.error(str(e))
@@ -354,12 +265,14 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         # and it should not be calculated every time anyway!
         # oh look, here we are needed a class again
         if False:
-            versionIRI = [e['obj']
-                        for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
-                                                  'NIF/ttl/nif.ttl')['edges']
-                        if e['pred'] == 'versionIRI'][0]
+            versionIRI = [
+                e['obj']
+                for e in sgg.getNeighbors('http://ontology.neuinfo.org/'
+                                          'NIF/ttl/nif.ttl')['edges']
+                if e['pred'] == 'versionIRI'][0]
             #print(versionIRI)
-            prov.append(f'<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" href="{versionIRI}">')  # FIXME wrong and wont resolve
+            prov.append('<link rel="http://www.w3.org/ns/prov#wasDerivedFrom" '
+                        f'href="{versionIRI}">')  # FIXME wrong and wont resolve
         prov.append('<meta name="representation" content="SciGraph">')  # FIXME :/
     kwargs['html_head'] = prov
     try:
@@ -428,23 +341,21 @@ def render(pred, root, direction=None, depth=10, local_filepath=None, branch='ma
         if verbose:
             log.error(f'{type(e)} {e}')
         if sgg.getNode(root):
-            message = 'Unknown predicate or no results.'  # FIXME distinguish these cases...
+            # FIXME distinguish these cases...
+            message = 'Unknown predicate or no results.'
         elif 'json' in kwargs:
             message = 'Unknown root.'
-            r = g.expand(root)
-            for s in g.g.subjects():
+            r = graph.namespace_manager.expand(root)
+            for s in graph.subjects():
                 if r == s:
-                    message = ('No results. You are querying a ttl file directly, '
+                    message = ('No results. '
+                               'You are querying a ttl file directly, '
                                'did you remember to set ?restriction=true?')
                     break
         else:
             message = 'Unknown root.'
 
         return abort(422, message)
-
-
-class fakeRequest:
-    args = {}
 
 
 def getArgs(request):
@@ -543,6 +454,15 @@ demo_examples = (
 )
 
 def server(api_key=None, verbose=False):
+    # data endpoint
+    #_dataBP = 'https://sparc.olympiangods.org/scigraph'
+    _dataBP = 'http://sparc-data.scicrunch.io:9000/scigraph'
+    scigraphd = moduleDirect(_dataBP, 'scigraphd')
+    data_sgd = scigraphd.Dynamic(cache=True, verbose=True, do_error=True)
+    data_sgd._basePath = _dataBP
+    data_sgc = scigraphd.Cypher(cache=True, verbose=True)
+    data_sgc._basePath = _dataBP
+
     f = Path(__file__).resolve()
     working_dir = get_working_dir(__file__)
     resources = auth.get_path('resources')
@@ -599,11 +519,11 @@ def server(api_key=None, verbose=False):
         d = url_for('route_docs')
         e = url_for('route_examples')
         i = url_for('route_import_chain')
-        return htmldoc(atag(d, 'Docs'),
+        return hfn.htmldoc(hfn.atag(d, 'Docs'),
                        '<br>',
-                       atag(e, 'Examples'),
+                       hfn.atag(e, 'Examples'),
                        '<br>',
-                       atag(i, 'Import chain'),
+                       hfn.atag(i, 'Import chain'),
                        title='NIF ontology hierarchies')
 
     @app.route(f'/{basename}/docs', methods=['GET'])
@@ -612,28 +532,34 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/examples', methods=['GET'])
     def route_examples():
-        links = render_table([[name,
-                               atag(url_for("route_query", pred=pred, root=root) + (args[0] if args else ''),
-                                    f'../query/{pred}/{root}{args[0] if args else ""}')]
-                              for name, pred, root, *args in examples],
-                             'Root class', '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false',
-                             halign='left')
+        links = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_query", pred=pred, root=root) + (args[0] if args else ''),
+                   f'../query/{pred}/{root}{args[0] if args else ""}')]
+             for name, pred, root, *args in examples],
+            'Root class',
+            '../query/{predicate-curie}/{root-curie}?direction=INCOMING&depth=10&branch=master&local=false',
+            halign='left')
 
-        flinks = render_table([[name,
-                                atag(url_for("route_filequery", pred=pred, root=root, file=file) + (args[0] if args else ''),
-                                     f'../query/{pred}/{root}/{file}{args[0] if args else ""}')]
-                               for name, pred, root, file, *args in file_examples],
-                              'Root class', '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
-                              halign='left')
+        flinks = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_filequery", pred=pred, root=root, file=file) + (args[0] if args else ''),
+                       f'../query/{pred}/{root}/{file}{args[0] if args else ""}')]
+             for name, pred, root, file, *args in file_examples],
+            'Root class',
+            '../query/{predicate-curie}/{root-curie}/{ontology-filepath}?direction=INCOMING&depth=10&branch=master&restriction=false',
+            halign='left')
 
-        dlinks = render_table([[name,
-                                atag(url_for("route_dynamic", path=path) + (querystring if querystring else ''),
-                                     f'../query/dynamic/{path}{querystring if querystring else ""}')]
-                               for name, path, querystring in dynamic_examples],
-                              'Root class', '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
-                              halign='left')
+        dlinks = hfn.render_table(
+            [[name,
+              hfn.atag(url_for("route_dynamic", path=path) + (querystring if querystring else ''),
+                       f'../query/dynamic/{path}{querystring if querystring else ""}')]
+             for name, path, querystring in dynamic_examples],
+            'Root class',
+            '../query/dynamic/{path}?direction=OUTGOING&dynamic=query&args=here',
+            halign='left')
 
-        return htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
+        return hfn.htmldoc(links, flinks, dlinks, title='Example hierarchy queries')
 
     @app.route(f'/{basename}/sparc/demos/isan2019/neuron-connectivity', methods=['GET'])
     def route_sparc_demos_isan2019_neuron_connectivity():
@@ -726,13 +652,6 @@ def server(api_key=None, verbose=False):
     def route_sparc_demos_apinat():
         return 'apinat'
 
-    #@app.route(f'/{basename}/sparc/demos/apinat/housing-lyphs/<id>', methods=['GET'])
-    #def route_sparc_demos_apinat_housing_lyphs(id):
-        #('http://sparc-data.scicrunch.io:9000/scigraph/'
-         #'dynamic/demos/apinat/housing-lyphs/apin.bolew%3Asoma202')
-        #data = query
-        #return
-
     @app.route(f'/{basename}/sparc/connectivity/query', methods=['GET'])
     def route_sparc_connectivity_query():
         kwargs = request.args
@@ -792,11 +711,11 @@ def server(api_key=None, verbose=False):
 
     @app.route(f'/{basename}/sparc/simple/dynamic/<path:path>', methods=['GET'])
     def route_sparc_simple_dynamic(path):
-        return sparc_dynamic(path, wgb, simplify)
+        return sparc_dynamic(data_sgd, data_sgc, path, wgb, simplify)
 
     @app.route(f'/{basename}/sparc/dynamic/<path:path>', methods=['GET'])
     def route_sparc_dynamic(path):
-        return sparc_dynamic(path, wgb)
+        return sparc_dynamic(data_sgd, data_sgc, path, wgb)
 
     @app.route(f'/{basename}/dynamic/<path:path>', methods=['GET'])
     def route_dynamic(path):
@@ -811,9 +730,17 @@ def server(api_key=None, verbose=False):
         else:
             format_ = None
 
-        j = sgd.dispatch(path, **args)
+        try:
+            j = sgd.dispatch(path, **args)
+        except rHTTPError as e:
+            log.exception(e)
+            abort(e.response.status_code)  # DO NOT PASS ALONG THE MESSAGE
+        except ValueError as e:
+            log.exception(e)
+            abort(404)
+
         if j is None or 'edges' not in j or not j['edges']:
-            log.error(pprint(j))
+            log.error(pformat(j))
             log.debug(sgd._last_url)
             return abort(400)
 
@@ -839,12 +766,12 @@ def server(api_key=None, verbose=False):
                 #rows = [[ot.label, ot.asId().atag(), ot.definition] for ot in ots]
                 rows = [[ot.label, hfn.atag(ot.iri, ot.curie), ot.definition] for ot in ots]
 
-                return htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
-                               styles=(hfn.table_style, nowrap('col-label', 'td')))
+                return hfn.htmldoc(hfn.render_table(rows, 'label', 'curie', 'definition'),
+                                   styles=(hfn.table_style, nowrap('col-label', 'td')))
 
-        return htmldoc(extras.html,
-                       other=prov,
-                       styles=hfn.tree_styles)
+        return hfn.htmldoc(extras.html,
+                           other=prov,
+                           styles=hfn.tree_styles)
 
     @app.route(f'/{basename}/imports/chain', methods=['GET'])
     def route_import_chain():
@@ -911,8 +838,8 @@ def server(api_key=None, verbose=False):
 
         hyp_rows = hyperlink_tree(journey)
 
-        return htmldoc(
-            render_table(hyp_rows),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
             title = 'Terms for ' + (tier2 if tier2 is not None else tier1),
             metas = ({'name':'date', 'content':time()},),
         )
@@ -921,7 +848,7 @@ def server(api_key=None, verbose=False):
     @app.route(f'/{basename}/sparc/view/', methods=['GET'])
     def route_sparc_view():
         hyp_rows = []
-        spaces = nbsp * 8
+        spaces = hfn.nbsp * 8
         for tier1, tier2_on in sorted(sparc_view.items()):
             url = url_for('route_sparc_view_query', tier1=tier1)
             tier1_row = tier1.split(YML_DELIMITER)
@@ -945,19 +872,19 @@ def server(api_key=None, verbose=False):
                 if len(list(sparc_view[tier1_row[0]][tier2_row[0]].keys())) == 1:
                     tagged_tier2_row[0] = spaces+tier2_row[0]
                 hyp_rows.append(tagged_tier2_row)
-        return htmldoc(
-            render_table(hyp_rows),
-            title = 'Main Page Sparc',
-            styles = ["p {margin: 0px; padding: 0px;}"],
-            metas = ({'name':'date', 'content':time()},),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
+            title= 'Main Page Sparc',
+            styles= ["p {margin: 0px; padding: 0px;}"],
+            metas= ({'name':'date', 'content':time()},),
         )
 
     @app.route(f'/{basename}/sparc/index', methods=['GET'])
     @app.route(f'/{basename}/sparc/index/', methods=['GET'])
     def route_sparc_index():
         hyp_rows = hyperlink_tree(sparc_view)
-        return htmldoc(
-            render_table(hyp_rows),
+        return hfn.htmldoc(
+            hfn.render_table(hyp_rows),
             title = 'SPARC Anatomical terms index',
             metas = ({'name':'date', 'content':time()},),
         )
@@ -972,7 +899,7 @@ def server(api_key=None, verbose=False):
 
         log.critical(f'{resources}/sawg.org has not been published')
         return send_from_directory(resources.as_posix(), 'sawg.org')
-        #return htmldoc(
+        #return hfn.htmldoc(
             #atag(url_for('route_sparc_view'), 'Terms by region or atlas'), '<br>',
             #atag(url_for('route_sparc_index'), 'Index'),
             #title='SPARC Anatomical terms', styles=["p {margin: 0px; padding: 0px;}"],
@@ -1062,18 +989,23 @@ test_terms = [OntId('UBERON:0001759'),
               OntId('ILX:0738374')]
 
 
+class fakeRequest:
+    args = {}
+
+
 def test():
     global request
     request = fakeRequest()
     app = server()
     (route_, route_docs, route_filequery, route_examples, route_iriquery,
      route_query, route_dynamic, route_sparc_demos_isan2019_flatmap_queries,
-     route_sparc_demos_isan2019_neuron_connectivity,
+     route_sparc_demos_isan2019_neuron_connectivity, route_sparc_dynamic,
     ) = (app.view_functions[k]
          for k in ('route_', 'route_docs', 'route_filequery',
                    'route_examples', 'route_iriquery', 'route_query',
                    'route_dynamic', 'route_sparc_demos_isan2019_flatmap_queries',
                    'route_sparc_demos_isan2019_neuron_connectivity',
+                   'route_sparc_dynamic',
          ))
 
     #for name, path in demo_examples:
@@ -1102,8 +1034,11 @@ def test():
         try:
             resp = route_dynamic('this/endpoint/does/not/exist')
             assert False, 'should have failed'
-        except TypeError:
+        except ValueError:
             pass
+
+    def test_simple_dynamic():
+        resp = route_sparc_dynamic('demos/apinat/housing-lyphs')
 
     def test_examples():
         for _, predicate, root, *_ in extra_examples + examples:
@@ -1130,6 +1065,8 @@ def test():
             if args and 'restriction' in args[0]:
                 request.args.pop('restriction')
 
+    test_simple_dynamic()
+    return
     test_dynamic()
     test_dynamic_negative()
     request.args['depth'] = 1
@@ -1139,7 +1076,7 @@ def test():
 
 
 def main():
-    from docopt import docopt
+    from docopt import docopt, parse_defaults
     args = docopt(__doc__, version='ontree 0.0.0')
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     verbose = args['--verbose']

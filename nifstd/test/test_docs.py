@@ -1,6 +1,7 @@
 import re
 import unittest
 from pathlib import Path
+import pytest
 from pyontutils.utils import get_working_dir
 from nifstd_tools.docs import FixLinks
 
@@ -22,6 +23,7 @@ class TestRegex(unittest.TestCase):
         assert len(ml.groups()) == 2, ml
 
 
+@pytest.mark.skipif(working_dir is None, reason='Not in git repo so not testing.')  # FIXME create a temp repo?
 class TestFixLinks(unittest.TestCase):
     path_nasty_good = (
         (Path(__file__), '[[file:${HOME}/.ssh/config][your ssh config file]]', '=${HOME}/.ssh/config='),

@@ -1,4 +1,4 @@
-referenceHost: uri.interlex.org
+referenceIndex: uri.interlex.org
 namespaces: http://uri.interlex.org/tgbugs/uris/readable/
 include:
   - path: ~/git/NIF-Ontology/ttl/phenotype-core.ttl

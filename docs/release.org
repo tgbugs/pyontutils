@@ -177,7 +177,7 @@ build-release () {
         elif [[ -n ${CLONEFROM} && "$rurl" != "${CLONEFROM}" ]]; then
             git remote set-url origin "${CLONEFROM}"
         fi
-        git fetch
+        git fetch || return $?  # fail on bad clone to prevent testing against stale code
         git reset --hard origin/master
         git clean -dfx
         popd
@@ -190,7 +190,7 @@ build-release () {
     fi
     # TODO __version__ check against ${version}
 
-    pushd ${folder} || return 1  # or subfolder
+    pushd ${folder} || return $?  # or subfolder
 
     if [[ $(git tag -l ${tag}) ]]; then
         echo "${tag} has already been released for this repo!"
@@ -235,11 +235,11 @@ build-release () {
     pipenv --python 3.7  # for some reason 3.6 lingers in some envs
     if [[ -n ${INTEGRATION_PACKAGES} ]]; then
         echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
-        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return 1
+        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return $?
     fi
     echo $(color yellow)installing$(color off) ${packagename}
-    pipenv run pip install -e .[test]   # .[services] for ontquery full install
-    PYTHONWARNINGS=ignore pipenv run python setup.py test || local FAILURE=1
+    pipenv run pip install -e .[test] || return $?  # .[services] for ontquery full install
+    pipenv run python setup.py test || local FAILURE=$?
     # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
     # everything should pass if not, keep going until it does
     popd
@@ -300,10 +300,10 @@ function push-release () {
     local version=$1
     shift
 
-    rsync -a -v --ignore-existing ${folder}/dist/${packagename/-/*}-${version}{-,.tar}* ${software_releases_path}/ || return 1
+    rsync -a -v --ignore-existing ${folder}/dist/${packagename/-/*}-${version}{-,.tar}* ${software_releases_path}/ || return $?
     pushd ${software_releases_path}
     sha256sum ${packagename/-/*}-${version}{-,.tar}* >> hashes
-    twine upload --repository test ${packagename/-/*}-${version}{-,.tar}* || return 1
+    twine upload --repository test ${packagename/-/*}-${version}{-,.tar}* || return $?
     sleep 1
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
@@ -386,7 +386,7 @@ function final-release () {
 
     pushd ${software_releases_path}
 
-    twine upload --repository pypi ${packagename/-/*}-${version}{-,.tar}* || return 1  # enter password here
+    twine upload --repository pypi ${packagename/-/*}-${version}{-,.tar}* || return $?  # enter password here
 
     sleep 1
     echo "pypi hashes"

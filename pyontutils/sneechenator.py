@@ -5,6 +5,7 @@
 
 from urllib.parse import urlparse
 import yaml
+import idlib
 import rdflib
 import ontquery as oq
 import augpathlib as aug
@@ -29,9 +30,10 @@ snchn = rdflib.Namespace('https://uilx.org/sneechenator/u/r/')
 sncho = rdflib.Namespace('https://uilx.org/sneechenator/o/u/')
 # ontology hash resolver w/ filter by group
 sghashes = rdflib.Namespace('https://uilx.org/sneechenator/o/h/')
-CustomTurtleSerializer.addTopClasses(snchn.IndexGraph,
-                                     snchn.PartialIndexGraph)
-
+_tc = (snchn.IndexGraph,
+       snchn.PartialIndexGraph)
+CustomTurtleSerializer.addTopClasses(*_tc)
+OntGraph.metadata_type_markers.extend(_tc)  # FIXME naming
 
 IXR = oq.plugin.get('InterLex')
 rdfl = oq.plugin.get('rdflib')
@@ -70,21 +72,21 @@ class SnchFile:
         if not orgs:
             raise ValueError(f'orgs is epty for {in_path}')
 
-        referenceHost = blob['referenceHost']
+        referenceIndex = blob['referenceIndex']
         namespaces = blob['namespaces']
         if isinstance(namespaces, str):
             namespaces = namespaces.split(' ')
 
         snchf = cls(orgs=orgs,
                     namespaces=namespaces,
-                    referenceHost=referenceHost)
+                    referenceIndex=referenceIndex)
         return cls(graph=snchf.populate(OntGraph()))
 
     @classmethod
     def fromTtl(cls, in_path):
         return cls(graph=OntGraph(path=in_path).parse())
 
-    def __init__(self, *, orgs=tuple(), namespaces=tuple(), referenceHost=None, graph=None):
+    def __init__(self, *, orgs=tuple(), namespaces=tuple(), referenceIndex=None, graph=None):
         # FIXME ignore the issue of transparently iding git repos right now
         #oris = [OntRestIri(i) for i in input_iris]  # FIXME need commit hashes etc
         # right now we require paths so we can get the granular information and
@@ -99,7 +101,7 @@ class SnchFile:
             # for the the status graph we use below ...
         else:
             self.identity_metadata = rdflib.BNode()  # this is removed after a first output
-            self.referenceHost = rdflib.Literal(referenceHost)
+            self.referenceIndex = rdflib.Literal(referenceIndex)
             self.namespaces = [rdflib.URIRef(ns) for ns in namespaces]
             #self.base_path = base_path # FIXME source might be from anywhere an we would have to copy
             #self.path_out = aug.RepoPath(base_path.stem).with_suffix('.deref.yaml')
@@ -131,7 +133,7 @@ class SnchFile:
             pass
 
         self.identity_metadata = graph.subjectIdentity(s)  # FIXME align naming with idlib when we get there
-        self.referenceHost = next(graph[s:snchn.referenceHost:])
+        self.referenceIndex = next(graph[s:snchn.referenceIndex:])
         self.namespaces = list(graph[s:snchn.namespaces:])
         _orgs = []
         orgs = []
@@ -206,7 +208,7 @@ class SnchFile:
             s = self.s
 
         yield s, rdf.type, snchn.SneechFile
-        yield s, snchn.referenceHost, self.referenceHost
+        yield s, snchn.referenceIndex, self.referenceIndex
         for ns in self.namespaces:
             yield s, snchn.namespaces, ns
 
@@ -235,7 +237,7 @@ class SnchFile:
             paths = [{'path': org.path.as_posix(),
                     'ref': str(org.ref)} for org in self.orgs]
 
-        return {'referenceHost': self.referenceHost,
+        return {'referenceIndex': self.referenceIndex,
                 'namespaces': self.namespaces,
                 'paths': paths}
 
@@ -249,7 +251,7 @@ class SnchFile:
 
         return sneechenator.COMMENCE(namespaces=self.namespaces,
                                      orgs=self.orgs,
-                                     referenceHost=self.referenceHost,
+                                     referenceIndex=self.referenceIndex,
                                      sneech_file=self,
                                      path_out=path_out,)
 
@@ -275,18 +277,18 @@ class SneechWrangler:
         else:
             self.rp_sneech = rpath.working_dir
 
-    def index_graph(self, referenceHost, *, _gc=OntGraph):
-        path = self.path_index(referenceHost)
+    def index_graph(self, referenceIndex, *, _gc=OntGraph):
+        path = self.path_index(referenceIndex)
         # TODO check for uncommitted?
-        return _gc(path=path)
+        return _gc(path=path).parse()
 
-    def path_index(self, referenceHost):
+    def path_index(self, referenceIndex):
         #uri_path_sandbox = uri_path_sandbox.strip('/')  # insurace
         # uri_path_sandbox is needless complication here
-        path = self.dir_index / referenceHost / 'index.ttl'
+        path = self.dir_index / referenceIndex / 'index.ttl'
         return path
 
-    def new_index(self, referenceHost, commit=True):
+    def new_index(self, referenceIndex, *, commit=True):
         """ reference hosts have a single incrementing primary key index
             to which everything is mapped
 
@@ -318,7 +320,7 @@ class SneechWrangler:
             /obo/uris/obo/ ??
         '''
 
-        path = self.path_index(referenceHost)
+        path = self.path_index(referenceIndex)
 
         rrp = path.repo_relative_path
         s = sncho[rrp.with_suffix('').as_posix()]  # TODO check ownership
@@ -334,8 +336,8 @@ class SneechWrangler:
         # base/ontologies/
         # {group}/ontologies/uris/
         pos = ((rdf.type, snchn.IndexGraph),
-               (rdfs.label, rdflib.Literal(f'IndexGraph for {referenceHost}')),
-               (snchn.referenceHost, rdflib.Literal(referenceHost)),  # TODO HRM
+               (rdfs.label, rdflib.Literal(f'IndexGraph for {referenceIndex}')),
+               (snchn.referenceIndex, rdflib.Literal(referenceIndex)),  # TODO HRM
                #(snchn.indexRemote, )
         )
 
@@ -346,7 +348,7 @@ class SneechWrangler:
         g.write()
 
         if commit:
-            path.commit(f'add new index for {referenceHost}')
+            path.commit(f'add new index for {referenceIndex}')
 
         return path
 
@@ -385,9 +387,14 @@ class SneechWrangler:
         if cwd.working_dir == self.rp_sneech.working_dir and self.logic_for_in_process:
             existing = cwd
 
-    @property
-    def existing_indexes(self):
-        return list(set(index_graph.matchNamespace(index_namespace)))
+    def existing_indexes(self, referenceIndex, *index_namespaces):
+        index_graph = self.index_graph(referenceIndex)
+        if not index_namespaces:
+            index_namespaces = [n for p, n in index_graph
+                                if p not in ('owl', 'rdf', 'rdfs', 'xml')]
+
+        {index_namespace:set(index_graph.matchNamespace(index_namespace))
+         for index_namespace in index_namespaces}
 
 
 class Sneechenator:
@@ -418,9 +425,17 @@ class Sneechenator:
     0. commit + push
 """
 
-    mapping_predicate = None
+    referenceIndex = 'uilx.org/temp/u'
+    mapping_predicate = snchn.hasIndexedId
     #type_index = None
-    def __init__(self):
+
+    def __init__(self, *args, path_wrangler=None, **kwargs):
+        if path_wrangler is None:
+            path_wrangler = auth.get_path('git-local-base') / 'sneechenator'
+
+        self.wrangler = SneechWrangler(path_wrangler)
+        #super().__init__(*args, **kwargs)
+
         #if org_index.path.stem != self.type_index:  # FIXME bad ... use embedded metadata?
             #raise TypeError('type mismatch {self.type_index} != {org_index.path.stem}')
 
@@ -428,7 +443,6 @@ class Sneechenator:
 
         # FIXME or do the namespaces and orgs come later ?
         # and need to be passed in making the sneechenator identical with the index ?
-        pass
 
     def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(), sneech_file=None, path_out=None, **kwargs):
         if sneech_file is not None and not orgs:
@@ -443,14 +457,14 @@ class Sneechenator:
 
         #derp = g.namespace_manager.store.namespace
         #namespaces = [derp(p) for p in prefixes]  # FIXME prefix vs namespace
-        rg, maybe_sneeches = self.sneechReviewGraph(namespaces, source_graph,  sneech_file, path_out)
+        rg, maybe_sneeches = self.sneechReviewGraph(source_graph, namespaces,  sneech_file, path_out)
         # TODO I think we commit here ?
         #breakpoint()
 
     def CONTINUE(self, path_sneech_file):
         pass
 
-    def alreadyMapped(self, could_map):
+    def alreadyMapped(self, could_map, namespace=None):
         """ alreadyMapped is the most efficient way to allow multiple different
             implementations to return the set of terms that have already been
             identified in a way that is network transparent """
@@ -460,9 +474,29 @@ class Sneechenator:
         # in the git implementation it is local, also we have to assume that
         # the number of things to be mapped in any one instance will be smaller
         # than the index of everything that has been mapped
-        raise NotImplementedError('implement in subclass')
 
-    def preSquare(self, namespaces, source_graph):
+        # FIXME TODO allow namespace could_map pairings?
+        # or what? should we assume anything about the
+        # criteria used to select could map?
+        index_graph = self.wrangler.index_graph(self.referenceIndex)
+        g = index_graph.__class__()
+        s = index_graph.boundIdentifier + '#ArbitrarySubset'
+        title = rdflib.Literal(f'Subset of mapped IRIs for {self.referenceIndex}')
+        triples_header = (
+            (s, p, o) for p, o in
+            ((rdf.type, snchn.PartialIndexGraph),
+             (rdfs.label, title),
+             (snchn.referenceIndex, rdflib.Literal(self.referenceIndex)),
+            ))
+        [g.add(t) for t in triples_header]
+        [g.add((s, self.mapping_predicate, o))
+         for s in could_map
+         for o in index_graph[s:self.mapping_predicate:]]
+        return g
+
+
+
+    def preSquare(self, source_graph, namespaces):
         # TODO remove use of self where possible
         already = []
         maybe = []
@@ -476,14 +510,14 @@ class Sneechenator:
             # rework this as needed since it is an implementation detail
             # FIXME already_mapped in this case is actually the
             # remote index graph and should probably be passed along ??
-            already_mapped = self.alreadyMapped(namespace, could_map)
+            already_mapped = self.alreadyMapped(could_map, namespace)
             already += [s for s, p, o in already_mapped]
             maybe += [e for e in could_map if e not in already]
 
         return already, maybe
 
-    def preSneech(self, namespaces, source_graph):
-        already, maybe_maybe = self.preSquare(namespaces, source_graph)
+    def preSneech(self, source_graph, namespaces):
+        already, maybe_maybe = self.preSquare(source_graph, namespaces)
 
         rdll = rdfl(source_graph)
         rdll.setup(instrumented=OntTerm)
@@ -499,12 +533,13 @@ class Sneechenator:
         return already, cannot, maybe, sneeches, maybe_sneeches
 
     def reView(self, graph, maybe_sneeches):
-        ml = max(len(t.label) for t in maybe_sneeches)
-        mlm = max(len(m.label) for ms in maybe_sneeches.values() for m in ms)
-        for ms, matches in maybe_sneeches.items():
-            for match in matches:
-                mp = self.mapping_predicate.n3(graph.namespace_manager)
-                print(f'{ms.label:<{ml + 2}}{match.label:<{mlm + 2}}{ms.curie} {mp} {match.curie}')
+        if maybe_sneeches:
+            ml = max(len(t.label) for t in maybe_sneeches)
+            mlm = max(len(m.label) for ms in maybe_sneeches.values() for m in ms)
+            for ms, matches in maybe_sneeches.items():
+                for match in matches:
+                    mp = self.mapping_predicate.n3(graph.namespace_manager)
+                    print(f'{ms.label:<{ml + 2}}{match.label:<{mlm + 2}}{ms.curie} {mp} {match.curie}')
 
     @staticmethod
     def makeSquare(rdll, e):
@@ -523,10 +558,10 @@ class Sneechenator:
         # synonyms
         raise NotImplementedError('implement in subclasses')
 
-    def sneechReviewGraph(self, namespaces, source_graph, sneech_file=None, path_out=None):
+    def sneechReviewGraph(self, source_graph, namespaces, sneech_file=None, path_out=None):
         # TODO cache
         (already, cannot, maybe, sneeches, maybe_sneeches
-        )= self.preSneech(namespaces, source_graph)
+        )= self.preSneech(source_graph, namespaces)
         # TODO not entirely sure about the best place to put this ...
         self.reView(source_graph, maybe_sneeches)  # FIXME dump and commit
 
@@ -568,26 +603,18 @@ class Sneechenator:
 
 
 class InterLexSneechenator(Sneechenator):
-    referenceHost = 'uri.interlex.org'
+    referenceIndex = 'uri.interlex.org'
     mapping_predicate = ilxtr.hasIlxId
-
-    @oq.utils.mimicArgs(Sneechenator.__init__)
-    def __init__(self, *args, path_wrangler=None, **kwargs):
-        if path_wrangler is None:
-            path_wrangler = auth.get_path('git-local-base') / 'sneechenator'
-
-        self.wrangler = SneechWrangler(path_wrangler)
-        super().__init__(*args, **kwargs)
 
     def COMMENCE(self, *, namespaces=tuple(), orgs=tuple(),
                  sneech_file=None, path_out=None,
-                 referenceHost=None):
+                 referenceIndex=None):
         # TODO set up index and stuff
         if sneech_file is not None and not orgs:
             return sneech_file.COMMENCE(self, path_out=path_out)
 
-        if self.referenceHost != str(referenceHost):
-            raise TypeError(f'{self.referenceHost} != {referenceHost}')
+        if self.referenceIndex != str(referenceIndex):
+            raise TypeError(f'{self.referenceIndex} != {referenceIndex}')
 
         if not orgs:
             raise TypeError('orgs cannot be empty!')
@@ -615,15 +642,21 @@ class InterLexSneechenator(Sneechenator):
         '''
         SELECT t.s, t.p, t.o FROM triples as t WHERE t.p = {self.mapping_predicate} AND t.s IN {could_map}
         '''
-        index_graph = self.wrangler.index_graph(self.referenceHost)
+        index_graph = self.wrangler.index_graph(self.referenceIndex)
         return set((s, self.mapping_predicate, o)
                    for s in could_map
                    for o in index_graph[s:self.mapping_predicate:])
 
-    def alreadyMapped(self, namespace, could_map):
-        ori = OntResIri(f'http://localhost:8515/base/external/mapped?iri={namespace}')
-        ori.graph_next(send_data='\n'.join(str(m) for m in could_map))
-        breakpoint()
+    def alreadyMapped(self, could_map, namespace=None):
+        arg_ns = f'?iri={namespace}' if namespace is not None else ''
+        ori = OntResIri(f'http://localhost:8515/base/external/mapped{arg_ns}')  # FIXME
+        ct = idlib.conventions.type.ConvTypeBytesHeader(
+            format='text/turtle',
+            start=b'\ (?:snchn)?:(PartialIndexGraph)',
+            stop=b'\ \.$',
+            sentinel=b'^###\ ')
+        g = ori.graph_next(send_data='\n'.join(str(m) for m in could_map), conventions_type=ct)
+        return g
 
 
 def test():

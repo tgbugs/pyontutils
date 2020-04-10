@@ -256,8 +256,9 @@ tr { vertical-align: baseline; }
 details_style = '''
 details summary::-webkit-details-marker { display: none; }
 details > summary:first-of-type { list-style-type: none; }
-details > summary:hover { color : #40b040; background-color : #ccccff; }
+details > summary:hover { color: #40b040; background-color : #ccccff; }
 details:not([open]) > summary:hover > a { color : #ff0000; font-weight: bold; }
+details[open] > summary > span.hide-when-open { display: none; }
 '''
 
 navbar_style = '''

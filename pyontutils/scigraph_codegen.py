@@ -28,10 +28,11 @@ class restService:
 
     _api_key = None
 
-    def __init__(self, cache=False, safe_cache=False, key=None):
+    def __init__(self, cache=False, safe_cache=False, key=None, do_error=False):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
         self._session.mount('http://', adapter)
+        self._do_error = do_error
 
         if cache:
             #print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
@@ -90,7 +91,10 @@ class restService:
                                   f'Did you set {self.__class__.__name__}.api_key'
                                   ' = my_api_key?')
         elif not resp.ok:
-            return None
+            if self._do_error:
+                resp.raise_for_status()
+            else:
+                return None
         elif resp.headers['content-type'] == 'application/json':
             return resp.json()
         elif resp.headers['content-type'].startswith('text/plain'):
@@ -299,6 +303,9 @@ class Dynamic(SUBCLASS):
 
                 cands = new_cands
 
+            elif not cands:
+                raise ValueError(f'{self._basePath} does not have endpoints matching {path}')
+
             fname = cands[0]
         else:
             arg = None
@@ -307,7 +314,7 @@ class Dynamic(SUBCLASS):
             fname = self._path_to_id(path)
 
         if not hasattr(self, fname):
-            raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
+            raise ValueError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
 
         return getattr(self, fname), args, kwargs
 
@@ -343,12 +350,12 @@ class Graph(SUBCLASS):
 class CLASSNAME(restService):
     """ DOCSTRING """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
 
 class FAKECLASS:
@@ -880,8 +887,16 @@ class State2(State):
         return None, ''
 
 
-def moduleDirect(api_url, basepath, module_name):
+def moduleDirect(basepath, module_name, *, version=2):
     """ Avoid the need for dynamics altogether """
+    if version < 2:
+        state = State
+        docs_path = 'api-docs'
+    else:
+        state = State2
+        docs_path = 'swagger.json'
+
+    api_url = f'{basepath}/{docs_path}'
     s = state(api_url, basepath)
     code = s.code()
     return importDirect(code, module_name)

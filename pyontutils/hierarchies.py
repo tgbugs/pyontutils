@@ -40,6 +40,7 @@ Extras = namedtuple('Extras', ['hierarchy', 'html_hierarchy',
 
 log = _log.getChild('hierarchies')
 
+
 def alphasortkey(keyvalue):
     key, value = keyvalue
     if key is None:
@@ -48,9 +49,11 @@ def alphasortkey(keyvalue):
         key = key.split('>', 1)[-1]
     return natsort(key)
 
+
 def tcsort(item):  # FIXME SUCH WOW SO INEFFICIENT O_O
     """ get len of transitive closure assume type items is tree... """
     return len(item[1]) + sum(tcsort(kv) for kv in item[1].items())
+
 
 def in_tree(node, tree):  # XXX TODO
     if not tree:
@@ -62,6 +65,7 @@ def in_tree(node, tree):  # XXX TODO
             if in_tree(node, subtree):
                 return True
         return False
+
 
 def get_node(start, tree, pnames):
     """ for each parent find a single branch to root """
@@ -87,6 +91,7 @@ def get_node(start, tree, pnames):
     print('branch', branch)
     return tree, branch
 
+
 def flag_dep(json_):
     for node in json_['nodes']:
         if DEP in node['meta']:
@@ -99,6 +104,7 @@ def flag_dep(json_):
                     edge['sub'] = tc.red(curie)
                 elif edge['obj'] == curie:
                     edge['obj'] = tc.red(curie)
+
 
 def cycle_check(puta_end, start, graph):  # XXX use the flat_tree trick!
     visited = []
@@ -119,6 +125,7 @@ def cycle_check(puta_end, start, graph):  # XXX use the flat_tree trick!
             return test
 
     return inner(start)
+
 
 def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than just leaves!
     #FIXME still an issue: Fornix, Striatum, Diagonal Band
@@ -167,9 +174,11 @@ def dematerialize(parent_name, parent_node):  # FIXME we need to demat more than
 
     return lleaves
 
+
 class defaultdict(base_dd):
     __str__ = dict.__str__
     __repr__ = dict.__repr__
+
 
 class TreeNode(defaultdict):  # FIXME need to factory this to allow separate trees!
 
@@ -181,6 +190,16 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
     def print_tree(self, level = 0, html=False):
         output = ''
+
+        if html:
+            # LOL PYTHON adding keywords to a language to try to fix broken scope?
+            # oops didn't work, can't shadow a global variable in local scope without
+            # also changing the outer scope OOPS, nonlocal doesn't work with globals derp
+            _MID_STEM = '<span title="{predicate}">' + MID_STEM + '</span>'  # LOL PYTHON
+            _BOT_STEM = '<span title="{predicate}">' + BOT_STEM + '</span>'  # LOL PYTHON
+        else:
+            _MID_STEM = MID_STEM  # LOL PYTHON
+            _BOT_STEM = BOT_STEM  # LOL PYTHON
 
         if level == 0:
             self.__class__.existing = {}  # clean up any old mess
@@ -202,7 +221,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         elif len(self) > 1:  # not sure why we need this... :/
             output += '\n'
 
-        self.__class__.prefix.append(MID_STEM)
+        self.__class__.prefix.append(_MID_STEM)
 
         items = []
 
@@ -217,7 +236,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     __t['* %s *' % tcsort((None, value))]
 
                     cend = self.__class__.prefix[-1]
-                    if cend == MID_STEM:
+                    if cend == _MID_STEM:
                         self.__class__.prefix[-1] = symboltype
                     self.__class__.current_parent = key
                     value = __t.print_tree(level, html)
@@ -238,7 +257,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             ds = ''
             if type(value) == type(self):
                 cend = self.__class__.prefix[-1]
-                if cend == MID_STEM:
+                if cend == _MID_STEM:
                     self.__class__.prefix[-1] = symboltype
 
                 self.__class__.current_parent = key
@@ -250,7 +269,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     else:
                         ds = '<details><summary>'
 
-                    key += ' ... <br></summary>'
+                    key += '<span class="hide-when-open"> ... </span><br></summary>'
                     v += '</details>'
 
                 self.__class__.prefix[-1] = cend
@@ -273,10 +292,10 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         for key, value in items_list[:-1]:
             switch(BRANCH, key, value)
 
-        switch(BLANK, *items_list[-1])  # need to put blanks after BOT_STEM
+        switch(BLANK, *items_list[-1])  # need to put blanks after _BOT_STEM
 
         output += '\n'.join(['{3}{0}{1}{2}'.format(''.join(self.prefix), k, v, ds) for k, v, ds in items[:-1]])
-        self.__class__.prefix[-1] = BOT_STEM
+        self.__class__.prefix[-1] = _BOT_STEM
         output += '\n' + '{3}{0}{1}{2}'.format(''.join(self.prefix), *items[-1])
 
         if len(self.__class__.prefix) > 1:
@@ -330,11 +349,27 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                 prefix, suffix = line.split(splitter)
                 if 'summary>' in line:
                     pre_splitter = 'summary>'
-                    pre_prefix, prefix = prefix.split(pre_splitter)
+                    pre_prefix, prefix = prefix.split(pre_splitter, 1)
+                    if '<span ' in prefix:
+                        post_splitter = '<span '
+                        prefix, postfix = prefix.split(post_splitter, 1)
+                    else:
+                        postfix = ''
+
                     _prefix = prefix.replace(' ', '\xa0')  # nbsp
                     prefix = pre_splitter.join((pre_prefix, _prefix))
+                    if postfix:
+                        prefix = post_splitter.join((prefix, postfix))
                 else:
+                    if '<span ' in prefix:
+                        post_splitter = '<span '
+                        prefix, postfix = prefix.split(post_splitter, 1)
+                    else:
+                        postfix = ''
+
                     prefix = prefix.replace(' ', '\xa0')  # nbsp
+                    if postfix:
+                        prefix = post_splitter.join((prefix, postfix))
 
                 line = splitter.join((prefix, suffix))
             new_lines.append(line)
@@ -346,29 +381,11 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         output = output.replace('</summary> <br>', '</summary>')
         output = output.replace('</details> <br>', '</details>')
         return output
-        html_head = '\n    '.join(self.html_head)
-        output = ('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '
-                  '"http://www.w3.org/TR/html4/loose.dtd">\n'
-                  '<html>\n'
-                  '  <head>\n'
-                  '    <meta charset="UTF-8">\n'
-                  f'    {html_head}\n'
-                  '    <style>\n'
-                  '    body { font-family: Dejavu Sans Mono;\n'
-                  '           font-size: 10pt; }\n'
-                  '    a:link { color: black; }\n'
-                  '    a:visited { color: grey; }\n'
-                  '    details summary::-webkit-details-marker { display: none; }\n'
-                  '    details > summary:first-of-type { list-style-type: none; }\n'
-                  '    </style>\n'
-                  '  </head>\n'
-                  '  <body>\n'
-                  + output + '\n'
-                  '  </body>\n</html>')
-        return output
+
 
 def tree():
     return TreeNode(tree)
+
 
 def newTree(name, **kwargs):
     base_dict = {'prefix':[], 'existing':{}, 'current_parent':None}
@@ -377,6 +394,7 @@ def newTree(name, **kwargs):
     def Tree(): return newTreeNode(Tree)
 
     return Tree, newTreeNode
+
 
 def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_prefix, curie):
     root_iri = None  # FIXME 268

@@ -2,7 +2,7 @@ from pathlib import Path
 import rdflib
 from collections import defaultdict
 from pyontutils.core import Collector, resSource, ParcOnt
-from pyontutils.core import makePrefixes, makeGraph, relative_resources
+from pyontutils.core import makePrefixes, makeGraph
 from pyontutils.core import OntGraph, map_term
 from pyontutils.utils import Async, deferred, rowParse
 from pyontutils.config import auth
@@ -39,7 +39,7 @@ class Artifacts(Collector):
 
 
 class SwansonAppendix(resSource):
-    sourceFile = relative_resources('swanson_aligned.txt')
+    sourceFile = auth.get_path('resources') / 'swanson_aligned.txt'
     artifact = Artifacts.SwansonAppendix
 
 

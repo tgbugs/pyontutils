@@ -28,7 +28,7 @@ from pathlib import Path
 import rdflib
 import htmlfn as hfn
 from docopt import docopt
-from pyontutils.core import qname, OntId
+from pyontutils.core import qname, OntId, OntGraph
 from pyontutils.utils import TermColors as tc, getSourceLine, UTCNOWISO
 from pyontutils.utils import Async, deferred
 from pyontutils.ontload import import_tree
@@ -71,7 +71,7 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
             return None, None
 
         ontologies = ontology,  # hack around bad code in ontload
-        import_graph = rdflib.Graph()
+        import_graph = OntGraph()
         [import_graph.add(t) for t in itrips]
 
         self.tree, self.extra = next(import_tree(import_graph, ontologies))
