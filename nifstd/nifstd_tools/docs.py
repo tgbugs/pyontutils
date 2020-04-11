@@ -915,18 +915,21 @@ class Main(clif.Dispatcher):
         titles = doc_config['titles']
 
         outname_rendered = render_docs(wd_docs_kwargs, out_path, titles,
-                                        self.options.jobs,
-                                        debug=self.options.debug)
+                                       self.options.jobs,
+                                       debug=self.options.debug)
 
         index = [f'<b class="{heading}">{heading}</b>'
                 for heading in doc_config['index']]
 
+        _NOTITLE=object()
         for outname, rendered in outname_rendered:
             apath = outname.relative_to(self.options.out_path)
-            title = titles.get(apath.as_posix(), None)
+            title = titles.get(apath.as_posix(), _NOTITLE)
             # TODO parse out/add titles
-            value = hfn.atag(apath) if title is None else hfn.atag(apath, title)
-            index.append(value)
+            if title is not None:
+                value = hfn.atag(apath) if title is _NOTITLE else hfn.atag(apath, title)
+                index.append(value)
+
             if not outname.parent.exists():
                 outname.parent.mkdir(parents=True)
 

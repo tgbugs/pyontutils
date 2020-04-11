@@ -21,7 +21,6 @@ skip:
   sparc-curation:
     - README.md                      # insubstantial
     - docs/apinatomy.org             # rendered under sparc
-    - docs/background.org            # rendered under sparc
     - docs/developer-guide.org       # rendered under sparc
     - docs/notes.org                 # not relevant
     - test/apinatomy/README.org      # insubstantial
@@ -91,3 +90,4 @@ titles:
   pyontutils/htmlfn/README.html: htmlfn readme
   pyontutils/ttlser/README.html: ttlser readme
   orthauth/docs/guide.html: orthauth user guide
+  sparc-curation/docs/background.html: null  # prevent broken links
