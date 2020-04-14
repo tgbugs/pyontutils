@@ -651,24 +651,43 @@ class rowParse:
         pass
 
 
+class LolPython(list):
+    """ because who needs to setattr lists right? """
+
+    def _asdict(self):
+        return {h:v for h, v in zip(self._header, self)}
+
+
+def _sigh(header, row):
+    out = LolPython(row)
+    out._header = header
+    out._fields = header
+    for name, value in zip(header, out):
+        setattr(out, name, value)
+
+    return out
+
+
 class byCol:
     # FIXME this class +is+ was unpickleable, lol python
     def __init__(self, rows, header=None, to_index=tuple()):
         # what I think is a pickleable version
         if header is None:  # FIXME non None header might have bad names?
-            orig_header = [str(c) for c in rows[0]]  # normalize all to string for safety
-            header = [python_identifier(c) for i, c in enumerate(orig_header)]
+            _oh = [str(c) for c in rows[0]]
+            header = [python_identifier(c) for i, c in enumerate(_oh)]
             #changes = {new:old for old, new in zip(rows[0], header) if old != new}
+            orig_header = _sigh(header, _oh)  # normalize all to string for safety
             rows = rows[1:]
         else:
-            orig_header = header
+            orig_header = _sigh(header, header)
 
         # normalize row lenght  # FIXME account for rows longer than header
-        rows = [row + [None] * (len(header) - len(row)) for row in rows]
+        rows = [_sigh(header, row + [None] * (len(header) - len(row))) for row in rows]
+        #setattr(self, name, LOL_PYTHON(header, row))
 
         # so apparently using namedtuple dynamically breaks pickle LOL PYTHON LOL
         self.orig_header = orig_header
-        self.header = header
+        self.header = _sigh(header, header)
         self.rows = rows
         self.__indexes = {}
         for col_name in to_index:
