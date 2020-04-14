@@ -8,6 +8,7 @@ import subprocess
 from io import BytesIO
 from random import shuffle
 from pathlib import Path
+from collections import defaultdict
 import rdflib
 
 from ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
@@ -29,6 +30,7 @@ def randomize_dict_order(d):
         return randomize_dict_order(d)  # try again
     else:
         return out
+
 
 def randomize_prefix_order(graph):
     namespace = graph.namespace_manager.store._IOMemory__namespace
@@ -53,29 +55,56 @@ def randomize_prefix_order(graph):
     readd(sp, prefix)
     graph.namespace_manager.reset()  # repopulate the trie
 
+
 def randomize_BNode_order(graph):
+    orig = rdflib.Graph()
+    [orig.add(t) for t in graph]
     replaced = {}
-    urn = ['{i:0<6}'.format(i=i) for i in range(999999)]
+    urn = ['{i:0>6}'.format(i=i) for i in range(999999)]  # I'm dying < != >
     shuffle(urn)
-    def swap(t):
-        if isinstance(t, rdflib.BNode):
-            if t in replaced:
-                return replaced[t]
+    safe_urn = (_ for _ in urn)
+    existing = set(e for t in graph for e in t if isinstance(e, rdflib.BNode))
+    all_new = set()
+    via_replace = set()
+    def swap(e):
+        if isinstance(e, rdflib.BNode):
+            if e in replaced:
+                via_replace.add(e)
+                return replaced[e]
             else:
-                rnd = urn.pop()  # avoid the rare duplicate
+                rnd = next(safe_urn)  # avoid the rare duplicate
                 new = rdflib.BNode(rnd)
-                replaced[t] = new
+                all_new.add(new)
+                replaced[e] = new
                 return new
-        return t
+        else:
+            return e
+
     for trip in graph:
-        new_trip = tuple(swap(t) for t in trip)
+        new_trip = tuple(swap(_) for _ in trip)
         if new_trip != trip:
             graph.remove(trip)
             graph.add(new_trip)
 
+    assert not existing & all_new
+    if len(existing) != len(all_new):
+        missing = existing - set(replaced)
+        derp = defaultdict(list)
+        for k, v in replaced.items():
+            derp[v].append(k)
+        dupe = {k:v for k, v in derp.items() if len(v) > 1}
+        print(dupe)
+        dv = set(v for vs in dupe.values() for v in vs)
+        print([t for t in orig if [_ for _ in dv if _ in t]])
+        dupe_via_replace = via_replace & dv
+        print(dupe_via_replace)
+
+    assert len(existing) == len(all_new), 'len(existing) != len(all_new)'
+
 
 class TestTtlser(unittest.TestCase):
 
+    _ntests = 1000  # increase to catch infrequent det failures
     format = 'nifttl'
     serializer = CustomTurtleSerializer
     goodpath = 'test/good.ttl'
@@ -96,6 +125,7 @@ class TestTtlser(unittest.TestCase):
                   'from io import BytesIO\n' +
                   'from random import shuffle\n' +
                   'from pathlib import Path\n' +
+                  'from collections import defaultdict\n' +
                   'import rdflib\n' +
                   ('from ttlser import ' + self.serializer.__name__ + '\n') +
                   ("rdflib.plugin.register(" + repr(self.format) + ", rdflib.serializer.Serializer, ") +
@@ -133,7 +163,7 @@ class TestTtlser(unittest.TestCase):
         actual = self.actual
         actualpath = self.actualpath
         actualpath2 = self.actualpath2
-        for _ in range(5):  # increase this number of you are suspicious
+        for _ in range(self._ntests):
             if seed is not None:
                 env['PYTHONHASHSEED'] = str(seed)
             else:
@@ -146,8 +176,9 @@ class TestTtlser(unittest.TestCase):
                                  stderr=subprocess.PIPE,
                                  env=env)
             out, err = p.communicate()
-            #print(code)
-            #print(err.decode())
+            if err.strip():
+                print(code)
+                print(err.decode())
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
             #out = out.split(b'\n', 1)[1]  # don't need to remove the rdflib noise if using >=rdflib-5.0.0
             actual2 = out
