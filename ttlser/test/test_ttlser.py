@@ -57,24 +57,18 @@ def randomize_prefix_order(graph):
 
 
 def randomize_BNode_order(graph):
-    orig = rdflib.Graph()
-    [orig.add(t) for t in graph]
     replaced = {}
-    urn = ['{i:0>6}'.format(i=i) for i in range(999999)]  # I'm dying < != >
+    urn = ['{i:0>6}'.format(i=i) for i in range(999999)]
     shuffle(urn)
+    assert len(urn) == len(set(urn))  # TRY IT I DARE YOU
     safe_urn = (_ for _ in urn)
-    existing = set(e for t in graph for e in t if isinstance(e, rdflib.BNode))
-    all_new = set()
-    via_replace = set()
     def swap(e):
         if isinstance(e, rdflib.BNode):
             if e in replaced:
-                via_replace.add(e)
                 return replaced[e]
             else:
                 rnd = next(safe_urn)  # avoid the rare duplicate
                 new = rdflib.BNode(rnd)
-                all_new.add(new)
                 replaced[e] = new
                 return new
         else:
@@ -86,25 +80,10 @@ def randomize_BNode_order(graph):
             graph.remove(trip)
             graph.add(new_trip)
 
-    assert not existing & all_new
-    if len(existing) != len(all_new):
-        missing = existing - set(replaced)
-        derp = defaultdict(list)
-        for k, v in replaced.items():
-            derp[v].append(k)
-        dupe = {k:v for k, v in derp.items() if len(v) > 1}
-        print(dupe)
-        dv = set(v for vs in dupe.values() for v in vs)
-        print([t for t in orig if [_ for _ in dv if _ in t]])
-        dupe_via_replace = via_replace & dv
-        print(dupe_via_replace)
-
-    assert len(existing) == len(all_new), 'len(existing) != len(all_new)'
-
 
 class TestTtlser(unittest.TestCase):
 
-    _ntests = 1000  # increase to catch infrequent det failures
+    _ntests = 5  # increase to catch infrequent det failures
     format = 'nifttl'
     serializer = CustomTurtleSerializer
     goodpath = 'test/good.ttl'
