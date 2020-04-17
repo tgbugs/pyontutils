@@ -1,7 +1,6 @@
 import yaml
 from pathlib import Path
 import rdflib
-import requests
 from ontquery.terms import OntCuries
 from pyontutils.utils import log
 from pyontutils.config import auth
@@ -80,6 +79,8 @@ def getCuries(curies_location):
         # in this repo at this commit is what
         # causes the issue, github is the best
         # solution, so write once to a known location
+
+        import requests
         if curies_location == Path(auth.get_default('curies')):
             master_blob = 'https://github.com/tgbugs/pyontutils/blob/master/'
             raw_path = 'nifstd/scigraph/curie_map.yaml?raw=true'
