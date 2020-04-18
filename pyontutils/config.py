@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 from tempfile import gettempdir
 from functools import wraps
-import appdirs
 import orthauth as oa
 from pyontutils.utils import TermColors as tc, log
 from pyontutils.utils import get_working_dir
@@ -13,9 +12,8 @@ from pyontutils.utils import get_working_dir
 oa.utils.log.removeHandler(oa.utils.log.handlers[0])
 oa.utils.log.addHandler(log.handlers[0])
 
-auth = oa.configure_relative('auth-config.py')
+auth = oa.configure_here('auth-config.py', __name__)
 
-#pyontutils_config_path = Path(appdirs.user_config_dir(), 'pyontutils')
 pyontutils_config_path = auth.dynamic_config._path.parent
 if not pyontutils_config_path.parent.exists():
     log.warning(f'config path does not exist! Errors incoming! {pyontutils_config_path.parent}')
@@ -27,8 +25,6 @@ system_curies_path = Path(sys.prefix) / _data_curies_string
 if working_dir is None:
     # we are not in git, we are probably testing or installed by a user
     default_curies = pyontutils_config_path / 'curie_map.yaml'
-    #if not default_curies.exists():
-        #log.warning(f'No curies found at {default_curies!r}')
     # hardcoding the default api here to avoid importing the scigraph client
     default_scigraph_api = 'https://scicrunch.org/api/1/scigraph'
 else:
