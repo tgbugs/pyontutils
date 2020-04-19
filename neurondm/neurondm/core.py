@@ -1460,7 +1460,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     local_names = {}
     __cache = {}
     __pcache = {}
-    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
+    def __init__(self, phenotype, ObjectProperty=None, label=None, override=True, check=False):
         # FIXME allow ObjectProperty or predicate? keyword?
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
@@ -1471,7 +1471,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             ObjectProperty = phenotype.e
             phenotype = phenotype.p
 
-        self.p = self.checkPhenotype(phenotype)
+        self.p = self.checkPhenotype(phenotype)  # FIXME do this after construction
         if ObjectProperty is None:
             self.e = self.getObjectProperty(self.p)
         else:
@@ -2222,7 +2222,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         lop1 = len(ORDER) + 1
         self.pes = tuple(sorted(sorted(phenotypeEdges),
                                 key=lambda pe: ORDER.index(pe.e) if pe.e in ORDER else lop1))
-        self.validate()
+        #self.validate()  # FIXME this should only be called AFTER construction
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
@@ -2265,13 +2265,16 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph and not override:
             self.Class = self.existing_pes[self]
         else:
-            self.Class = self._graphify()
-            self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
-            self.existing_pes[self] = self.Class
+            self.existing_pes[self] = None
+            log.warning('self._sigh has not been called')
 
         self.ttl = self._instance_ttl
         self.python = self._instance_python
 
+    def _sigh(self):
+        self.Class = self._graphify()
+        self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
+        self.existing_pes[self] = self.Class
 
     def removeDuplicateSuperProperties(self, rawpes):
         # find any duplicate phenotype values

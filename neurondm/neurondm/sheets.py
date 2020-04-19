@@ -131,6 +131,8 @@ class CutsV1(Cuts):
                 id = OntId(cell).u if cell else None
                 return
             elif header == 'label':
+                if id == OntId('NIFEXT:66').u:
+                    breakpoint()
                 label_neuron = cell
                 if cell in self.existing:
                     current_neuron = self.existing[cell]
@@ -431,6 +433,7 @@ class CutsV1(Cuts):
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
+
     from neurondm.compiled.common_usage_types import config as cuts_config
     cuts_neurons = cuts_config.neurons()
     expect_pes = {n.id_:n.pes for n in cuts_neurons}
@@ -447,7 +450,6 @@ def main():
     config.write()
     #config = Config(config.name)
     #config.load_existing()  # FIXME this is a hack to get get a load_graph
-
 
     # FIXME we need this because _bagExisting doesn't deal with unionOf right now
     def trything(f):
@@ -484,7 +486,8 @@ def main():
         # TODO implement on the object to allow joining on an index?
         # man this would be easier with sql >_< probably pandas too
         # but so many dependencies ... also diffing issues etc
-        return valuesC.searchIndex('label', r.label)
+        if r.label is not None:
+            return valuesC.searchIndex('label', r.label)
 
     def key(field_value):
         field, value = field_value
