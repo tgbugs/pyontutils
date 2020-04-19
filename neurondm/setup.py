@@ -35,8 +35,7 @@ def _ontology_data_files():
         except ValueError:
             import orthauth as oa
             from pyontutils.config import auth as pauth
-            auth = oa.configure_relative('neurondm/auth-config.py',
-                                         include=pauth)
+            auth = oa.configure(Path('neurondm/auth-config.py').resolve(), include=pauth)
         ###
 
         olr = Path(auth.get_path('ontology-local-repo'))
@@ -87,6 +86,7 @@ try:
             'License :: OSI Approved :: MIT License',
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
         ],
         keywords=('neuron types NIF ontology neuroscience phenotype '
                 'OWL rdf rdflib data model'),
@@ -94,9 +94,8 @@ try:
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
-            'orthauth>=0.0.9',  # temp, needed to work around include relative issue until pyontutils bumps the dep
             'hyputils>=0.0.4',
-            'pyontutils>=0.1.7',
+            'pyontutils>=0.1.22',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
