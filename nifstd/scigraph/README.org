@@ -326,7 +326,8 @@ g.write()
 Run this block
 #+name: sparc-community-terms-update
 #+caption: running =interlex-alt= is really all that is required, the url is for simplicity
-#+begin_src bash :results output :noweb no-export
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :results output :noweb no-export :tangle ./bin/sparc-community-terms-update
 pushd ~/git/NIF-Ontology/ttl
 git checkout sparc || exit $?  # can fail if your working copy has stuff saved
 git pull || exit $?
