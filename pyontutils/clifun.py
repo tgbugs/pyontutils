@@ -8,6 +8,7 @@ Options:
 """
 
 import re
+import sys
 from types import GeneratorType
 from keyword import kwlist
 from terminaltables import AsciiTable
@@ -34,10 +35,11 @@ def python_identifier(string):
 
 class Options:
     # there is only ever one of these because of how docopt works
-    def __new__(cls, args, defaults):
+    def __new__(cls, args, defaults, argv=None):
         cls = type(cls.__name__, (cls,), {})  # prevent persistence of args
         cls.args = args
         cls.defaults = defaults
+        cls.argv = sys.argv if argv is None else argv
         for arg, value in cls.args.items():
             ident = python_identifier(arg.strip('-'))
 
@@ -55,9 +57,11 @@ class Options:
 
     @property
     def commands(self):
-        for k, v in self.args.items():
-            if v and not any(k.startswith(c) for c in ('-', '<')):
-                yield python_identifier(k)
+        cmd_args = {k:v for k, v in self.args.items()
+                    if v and not any(k.startswith(c) for c in ('-', '<'))}
+
+        for k in sorted(cmd_args, key=lambda k: self.argv.index(k)):
+            yield python_identifier(k)
 
     def __repr__(self):
         def key(kv, counter=[0]):
