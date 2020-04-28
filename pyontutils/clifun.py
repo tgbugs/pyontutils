@@ -1,6 +1,15 @@
 """Helper classes for organizing docopt programs
+
 Usage:
-    demo [options] <args>...
+    demo [options]
+    demo sub-command-1 [options] <args>...
+    demo sub-command-2 sub-command-1 [options] <args>...
+
+Usage-Bad:
+    Example:
+        demo [options] <args>...
+        demo cmd [options]
+    Reason: <args>... masks cmd
 
 Options:
     -o --optional      an optional argument
@@ -37,10 +46,10 @@ class Options:
     # there is only ever one of these because of how docopt works
     def __new__(cls, args, defaults, argv=None):
         cls = type(cls.__name__, (cls,), {})  # prevent persistence of args
-        cls.args = args
-        cls.defaults = defaults
-        cls.argv = sys.argv if argv is None else argv
-        for arg, value in cls.args.items():
+        cls._args = args
+        cls._defaults = defaults
+        cls._argv = sys.argv if argv is None else argv
+        for arg, value in cls._args.items():
             ident = python_identifier(arg.strip('-'))
 
             @property
@@ -57,10 +66,10 @@ class Options:
 
     @property
     def commands(self):
-        cmd_args = {k:v for k, v in self.args.items()
+        cmd_args = {k:v for k, v in self._args.items()
                     if v and not any(k.startswith(c) for c in ('-', '<'))}
 
-        for k in sorted(cmd_args, key=lambda k: self.argv.index(k)):
+        for k in sorted(cmd_args, key=lambda k: self._argv.index(k)):
             yield python_identifier(k)
 
     def __repr__(self):
@@ -76,7 +85,7 @@ class Options:
         rows = [[k, '' if v is None or v is False
                  else ('x' if v is True
                        else ('_' if isinstance(v, list) else v))]
-                for k, v in sorted([(k, v) for k, v in self.args.items()
+                for k, v in sorted([(k, v) for k, v in self._args.items()
                                     if v or k.startswith('-')
                 ], key=key)
         ]
@@ -130,9 +139,9 @@ class Dispatcher:
             try:
                 value = getattr(self, command, self._oops)()
                 if isinstance(value, GeneratorType):
-                    list(value)
+                    value = list(value)
 
-                return
+                return value
             except self._CommandNotFoundError:
                 # this is a hack to not have to deal with command ordering 
                 # basically the structure of the subdispatchers should take
@@ -140,7 +149,7 @@ class Dispatcher:
                 continue
 
         else:
-            self.default()
+            return self.default()
 
     def default(self):
         raise NotImplementedError('docopt I can\'t believe you\'ve done this')
@@ -151,11 +160,30 @@ def main():
     args = docopt(__doc__, version='clifun-demo 0.0.0')
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     options = Options(args, defaults)
-    main = Dispatcher(options)
+
+    class Main(Dispatcher):
+        """
+        The dispatcher for the demo.
+        Normally this class is at the top level NOT in main.
+        """
+
+        def default(self):
+            return ('default', *self.options.args)
+
+        def sub_command_1(self):
+            return ('sc1', *self.options.args)
+
+        def sub_command_2(self):
+            return ('sc2', self.options.sub_command_1, *self.options.args)
+
+    main = Main(options)
     if main.options.debug:
         print(main.options)
 
-    main()
+    out = main()
+    print(out)
+    assert out
+    return out
 
 
 if __name__ == '__main__':
