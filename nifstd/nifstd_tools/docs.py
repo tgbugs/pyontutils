@@ -844,15 +844,15 @@ class Options(clif.Options):
 
     @property
     def config(self):
-        return Path(self.args['--config'])
+        return Path(self._args['--config'])
 
     @property
     def jobs(self):
-        return int(self.args['--jobs'])
+        return int(self._args['--jobs'])
 
     @property
     def out_path(self):
-        return Path(self.args['--out-path']).expanduser()
+        return Path(self._args['--out-path']).expanduser()
 
     @property
     def BUILD(self):
