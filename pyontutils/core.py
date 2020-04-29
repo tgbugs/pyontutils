@@ -236,9 +236,29 @@ class OntMeta(OntRes):
             itio.name = self.identifier  # some rdflib parses need a name
             graph.parse(file=itio, format=self.format)
 
+    def _populate_next(self, graph, *args, yield_response_gen=False, **kwargs):
+        """ Use when you want to populate a graph with the header
+            and then populate another graph with everything, will probably
+            become useful when we get conjuctive graph working as expected """
+
+        if yield_response_gen:
+            kwargs['yield_response_gen'] = yield_response_gen
+            format, *header_chunks, (resp, gen) = self.data_next(**kwargs)
+            self._populate(graph, header_chunks)
+            yield format
+            yield from header_chunks
+            yield resp, gen
+        else:
+            generator = self.data_next(**kwargs)
+            format = next(generator)
+            self._populate(graph, generator)
+
     def populate_next(self, graph, *args, **kwargs):
-        format, *header_chunks, (resp, gen) = self.data_next(**kwargs)
-        self._populate(graph, chain(header_chunks, gen))
+        if 'yield_response_gen' in kwargs:
+            raise TypeError('if you need yield_response_gen use _populate_next')
+
+        generator = self._populate_next(graph, *args, **kwargs)
+        list(generator)  # express the generator without causing a StopIteration
 
     def __eq__(self, other):
         # FIXME this is ... complicated
@@ -349,7 +369,7 @@ class OntMetaIri(OntMeta, OntIdIri):
         elif first.startswith(b'@prefix') or first.startswith(b'#lang rdf/turtle'):
             start = b' owl:Ontology'  # FIXME this is not standard
             # FIXME snchn.IndexGraph etc ... need a more extensible way to mark the header ...
-            stop = b'\ \.$'  # FIXME can be fooled by strings
+            stop = b'\ \.\n'  # FIXME can be fooled by strings
             sentinel = b'^###\ '  # FIXME only works for ttlser
             #sentinel = b' a '  # FIXME if a |owl:Ontology has a chunk break on | this is incorrect
             # also needs to be a regex that ends in [^owl:Ontology]
@@ -459,12 +479,18 @@ class OntMetaIri(OntMeta, OntIdIri):
                     if yield_response_gen:
                         header_data += chunk
 
+                    # we yield here because pre-header chunks count as header chunks
+                    # this is because any information prior to the header stop pattern
+                    # is either header or local conventions that will be needed to
+                    # parse the header stream ... and thus count as 'header chunks'
                     yield chunk
 
         else:
             # the case where there is no header so we don't return inside the loop
             log.warning('missed sentinel')
-            yield resp, gen
+            if yield_response_gen:
+                yield resp, gen
+
             return
 
 
@@ -504,8 +530,7 @@ class OntResIri(OntIdIri, OntResOnt):
         # (i.e. that there isn't a function that can 1:1 interconvert)
 
         generator = self.metadata().data_next(yield_response_gen=True, **kwargs)
-        l = list(generator)
-        format, *header_chunks, (resp, gen) = l
+        format, *header_chunks, (resp, gen) = generator
         self.headers = resp.headers
         self.format = format
         # TODO populate header graph? not sure this is actually possible

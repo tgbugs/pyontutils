@@ -1,0 +1,93 @@
+title: NIF Ontology documentation index
+repos:
+  NIF-Ontology: https://github.com/SciCrunch/NIF-Ontology.git
+  pyontutils: https://github.com/tgbugs/pyontutils.git
+  augpathlib: https://github.com/tgbugs/augpathlib.git
+  interlex: https://github.com/tgbugs/interlex.git
+  ontquery: https://github.com/tgbugs/ontquery.git
+  orthauth: https://github.com/tgbugs/orthauth.git
+  sparc-curation: https://github.com/SciCrunch/sparc-curation.git
+skip-folders:
+  - notebook-testing
+  - complete
+  - ilxutils
+  - librdflib
+skip:
+  pyontutils:
+    - docs/NeuronLangExample.ipynb   # exact skip due to moving file
+    - ilxutils/ilx-playground.ipynb
+    - nifstd/resources/sawg.org      # published via another workflow
+    - pyontutils/clifun.py           # not useful, is just a demo
+  sparc-curation:
+    - README.md                      # insubstantial
+    - docs/apinatomy.org             # rendered under sparc
+    - docs/developer-guide.org       # rendered under sparc
+    - docs/notes.org                 # not relevant
+    - test/apinatomy/README.org      # insubstantial
+    - resources/scigraph/README.org  # replaced by the nifstd scigraph readme
+  interlex:
+    - README.md                      # insubstantial
+    - docs/explaining.org            # not ready
+index:
+  - Components
+  - Ontology
+  - Contributing
+  - Ontology content
+  - SciGraph
+  - Python
+  - InterLex
+  - Specifications
+  - Other
+titles:
+  Components: Components
+  NIF-Ontology/README.html: Introduction to the NIF Ontology
+  ontquery/README.html: Introduction to ontquery
+  orthauth/README.html: Introduction to orthauth
+  pyontutils/README.html: Introduction to pyontutils
+  pyontutils/nifstd/README.html: Introduction to nifstd-tools
+  pyontutils/neurondm/README.html: Introduction to neurondm
+  pyontutils/ilxutils/README.html: Introduction to ilxutils
+
+  Ontology: Ontology
+  NIF-Ontology/docs/processes.html: 'Ontology development processes (START HERE!)'
+  NIF-Ontology/docs/development-setup.html: Ontology development setup
+  pyontutils/nifstd/resolver/README.html: Ontology resolver setup
+  NIF-Ontology/docs/import-chain.html: Ontology import chain
+  NIF-Ontology/docs/external-sources.html: External sources for the ontology
+
+  Contributing: Contributing
+  pyontutils/nifstd/development/README.html: Contributing to the ontology
+  pyontutils/nifstd/development/community/README.html: Contributing term lists to the ontology
+  pyontutils/neurondm/neurondm/models/README.html: Contributing neuron terminology to the ontology
+
+  Ontology content: Ontology content
+  NIF-Ontology/docs/brain-regions.html: Parcellation schemes
+  pyontutils/nifstd/development/methods/README.html: Methods and techniques
+  NIF-Ontology/docs/Neurons.html: Neuron Lang overview
+  pyontutils/neurondm/docs/NeuronLangExample.html: Neuron Lang examples
+  pyontutils/neurondm/docs/neurons_notebook.html: Neuron Lang setup
+
+  SciGraph: SciGraph
+  pyontutils/nifstd/scigraph/README.html: SciGraph user guide
+
+  Python: Python
+  docstrings.html: Command line programs
+  sparc-curation/docs/setup.html: Developer and curator setup (broader scope but extremely detailed)
+  pyontutils/docs/release.html: Python library packaging and release process
+
+  InterLex: InterLex
+  interlex/docs/setup.html: InterLex setup
+  interlex/alt/README.html: InterLex alternate resolver
+  NIF-Ontology/docs/interlex-spec.html: InterLex specification
+  interlex/docs/implementation.html: InterLex implementation
+  ontquery/docs/interlex-client.html: InterLex client library documentation
+
+  Specifications: Specifications
+  pyontutils/ttlser/docs/ttlser.html: Deterministic turtle specification
+
+  Other: Other
+  augpathlib/README.html: augpathlib readme
+  pyontutils/htmlfn/README.html: htmlfn readme
+  pyontutils/ttlser/README.html: ttlser readme
+  orthauth/docs/guide.html: orthauth user guide
+  sparc-curation/docs/background.html: null  # prevent broken links

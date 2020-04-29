@@ -31,7 +31,7 @@ from pyontutils.namespaces import TEMP, UBERON, ilxtr, PREFIXES as uPREFIXES, NI
 from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
-auth = oa.configure_relative('auth-config.py', include=pauth)
+auth = oa.configure_here('auth-config.py', __name__, include=pauth)
 ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')

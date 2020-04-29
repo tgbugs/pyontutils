@@ -1,16 +1,25 @@
 #!/usr/bin/env python3.7
-"""Compile all ontology related documentation.
+import tempfile
+from pyontutils.config import auth
+from augpathlib import RepoPath as Path
+temp_path = Path(tempfile.tempdir)
+_ddconf = auth.get_path('resources') / 'doc-config.yaml'
+_ddpath = temp_path / 'build-ont-docs' / 'docs'
+__doc__ = f"""Compile all documentation from git repos.
 
 Usage:
     ont-docs [options] [--repo=<REPO>...]
 
 Options:
-    -h --help            show this
-    -s --spell           run hunspell on all docs
-    -o --docstring-only  build docstrings only
-    -j --jobs=NJOBS      number of jobs [default: 9]
-    -r --repo=<REPO>     additional repos to crawl for docs
-    --debug              redirect stderr to debug pipeline errors
+    -h --help             show this
+    -c --config=<PATH>    path to doc-index.yaml [default: {_ddconf}]
+    -o --out-path=<PATH>  path inside which docs are built [default: {_ddpath}]
+    -b --html-root=<REL>  relative path to the html root [default: ..]
+    -s --spell            run hunspell on all docs
+    -d --docstring-only   build docstrings only
+    -j --jobs=NJOBS       number of jobs [default: 9]
+    -r --repo=<REPO>      additional repos to crawl for docs
+    --debug               redirect stderr to debug pipeline errors
 
 """
 import os
@@ -18,24 +27,24 @@ import re
 import ast
 import shutil
 import logging
-import tempfile
 import subprocess
+from pathlib import PurePath
 from urllib.parse import urlparse
 from importlib import import_module
+import yaml
+import htmlfn as hfn
 import nbformat
 from git import Repo
-from htmlfn import htmldoc, atag
 from joblib import Parallel, delayed
 from nbconvert import HTMLExporter
-from augpathlib import RepoPath as Path, exceptions as aexc
-from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger
+from augpathlib import exceptions as aexc
+from pyontutils import clifun as clif
+from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger, isoformat
 from pyontutils.utils import TermColors as tc, get_working_dir
-from pyontutils.config import auth
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
 working_dir = Path(__file__).resolve().working_dir
-temp_path = Path(tempfile.tempdir)
 
 try:
     import hunspell
@@ -45,6 +54,48 @@ except ImportError:
 suffixFuncs = {}
 
 
+def findAssignToName(name, body, reverse=False):
+    eb = enumerate(body)
+    gen = reversed(list(eb)) if reverse else eb
+    return [(i, n) for i, n in gen
+            if n.col_offset == 0 and
+            isinstance(n, ast.Assign) and
+            isinstance(n.targets[0], ast.Name) and
+            n.targets[0].id == name]
+
+
+def asStr(astNode, prior=tuple()):
+    if isinstance(astNode, ast.Str):
+        return astNode.s
+    elif isinstance(astNode, ast.FormattedValue):
+        v = astNode.value
+        if isinstance(v, ast.Name):
+            # have to reverse to find the latest setting of the value
+            # not the first since python allows rebinding
+            maybe_name = findAssignToName(v.id, prior, reverse=True)
+            if maybe_name:
+                _, n = maybe_name[0]
+                return asStr(n.value)
+            else:
+                raise NotImplementedError(f'found no assignment to {v.id}')
+        else:
+            return asStr(v)
+    elif isinstance(astNode, ast.Name):
+        return astNode.id
+    elif isinstance(astNode, ast.BinOp):
+        return (asStr(astNode.left) +
+                ' ' + asStr(astNode.op) + ' ' +
+                asStr(astNode.right))
+    elif isinstance(astNode, ast.Div):
+        return '/'
+    elif isinstance(astNode, ast.Call):
+        return asStr(astNode.func)
+    elif isinstance(astNode, ast.Attribute):
+        return asStr(astNode.value) + '.' + astNode.attr
+    else:
+        raise NotImplementedError(f'{astNode}')
+
+
 def patch_theme_setup(theme):
     with open(theme, 'rt+') as f:
         dat = f.read()
@@ -52,18 +103,73 @@ def patch_theme_setup(theme):
         f.write(dat.replace('="styles/', '="/docs/styles/'))
 
 
-_org_edit_link_html = '#+HTML: <div align="right"><a href={edit_link}>Edit on GitHub</a></div>\n'
-def makeOrgHeader(title, authors, date, theme, edit_link=None):
-    header = (f'#+TITLE: {title}\n'
-              f'#+AUTHOR: {authors}\n'
-              f'#+DATE: {date}\n'
-              f'#+SETUPFILE: {theme}\n'
-              f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
-              #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'  # unfortunately this is to html...
-             )
+_crumbs = ('<span style="float:left;">'
+           '<a href="/docs">Index</a> > {title}</span>')
+def makeEditLink(crumbs, title, edit_link):
+    GITHUB_SYMBOL = b'\xef\x82\x9b'.decode()  # 
+    ghs = ''  # TODO apparently need font awsome for this or something?
+    crumbs = crumbs.format(title=title)
+    _org_edit_link_html = (
+        f'#+HTML: <div>{crumbs}'
+        f'<span style="float:right;"><a href={edit_link}>'
+        f'{ghs}Edit on GitHub</a></span><br><br></div>\n')
+
+    return _org_edit_link_html
+
+
+def augmentExisting(header, title, authors, date, theme):
+    def tf(line): return line if line else f'#+TITLE: {title}'
+    def af(line):
+        if line:
+            existing = [a.strip().rstrip()
+                        for a in line.split(':', 1)[-1].split(',')]
+            all_authors = existing + [a for a in authors if a not in existing]
+        else:
+            all_authors = authors
+
+        astr = ', '.join(all_authors)
+        return f'#+AUTHOR: {astr}'
+    def df(line): return f'#+DATE: {date}'
+    def sf(line): return line if line else f'#+SETUPFILE: {theme}'
+
+    sections = (('#+title:', tf),
+                ('#+author:', af),
+                ('#+date:', df),
+                ('#+setupfile:', sf),)
+
+    lines = header.split('\n')
+    for head, func in sections:
+        for i, line in enumerate(tuple(lines)):
+            if line.lower().startswith(head):
+                if head == '#+title:':
+                    title = line.split(':', 1)[-1].strip()
+
+                lines[i] = func(line)
+                break
+        else:
+            lines.append(func(None))
+
+    return '\n'.join(lines) + '\n', title
+
+
+def makeOrgHeader(title, authors, date, theme, crumbs='', edit_link=None,
+                  existing=None):
+    if existing is not None:
+        existing = existing.decode()
+        header, title = augmentExisting(existing, title, authors, date, theme)
+
+    else:
+        header = (f'#+TITLE: {title}\n'
+                  f'#+AUTHOR: {", ".join(authors)}\n'
+                  f'#+DATE: {date}\n'
+                  f'#+SETUPFILE: {theme}\n'
+                  f'#+OPTIONS: ^:nil num:nil html-preamble:t H:2\n'
+                  # unfortunately this is to html...
+                  #'#+LATEX_HEADER: \\renewcommand\contentsname{Table of Contents}\n'
+                )
 
     if edit_link is not None:
-        header += _org_edit_link_html.format(edit_link=edit_link)
+        header += makeEditLink(crumbs, title, edit_link)
 
     return header
 
@@ -76,8 +182,6 @@ class FixLinks:
         """ EVIL """
 
     def __init__(self, current_file):
-        print('========================================')
-        print(current_file)
         self.current_file = Path(current_file).resolve()
         self.working_dir = self.current_file.working_dir
         if self.working_dir is None:
@@ -273,22 +377,29 @@ class FixLinks:
         return out.encode()
 
 
-def get__doc__s():
-    repo = Repo(working_dir.as_posix())
-    paths = sorted(f for f in repo.git.ls_files().split('\n')
-                   if f.endswith('.py') and
-                   any(f.startswith(n) for n in
-                       ('pyontutils', 'ttlser', 'nifstd', 'neurondm')))
+def get__doc__s(repo_paths, skip_folders, skip):
+    paths = sorted(
+        rp / f for rp in repo_paths
+        if not print(rp, rp.name, skip.get(rp.name, None))
+        for f in rp.repo.git.ls_files().split('\n')
+        if f.endswith('.py')
+        and not f.startswith('test')
+        and not [sf for sf in skip_folders if sf in f]
+        and not f in skip.get(rp.name, tuple())
+        and not print(f)
+
+        #and any(f.startswith(n) for n in ('pyontutils', 'ttlser', 'nifstd', 'neurondm'))  # FIXME hardcoded
+    )
     # TODO figure out how to do relative loads for resolver docs
     docs = []
     #skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
     skip = 'ilxcli', 'deploy'
-    for i, path in enumerate(paths):
+    for i, ppath in enumerate(paths):
+        path = ppath.repo_relative_path.as_posix()
         if any(nope in path for nope in skip):
             continue
-        ppath = (working_dir / path).resolve()
         #print(ppath)
-        module_path = ppath.relative_to(working_dir).as_posix()[:-3].replace('/', '.')
+        module_path = ppath.repo_relative_path.as_posix()[:-3].replace('/', '.')
         #print(module_path)
 
         with open(ppath, 'rt') as f:
@@ -296,13 +407,17 @@ def get__doc__s():
 
         doc = ast.get_docstring(tree)
 
-        #module = import_module(module_path)
-        #doc = (module.__doc__
-               #if module.__doc__
-               #else print(tc.red('WARNING:'), 'no docstring for', module_path))
         if doc is None:
-            #print(tc.red('WARNING:'), 'no docstring for', module_path)
-            pass
+            maybe__doc__ = findAssignToName('__doc__', tree.body)
+
+            if maybe__doc__:  # FIXME warn on multi?
+                i, n = maybe__doc__[0]
+                prior = tree.body[:i]
+                doc = ''.join([asStr(v, prior) for v in n.value.values])
+
+            else:
+                #print(tc.red('WARNING:'), 'no docstring for', module_path)
+                pass
 
         if doc and 'Usage:' in doc:
             # get cli program name
@@ -317,18 +432,22 @@ def get__doc__s():
     return sorted(docs, reverse=True)
 
 
-def docstrings(theme):
+def makeDocstrings(BUILD, repo_paths, skip_folders, skip):
     docstr_file = 'docstrings.org'
-    docstr_path = working_dir / docstr_file
+    docstr_path = BUILD / docstr_file
     title = 'Command line programs and libraries'
-    authors = 'various'
-    date = TODAY()
-    docstr_kwargs = (working_dir, docstr_path,
+    authors = ['various']
+    date = TODAY()  # FIXME midnight issues
+    docstr_kwargs = (docstr_path, docstr_path,
                      {'authors': authors,
                       'date': date,
-                      'title': title})
-    docstrings = get__doc__s()
-    header = makeOrgHeader(title, authors, date, theme)
+                      'title': title,
+                      'org': '',
+                      'repo': '',
+                      'branch': 'master',
+                      'crumbs': _crumbs,
+                     })
+    docstrings = get__doc__s(repo_paths, skip_folders, skip)
 
     done = []
     dslist = []
@@ -339,7 +458,7 @@ def docstrings(theme):
         if docstring is not None:
             dslist.append(f'** {module}\n#+BEGIN_SRC\n{docstring}\n#+END_SRC')
 
-    docstrings_org = header + '\n'.join(dslist)
+    docstrings_org = '\n'.join(dslist)
     with open(docstr_path.as_posix(), 'wt') as f:
         f.write(docstrings_org)
 
@@ -352,17 +471,20 @@ def suffix(ext):  # TODO multisuffix?
         return function
     return decorator
 
+
 def pandocVersion():
     p = subprocess.Popen(['pandoc', '--version'], stdout=subprocess.PIPE)
     out, _ = p.communicate()
     version = out.split(b'\n', 1)[0].split(b' ', 1)[-1].decode()
     return version
 
+
 def getMdReadFormat(version):
     if version < '2.2.1':
         return 'markdown_github'
     else:
         return 'gfm'
+
 
 pdv = pandocVersion()
 md_read_format = getMdReadFormat(pdv)
@@ -424,6 +546,8 @@ compile_org_file = ['emacs',
                     '--load', docs_init,
                     '--funcall', 'compile-org-file']
 
+first_sep = re.compile(b'^[^#\n]', re.MULTILINE)
+
 
 @suffix('org')
 def renderOrg(path, debug=False, **kwargs):
@@ -443,52 +567,59 @@ def renderOrg(path, debug=False, **kwargs):
     with open(orgfile, 'rb') as f:
         # for now we do this and don't bother with the stream implementaiton of read1 write1
         org_in = f.read()
-        theme = kwargs['theme']
-        full_theme = theme.as_posix()
-        if b'#+SETUPFILE:' not in org_in:
-            insert = f'\n\n#+SETUPFILE: {full_theme}\n'.encode()
-        else:
-            insert = b''
 
-        if github_link is not None:
-            insert += _org_edit_link_html.format(edit_link=github_link).encode() + b'\n'
+    title = kwargs['title']
+    authors = kwargs['authors']
+    date = kwargs['date']
+    crumbs = kwargs['crumbs'] 
+    theme = kwargs['theme']
 
-        try:
-            if org_in.startswith(b'* '):
-                org = insert + org_in
-            else:
-                title_author_etc, rest = org_in.split(b'\n\n', 1)
-                org = (title_author_etc +
-                       insert +
-                       rest)
-        except ValueError as e:
-            title = kwargs['title']
-            authors = kwargs['authors']
-            date = kwargs['date']
-            title_author_etc = makeOrgHeader(title, authors, date, theme, github_link)
+    repo = kwargs['repo']
+    _title = PurePath(repo + '/' + title).with_suffix('.html').as_posix()
+    title = (kwargs['titles'][_title]
+            if 'titles' in kwargs and _title in kwargs['titles'] else
+            title)
+
+    try:
+        if org_in.startswith(b'* '):
+            title_author_etc = makeOrgHeader(title, authors, date, theme,
+                                             crumbs, github_link)
             org = title_author_etc.encode() + org_in
-            #raise ValueError(f'{orgfile!r}') from e
+        else:
+            match = first_sep.search(org_in)
+            if match is None:
+                breakpoint()
+            start = match.start()
+            existing, rest = org_in[:start], org_in[start:]
+            title_author_etc = makeOrgHeader(title, authors, date, theme,
+                                             crumbs, github_link, existing)
+            org = (title_author_etc.encode() +
+                   rest)
+    except ValueError as e:
+        log.exception(e)
+        title_author_etc = makeOrgHeader(title, authors, date, theme,
+                                         crumbs, github_link)
+        org = title_author_etc.encode() + org_in
+        #raise ValueError(f'{orgfile!r}') from e
 
+    # fix links
+    fix_links = FixLinks(path)
+    org = fix_links(org)
 
-        # fix links
-        fix_links = FixLinks(path)
-        org = fix_links(org)
-
-        #org =  + org_in  # TODO check how this interacts with other #+SETUPFILE: lines
-        #print(org.decode())
-        out, err = p.communicate(input=org)
-        if not out and not err:
-            log.critical(f'No output and no error for {path}\n'
-                         'Set --debug to dump to file.')
-            if debug:
-                with open(temp_path / f'debug-{path.name}', 'wb') as f:
-                    f.write(org)
+    out, err = p.communicate(input=org)
+    if not out and not err:
+        log.critical(f'No output and no error for {path}\n'
+                        'Set --debug to dump to file.')
+        if debug:
+            with open(temp_path / f'debug-{path.name}', 'wb') as f:
+                f.write(org)
 
     return out.decode()
 
 
 @suffix('md')
-def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwargs):
+def renderMarkdown(path, title=None, authors=None, date=None, theme=None,
+                   crumbs='', debug=False, **kwargs):
     mdfile = path.as_posix()
     try:
         ref = path.latest_commit().hexsha
@@ -499,7 +630,11 @@ def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwa
     # TODO fix relative links to point to github
 
     if pandoc_columns:
-        pandoc = ['pandoc', '--columns', '600', '-f', md_read_format, '-t', 'org', mdfile]
+        pandoc = ['pandoc',
+                  '--columns', '600',
+                  '-f', md_read_format,
+                  '-t', 'org',
+                  mdfile]
     else:
         pandoc = ['pandoc', '-f', md_read_format, '-t', 'org', mdfile]
     sed = ['sed', r's/\[\[\(.\+\)\]\[\[\[\(.\+\)\]\]\]\]/[[img:\2][\1]]/g']
@@ -521,9 +656,14 @@ def renderMarkdown(path, title=None, authors=None, date=None, debug=False, **kwa
                          stderr=(subprocess.STDOUT
                                  if debug else
                                  subprocess.PIPE))
-    authors = ', '.join(authors)
-    theme = kwargs['theme']
-    header = makeOrgHeader(title, authors, date, theme, github_link)
+
+    repo = kwargs['repo']
+    _title = PurePath(repo + '/' + title).with_suffix('.html').as_posix()
+    title = (kwargs['titles'][_title]
+            if 'titles' in kwargs and _title in kwargs['titles'] else
+            title)
+
+    header = makeOrgHeader(title, authors, date, theme, crumbs, github_link)
     out, err = s.communicate()
     #print(out.decode())
 
@@ -596,54 +736,70 @@ def renderNotebook(path, **kwargs):
     body, resources = html_exporter.from_notebook_node(notebook)
     return body
 
+
 def renderDoc(path, debug=False, **kwargs):
     # TODO add links back to github and additional prov for generation
+    print('========================================')
+    print(path)
     try:
         # renderMarkdown # renderOrg
         return suffixFuncs[path.suffix](path, debug=debug, **kwargs)
     except KeyError as e:
         raise TypeError(f'Don\'t know how to render {path.suffix}') from e
 
-def makeKwargs(repo, filepath):
+
+def makeKwargs(repo_path, filepath):
+    path = repo_path / filepath
     kwargs = {}
-    kwargs['title'] = (Path(repo.working_dir).name + ' ' + filepath
-                       if filepath.startswith('README.')
-                       else filepath)
-    kwargs['authors'] = sorted(name.strip()
-                               for name in
-                               set(repo.git.log(['--pretty=format:%an%x09',
-                                                 filepath]).split('\n')))
-    kwargs['date'] = repo.git.log(['-n', '1', '--pretty=format:%aI']).strip()
-    repo_url = Path(next(next(r for r in repo.remotes if r.name == 'origin').urls))
+    kwargs['title'] = filepath
+    kwargs['authors'] = sorted(
+        name.strip()
+        for name in
+        set(repo_path.repo.git.log(['--follow',
+                                    '--pretty=format:%an%x09',
+                                    filepath]).split('\n')))
+    kwargs['date'] = isoformat(path.latest_commit().authored_datetime)
+    repo_url = Path(next(next(r for r in repo_path.repo.remotes
+                              if r.name == 'origin').urls))
     kwargs['org'] = repo_url.parent.name
     kwargs['repo'] = repo_url.stem
     kwargs['branch'] = 'master'  # TODO figure out how to get the default branch on the remote
+    kwargs['crumbs'] = _crumbs
 
     return kwargs
 
-def outFile(doc, working_dir, BUILD):
+
+def outFile(doc, working_dir, out_path):
     relative_html = doc.relative_to(working_dir.parent).with_suffix('.html')
-    return BUILD / 'docs' / relative_html
+    return out_path / relative_html
 
 
-def run_all(doc, wd, BUILD, debug=False, logfix=False, **kwargs):
+def run_all(doc, wd, out_path, titles=None, debug=False, logfix=False, **kwargs):
     # workaround for joblib 692 that only creates the logger once
     # workaround for incorrect behavior in old versions of makeSimpleLogger
     log = logging.getLogger('ont-docs')
     if not log.handlers:
         log = makeSimpleLogger('ont-docs')
 
-    return outFile(doc, wd, BUILD), renderDoc(doc, debug=debug, **kwargs)
+    return (outFile(doc, wd, out_path),
+            renderDoc(doc, titles=titles, debug=debug, **kwargs))
 
 
-def render_docs(wd_docs_kwargs, BUILD, n_jobs=9, debug=False):
+def render_docs(wd_docs_kwargs, out_path, titles=None, n_jobs=9, debug=False):
+    if titles is None:
+        titles = {}
+
     if 'CI' in os.environ or n_jobs == 1:
-        outname_rendered = [(outFile(doc, wd, BUILD), renderDoc(doc, debug=debug, **kwargs))
-                            for wd, doc, kwargs in wd_docs_kwargs]
+        outname_rendered = [
+            (outFile(doc, wd, out_path),
+             renderDoc(doc, titles=titles,
+                       debug=debug, **kwargs))
+            for wd, doc, kwargs in wd_docs_kwargs]
     else:
-        outname_rendered = Parallel(n_jobs=n_jobs)(delayed(run_all)(doc, wd, BUILD,
-                                                                    debug=debug, logfix=not i, **kwargs)
-                                                   for i, (wd, doc, kwargs) in enumerate(wd_docs_kwargs))
+        outname_rendered = Parallel(n_jobs=n_jobs)(
+            delayed(run_all)(doc, wd, out_path, titles=titles,
+                             debug=debug, logfix=not i, **kwargs)
+            for i, (wd, doc, kwargs) in enumerate(wd_docs_kwargs))
     return outname_rendered
 
 
@@ -651,24 +807,24 @@ def deadlink_check(html_file):
     """ TODO """
 
 
-def prepare_paths(BUILD, docs_dir, theme_repo, theme):
+def prepare_paths(BUILD, out_path, theme_repo, theme):
     patch_theme_setup(theme)
 
     if not BUILD.exists():
         BUILD.mkdir()
 
-    if not docs_dir.exists():
-        docs_dir.mkdir()
+    if not out_path.exists():
+        out_path.mkdir()
 
     theme_styles_dir = theme_repo / 'styles'
-    doc_styles_dir = docs_dir / 'styles'
+    doc_styles_dir = out_path / 'styles'
     if doc_styles_dir.exists():
         shutil.rmtree(doc_styles_dir)
 
     shutil.copytree(theme_styles_dir, doc_styles_dir)
 
     # this is tricky
-    #images_dir = docs_dir / 'images'
+    #images_dir = out_path / 'images'
     #if images_dir.exists():
         #shutil.rmtree(images_dir)
 
@@ -676,168 +832,130 @@ def prepare_paths(BUILD, docs_dir, theme_repo, theme):
     #shutil.copy(image, images_dir)
 
 
-def main():
-    from docopt import docopt
-    args = docopt(__doc__)
-    debug = args['--debug']
+def only(repo_path, file):
+    """ for debugging specific files """
+    #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
+    #and Path(repo.working_dir).name == 'pyontutils' and f == 'README.md'  # DEBUG
+    #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
+    return True
 
-    BUILD = working_dir / 'doc_build'
-    docs_dir = BUILD / 'docs'
-    glb = Path(auth.get_path('git-local-base'))
-    theme_repo = glb / 'org-html-themes'
-    theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
-    prepare_paths(BUILD, docs_dir, theme_repo, theme)
 
-    docstring_kwargs = docstrings(theme)
-    wd_docs_kwargs = [docstring_kwargs]
-    if args['--docstring-only']:
+class Options(clif.Options):
+
+    @property
+    def config(self):
+        return Path(self._args['--config'])
+
+    @property
+    def jobs(self):
+        return int(self._args['--jobs'])
+
+    @property
+    def out_path(self):
+        return Path(self._args['--out-path']).expanduser()
+
+    @property
+    def BUILD(self):
+        return (self.out_path / self.html_root).resolve()
+
+
+class Main(clif.Dispatcher):
+
+    @property
+    def _doc_config(self):
+        with open(self.options.config, 'rt') as f:
+            return yaml.safe_load(f)
+
+    def default(self):
+        out_path = self.options.out_path
+        BUILD = self.options.BUILD
+
+        glb = Path(auth.get_path('git-local-base'))
+        theme_repo = glb / 'org-html-themes'
+        theme =  theme_repo / 'setup/theme-readtheorg-local.setup'
+        prepare_paths(BUILD, out_path, theme_repo, theme)
+
+        doc_config = self._doc_config
+        names = tuple(doc_config['repos']) + tuple(self.options.repo)  # TODO fetch if missing ?
+        repo_paths = [(glb / name).resolve() for name in names]
+        repos = [p.repo for p in repo_paths]
+        skip_folders = doc_config.get('skip-folders', tuple())
+        rskip = doc_config.get('skip', {})
+
+        # TODO move this into run_all
+        docstring_kwargs = makeDocstrings(BUILD, repo_paths, skip_folders, rskip)
+        wd_docs_kwargs = [docstring_kwargs]
+        if self.options.docstring_only:
+            [kwargs.update({'theme': theme})
+            for _, _, kwargs in wd_docs_kwargs]
+            outname, rendered = render_docs(wd_docs_kwargs, out_path, 1,
+                                            debug=self.options.debug)[0]
+            if not outname.parent.exists():
+                outname.parent.mkdir(parents=True)
+            with open(outname.as_posix(), 'wt') as f:
+                f.write(rendered)
+            return
+
+        et = tuple()
+        wd_docs_kwargs += [
+            (rp, rp / f, makeKwargs(rp, f))
+            for rp in repo_paths
+            for f in rp.repo.git.ls_files().split('\n')
+            if Path(f).suffix in suffixFuncs
+            and only(rp, f)
+            and noneMembers(f, *skip_folders)
+            and f not in rskip.get(rp.name, et)]
+
         [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
-        outname, rendered = render_docs(wd_docs_kwargs, BUILD, 1, debug=debug)[0]
-        if not outname.parent.exists():
-            outname.parent.mkdir(parents=True)
-        with open(outname.as_posix(), 'wt') as f:
-            f.write(rendered)
-        return
 
-    names = ('augpathlib', 'interlex', 'ontquery', 'orthauth', 'sparc-curation') + tuple(args['--repo'])
-    repo_paths = [Path(auth.get_path('ontology-local-repo')),
-                  Path(working_dir)] + [glb / name for name in names]
-    repos = [p.repo for p in repo_paths]
-    skip_folders = 'notebook-testing', 'complete', 'ilxutils', 'librdflib'
-    rskip = {
-        'pyontutils': (
-            'docs/NeuronLangExample.ipynb',  # exact skip due to moving file
-            'ilxutils/ilx-playground.ipynb',
-            'nifstd/resources/sawg.org',  # published via another workflow
-        ),
-        'sparc-curation': (
-            'README.md',  # insubstantial
-            'docs/apinatomy.org',
-            'docs/developer-guide.org',
-            'docs/notes.org',
-            'test/apinatomy/README.org',
-            'resources/scigraph/README.org',  # replaced by the nifstd scigraph readme
-        ),
-        'interlex': (
-            'README.md',  # insubstantial
-            'docs/explaining.org',  # not ready
-        ),}
+        if self.options.spell:
+            spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
+            return
 
-    et = tuple()
-    # TODO move this into run_all
-    #wd_docs_kwargs = [(Path(repo.working_dir).resolve(),
-    wd_docs_kwargs += [(Path(repo.working_dir).resolve(),
-                        Path(repo.working_dir, f).resolve(),
-                        makeKwargs(repo, f))
-                       for repo in repos
-                       for f in repo.git.ls_files().split('\n')
-                       if Path(f).suffix in suffixFuncs
-                       #and Path(repo.working_dir).name == 'NIF-Ontology' and f == 'README.md'  # DEBUG
-                       #and Path(repo.working_dir).name == 'pyontutils' and f == 'README.md'  # DEBUG
-                       #and Path(repo.working_dir).name == 'sparc-curation' and f == 'docs/setup.org'  # DEBUG
-                       and noneMembers(f, *skip_folders)
-                       and f not in rskip.get(Path(repo.working_dir).name, et)]
+        titles = doc_config['titles']
 
-    [kwargs.update({'theme': theme}) for _, _, kwargs in wd_docs_kwargs]
+        outname_rendered = render_docs(wd_docs_kwargs, out_path, titles,
+                                       self.options.jobs,
+                                       debug=self.options.debug)
 
-    if args['--spell']:
-        spell((f.as_posix() for _, f, _ in wd_docs_kwargs))
-        return
+        index = [f'<b class="{heading}">{heading}</b>'
+                for heading in doc_config['index']]
 
-    outname_rendered = render_docs(wd_docs_kwargs, BUILD, int(args['--jobs']), debug=debug)
+        _NOTITLE=object()
+        for outname, rendered in outname_rendered:
+            apath = outname.relative_to(self.options.out_path)
+            title = titles.get(apath.as_posix(), _NOTITLE)
+            # TODO parse out/add titles
+            if title is not None:
+                value = hfn.atag(apath) if title is _NOTITLE else hfn.atag(apath, title)
+                index.append(value)
 
-    titles = {
-        ###
-        'Components':'Components',
-        'NIF-Ontology/README.html':'Introduction to the NIF Ontology',  #
-        'ontquery/README.html':'Introduction to ontquery',
-        'orthauth/README.html':'Introduction to orthauth',
-        'pyontutils/README.html':'Introduction to pyontutils',
-        'pyontutils/nifstd/README.html':'Introduction to nifstd-tools',
-        'pyontutils/neurondm/README.html':'Introduction to neurondm',
-        'pyontutils/ilxutils/README.html':'Introduction to ilxutils',
+            if not outname.parent.exists():
+                outname.parent.mkdir(parents=True)
 
-        ###
-        'Developer docs':'Developer docs',
-        'NIF-Ontology/docs/processes.html':'Ontology development processes (START HERE!)',  # HOWTO
-        'NIF-Ontology/docs/development-setup.html': 'Ontology development setup',  # HOWTO
-        'sparc-curation/docs/setup.html': 'Developer and curator setup (broader scope but extremely detailed)',
-        'pyontutils/docs/release.html': 'Python library packaging and release process',
-        'NIF-Ontology/docs/import-chain.html': 'Ontology import chain',  # Documentation
+            with open(outname.as_posix(), 'wt') as f:
+                f.write(rendered)
 
-        'pyontutils/nifstd/resolver/README.html': 'Ontology resolver setup',
-        'interlex/alt/README.html': 'InterLex alternate resolver',  # TODO
-        'interlex/docs/setup.html': '',  # present but not visibly listed
-        'interlex/docs/implementation.html': '',  # present but not visibly listed
+        lt  = list(titles)
+        def title_key(a):
+            return lt.index(a.split('"')[1])
 
-        'pyontutils/nifstd/scigraph/README.html': 'SciGraph user guide',
+        index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] +
+                                    sorted(index, key=title_key))
+        with open((out_path / 'index.html').as_posix(), 'wt') as f:
+            f.write(hfn.htmldoc(index_body,
+                                title=doc_config['title']))
 
-        'pyontutils/docstrings.html': 'Command line programs',
-        'NIF-Ontology/docs/external-sources.html': 'External sources for the ontology',  # Other
-        'ontquery/docs/interlex-client.html': 'InterLex client library doccumentation',
-        'orthauth/docs/guide.html': 'Orthauth user guide',
 
-        ###
-        'Contributing':'Contributing',
-        'pyontutils/nifstd/development/README.html':'Contributing to the ontology',
-        'pyontutils/nifstd/development/community/README.html':'Contributing term lists to the ontology',
-        'pyontutils/neurondm/neurondm/models/README.html':'Contributing neuron terminology to the ontology',
+def main():
+    from docopt import docopt, parse_defaults
+    args = docopt(__doc__)
+    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
+    debug = args['--debug']
+    options = Options(args, defaults)
+    main = Main(options)
+    main()
 
-        ###
-        'Ontology content':'Ontology content',
-        'NIF-Ontology/docs/brain-regions.html':'Parcellation schemes',  # Ontology Content
-        'pyontutils/nifstd/development/methods/README.html':'Methods and techniques',  # Ontology content
-        'NIF-Ontology/docs/Neurons.html':'Neuron Lang overview',
-        'pyontutils/neurondm/docs/NeuronLangExample.html':'Neuron Lang examples',
-        'pyontutils/neurondm/docs/neurons_notebook.html':'Neuron Lang setup',
-
-        ###
-        'Specifications':'Specifications',
-        'NIF-Ontology/docs/interlex-spec.html':'InterLex specification',  # Documentation
-        'pyontutils/ttlser/docs/ttlser.html':'Deterministic turtle specification',
-
-        ###
-        'Other':'Other',
-        'augpathlib/README.html': 'augpathlib readme',
-        'pyontutils/htmlfn/README.html': 'htmlfn readme',
-        'pyontutils/ttlser/README.html': 'ttlser readme',
-        'sparc-curation/docs/background.html': '',  # present but not visibly listed
-    }
-
-    titles_sparc = {  # TODO abstract this out ...
-        'Background': 'Background',
-        'sparc-curation/docs/background.html': 'SPARC curation background',
-        'Other':'Other',
-        'sparc-curation/README.html': 'sparc-curation readme',
-    }
-
-    index = [
-        '<b class="Components">Components</b>',
-        '<b class="Developer docs">Developer docs</b>',
-        '<b class="Contributing">Contributing</b>',
-        '<b class="Ontology content">Ontology content</b>',
-        '<b class="Specifications">Specifications</b>',
-        '<b class="Other">Other</b>',
-    ]
-    for outname, rendered in outname_rendered:
-        apath = outname.relative_to(BUILD / 'docs')
-        title = titles.get(apath.as_posix(), None)
-        # TODO parse out/add titles
-        value = atag(apath) if title is None else atag(apath, title)
-        index.append(value)
-        if not outname.parent.exists():
-            outname.parent.mkdir(parents=True)
-        with open(outname.as_posix(), 'wt') as f:
-            f.write(rendered)
-
-    lt  = list(titles)
-    def title_key(a):
-        return lt.index(a.split('"')[1])
-
-    index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] + sorted(index, key=title_key))
-    with open((BUILD / 'docs/index.html').as_posix(), 'wt') as f:
-        f.write(htmldoc(index_body,
-                        title='NIF Ontology documentation index'))
 
 if __name__ == '__main__':
     main()

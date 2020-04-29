@@ -9,6 +9,9 @@ This readme consolidates a number of different processes for deploying
 ontologies to SciGraph into a single workflow that avoids most of the
 hidden pitfalls we have encountered over the past 4 years.
 
+*NOTE*: if you are using a non-standard location for =~/git= then the best
+way to fix this file at the moment is to do a global find and replace.
+
 * Using this file
 Before you can use this file you will need to complete the [[#setup][Setup section]]. \\
 
@@ -23,7 +26,7 @@ the whole file from the command line using with the following.
 emacs --batch \
       --load org \
       --load ob-shell \
-      --eval "(unless ((lambda (a b) (or (string> a b) (string= a b))) (org-version) \"9.3\") (message (format \"your org is too old! %s < 9.3 \" (org-version))) (kill-emacs 1))" \
+      --eval "(unless ((lambda (a b) (or (string> a b) (string= a b))) (org-version) \"9.3\") (message (format \"your org is too old! %s < 9.3 try loading ~/git/orgstrap/init.el\" (org-version))) (kill-emacs 1))" \
       --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
 #+end_src
 The core functionality is tangled to [[file:./bin/scigraph-functions.sh]]. \\
@@ -140,6 +143,9 @@ the requisite values below in the variables section (not exported).
 Alternately, copy the block as is an make the changes manually.
 Then open [[file:${HOME}/.ssh/config.scigraph.example][~/.ssh/config.scigraph.example]]
 and copy the sections into [[file:${HOME}/.ssh/config][your ssh config file]].
+
+If you are deploying to an aws server (e.g. aws-scigraph or aws-scigraph-data),
+the =IdentityFile= entry must point to a key that has admin access via the aws console.
 #+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
 Host *
@@ -326,7 +332,8 @@ g.write()
 Run this block
 #+name: sparc-community-terms-update
 #+caption: running =interlex-alt= is really all that is required, the url is for simplicity
-#+begin_src bash :results output :noweb no-export
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :results output :noweb no-export :tangle ./bin/sparc-community-terms-update
 pushd ~/git/NIF-Ontology/ttl
 git checkout sparc || exit $?  # can fail if your working copy has stuff saved
 git pull || exit $?
@@ -343,7 +350,11 @@ popd
 
 Review the output of this block or [[file:${HOME}/git/NIF-Ontology/ttl/sct-diff.patch]]
 Make any manual changes, commit, and push.
-You will also need to merge sparc into dev for the changes to be included in the SciGraph load.
+You will also need to merge sparc into dev for the changes to be included in the SciGraph load. i.e., the following:
+#+begin_src bash :eval never
+git checkout dev
+git merge sparc
+#+end_src
 *** code
 *** graph
 **** load

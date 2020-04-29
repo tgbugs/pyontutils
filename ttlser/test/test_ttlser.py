@@ -8,6 +8,7 @@ import subprocess
 from io import BytesIO
 from random import shuffle
 from pathlib import Path
+from collections import defaultdict
 import rdflib
 
 from ttlser import CustomTurtleSerializer, SubClassOfTurtleSerializer
@@ -29,6 +30,7 @@ def randomize_dict_order(d):
         return randomize_dict_order(d)  # try again
     else:
         return out
+
 
 def randomize_prefix_order(graph):
     namespace = graph.namespace_manager.store._IOMemory__namespace
@@ -53,22 +55,27 @@ def randomize_prefix_order(graph):
     readd(sp, prefix)
     graph.namespace_manager.reset()  # repopulate the trie
 
+
 def randomize_BNode_order(graph):
     replaced = {}
-    urn = ['{i:0<6}'.format(i=i) for i in range(999999)]
+    urn = ['{i:0>6}'.format(i=i) for i in range(999999)]
     shuffle(urn)
-    def swap(t):
-        if isinstance(t, rdflib.BNode):
-            if t in replaced:
-                return replaced[t]
+    assert len(urn) == len(set(urn))  # TRY IT I DARE YOU
+    safe_urn = (_ for _ in urn)
+    def swap(e):
+        if isinstance(e, rdflib.BNode):
+            if e in replaced:
+                return replaced[e]
             else:
-                rnd = urn.pop()  # avoid the rare duplicate
+                rnd = next(safe_urn)  # avoid the rare duplicate
                 new = rdflib.BNode(rnd)
-                replaced[t] = new
+                replaced[e] = new
                 return new
-        return t
+        else:
+            return e
+
     for trip in graph:
-        new_trip = tuple(swap(t) for t in trip)
+        new_trip = tuple(swap(_) for _ in trip)
         if new_trip != trip:
             graph.remove(trip)
             graph.add(new_trip)
@@ -76,6 +83,7 @@ def randomize_BNode_order(graph):
 
 class TestTtlser(unittest.TestCase):
 
+    _ntests = 5  # increase to catch infrequent det failures
     format = 'nifttl'
     serializer = CustomTurtleSerializer
     goodpath = 'test/good.ttl'
@@ -96,6 +104,7 @@ class TestTtlser(unittest.TestCase):
                   'from io import BytesIO\n' +
                   'from random import shuffle\n' +
                   'from pathlib import Path\n' +
+                  'from collections import defaultdict\n' +
                   'import rdflib\n' +
                   ('from ttlser import ' + self.serializer.__name__ + '\n') +
                   ("rdflib.plugin.register(" + repr(self.format) + ", rdflib.serializer.Serializer, ") +
@@ -133,7 +142,7 @@ class TestTtlser(unittest.TestCase):
         actual = self.actual
         actualpath = self.actualpath
         actualpath2 = self.actualpath2
-        for _ in range(5):  # increase this number of you are suspicious
+        for _ in range(self._ntests):
             if seed is not None:
                 env['PYTHONHASHSEED'] = str(seed)
             else:
@@ -146,8 +155,9 @@ class TestTtlser(unittest.TestCase):
                                  stderr=subprocess.PIPE,
                                  env=env)
             out, err = p.communicate()
-            #print(code)
-            #print(err.decode())
+            if err.strip():
+                print(code)
+                print(err.decode())
             out = re.sub(br"\[\d+ refs, \d+ blocks\]\r?\n?", b"", out)  # nose can't import strip_python_stderr from any test submodule :/
             #out = out.split(b'\n', 1)[1]  # don't need to remove the rdflib noise if using >=rdflib-5.0.0
             actual2 = out
