@@ -1,5 +1,6 @@
 import os
 import sys
+import stat
 import shutil
 import unittest
 import subprocess

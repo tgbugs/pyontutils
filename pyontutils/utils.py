@@ -654,12 +654,23 @@ class rowParse:
 class LolPython(list):
     """ because who needs to setattr lists right? """
 
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self._list[key] = value
+
     def _asdict(self):
         return {h:v for h, v in zip(self._header, self)}
 
+    def _raw(self):
+        return self._list
 
-def _sigh(header, row):
+
+def _sigh(header, row, orig_row=None):
+    if orig_row is None:
+        orig_row = row
+
     out = LolPython(row)
+    out._list = orig_row
     out._header = header
     out._fields = header
     for name, value in zip(header, out):
@@ -682,7 +693,7 @@ class byCol:
             orig_header = _sigh(header, header)
 
         # normalize row lenght  # FIXME account for rows longer than header
-        rows = [_sigh(header, row + [None] * (len(header) - len(row))) for row in rows]
+        rows = [_sigh(header, row + [None] * (len(header) - len(row)), row) for row in rows]
         #setattr(self, name, LOL_PYTHON(header, row))
 
         # so apparently using namedtuple dynamically breaks pickle LOL PYTHON LOL
@@ -751,8 +762,9 @@ class byCol:
         for col in self.header:
             yield [col, *getattr(self, col)]
 
-    def searchIndex(self, index, value):
-        return self.__indexes[index][value]
+    def searchIndex(self, index, value, raw=False):
+        row = self.__indexes[index][value]
+        return row._raw() if raw else row
 
     def __getitem__(self, key):
         return list(getattr(self, key))
