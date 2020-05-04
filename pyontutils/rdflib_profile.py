@@ -155,9 +155,9 @@ def main():
 
         thisfile = Path(__file__).resolve().absolute()
         thisfolder = thisfile.parent
-        files = thisfile, thisfolder / 'ttlser.py', thisfolder / '__init__.py'
+        files = thisfile, thisfolder / '__init__.py'
 
-        venvs = 'rdflib-4.2.2', 'neurdflib-5.0.0'
+        venvs = 'rdflib-4.2.2', 'rdflib-5.0.0'
 
         data = {}
         pipenv = args['--pipenv']
@@ -171,7 +171,7 @@ def main():
 
                 pkg, version = venv.split('-', 1)
 
-                os.system(f'cd {p.as_posix()} && unset PYTHONPATH && pipenv install {pkg}')
+                os.system(f'cd {p.as_posix()} && unset PYTHONPATH && pipenv install {pkg}=={version}')
 
             for f in files:
                 shutil.copy(f.as_posix(), (po / f.name).as_posix())

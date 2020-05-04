@@ -52,7 +52,10 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
         raise ValueError(_msg) from e
 
     if store_file is None:
-        msg = (f'No file exists at the path specified by {_auth_var} in {auth._path}')
+        _p = 'RUNTIME_CONFIG' if auth._path is None else auth._path
+        msg = (f'No file exists at the path specified by {_auth_var} in {_p}')
+        log.debug(auth._runtime_config)
+        log.debug(auth.user_config._runtime_config)
         raise ValueError(msg)
 
     # TODO log which file it is writing to ...
@@ -134,6 +137,14 @@ def default_filter_cell(cell):
         cell.pop(k, None)
 
 
+def num_to_ab(n):
+    string = ''
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        string = chr(65 + remainder) + string
+    return string
+
+
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
                      filter_cell=default_filter_cell):
     SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
@@ -147,13 +158,6 @@ def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet
     values = result.get('values', [])
 
     if fetch_grid:
-        def num_to_ab(n):
-            string = ''
-            while n > 0:
-                n, remainder = divmod(n - 1, 26)
-                string = chr(65 + remainder) + string
-            return string
-
         rm = len(values)
         cm = max([len(c) for c in values])
         cml = num_to_ab(cm)
@@ -210,6 +214,24 @@ class Cell:
         self.column_index = column_index
 
     @property
+    def row(self):
+        return Row(self, self.row_index)
+
+    def __repr__(self):
+        changed = '*' if self in self.sheet._uncommitted_updates else ' '
+        #return f'<Cell{changed} {self.row_index:>4},{self.column_index:>4} -> {self.value!r}>'
+        return f'<Cell{changed} {self.range} -> {self.value!r}>'
+
+    def __hash__(self):
+        return hash((self.__class__, self.sheet, self.row_index, self.column_index))
+
+    def __eq__(self, other):
+        """ cell equality is equality of location, not contents """
+        s = self.sheet, self.row_index, self.column_index
+        o = other.sheet, other.row_index, other.column_index
+        return s == o
+
+    @property
     def column_header(self):
         return self.sheet.byCol.header[self.column_index]
 
@@ -224,6 +246,10 @@ class Cell:
     def value(self):
         return self.sheet.values[self.row_index][self.column_index]
 
+    @value.setter
+    def value(self, value):
+        self.sheet._setCellValue(self, value)
+
     @property
     def grid(self):
         return self.sheet.get_cell(self.row_index, self.column_index)
@@ -231,6 +257,75 @@ class Cell:
     @property
     def hyperlink(self):
         return self.grid.get('hyperlink', None)
+
+    @property
+    def range(self):
+        c = num_to_ab(self.column_index + 1)
+        r = self.row_index + 1
+        return f'{self.sheet.sheet_name}!{c}{r}'
+
+
+class Row:
+    def __init__(self, sheet, row_index):
+        self.sheet = sheet
+        self.row_index = row_index
+        for col_index, name in enumerate(self.header):
+            def f(ci=col_index):
+                return self.cell_object(ci)
+
+            setattr(self, name, f)
+
+    def __repr__(self):
+        changed = ('+' if self in self.sheet._uncommitted_appends
+                   else ('*' if [c for c in self.cells
+                                 if c in self.sheet._uncommitted_updates] else ' '))
+        return f'<Row{changed} {self.range}>'
+
+    def __hash__(self):
+        return hash((self.__class__, self.sheet, self.row_index))
+
+    def __eq__(self, other):
+        """ cell equality is equality of location, not contents """
+        s = self.sheet, self.row_index
+        o = other.sheet, other.row_index
+        return s == o
+
+    @property
+    def header(self):
+        return self.sheet.byCol.header
+
+    def __getitem__(self, index):
+        return self.sheet.values[self.row_index][index]
+
+    def cell_object(self, column_index):
+        return Cell(self.sheet, self.row_index, column_index)
+
+    @property
+    def values(self):  # FIXME naming ?
+        return self.sheet.values[self.row_index]
+
+    @property
+    def cells(self):
+        return [self.cell_object(column_index) for column_index, _ in enumerate(self.values)]
+
+    @property
+    def range(self):
+        minc = 'A'  # anticipating arbitrary row ranges
+        maxc = num_to_ab(len(self.values) + 1)
+        r = self.row_index + 1
+        return f'{self.sheet.sheet_name}!{minc}{r}:{maxc}{r}'
+
+    def rowFromIndex(self, index):
+        return self.__class__(self.sheet, index)
+
+    def rowFromOffset(self, offset):
+        return self.rowFromIndex(self.row_index + offset)
+
+    def rowAbove(self, negative_offset=1):
+        return self.rowFromOffset(-negative_offset)
+
+    def rowBelow(self, postive_offset=1):
+        return self.rowFromOffset(positive_offset)
 
 
 class Sheet:
@@ -251,6 +346,10 @@ class Sheet:
 
         if fetch_grid is not None:
             self.fetch_grid = fetch_grid
+
+        # TODO can probably unify these since can dispatch on Cell/Row
+        self._uncommitted_updates = {}
+        self._uncommitted_appends = {}
 
         self.readonly = readonly
         self._setup()
@@ -282,10 +381,12 @@ class Sheet:
 
     def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
+        self._stash_uncommitted()
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
-        values, grid, cells_index = get_sheet_values(self.name, self.sheet_name,
+        values, grid, cells_index = get_sheet_values(self.name,
+                                                     self.sheet_name,
                                                      spreadsheet_service=self._spreadsheet_service,
                                                      fetch_grid=fetch_grid,
                                                      filter_cell=filter_cell)
@@ -303,6 +404,8 @@ class Sheet:
 
         self.grid = grid
         self.cells_index = cells_index
+
+        self._reapply_uncommitted()
 
         #self._lol_g, self._lol_c = grid, cells_index  # WHAT! this causes the problem !?
         #import copy
@@ -356,3 +459,94 @@ class Sheet:
 
     def cell_object(self, row_index, column_index):
         return Cell(self, row_index, column_index)
+
+    def row_object(self, row_index):
+        return Row(self, row_index)
+
+    def _setCellValue(self, cell, value):
+        """ call before making the change """
+        if isinstance(value, Cell):
+            raise TypeError(f'values should not be of type Cell: {value}')
+
+        if cell not in self._uncommitted_updates:
+            self._uncommitted_updates[cell] = cell.value  # store the old values
+
+        self.values[cell.row_index][cell.column_index] = value
+
+    def _appendRow(self, row):
+        # NOTE this intentionally does not go in the byCol index
+        # it should be added after commit completes, but byCol is static
+        # and we need to remove it as a dependency at some point ...
+        if row not in self.values:
+            self.values.append(row)
+            row_object = Row(self, self.values.index(row))
+            self._uncommitted_appends[row_object] = row
+        else:
+            # FIXME should we allow identical duplicate rows?
+            # or do we require another mechanism for that?
+            raise ValueError('row already in sheet')
+
+    def uncommitted(self):
+        return {**self._uncommitted_appends, **self._uncommitted_updates}
+
+    def commit(self):
+        self._commit_appends()
+        self._commit_updates()
+
+    def _commit_appends(self):
+        if not self._uncommitted_appends:
+            return
+
+        row_objects = sorted(self._uncommitted_appends, key= lambda r: r.row_index)
+        values = [r.values for r in row_objects]  # FIXME variable length appends
+        body = {'values': values}
+
+        rmin = row_objects[0].row_index + 1
+        rmax = row_objects[-1].row_index + 1
+        cmin = 'A'
+        cmax = num_to_ab(max(len(v) for v in values) + 1)
+        range = f'{self.sheet_name}!{cmin}{rmin}:{cmax}{rmax}'
+
+        resp = (self._spreadsheet_service.values()
+                .append(spreadsheetId=self._sheet_id(),
+                        valueInputOption='USER_ENTERED',
+                        range=range,
+                        body=body)
+                .execute())
+
+        self._uncommitted_appends = {}
+
+    def _commit_updates(self):
+        data = [{'range': cell.range, 'values': [[cell.value]]}
+                for cell in self._uncommitted_updates]
+        body = {'valueInputOption': 'USER_ENTERED',
+                'data': data,}
+        resp = (self._spreadsheet_service.values()
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+
+        self._uncommitted_updates = {}
+
+    def _stash_uncommitted(self):
+        self._stash = {c:c.value for c in self._uncommitted_updates}
+        # TODO do we revert here?
+
+    def _reapply_uncommitted(self):
+        """ if fetch is called, reapply our changes """
+        old_u = self._uncommitted_updates  # keep in case something goes wrong ?
+        self._uncommitted_updates = {}  # reset this to capture the new starting values
+        old_a = self._uncommitted_appends  # in the event someone else appended rows, don't klobber
+        self._uncommitted_appends = {}
+        ds = (old_a, self._stash)
+        for d in ds:
+            for k, v in d.items():
+                if isinstance(k, Row):
+                    # FIXME WARNING replay is not consistent if dict insertion is
+                    # not preserved, e.g. in old versions of python
+                    self._appendRow(v)
+                elif isinstance(k, Cell):
+                    self._setCellValue(k, v)
+                else:
+                    raise NotImplementedError('Unhandled type {type(k)}')
+
+        self._stash = None

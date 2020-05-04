@@ -1,5 +1,6 @@
 import pprint
 import unittest
+import pytest
 import orthauth as oa
 from pyontutils import sheets
 
@@ -92,6 +93,15 @@ def do_test(expect, SCOPES='https://www.googleapis.com/auth/spreadsheets.readonl
 
 
 class TestGetOauthService(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.__auth = sheets.auth
+
+    @classmethod
+    def tearDownClass(cls):
+        sheets.auth = cls.__auth
+
     def test(self):
         keep_expect = ('user_config_no_vars',
                        'user_config_empty',
@@ -123,3 +133,45 @@ class TestGetOauthService(unittest.TestCase):
                     bads.append((cname, sname, 'SCOPES=None', e))
 
         assert not bads, pprint.pformat(bads)
+
+
+class SheetToTest(sheets.Sheet):
+
+    name = 'pyontutils-test'
+    sheet_name = 'tests'
+    index_columns = 'id',
+    fetch_grid = True
+
+
+class TestSheets(unittest.TestCase):
+
+    def setUp(self):
+        self.sheet = SheetToTest(readonly=False)
+        self.sheet_ro = SheetToTest()
+
+    def test_update(self):
+        row = self.sheet.row_object(1)
+
+        row.name().value = 'hello there'
+        self.sheet.commit()
+        self.sheet_ro.fetch()
+        tv1 = self.sheet_ro.values
+        assert self.sheet.values == tv1
+
+        row.name().value = ''
+        self.sheet.commit()
+        self.sheet_ro.fetch()
+        tv2 = self.sheet_ro.values
+        assert self.sheet.values == tv2
+        assert tv1 != tv2
+
+    @pytest.mark.skip('TODO')
+    def test_append(self):
+        pass
+
+    @pytest.mark.skip('TODO')
+    def test_stash(self):
+        # create another instance of the sheet
+        # update using that instance
+        # fetch to make sure stashing works as expected
+        pass
