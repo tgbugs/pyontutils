@@ -12,7 +12,7 @@ from pyontutils.combinators import Restriction2, POCombinator
 from pyontutils.combinators import annotation, restriction, restrictionN
 from nifstd_tools.methods.core import methods_core, asp, proc, tech, prot, _t, restN, oECN, branch
 from nifstd_tools.methods.helper import methods_helper, restHasValue
-from pyontutils.closed_namespaces import owl, rdf, rdfs, oboInOwl
+from pyontutils.namespaces import owl, rdf, rdfs, oboInOwl, replacedBy
 
 # NOTE if vim is slow it is probably becuase there are
 # so many nested parens `:set foldexpr=` fixes the problem
@@ -72,7 +72,8 @@ filename = 'methods'
 prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
             'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
             'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX', 'oboInOwl'
+            'NLX', 'oboInOwl', 'RO', 'PR', 'PATO', 'IAO', 'replacedBy',
+            'locatedIn',
 )
 
 imports = (methods_core.iri,
@@ -2990,7 +2991,8 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        synonyms=('light sheet fluorescence microscopy', 'LSFM')),
     oc(TEMP(361)),
-    (TEMP(361), owl.equivalentClass, TEMP(362)),  # STPT and TPT used to be 361 and 362, now merged
+    (TEMP(361), owl.deprecated, Literal(True)),
+    (TEMP(361), replacedBy, TEMP(362)),  # STPT and TPT used to be 361 and 362, now merged
     _t(TEMP(362), 'two-photon tomographic technique',
        (hasPart, tech.twoPhoton),
        (hasPart, tech.tomography),
