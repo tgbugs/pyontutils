@@ -1,6 +1,8 @@
 import pickle
 import itertools
 from pathlib import Path
+import idlib
+import htmlfn as hfn
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -208,6 +210,7 @@ def get_note(row_index, column_index, cells_index):
 
 
 class Cell:
+
     def __init__(self, sheet, row_index, column_index):
         self.sheet = sheet
         self.row_index = row_index
@@ -215,7 +218,11 @@ class Cell:
 
     @property
     def row(self):
-        return Row(self, self.row_index)
+        return Row(self.sheet, self.row_index)
+
+    @property
+    def column(self):
+        return Column(self.sheet, self.column_index)
 
     def __repr__(self):
         changed = '*' if self in self.sheet._uncommitted_updates else ' '
@@ -234,11 +241,14 @@ class Cell:
     @property
     def column_header(self):
         return self.sheet.byCol.header[self.column_index]
+        # FIXME normalized vs unnormalized
+        return self.sheet.values[0][self.column_index]
 
     @property
     def row_header(self):
-        if self.sheet.byCol.index_columns:
-            col = self.sheet.byCol.index_columns[0]
+        if self.sheet.index_columns:
+            col = self.sheet.index_columns[0]
+            # FIXME how to handle normalized names once we remove byCol?
             row_header_column_index = self.sheet.byCol.header.index(col)
             return self.sheet.values[self.row_index][row_header_column_index]
 
@@ -259,6 +269,14 @@ class Cell:
         return self.grid.get('hyperlink', None)
 
     @property
+    def atag(self):
+        return hfn.atag(self.hyperlink, self.value)
+
+    def asTerm(self):
+        # TODO as identifier ?
+        return idlib.from_oq.OntTerm(iri=self.hyperlink, label=self.value)
+
+    @property
     def range(self):
         c = num_to_ab(self.column_index + 1)
         r = self.row_index + 1
@@ -266,11 +284,12 @@ class Cell:
 
 
 class Row:
+
     def __init__(self, sheet, row_index):
         self.sheet = sheet
         self.row_index = row_index
-        for col_index, name in enumerate(self.header):
-            def f(ci=col_index):
+        for column_index, name in enumerate(self.header):
+            def f(ci=column_index):
                 return self.cell_object(ci)
 
             setattr(self, name, f)
@@ -292,10 +311,10 @@ class Row:
 
     @property
     def header(self):
-        return self.sheet.byCol.header
+        return self.sheet.byCol.header  # FIXME normalized vs unnormalized
 
-    def __getitem__(self, index):
-        return self.sheet.values[self.row_index][index]
+    def __getitem__(self, column_index):
+        return self.sheet.values[self.row_index][column_index]
 
     def cell_object(self, column_index):
         return Cell(self.sheet, self.row_index, column_index)
@@ -306,13 +325,18 @@ class Row:
 
     @property
     def cells(self):
-        return [self.cell_object(column_index) for column_index, _ in enumerate(self.values)]
+        return [self.cell_object(column_index)
+                for column_index, _ in enumerate(self.values)]
 
     @property
     def range(self):
         minc = 'A'  # anticipating arbitrary row ranges
         maxc = num_to_ab(len(self.values) + 1)
-        r = self.row_index + 1
+        ri = self.row_index
+        if ri < 0:
+            ri = len(self.values) + ri
+
+        r = ri + 1
         return f'{self.sheet.sheet_name}!{minc}{r}:{maxc}{r}'
 
     def rowFromIndex(self, index):
@@ -324,8 +348,85 @@ class Row:
     def rowAbove(self, negative_offset=1):
         return self.rowFromOffset(-negative_offset)
 
-    def rowBelow(self, postive_offset=1):
+    def rowBelow(self, positive_offset=1):
         return self.rowFromOffset(positive_offset)
+
+
+class Column:
+
+    def __init__(self, sheet, column_index):
+        self.sheet = sheet
+        self.column_index = column_index
+        if self.sheet.index_columns:  # FIXME primary key for row ???
+            for row_index, name in enumerate(self.header):
+                def f(ri=row_index):
+                    return self.cell_object(ri)
+
+                setattr(self, name, f)
+
+    def __repr__(self):
+        changed = ('+' if self in self.sheet._uncommitted_appends
+                   else ('*' if [c for c in self.cells
+                                 if c in self.sheet._uncommitted_updates] else ' '))
+        return f'<Column{changed} {self.range}>'
+
+    def __hash__(self):
+        return hash((self.__class__, self.sheet, self.column_index))
+
+    def __eq__(self, other):
+        """ cell equality is equality of location, not contents """
+        s = self.sheet, self.column_index
+        o = other.sheet, other.column_index
+        return s == o
+
+    @property
+    def header(self):
+        if self.sheet.index_columns:
+            # FIXME multi column primary keys ??
+            # FIXME normalization ??
+            col = self.sheet.index_columns[0]
+            row_header_column_index = self.sheet.byCol.header.index(col)
+            # urg the perf
+            return [r[row_header_column_index] for r in self.sheet.values]
+
+    def __getitem__(self, row_index):
+        return self.sheet.values[row_index][self.column_index]
+
+    def cell_object(self, row_index):
+        return Cell(self.sheet, row_index, self.column_index)
+
+    # XXX
+    def values(self):  # FIXME naming ?
+        # FIXME can't update this so making it a function ???
+        return [v[self.column_index] for v in self.sheet.values]
+
+    @property
+    def cells(self):
+        return [self.cell_object(row_index)
+                for row_index, _ in enumerate(self.sheet.values)]
+
+    @property
+    def range(self):
+        minr = 1  # anticipating arbitrary column ranges
+        maxr = len(self.sheet.values) + 1
+        ci = self.column_index
+        if ci < 0:
+            ci = len(self.sheet.values[0]) + ci
+
+        c = num_to_ab(ci + 1)
+        return f'{self.sheet.sheet_name}!{c}{minr}:{c}{maxr}'
+
+    def columnFromIndex(self, index):
+        return self.__class__(self.sheet, index)
+
+    def columnFromOffset(self, offset):
+        return self.columnFromIndex(self.column_index + offset)
+
+    def columnLeft(self, negative_offset=1):
+        return self.columnFromOffset(-negative_offset)
+
+    def columnRight(self, positive_offset=1):
+        return self.columnFromOffset(positive_offset)
 
 
 class Sheet:
@@ -462,6 +563,9 @@ class Sheet:
 
     def row_object(self, row_index):
         return Row(self, row_index)
+
+    def column_object(self, column_index):
+        return Column(self, column_index)
 
     def _setCellValue(self, cell, value):
         """ call before making the change """
