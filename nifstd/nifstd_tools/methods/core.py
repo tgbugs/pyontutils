@@ -835,7 +835,8 @@ methods_core = simpleOnt(filename=filename,
                          triples=triples,
                          comment=comment,
                          branch=branch,
-                         _repo=_repo)
+                         _repo=_repo,
+                         calling__file__=__file__,)
 
 methods_core._graph.add_namespace('asp', str(asp))
 methods_core._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...

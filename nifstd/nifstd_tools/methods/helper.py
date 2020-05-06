@@ -866,7 +866,8 @@ methods_helper = simpleOnt(filename=filename,
                            triples=triples,
                            comment=comment,
                            branch=branch,
-                           _repo=_repo)
+                           _repo=_repo,
+                           calling__file__=__file__,)
 
 
 def main():

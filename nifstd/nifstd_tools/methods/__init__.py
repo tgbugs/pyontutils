@@ -3081,7 +3081,8 @@ methods = simpleOnt(filename=filename,
                     triples=triples,
                     comment=comment,
                     branch=branch,
-                    _repo=_repo)
+                    _repo=_repo,
+                    calling__file__=__file__,)
 
 [methods.graph.add((o2, rdfs.subClassOf, TEMP_ns.temp))
  for s1, p1, o1 in methods.graph if
@@ -3194,7 +3195,8 @@ def forComparison():
                                triples=triples,
                                comment=comment,
                                branch=branch,
-                               _repo=_repo)
+                               _repo=_repo,
+                               calling__file__=__file__)
 
 
 def extra():

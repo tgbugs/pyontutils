@@ -312,7 +312,8 @@ class AllenCellTypes:
                                      prefixes=self.prefixes,
                                      triples=triples,
                                      comment='Allen transgenic lines for cell types',
-                                     branch=self.branch)
+                                     branch=self.branch,
+                                     calling__file__=__file__,)
 
         transgenic_lines._graph.write()
 

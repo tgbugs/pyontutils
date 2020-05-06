@@ -2389,9 +2389,21 @@ class Ont:
                 commit = 'FAKE-COMMIT'
 
         try:
+            wgb = None
             if self.source_file:
                 filepath = self.source_file
                 line = ''
+                if isinstance(self.source_file, aug.RepoPath):
+                    working_dir = self.source_file.working_dir
+                    if working_dir is not None:
+                        commit = str(self.source_file.latest_commit())
+                        uri = self.source_file.remote_uri_human(ref=commit)
+                        diff = self.source_file.has_uncommitted_changes()
+                        if diff:
+                            uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
+
+                        wgb = self.wasGeneratedBy = uri
+
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
@@ -2403,9 +2415,12 @@ class Ont:
             _file = 'nofile'
             filepath = Path(_file).name
 
-        self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
-                                                         hash_L_line=line,
-                                                         filepath=filepath)
+        if wgb is None:
+            self.wasGeneratedBy = (self.wasGeneratedBy
+                                   .format(commit=commit,
+                                           hash_L_line=line,
+                                           filepath=filepath))
+
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
@@ -2582,13 +2597,17 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               branch='master',
               fail=False,
               _repo=True,
-              write=False):
+              write=False,
+              calling__file__=None):
 
     for i in imports:
         if not isinstance(i, rdflib.URIRef):
             raise TypeError(f'Import {i} is not a URIRef!')
 
     class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
+
+        source_file = aug.RepoPath(calling__file__)
+        # FIXME TODO get the line by inspecting the stack ?
 
         def _triples(self):
             yield from cmb.flattenTriples(triples)
