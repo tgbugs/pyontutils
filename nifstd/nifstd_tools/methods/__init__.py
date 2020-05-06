@@ -1,9 +1,10 @@
+import rdflib
 from rdflib import URIRef, Literal
 from pyontutils.core import OntId, OntTerm, qname
 from pyontutils.core import simpleOnt, displayGraph
 from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import partOf, hasRole, locatedIn
-from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO, TEMP as TEMP_ns
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
 from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput
 from pyontutils.combinators import flattenTriples, unionOf, intersectionOf
 from pyontutils.combinators import Restriction, EquivalentClass
@@ -16,6 +17,8 @@ from pyontutils.namespaces import owl, rdf, rdfs, oboInOwl, replacedBy
 
 # NOTE if vim is slow it is probably becuase there are
 # so many nested parens `:set foldexpr=` fixes the problem
+
+local = rdflib.Namespace(ilxtr[''] + 'indexes/files/methods/')
 
 blankc = POCombinator
 restSomeHasValue = Restriction2(None, owl.onProperty, owl.someValuesFrom, owl.hasValue)
@@ -58,9 +61,13 @@ i = I()
 
 
 def TEMP(value, current=True):
-    uri = TEMP_ns[str(value)]
+    uri = local[str(value)]
     if current:
         i.current = uri
+    #else:  # sadly this produce errors in protege
+        #bn = rdflib.BNode()
+        #uri = bn
+
     return uri
 
 
@@ -69,13 +76,7 @@ def TEMP(value, current=True):
 ###
 
 filename = 'methods'
-prefixes = ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
-            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
-            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX', 'oboInOwl', 'RO', 'PR', 'PATO', 'IAO', 'replacedBy',
-            'locatedIn',
-)
-
+prefixes = {'local': local}
 imports = (methods_core.iri,
            methods_helper.iri,
            NIFTTL['bridge/chebi-bridge.ttl'],
@@ -90,7 +91,7 @@ triples = (
 
     (ilxtr.hasSomething, owl.inverseOf, ilxtr.isSomething),
     _t(tech.unfinished, 'Unfinished techniques',
-       (ilxtr.hasSomething, TEMP_ns.temp),
+       (ilxtr.hasSomething, ilxtr.Something),
        synonyms=('incompletely modeled techniques',)
       ),
 
@@ -537,7 +538,7 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (hasPart, tech.anestheticAdministration),
        (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
-       (ilxtr.hasSomething, TEMP(39)),
+       (ilxtr.hasSomething, TEMP(39, current=False)),
        synonyms=('anaesthesia without recovery',
                  'anaesthesia with no recovery',),
     ),
@@ -3084,7 +3085,7 @@ methods = simpleOnt(filename=filename,
                     _repo=_repo,
                     calling__file__=__file__,)
 
-[methods.graph.add((o2, rdfs.subClassOf, TEMP_ns.temp))
+[methods.graph.add((o2, rdfs.subClassOf, ilxtr.Something))
  for s1, p1, o1 in methods.graph if
  p1 == owl.onProperty and
  o1 == ilxtr.hasSomething

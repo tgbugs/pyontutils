@@ -2589,7 +2589,7 @@ class Collector:
 
 
 def simpleOnt(filename=f'temp-{UTCNOW()}',
-              prefixes=tuple(),  # dict or list
+              prefixes=tuple(),  # dict
               imports=tuple(),
               triples=tuple(),
               comment=None,
@@ -2617,10 +2617,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.filename = filename
     Simple.comment = comment
     Simple.imports = imports
-    if isinstance(prefixes, dict):
-        Simple.prefixes = {k:str(v) for k, v in prefixes.items()}
-    else:
-        Simple.prefixes = makePrefixes(*prefixes)
+    Simple.prefixes = dict(uPREFIXES)
+    if prefixes:
+        Simple.prefixes.update({k:str(v) for k, v in prefixes.items()})
 
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'

@@ -72,7 +72,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
 
 obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'
-prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
+prefixes = None
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = NIFTTL['nif_backend.ttl'],
 #imports = obo['bfo.owl'], obo['ro.owl']
