@@ -3,7 +3,7 @@ from pyontutils.core import OntId, OntTerm, qname
 from pyontutils.core import simpleOnt, displayGraph
 from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import partOf, hasRole, locatedIn
-from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO, TEMP
+from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO, TEMP as TEMP_ns
 from pyontutils.namespaces import definition, realizes, hasParticipant, hasPart, hasInput
 from pyontutils.combinators import flattenTriples, unionOf, intersectionOf
 from pyontutils.combinators import Restriction, EquivalentClass
@@ -38,12 +38,14 @@ class I:
     counter = iter(range(999999))
     @property
     def d(self):
+        raise BaseException('do not use')
         current = TEMP[str(next(self.counter))]
         self.current = current
         return current
 
     @property
     def b(self):
+        raise BaseException('do not use')
         """ blank node """
         current = next(self.counter)
         return TEMP[str(current)]
@@ -53,6 +55,14 @@ class I:
         return self.current
 
 i = I()
+
+
+def TEMP(value, current=True):
+    uri = TEMP_ns[str(value)]
+    if current:
+        i.current = uri
+    return uri
+
 
 ###
 #   Methods
@@ -79,11 +89,11 @@ triples = (
 
     (ilxtr.hasSomething, owl.inverseOf, ilxtr.isSomething),
     _t(tech.unfinished, 'Unfinished techniques',
-       (ilxtr.hasSomething, TEMP.temp),
+       (ilxtr.hasSomething, TEMP_ns.temp),
        synonyms=('incompletely modeled techniques',)
       ),
 
-    _t(i.d, 'atlas registration technique',
+    _t(TEMP(0), 'atlas registration technique',
        # ilxtr.hasPrimaryParticipant, restriction(partOf, some animalia)
        # TODO this falls into an extrinsic classification technique...
        # or a context classification/naming technique...
@@ -112,27 +122,27 @@ triples = (
     oc(ilxtr.analysisRole, OntTerm('BFO:0000023', label='role')
     ),
 
-    _t(i.d, 'randomization technique',  # FIXME this is not defined correctly
+    _t(TEMP(1), 'randomization technique',  # FIXME this is not defined correctly
        (ilxtr.hasPrimaryAspect, asp.informationEntropy),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
     ),
 
     # FIXME see if we really want these?
-    _t(i.d, 'techniques classified by inputs',
+    _t(TEMP(2), 'techniques classified by inputs',
        (hasInput, ilxtr.materialEntity)),
 
-    _t(i.d, 'techniques classified by aspects',
+    _t(TEMP(3), 'techniques classified by aspects',
        (ilxtr.processHasAspect, ilxtr.aspect)),
 
-    _t(i.d, 'techniques classified by primary aspects',
+    _t(TEMP(4), 'techniques classified by primary aspects',
        (ilxtr.hasPrimaryAspect, ilxtr.aspect)),
 
-    _t(i.d, 'techniques classified by constraining aspects',
+    _t(TEMP(5), 'techniques classified by constraining aspects',
        (ilxtr.hasConstrainingAspect, ilxtr.aspect),
        synonyms=('has constraining aspect',
                  'technique defined by constraint')),
 
-    _t(i.d, 'composite techniques',
+    _t(TEMP(6), 'composite techniques',
        (hasPart, ilxtr.technique),
        comment=('Note that while the notion of atomic techniques is '
                 'the complement of composite techniques, in an open world '
@@ -142,12 +152,12 @@ triples = (
                 "or 'in the current model' or 'at the current level of abstraction' "
                 'do not have any explicit parts.')),
 
-    _t(i.d, 'chemical technique',  # FIXME but not molecular? or are molecular subset?
+    _t(TEMP(7), 'chemical technique',  # FIXME but not molecular? or are molecular subset?
        (hasParticipant,  # FIXME hasParticipant is incorrect? too broad?
         OntTerm('CHEBI:24431', label='chemical entity')
        ),),
 
-    _t(i.d, 'molecular technique',  # FIXME help I have no idea how to model this same with chemical technique
+    _t(TEMP(8), 'molecular technique',  # FIXME help I have no idea how to model this same with chemical technique
        # TODO FIXME I think it is clear that there are certain techniques which are
        # named in a way that is assertional, not definitional
        # it seems appropriate for those arbitrarily named techniques to use subClassOf?
@@ -155,7 +165,7 @@ triples = (
         OntTerm('CHEBI:25367', label='molecule')
        ),),
 
-    _t(i.d, 'cellular technique',
+    _t(TEMP(9), 'cellular technique',
        intersectionOf(ilxtr.technique,
                       restN(hasInput, OntTerm('SAO:1813327414', label='Cell'))),
        intersectionOf(ilxtr.technique,
@@ -167,12 +177,12 @@ triples = (
        # including the ones that we have named
        equivalentClass=oECN),
 
-    _t(i.d, 'cell type induction technique',
+    _t(TEMP(10), 'cell type induction technique',
        (ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell')),
        (hasInput, ilxtr.inductionFactor),
     ),
 
-    _t(i.d, 'molecular cloning technique',
+    _t(TEMP(11), 'molecular cloning technique',
 
        (ilxtr.hasPrimaryInput,
         OntTerm('CHEBI:33696', label='nucleic acid')
@@ -185,7 +195,7 @@ triples = (
        synonyms=('cloning technique', 'molecular cloning')
     ),
 
-    _t(i.d, 'microarray technique',
+    _t(TEMP(12), 'microarray technique',
        (hasInput,
         # TODO leverage EFO here
         # OntTerm(search='microarray', limit=20, prefix='NIFSTD')  # nice trick
@@ -225,20 +235,20 @@ triples = (
                       restrictionN(hasPart, tech._naSeq)),
        equivalentClass=oECN),
 
-    _t(i.d, 'deep sequencing technique',
+    _t(TEMP(13), 'deep sequencing technique',
        (hasPart, tech._naSeq),
        (ilxtr.isConstrainedBy, prot.deepSequencing),  # FIXME circular
        synonyms=('deep sequencing',)
     ),
 
-    _t(i.d, 'sanger sequencing technique',
+    _t(TEMP(14), 'sanger sequencing technique',
        (hasPart, tech._naSeq),
        (ilxtr.isConstrainedBy, prot.sangerSequencing),
        # we want these to differentiate based on the nature of the technqiue
        synonyms=('sanger sequencing',)
     ),
 
-    _t(i.d, 'shotgun sequencing technique',
+    _t(TEMP(15), 'shotgun sequencing technique',
        (hasPart, tech._naSeq),
        (ilxtr.isConstrainedBy, prot.shotgunSequencing),
        synonyms=('shotgun sequencing',)
@@ -292,7 +302,7 @@ triples = (
     # Split-seq single cell single nuclei
     # SPLiT-seq
 
-    _t(i.d, 'mRNA-seq',
+    _t(TEMP(16), 'mRNA-seq',
        (hasPart, tech.rnaSeq),
        (ilxtr.hasPrimaryInput, OntTerm('SO:0000234')
        #(ilxtr.hasPrimaryInput, ilxtr.mRNA
@@ -303,7 +313,7 @@ triples = (
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
     ),
 
-    _t(i.d, 'snRNA-seq',
+    _t(TEMP(17), 'snRNA-seq',
        #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        (hasPart, tech.rnaSeq),
        #(hasParticipant, OntTerm('GO:0005634', label='nucleus')),
@@ -313,7 +323,7 @@ triples = (
                  'sNuc-Seq',  # why sequencing community WHY
                  'single nucleus RNA-seq',)),
 
-    _t(i.d, 'scRNA-seq',
+    _t(TEMP(18), 'scRNA-seq',
        #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33697', label='RNA')),
        (hasPart, tech.rnaSeq),
        #(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell')),
@@ -324,7 +334,7 @@ triples = (
         # 'deep-dive scRNA-Seq'  # deep-dive vs wide-shallow I think is what this is
 
 
-    _t(i.d, 'Patch-seq',
+    _t(TEMP(19), 'Patch-seq',
        (hasPart, tech.rnaSeq),  # FIXME I don't think this modelling is correct/complete
        (ilxtr.hasPrimaryInput, ilxtr.RNApolymer),
        (hasParticipant, ilxtr.microPipette),  # FIXME TODO
@@ -342,7 +352,7 @@ triples = (
        def_='non CG methylation',
     ),
 
-    _t(i.d, 'snmC-seq',
+    _t(TEMP(20), 'snmC-seq',
        (hasPart, tech.mcSeq),
        #(ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus')),
         restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus'), Literal(1)),
@@ -351,20 +361,20 @@ triples = (
     # mCH
 
     _t(tech.ATACseq, 'ATAC-seq',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(21, current=False)),
        (hasPart, tech.libraryPrep),
        (hasPart, tech.sequencing),  # TODO
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
     ),
 
-    _t(i.d, 'snATAC-seq',
+    _t(TEMP(22), 'snATAC-seq',
        (hasPart, tech.ATACseq),
        #(ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus')),
         restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('GO:0005634', label='nucleus'), Literal(1)),
        synonyms=('single-nucleus ATAC-seq',
                  'single nucleus ATAC-seq',)),
 
-    _t(i.d, 'scATAC-seq',
+    _t(TEMP(23), 'scATAC-seq',
        (hasPart, tech.ATACseq),
        #(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell')),
         restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1)),
@@ -372,16 +382,16 @@ triples = (
        synonyms=('single-cell ATAC-seq',
                  'single cell ATAC-seq',)),
 
-    _t(i.d, 'bulk ATAC-seq',
+    _t(TEMP(24), 'bulk ATAC-seq',
        (hasPart, tech.ATACseq),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(25, current=False)),
        synonyms=('Bulk-ATAC-seq',)),
 
     #'scranseq'  # IS THIS FOR REAL!?
     #'ssranseq'  # oh boy, this is just me being bad at spelling scrnaseq?
 
     _t(tech.dropSep, 'droplet based separation technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(26, current=False)),
        synonyms=('droplet sequencing', 'Droplet-Sequencing',
                  'droplet based sequencing technique')
     ),
@@ -389,7 +399,7 @@ triples = (
     # aren't also classified as separation techniques
     oc_(tech.dropSep, restriction(hasParticipant, ilxtr.dropletFormingMicrofluidicsDevice)),
 
-    _t(i.d, 'Drop-seq',
+    _t(TEMP(27), 'Drop-seq',
        (hasPart, tech.dropSep),  # TODO
        (hasPart, tech.rnaSeq),  # TODO
        (ilxtr.isConstrainedBy, prot.dropSeq),  # TODO
@@ -398,15 +408,15 @@ triples = (
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
     ),
 
-    _t(i.d, 'DroNc-seq',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(28), 'DroNc-seq',
+       (ilxtr.hasSomething, TEMP(29, current=False)),
        (hasPart, tech.dropSep),  # TODO
        (hasPart, tech.rnaSeq),  # TODO
        # https://www.ncbi.nlm.nih.gov/pubmed/28846088
       ),
 
     _t(tech.chromium3p, "chromium 3' sequencing",
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(30, current=False)),
        (hasParticipant, ilxtr.chromium3pkit),
        (hasPart, tech.dropSep),  # TODO
        (hasPart, tech.rnaSeq),  # TODO
@@ -443,8 +453,8 @@ triples = (
                 'strategies and require different processing pipelines.')),
     (tech.chromium3pv1, owl.disjointWith, tech.chromium3pv2),
 
-    _t(i.d, 'MAP-seq',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(31), 'MAP-seq',
+       (ilxtr.hasSomething, TEMP(32, current=False)),
        (hasPart, tech.sequencing),
        (hasPart, tech.libraryPrep),
        #(ilxtr.hasInformationOutput, ilxtr.informationArtifact),  # note use of artifact
@@ -465,17 +475,17 @@ triples = (
                  'SMART-Seq®',
        )),
 
-    _t(i.d, 'SMART-seq2',
+    _t(TEMP(33), 'SMART-seq2',
        # but illumina also has a page on it ...
        # what is going on
        (hasPart, tech.rnaSeq),
        (ilxtr.isImplementationOf, tech.smartSeq),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(34, current=False)),
        def_='Improved version of the Smart-seq technique',
        synonyms=('Smart-Seq2',
                  'SMART-seq2')),
 
-    _t(i.d, 'SMART-seq v4',
+    _t(TEMP(35), 'SMART-seq v4',
        (hasPart, tech.rnaSeq),
        (ilxtr.isImplementationOf, tech.smartSeq),
        def_='Commercial compeitor for Smart-seq2 developed later in time',
@@ -512,21 +522,21 @@ triples = (
     ),
     # local anaesthesia technique
     # global anaesthesia technique
-    _t(i.d, 'survival anaesthesia technique',
+    _t(TEMP(36), 'survival anaesthesia technique',
        (ilxtr.hasPrimaryAspect, asp.nervousResponsiveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (hasPart, tech.anestheticAdministration),
        (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(37, current=False)),
        synonyms=('anaesthesia with recovery',),
     ),
 
-    _t(i.d, 'terminal anaesthesia technique',
+    _t(TEMP(38), 'terminal anaesthesia technique',
        (ilxtr.hasPrimaryAspect, asp.nervousResponsiveness),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        (hasPart, tech.anestheticAdministration),
        (hasParticipant, OntTerm('NCBITaxon:33208', label='Metazoa')),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(39)),
        synonyms=('anaesthesia without recovery',
                  'anaesthesia with no recovery',),
     ),
@@ -551,7 +561,7 @@ triples = (
     _t(tech.smFISH, 'single-molecule fluorescence in situ hybridization technique',
        (hasPart, tech.ISH),
        (hasInput, ilxtr.fluorescentMolecule),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(40, current=False)),
        synonyms=('single-molecule fluorescence in situ hybridization',
                  'single molecule fluorescence in situ hybridization',
                  'single-molecule FISH',
@@ -562,7 +572,7 @@ triples = (
     _t(tech.MERFISH, 'multiplexed error-robust fluorescence in situ hybridization technique',
        (hasPart, tech.ISH),
        (hasInput, ilxtr.fluorescentMolecule),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(41, current=False)),
        synonyms=('multiplexed error-robust fluorescence in situ hybridization',
                  'multiplexed error robust fluorescence in situ hybridization',
                  'multiplexed error-robust FISH',
@@ -570,7 +580,7 @@ triples = (
                  'MERFISH'),
     ),
 
-    _t(i.d, 'genetic technique',
+    _t(TEMP(42), 'genetic technique',
        (hasParticipant,
         # the participant is really some DNA that corresponds to a gene
         OntTerm('SO:0000704', label='gene')  # prefer SO for this case?
@@ -580,7 +590,7 @@ triples = (
     ),
 
     _t(tech.enrichment, 'enrichment technique',
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(42.5)),
        (ilxtr.hasPrimaryAspect, asp.proportion),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        def_='increase proporation',  # the count stays the same
@@ -594,23 +604,23 @@ triples = (
        def_='increase number',
     ),
 
-    _t(i.d, 'nucleic acid amplification technique',
+    _t(TEMP(43), 'nucleic acid amplification technique',
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:33696', label='nucleic acid')),
        (ilxtr.hasPrimaryAspect, asp['count']),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
       ),
-    _t(i.d, 'expression manipulation technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'conditional expression manipulation technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(44), 'expression manipulation technique',
+       (ilxtr.hasSomething, TEMP(45, current=False))),
+    _t(TEMP(46), 'conditional expression manipulation technique',
+       (ilxtr.hasSomething, TEMP(47, current=False))),
 
-    _t(i.d, 'knock in technique',
-       (ilxtr.hasSomething, i.b),
+    _t(TEMP(48), 'knock in technique',
+       (ilxtr.hasSomething, TEMP(49, current=False)),
     ),
     (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000121')),
 
-    _t(i.d, 'knock down technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(50), 'knock down technique',
+       (ilxtr.hasSomething, TEMP(51, current=False)),
        synonyms=('underexpression technique',),
     ),
 
@@ -620,17 +630,17 @@ triples = (
     # RNA interference 'HBP_MEM:0000123'
     # dominant-negative inhibition   sigh 'HBP_MEM:0000125'
 
-    _t(i.d, 'knock out technique',
-       (ilxtr.hasSomething, i.b),
+    _t(TEMP(52), 'knock out technique',
+       (ilxtr.hasSomething, TEMP(53, current=False)),
     ),
     (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000120')),
 
-    _t(i.d, 'mutagenesis technique',
-       (ilxtr.hasSomething, i.d)
+    _t(TEMP(54), 'mutagenesis technique',
+       (ilxtr.hasSomething, TEMP(55, current=False))
     ),
 
-    _t(i.d, 'overexpression technique',
-       (ilxtr.hasSomething, i.d)
+    _t(TEMP(56), 'overexpression technique',
+       (ilxtr.hasSomething, TEMP(57, current=False))
     ),
 
     _t(tech.delivery, 'delivery technique',
@@ -659,35 +669,35 @@ triples = (
                  #intersectionOf(asp.location,
                                 #restN(ilxtr.hasAspectContext,
                                       #asp.endTime)))),
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(57.5)),
        def_='A technique for moving something from point a to point b.',
        equivalentClass=oECN),
 
-    _t(i.d, 'package delivery technique',
+    _t(TEMP(58), 'package delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (ilxtr.hasPrimaryParticipant, ilxtr.package),
        # the DHL guy case
        synonyms=('parcel delivery technique',)
     ),
 
-    _t(i.d, 'physical delivery technique',
+    _t(TEMP(59), 'physical delivery technique',
        # i.e. distinct from energy released by chemical means?
        # gravity not ATP hydrolysis?
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
        (ilxtr.hasMotiveForce, ilxtr.physicalForce)),
 
-    _t(i.d, 'diffusion based delivery technique',
+    _t(TEMP(60), 'diffusion based delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
        (ilxtr.hasMotiveForce, ilxtr.brownianMotion)),
 
-    _t(i.d, 'bath application technique',
+    _t(TEMP(61), 'bath application technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
        (hasParticipant, ilxtr.bathSolution)),
 
-    _t(i.d, 'topical application technique',
+    _t(TEMP(62), 'topical application technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        #(ilxtr.hasTarget, ilxtr.externalSurfaceOfOrganism)
        (ilxtr.hasTarget, ilxtr.surface),  # TODO surface as a 'generic' black box component
@@ -695,12 +705,12 @@ triples = (
        # potential subclasses, spread, smear, wipe, daub, dust
     ),
 
-    _t(i.d, 'mechanical delivery technique',
+    _t(TEMP(63), 'mechanical delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # FIXME
        (ilxtr.hasMotiveForce, ilxtr.mechanicalForce)),
 
-    _t(i.d, 'rocket delivery technique',
+    _t(TEMP(64), 'rocket delivery technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (hasInput, ilxtr.rocket),
        comment=('This is here for (among other things) the morbid clinical scenario '
@@ -718,25 +728,25 @@ triples = (
        # TODO def_=('must cross some barries or overcome some opposing force or obstacle')
        equivalentClass=oECN),
 
-    _t(i.d, 'ballistic injection technique',
+    _t(TEMP(65), 'ballistic injection technique',
        # makes use of phenomena?
        (ilxtr.hasSomething, ilxtr.intoSomething),  # FIXME
        (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(66, current=False))),
 
-    _t(i.d, 'biolistic injection technique',
+    _t(TEMP(67), 'biolistic injection technique',
        # makes use of phenomena?
        (ilxtr.hasSomething, ilxtr.intoSomething),  # FIXME
        (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(68, current=False))),
 
-    _t(i.d, 'pressure injection technique',
+    _t(TEMP(69), 'pressure injection technique',
        # makes use of phenomena?
        (ilxtr.hasSomething, ilxtr.intoSomething),  # FIXME
        (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(70, current=False))),
 
-    _t(i.d, 'brain injection technique',
+    _t(TEMP(71), 'brain injection technique',
        (hasPart, tech.injection),  # FIXME we need a way to have primary aspect + target? what is a target?
        # in other similar cases we have used hasPart, but then we have to have the
        # non-transitive hasPart because
@@ -753,23 +763,23 @@ triples = (
        #(ilxtr.hasPrimaryParticipant, OntTerm('SAO:1289190043', label='Cellular Space')),  # TODO add intracellular as synonym
        synonyms=('intracellular injection',)),
 
-    _t(i.d, 'viral injection technique',
+    _t(TEMP(72), 'viral injection technique',
        (hasPart, tech.injection),
        (hasParticipant, ilxtr.viralParticle),
        def_='a technique for injecting viral particles',
     ),
 
-    _t(i.d, 'AAVretro injection technique',
+    _t(TEMP(73), 'AAVretro injection technique',
        (hasPart, tech.injection),
        (hasParticipant, ilxtr.AAVretro),
        synonyms=('AAVretro injection',)
     ),
 
-    _t(i.d, 'electrical delivery technique',
+    _t(TEMP(74), 'electrical delivery technique',
        # FIXME electroporation doesn't actually work this way
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (ilxtr.hasConstrainingAspect, asp.electrical),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(75, current=False)),
        comment='rail gun seems about as close was we can get'
     ),
 
@@ -800,63 +810,63 @@ triples = (
        synonyms=('electropermeabilization technique',),  # FIXME sp?
        equivalentClass=oECN),
 
-    _t(i.d, 'in utero electroporation technique',
+    _t(TEMP(76), 'in utero electroporation technique',
        (hasPart, tech.electroporation),
        (ilxtr.hasPrimaryParticipant, restN(locatedIn, ilxtr.uterus))),
-    _t(i.d, 'single cell electroporation technique',
+    _t(TEMP(77), 'single cell electroporation technique',
        (hasPart, tech.electroporation),
        (hasPart, tech.cellPatching),
        # FIXME the target of permeability is not the cell but rather the cell membrane :/
        restMaxCardValue(ilxtr.hasPrimaryInput, OntTerm('SAO:1813327414', label='Cell'), Literal(1))),
-    #_t(i.d, 'chemical delivery technique',  # not obvious how to define this or if it is used
-       #(ilxtr.hasSomething, i.d)),
-    _t(i.d, 'single neuron electroporation technique',
+    #_t(TEMP(77.5), 'chemical delivery technique',  # not obvious how to define this or if it is used
+       #(ilxtr.hasSomething, TEMP(77.6))),
+    _t(TEMP(78), 'single neuron electroporation technique',
        (hasPart, tech.electroporation),
        (hasPart, tech.cellPatching),
        # FIXME the target of permeability is not the cell but rather the cell membrane :/
        restMaxCardValue(ilxtr.hasPrimaryInput,
                         OntTerm('SAO:1417703748', label='Neuron'), Literal(1))),
-    #_t(i.d, 'chemical delivery technique',  # not obvious how to define this or if it is used
-       #(ilxtr.hasSomething, i.d)),
+    #_t(TEMP(78.5), 'chemical delivery technique',  # not obvious how to define this or if it is used
+       #(ilxtr.hasSomething, TEMP(78.6))),
 
-    _t(i.d, 'DNA delivery technique',
+    _t(TEMP(79), 'DNA delivery technique',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        # isConstrainedBy information content of the dna?
        (ilxtr.hasPrimaryAspectActualized, asp.location),
       ),
-    _t(i.d, 'transfection technique',
+    _t(TEMP(80), 'transfection technique',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasSomething, i.d),  # TODO hasIntention -> GO gene expression of _that_ gene?
+       (ilxtr.hasSomething, TEMP(81, current=False)),  # TODO hasIntention -> GO gene expression of _that_ gene?
        #(ilxtr.hasIntention, 'GO:0010467')  # FIXME or DNA amplification
        # incorporation into the hosts cellular biology?
        # into a cell?
     ),
-    _t(i.d, 'DNA delivery technique exploiting some active biological process',
+    _t(TEMP(82), 'DNA delivery technique exploiting some active biological process',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        (ilxtr.hasPrimaryAspectActualized, asp.location),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(83, current=False)),
        synonyms=('DNA delivery exploiting some pre-existing mechanism technique',),
     ),
-    _t(i.d, 'DNA delivery via primary genetic code technique',
+    _t(TEMP(84), 'DNA delivery via primary genetic code technique',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (hasParticipant, ilxtr.primaryHeritableGeneticMaterial)),
-    #_t(i.d, 'DNA delivery via germ line technique',  # too cryptic, and is probably actually a process
+    #_t(TEMP(84.5), 'DNA delivery via germ line technique',  # too cryptic, and is probably actually a process
        #(ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        #(ilxtr.hasPrimaryAspectActualized, asp.location),
-       #(ilxtr.hasSomething, i.d)),
-    _t(i.d, 'DNA delivery via plasmid technique',
+       #(ilxtr.hasSomething, TEMP(84.6))),
+    _t(TEMP(85), 'DNA delivery via plasmid technique',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        (hasParticipant, ilxtr.plasmidDNA)),
-    _t(i.d, 'DNA delivery via viral particle technique',
+    _t(TEMP(86), 'DNA delivery via viral particle technique',
        (ilxtr.hasPrimaryInput, OntTerm('SO:0001235', term='replicon')),
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # notion of failure due to inadequate titer...
        (hasParticipant, ilxtr.viralParticle)),
 
-    _t(i.d, 'tracing technique',
+    _t(TEMP(87), 'tracing technique',
        (hasParticipant, ilxtr.axon),
        (ilxtr.hasPrimaryAspect, asp.connectivity),
        synonyms=('axon tracing technique',
@@ -884,7 +894,7 @@ triples = (
        def_='movement via active or passive means toward the soma of a cell'
       ),
 
-    _t(i.d, 'anterograde tracing technique',
+    _t(TEMP(88), 'anterograde tracing technique',
        (hasPart, tech.delivery),
        (hasParticipant, ilxtr.axon),
        (hasPart, proc.anterogradeMovement),
@@ -897,7 +907,7 @@ triples = (
        # hasPrimaryAspect_dAdT ilxtr.negative
        synonyms=( 'anterograde tracing',)
     ),
-    _t(i.d, 'retrograde tracing technique',
+    _t(TEMP(89), 'retrograde tracing technique',
        (hasPart, tech.delivery),
        (hasParticipant, ilxtr.axon),
        (hasPart, proc.retrogradeMovement),
@@ -910,7 +920,7 @@ triples = (
        # hasPrimaryAspect_dAdT ilxtr.positive
        synonyms=('retrograde tracing',)
     ),
-    _t(i.d, 'bidirectional tracing technique',
+    _t(TEMP(90), 'bidirectional tracing technique',
        (hasPart, tech.delivery),
        (hasParticipant, ilxtr.axon),
        (hasPart, proc.anterogradeMovement),
@@ -918,14 +928,14 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.connectivity),
        synonyms=('bidirectional tracing',)
     ),
-    _t(i.d, 'diffusion tracing technique',
+    _t(TEMP(91), 'diffusion tracing technique',
        (hasParticipant, ilxtr.axon),
        (hasPart, tech.delivery),
        (ilxtr.hasPrimaryAspect, asp.connectivity),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(92, current=False)),
        synonyms=('diffusion tracing',)
     ),
-    _t(i.d, 'transsynaptic tracing technique',
+    _t(TEMP(93), 'transsynaptic tracing technique',
        (hasPart, tech.delivery),  # agentous delivery mechanism...
        (hasParticipant, ilxtr.axon),
        (ilxtr.hasPrimaryAspect, asp.connectivity),
@@ -933,29 +943,29 @@ triples = (
        # more than one cell body
        synonyms=( 'transsynaptic tracing',)
     ),
-    _t(i.d, 'monosynapse transsynaptic tracing technique',
+    _t(TEMP(94), 'monosynapse transsynaptic tracing technique',
        (hasParticipant, ilxtr.axon),
        (hasPart, tech.delivery),
        (ilxtr.hasPrimaryAspect, asp.connectivity),
        # more than cell body and more than one nerve
        (ilxtr.hasParticipant, ilxtr.synapse),  # synapses between at least 2 pairs of cells
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(95, current=False)),
        synonyms=('monosynaptic transsynaptic tracing technique',
                  'monosynaptic transsynaptic tracing')),
-    _t(i.d, 'multisynapse transsynaptic tracing technique',
+    _t(TEMP(96), 'multisynapse transsynaptic tracing technique',
        (hasParticipant, ilxtr.axon),
        (hasPart, tech.delivery),
        (ilxtr.hasPrimaryAspect, asp.connectivity),
        # more than cell body and more than one nerve
        (ilxtr.hasParticipant, ilxtr.synapse),  # synapses between at least 2 pairs of cells
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(97, current=False)),
        synonyms=('multisynaptic transsynaptic tracing technique',
                  'multisynaptic transsynaptic tracing')),
 
     # 'TRIO'
     # 'tracing the relationship between input and output'
 
-    _t(i.d, 'computational technique',  # these seem inherantly circulat... they use computation...
+    _t(TEMP(98), 'computational technique',  # these seem inherantly circulat... they use computation...
        ilxtr.technique,
        restMinCardValue(ilxtr.isConstrainedBy, ilxtr.algorithm, Literal(1)),  # axioms??
        (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
@@ -963,8 +973,8 @@ triples = (
        # different from?
       ),
 
-    #_t(i.d, 'mathematical technique',
-       #(ilxtr.hasSomething, i.d),
+    #_t(TEMP(98.5), 'mathematical technique',
+       #(ilxtr.hasSomething, TEMP(98.6)),
        #(ilxtr.isConstrainedBy, ilxtr.algorithm),
       #),
 
@@ -974,13 +984,13 @@ triples = (
        (ilxtr.isConstrainedBy, ilxtr.statisticalAlgorithm),
       ),
 
-    _t(i.d, 'simulation technique',
+    _t(TEMP(99), 'simulation technique',
        (ilxtr.isConstrainedBy, ilxtr.algorithm),
        (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(100, current=False))),
 
-    _t(i.d, 'storage technique',
+    _t(TEMP(101), 'storage technique',
        (ilxtr.hasPrimaryAspectActualized, asp.location),
        # to put away for future use?
        # not for immediate use
@@ -994,7 +1004,7 @@ triples = (
        (ilxtr.hasIntention, ilxtr.saveForTheFuture),
        ),
 
-    _t(i.d, 'preservation technique',
+    _t(TEMP(102), 'preservation technique',
        (ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
        # FIXME change in change in some aspect
        # expected change in black box if this is not done?
@@ -1003,15 +1013,15 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
       ),
 
-    _t(i.d, 'tissue preservation technique',
+    _t(TEMP(103), 'tissue preservation technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
       ),
 
     _t(tech.localization, 'localization technique',
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(104, current=False))),
 
-    _t(i.d, 'colocalization technique',
+    _t(TEMP(105), 'colocalization technique',
        # FIXME measurement vs putting them together?
        ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
@@ -1021,7 +1031,7 @@ triples = (
        # the localtion of the primary participants of eac
       ),
 
-    _t(i.d, 'image reconstruction technique',
+    _t(TEMP(106), 'image reconstruction technique',
        (ilxtr.hasDirectInformationInput, ilxtr.image),
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.isConstrainedBy, ilxtr.inverseProblemAlgorithm)),
@@ -1032,7 +1042,7 @@ triples = (
        (ilxtr.isConstrainedBy, ilxtr.radonTransform),
        synonyms=('tomography',)),
 
-    _t(i.d, 'positron emission tomography',
+    _t(TEMP(107), 'positron emission tomography',
        (hasPart, tech.positronEmissionImaging),
        (hasPart, tech.tomography),
        synonyms=('PET', 'PET scan')),
@@ -1041,24 +1051,24 @@ triples = (
     # "Single-Proton emission computerized tomography"
     # "HBP_MEM:0000010"  # TODO
 
-    _t(i.d, 'stereology technique',
+    _t(TEMP(108), 'stereology technique',
        (hasPart, tech.statistics),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(109, current=False)),
        synonyms=('stereology',)),
 
-    _t(i.d, 'design based stereology technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(110), 'design based stereology technique',
+       (ilxtr.hasSomething, TEMP(111, current=False)),
        synonyms=('design based stereology',)),
 
-    _t(i.d, 'spike sorting technique',
+    _t(TEMP(112), 'spike sorting technique',
        (ilxtr.hasDirectInformationInput, ilxtr.timeSeries),  # TODO more specific
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),  # TODO MUCH more specific
        #(ilxtr.detects, ilxtr['informationPattern/spikes'])  # TODO?
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(112.5)),
        (ilxtr.isConstrainedBy, ilxtr.spikeSortingAlgorithm),
        synonyms=('spike sorting',)),
 
-    _t(i.d, 'detection technique',
+    _t(TEMP(113), 'detection technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        (ilxtr.detects, ilxtr.materialEntity)),
@@ -1067,27 +1077,27 @@ triples = (
     # detected phenomena
     oc_(i.p, restriction(ilxtr.hasPrimaryAspect, ilxtr.aspect)),
 
-    _t(i.d, 'identification technique',
+    _t(TEMP(114), 'identification technique',
        (ilxtr.isConstrainedBy, ilxtr.identificationCriteria),  # FIXME circular and not what actually differentiates
        ),
-    _t(i.d, 'characterization technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'classification technique',
+    _t(TEMP(115), 'characterization technique',
+       (ilxtr.hasSomething, TEMP(116, current=False))),
+    _t(TEMP(117), 'classification technique',
        (ilxtr.isConstrainedBy, ilxtr.classificationCriteria),  # FIXME circular and not what actually differentiates
        ),
-    _t(i.d, 'curation technique',
+    _t(TEMP(118), 'curation technique',
        # ilxtr.isConstrainedBy, curation workflow specification... not helful and not correct
        (hasParticipant, OntTerm('NCBITaxon:9606')),
        (ilxtr.hasDirectInformationInput, ilxtr.informationArtifact),
        (ilxtr.hasInformationOutput, ilxtr.informationArtifact),
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(119, current=False))),
 
-    _t(i.d, 'angiographic technique',
+    _t(TEMP(120), 'angiographic technique',
        (hasPart, ilxtr.xrayImaging),
        (ilxtr.knownDetectedPhenomena, restN(partOf, OntTerm('UBERON:0007798'))),
        synonyms=('angiography',)),
 
-    _t(i.d, 'ex vivo technique',
+    _t(TEMP(121), 'ex vivo technique',
        # (hasParticipant, ilxtr.somethingThatUsedToBeAlive),
        # more like 'was' a cellular organism
        # ah time...
@@ -1119,7 +1129,7 @@ triples = (
        #(ilxtr.hasConstrainingAspect, asp.location),
        #(ilxtr.hasConstrainingAspect_value, ilxtr.unchanged),  # FIXME
        (ilxtr.hasPartPriParticipant, ilxtr.materialEntity),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(122, current=False)),
 
        # process has part that has primary aspect actualized location
        # process has part that has constraining aspect some aspect matches
@@ -1130,12 +1140,12 @@ triples = (
                  #restN(hasPart, restN(ilxtr.primaryParticipantIn,
                                       #ilxtr.separationProcessPart)))),
 
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(122.5)),
        # primary participant partOf theSameContainingEntity
        synonyms=('in situ',),),
     (tech.inSitu, owl.disjointWith, tech.inVitro),
 
-    _t(i.d, 'in vivo technique',
+    _t(TEMP(123), 'in vivo technique',
        # (hasParticipant, ilxtr.somethingThatIsAlive),
        ilxtr.technique,
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:131567', label='cellular organisms')),
@@ -1156,7 +1166,7 @@ triples = (
        restHasValue(ilxtr.hasConstrainingAspect_value, Literal(True)),
     ),
 
-    _t(i.d, 'in utero technique',
+    _t(TEMP(124), 'in utero technique',
        # has something in
        #(hasParticipant, ilxtr.somethingThatIsAliveAndIsInAUterus),
        intersectionOf(ilxtr.technique,
@@ -1168,7 +1178,7 @@ triples = (
        equivalentClass=oECN),
 
     _t(tech.inVitro, 'in vitro technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(125, current=False)),
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystemDisjointWithLivingOrganism),
        #(ilxtr.hasPrimaryParticipant, thing that was derived from living organsim? no? pure synthesis...),
        (hasParticipant, ilxtr.somethingThatIsAliveAndIsInAGlassContainer),
@@ -1177,18 +1187,18 @@ triples = (
        # that is not either derived from some organism ...
        synonyms=('in vitro',),),
 
-    _t(i.d, 'high throughput technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(126), 'high throughput technique',
+       (ilxtr.hasSomething, TEMP(127, current=False)),
        # TODO has minimum cardinality 'large' on the primary participant
        synonyms=('high throughput',),),
 
-    _t(i.d, 'fourier analysis technique',
+    _t(TEMP(128), 'fourier analysis technique',
        (realizes, ilxtr.analysisRole),  # FIXME needs to be subClassOf role...
        (ilxtr.isConstrainedBy, ilxtr.fourierTransform),
        synonyms=('fourier analysis',),),
 
-    _t(i.d, 'sample preparation technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(129), 'sample preparation technique',
+       (ilxtr.hasSomething, TEMP(130, current=False)),
        # TODO
        # (ilxtr.hasIntention, ???)
        # to get the thing in the right state so that it can be measured
@@ -1213,12 +1223,12 @@ triples = (
        ''',
        synonyms=('dissection',),),
 
-    _t(i.d, 'atlas guided microdissection technique',
+    _t(TEMP(131), 'atlas guided microdissection technique',
        (ilxtr.isConstrainedBy, ilxtr.parcellationAtlas),
        (ilxtr.hasPrimaryOutput, ilxtr.partOfSomePrimaryInput),  #FIXME
        synonyms=('atlas guided microdissection',),),
 
-    _t(i.d, 'crystallization technique',
+    _t(TEMP(132), 'crystallization technique',
        (ilxtr.hasPrimaryAspect, asp.latticePeriodicity),  # physical order
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positive),
        # cyrstallized vs amorphous
@@ -1227,7 +1237,7 @@ triples = (
              'on a set of non-patterend components'),
        synonyms=('crystallization',)),
 
-    _t(i.d, 'crystal quality evalulation technique',
+    _t(TEMP(133), 'crystal quality evalulation technique',
        (ilxtr.hasPrimaryInput, ilxtr.materialEntity),
        (ilxtr.hasPrimaryAspect, asp.physicalOrderedness),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
@@ -1235,12 +1245,12 @@ triples = (
        # there are many other metrics that can be used that are subclasses
       ),
 
-    _t(i.d, 'tissue clearing technique',
+    _t(TEMP(134), 'tissue clearing technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
       ),
 
-    _t(i.d, 'CLARITY technique',
+    _t(TEMP(135), 'CLARITY technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.isConstrainedBy, prot.CLARITY),
        (ilxtr.hasPrimaryAspect, asp.transparency),  # FIXME
@@ -1253,7 +1263,7 @@ triples = (
        # usually crosslinks proteins?
        # cyrofixation also for improving the mechanical properties
        # literally "fix" something so that it doesn't move or changed, it is "fixed" in time
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(135.5)),
        #(ilxtr.hasPrimaryAspect, asp.spontaneousChangeInStructure),
        #(ilxtr.hasPrimaryAspect_dAdT, ilxtr.negative),
        #(ilxtr.hasPrimaryAspect, asp.likelinessToDecompose),
@@ -1284,13 +1294,13 @@ triples = (
     #oc_(tech.fixation,
        #),
 
-    _t(i.d, 'tissue fixation technique',
+    _t(TEMP(136), 'tissue fixation technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        (ilxtr.hasConstrainingAspect, asp.fixedness),
        (ilxtr.hasConstrainingAspect_dAdT, ilxtr.positiveNonZero),
        synonyms=('tissue fixation',)),
 
-    _t(i.d, 'sensitization technique',
+    _t(TEMP(137), 'sensitization technique',
        # If we were to try to model this fully in the ontology
        # then we would have a giant hiearchy of sensitivities to X
        # when in fact sensitivity is a defined measure/aspect not
@@ -1300,61 +1310,61 @@ triples = (
        (ilxtr.hasPrimaryAspectActualized, asp.sensitivity),
     ),
 
-    _t(i.d, 'permeabilization technique',
+    _t(TEMP(138), 'permeabilization technique',
        # TODO how to model 'the permeability of a membrane to X'
        #  check go
        (ilxtr.hasPrimaryAspectActualized, asp.permeability),
     ),
 
-    _t(i.d, 'chemical synthesis technique',
+    _t(TEMP(139), 'chemical synthesis technique',
        # involves some chemical reaction ...
        # is ioniziation a chemical reaction? e.g. NaCl -> Na+ Cl-??
        (ilxtr.hasPrimaryOutput,  OntTerm('CHEBI:24431', label='chemical entity')),
       ),
-    #_t(i.d, 'physical synthesis technique',  # this term isn't used very widely
+    #_t(TEMP(139.5), 'physical synthesis technique',  # this term isn't used very widely
        # e.g. making a microchip, doesn't just use chemistry, though it uses some chemistry
        # the output is not chemical...
        #(ilxtr.hasPrimaryOutput, ilxtr.materialEntity),
       #),
 
-    _t(i.d, 'construction technique',
+    _t(TEMP(140), 'construction technique',
        # build something, or assemble something that cannot be removed
        # deconstruction vs destruction, deconstruction usually suggests
        # can't be reconstructed? but then we reconstructive surgery
        (ilxtr.hasPrimaryOutput, ilxtr.building),  # TODO
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(141, current=False)),
       ),
 
-    _t(i.d, 'assembly technique',
+    _t(TEMP(142), 'assembly technique',
        # put something together
        # suggests that disassembly is possible
        (ilxtr.hasPrimaryOutput, ilxtr.materialEntity),  # TODO
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(143, current=False)),
       ),
 
-    _t(i.d, 'mixing technique',
+    _t(TEMP(144), 'mixing technique',
        #tech.creating,  # not entirely clear that this is the case...
        #ilxtr.mixedness is circular
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(145, current=False)),
        synonyms=('mixing',),),
 
-    _t(i.d, 'agitating technique',
+    _t(TEMP(146), 'agitating technique',
        #tech.mixing,
        # allocation on failure?
        # classification depends exactly on the goal
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(147, current=False)),
        synonyms=('agitating',),),
 
-    _t(i.d, 'stirring technique',
+    _t(TEMP(148), 'stirring technique',
        #tech.mixing,  # not clear, the intended outcome may be that the thing is 'mixed'...
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(149, current=False)),
        synonyms=('stirring',),),
 
-    _t(i.d, 'dissolving technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(150), 'dissolving technique',
+       (ilxtr.hasSomething, TEMP(151, current=False)),
        synonyms=('dissolve',),),
 
-    _t(i.d, 'husbandry technique',
+    _t(TEMP(152), 'husbandry technique',
        # FIXME maintenance vs growth
        # also how about associated techniques?? like feeding
        # include in the oec or 'part of some husbandry technique'??
@@ -1367,7 +1377,7 @@ triples = (
        synonyms=('culture technique', 'husbandry', 'culture'),
       ),
 
-    _t(i.d, 'feeding technique',
+    _t(TEMP(153), 'feeding technique',
        # metabolism required so no viruses
        # TODO how to get this to classify as a maintenance technique
        #  without having to include the entailment explicitly
@@ -1385,13 +1395,13 @@ triples = (
        #  there might be a way to create a class that will work using
        #  ilxtr.hasSideEffectTechnique or ilxtr.hasSideEffect?
 
-    _t(i.d, 'high-fat diet feeding technique',
+    _t(TEMP(154), 'high-fat diet feeding technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        (ilxtr.hasPrimaryAspectActualized, asp.weight),
        (hasInput, ilxtr.highFatDiet),
     ),
 
-    _t(i.d, 'mouse circadian based high-fat diet feeding technique',
+    _t(TEMP(155), 'mouse circadian based high-fat diet feeding technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:10090', label='Mus musculus')),
        # ie that if one were to measure rather than specify
        # the mouse should be in in the same phase during the activity
@@ -1400,7 +1410,7 @@ triples = (
        (hasInput, ilxtr.highFatDiet),
        ),
 
-    _t(i.d, 'mouse age based high-fat diet feeding technique',
+    _t(TEMP(156), 'mouse age based high-fat diet feeding technique',
        # TODO there are a whole bunch of other high fat diet feeding techniques
        # 'MmusDv:0000050'
        # as opposed to the primary aspect being the current point in the cyrcadian cycle
@@ -1411,7 +1421,7 @@ triples = (
        # (hasInput, ilx['researchdiets/uris/productnumber/D12492']),  # too specific
        ),
 
-    _t(i.d, 'bacterial culture technique',
+    _t(TEMP(157), 'bacterial culture technique',
        #(hasParticipant, OntTerm('NCBITaxon:2', label='Bacteria <prokaryote>')),
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:2')),  # FIXME > 1 label
        synonyms=('bacterial culture',),),
@@ -1425,54 +1435,54 @@ triples = (
         restriction(ilxtr.hasConstrainingAspect, asp.temperature),
         restriction(hasInput, ilxtr.cultureMedia)),
 
-    _t(i.d, 'yeast culture technique',
+    _t(TEMP(158), 'yeast culture technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:4932', label='Saccharomyces cerevisiae')),
        synonyms=('yeast culture',),),
 
-    _t(i.d, 'tissue culture technique',
+    _t(TEMP(159), 'tissue culture technique',
        (ilxtr.hasPrimaryInputOutput, ilxtr.tissue),
        synonyms=('tissue culture',),),
 
-    _t(i.d, 'slice culture technique',
+    _t(TEMP(160), 'slice culture technique',
        (ilxtr.hasPrimaryInputOutput, intersectionOf(ilxtr.brainSlice,
                                                     ilxtr.physiologicalSystem)),
        synonyms=('slice culture',),),
 
-    _t(i.d, 'open book preparation technique',
+    _t(TEMP(161), 'open book preparation technique',
        tech.maintaining,
        (hasInput,
         OntTerm('UBERON:0001049', label='neural tube')
         #OntTerm(term='neural tube', prefix='UBERON')  # FIXME dissected out neural tube...
        ),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(162, current=False)),
        synonyms=('open book culture', 'open book preparation'),),
 
-    _t(i.d, 'fly culture technique',
+    _t(TEMP(163), 'fly culture technique',
        (ilxtr.hasPrimaryInputOutput,
         OntTerm('NCBITaxon:7215', label='Drosophila <fruit fly, genus>')
         #OntTerm(term='drosophila')
        ),
        synonyms=('fly culture',),),
 
-    _t(i.d, 'rodent husbandry technique',
+    _t(TEMP(164), 'rodent husbandry technique',
        (ilxtr.hasPrimaryInputOutput,
         OntTerm('NCBITaxon:9989', label='Rodentia')  # FIXME population vs individual?
        ),
        synonyms=('rodent husbandry', 'rodent culture technique'),),
 
-    _t(i.d, 'enclosure design technique',  # FIXME design technique? produces some information artifact?
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(165), 'enclosure design technique',  # FIXME design technique? produces some information artifact?
+       (ilxtr.hasSomething, TEMP(166, current=False))),
 
-    _t(i.d, 'housing technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(167), 'housing technique',
+       (ilxtr.hasSomething, TEMP(168, current=False)),
        synonyms=('housing',),
     ),
-    _t(i.d, 'mating technique',
+    _t(TEMP(169), 'mating technique',
        ilxtr.technique,
        restMinCardValue(hasParticipant, ilxtr.sexuallyReproducingOrgansim, Literal(2)),
        synonyms=('mating',),
     ),
-    _t(i.d, 'watering technique',
+    _t(TEMP(170), 'watering technique',
        (ilxtr.hasPrimaryInputOutput, OntTerm('NCBITaxon:131567', label='cellular organisms')),
        (hasInput, ilxtr.water),  # no output
        synonyms=('watering',),
@@ -1500,29 +1510,29 @@ triples = (
                  'material contrast enhancement technique',),
        equivalentClass=oECN),
 
-    _t(i.d, 'tagging technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(171), 'tagging technique',
+       (ilxtr.hasSomething, TEMP(172, current=False))),
 
     _t(tech.histology, 'histological technique',
        # is this the assertional/definitional part where we include everything?
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(172.5)),
        synonyms=('hisology',)),
 
     _t(OntTerm('BIRNLEX:2107'), 'staining technique',  # TODO integration
-       (ilxtr.hasSomething, i.d)),
+       (ilxtr.hasSomething, TEMP(173, current=False))),
 
-    _t(i.d, 'immunochemical technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(174), 'immunochemical technique',
+       (ilxtr.hasSomething, TEMP(175, current=False))),
 
-    _t(i.d,'immunocytochemical technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(176),'immunocytochemical technique',
+       (ilxtr.hasSomething, TEMP(177, current=False)),
        (hasInput, ilxtr.cell),
        synonyms=('immunocytochemistry technique',
                  'immunocytochemistry')),
 
     _t(OntTerm('NLXINV:20090609'), 'immunohistochemical technique',  # TODO
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(178, current=False)),
        (hasInput, ilxtr.tissue),
        synonyms=('immunohistochemistry technique',
                  'immunohistochemistry')),
@@ -1531,18 +1541,18 @@ triples = (
     # TODO "HBP_MEM:0000116"
     # "Immunoelectron microscopy"
 
-    _t(i.d, 'direct immunohistochemical technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(179), 'direct immunohistochemical technique',
+       (ilxtr.hasSomething, TEMP(180, current=False)),
        synonyms=('direct immunohistochemistry technique',
                  'direct immunohistochemistry')),
-    _t(i.d, 'indirect immunohistochemical technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(181), 'indirect immunohistochemical technique',
+       (ilxtr.hasSomething, TEMP(182, current=False)),
        synonyms=('indirect immunohistochemistry technique',
                  'indirect immunohistochemistry')),
 
     _t(tech.stateBasedContrastEnhancement, 'state based contrast enhancement technique',
        #tech.contrastEnhancement,  # FIXME compare this to how we modelled fMRI below? is BOLD and _enhancement_?
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(183, current=False)),
 
     ),
 
@@ -1613,15 +1623,15 @@ triples = (
        # VS FIXME TODO does the cardinality restriction work for auto subclassing?
        # FIXME hasConstrainingAspect is implicitly on the primary participant, these are on its parts...
        #restMinCardValue(ilxtr.hasConstrainingAspect, ilxtr.aspect, Literal(1)),
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(183.5)),
        equivalentClass=oECN),
 
-    _t(i.d, 'filtering technique',
+    _t(TEMP(184), 'filtering technique',
        (hasPart, intersectionOf(
            ilxtr.allocatingProcessPart,
            restN(ilxtr.hasConstrainingAspect, asp.size)))),
 
-    _t(i.d, 'sorting technique',
+    _t(TEMP(185), 'sorting technique',
        ilxtr.technique,
        # FIXME has part vs has member?
        (ilxtr.hasPrimaryParticipant,
@@ -1643,43 +1653,43 @@ triples = (
        #(ilxtr.hasParticipantPartConstrainingAspect, ilxtr.aspect)
       ),
 
-    _t(i.d, 'extraction technique',
+    _t(TEMP(186), 'extraction technique',
        (hasParticipant, ilxtr.extract),  # FIXME circular
        ),
     _t(tech.precipitation, 'precipitation technique',
        (hasParticipant, ilxtr.precipitate),  # FIXME circular
       ),
-    _t(i.d, 'pull-down technique',
+    _t(TEMP(187), 'pull-down technique',
        (hasPart, tech.precipitation),
        # allocation enrichement
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'isolation technique',
+       (ilxtr.hasSomething, TEMP(188, current=False)),),
+    _t(TEMP(189), 'isolation technique',
        # enrichment
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'purification technique',
+       (ilxtr.hasSomething, TEMP(190, current=False)),),
+    _t(TEMP(191), 'purification technique',
        # enrichment
-       (ilxtr.hasSomething, i.d),),
+       (ilxtr.hasSomething, TEMP(192, current=False)),),
 
-    _t(i.d, 'fractionation technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'chromatography technique',
+    _t(TEMP(193), 'fractionation technique',
+       (ilxtr.hasSomething, TEMP(194, current=False)),),
+    _t(TEMP(195), 'chromatography technique',
        (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
        (ilxtr.hasParticipantPartConstrainingAspect, asp.partitionCoefficient),
        synonyms=('chromatography',),),
-    _t(i.d, 'distillation technique',
+    _t(TEMP(196), 'distillation technique',
        (ilxtr.hasParticipantPartConstrainingAspect, asp.boilingPoint),
        (ilxtr.hasParticipantPartConstrainingAspect, asp.condensationPoint),
        #(ilxtr.knownDifferentiatingPhenomena, asp.boilingPoint),
        #(ilxtr.knownDifferentiatingPhenomena, asp.condensationPoint),
        synonyms=('distillation',),),
     _t(tech.electrophoresis, 'electrophoresis technique',
-       #(ilxtr.hasSomething, i.d),
+       #(ilxtr.hasSomething, TEMP(196.5)),
        (ilxtr.hasParticipantPartPrimaryAspectActualized, asp.location),
        (ilxtr.hasParticipantPartConstrainingAspect, asp.size),
        (ilxtr.hasParticipantPartConstrainingAspect, asp.charge),
        (ilxtr.hasParticipantPartConstrainingAspect, asp.bindingAffinity),  # FIXME ... this is qualified...
        synonyms=('electrophoresis',),),
-    _t(i.d, 'centrifugation technique',
+    _t(TEMP(197), 'centrifugation technique',
        intersectionOf(ilxtr.technique,
                       restN(hasInput, ilxtr.centrifuge)),
        intersectionOf(ilxtr.technique,
@@ -1692,37 +1702,37 @@ triples = (
        #(ilxtr.knownDifferentiatingPhenomena, asp.density),
        synonyms=('centrifugation',),
        equivalentClass=oECN),
-    _t(i.d, 'ultracentrifugation technique',
+    _t(TEMP(198), 'ultracentrifugation technique',
        (hasInput, ilxtr.ultracentrifuge),
        synonyms=('ultracentrifugation',),),
 
-    _t(i.d, 'sampling technique',
+    _t(TEMP(199), 'sampling technique',
        # selection technqiue, not a separation technique
        # it has to do with picking
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'blind selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'random selection technique',
-       (ilxtr.hasSomething, i.d),),
-    _t(i.d, 'targeted selection technique',
-       (ilxtr.hasSomething, i.d),),
+       (ilxtr.hasSomething, TEMP(200, current=False)),),
+    _t(TEMP(201), 'selection technique',
+       (ilxtr.hasSomething, TEMP(202, current=False)),),
+    _t(TEMP(203), 'blind selection technique',
+       (ilxtr.hasSomething, TEMP(204, current=False)),),
+    _t(TEMP(205), 'random selection technique',
+       (ilxtr.hasSomething, TEMP(206, current=False)),),
+    _t(TEMP(207), 'targeted selection technique',
+       (ilxtr.hasSomething, TEMP(208, current=False)),),
 
-    _t(i.d, 'biological activity measurement technique',
+    _t(TEMP(209), 'biological activity measurement technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),  # TODO
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        synonyms=('activity measurement technique', 'bioassay')),
 
-    _t(i.d, 'observational technique',
+    _t(TEMP(210), 'observational technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        # non numerical? interpretational?
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(211, current=False)),
        synonyms=('observation', 'observation technique'),),
 
-    _t(i.d, 'procurement technique',
+    _t(TEMP(212), 'procurement technique',
        intersectionOf(ilxtr.technique,
                       restN(ilxtr.hasPrimaryAspectActualized, asp.location),
                       restN(ilxtr.hasConstrainingAspect, asp.endLocation),
@@ -1803,7 +1813,7 @@ triples = (
 
     _t(tech.aliquoting, 'aliquoting technique',
        # TODO should be subClassOf allocating
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(213, current=False)),
       ),
 
     # disjointness
@@ -1914,12 +1924,12 @@ triples = (
        (realizes, ilxtr.analysisRole),
        synonyms=('analysis',),),
 
-    _t(i.d, 'data processing technique',
+    _t(TEMP(214), 'data processing technique',
        (ilxtr.hasDirectInformationInput, ilxtr.informationEntity),
        (ilxtr.hasInformationOutput, ilxtr.informationEntity),
        synonyms=('data processing', 'data transformation technique'),),
 
-    _t(i.d, 'image processing technique',
+    _t(TEMP(215), 'image processing technique',
        (ilxtr.hasDirectInformationInput, ilxtr.image),
        (ilxtr.hasInformationOutput, ilxtr.image),
        # some subpart may have the explicit output it just requires the direct input
@@ -1930,7 +1940,7 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
        synonyms=('signal processing',),),
 
-    _t(i.d, 'signal filtering technique',
+    _t(TEMP(216), 'signal filtering technique',
        # FIXME aspects of information entities...
        # lots of stuff going on here...
        tech.sigproc,
@@ -1962,7 +1972,7 @@ triples = (
        # TODO
       ),
 
-    _t(i.d, 'in vitro IR DIC slice electrophysiology',
+    _t(TEMP(217), 'in vitro IR DIC slice electrophysiology',
        #(hasPart, tech.IRDIC),
        (hasInput, ilxtr.IRCamera),
        (hasInput, ilxtr.DICmicroscope),
@@ -2001,18 +2011,18 @@ triples = (
        synonyms=('microscopy',),
     ),
 
-    _t(i.d, 'microscope production technique',
+    _t(TEMP(218), 'microscope production technique',
        (ilxtr.hasPrimaryOutput, ilxtr.microscope),
       ),
 
-    _t(i.d, 'recording electrode production technique',
+    _t(TEMP(219), 'recording electrode production technique',
        (ilxtr.hasPrimaryOutput, ilxtr.recordingElectrode),
       ),
 
-    _t(i.d, 'micropipette production technique',
+    _t(TEMP(220), 'micropipette production technique',
        (ilxtr.hasPrimaryOutput, ilxtr.microPipette)),
 
-    _t(i.d, 'microscope repair technique',
+    _t(TEMP(221), 'microscope repair technique',
        (ilxtr.hasPrimaryInputOutput, ilxtr.microscope)),
 
     _t(tech.lightMicroscopy, 'light microscopy technique',
@@ -2025,7 +2035,7 @@ triples = (
        #(hasParticipant, OntTerm(term='visible light')),  # FIXME !!! detects vs participant ???
        synonyms=('light microscopy',)),
 
-    _t(i.d, 'confocal microscopy technique',
+    _t(TEMP(222), 'confocal microscopy technique',
        (hasInput, OntTerm('BIRNLEX:2029', label='Confocal microscope')),
        (ilxtr.detects, ilxtr.visibleLight),
        (ilxtr.isConstrainedBy, OntTerm('BIRNLEX:2258', label='Confocal imaging protocol')),
@@ -2033,7 +2043,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        synonyms=('confocal microscopy',)),
 
-    _t(i.d, 'phase contrast microscopy technique',  # TODO
+    _t(TEMP(223), 'phase contrast microscopy technique',  # TODO
        (hasInput, ilxtr.phaseContrastMicroscope),  # FIXME circular
        (ilxtr.detects, ilxtr.visibleLight),  # FIXME true??
        (ilxtr.hasInformationOutput, ilxtr.image),
@@ -2055,7 +2065,7 @@ triples = (
        #equivalentClass=oECN
     ),
 
-    _t(i.d, 'functional brain imaging',
+    _t(TEMP(224), 'functional brain imaging',
        intersectionOf(ilxtr.technique,
                       # TODO figure out how to tie in the bFA, maybe make it 'functional' contrast
                       # suitably nebulous to allow for many operational definitions
@@ -2083,7 +2093,7 @@ triples = (
        equivalentClass=oECN),
     (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000007')),
 
-    _t(i.d, 'photographic technique',
+    _t(TEMP(225), 'photographic technique',
        (ilxtr.detects, ilxtr.photons),  # FIXME acctually it detects energy in _any_ form including electrons
        #(ilxtr.hasPrimaryAspect, asp.contrast),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),  # the scene
@@ -2116,7 +2126,7 @@ triples = (
     ),
     (tech.opticalImaging, ilxtr.hasTempId, OntTerm("HBP_MEM:0000013")),
 
-    _t(i.d, 'intrinsic optical imaging',
+    _t(TEMP(226), 'intrinsic optical imaging',
        #tech.opticalImaging,
        #tech.contrastDetection,
        # this is a good counter example to x-ray imaging concernts
@@ -2158,7 +2168,7 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.contrast),  # contrast to something? FIXME this seems a bit off...
        (ilxtr.hasPrimaryAspect_dAdS, ilxtr.nonZero),
        (ilxtr.hasInformationOutput, ilxtr.spatialFrequencyImageStack),  # TODO FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(227, current=False)),
       ),
 
     _t(tech.MRI, 'magnetic resonance imaging',
@@ -2188,7 +2198,7 @@ triples = (
        # FIXME hasPart MRI image processing?
        (ilxtr.hasDirectInformationInput, ilxtr.image),
        (ilxtr.hasInformationOutput, ilxtr.image),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(228, current=False)),
       ),
 
     olit(tech.fMRI, rdfs.comment,
@@ -2216,7 +2226,7 @@ triples = (
     _t(tech.dwMRI_ImageProcessing, 'diffusion weighted MRI image processing',
        (ilxtr.hasDirectInformationInput, ilxtr.image),
        (ilxtr.hasInformationOutput, ilxtr.image),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(229, current=False)),
       ),
 
     _t(proc.diffusion, 'diffusion process',
@@ -2244,19 +2254,19 @@ triples = (
     _t(tech.DTI_ImageProcessing, 'diffusion tensor image processing',
        (ilxtr.hasDirectInformationInput, ilxtr.image),
        (ilxtr.hasInformationOutput, ilxtr.image),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(230, current=False)),
       ),
 
-    _t(i.d, 'electroencephalography',
-       (ilxtr.hasSomething, i.b),
+    _t(TEMP(231), 'electroencephalography',
+       (ilxtr.hasSomething, TEMP(232, current=False)),
        (ilxtr.hasPrimaryAspect, asp.electrical),
        (ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem),  # FIXME uberon part of should work for this?
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
        synonyms=('EEG',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000011")),
 
-    _t(i.d, 'magnetoencephalography',
-       (ilxtr.hasSomething, i.b),
+    _t(TEMP(233), 'magnetoencephalography',
+       (ilxtr.hasSomething, TEMP(234, current=False)),
        (ilxtr.hasPrimaryParticipant, OntTerm('NCBITaxon:40674', 'Mammalia')),
        (ilxtr.hasPrimaryAspect, asp.magnetic),
        (ilxtr.hasInformationOutput, ilxtr.timeSeries),
@@ -2264,7 +2274,7 @@ triples = (
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000012")),
 
     # modification techniques
-    _t(i.d, 'modification technique',
+    _t(TEMP(235), 'modification technique',
        # FIXME TODO
        (ilxtr.hasPrimaryAspect, asp.isClassifiedAs),
        # is classified as
@@ -2276,7 +2286,7 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        synonyms=('modulation technique', 'modulation', 'activity modulation')),
 
-    _t(i.d, 'activation technique',
+    _t(TEMP(236), 'activation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        # hasPrimaryAspect some aspect of the primary participant which FOR THAT PARTICIPANT
@@ -2286,7 +2296,7 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
-    _t(i.d, 'deactivation technique',
+    _t(TEMP(237), 'deactivation technique',
        (ilxtr.hasProbe, ilxtr.materialEntity),  # FIXME some pheonmena... very often light...
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),  # FIXME this is more state?
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
@@ -2304,15 +2314,15 @@ triples = (
     ),
 
     _t(tech.perfusion, 'perfusion technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(238, current=False)),
       ),
 
-    _t(i.d, 'intracardial perfusion technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(239), 'intracardial perfusion technique',
+       (ilxtr.hasSomething, TEMP(240, current=False)),
        synonyms=('intracardial perfusion',),
       ),
 
-    _t(i.d, 'pharmacological technique',
+    _t(TEMP(241), 'pharmacological technique',
        intersectionOf(ilxtr.technique,
                       #restN(ilxtr.hasProbe, ilxtr.molecule),  # FIXME on a living system?
                       restN(hasInput, restN(hasRole, OntTerm('CHEBI:23888')))),
@@ -2322,35 +2332,35 @@ triples = (
        synonyms=('pharmacology',),
        equivalentClass=oECN),
 
-    _t(i.d, 'ttx bath application technique',
+    _t(TEMP(242), 'ttx bath application technique',
        (hasParticipant, ilxtr.bathSolution),
        (ilxtr.hasPrimaryAspectActualized, asp.location),  # in bath?
        (ilxtr.hasPrimaryInput, OntTerm('CHEBI:9506')),
       ),
 
-    _t(i.d, 'photoactivation technique',
+    _t(TEMP(243), 'photoactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
-    _t(i.d, 'photoinactivation technique',
+    _t(TEMP(244), 'photoinactivation technique',
        (ilxtr.hasProbe, ilxtr.photons),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
-    _t(i.d, 'photobleaching technique',
+    _t(TEMP(245), 'photobleaching technique',
        (ilxtr.hasProbe, ilxtr.photons),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(246, current=False)),
     ),
 
-    _t(i.d, 'photoconversion technique',
+    _t(TEMP(247), 'photoconversion technique',
        (ilxtr.hasProbe, ilxtr.photons),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(248, current=False)),
     ),
 
-    _t(i.d, 'molecular uncaging technique',
+    _t(TEMP(249), 'molecular uncaging technique',
        # FIXME caged molecule?
        (ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:25367', label='molecule')),
        (ilxtr.hasPrimaryAspect, asp.boundFunctionalAspect),
@@ -2358,43 +2368,43 @@ triples = (
        synonyms=('uncaging', 'uncaging technique')
     ),
 
-    _t(i.d, 'physical modification technique',
+    _t(TEMP(250), 'physical modification technique',
        # FIXME for all physical things is it that the aspect is physical?
        # or that there is actually a physical change induced?
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(251, current=False)),
     ),
 
-    _t(i.d, 'ablation technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(252), 'ablation technique',
+       (ilxtr.hasSomething, TEMP(253, current=False)),
     ),
 
-    _t(i.d, 'blinding technique',
+    _t(TEMP(254), 'blinding technique',
        (ilxtr.hasPrimaryAspect, asp.vision),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
-    _t(i.d, 'crushing technique',
+    _t(TEMP(255), 'crushing technique',
        # tissue destruction technique
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(256, current=False)),
     ),
 
-    _t(i.d, 'deafferenting technique',
+    _t(TEMP(257), 'deafferenting technique',
        # tissue destruction technique
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(258, current=False)),
     ),
 
-    _t(i.d, 'depolarization technique',
+    _t(TEMP(259), 'depolarization technique',
        (ilxtr.hasPrimaryAspect, asp.voltage),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),  # or is it neative (heh)
        # yes this is confusing, but cells have negative membrane potentials
     ),
 
-    _t(i.d, 'hyperpolarization technique',
+    _t(TEMP(260), 'hyperpolarization technique',
        (ilxtr.hasPrimaryAspect, asp.voltage),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
     ),
 
-    _t(i.d, 'illumination technique',
+    _t(TEMP(261), 'illumination technique',
        # as distinct from a technique for illuminating a page in a medieval text
        #tech.agnostic,  # TODO agnostic techniques try to do nothing scientific usually
        # they are purely goal driven
@@ -2403,24 +2413,24 @@ triples = (
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
-    _t(i.d, 'lesioning technique',
+    _t(TEMP(262), 'lesioning technique',
        (hasPart, tech.surgical),  # is this true
        # has intention to destory some subset of the nervous system
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(263, current=False)),
     ),
 
-    _t(i.d, 'sensory deprivation technique',
+    _t(TEMP(264), 'sensory deprivation technique',
        (ilxtr.hasPrimaryAspect, asp.sensory),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(265, current=False)),
     ),
 
-    _t(i.d, 'transection technique',
+    _t(TEMP(266), 'transection technique',
        (hasPart, tech.surgical),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(267, current=False)),
     ),
 
-    _t(i.d, 'stimulation technique',
+    _t(TEMP(268), 'stimulation technique',
        #(ilxtr.hasPrimaryAspect, ilxtr.physiologicalActivity),  # TODO
        (ilxtr.hasProbe, ilxtr.materialEntity),
        (ilxtr.hasPrimaryAspect, asp.biologicalActivity),
@@ -2434,19 +2444,19 @@ triples = (
         #oECN(intersectionOf(ilxtr.technique,
                             #restN(ilxtr.hasPrimaryParticipant, ilxtr.physiologicalSystem)))),
 
-    _t(i.d, 'physical stimulation technique',  # FIXME another use of physical
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(269), 'physical stimulation technique',  # FIXME another use of physical
+       (ilxtr.hasSomething, TEMP(270, current=False)),
        (ilxtr.hasProbe, ilxtr.mechanicalForce),  # but is this physical?
        def_='A technique using mechanical force to enduce a state change on a system.',
        synonyms=('mechanical stimulation technique',)
     ),
 
-    _t(i.d, 'electrical stimulation technique',
+    _t(TEMP(271), 'electrical stimulation technique',
        #(ilxtr.hasProbe, asp.electrical),  # FIXME the probe should be the physical mediator
        #(ilxtr.hasProbe, ilxtr.electricalPhenomena),  # electircal field?
        (ilxtr.hasProbe, ilxtr.electricalField),  # electircal field?
        (ilxtr.hasPrimaryAspect, asp.electrical),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(272, current=False)),
     ),
 
     _t(tech.stim_Magnetic, 'magnetic stimulation technique',
@@ -2457,18 +2467,18 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.magnetic),
     ),
 
-    _t(i.d, 'transcranial magnetic stimulation technique',
+    _t(TEMP(273), 'transcranial magnetic stimulation technique',
        (ilxtr.hasProbe, ilxtr.magneticField),
        (ilxtr.hasPrimaryAspect, asp.magnetic),
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(274, current=False)),
     ),
 
-    _t(i.d, 'cortico-cortical evoked potential technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(275), 'cortico-cortical evoked potential technique',
+       (ilxtr.hasSomething, TEMP(276, current=False)),
     ),
 
-    _t(i.d, 'microstimulation technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(277), 'microstimulation technique',
+       (ilxtr.hasSomething, TEMP(278, current=False)),
     ),
 
     _t(tech.cutting, 'cutting technique',
@@ -2477,17 +2487,17 @@ triples = (
       ),
 
     _t(tech.surgical, 'surgical technique',
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(279, current=False)),
        # any technique that involves the destruction of some anatomical structure
        # which requires healing (if possible)
        (hasPart, tech.cutting),  # FIXME obviously too broad
        synonyms=('surgery',),),
 
-    oc_(i.d, blankc(rdfs.label, Literal('reconstructive surgery')),  # FIXME TODO
+    oc_(TEMP(280), blankc(rdfs.label, Literal('reconstructive surgery')),  # FIXME TODO
         oec(restN(hasPart, tech.surgical),
             restN(ilxtr.hasIntention, ilxtr.toReconstruct))),
 
-    _t(i.d, 'biopsy technique',
+    _t(TEMP(281), 'biopsy technique',
        (hasPart, tech.surgical),  # FIXME
        #tech.maintaining,  # things that have output tissue that don't unis something
        # this is not creating so it is not a primary output
@@ -2496,59 +2506,59 @@ triples = (
        (ilxtr.hasPrimaryOutput, ilxtr.tissue),  # TODO
     ),
 
-    _t(i.d, 'craniotomy technique',
+    _t(TEMP(282), 'craniotomy technique',
        (hasPart, tech.surgical),  # FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(283, current=False)),
        def_='Makes a hold in the cranium (head).',
     ),
 
-    _t(i.d, 'durotomy technique',
+    _t(TEMP(284), 'durotomy technique',
        (hasPart, tech.surgical),  # FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(285, current=False)),
        def_='Makes a hold in the dura.',
     ),
 
-    _t(i.d, 'transplantation technique',
+    _t(TEMP(286), 'transplantation technique',
        (hasPart, tech.surgical),  # FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(287, current=False)),
        synonyms=('transplant',)
     ),
 
-    _t(i.d, 'implantation technique',
+    _t(TEMP(288), 'implantation technique',
        (hasPart, tech.surgical),  # FIXME
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(289, current=False)),
     ),
 
-    _t(i.d, 'stereotaxic technique',
+    _t(TEMP(290), 'stereotaxic technique',
        (hasPart, tech.surgical),  # FIXME
        (hasInput, ilxtr.stereotax),
        (ilxtr.isConstrainedBy, ilxtr.stereotaxiCoordinateSystem),
     ),
 
-    _t(i.d, 'behavioral technique',  # FIXME this is almost always actually some environmental manipulation
+    _t(TEMP(291), 'behavioral technique',  # FIXME this is almost always actually some environmental manipulation
        # asp.behavioral -> 'Something measurable aspect of an organisms behavior. i.e. the things that it does.'
        (ilxtr.hasPrimaryAspect, asp.behavioral),
     ),
 
-    _t(i.d, 'behavioral conditioning technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(292), 'behavioral conditioning technique',
+       (ilxtr.hasSomething, TEMP(293, current=False)),
        def_='A technique for producing a specific behavioral response to a set of stimuli.',  # FIXME
        synonyms=('behavioral conditioning', 'conditioning', 'conditioning technique')
     ),
 
-    _t(i.d, 'environmental manipulation technique',
+    _t(TEMP(294), 'environmental manipulation technique',
        # FIXME extremely broad, includes basically everything we do in science that is not
        # done directly to the primary subject
        (ilxtr.hasPrimaryParticipant, ilxtr.notTheSubject),
     ),
 
-    _t(i.d, 'environmental enrichment technique',
-       (ilxtr.hasSomething, i.d),
+    _t(TEMP(295), 'environmental enrichment technique',
+       (ilxtr.hasSomething, TEMP(296, current=False)),
        synonyms=('behavioral enrichment technique',)
        # and here we see the duality between environment and behavior
     ),
 
-    _t(i.d, 'dietary technique',
+    _t(TEMP(297), 'dietary technique',
        # FIXME this doesn't capture feeding and watering as we might expect
        #ilxtr.technique,
        # unionOf hasPart dietary technique OR hasPrimaryParticipant food
@@ -2563,20 +2573,20 @@ triples = (
            #restrictionN(hasPart, i.p))
        equivalentClass=oECN),
 
-    _t(i.d, 'dietary enrichment technique',
+    _t(TEMP(298), 'dietary enrichment technique',
        (hasInput, ilxtr.food_and_water),
        # NOTE the aspect could be amount or diversity
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.positiveNonZero),
     ),
 
-    _t(i.d, 'dietary restriction technique',
-       #(ilxtr.hasSomething, i.d),
+    _t(TEMP(299), 'dietary restriction technique',
+       #(ilxtr.hasSomething, TEMP(299.5)),
        (hasInput, ilxtr.food_and_water),  # metabolic input
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),  # FIXME may need to use has part?
        # reduction in some metabolic input
     ),
 
-    _t(i.d, 'food deprivation technique',
+    _t(TEMP(300), 'food deprivation technique',
        (ilxtr.hasPrimaryInput, ilxtr.food),
        (ilxtr.hasPrimaryAspectActualized, asp.allocation),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
@@ -2594,10 +2604,10 @@ triples = (
                 )
     ),
 
-    _t(i.b, 'technique that makes use of food deprivation',
+    _t(TEMP(301, current=False), 'technique that makes use of food deprivation',
        (hasPart, i.p),),
 
-    _t(i.d, 'water deprivation technique',
+    _t(TEMP(302), 'water deprivation technique',
        (ilxtr.hasPrimaryInput, ilxtr.water),
        (ilxtr.hasPrimaryAspectActualized, asp.allocation),
        (ilxtr.hasPrimaryAspect_dAdT, ilxtr.negativeNonZero),
@@ -2633,7 +2643,7 @@ triples = (
        synonyms=('sectioning',)),  # FIXME
     oc_(tech.sectioning, restriction(ilxtr.hasDualInputTechnique, tech.destroying)),
 
-    _t(i.d, 'tissue sectioning technique',
+    _t(TEMP(303), 'tissue sectioning technique',
        (ilxtr.hasPrimaryOutput, ilxtr.section),
        # FIXME primary participant to be destroyed? seems like there is a comflict here...
        # the cardinality rules are not catching it?
@@ -2642,7 +2652,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, OntTerm('UBERON:0000479', label='tissue')),
        synonyms=('tissue sectioning',)),
 
-    _t(i.d, 'brain sectioning technique',
+    _t(TEMP(304), 'brain sectioning technique',
        (ilxtr.hasPrimaryOutput, ilxtr.section),
         (ilxtr.hasDualTechnique,
          restN(ilxtr.hasPrimaryInput,
@@ -2652,26 +2662,26 @@ triples = (
        synonyms=('brain sectioning',)),
     #oc_(i.p,),
 
-    _t(i.d, 'block face sectioning technique',
+    _t(TEMP(305), 'block face sectioning technique',
        # SBEM vs block face for gross anatomical registration
        tech.sectioning,
-       (ilxtr.hasSomething, i.d),
+       (ilxtr.hasSomething, TEMP(306, current=False)),
     ),
 
-    _t(i.d, 'microtomy technique',
+    _t(TEMP(307), 'microtomy technique',
        (hasInput, ilxtr.microtome),
        #(ilxtr.hasDualInputTechnique, tech.destroying),  # TODO
        (ilxtr.hasPrimaryOutput, ilxtr.thinSection),  # this prevents issues with microtome based warfare techniques
        synonyms=('microtomy',)
     ),
 
-    _t(i.d, 'ultramicrotomy technique',
+    _t(TEMP(308), 'ultramicrotomy technique',
        (hasInput, ilxtr.ultramicrotome),
        (ilxtr.hasPrimaryOutput, ilxtr.veryThinSection),  # FIXME > 1?
        synonyms=('ultramicrotomy',)
     ),
 
-    _t(i.d, 'array tomographic technique',
+    _t(TEMP(309), 'array tomographic technique',
        (hasPart, tech.lightMicroscopy),
        #(hasParticipant, ilxtr.microscope),  # FIXME more precisely?
        (hasPart, tech.tomography),
@@ -2698,13 +2708,13 @@ triples = (
        # hasProbe ilxtr.electron and some focusing elements and detects ilxtr.electron
        synonyms=('scanning electron microscopy', 'SEM')),
 
-    _t(i.d, 'electron tomography technique',
+    _t(TEMP(310), 'electron tomography technique',
        (hasPart, tech.electronMicroscopy),
        (hasPart, tech.tomography),
        synonyms=('electron tomography',),
       ),
 
-    _t(i.d, 'correlative light-electron microscopy technique',
+    _t(TEMP(311), 'correlative light-electron microscopy technique',
        #(hasInput, OntTerm('BIRNLEX:2041', label='Electron microscope')),
        # this works extremely well because the information outputs propagate nicely
        (hasPart, tech.lightMicroscopy),
@@ -2714,7 +2724,7 @@ triples = (
        synonyms=('correlative light-electron microscopy',)
     ),
 
-    _t(i.d, 'serial blockface electron microscopy technique',
+    _t(TEMP(312), 'serial blockface electron microscopy technique',
        (hasPart, tech.electronMicroscopy),
        (hasPart, tech.ultramicrotomy),
        (hasInput, ilxtr.serialBlockfaceUltraMicrotome),
@@ -2724,7 +2734,7 @@ triples = (
        synonyms=('serial blockface electron microscopy',)
     ),
 
-    _t(i.d, 'super resolution microscopy technique',
+    _t(TEMP(313), 'super resolution microscopy technique',
        #(hasParticipant, OntTerm('BIRNLEX:2106', label='Microscope', synonyms=[])),  # TODO more
        (hasPart, tech.lightMicroscopy),  # FIXME special restriction on the properties of the scope?
        (ilxtr.isConstrainedBy, ilxtr.superResolutionAlgorithm),
@@ -2732,7 +2742,7 @@ triples = (
        synonyms=('super resolution microscopy',)
     ),
 
-    _t(i.d, 'northern blotting technique',
+    _t(TEMP(314), 'northern blotting technique',
        (hasPart, tech.electrophoresis),
        # fixme knownDetectedPhenomena?
        (ilxtr.hasPrimaryParticipant, OntId('CHEBI:33697')),
@@ -2740,7 +2750,7 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.sequence),
        synonyms=('northern blot',)
     ),
-    _t(i.d, 'Southern blotting technique',
+    _t(TEMP(315), 'Southern blotting technique',
        (hasPart, tech.electrophoresis),
        #(ilxtr.hasPrimaryParticipant, OntTerm('CHEBI:16991', term='DNA')),
        (ilxtr.hasPrimaryParticipant, ilxtr.DNApolymer),
@@ -2748,7 +2758,7 @@ triples = (
        (ilxtr.hasPrimaryAspect, asp.sequence),
        synonyms=('Southern blot',)
     ),
-    _t(i.d, 'western blotting technique',
+    _t(TEMP(316), 'western blotting technique',
        # FIXME dissociated
        (hasPart, tech.electrophoresis),
        (ilxtr.hasPrimaryParticipant, OntTerm('PR:000000001', label='protein')),  # at least one
@@ -2767,7 +2777,7 @@ triples = (
                  'protein immunoblot',)),
     (i.p, ilxtr.hasTempId, OntTerm("HBP_MEM:0000112")),
 
-    _t(i.d, 'intracellular electrophysiology technique',
+    _t(TEMP(317), 'intracellular electrophysiology technique',
        (ilxtr.hasPrimaryParticipant, OntTerm('GO:0005622', label='intracellular')),
        # FIXME in a physiological (not dead) system
        (ilxtr.hasPrimaryAspect, asp.electrical),
@@ -2797,14 +2807,14 @@ triples = (
        synonyms=('extracellular multi electrode technique',)),
        (tech.singleElectrodeEphys, ilxtr.hasTempId, OntTerm('HBP_MEM:0000019')),
 
-    _t(i.d, 'multi electrode extracellular electrophysiology recording technique',
+    _t(TEMP(318), 'multi electrode extracellular electrophysiology recording technique',
        (hasPart, tech.multiElectrodeEphys),
        (hasPart, tech.ephysRecording),
        synonyms=('multi unit recording',
                  'multi unit recording technique',
                  'multi-unit recording',),
       ),
-    _t(i.d, 'single electrode extracellular electrophysiology recording technique',
+    _t(TEMP(319), 'single electrode extracellular electrophysiology recording technique',
        (hasPart, tech.singleElectrodeEphys),
        (hasPart, tech.ephysRecording),
        synonyms=('single unit recording',
@@ -2812,7 +2822,7 @@ triples = (
                  'single-unit recording',),
       ),
 
-    _t(i.d, 'extracellular electrophysiology recording technique',
+    _t(TEMP(320), 'extracellular electrophysiology recording technique',
        (hasPart, tech.extracellularEphys),
        (hasPart, tech.ephysRecording),
        synonyms=('extracellular recording',),
@@ -2850,40 +2860,40 @@ triples = (
        equivalentClass=oECN),
        (tech.patchClamp, ilxtr.hasTempId, OntTerm('HBP_MEM:0000017')),
 
-    _t(i.d, 'cell attached patch technique',
+    _t(TEMP(321), 'cell attached patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
        (hasParticipant, OntTerm('GO:0005622', label='intracellular')),
        # cell attached configuration?
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(322, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000029')),
 
-    _t(i.d, 'inside out patch technique',
+    _t(TEMP(323), 'inside out patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(324, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000028')),
 
-    _t(i.d, 'loose patch technique',
+    _t(TEMP(325), 'loose patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(326, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000024')),
 
-    _t(i.d, 'outside out patch technique',
+    _t(TEMP(327), 'outside out patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(328, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000026')),
 
-    _t(i.d, 'perforated patch technique',
+    _t(TEMP(329), 'perforated patch technique',
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasInput, ilxtr.patchPipette),
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(330, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000025')),
 
@@ -2891,7 +2901,7 @@ triples = (
        (ilxtr.hasPrimaryParticipant, ilxtr.cellMembrane),
        (hasParticipant, OntTerm('GO:0005622', label='intracellular')),
        (hasInput, ilxtr.patchPipette),
-       (ilxtr.hasSomething, i.b),
+       (ilxtr.hasSomething, TEMP(331, current=False)),
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000027')),
 
@@ -2901,7 +2911,7 @@ triples = (
        (ilxtr.hasConstrainingAspect, asp.electrical),
        # FIXME should be different aspects??
       ),
-    _t(i.d, 'current clamp technique',
+    _t(TEMP(332), 'current clamp technique',
        (hasInput, ilxtr.recordingElectrode),
        (ilxtr.hasPrimaryAspect, asp.voltage),
        (ilxtr.hasConstrainingAspect, asp.current),
@@ -2920,51 +2930,51 @@ triples = (
     ),
        (i.p, ilxtr.hasTempId, OntTerm('HBP_MEM:0000203')),
 
-    _t(i.d, 'dynamic clamp technique',
+    _t(TEMP(333), 'dynamic clamp technique',
        (hasPart, tech.vClamp),
        (hasInput, ilxtr.dynamicClampAmplifier),
       ),
 
-    _t(i.d, 'whole cell patch clamp technique',
+    _t(TEMP(334), 'whole cell patch clamp technique',
        (hasPart, tech.eClamp),
        (hasPart, tech.wholeCellPatch),
        synonyms=('whole cell patch clamp',),
       ),
 
-    _t(i.d, 'cell filling technique',
+    _t(TEMP(335), 'cell filling technique',
        (hasPart, tech.cellPatching),
        #(hasPart, tech.contrastEnhancement),  #not the right way to do this?
        #(hasParticipant, OntTerm('GO:0005622', label='intracellular')),
        (hasInput, ilxtr.contrastAgent),  # FIXME ...
       ),
 
-    _t(i.d, 'neuron morphology reconstruction technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'autoradiographic technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'intravascaular filling technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'brightfield microscopy technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'machine learning technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'deep learning technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'delineation technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'epifluorescent microscopy technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'epifluorescent microscopy',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'fiber photometry technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'focused ion beam scanning electron microscoscopy technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'microendoscopic technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(336), 'neuron morphology reconstruction technique',
+       (ilxtr.hasSomething, TEMP(337, current=False))),
+    _t(TEMP(338), 'autoradiographic technique',
+       (ilxtr.hasSomething, TEMP(339, current=False))),
+    _t(TEMP(340), 'intravascaular filling technique',
+       (ilxtr.hasSomething, TEMP(341, current=False))),
+    _t(TEMP(342), 'brightfield microscopy technique',
+       (ilxtr.hasSomething, TEMP(343, current=False))),
+    _t(TEMP(344), 'machine learning technique',
+       (ilxtr.hasSomething, TEMP(345, current=False))),
+    _t(TEMP(346), 'deep learning technique',
+       (ilxtr.hasSomething, TEMP(347, current=False))),
+    _t(TEMP(348), 'delineation technique',
+       (ilxtr.hasSomething, TEMP(349, current=False))),
+    _t(TEMP(350), 'epifluorescent microscopy technique',
+       (ilxtr.hasSomething, TEMP(351, current=False))),
+    _t(TEMP(352), 'epifluorescent microscopy',
+       (ilxtr.hasSomething, TEMP(353, current=False))),
+    _t(TEMP(354), 'fiber photometry technique',
+       (ilxtr.hasSomething, TEMP(355, current=False))),
+    _t(TEMP(356), 'focused ion beam scanning electron microscoscopy technique',
+       (ilxtr.hasSomething, TEMP(357, current=False))),
+    _t(TEMP(358), 'microendoscopic technique',
+       (ilxtr.hasSomething, TEMP(359, current=False))),
     _t(tech.twoPhoton, 'two-photon microscopy technique',
        (hasInput, ilxtr.twoPhotonMicroscope),  # TODO
-       (ilxtr.hasSomething, i.d),  # TODO visible light vs microscopy
+       (ilxtr.hasSomething, TEMP(360, current=False)),  # TODO visible light vs microscopy
        synonyms=('two-photon microscopy',)),
     _t(tech.lightsheetMicroscopy, 'light sheet microscopy technique',
        (hasInput, ilxtr.lightSheetMicroscope),  # TODO
@@ -2972,33 +2982,35 @@ triples = (
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        synonyms=('light sheet microscopy',)),
-    _t(i.d, 'light sheet fluorescence microscopy technique',
+    _t(tech.lightSheetMicroscopyFluorescent, 'light sheet fluorescence microscopy technique',
        (hasInput, ilxtr.lightSheetMicroscope),  # TODO
        (ilxtr.detects, ilxtr.visibleLight),
        (hasInput, ilxtr.fluorescentMolecule),  # hasParticipant hasPart FIXME
        (ilxtr.hasInformationOutput, ilxtr.image),
        (ilxtr.hasPrimaryParticipant, ilxtr.materialEntity),
        synonyms=('light sheet fluorescence microscopy', 'LSFM')),
-    _t(i.d, 'two-photon tomographic technique',
+    oc(TEMP(361)),
+    (TEMP(361), owl.equivalentClass, TEMP(362)),  # STPT and TPT used to be 361 and 362, now merged
+    _t(TEMP(362), 'two-photon tomographic technique',
        (hasPart, tech.twoPhoton),
        (hasPart, tech.tomography),
-       (ilxtr.hasSomething, i.d), # TODO serial??  this model conflates with 2p tomography ...
+       (ilxtr.hasSomething, TEMP(363, current=False)), # TODO serial??  this model conflates with 2p tomography ...
        synonyms=('serial two-photon tomography', 'STPT',)
        # FIXME acronym
       ),
-    _t(i.d, 'oblique light sheet tomographic technique',
+    _t(tech.lightSheetTomographyOblique, 'oblique light sheet tomographic technique',
        (hasPart, tech.lightsheetMicroscopy),
        (hasPart, tech.tomography),
-       (ilxtr.hasSomething, i.d), # TODO oblique?
+       (ilxtr.hasSomething, TEMP(363.5, current=False)), # TODO oblique?
        synonyms=('oblique light sheet tomography', 'OLST',)
        # FIXME acronym
       ),
-    _t(i.d, 'wide-field microscopy technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'brain-wide technique',
-       (ilxtr.hasSomething, i.d)),
-    _t(i.d, 'gene characterization technique',
-       (ilxtr.hasSomething, i.d)),
+    _t(TEMP(364), 'wide-field microscopy technique',
+       (ilxtr.hasSomething, TEMP(365, current=False))),
+    _t(TEMP(366), 'brain-wide technique',
+       (ilxtr.hasSomething, TEMP(367, current=False))),
+    _t(TEMP(368), 'gene characterization technique',
+       (ilxtr.hasSomething, TEMP(369, current=False))),
 )
 
 def ect():  # FIXME not used supposed to make dAdT zero equi to value hasValue 0
@@ -3069,7 +3081,7 @@ methods = simpleOnt(filename=filename,
                     branch=branch,
                     _repo=_repo)
 
-[methods.graph.add((o2, rdfs.subClassOf, TEMP.temp))
+[methods.graph.add((o2, rdfs.subClassOf, TEMP_ns.temp))
  for s1, p1, o1 in methods.graph if
  p1 == owl.onProperty and
  o1 == ilxtr.hasSomething
