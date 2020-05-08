@@ -72,7 +72,7 @@ def _t(subject, label, *rests, def_=None, synonyms=tuple(), comment=None,
 
 obo, RO, prov, *_ = makeNamespaces('obo', 'RO', 'prov')
 filename = 'methods-core'
-prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant')
+prefixes = None
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 imports = NIFTTL['nif_backend.ttl'],
 #imports = obo['bfo.owl'], obo['ro.owl']
@@ -835,7 +835,8 @@ methods_core = simpleOnt(filename=filename,
                          triples=triples,
                          comment=comment,
                          branch=branch,
-                         _repo=_repo)
+                         _repo=_repo,
+                         calling__file__=__file__,)
 
 methods_core._graph.add_namespace('asp', str(asp))
 methods_core._graph.add_namespace('ilxtr', str(ilxtr))  # FIXME why is this now showing up...

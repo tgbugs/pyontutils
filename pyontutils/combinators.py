@@ -198,7 +198,10 @@ class POCombinator(_POCombinator):
             return self
 
 
+Pair = POCombinator
+
 oc_ = POCombinator(rdf.type, owl.Class)
+Class = oc_
 
 allDifferent = POCombinator(rdf.type, owl.AllDifferent)
 

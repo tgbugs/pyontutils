@@ -46,7 +46,8 @@ from pyontutils.namespaces import (makePrefixes,
                                    dc,
                                    dcterms,
                                    prov,
-                                   oboInOwl)
+                                   oboInOwl,
+                                   replacedBy,)
 from pyontutils.identity_bnode import IdentityBNode
 
 current_file = Path(__file__).absolute()
@@ -614,11 +615,15 @@ class OntResPath(OntIdPath, OntResOnt):
 
 
 class OntIdGit(OntIdPath):
+
     def __init__(self, path, ref='HEAD'):
         """ ref can be HEAD, branch, commit hash, etc.
 
             if ref = None, the working copy of the file is used
             if ref = '',   the index   copy of the file is used """
+
+        if not isinstance(path, aug.RepoPath):
+            path = aug.RepoPath(path)
 
         self.path = path
         self.ref = ref
@@ -645,6 +650,10 @@ class OntIdGit(OntIdPath):
             return self.path.as_posix()
 
         return str(self.ref) + ':' + self.path.repo_relative_path.as_posix()
+
+    @property
+    def repo(self):
+        return self.path.repo
 
     def metadata(self):
         if not hasattr(self, '_metadata'):
@@ -1059,38 +1068,14 @@ class OntGraph(rdflib.Graph):
 
         yield from self.transitiveClosure(f, (None, None, subject))
 
-    def _subjectGraph(self, subject, *, done=None):
-        # some days I am dumb
-        first = False
-        if done is None:
-            first = True
-            done = set()
-
-        done.add(subject)
-
-        for p, o in self[subject::]:
-            if first:  # subject free subject graph
-                yield p, o
-            else:
-                yield subject, p, o
-
-            if isinstance(o, rdflib.BNode):
-                yield from self.subjectGraph(o, done=done)
-            elif isinstance(o, rdflib.URIRef):
-                # TODO if we want closed world identified subgraphs
-                # then we would compute the identity of the named
-                # here as well, however, that is a rare case and
-                # would cause identities to change at a distance
-                # which is bad, so probably should never do it
-                pass
-
     def subjectIdentity(self, subject, *, debug=False):
         """ calculate the identity of a subgraph for a particular subject
             useful for determining whether individual records have changed
             not quite
         """
 
-        pairs_triples = list(self.subjectGraph(subject))
+        triples = list(self.subjectGraph(subject))  # subjective
+        pairs_triples = [tuple(None if e == subject else e for e in t) for t in triples]  # objective
         ibn = IdentityBNode(pairs_triples, debug=False)
         if debug:
             triples = [(subject, *pos) if len(pos) == 2 else pos for pos in pairs_triples]
@@ -1127,6 +1112,28 @@ class OntGraph(rdflib.Graph):
             if isinstance(s, rdflib.URIRef):
                 yield s
 
+    def subjectsRenamed(self, other_graph):
+        """ find subjects where only the id has changed """
+        # FIXME dispatch on OntRes ?
+
+        # TODO consider adding this to subjectsChanged?
+        # probably not because the ability to reliably detect
+        # renaming vs changing using this code requires that
+        # renames and changes be two separate operations
+
+        # FIXME cases where we have :a a owl:Class . :b a owl:Class .
+        # in a single graph
+        sid = {self.subjectIdentity(s):s for s in set(self.named_subjects())}
+        oid = {other_graph.subjectIdentity(s):s for s in set(other_graph.named_subjects())}
+        # FIXME triples output vs map?
+        mapping = {s:oid[identity] for identity, s in sid.items()
+                   if identity in oid and oid[identity] != s}
+        return mapping
+
+    def subjectsRenamedTriples(self, renamed_subjects_graph, predicate=replacedBy):
+        for name, renamed in self.subjectsRenamed(renamed_subjects_graph).items():
+            yield name, predicate, renamed
+
     def subjectsChanged(self, other_graph):
         """ in order to detect this the mapped id must be persisted
             by the process that is making the change
@@ -1138,6 +1145,7 @@ class OntGraph(rdflib.Graph):
             version of the graph around might be easier. TODO explore
             tradeoffs.
         """
+        # FIXME dispatch on OntRes ?
 
         # the case where an external process (e.g. editing in protege)
         # has caused a change in the elements used to calculate the id
@@ -1270,6 +1278,10 @@ class OntGraph(rdflib.Graph):
 
         new_self.namespace_manager.populate_from(index_graph)
         return new_self
+
+    def identity(self, cypher=None):
+        # TODO cypher ?
+        return IdentityBNode(self)
 
     # variously named/connected subsets
 
@@ -2389,9 +2401,21 @@ class Ont:
                 commit = 'FAKE-COMMIT'
 
         try:
+            wgb = None
             if self.source_file:
                 filepath = self.source_file
                 line = ''
+                if isinstance(self.source_file, aug.RepoPath):
+                    working_dir = self.source_file.working_dir
+                    if working_dir is not None:
+                        commit = str(self.source_file.latest_commit())
+                        uri = self.source_file.remote_uri_human(ref=commit)
+                        diff = self.source_file.has_uncommitted_changes()
+                        if diff:
+                            uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
+
+                        wgb = self.wasGeneratedBy = uri
+
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
                 _file = getsourcefile(self.__class__)
@@ -2403,9 +2427,12 @@ class Ont:
             _file = 'nofile'
             filepath = Path(_file).name
 
-        self.wasGeneratedBy = self.wasGeneratedBy.format(commit=commit,
-                                                         hash_L_line=line,
-                                                         filepath=filepath)
+        if wgb is None:
+            self.wasGeneratedBy = (self.wasGeneratedBy
+                                   .format(commit=commit,
+                                           hash_L_line=line,
+                                           filepath=filepath))
+
         imports = tuple(i.iri if isinstance(i, Ont) else i for i in self.imports)
         self._graph = createOntology(filename=self.filename,
                                      name=self.name,
@@ -2574,7 +2601,7 @@ class Collector:
 
 
 def simpleOnt(filename=f'temp-{UTCNOW()}',
-              prefixes=tuple(),  # dict or list
+              prefixes=tuple(),  # dict
               imports=tuple(),
               triples=tuple(),
               comment=None,
@@ -2582,13 +2609,17 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               branch='master',
               fail=False,
               _repo=True,
-              write=False):
+              write=False,
+              calling__file__=None):
 
     for i in imports:
         if not isinstance(i, rdflib.URIRef):
             raise TypeError(f'Import {i} is not a URIRef!')
 
     class Simple(Ont):  # TODO make a Simple(Ont) that works like this?
+
+        source_file = aug.RepoPath(calling__file__)
+        # FIXME TODO get the line by inspecting the stack ?
 
         def _triples(self):
             yield from cmb.flattenTriples(triples)
@@ -2598,10 +2629,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.filename = filename
     Simple.comment = comment
     Simple.imports = imports
-    if isinstance(prefixes, dict):
-        Simple.prefixes = {k:str(v) for k, v in prefixes.items()}
-    else:
-        Simple.prefixes = makePrefixes(*prefixes)
+    Simple.prefixes = dict(uPREFIXES)
+    if prefixes:
+        Simple.prefixes.update({k:str(v) for k, v in prefixes.items()})
 
     if branch != 'master':
         Simple.remote_base = f'https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/{branch}/'

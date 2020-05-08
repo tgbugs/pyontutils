@@ -54,6 +54,9 @@ PAXRAT: http://uri.interlex.org/paxinos/uris/rat/labels/
 PAXMUS: http://uri.interlex.org/paxinos/uris/mouse/labels/
 NDA.CDE: http://uri.interlex.org/NDA/uris/datadictionary/elements/
 ilxtr: http://uri.interlex.org/tgbugs/uris/readable/
+ilxti: http://uri.interlex.org/tgbugs/uris/indexes/
+ilxtib: http://uri.interlex.org/tgbugs/uris/indexes/blank/
+ilxtio: http://uri.interlex.org/tgbugs/uris/indexes/ontologies/
 
 # alternate ids
 GBIF:    http://www.gbif.org/species/

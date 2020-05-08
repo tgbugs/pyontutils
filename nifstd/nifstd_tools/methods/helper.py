@@ -19,12 +19,7 @@ from pyontutils.closed_namespaces import owl, rdf, rdfs
 restHasValue = Restriction(None, owl.hasValue)
 
 filename = 'methods-helper'
-prefixes = ('BFO', 'ilxtr', 'NIFRID', 'RO', 'IAO', 'definition', 'hasParticipant', 'TEMP')
-prefixes += ('TEMP', 'ilxtr', 'NIFRID', 'definition', 'realizes', 'hasRole',
-            'hasParticipant', 'hasPart', 'hasInput', 'hasOutput', 'BFO',
-            'CHEBI', 'GO', 'SO', 'NCBITaxon', 'UBERON', 'SAO', 'BIRNLEX',
-            'NLX',
-)
+prefixes = None
 OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 #OntCuries['HBP_MEM'] = 'http://www.hbp.FIXME.org/hbp_measurement_methods/'
 #imports = NIFTTL['nif_backend.ttl'],
@@ -866,7 +861,8 @@ methods_helper = simpleOnt(filename=filename,
                            triples=triples,
                            comment=comment,
                            branch=branch,
-                           _repo=_repo)
+                           _repo=_repo,
+                           calling__file__=__file__,)
 
 
 def main():

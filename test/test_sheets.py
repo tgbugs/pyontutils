@@ -175,3 +175,23 @@ class TestSheets(unittest.TestCase):
         # update using that instance
         # fetch to make sure stashing works as expected
         pass
+
+    def test_row(self):
+        r = self.sheet.row_object(0)
+        r.header
+        r = r.rowAbove()
+        r = r.rowBelow()
+        r.cell_object(1).value = 'oops'
+        a = r.cells
+        b = [c.column for c in r.cells]
+        repr((a, b))
+
+    def test_column(self):
+        c = self.sheet.column_object(0)
+        c.header
+        c = c.columnLeft()
+        c = c.columnRight()
+        c.cell_object(1).value = 'oops'
+        a = c.cells
+        b = [c.row for c in c.cells]
+        repr((a, b))

@@ -422,6 +422,13 @@ class IdentityBNode(rdflib.BNode):
     def __str__(self):
         return self.identity.hex()
 
+    def __hash__(self):
+        # for reasons I do not entirely understand
+        # str.__hash__ does not produce identical hashes
+        # for IdentityBNodes with the same identity ...
+        # which is ... worrying
+        return hash((self.__class__, self.identity))
+
 
 class IdLocalBNode(rdflib.BNode):
     """ For use inside triples.
