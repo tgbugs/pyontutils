@@ -45,19 +45,54 @@ helper = ttl / 'methods-helper.ttl'
 core =  ttl / 'methods-core.ttl'
 
 
-def methods():
+def methods_mapping():
     from pyontutils.namespaces import TEMP, ilxtr, tech
-    from . import methods
+    from nifstd_tools import methods as m
+    import rdflib
 
-    org = OntResGit(methods)
+    # TODO add this to ibnode tests
+    _before = OntResGit(methods, ref='8c30706cbc7ccc7443685a34dec026e8afbbedd1')
+    after = OntResGit(methods, ref='860c88a574d17e0d427c1101fa1947b730b613a9')  # renaming commit
+    before = OntResGit(after.path, ref=after.ref + '~1')
+    assert before.graph.identity() == _before.graph.identity()
+
+    bg = before.graph
+    ag = after.graph
+    _, local = next(ag[:ilxtr.indexNamespace:])
+    local = rdflib.Namespace(str(local))
+    T0 = TEMP['0']
+    l0 = local['0']
+    b = OntGraph().populate_from_triples(bg.subjectGraph(T0))
+    a = OntGraph().populate_from_triples(ag.subjectGraph(l0))
+    b.debug()
+    a.debug()
+    it = b.subjectIdentity(T0)
+    il = a.subjectIdentity(l0)
+    assert it == il
+    assert it in (il,)
+    assert il in (it,)  # (it,) ni il  # SIGH
+    assert it in {il:None}
+    assert il in {it:None}
+    r = b.subjectsRenamed(a)
+    renamed = before.graph.subjectsRenamed(after.graph)
+    assert (len(renamed) -1 ==
+            max([int(v.rsplit('/', 1)[-1])
+                 for v in renamed.values()
+                 if v != ilxtr.Something]))
+
+    (OntGraph(namespace_manager=after.graph.namespace_manager)
+     .populate_from_triples(before
+                            .graph
+                            .subjectsRenamedTriples(after.graph))
+     .debug())
+    return renamed
 
     index_graph = OntGraph(path=olr / 'ttl/generated/index-methods.ttl')
-
     # FIXME either use or record for posterity the commits where these
     # transformations were run rather than pointing to the branch name
     with org.repo.getRef('methods'):
         input_graph = org.graph
-        output_graph = input_graph.mapTempToIndex(index_graph, TEMP, methods.local)
+        output_graph = input_graph.mapTempToIndex(index_graph, TEMP, m.local)
         a, r, c = output_graph.subjectsChanged(input_graph)
         index_graph.write()
 
@@ -74,7 +109,7 @@ def methods_sneech():
 
 def main():
     #npokb()
-    methods()
+    methods_mapping()
 
 
 if __name__ == '__main__':
