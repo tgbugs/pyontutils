@@ -63,8 +63,6 @@ class I:
 
 i = I()
 
-i.last = None
-
 def DEV(value, current=True):
     i.last = value
     uri = local[str(value)]
@@ -75,12 +73,6 @@ def DEV(value, current=True):
 
 
 def blank(value):
-    return TEMP[str(i.last + value)]
-    # REMOVE THE FIRST RETURN to enter the second phase of the renumbering
-    # we don't want to change the local structure of the classes
-    # serialized in the file when we change out the class id sequence
-    # because then we can't determine that only the id changed since
-    # the pairs also changed
     return local_blank[str(value)]
 
 
