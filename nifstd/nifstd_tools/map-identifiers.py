@@ -3,14 +3,13 @@
 # equivalent indexed as default
 # equivalent indexed in map only
 
-from pyontutils.core import OntGraph
+import augpathlib as aug
+from pyontutils.core import OntGraph, OntResGit
 from pyontutils.namespaces import TEMP, ilx, rdf, owl, ilxtr, npokb, OntCuries
+from pyontutils.config import auth
 
 
-def main():
-    from pathlib import Path
-    from pyontutils.config import auth
-
+def npokb():
     index_graph = OntGraph(path=auth.get_path('ontology-local-repo') /
                            'ttl/generated/neurons/npokb-index.ttl')
 
@@ -37,6 +36,46 @@ def main():
     #from sparcur.paths import Path
     #Path(index_graph.path).xopen()
     breakpoint()
+
+
+olr = aug.RepoPath(auth.get_path('ontology-local-repo'))
+ttl = olr / 'ttl'
+methods = ttl / 'methods.ttl'
+helper = ttl / 'methods-helper.ttl'
+core =  ttl / 'methods-core.ttl'
+
+
+def methods():
+    from pyontutils.namespaces import TEMP, ilxtr, tech
+    from . import methods
+
+    org = OntResGit(methods)
+
+    index_graph = OntGraph(path=olr / 'ttl/generated/index-methods.ttl')
+
+    # FIXME either use or record for posterity the commits where these
+    # transformations were run rather than pointing to the branch name
+    with org.repo.getRef('methods'):
+        input_graph = org.graph
+        output_graph = input_graph.mapTempToIndex(index_graph, TEMP, methods.local)
+        a, r, c = output_graph.subjectsChanged(input_graph)
+        index_graph.write()
+
+
+def methods_sneech():
+    # TODO the sneech files ?
+    org_m = OntResGit(methods)
+    org_h = OntResGit(helper)
+    org_c = OntResGit(core)
+
+    with org.repo.getRef('methods'):
+        pass
+
+
+def main():
+    #npokb()
+    methods()
+
 
 if __name__ == '__main__':
     main()

@@ -614,11 +614,15 @@ class OntResPath(OntIdPath, OntResOnt):
 
 
 class OntIdGit(OntIdPath):
+
     def __init__(self, path, ref='HEAD'):
         """ ref can be HEAD, branch, commit hash, etc.
 
             if ref = None, the working copy of the file is used
             if ref = '',   the index   copy of the file is used """
+
+        if not isinstance(path, aug.RepoPath):
+            path = aug.RepoPath(path)
 
         self.path = path
         self.ref = ref
@@ -645,6 +649,10 @@ class OntIdGit(OntIdPath):
             return self.path.as_posix()
 
         return str(self.ref) + ':' + self.path.repo_relative_path.as_posix()
+
+    @property
+    def repo(self):
+        return self.path.repo
 
     def metadata(self):
         if not hasattr(self, '_metadata'):

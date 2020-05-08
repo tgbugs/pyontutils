@@ -235,11 +235,11 @@ def makeURIs(*prefixes):
 # namespaces
 
 (HBA, MBA, NCBITaxon, NIFSTD, NIFRID, NIFTTL, UBERON, BFO, SO, ilxtr,
- TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS, tech, CL,
+ TEMP, TEMPRAW, ILX, PAXRAT, PAXMUS, tech, CL, ilxti, ilxtib, ilxtio,
 ) = makeNamespaces('HBA', 'MBA', 'NCBITaxon', 'NIFSTD', 'NIFRID',
                    'NIFTTL', 'UBERON', 'BFO', 'SO', 'ilxtr',
                    'TEMP', 'TEMPRAW', 'ILX', 'PAXRAT', 'PAXMUS',
-                   'tech', 'CL',
+                   'tech', 'CL', 'ilxti', 'ilxtib', 'ilxtio',
                   )
 
 ilxb = interlex_namespace('base/')
