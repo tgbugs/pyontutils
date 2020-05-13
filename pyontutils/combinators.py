@@ -203,6 +203,8 @@ Pair = POCombinator
 oc_ = POCombinator(rdf.type, owl.Class)
 Class = oc_
 
+Ontology = POCombinator(rdf.type, owl.Ontology)
+
 allDifferent = POCombinator(rdf.type, owl.AllDifferent)
 
 

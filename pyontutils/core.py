@@ -871,8 +871,16 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
 
-    def populate_from(self, *graphs):
-        [self.bind(k, v) for g in graphs for k, v in g.namespaces()]
+    def populate_from(self, *graph_nsm_dict):
+        """ populate namespace manager from graphs,
+            namespace managers, or dicts """
+
+        [self.bind(k, v) for gnd in graph_nsm_dict
+         for k, v in
+         (gnd.namespaces()
+          if (isinstance(gnd, rdflib.Graph) or
+              isinstance(gnd, rdflib.namespace.NamespaceManager)) else
+          gnd.items())]
 
 
 class OntGraph(rdflib.Graph):
