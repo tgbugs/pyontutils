@@ -2,12 +2,14 @@ import io
 import os
 import yaml
 import types
+import gzip
 import zipfile
 import tempfile
 import mimetypes
 import subprocess
 import idlib
 import rdflib
+from types import MappingProxyType
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
@@ -127,6 +129,8 @@ class OntRes(idlib.Stream):
 
     Graph = None  # this is set below after OntGraph is created (derp)
 
+    _progenitors = MappingProxyType({})  # this is a dict, but immutable to prevent accidents
+
     def __init__(self, identifier, repo=None, Graph=None):  # XXX DO NOT USE THIS IT IS BROKEN
         self.identifier = identifier  # the potential attribute error here is intentional
         self.repo = repo  # I have a repo augmented path in my thesis stats code
@@ -135,7 +139,7 @@ class OntRes(idlib.Stream):
 
         self.Graph = Graph
 
-    def progenitor(self, level=1):
+    def progenitor(self, *args, level=1, type=None, _type=type):
         """ return the reproductible progenitor object/stream at level n
             also includes progenitors that are not reproducible but that
             retain metadata about the substream in question, e.g a requests
@@ -152,6 +156,9 @@ class OntRes(idlib.Stream):
 
             level == 0 -> returns self to break"""
 
+        if args:
+            raise TypeError('progenitor acceps keywords arguments only!')
+
         # FIXME probably makes more sense to store progenitors in a dict
         # with a controlled set of types than just by accident of ordering
         # this would allow us to keep everything along the way
@@ -163,6 +170,9 @@ class OntRes(idlib.Stream):
 
         # TODO instrumenting all the other objects with
         # a progenitor method is going to be a big sigh
+        if type is not None:
+            return self._progenitors[type]  # FIXME need enum or something
+
         if level is not None and level == 0:
             return self
         else:
@@ -170,7 +180,8 @@ class OntRes(idlib.Stream):
                 level += 1  # compensate for reversed
 
             # HACK to retain a stack of progenitors manually for now
-            return self._progenitors[-level]
+            # FIXME blased insertion order :/ implemnation details
+            return list(self._progenitors.values())[-level]
 
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
@@ -376,14 +387,12 @@ class OntMetaIri(OntMeta, OntIdIri):
         # it is ok to fail halfway through and not restore
         # the whole point of progenitors is to give you access
         # to the exact state that failed so you can debug
-        self._progenitors = []
+        self._progenitors = {}
 
-        if self.identifier.endswith('.zip'):
-            # TODO use Content-Range to retrieve only the central directory
-            # after we get the header here
-            # https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
-            # this could be another way to handle the filesystem issues for bf
-            # as well ...
+
+        _gz = self.identifier.endswith('.gz')
+        _zip = self.identifier.endswith('.zip')
+        if _zip or _gz:
             id_hash = IdentityBNode(self.identifier).identity.hex()
             cache_root = idlib.config.auth.get_path('cache-path') / 'streams'
             cache_dir = cache_root / id_hash[:2]
@@ -392,61 +401,74 @@ class OntMetaIri(OntMeta, OntIdIri):
             with self._get(send_data=send_data) as resp:
                 # FIXME since the resp is already closed here
                 # need to prevent double close issuse below
-                self._progenitors.append(resp)
+                self._progenitors['stream-http'] = resp
                 self.headers = resp.headers  # XXX I think this is right ?
                 # FIXME obvious issue here is if the content length is the
                 # same but the checksum differs, e.g. due to single char fixes
                 # though for zipped content that seems unlikely given all the
                 # metadata that a zipfile embeds
                 # some sources do provide an etag might help?
-                content_length = int(resp.headers['Content-Length'])
+                if 'Content-Length' in resp.headers:  # WHY U DO DIS!??!!
+                    content_length = int(resp.headers['Content-Length'])
+                else:
+                    # apparently the chebi server doesn't returen content length on some requests !?
+                    content_length = object()
+
                 if not file.exists() or file.size != content_length:
                     file.data = resp.iter_content(chunk_size=file.chunksize)
 
-            self._progenitors.append(file)
+            self._progenitors['path'] = file
 
-            zp = aug.ZipPath(file)
-            # TODO so many progenitors
-            id_path = PurePath(self.identifier)
-            id_stem = id_path.stem
-            matching_members = [
-                z for z in zp.rchildren if not z.is_dir() and z.stem == id_stem
-            ]
+            if _gz:
+                # check also Etag and Last-Modified
+                # but will need to use xattrs to store
+                raise NotImplementedError('TODO')
+            elif _zip:
+                zp = aug.ZipPath(file)
+                # TODO so many progenitors
+                id_path = PurePath(self.identifier)
+                id_stem = id_path.stem
+                matching_members = [
+                    z for z in zp.rchildren if not z.is_dir() and z.stem == id_stem
+                ]
 
-            if len(matching_members) != 1:
-                # TODO
-                raise ValueError(matching_memebers)
+                if len(matching_members) != 1:
+                    # TODO
+                    raise ValueError(matching_memebers)
 
-            member = matching_members[0]
-            self._progenitors.append(member)  # ok to include a tuple here I think ...
-            filelike = member.open()
-            #self._progenitors.append(filelike)  # NOTE reproductible progenitors only
-            # unfortunately the ZipInfo objects don't hold a pointer back to the ZipFile
-            def filelike_to_generator(filelike, chunksize=file.chunksize):
-                """ NOTE: closes at the end """
-                with filelike:  # will close at the end
-                    while True:
-                        try:
-                            data = filelike.read(chunksize)  # TODO hinting
-                        except AttributeError as e:
-                            raise ValueError('I/O operation on closed zip stream') from e
+                member = matching_members[0]
+                self._progenitors['path-compressed'] = member  # ok to include a tuple here I think ...
+                filelike = member.open()
+                self._progenitors['stream-file'] = filelike  # NOTE reproductible progenitors only
+                # unfortunately the ZipInfo objects don't hold a pointer back to the ZipFile
+                def filelike_to_generator(filelike, chunksize=file.chunksize):
+                    """ NOTE: closes at the end """
+                    with filelike:  # will close at the end
+                        while True:
+                            try:
+                                data = filelike.read(chunksize)  # TODO hinting
+                            except AttributeError as e:
+                                raise ValueError('I/O operation on closed zip stream') from e
 
-                        if not data:
-                            break
+                            if not data:
+                                break
 
-                        yield data
+                            yield data
 
-            # FIXME the rdf+xml won't work on a generator
-            # it would be nice to be able to return/work directly from
-            # the filelike instead of from the generator in cases where
-            # it really is a file like instead of the resp.iter_content
-            # case that we deal with here
-            gen = filelike_to_generator(filelike)
-            #self._progenitors.append(gen)  # NOTE reproductible progenitors only
+                # FIXME the rdf+xml won't work on a generator
+                # it would be nice to be able to return/work directly from
+                # the filelike instead of from the generator in cases where
+                # it really is a file like instead of the resp.iter_content
+                # case that we deal with here
+                gen = filelike_to_generator(filelike)
+                self._progenitors['stream-generator'] = (gen)  # NOTE reproductible progenitors only
+
+            else:
+                raise BaseException('WHAT HATH THOU PROSECUTED SIR!?')
 
         else:
             resp = self._get(send_data=send_data)
-            self._progenitors.append(resp)
+            self._progenitors['stream-http-response'](resp)
             self.headers = resp.headers
             # TODO consider yielding headers here as well?
             filelike = None
@@ -2342,7 +2364,7 @@ class Source(tuple):
                     cls._type = 'iri'
                     cls.iri = rdflib.URIRef(cls.source)
 
-            elif os.path.exists(cls.source):  # TODO no expanded stuff
+            elif cls.source and os.path.exists(cls.source):  # TODO no expanded stuff
                 cls.source = aug.RepoPath(cls.source)
                 try:
                     cls.source.repo
@@ -2364,7 +2386,7 @@ class Source(tuple):
 
             else:
                 cls._type = None
-                log.warning('Unknown source {cls.source}')
+                log.warning(f'Unknown source {cls.source}')
 
             cls.raw = cls.loadData()
             cls._data = cls.validate(*cls.processData())
