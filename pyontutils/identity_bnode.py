@@ -442,3 +442,67 @@ class IdLocalBNode(rdflib.BNode):
 
     def __str__(self):
         return f'{self.identity}_{self.local_id}'
+
+
+class IdentityPython(IdentityBNode):
+    # FIXME order preserving lists :/ :/
+    # can't use __new__ because can't deal with ordered before getting self due to crappy impl above
+    # this would be SO MUCH EASIER if it was possible to sanely subclass/extend the classes we wanted
+    # to calculate an identity for :/
+    #def __new__(cls, thing, , debug=False):
+        #self = super().__new__(cls, thing, debug=False)
+
+    def identity_function(self, thing):
+        asdf = False  # TODO
+        return next(self.recurse(thing), preserve_list_order=asdf)
+
+    def recurse(self, thing, *, preserve_list_order=True):
+        if isinstance(thing, dict):
+            yield self.ordered_identity(*sorted(thing.items()))
+        if isinstance(thing, list):
+            if self.asdf:
+                asdf
+        if isinstance(thing, str):
+            asdf
+        if isinstance(thing, bytes):
+            asdf
+
+        for thing in triples_or_pairs_or_thing:
+            if thing is None:
+                yield self.null_identity
+            elif isinstance(thing, bytes):
+                yield thing
+            elif type(thing) == str:  # exact match, the rest are instances of str
+                yield self.to_bytes(thing)
+            elif isinstance(thing, rdflib.URIRef):
+                yield self.to_bytes(thing)
+            elif isinstance(thing, rdflib.Literal):
+                # "http://asdf.asdf" != <http://asdf.asdf>
+                # need str(thing) breaks recursion on rdflib.Literal
+                yield self.ordered_identity(*self.recurse((str(thing), thing.datatype, thing.language)))
+            elif isinstance(thing, IdLocalBNode) or isinstance(thing, IdentityBNode):
+                yield thing.identity # TODO check that we aren't being lied to?
+            elif isinstance(thing, rdflib.BNode):
+                if bnodes_ok:
+                    yield thing
+                else:
+                    raise ValueError('BNodes only have names or collective identity...')
+
+            elif isinstance(thing, dict):
+                if self._allow_all_types:
+                    yield self.ordered_identity(*sorted(thing.items()))
+                else:
+                    raise TypeError(f"This class can't process values of type dict.\n{thing}")
+
+
+
+def identity_python(thing, *, sort_lists=False, cypher=hashlib.blake2b):
+    """ identity for dicts """
+    if isinstance(thing, dict):
+        asdf
+    if isinstance(thing, list):
+        asdf
+    if isinstance(thing, str):
+        asdf
+    if isinstance(thing, bytes):
+        asdf
