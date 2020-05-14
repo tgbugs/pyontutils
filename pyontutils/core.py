@@ -2,6 +2,7 @@ import io
 import os
 import yaml
 import types
+import zipfile
 import tempfile
 import mimetypes
 import subprocess
@@ -134,6 +135,43 @@ class OntRes(idlib.Stream):
 
         self.Graph = Graph
 
+    def progenitor(self, level=1):
+        """ return the reproductible progenitor object/stream at level n
+            also includes progenitors that are not reproducible but that
+            retain metadata about the substream in question, e.g a requests
+            response object has information about the superstream for a
+            text stream
+
+            generators and filelike objects should not be included in
+            the progenitor list since they do not represent stateless
+            progenitors (i.e. a generator can only be expressed once)
+
+            note that sometimes this may include a tuple if the information
+            needed has more than one part, no conventions for this have
+            been decided yet
+
+            level == 0 -> returns self to break"""
+
+        # FIXME probably makes more sense to store progenitors in a dict
+        # with a controlled set of types than just by accident of ordering
+        # this would allow us to keep everything along the way
+        # of course watch out for garbage collection issues ala lxml etree
+
+        # XXX NOTE: self._progenitors = [] should be set EVERY time data is retrieved
+        # it should NOT be set during __init__
+        # if not hasattr(self, '_progenitors'):  # TODO
+
+        # TODO instrumenting all the other objects with
+        # a progenitor method is going to be a big sigh
+        if level is not None and level == 0:
+            return self
+        else:
+            if level < 0:
+                level += 1  # compensate for reversed
+
+            # HACK to retain a stack of progenitors manually for now
+            return self._progenitors[-level]
+
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
 
@@ -152,6 +190,8 @@ class OntRes(idlib.Stream):
 
     #@oq.utils.mimicArgs(data_next)  # TODO
     def graph_next(self, **kwargs):
+        # FIXME this is a successor stream
+
         # FIXME transitions to other streams should be functions
         # and it also allows passing an explicit cypher argument
         # to enable checksumming in one pass, however this will
@@ -332,18 +372,86 @@ class OntMetaIri(OntMeta, OntIdIri):
                   # or something like that
                   yield_response_gen=False):
 
+        # reset progenitors each call to prevent stale state
+        # it is ok to fail halfway through and not restore
+        # the whole point of progenitors is to give you access
+        # to the exact state that failed so you can debug
+        self._progenitors = []
+
         if self.identifier.endswith('.zip'):
             # TODO use Content-Range to retrieve only the central directory
             # after we get the header here
             # https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
             # this could be another way to handle the filesystem issues for bf
             # as well ...
-            pass
+            id_hash = IdentityBNode(self.identifier).identity.hex()
+            cache_root = idlib.config.auth.get_path('cache-path') / 'streams'
+            cache_dir = cache_root / id_hash[:2]
+            cache_dir.mkdir(exist_ok=True, parents=True)
+            file = aug.LocalPath(cache_dir / id_hash)
+            with self._get(send_data=send_data) as resp:
+                # FIXME since the resp is already closed here
+                # need to prevent double close issuse below
+                self._progenitors.append(resp)
+                self.headers = resp.headers  # XXX I think this is right ?
+                # FIXME obvious issue here is if the content length is the
+                # same but the checksum differs, e.g. due to single char fixes
+                # though for zipped content that seems unlikely given all the
+                # metadata that a zipfile embeds
+                # some sources do provide an etag might help?
+                content_length = int(resp.headers['Content-Length'])
+                if not file.exists() or file.size != content_length:
+                    file.data = resp.iter_content(chunk_size=file.chunksize)
 
-        resp = self._get(send_data=send_data)
-        self.headers = resp.headers
-        # TODO consider yielding headers here as well?
-        gen = resp.iter_content(chunk_size=4096)
+            self._progenitors.append(file)
+
+            zp = aug.ZipPath(file)
+            # TODO so many progenitors
+            id_path = PurePath(self.identifier)
+            id_stem = id_path.stem
+            matching_members = [
+                z for z in zp.rchildren if not z.is_dir() and z.stem == id_stem
+            ]
+
+            if len(matching_members) != 1:
+                # TODO
+                raise ValueError(matching_memebers)
+
+            member = matching_members[0]
+            self._progenitors.append(member)  # ok to include a tuple here I think ...
+            filelike = member.open()
+            #self._progenitors.append(filelike)  # NOTE reproductible progenitors only
+            # unfortunately the ZipInfo objects don't hold a pointer back to the ZipFile
+            def filelike_to_generator(filelike, chunksize=file.chunksize):
+                """ NOTE: closes at the end """
+                with filelike:  # will close at the end
+                    while True:
+                        try:
+                            data = filelike.read(chunksize)  # TODO hinting
+                        except AttributeError as e:
+                            raise ValueError('I/O operation on closed zip stream') from e
+
+                        if not data:
+                            break
+
+                        yield data
+
+            # FIXME the rdf+xml won't work on a generator
+            # it would be nice to be able to return/work directly from
+            # the filelike instead of from the generator in cases where
+            # it really is a file like instead of the resp.iter_content
+            # case that we deal with here
+            gen = filelike_to_generator(filelike)
+            #self._progenitors.append(gen)  # NOTE reproductible progenitors only
+
+        else:
+            resp = self._get(send_data=send_data)
+            self._progenitors.append(resp)
+            self.headers = resp.headers
+            # TODO consider yielding headers here as well?
+            filelike = None
+            gen = resp.iter_content(chunk_size=4096)
+
         first = next(gen)
         # TODO better type detection
 
@@ -435,6 +543,8 @@ class OntMetaIri(OntMeta, OntIdIri):
                             yield close_rdf
 
                         resp.close()
+                        if filelike is not None:
+                            filelike.close()
 
                     return
 
@@ -470,6 +580,8 @@ class OntMetaIri(OntMeta, OntIdIri):
                             yield close_rdf
 
                         resp.close()
+                        if filelike is not None:
+                            filelike.close()
 
                     return
 
@@ -491,6 +603,10 @@ class OntMetaIri(OntMeta, OntIdIri):
             log.warning('missed sentinel')
             if yield_response_gen:
                 yield resp, gen
+            else:
+                resp.close()
+                if filelike is not None:
+                    filelike.close()
 
             return
 
@@ -2243,8 +2359,8 @@ class Source(tuple):
                         cls.iri = rdflib.URIRef(cls.source.as_uri())
                     #else:
                         #print(cls, 'already has an iri', cls.iri)
-                else:
-                    raise BaseException('I can\'t believe you\'ve done this.')
+                except BaseException as e:
+                    raise BaseException('I can\'t believe you\'ve done this.') from e
 
             else:
                 cls._type = None

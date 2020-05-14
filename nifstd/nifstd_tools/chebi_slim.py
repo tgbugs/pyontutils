@@ -9,7 +9,7 @@ from lxml import etree
 import rdflib
 import requests
 from pyontutils.core import makeGraph, yield_recursive, qname, build
-from pyontutils.core import Ont, Source
+from pyontutils.core import Ont, Source, OntGraph
 from pyontutils.config import auth
 from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole
 from pyontutils.namespaces import PREFIXES as uPREFIXES, ilxtr
@@ -35,6 +35,7 @@ class ChebiIdsSrc(Source):
 class ChebiOntSrc(Source):
     source = 'http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz'
     source_original = True
+    _id_src = ChebiIdsSrc
     @classmethod
     def loadData(cls):
         source = '/tmp/chebi.gz'
@@ -53,7 +54,7 @@ class ChebiOntSrc(Source):
 
     @classmethod
     def processData(cls):
-        ids_raw, ids = ChebiIdsSrc()
+        ids_raw, ids = cls._id_src()
         tree = cls.raw
         r = tree.getroot()
         cs = r.getchildren()
@@ -82,7 +83,7 @@ class ChebiOntSrc(Source):
         for c in all_:
             r.append(c)
         data = etree.tostring(r)
-        g = rdflib.Graph()
+        g = OntGraph()
         g.parse(data=data)  # now _this_ is stupidly slow (like 20 minutes of slow) might make more sense to do the xml directly?
         cls.iri = list(g.query('SELECT DISTINCT ?match WHERE { ?temp rdf:type owl:Ontology . ?temp owl:versionIRI ?match . }'))[0][0]
         return more, more_ids, g
