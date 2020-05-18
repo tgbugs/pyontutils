@@ -461,14 +461,14 @@ class OntMetaIri(OntMeta, OntIdIri):
                 # it really is a file like instead of the resp.iter_content
                 # case that we deal with here
                 gen = filelike_to_generator(filelike)
-                self._progenitors['stream-generator'] = (gen)  # NOTE reproductible progenitors only
+                self._progenitors['stream-generator'] = gen  # NOTE reproductible progenitors only
 
             else:
                 raise BaseException('WHAT HATH THOU PROSECUTED SIR!?')
 
         else:
             resp = self._get(send_data=send_data)
-            self._progenitors['stream-http-response'](resp)
+            self._progenitors['stream-http-response'] = resp
             self.headers = resp.headers
             # TODO consider yielding headers here as well?
             filelike = None
