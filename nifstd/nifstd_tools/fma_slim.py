@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import pathlib
-import zipfile
 from collections import Counter
 from lxml import etree
 from pyontutils.core import OntResIri, OntGraph, OntTerm
