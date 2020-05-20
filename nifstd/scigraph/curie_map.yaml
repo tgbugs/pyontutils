@@ -68,6 +68,9 @@ SBO:    'http://www.ebi.ac.uk/sbo/main/SBO:'  # SBO is a fakeobo
 # scicrunch registry
 SCR: http://scicrunch.org/resolver/SCR_
 
+# scicrunch rrid resolver
+RRID: 'https://scicrunch.org/resolver/RRID:'
+
 # ontologies
 obo:       http://purl.obolibrary.org/obo/
 HP:        http://purl.obolibrary.org/obo/HP_
