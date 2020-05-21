@@ -542,13 +542,15 @@ def main():
         'skos': 'http://www.w3.org/2004/02/skos/core#',
         'dc': ('https://www.dublincore.org/specifications/dublin-core/'
                'dcmi-terms/dublin_core_elements.ttl'),
-        'dcterms': 'http://purl.org/dc/terms/',
+        'dcterms': ('https://dublincore.org/specifications/dublin-core/'
+                    'dcmi-terms/dublin_core_terms.ttl'),
         'prov': 'http://www.w3.org/ns/prov#',
         'npoph': ('https://raw.githubusercontent.com/SciCrunch/NIF-Ontology/'
                   'neurons/ttl/phenotype-core.ttl'),
     }
     alternate_prefixs = {
         'dc': 'http://purl.org/dc/elements/1.1/',  # no longer fetches correctly
+        'dcterms': 'http://purl.org/dc/terms/',  # paul has 308ed the purls
         'npoph': 'http://uri.interlex.org/tgbugs/uris/readable/',
     }
     tw = 4
