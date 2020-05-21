@@ -43,6 +43,17 @@ def python_identifier(string):
 
 
 class Options:
+
+    @classmethod
+    def setup(cls, doc, argv=None, **kwargs):
+        """ kwargs are passed to docopt """
+        from docopt import docopt, parse_defaults
+        args = docopt(doc, argv=argv, **kwargs)
+        defaults = {o.name:o.value if o.argcount else None
+                    for o in parse_defaults(doc)}
+        options = cls(args, defaults, argv=argv)
+        return options, args, defaults
+
     # there is only ever one of these because of how docopt works
     def __new__(cls, args, defaults, argv=None):
         cls = type(cls.__name__, (cls,), {})  # prevent persistence of args
@@ -156,10 +167,7 @@ class Dispatcher:
 
 
 def main():
-    from docopt import docopt, parse_defaults
-    args = docopt(__doc__, version='clifun-demo 0.0.0')
-    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
-    options = Options(args, defaults)
+    options, *ad = Options.setup(__doc__, version='clifun-demo 0.0.0')
 
     class Main(Dispatcher):
         """

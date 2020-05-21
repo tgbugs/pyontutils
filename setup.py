@@ -41,7 +41,7 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
-        'augpathlib>=0.0.15',
+        'augpathlib>=0.0.16',
         'colorlog',
         'docopt',
         'gitpython',

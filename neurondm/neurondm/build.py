@@ -1124,7 +1124,7 @@ def predicate_disambig(graph):
 def make_models():
     from importlib import import_module
     from neurondm.models import __all__
-    skip = 'phenotype_direct',
+    skip = 'phenotype_direct', 'pcl'  # skip pcl for now since it is unlifted
     __all__ = [a for a in __all__ if a not in skip]
     for module in __all__:
         if 'CI' in os.environ and module == 'cuts':  # FIXME XXX temp fix

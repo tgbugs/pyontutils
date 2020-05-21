@@ -9,7 +9,7 @@ from lxml import etree
 import rdflib
 import requests
 from pyontutils.core import makeGraph, yield_recursive, qname, build
-from pyontutils.core import Ont, Source
+from pyontutils.core import Ont, Source, OntGraph, OntResIri
 from pyontutils.config import auth
 from pyontutils.namespaces import makePrefixes, replacedBy, hasPart, hasRole
 from pyontutils.namespaces import PREFIXES as uPREFIXES, ilxtr
@@ -35,8 +35,18 @@ class ChebiIdsSrc(Source):
 class ChebiOntSrc(Source):
     source = 'http://ftp.ebi.ac.uk/pub/databases/chebi/ontology/nightly/chebi.owl.gz'
     source_original = True
+    _id_src = ChebiIdsSrc
+    more = True
     @classmethod
     def loadData(cls):
+        # TODO chebi has Etag and Last-Modified
+        # that we could use to deal with lack of Content-Length
+
+        #ori = OntResIri(cls.source)
+        #omi = ori.metadata()
+        #omi.graph
+        #zp = omi.progenitor(type='path-compressed')
+
         source = '/tmp/chebi.gz'
         if not os.path.exists(source):
             gzed = requests.get(cls.source)
@@ -53,7 +63,7 @@ class ChebiOntSrc(Source):
 
     @classmethod
     def processData(cls):
-        ids_raw, ids = ChebiIdsSrc()
+        ids_raw, ids = cls._id_src()
         tree = cls.raw
         r = tree.getroot()
         cs = r.getchildren()
@@ -65,6 +75,7 @@ class ChebiOntSrc(Source):
         rpl_dict = {_.text:_.getparent() for _ in rpl_check if _.text in ids_raw} # we also need to have any new classes that have replaced old ids
         also_classes = list(rpl_dict.values())
         a = ontology + ops + classes + also_classes
+
         def rec(start_set, done):
             ids_ = set()
             for c in start_set:
@@ -76,13 +87,18 @@ class ChebiOntSrc(Source):
                 supers += msup
                 ids_.update(more_ids)
             return supers, ids_
+
         more, more_ids = rec(a, a)
-        all_ = set(a + more)
+        all_nodes = a
+        if cls.more:
+            all_nodes = a + more
+
+        all_ = set(all_nodes)
         r.clear()  # wipe all the stuff we don't need
         for c in all_:
             r.append(c)
         data = etree.tostring(r)
-        g = rdflib.Graph()
+        g = OntGraph()
         g.parse(data=data)  # now _this_ is stupidly slow (like 20 minutes of slow) might make more sense to do the xml directly?
         cls.iri = list(g.query('SELECT DISTINCT ?match WHERE { ?temp rdf:type owl:Ontology . ?temp owl:versionIRI ?match . }'))[0][0]
         return more, more_ids, g

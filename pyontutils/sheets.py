@@ -323,6 +323,11 @@ class Row:
     def values(self):  # FIXME naming ?
         return self.sheet.values[self.row_index]
 
+    @values.setter
+    def values(self, values):
+        for column_index, v in enumerate(values):
+            self.cell_object(column_index).value = v
+
     @property
     def cells(self):
         return [self.cell_object(column_index)

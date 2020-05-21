@@ -2410,6 +2410,20 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
     def HiddenLabel(self):
         return f'({self.__class__.__name__} ' + ' '.join(pe.pHiddenLabel for pe in self.pes) + ')'
 
+    @property
+    def simpleLabel(self):
+        if hasattr(self, 'commonName'):
+            return self.commonName
+        else:
+            return self.genLabel
+
+    @property
+    def simpleLocalLabel(self):
+        if hasattr(self, 'commonName'):
+            return self.commonName
+        else:
+            return self.localLabel
+
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -2800,6 +2814,14 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
+        sl = rdflib.Literal(self.simpleLabel)
+        graph.add((self.id_, ilxtr.simpleLabel, sl))
+        sll = rdflib.Literal(self.simpleLocalLabel)
+        graph.add((self.id_, ilxtr.simpleLocalLabel, sll))
+        if hasattr(self, 'commonName'):
+            cn = self.commonName
+            graph.add((self.id_, ilxtr.commonName, rdflib.Literal(cn)))
+
     def _graphify_pes(self, graph, members, method='_graphify_expand_location'):
         for pe in self.pes:
             target = getattr(pe, method)(graph=graph, method=method)
@@ -2846,6 +2868,10 @@ class NeuronCUT(Neuron):
         Class = self._graphify_pes(graph, members)
         Class.subClassOf = [self.owlClass]
         return Class
+
+    @property
+    def commonName(self):
+        return self.origLabel
 
 
 class NeuronEBM(Neuron):
