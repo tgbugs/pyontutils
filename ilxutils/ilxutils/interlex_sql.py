@@ -480,7 +480,7 @@ class IlxSql():
         """.format(tablename=tablename, limit=limit)
         return pd.read_sql(sql_query, self.engine)
 
-    def get_custom(self, data):
+    def get_custom(self, sql_query):
         return pd.read_sql(sql_query, self.engine)
 
 
