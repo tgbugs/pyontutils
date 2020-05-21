@@ -9,7 +9,6 @@ import mimetypes
 import subprocess
 import idlib
 import rdflib
-from types import MappingProxyType
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
@@ -129,8 +128,6 @@ class OntRes(idlib.Stream):
 
     Graph = None  # this is set below after OntGraph is created (derp)
 
-    _progenitors = MappingProxyType({})  # this is a dict, but immutable to prevent accidents
-
     def __init__(self, identifier, repo=None, Graph=None):  # XXX DO NOT USE THIS IT IS BROKEN
         self.identifier = identifier  # the potential attribute error here is intentional
         self.repo = repo  # I have a repo augmented path in my thesis stats code
@@ -138,50 +135,6 @@ class OntRes(idlib.Stream):
             Graph = OntGraph
 
         self.Graph = Graph
-
-    def progenitor(self, *args, level=1, type=None, _type=type):
-        """ return the reproductible progenitor object/stream at level n
-            also includes progenitors that are not reproducible but that
-            retain metadata about the substream in question, e.g a requests
-            response object has information about the superstream for a
-            text stream
-
-            generators and filelike objects should not be included in
-            the progenitor list since they do not represent stateless
-            progenitors (i.e. a generator can only be expressed once)
-
-            note that sometimes this may include a tuple if the information
-            needed has more than one part, no conventions for this have
-            been decided yet
-
-            level == 0 -> returns self to break"""
-
-        if args:
-            raise TypeError('progenitor acceps keywords arguments only!')
-
-        # FIXME probably makes more sense to store progenitors in a dict
-        # with a controlled set of types than just by accident of ordering
-        # this would allow us to keep everything along the way
-        # of course watch out for garbage collection issues ala lxml etree
-
-        # XXX NOTE: self._progenitors = [] should be set EVERY time data is retrieved
-        # it should NOT be set during __init__
-        # if not hasattr(self, '_progenitors'):  # TODO
-
-        # TODO instrumenting all the other objects with
-        # a progenitor method is going to be a big sigh
-        if type is not None:
-            return self._progenitors[type]  # FIXME need enum or something
-
-        if level is not None and level == 0:
-            return self
-        else:
-            if level < 0:
-                level += 1  # compensate for reversed
-
-            # HACK to retain a stack of progenitors manually for now
-            # FIXME blased insertion order :/ implemnation details
-            return list(self._progenitors.values())[-level]
 
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')

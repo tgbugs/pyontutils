@@ -48,7 +48,7 @@ setup(
         'google-api-python-client',
         'google-auth-oauthlib',
         'htmlfn',
-        'idlib',
+        'idlib>=0.0.1.dev4',
         "ipython; python_version < '3.7'",
         'joblib>=0.14.1',
         'lxml',
