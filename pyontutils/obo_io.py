@@ -64,6 +64,7 @@ __author__ = 'Tom Gillespie'
 import os
 import ast
 import inspect
+import pathlib
 from types import MethodType
 from datetime import datetime
 from getpass import getuser
@@ -85,7 +86,7 @@ log = makeSimpleLogger('obo-io')
 
 fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')
 
-N = -1  # use to define 'many ' for tag counts
+N = object()  # use to define 'many ' for tag counts
 TW = 4  # tab width
 
 class od(OrderedDict):
@@ -198,12 +199,19 @@ class OboFile:
         for store in tvpair_stores:
             self.add_tvpair_store(store)
 
-    def write(self, filename, type_='obo'):  #FIXME this is bugged
+    def write(self, filename=None, type_='obo', overwrite=False):  #FIXME this is bugged
         """ Write file, will not overwrite files with the same name
             outputs to obo by default but can also output to ttl if
             passed type_='ttl' when called.
         """
-        if os.path.exists(filename):
+        if filename is None:
+            filename = self.filename
+
+        if not isinstance(filename, pathlib.Path):
+            filename = pathlib.Path(filename)
+
+        if filename.exists() and not overwrite:
+            filename = filename.as_posix()  # FIXME
             name, ext = filename.rsplit('.',1)
             try:
                 prefix, num = name.rsplit('_',1)
@@ -212,6 +220,7 @@ class OboFile:
                 filename = prefix + '_' + str(n) + '.' + ext
             except ValueError:
                 filename = name + '_1.' + ext
+
             print('file exists, renaming to %s' % filename)
             self.write(filename, type_)
 
@@ -626,7 +635,8 @@ class TVPairStore:
                 print(self._tags[tag])
                 self.__dict__[dict_tag] = []
             elif self._tags[tag] == N:
-                self.__dict__[dict_tag] = []
+                if dict_tag not in self.__dict__:
+                    self.__dict__[dict_tag] = []
 
         if self._tags[tag] == N:
             try:

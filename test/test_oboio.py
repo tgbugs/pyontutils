@@ -35,3 +35,15 @@ class TestOboIo(unittest.TestCase):
         terms = [oio.Term(id=i, name=n) for i, n in ids_names]
         of.add(*terms)
         str(of)
+
+    def test_header_treat_xrefs(self):
+        of = oio.OboFile()
+        test_tag = 'treat-xrefs-as-is_a'
+        tags_values = [
+            [test_tag, 'TEMP:test1'],
+            [test_tag, 'TEMP:test2'],
+        ]
+        tvpairs = [oio.TVPair(tag=t, value=v) for t, v in tags_values]
+        of.header.add(*tvpairs)
+        tv = str(of)
+        assert len(tv.split(test_tag)) > 2, tv
