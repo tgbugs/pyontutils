@@ -168,10 +168,15 @@ class LabelMaker:
         for function_name, predicate in zip(self._order, self.predicates):
             if predicate in neuron._pesDict:
                 phenotypes = neuron._pesDict[predicate]
+                if not phenotypes:
+                    log.warning('wat: {neuron}')
+                    continue
+
                 function = getattr(self, function_name)
                 # TODO resolve and warn on duplicate phenotypes in the same hierarchy
                 # TODO negative phenotypes
-                sub_labels = list(function(phenotypes))
+                less_entailed = [p for p in phenotypes if not isinstance(p, EntailedPhenotype)]
+                sub_labels = list(function(less_entailed))
                 labels += sub_labels
 
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
@@ -187,7 +192,9 @@ class LabelMaker:
     def _default(self, phenotypes):
         for p in sorted(phenotypes, key=self._key):
             if isinstance(p, EntailedPhenotype):
-                continue  # FIXME TODO I think it is correct to drop these
+                # FIXME TODO I think it is correct to drop these
+                raise TypeError('entailed should have been filtered '
+                                'before arriving here')
 
             if isinstance(p, NegPhenotype):
                 prefix = '-'
@@ -258,6 +265,7 @@ class LabelMaker:
 
         for i, phenotype in enumerate(phenotypes):
             l = next(self._default((phenotype,)))
+
             if i + 1 == lp:
                 l += ')'
 
@@ -287,6 +295,7 @@ class LabelMaker:
                 prefix = ''
 
             yield prefix + next(self._default((phenotype,)))
+
     def _molecular(self, phenotypes):
         if self.local_conventions:
             yield from self._plus_minus(phenotypes)
@@ -2853,7 +2862,9 @@ class Neuron(NeuronBase):
                 members.append(djc)
             elif isinstance(pe, EntailedPhenotype):
                 restr = pe._graphify(graph=graph)
-                self.Class.subClassOf.append(restr)
+                _sco = list(self.Class.subClassOf)
+                _sco.append(restr)
+                self.Class.subClassOf = _sco
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
 

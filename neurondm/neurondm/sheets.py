@@ -580,7 +580,8 @@ def main():
     [f._sigh() for f in final]
     config.write()
     config.write_python()
-    breakpoint()
+    if __name__ == '__main__':
+        breakpoint()
 
 
 if __name__ == '__main__':
