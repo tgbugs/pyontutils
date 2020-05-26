@@ -19,6 +19,7 @@ __all__ = [
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
+    'EntailedPhenotype',
     'LogicalPhenotype',
     'Neuron',
     'NeuronCUT',

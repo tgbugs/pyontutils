@@ -3,12 +3,14 @@ from functools import wraps
 import rdflib  # FIXME decouple
 import ontquery as oq
 from hyputils.hypothesis import idFromShareLink, shareLinkFromId
+from pyontutils import sheets
 from pyontutils.sheets import update_sheet_values, get_note, Sheet
 from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition, npoph
 from pyontutils.namespaces import rdfs, rdf
 from pyontutils.utils import allMembers
 from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
+from neurondm import EntailedPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
 from neurondm.core import log, OntId, OntTerm
 
@@ -80,7 +82,7 @@ class CutsV1(Cuts):
             e_config.load_existing()
             # FIXME clear use case for the remaining bound to whatever query produced it rather
             # than the other way around ... how to support this use case ...
-            cls.existing = {str(n.origLabel):n for n in e_config.neurons()}
+            cls.existing = {n.origLabel.toPython():n for n in e_config.existing_pes}
             cls.query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
             cls.sgv = Vocabulary()
 
@@ -430,6 +432,50 @@ class CutsV1(Cuts):
                 else:
                     yield iri, label
 
+
+class CutsV1Lite(Cuts):
+    sheet_name = 'CUT V1.0'
+    fetch_grid = False
+
+
+class Row(sheets.Row):
+
+    def neuron_existing(self):
+        al = self.alignment_label().value
+        return self.sheet.existing.get(al if al else self.label().value)
+
+    def include(self):
+        return self.status().value == 'Yes'
+
+    def entailed_molecular_phenotypes(self):
+        cell = self.exhasmolecularphenotype()
+        labels = cell.value.split(',')
+        for label in labels:
+            label = label.strip()
+            term = self.sheet.sgv.findByTerm(label)
+            if term:
+                yield OntTerm(iri=term[0]['iri']).asPhenotype()
+
+    def neuron_cleaned(self):
+        ne = self.neuron_existing()
+        emp = list(self.entailed_molecular_phenotypes())
+        eobjects = [e.p for e in emp]
+        if not emp:
+            return ne
+
+        entail_predicates = ilxtr.hasAxonLocatedIn,
+
+        def should_entail(pe):
+            return pe.p in eobjects or pe.e in entail_predicates
+
+        pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne.pes]
+        return NeuronCUT(*pes, label=ne.origLabel, override=True)
+
+
+# monkey patch
+sheets.Row = Row
+
+
 def main():
     #from neurondm.models.cuts import main as cuts_main
     #cuts_config, *_ = cuts_main()
@@ -514,6 +560,27 @@ def main():
     #resp = update_sheet_values('neurons-cut', 'Roundtrip', rows)
     if __name__ == '__main__':
         breakpoint()
+
+
+def main():
+    #cv1 = CutsV1Lite()
+    CutsV1.fetch_grid = False
+    cv1 = CutsV1()
+    hrm = [cv1.row_object(i) for i, r in enumerate(cv1.values)
+           if cv1.row_object(i).exhasmolecularphenotype().value]
+    to_sco = set(t for h in hrm for t in h.entailed_molecular_phenotypes())
+    ros = [cv1.row_object(i + 1) for i, r in enumerate(cv1.values[1:])]
+    to_fix = [r for r in ros if list(r.entailed_molecular_phenotypes())]
+    #maybe_fixed = [t.neuron_cleaned() for t in to_fix]
+    #assert maybe_fixed != [f.neuron_existing() for f in to_fix]
+    config = Config('cut-release-final')
+    _final = [r.neuron_cleaned() for r in ros if r.include()]
+    final = [f for f in _final if f is not None]  # FIXME there are 16 neurons marked as yes that are missing
+    #fixed = [f for f in final if [_ for _ in f.pes if isinstance(_, EntailedPhenotype)]]
+    [f._sigh() for f in final]
+    config.write()
+    config.write_python()
+    breakpoint()
 
 
 if __name__ == '__main__':

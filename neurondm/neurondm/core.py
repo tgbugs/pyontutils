@@ -51,6 +51,7 @@ __all__ = [
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
+    'EntailedPhenotype',
     'LogicalPhenotype',
     'Neuron',
     'NeuronCUT',
@@ -185,6 +186,9 @@ class LabelMaker:
 
     def _default(self, phenotypes):
         for p in sorted(phenotypes, key=self._key):
+            if isinstance(p, EntailedPhenotype):
+                continue  # FIXME TODO I think it is correct to drop these
+
             if isinstance(p, NegPhenotype):
                 prefix = '-'
             else:
@@ -850,7 +854,7 @@ class Config:
         return graphBase.part_of_graph
 
     def neurons(self):
-        return sorted(self.existing_pes)
+        return sorted(self.existing_pes)  # FIXME stupidly slow
 
     def activate(self):
         """ set this config as the active config """
@@ -1499,6 +1503,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             return self
 
+    def asEntailed(self):
+        return EntailedPhenotype(self)
+
+    def asNegative(self):
+        """ NOTE asNegativeEntailed doesn't exist right now """
+        return NegPhenotype(self)
+
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
             # fix for dumb infixowl code that asserts type equality
@@ -1841,6 +1852,11 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
 class NegPhenotype(Phenotype):
     _rank = '1'
     """ Class for Negative Phenotypes to simplfy things """
+
+
+class EntailedPhenotype(Phenotype):
+    """ render as subClassOf rather than equivalentClass """
+    _rank = '8'
 
 
 class UnionPhenotype(graphBase):  # not ready
@@ -2262,7 +2278,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         self._origLabel = label
         self._override = override
 
-        if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph and not override:
+        if (not override and
+            self in self.existing_pes and
+            self.Class.graph is self.existing_pes[self].graph):
             self.Class = self.existing_pes[self]
         else:
             self.existing_pes[self] = None
@@ -2833,6 +2851,9 @@ class Neuron(NeuronBase):
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
                 djc.complementOf = target
                 members.append(djc)
+            elif isinstance(pe, EntailedPhenotype):
+                restr = pe._graphify(graph=graph)
+                self.Class.subClassOf.append(restr)
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
 
