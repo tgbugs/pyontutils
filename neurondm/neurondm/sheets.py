@@ -469,7 +469,7 @@ class Row(sheets.Row):
             return pe.p in eobjects or pe.e in entail_predicates
 
         pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne.pes]
-        return NeuronCUT(*pes, label=ne.origLabel, override=True)
+        return NeuronCUT(*pes, id_=ne.id_, label=ne.origLabel, override=True)
 
 
 # monkey patch

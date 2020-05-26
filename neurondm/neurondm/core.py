@@ -2454,6 +2454,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         else:
             return self.localLabel
 
+    @property
+    def prefLabel(self):
+        if self.origLabel:
+            return self.origLabel
+
+        return self.genLabel
+
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
         self.id_ = 'ILX:1234567'
@@ -2843,6 +2850,9 @@ class Neuron(NeuronBase):
 
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
+
+        pl = rdflib.Literal(self.prefLabel)
+        graph.add((self.id_, skos.prefLabel, pl))
 
         sl = rdflib.Literal(self.simpleLabel)
         graph.add((self.id_, ilxtr.simpleLabel, sl))
