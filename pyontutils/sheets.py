@@ -225,6 +225,7 @@ class Cell:
         return Column(self.sheet, self.column_index)
 
     def __repr__(self):
+        # TODO deleted ??
         changed = '*' if self in self.sheet._uncommitted_updates else ' '
         #return f'<Cell{changed} {self.row_index:>4},{self.column_index:>4} -> {self.value!r}>'
         return f'<Cell{changed} {self.range} -> {self.value!r}>'
@@ -296,8 +297,9 @@ class Row:
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
-                   else ('*' if [c for c in self.cells
-                                 if c in self.sheet._uncommitted_updates] else ' '))
+                   else ('-' if self in self.sheet._uncommitted_deletes
+                         else ('*' if [c for c in self.cells
+                                       if c in self.sheet._uncommitted_updates] else ' ')))
         return f'<Row{changed} {self.range}>'
 
     def __hash__(self):
@@ -336,7 +338,16 @@ class Row:
     @property
     def range(self):
         minc = 'A'  # anticipating arbitrary row ranges
-        maxc = num_to_ab(len(self.values) + 1)
+        try:
+            maxc = num_to_ab(len(self.values) + 1)
+        except IndexError:
+            # deleted rows have no max length
+            if self in self.sheet._uncommitted_deletes:
+                _old_values = self.sheet._uncommitted_deletes[self]
+                maxc = num_to_ab(len(_old_values) + 1)
+            else:
+                raise
+
         ri = self.row_index
         if ri < 0:
             ri = len(self.values) + ri
@@ -371,8 +382,9 @@ class Column:
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
-                   else ('*' if [c for c in self.cells
-                                 if c in self.sheet._uncommitted_updates] else ' '))
+                   else ('-' if self in self.sheet._uncommitted_deletes
+                         else ('*' if [c for c in self.cells
+                                       if c in self.sheet._uncommitted_updates] else ' ')))
         return f'<Column{changed} {self.range}>'
 
     def __hash__(self):
@@ -456,6 +468,7 @@ class Sheet:
         # TODO can probably unify these since can dispatch on Cell/Row
         self._uncommitted_updates = {}
         self._uncommitted_appends = {}
+        self._uncommitted_deletes = {}
 
         self.readonly = readonly
         self._setup()
@@ -490,6 +503,12 @@ class Sheet:
         self._stash_uncommitted()
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
+
+        resp = (self._spreadsheet_service
+                .get(spreadsheetId=self._sheet_id())
+                .execute())
+        self._meta = resp  # FIXME TODO streamify?
+        # TODO use this to create generic subclasses on the fly for each sheet?
 
         values, grid, cells_index = get_sheet_values(self.name,
                                                      self.sheet_name,
@@ -542,6 +561,14 @@ class Sheet:
                             values,
                             spreadsheet_service=self._spreadsheet_service)
 
+    def sheetId(self):
+        """ the tab aka sheetId not the _sheet_id aka spreadsheetId """
+        # maximum confusion
+        for s in self._meta['sheets']:
+            props = s['properties']
+            if props['title'] == self.sheet_name:
+                return props['sheetId']
+
     def show_notes(self):
         for i, row in enumerate(self.values):
             for j, cell in enumerate(row):
@@ -577,6 +604,8 @@ class Sheet:
         if isinstance(value, Cell):
             raise TypeError(f'values should not be of type Cell: {value}')
 
+        self._error_when_in_delete()
+
         if cell not in self._uncommitted_updates:
             self._uncommitted_updates[cell] = cell.value  # store the old values
 
@@ -586,6 +615,7 @@ class Sheet:
         # NOTE this intentionally does not go in the byCol index
         # it should be added after commit completes, but byCol is static
         # and we need to remove it as a dependency at some point ...
+        self._error_when_in_delete()
         if row not in self.values:
             self.values.append(row)
             row_object = Row(self, self.values.index(row))
@@ -595,12 +625,107 @@ class Sheet:
             # or do we require another mechanism for that?
             raise ValueError('row already in sheet')
 
+    def _row_from_index(self, index_column=None, value=None, row=None,
+                        fail=False):
+        if index_column is None:
+            index_column = self.index_columns[0]
+
+        if (value is None and row is None or
+            value is not None and row is not None):
+            raise TypeError('one and only one of value or row is required')
+
+        cell_index_header = getattr(self.row_object(0), index_column)()
+        if row:
+            index_value = row[cell_index_header.column_index]
+
+        row_object = getattr(cell_index_header.column, index_value)().row
+        return row_object, index_value
+
+    def insert(self, *rows):
+        """ you know it """
+        for row in rows:
+            try:
+                row_object, index_value = self._row_from_index(row=row)
+                raise ValueError('Row with pkey {value!r} already exists!\n'
+                                 'You should probably rollback your changes.')
+            except AttributeError:
+                self._appendRow(row)
+
+    def _error_when_uncommited(self):
+        if self._uncommitted_appends or self._uncommitted_updates:
+            raise ValueError('Sheet currently has uncommited appends or updates.')
+
+    def _error_when_in_delete(self):
+        # managing deletes is not simple because the row index has to be
+        # shifted based on the number of deletes, same issue for all
+        # other operations as well ... SIGH, basically don't stack
+        # deletes with anything else right now :/
+        if self._uncommitted_deletes:
+            raise ValueError('Sheet currently has uncommited deletes.')
+
+    def delete(self, *rows):
+        """ get me outa here """
+        if self.uncommitted():
+            raise ValueError('Sheet has uncommited changes, no deletes '
+                             'may be added to this transaction.')
+
+        row_objects = sorted([self._row_from_index(row=row)[0] for row in rows],
+                             key=lambda ro: ro.row_index)
+
+        # backwards so indexes don't shift under us
+        for row_object in row_objects[::-1]:
+            if row_object in self._uncommitted_deletes:
+                raise ValueError('very bad things have happened here')
+
+            self._uncommitted_deletes[row_object] = self.values.pop(row_object.row_index)
+
+    def upsert(self, *rows):
+        """ update or insert one or more rows
+            WARNING: DO NOT USE THIS IF THE PRIMARY INDEX COLUMN IS NOT UNIQUE
+            We do not currently have support for composite primary keys. """
+
+        for row in rows:
+            try:
+                row_object, index_value = self._row_from_index(row=row)
+                row_object.values = row
+            except AttributeError:
+                self._appendRow(row)
+
+    def rollback(self):
+        """ remove all changes staged for commit to the local version """
+        # TODO
+        if not self.uncommitted():
+            raise ValueError('There are no uncommitted changes to roll back!')
+
+        raise NotImplementedError('TODO')
+        # remove the new rows
+        self._uncommitted_appends = {}
+        # restore the previous rows
+        self._uncommitted_updates = {}
+        # restore the previous rows, note that all rows >= row_index += 1
+        # have to use list.insert(row_object.row_index, )
+
+        [self.values.insert(row_object.row_index, previously_deleted_row)
+         for row_object, previously_deleted_row in
+         sorted(self._uncommitted_deletes.items(),
+                # have to insert lowest first so that we don't try to insert
+                # into a position in the list that doesn't exist since we
+                # previously removed it
+                key=lambda kv: kv[0].row_index)]
+        self._uncommitted_deletes = {}
+
     def uncommitted(self):
-        return {**self._uncommitted_appends, **self._uncommitted_updates}
+        return {**self._uncommitted_appends,
+                **self._uncommitted_updates,
+                **self._uncommitted_deletes}
 
     def commit(self):
+        # FIXME need clear documentation about the order in which these things execute
         self._commit_appends()
         self._commit_updates()
+        # deletes go last so that they don't rearrange the sheet and shift
+        # cell definitions for everything else
+        self._commit_deletes()
 
     def _commit_appends(self):
         if not self._uncommitted_appends:
@@ -635,6 +760,34 @@ class Sheet:
                 .execute())
 
         self._uncommitted_updates = {}
+
+    def _commit_deletes(self):
+        if not self._uncommitted_deletes:
+            return
+
+        # TODO columns ?
+
+        # delete from the bottom up to avoid changes in the indexing
+        row_objects = sorted(self._uncommitted_deletes, key= lambda r: r.row_index)
+        # can't use rmin and rmax because there might be gaps
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        data = [
+            {'deleteDimension': {
+                'range': {
+                    'sheetId': self.sheetId(),
+                    'dimension': 'ROWS' if isinstance(row_object, Row) else 'COLUMNS',
+                    'startIndex': row_object.row_index,
+                    'endIndex': row_object.row_index + 1,  # have to delete at least one whole row
+                }}}
+            for row_object in row_objects[::-1]]  # remove last first just in case
+        body = {'requests': data}
+        resp = (self._spreadsheet_service
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+
+        self._uncommitted_deletes = {}
 
     def _stash_uncommitted(self):
         self._stash = {c:c.value for c in self._uncommitted_updates}

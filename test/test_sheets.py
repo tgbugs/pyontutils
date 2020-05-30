@@ -165,6 +165,64 @@ class TestSheets(unittest.TestCase):
         assert self.sheet.values == tv2
         assert tv1 != tv2
 
+    def test_upsert_up(self):
+        row = ['a', 'lol', 'nope']
+        assert row not in self.sheet.values
+        row_object, _ = self.sheet._row_from_index(row=row)
+        original_values = list(row_object.values)  # dupe the list since we mutate values
+        assert original_values != row
+
+        try:
+            self.sheet.upsert(row)
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv1 = self.sheet_ro.values
+            assert self.sheet.values == tv1
+        finally:
+            self.sheet.upsert(original_values)
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv1 = self.sheet_ro.values
+            assert self.sheet.values == tv1
+
+    def test_delete(self):
+        row = ['d', '', '']
+        assert row in self.sheet.values
+        row_object, _ = self.sheet._row_from_index(row=row)
+
+        try:
+            self.sheet.delete(row)
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv1 = self.sheet_ro.values
+            assert self.sheet.values == tv1
+            assert row not in tv1
+        finally:
+            if row not in tv1:
+                self.sheet.insert(row)  # FIXME can only append not insert back to previous location ...
+                self.sheet.commit()
+                self.sheet_ro.fetch()
+                tv1 = self.sheet_ro.values
+                assert self.sheet.values == tv1
+                assert row in tv1
+
+    def test_upsert_in(self):
+        row = ['e', 'lol', 'nope']
+        assert row not in self.sheet.values
+        self.sheet.upsert(row)
+        self.sheet.commit()
+        self.sheet_ro.fetch()
+        tv1 = self.sheet_ro.values
+        try:
+            assert self.sheet.values == tv1
+        finally:
+            if row in self.sheet.values:
+                self.sheet.delete(row)
+                self.sheet.commit()
+                self.sheet_ro.fetch()
+                tv1 = self.sheet_ro.values
+                assert self.sheet.values == tv1
+
     @pytest.mark.skip('TODO')
     def test_append(self):
         pass
