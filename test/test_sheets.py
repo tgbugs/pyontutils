@@ -283,6 +283,36 @@ class TestSheets(unittest.TestCase):
             # FIXME I suspect this will break due to missing ends
             assert self.sheet.values == tv2 == ovalues
 
+    def test_set_values_update_more_rows(self):
+        ovalues = [list(l) for l in self.sheet.values]  # duh mutation is evil
+        _test_value = [[1, 2, 3, 4],  # FIXME these should probably throw errors too
+                       [1, 2, 3, 4],  # since they break the primary key assuptions?
+                       [1, 2, 3, 4],
+                       [1, 2, 3, 4],
+                       [2, 2, 3, 4],
+                       [3, 2, 3, 4],
+                       [4, 2, 3, 4],]
+        # haven't implemented conversion of cell values to strings yet
+        test_value = [[str(c) for c in r] for r in _test_value]
+
+        self.sheet.values = test_value
+        assert self.sheet.uncommitted()  # FIXME this needs to be run by default every test
+        assert ovalues != test_value  # FIXME this needs to be run by default every test
+        assert ovalues[0] != test_value[0]
+
+        try:
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv1 = self.sheet_ro.values
+            assert self.sheet.values == tv1
+        finally:
+            self.sheet.update(ovalues)
+            self.sheet.commit()
+            self.sheet_ro.fetch()
+            tv2 = self.sheet_ro.values
+            # FIXME I suspect this will break due to missing ends
+            assert self.sheet.values == tv2 == ovalues
+
     def test_row(self):
         r = self.sheet.row_object(0)
         r.header

@@ -8,6 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
+from pyontutils.clifun import python_identifier
 
 # TODO decouple oauth group sheets library
 
@@ -340,7 +341,14 @@ class Row:
 
     @property
     def header(self):
-        return self.sheet.byCol.header  # FIXME normalized vs unnormalized
+        # FIXME normalized vs unnormalized
+        if not self.sheet.values:
+            return []
+
+        return [python_identifier(v)
+                for v in self.sheet.values[0]
+                # FIXME really bad semantics here
+                if v != CELL_REMOVED]
 
     def __getitem__(self, column_index):
         return self.sheet.values[self.row_index][column_index]
@@ -482,8 +490,9 @@ class Sheet:
     fetch_grid = False
     index_columns = tuple()
 
-    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True,
-                 filter_cell=default_filter_cell):
+    def __init__(self, name=None, sheet_name=None,
+                 fetch=True, fetch_grid=None,
+                 readonly=True, filter_cell=default_filter_cell):
         """ name to override in case the same pattern is used elsewhere """
         if name is not None:
             self.name = name
@@ -501,7 +510,8 @@ class Sheet:
 
         self.readonly = readonly
         self._setup()
-        self.fetch(filter_cell=filter_cell)
+        if fetch:
+            self.fetch(filter_cell=filter_cell)
 
     @classmethod
     def _sheet_id(cls):
@@ -514,18 +524,29 @@ class Sheet:
 
     def _setup(self):
         if self.readonly:
-            if not hasattr(Sheet, '__spreadsheet_service_ro'):
-                service = get_oauth_service(readonly=self.readonly)  # I think it is correct to keep this ephimoral
+            if not hasattr(Sheet, '_Sheet__spreadsheet_service_ro'):
+                # I think it is correct to keep this ephimoral
+                service = get_oauth_service(readonly=self.readonly)
                 Sheet.__spreadsheet_service_ro = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service_ro
 
         else:
-            if not hasattr(Sheet, '__spreadsheet_service'):
+            if not hasattr(Sheet, '_Sheet__spreadsheet_service'):
                 service = get_oauth_service(readonly=self.readonly)
                 Sheet.__spreadsheet_service = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
+
+    def metadata(self):
+        # TODO figure out the caching here
+        resp = (self._spreadsheet_service
+                .get(spreadsheetId=self._sheet_id())
+                .execute())
+        self._meta = resp
+        # TODO use this to create generic subclasses
+        # on the fly for each sheet?
+        return self._meta
 
     def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
@@ -533,11 +554,7 @@ class Sheet:
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
-        resp = (self._spreadsheet_service
-                .get(spreadsheetId=self._sheet_id())
-                .execute())
-        self._meta = resp  # FIXME TODO streamify?
-        # TODO use this to create generic subclasses on the fly for each sheet?
+        self.metadata()
 
         values, grid, cells_index = get_sheet_values(
             self.name,
@@ -591,16 +608,26 @@ class Sheet:
             of the provided values. Explicitly update a range for that or
             use self.update which will blank existing values. """
         for i, row_values in enumerate(values):
-            self.row_object(i).values = row_values
+            try:
+                self.row_object(i).values = row_values
+            except IndexError:
+                self._appendRow(row_values)
 
     def update(self, values):
         """ update all values at the same time """
-        old_lv = len(self._values[0])
+        old_lv = len(self._values[0]) if self._values else 0
         lv = len(values)
         raw_values = [[''] * old_lv] + values
         update_values = [list(r) for r in
                          zip(*itertools.zip_longest(
                              *raw_values, fillvalue=CELL_REMOVED))][1:]
+
+        lev = len(self._values)
+        if lv < lev:
+            nblank = lev - lv
+            nc = len(update_values[0])  # FIXME values = [] ??
+            update_values += [[CELL_REMOVED] * nc] * nblank
+
         self.values = update_values
 
     def _update_old(self, values):
@@ -641,6 +668,9 @@ class Sheet:
                 .execute())
         added = [reply['addSheet'] for reply in resp['replies'] if 'addSheet' in reply]
         self._meta['sheets'].extend(added)
+        if not hasattr(self, '_values'):
+            self.fetch()  # FIXME so many network calls
+
         return resp
 
     def show_notes(self):
@@ -663,6 +693,15 @@ class Sheet:
             return {}  # need to return the empty dict for type safety
         #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
         #rd = grid['data'][0]['rowData']
+
+    @property
+    def cells(self):
+        out = []
+        for i, _ in enumerate(self.values):
+            ro = self.row_object(i)
+            out.append(ro.cells)
+
+        return out
 
     def cell_object(self, row_index, column_index):
         return Cell(self, row_index, column_index)
@@ -956,7 +995,10 @@ class Sheet:
         for cell in sorted(self._incomplete_removes,
                            # this runs backwards removing the most distant first
                            key=lambda c: (-c.row_index, -c.column_index)):
-            self.values[cell.row_index].pop(cell.column_index)
+            columns = self.values[cell.row_index]
+            columns.pop(cell.column_index)
+            if not columns:
+                self.values.pop(cell.row_index)
 
         self._incomplete_removes = {}
 
