@@ -368,9 +368,13 @@ class TVPair:  #TODO these need to be parented to something!
         try:
             # comment
             tail, comment = comm_split[-1].split('!',1)
-            comment = comment.strip()
-            comm_split[-1] = tail
-            value = '\!'.join(comm_split)
+            if tail.count('"') == 1 and comment.count('"') == 1:  # so dumb
+                comment = None
+                value = comm_split[-1]
+            else:
+                comment = comment.strip()
+                comm_split[-1] = tail
+                value = '\!'.join(comm_split)
 
         except ValueError:
             comment = None

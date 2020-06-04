@@ -6,6 +6,7 @@ class TMHelper:
     parse = oio.TVPair._parse_modifiers
     serialize = oio.TVPair._format_trailing_modifiers
 
+
 class TestOboIo(unittest.TestCase):
     def test_parse_trailing_modifiers(self):
         thm = TMHelper()
@@ -47,3 +48,22 @@ class TestOboIo(unittest.TestCase):
         of.header.add(*tvpairs)
         tv = str(of)
         assert len(tv.split(test_tag)) > 2, tv
+
+    def test_property_value_bug(self):
+        def _test(string):
+            pv = oio.Property_value.parse(string)
+            assert pv.value() == string
+            tv = oio.TVPair(string)
+            assert str(tv) == string
+            return pv, tv
+
+        minimal = ('property_value: any " ! " xsd:string')
+        pv, tv = _test(minimal)
+
+        ouch = ('property_value: editor_note "TODO -'
+                ' this string breaks the parser A:0 ! wat" xsd:string')
+        pv, tv = _test(ouch)
+
+        hrm = ('property_value: editor_note "TODO -'
+               ' consider relationship to UBERON:0000091 ! bilaminar disc" xsd:string')
+        pv, tv = _test(hrm)
