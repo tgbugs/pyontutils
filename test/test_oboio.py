@@ -60,6 +60,11 @@ class TestOboIo(unittest.TestCase):
         minimal = ('property_value: any " ! " xsd:string')
         pv, tv = _test(minimal)
 
+
+        darn = ('property_value: external_ontology_notes "see also MA:0002165 !'
+                ' lieno-pancreatic vein" xsd:string {external_ontology="MA"}')
+        pv, tv = _test(darn)
+
         ouch = ('property_value: editor_note "TODO -'
                 ' this string breaks the parser A:0 ! wat" xsd:string')
         pv, tv = _test(ouch)

@@ -10,6 +10,7 @@ Options:
     -d --debug            break after parsing
     -t --out-format=FMT   output to this format
                           options are obo or ttl [default: obo]
+    -o --overwrite        write the format, overwrite existing
     -w --write            write the output
     -s --strict           fail on missing definitions
 
@@ -86,7 +87,7 @@ log = makeSimpleLogger('obo-io')
 
 fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')
 
-N = object()  # use to define 'many ' for tag counts
+N = type('N', (object,), dict(__repr__=lambda self: '<N many>'))()  # use to define 'many' for tag counts
 TW = 4  # tab width
 
 class od(OrderedDict):
@@ -221,13 +222,13 @@ class OboFile:
             except ValueError:
                 filename = name + '_1.' + ext
 
-            print('file exists, renaming to %s' % filename)
+            log.warning(f'file exists, renaming to {filename}')
             self.write(filename, type_)
 
         else:
             with open(filename, 'wt', encoding='utf-8') as f:
                 if type_ == 'obo':
-                    f.write(str(self))  # FIXME this is incredibly slow for big files :/
+                    f.write(self.asObo())  # FIXME this is incredibly slow for big files :/
                 elif type_ == 'ttl':
                     f.write(self.__ttl__())
                 else:
@@ -273,7 +274,7 @@ class OboFile:
         ontid = fobo[self.header.ontology.value + '.ttl']
         yield ontid, rdf.type, owl.Ontology
 
-    def __str__(self):
+    def asObo(self):
         def oboify(values):
             return [str(s) for s in values if not isinstance(s, list)]
 
@@ -323,7 +324,6 @@ class TVPair:  #TODO these need to be parented to something!
 
         if line is not None:
             self.parse(line)
-            #print(self)
             self.validate(warn=True)
         else:
             self.make(tag, value, modifiers, comment, **kwargs)
@@ -368,7 +368,7 @@ class TVPair:  #TODO these need to be parented to something!
         try:
             # comment
             tail, comment = comm_split[-1].split('!',1)
-            if tail.count('"') == 1 and comment.count('"') == 1:  # so dumb
+            if tail.count('"') % 2 == 1 and comment.count('"') % 2 == 1:  # so dumb
                 comment = None
                 value = comm_split[-1]
             else:
@@ -634,9 +634,9 @@ class TVPairStore:
 
         if tag not in self.__dict__:
             if tag not in self._tags:
-                print('TAG NOT IN', tag)
+                log.warning(f'TAG NOT IN {tag} for {self.__class__}')
                 self._tags[tag] = N
-                print(self._tags[tag])
+                log.warning(self._tags[tag])
                 self.__dict__[dict_tag] = []
             elif self._tags[tag] == N:
                 if dict_tag not in self.__dict__:
@@ -727,7 +727,7 @@ class TVPairStore:
         for tag in self._r_tags:
             if tag not in tags:
                 if warn:
-                    print('probably a multipart definition')  # TODO
+                    log.warning('probably a multipart definition')  # TODO
                     #raise ImportWarning('%s %s is missing a required tag %s' %
                                         #(self.__class__.__name__, str(self), tag))
                 else:
@@ -761,8 +761,10 @@ class Header(TVPairStore):
         ('default-relationship-id-prefix', 1),
         ('relax-unique-identifier-assumption-for-namespace', N),
         ('relax-unique-label-assumption-for-namespace', N),
+        ('property_value', N),
         ('remark', N),
         ('ontology', 1),
+        ('owl-axioms', N),
     )
 
     _datetime_fmt = '%d:%m:%Y %H:%M'  # WE USE ZULU
@@ -930,7 +932,8 @@ class Term(Stanza):
 
 
 class Typedef(Stanza):
-    _bad_tags = ('union_of', 'intersection_of', 'disjoint_from', 'instance_of')
+    _bad_tags = ('union_of', 'intersection_of', 'instance_of')
+    # now allowed? 'disjoint_from'
 
 
 class Instance(Stanza):
@@ -1354,6 +1357,12 @@ def main():
     args = docopt(__doc__, version='obo-io 0')
     filename = args['<obofile>']
     fname, ext = filename.rsplit('.',1)
+
+    if args['--debug']:
+        log.setLevel('DEBUG')
+    else:
+        log.setLevel('INFO')
+
     if ext != 'obo':  # FIXME pretty sure a successful parse should be the measure here?
         # TODO TEST ME!
         raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
@@ -1370,8 +1379,8 @@ def main():
     else:
         outfilename = fname + '.' + args['--out-format']  # FIXME :/ doesn't play well with mime
 
-    if args['--write']:
-        of.write(outfilename, type_=args['--out-format'])
+    if args['--write'] or args['--overwrite']:
+        of.write(outfilename, type_=args['--out-format'], overwrite=args['--overwrite'])
 
     if args['--debug']:
         breakpoint()
