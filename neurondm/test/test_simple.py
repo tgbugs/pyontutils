@@ -1,4 +1,5 @@
 import unittest
+from pyontutils.namespaces import ilxtr
 from neurondm import simple
 from neurondm.simple import Phenotype, PhenotypeCollection
 from .common import skipif_no_net
@@ -26,3 +27,48 @@ class TestSimple(unittest.TestCase):
                                  Phenotype('ilxtr:someValue', 'ilxtr:someDimension'))
 
         assert len(pc) == 1
+
+    def test_and_cell(pc):
+        collect = simple.AndCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                                 Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        collect.debug()
+
+    def test_or_cell(pc):
+        collect = simple.OrCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                                Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        collect.debug()
+
+    def test_entailed_cell(pc):
+        collect = simple.EntailedCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                                      Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        collect.debug()
+
+    def test_cell_collection(self):
+        c1 = simple.AndCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                            Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        c2 = simple.OrCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                           Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        c3 = simple.EntailedCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                                 Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        cc = simple.CellCollection()
+        cc.add(c1, c2, c3)
+
+        cc.debug(cc.asNeurdf)
+        cc.debug(cc.asOwl)
+
+    def test_cell_hash_eq_id(self):
+        c1 = simple.AndCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                            Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+
+        c2 = simple.OrCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                           Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+
+        assert c1 is not c2
+        assert c1 != c2
+        assert len(set((c1, c2))) == 2
+
+        c1o = simple.AndCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
+                            Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+        assert c1 is not c1o
+        assert c1 == c1o
+        assert len(set((c1, c1o))) == 1

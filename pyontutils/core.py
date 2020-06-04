@@ -961,6 +961,7 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
+        return graph  # make it possible to write g = BNM.populate(OntGraph())
 
     def populate_from(self, *graph_nsm_dict):
         """ populate namespace manager from graphs,
@@ -972,6 +973,8 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
           if (isinstance(gnd, rdflib.Graph) or
               isinstance(gnd, rdflib.namespace.NamespaceManager)) else
           gnd.items())]
+
+        return self  # allow chaining
 
 
 class OntGraph(rdflib.Graph):
@@ -990,6 +993,9 @@ class OntGraph(rdflib.Graph):
             # FIXME the way this is implemented in rdflib makes it impossible to
             # change the namespace manager type in subclasses which is _really_ annoying
             # we shortcircuit this here
+            if namespace_manager and not isinstance(namespace_manager, BetterNamespaceManager):
+                namespace_manager = BetterNamespaceManager(self).populate_from(namespace_manager)
+
             self._namespace_manager = namespace_manager
 
         self.bind('owl', owl)
