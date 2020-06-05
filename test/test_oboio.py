@@ -1,5 +1,43 @@
+import os
+import shutil
 import unittest
+import pytest
 from pyontutils import obo_io as oio
+from .common import temp_path
+
+obo_test_string = """format-version: 1.2
+ontology: uberon/core
+subsetdef: cumbo "CUMBO"
+treat-xrefs-as-has-subclass: EV
+import: http://purl.obolibrary.org/obo/uberon/chebi_import.owl
+treat-xrefs-as-reverse-genus-differentia: TGMA part_of NCBITaxon:44484
+
+[Term]
+id: UBERON:0000003
+xref: SCTID:272650008
+relationship: in_lateral_side_of UBERON:0000033 {gci_relation="part_of", gci_filler="NCBITaxon:7776", notes="hagfish have median nostril"} ! head
+relationship: in_lateral_side_of UBERON:0000034 {gci_filler="NCBITaxon:7776", gci_relation="part_of", notes="hagfish have median nostril"}
+comment: robot does reorder the gci_ so that relation always comes before filler
+property_value: external_definition "One of paired external openings of the nasal chamber.[AAO]" xsd:string {date_retrieved="2012-06-20", external_class="AAO:0000311", ontology="AAO", source="AAO:EJS"}
+replaced_by: GO:0045202
+consider: FMA:67408
+
+[Term]
+id: UBERON:0000033
+name: head
+comment: needed to prevent robot from throwing a null pointer on the relationship axiom above
+
+[Term]
+id: UBERON:0000034
+
+[Typedef]
+id: in_lateral_side_of
+property_value: seeAlso FMA:86003
+name: in_lateral_side_of
+comment: id needed to prevent robot from throwing a null pointer on the relationship axiom above
+comment: apparently also have to have name strangely enough and robot doesn't roundtrip random comments
+is_transitive: true
+"""
 
 
 class TMHelper:
@@ -8,6 +46,17 @@ class TMHelper:
 
 
 class TestOboIo(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if temp_path.exists():
+            shutil.rmtree(temp_path)
+
+        temp_path.mkdir()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(temp_path)
+
     def test_parse_trailing_modifiers(self):
         thm = TMHelper()
 
@@ -72,3 +121,45 @@ class TestOboIo(unittest.TestCase):
         hrm = ('property_value: editor_note "TODO -'
                ' consider relationship to UBERON:0000091 ! bilaminar disc" xsd:string')
         pv, tv = _test(hrm)
+
+    def test_robot(self):
+        of1 = oio.OboFile(data=obo_test_string)
+        obo1 = of1.asObo(stamp=False)
+        obor1 = of1.asObo(stamp=False, version=oio.OBO_VER_ROBOT)
+
+        of2 = oio.OboFile(data=obo1)
+        obo2 = of2.asObo(stamp=False)
+        obor2 = of2.asObo(stamp=False, version=oio.OBO_VER_ROBOT)
+
+        of3 = oio.OboFile(data=obor1)
+        obo3 = of3.asObo(stamp=False)
+        obor3 = of3.asObo(stamp=False, version=oio.OBO_VER_ROBOT)
+
+        print(obo1)
+        print(obo2)
+
+        print(obor1)
+        print(obor2)
+
+        assert obo1 == obo2 == obo3 != obor1
+        assert obor1 == obor2 == obor3
+
+    @pytest.mark.skipif(not shutil.which('robot'), reason='robot not installed')
+    def test_robot_rt(self):
+        of = oio.OboFile(data=obo_test_string)
+        obor1 = of.asObo(stamp=False, version=oio.OBO_VER_ROBOT)
+        rtp = temp_path / 'robot-test.obo'
+        robot_path = temp_path / 'robot-test.test.obo'
+        of.write(rtp, stamp=False, version=oio.OBO_VER_ROBOT)
+        cmd = f'robot convert -vvv -i {rtp.as_posix()} -o {robot_path.as_posix()}'
+        wat = os.system(cmd)
+        if wat:
+            raise ValueError(wat)
+
+        datas = []
+        for path in (rtp, robot_path):
+            with open(path, 'rt') as f:
+                datas.append(f.read())
+
+        ours, rob = datas
+        assert ours == rob
