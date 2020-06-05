@@ -528,46 +528,7 @@ class TVPair:  #TODO these need to be parented to something!
         if self.trailing_modifiers:
             tm = self.trailing_modifiers
             if version == OBO_VER_ROBOT:
-                # FIXME this is too hidden
-                order = ('gci_relation',
-                         'gci_filler',
-
-                         'date_retrieved',
-                         'external_class',
-                         'external_class_label',
-                         'notes',
-                         'ontology',
-
-                         'seeAlso',
-
-                         'exceptions',
-
-                         'order',
-
-                         'scope',
-
-                         'editor',
-                         'editor_note',
-
-                         'is_inferred',
-
-                         'source',
-                         'status',
-                         )
-                order = ('gci_relation',
-                         'gci_filler',)
-                tmk = tuple(k for k, v in tm)
-                #if (len(tm) > 2 and
-                    #all([_ in tmk for _ in order])):
-                if True:
-                    def key(kv):
-                        key, value = kv
-                        if key in order:
-                            return 0, order.index(key), value
-                        else:
-                            return 1, key, value
-                else:
-                    key = lambda kv: kv
+                key = None  # don't change the order at all
             else:
                 key = lambda kv: kv
 
@@ -1008,7 +969,8 @@ class Stanza(TVPairStore):
         return rt
 
     def __new__(cls, *args, **kwargs):
-        cls._all_tags = [tag for tag in cls._all_tags if tag[0] not in cls._bad_tags]
+        cls._all_tags = [tag for tag in cls._all_tags
+                         if tag[0] not in cls._bad_tags]
         instance = super().__new__(cls, *args, **kwargs)
         cls.__new__ = super().__new__  # enforce runonce
         return instance  # we return here so we chain the runonce
@@ -1508,7 +1470,37 @@ class Xref(Value):  # TODO link internal ids, finalize will require cleanup, lot
         return super().parse(split)
 
 
-special_children = {sc.tag:sc for sc in (Subsetdef, Synonymtypedef, Idspace, Id_mapping, Def_, Synonym, Xref, Relationship, Is_a, Property_value)}
+class Consider(Value):
+    tag = 'consider'
+    seps = ' ',
+    def __init__(self, other, tvpair):
+        self.other = other
+
+    def value(self):
+        return self.other
+
+    @classmethod
+    def parse(cls, value, tvpair):
+        target_id = value
+        split = (target_id, tvpair)
+        return super().parse(split)
+
+    def __lt__(self, other):
+        return self.value().lower() < other.value().lower()
+
+
+special_children = {sc.tag:sc for sc in (Subsetdef,
+                                         Synonymtypedef,
+                                         Idspace,
+                                         Id_mapping,
+                                         Def_,
+                                         Synonym,
+                                         Xref,
+                                         Relationship,
+                                         Is_a,
+                                         Property_value,
+                                         Consider,
+                                         )}
 
 
 def deNone(*args):
