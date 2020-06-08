@@ -796,6 +796,8 @@ class Sheet:
         cell_index_header = getattr(self.row_object(0), index_column)()
         if row:
             index_value = row[cell_index_header.column_index]
+        else:
+            index_value = value
 
         row_object = getattr(cell_index_header.column, index_value)().row
         return row_object, index_value
