@@ -122,10 +122,12 @@ class TestRoundtrip(_TestNeuronsBase):
     def setUp(self):
         super().setUp()
         from neurondm import Config, Neuron, Phenotype, NegPhenotype
+        from neurondm import EntailedPhenotype
         self.Config = Config
         self.Neuron = Neuron
         self.Phenotype = Phenotype
         self.NegPhenotype = NegPhenotype
+        self.EntailedPhenotype = EntailedPhenotype
 
     def test_py_simple(self):
 
@@ -176,6 +178,13 @@ class TestRoundtrip(_TestNeuronsBase):
         print(a, b, c)
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
         assert a == b == c
+
+    def test_entailed_predicate(self):
+        p1 = self.Phenotype('ilxtr:somewhere', 'ilxtr:hasLocationPhenotype')
+        p2 = self.EntailedPhenotype('ilxtr:somewhere', 'ilxtr:hasLocationPhenotype')
+        n1 = self.Neuron(p1, p2)
+        n1._graphify()
+        # TODO assert to make sure the pattern is right
 
 
 class TestRoundtripCUT(TestRoundtrip):

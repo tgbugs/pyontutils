@@ -2871,7 +2871,7 @@ class Neuron(NeuronBase):
                 djc.complementOf = target
                 members.append(djc)
             elif isinstance(pe, EntailedPhenotype):
-                restr = pe._graphify(graph=graph)
+                restr = target
                 _sco = list(self.Class.subClassOf)
                 _sco.append(restr)
                 self.Class.subClassOf = _sco
