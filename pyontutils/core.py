@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import yaml
 import types
 import gzip
@@ -127,6 +128,24 @@ class OntRes(idlib.Stream):
         #pass
 
     Graph = None  # this is set below after OntGraph is created (derp)
+
+    @staticmethod
+    def fromStr(string):
+        if re.match(r'^(https?)://', string):
+            return OntResIri(string)
+        else:
+            file_uri = re.match(r'^file://(.+)$', string)
+            if file_uri:
+                path_string = file_uri.group(1)
+            else:
+                path_string = string
+
+            # TODO other OntResGit identifier options
+            rp = aug.RepoPath(path_string)
+            if rp.working_dir:
+                return OntResGit(rp)
+            else:
+                return OntResPath(path_string)
 
     def __init__(self, identifier, repo=None, Graph=None):  # XXX DO NOT USE THIS IT IS BROKEN
         self.identifier = identifier  # the potential attribute error here is intentional
