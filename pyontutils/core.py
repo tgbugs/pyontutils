@@ -361,7 +361,6 @@ class OntMetaIri(OntMeta, OntIdIri):
         # to the exact state that failed so you can debug
         self._progenitors = {}
 
-
         _gz = self.identifier.endswith('.gz')
         _zip = self.identifier.endswith('.zip')
         if _zip or _gz:
@@ -1578,6 +1577,12 @@ class OntGraph(rdflib.Graph):
         nodes, edges = self._genNodesEdges(gen, label_predicate)
         return {'nodes': nodes, 'edges': edges}
 
+    def fromTabular(self, rows, lifting_rule=None):
+        pass
+
+    def asTabular(self, lifting_rule=None, mimetype='text/tsv'):
+        pass
+
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
     def __init__(self, *args, store='default', identifier=None, **kwargs):
@@ -2507,7 +2512,8 @@ class Ont:
     def working_dir(self):
         return (aug.RepoPath(getsourcefile(self.__class__))
                 .resolve()
-                .resolve())
+                .resolve()
+                .working_dir)
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -2542,10 +2548,19 @@ class Ont:
 
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
-                _file = getsourcefile(self.__class__)
-                file = Path(_file)
+                file_string = getsourcefile(self.__class__)
+                file = aug.RepoPath(file_string)
                 file = file.resolve().resolve()
-                filepath = file.relative_to(working_dir).as_posix()
+                working_dir = file.working_dir
+                if working_dir is not None:
+                    commit = str(file.latest_commit())
+                    uri = file.remote_uri_human(ref=commit)
+                    diff = file.has_uncommitted_changes()
+                    if diff:
+                        uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
+
+                    wgb = self.wasGeneratedBy = uri
+
         except TypeError:  # emacs is silly
             line = '#Lnoline'
             _file = 'nofile'

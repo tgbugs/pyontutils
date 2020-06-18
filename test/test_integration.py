@@ -78,7 +78,7 @@ else:
     working_dir = RP(working_dir)
 
 glb = auth.get_path('git-local-base')
-olr = auth.get_path('ontology-local-repo')
+olr = auth.get_path('ontology-local-repo')  # TODO clone to a safe testing repo
 if olr.exists():
     ont_repo = Repo(olr)
     if isinstance(working_dir, aug.RepoPath):

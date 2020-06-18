@@ -393,7 +393,7 @@ you can run both blocks together with =run-load-deploy-graph-sparc=
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc :exports none
 <<run-load-graph-sparc>>
-|| exit 1
+|| exit $?
 <<run-deploy-graph-sparc>>
 #+end_src
 **** deploy from CI
@@ -433,7 +433,7 @@ deploy-services \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc
 <<run-build-services-sparc>>
-|| exit 1
+|| exit $?
 <<run-deploy-services-sparc>>
 #+end_src
 *** variables                                                      :noexport:
@@ -504,7 +504,7 @@ deploy-graph \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc-data
 <<run-load-graph-sparc-data>>
-|| exit 1
+|| exit $?
 <<run-deploy-graph-sparc-data>>
 #+end_src
 *** services config
@@ -543,7 +543,7 @@ deploy-services \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc-data
 <<run-build-services-sparc-data>>
-|| exit 1
+|| exit $?
 <<run-deploy-services-sparc-data>>
 #+end_src
 *** variables                                                      :noexport:
@@ -652,6 +652,17 @@ There are three main components for SciGraph infrastructure: code, graph, and se
 Each has a creation step (compile, load, and build respectively) and a deploy section.
 
 Unless you need to fix some of the code here, this heading is probably not relevant.
+
+Reminder that core functionality is tangled to [[file:./bin/scigraph-functions.sh]].
+#+name: fail-if-not-sourced
+#+caption: Fail if [[file:./bin/scigraph-functions.sh]] is not sourced.
+#+begin_src bash :exports none :tangle ./bin/scigraph-functions.sh
+if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
+    echo "${0} is not an executable shell script."
+    echo "Instead run \`source ${0}\`"
+    exit 1
+fi
+#+end_src
 ** Code
 Code is compiled once for all deployments.
 *** Compile
@@ -915,21 +926,21 @@ function load-graph () {
     if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
         rm "${LOAD_GRAPH_PATH}" -r
     fi
-    mkdir -p "${LOAD_GRAPH_PATH}" || return 1
-    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return 1
+    mkdir -p "${LOAD_GRAPH_PATH}" || return $?
+    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return $?
     yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
-        "${PATH_CONFIG_YAML_RAW}" > "${PATH_CONFIG_YAML}" || return 1
+        "${PATH_CONFIG_YAML_RAW}" > "${PATH_CONFIG_YAML}" || return $?
         # FIXME I think this line is bugged YES BUT ALSO BY THE VERY COMMENT ITSELF
-    scigraph-load -c "${PATH_CONFIG_YAML}" || return 1
+    scigraph-load -c "${PATH_CONFIG_YAML}" || return $?
 
-    pushd "${PATH_BUILD}" || return 1
+    pushd "${PATH_BUILD}" || return $?
     # mv prevents accidentally deploying the same graph twice
     # but use cp -r for development to avoid continual rebuild
-    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return 1
-    zip -r ${FILE_NAME_ZIP} ${STAMPED} || return 1
+    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return $?
+    zip -r ${FILE_NAME_ZIP} ${STAMPED} || return $?
     unlink "${LATEST}"
-    ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return 1
-    popd > /dev/null || return 1
+    ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return $?
+    popd > /dev/null || return $?
 }
 #+end_src
 **** ontload
