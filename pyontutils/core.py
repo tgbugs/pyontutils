@@ -2554,7 +2554,7 @@ class Ont:
                 working_dir = file.working_dir
                 if working_dir is not None:
                     commit = str(file.latest_commit())
-                    uri = file.remote_uri_human(ref=commit)
+                    uri = file.remote_uri_human(ref=commit) + line
                     diff = file.has_uncommitted_changes()
                     if diff:
                         uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
