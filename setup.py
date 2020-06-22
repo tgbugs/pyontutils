@@ -55,6 +55,7 @@ setup(
         'nest_asyncio',
         'ontquery>=0.2.3',
         'orthauth>=0.0.11',
+        'pyld',
         'pyyaml',
         'requests',
         'terminaltables',

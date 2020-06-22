@@ -1,5 +1,14 @@
-The hasLocationPhenotype property chain axiom breaks FaCT++.
-[[file:basic-model.html]]
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
+#+title: Overview of OWL modelling decisions
+#+author: Tom Gillespie
+#+options: num:nil html-preamble:t H:2
+# [[file:basic-model.html]]
+
+An overview of how the behavior of different reasoners influenced the decisions about
+how to model location phenotypes and molecular phenotypes in the Neuron Phenotype Ontology.
+
+Of particular note is that creating a =hasLocationPhenotype= property chain axiom breaks FaCT++.
+
 * Code
 #+begin_src bash :eval never
 NAME=base; protege "$(pwd)/basic-${NAME}.ttl"

@@ -54,46 +54,136 @@ except ImportError:
 suffixFuncs = {}
 
 
-def findAssignToName(name, body, reverse=False):
+def findAssignToName(name, body, reverse=False, col_offset=0):
     eb = enumerate(body)
     gen = reversed(list(eb)) if reverse else eb
     return [(i, n) for i, n in gen
-            if n.col_offset == 0 and
+            if n.col_offset <= col_offset and
             isinstance(n, ast.Assign) and
             isinstance(n.targets[0], ast.Name) and
             n.targets[0].id == name]
 
 
-def asStr(astNode, prior=tuple()):
+def findImportName(name, body, reverse=False, col_offset=0):
+    eb = enumerate(body)
+    gen = reversed(list(eb)) if reverse else eb
+    for i, node in gen:
+        if node.col_offset <= col_offset:
+            if not (isinstance(node, ast.Import) or
+                    isinstance(node, ast.ImportFrom)):
+                continue
+
+            if name in [n.asname if n.asname
+                        else n.name for n in node.names]:
+                return [(i, node)]
+
+
+def findName(name, body, reverse=False):
+    out = findAssignToName(name, body, reverse=reverse)
+    if not out:
+        out = findImportName(name, body, reverse=reverse)
+
+    return out
+
+def asStr(astNode, prior=tuple(), dereference=False):
+    """ having to explicitly pass prior to all recursive calls:
+        racket: am I a joke to you? sigh continuation markes talk
+        is just timely enough to realize how useful dynamic extent is
+        and just how much we miss it in cases like this >_< """
+
     if isinstance(astNode, ast.Str):
-        return astNode.s
+        return repr(astNode.s)
     elif isinstance(astNode, ast.FormattedValue):
-        v = astNode.value
-        if isinstance(v, ast.Name):
+        return asStr(astNode.value, prior, dereference=True)
+    elif isinstance(astNode, ast.JoinedStr):
+        around = '"""'
+        return (around +
+                ''.join([ast.literal_eval(asStr(v, prior))
+                         if isinstance(v, ast.Str) else asStr(v, prior)
+                         for v in astNode.values]) +
+                around)
+    elif isinstance(astNode, ast.Name):
+        if prior:
             # have to reverse to find the latest setting of the value
             # not the first since python allows rebinding
-            maybe_name = findAssignToName(v.id, prior, reverse=True)
+            maybe_name = findName(astNode.id, prior, reverse=True)
             if maybe_name:
-                _, n = maybe_name[0]
-                return asStr(n.value)
+                index, node = maybe_name[0]
+                s = asStr(node, prior[:index],
+                          dereference=astNode.id if dereference else False)
+                return s
             else:
-                raise NotImplementedError(f'found no assignment to {v.id}')
-        else:
-            return asStr(v)
-    elif isinstance(astNode, ast.Name):
+                raise NotImplementedError(f'found no assignment to {astNode.id}')
+
         return astNode.id
+    elif isinstance(astNode, ast.Assign):
+        value = asStr(astNode.value, prior, dereference=dereference)
+        if dereference:
+            return value
+        else:
+            return ', '.join([asStr(n, dereference=dereference)
+                              for n in astNode.targets]) + ' = ' + value
     elif isinstance(astNode, ast.BinOp):
-        return (asStr(astNode.left) +
-                ' ' + asStr(astNode.op) + ' ' +
-                asStr(astNode.right))
+        return (asStr(astNode.left, prior, dereference) +
+                ' ' + asStr(astNode.op, prior, dereference) + ' ' +
+                asStr(astNode.right, prior, dereference))
+    elif isinstance(astNode, ast.Add):
+        return '+'
     elif isinstance(astNode, ast.Div):
         return '/'
     elif isinstance(astNode, ast.Call):
-        return asStr(astNode.func)
+        return (asStr(astNode.func, prior, dereference) +
+                '(' +
+                ', '.join(asStr(a, prior, dereference) for a in astNode.args) +
+                ')')
     elif isinstance(astNode, ast.Attribute):
-        return asStr(astNode.value) + '.' + astNode.attr
+        return asStr(astNode.value, prior, dereference) + '.' + astNode.attr
+    elif isinstance(astNode, ast.Dict):
+        return ('{' +
+                ', '.join([(asStr(key, prior, dereference) +
+                            ': ' + asStr(value, prior, dereference))
+                           for key, value in zip(astNode.keys, astNode.values)]) +
+                '}')
+    elif isinstance(astNode, ast.Lambda):
+        return ('lambda ' +
+                ', '.join([asStr(a, prior, dereference) for a in astNode.args.args]) +
+                ': ' +
+                asStr(astNode.body, prior, dereference))
+    elif isinstance(astNode, ast.Expr):
+        return asStr(astNode.value, prior, dereference)
+    elif isinstance(astNode, ast.Module):
+        return '\n'.join([asStr(b, prior, dereference) for b in astNode.body])
+    elif isinstance(astNode, ast.arg):
+        return astNode.arg
+    elif isinstance(astNode, ast.Import):
+        return ('import ' + ', '.join([asStr(n) for n in astNode.names]))
+    elif isinstance(astNode, ast.ImportFrom):
+        _names = [asStr(n, dereference=dereference) for n in astNode.names]
+        names = [n for n in _names if n]  # filter the dereferenced case
+        if dereference:
+            name = names[0]  # a, b = imported_name1, imported_name2 not an issue, resolved independently
+            return astNode.module + '.' + name
+        else:
+            return ('from ' + astNode.module + ' ' +
+                    'import ' + ', '.join(names))
+    elif isinstance(astNode, ast.alias):
+        if dereference:
+            if (astNode.asname == dereference or
+                not astNode.asname and astNode.name == dereference):
+                # this deals with the threat of
+                # from asdf import name as dereference, dereference as name
+                return astNode.name
+        else:
+            return astNode.name + ((' as ' + astNode.asname)
+                                   if astNode.asname else
+                                   '')
     else:
         raise NotImplementedError(f'{astNode}')
+
+
+asdf = asStr(ast.parse("f'''i am a format docstring {_ddconf}'''"),
+             prior=ast.parse("_ddconf='another-string'\n").body,)
+assert ast.literal_eval(asdf) == "i am a format docstring 'another-string'"
 
 
 def patch_theme_setup(theme):
@@ -185,8 +275,11 @@ class FixLinks:
         self.current_file = Path(current_file).resolve()
         self.working_dir = self.current_file.working_dir
         if self.working_dir is None:
+            log.warning('Not in repo, not fixing links for {self.current_file}')
+            self.__call__ = lambda org: org
+            return
             # cannot proceed without git
-            raise FileNotFoundError(f'No working directory found for {self.current_file}')
+            #raise FileNotFoundError(f'No working directory found for {self.current_file}')
             #self.repo_name = 'NOREPO'
             #self.netloc = 'NOWHERE'
             #self.netloc_raw = 'NOWHERE'
@@ -413,7 +506,14 @@ def get__doc__s(repo_paths, skip_folders, skip):
             if maybe__doc__:  # FIXME warn on multi?
                 i, n = maybe__doc__[0]
                 prior = tree.body[:i]
-                doc = ''.join([asStr(v, prior) for v in n.value.values])
+                #_values = [asStr(v, prior) for v in n.value.values]
+                #doc = ''.join(_values)
+                doc = asStr(n.value, prior)
+                if isinstance(n.value, ast.JoinedStr):
+                    doc = ast.literal_eval(doc)
+                if doc.startswith("'"):
+                    breakpoint()
+                    doc = ast.literal_eval(doc)
 
             else:
                 #print(tc.red('WARNING:'), 'no docstring for', module_path)
@@ -456,7 +556,7 @@ def makeDocstrings(BUILD, repo_paths, skip_folders, skip):
             done.append(type)
             dslist.append(f'* {type}')
         if docstring is not None:
-            dslist.append(f'** {module}\n#+BEGIN_SRC\n{docstring}\n#+END_SRC')
+            dslist.append(f'** {module}\n#+BEGIN_SRC bash\n{docstring}\n#+END_SRC')
 
     docstrings_org = '\n'.join(dslist)
     with open(docstr_path.as_posix(), 'wt') as f:
@@ -555,7 +655,7 @@ def renderOrg(path, debug=False, **kwargs):
     try:
         ref = path.latest_commit().hexsha
         github_link = path.remote_uri_human(ref=ref)
-    except aexc.NoCommitsForFile:
+    except (aexc.NoCommitsForFile, aexc.NotInRepoError):
         github_link = None
 
     #print(' '.join(compile_org_file))
@@ -888,7 +988,9 @@ class Main(clif.Dispatcher):
         if self.options.docstring_only:
             [kwargs.update({'theme': theme})
             for _, _, kwargs in wd_docs_kwargs]
-            outname, rendered = render_docs(wd_docs_kwargs, out_path, 1,
+            outname, rendered = render_docs(wd_docs_kwargs, out_path,
+                                            titles=None,
+                                            n_jobs=1,
                                             debug=self.options.debug)[0]
             if not outname.parent.exists():
                 outname.parent.mkdir(parents=True)

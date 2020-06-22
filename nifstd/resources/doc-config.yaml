@@ -64,6 +64,7 @@ titles:
   NIF-Ontology/docs/brain-regions.html: Parcellation schemes
   pyontutils/nifstd/development/methods/README.html: Methods and techniques
   NIF-Ontology/docs/Neurons.html: Neuron Lang overview
+  pyontutils/neurondm/docs/basic-model.html: Neuron Lang OWL conversion
   pyontutils/neurondm/docs/NeuronLangExample.html: Neuron Lang examples
   pyontutils/neurondm/docs/neurons_notebook.html: Neuron Lang setup
 

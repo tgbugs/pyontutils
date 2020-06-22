@@ -37,6 +37,7 @@ before_install:
     rpm-spec-mode
     ssh-config-mode
     toml-mode
+    ttl-mode
     vimrc-mode
     yaml-mode
   - pushd NIF-Ontology

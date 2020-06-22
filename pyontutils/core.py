@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import json
 import yaml
 import types
 import gzip
@@ -10,6 +11,7 @@ import mimetypes
 import subprocess
 import idlib
 import rdflib
+from pyld import jsonld
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
@@ -109,6 +111,28 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
     if isinstance(new_s, rdflib.BNode):
         for p, o in source_graph.predicate_objects(new_s):
             yield from yield_recursive(new_s, p, o, source_graph)
+
+
+def triplesJsonLdPath(path):
+    def convert_element(blob,
+                        _lu={'literal': rdflib.Literal,
+                             'IRI': rdflib.URIRef,
+                             'blank node': rdflib.BNode,}):
+        kwargs = {}
+        if 'datatype' in blob:
+            kwargs['datatype'] = blob['datatype']
+        elif 'language' in blob:
+            kwargs['lang'] = blob['language']
+
+        return _lu[blob['type']](blob['value'], **kwargs)
+
+    with open(path, 'rt') as f:
+        j = json.load(f)
+
+    blob = jsonld.to_rdf(jsonld.expand(j))
+    for dt in blob['@default']:
+        yield tuple(convert_element(e) for e in
+                    (dt['subject'], dt['predicate'], dt['object']))
 
 
 # ontology resource object
