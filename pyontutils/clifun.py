@@ -1,14 +1,14 @@
 """Helper classes for organizing docopt programs
 
 Usage:
-    demo [options]
-    demo sub-command-1 [options] <args>...
-    demo sub-command-2 sub-command-1 [options] <args>...
+    clifun-demo [options]
+    clifun-demo sub-command-1 [options] <args>...
+    clifun-demo sub-command-2 sub-command-1 [options] <args>...
 
 Usage-Bad:
     Example:
-        demo [options] <args>...
-        demo cmd [options]
+        clifun-demo [options] <args>...
+        clifun-demo cmd [options]
     Reason: <args>... masks cmd
 
 Options:

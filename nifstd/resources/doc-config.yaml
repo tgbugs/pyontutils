@@ -13,11 +13,16 @@ skip-folders:
   - ilxutils
   - librdflib
 skip:
+  augpathlib:
+    - augpathlib/pyads.py            # unused
+  interlex:
+    - README.md                      # insubstantial
+    - docs/explaining.org            # not ready
   pyontutils:
     - docs/NeuronLangExample.ipynb   # exact skip due to moving file
     - ilxutils/ilx-playground.ipynb
     - nifstd/resources/sawg.org      # published via another workflow
-    - pyontutils/clifun.py           # not useful, is just a demo
+    - pyontutils/iterio.py           # insubstantial
   sparc-curation:
     - README.md                      # insubstantial
     - docs/apinatomy.org             # rendered under sparc
@@ -25,9 +30,6 @@ skip:
     - docs/notes.org                 # not relevant
     - test/apinatomy/README.org      # insubstantial
     - resources/scigraph/README.org  # replaced by the nifstd scigraph readme
-  interlex:
-    - README.md                      # insubstantial
-    - docs/explaining.org            # not ready
 index:
   - Components
   - Ontology

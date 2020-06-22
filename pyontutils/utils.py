@@ -5,6 +5,7 @@
 """
 
 import os
+import ast
 import math
 import asyncio
 import inspect
@@ -823,3 +824,133 @@ class _TermColors:
 
 
 TermColors = _TermColors()
+
+
+## ast printing
+
+def findAssignToName(name, body, reverse=False, col_offset=0):
+    eb = enumerate(body)
+    gen = reversed(list(eb)) if reverse else eb
+    return [(i, n) for i, n in gen
+            if n.col_offset <= col_offset and
+            isinstance(n, ast.Assign) and
+            isinstance(n.targets[0], ast.Name) and
+            n.targets[0].id == name]
+
+
+def findImportName(name, body, reverse=False, col_offset=0):
+    eb = enumerate(body)
+    gen = reversed(list(eb)) if reverse else eb
+    for i, node in gen:
+        if node.col_offset <= col_offset:
+            if not (isinstance(node, ast.Import) or
+                    isinstance(node, ast.ImportFrom)):
+                continue
+
+            if name in [n.asname if n.asname
+                        else n.name for n in node.names]:
+                return [(i, node)]
+
+
+def findName(name, body, reverse=False):
+    out = findAssignToName(name, body, reverse=reverse)
+    if not out:
+        out = findImportName(name, body, reverse=reverse)
+
+    return out
+
+
+def asStr(astNode, prior=tuple(), dereference=False):
+    """ having to explicitly pass prior to all recursive calls:
+        racket: am I a joke to you? sigh continuation markes talk
+        is just timely enough to realize how useful dynamic extent is
+        and just how much we miss it in cases like this >_< """
+
+    if isinstance(astNode, ast.Str):
+        return repr(astNode.s)
+    elif isinstance(astNode, ast.FormattedValue):
+        return asStr(astNode.value, prior, dereference=True)
+    elif isinstance(astNode, ast.JoinedStr):
+        around = '"""'
+        return (around +
+                ''.join([ast.literal_eval(asStr(v, prior))
+                         if isinstance(v, ast.Str) else asStr(v, prior)
+                         for v in astNode.values]) +
+                around)
+    elif isinstance(astNode, ast.Name):
+        if prior:
+            # have to reverse to find the latest setting of the value
+            # not the first since python allows rebinding
+            maybe_name = findName(astNode.id, prior, reverse=True)
+            if maybe_name:
+                index, node = maybe_name[0]
+                s = asStr(node, prior[:index],
+                          dereference=astNode.id if dereference else False)
+                return s
+            else:
+                raise NotImplementedError(f'found no assignment to {astNode.id}')
+
+        return astNode.id
+    elif isinstance(astNode, ast.Assign):
+        value = asStr(astNode.value, prior, dereference=dereference)
+        if dereference:
+            return value
+        else:
+            return ', '.join([asStr(n, dereference=dereference)
+                              for n in astNode.targets]) + ' = ' + value
+    elif isinstance(astNode, ast.BinOp):
+        return (asStr(astNode.left, prior, dereference) +
+                ' ' + asStr(astNode.op, prior, dereference) + ' ' +
+                asStr(astNode.right, prior, dereference))
+    elif isinstance(astNode, ast.Add):
+        return '+'
+    elif isinstance(astNode, ast.Div):
+        return '/'
+    elif isinstance(astNode, ast.Call):
+        return (asStr(astNode.func, prior, dereference) +
+                '(' +
+                ', '.join(asStr(a, prior, dereference) for a in astNode.args) +
+                ')')
+    elif isinstance(astNode, ast.Attribute):
+        return asStr(astNode.value, prior, dereference) + '.' + astNode.attr
+    elif isinstance(astNode, ast.Dict):
+        return ('{' +
+                ', '.join([(asStr(key, prior, dereference) +
+                            ': ' + asStr(value, prior, dereference))
+                           for key, value in zip(astNode.keys, astNode.values)]) +
+                '}')
+    elif isinstance(astNode, ast.Lambda):
+        return ('lambda ' +
+                ', '.join([asStr(a, prior, dereference) for a in astNode.args.args]) +
+                ': ' +
+                asStr(astNode.body, prior, dereference))
+    elif isinstance(astNode, ast.Expr):
+        return asStr(astNode.value, prior, dereference)
+    elif isinstance(astNode, ast.Module):
+        return '\n'.join([asStr(b, prior, dereference) for b in astNode.body])
+    elif isinstance(astNode, ast.arg):
+        return astNode.arg
+    elif isinstance(astNode, ast.Import):
+        return ('import ' + ', '.join([asStr(n) for n in astNode.names]))
+    elif isinstance(astNode, ast.ImportFrom):
+        _names = [asStr(n, dereference=dereference) for n in astNode.names]
+        names = [n for n in _names if n]  # filter the dereferenced case
+        if dereference:
+            name = names[0]  # a, b = imported_name1, imported_name2 not an issue, resolved independently
+            return astNode.module + '.' + name
+        else:
+            return ('from ' + astNode.module + ' ' +
+                    'import ' + ', '.join(names))
+    elif isinstance(astNode, ast.alias):
+        if dereference:
+            if (astNode.asname == dereference or
+                not astNode.asname and astNode.name == dereference):
+                # this deals with the threat of
+                # from asdf import name as dereference, dereference as name
+                return astNode.name
+        else:
+            return astNode.name + ((' as ' + astNode.asname)
+                                   if astNode.asname else
+                                   '')
+    else:
+        raise NotImplementedError(f'{astNode}')

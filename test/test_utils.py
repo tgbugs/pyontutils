@@ -1,5 +1,6 @@
+import ast
 import unittest
-from pyontutils.utils import injective_dict, Async, deferred, listIn
+from pyontutils.utils import injective_dict, Async, deferred, listIn, asStr
 
 
 class TestInjectiveDict(unittest.TestCase):
@@ -69,3 +70,10 @@ class TestListIn(unittest.TestCase):
         assert listIn([2, 2, 3], [2, 3]) == 1
         assert listIn([2, 2, 3, 3], [2, 3]) == 1
         assert listIn(['skip1>', 'skip1>', 'end', 'end'], ['skip1>', 'end']) == 1
+
+
+class TestAstString(unittest.TestCase):
+    def test_docstring(self):
+        asdf = asStr(ast.parse("f'''i am a format docstring {_ddconf}'''"),
+                    prior=ast.parse("_ddconf='another-string'\n").body,)
+        assert ast.literal_eval(asdf) == "i am a format docstring 'another-string'"
