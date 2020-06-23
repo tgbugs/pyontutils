@@ -10,10 +10,11 @@ how to model location phenotypes and molecular phenotypes in the Neuron Phenotyp
 Of particular note is that creating a =hasLocationPhenotype= property chain axiom breaks FaCT++.
 
 * Code
+Change =NAME== to match the name of the file to run e.g. =NAME=pca=.
 #+begin_src bash :eval never
 NAME=base; protege "$(pwd)/basic-${NAME}.ttl"
 #+end_src
-** Tangle
+** Ontology files to tangle
 #+name: base
 #+begin_src ttl :noweb no-export :comments link :tangle ./basic-base.ttl
 <<common>>
@@ -42,6 +43,8 @@ NAME=base; protege "$(pwd)/basic-${NAME}.ttl"
 :basic-pca-pos a owl:Ontology .
 #+end_src
 ** Blocks
+
+Local conventions.
 #+name: local-conventions
 #+begin_src ttl :exports none
 @prefix : <file:///ERROR/EMPTY/PREFIX/BANNED/> .
@@ -57,6 +60,30 @@ NAME=base; protege "$(pwd)/basic-${NAME}.ttl"
 @prefix sVF: <http://www.w3.org/2002/07/owl#someValuesFrom> .
 #+end_src
 
+Definition of the property chain axiom for =hasLocationPhenotype=.
+#+name: location-property-chain-axiom
+#+begin_src ttl
+ilxtr:hasLocationPhenotype a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            ilxtr:hasLocationPhenotype
+            partOf: ) .
+#+end_src
+
+Definitions of the part of self axioms.
+#+name: part-of-self
+#+begin_src ttl
+:brain subClassOf:                            [ a R: ; oP: partOf: ; sVF: :brain ] .
+:neocortex subClassOf:                        [ a R: ; oP: partOf: ; sVF: :neocortex ] .
+:somatosensory-cortex subClassOf:             [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex ] .
+:somatosensory-cortex-rat-atlas-1 subClassOf: [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex-rat-atlas-1 ] .
+:S1 subClassOf:                               [ a R: ; oP: partOf: ; sVF: :S1 ] .
+:S1-part subClassOf:                          [ a R: ; oP: partOf: ; sVF: :S1-part ] .
+:S2 subClassOf:                               [ a R: ; oP: partOf: ; sVF: :S2 ] .
+:S2-part subClassOf:                          [ a R: ; oP: partOf: ; sVF: :S2-part ] .
+:spinal-cord subClassOf:                      [ a R: ; oP: partOf: ; sVF: :spinal-cordl ] .
+#+end_src
+
+Common definitions.
 #+name: common
 #+begin_src ttl :noweb yes :comments link
 <<local-conventions>>
@@ -205,27 +232,6 @@ ilxtr:parcellationLabel a owl:Class ;
     subClassOf: :anatomical-entity .
 
 ### Serialized using the ttlser deterministic serializer v1.2.0
-#+end_src
-
-#+name: location-property-chain-axiom
-#+begin_src ttl
-ilxtr:hasLocationPhenotype a owl:ObjectProperty ;
-    owl:propertyChainAxiom (
-            ilxtr:hasLocationPhenotype
-            partOf: ) .
-#+end_src
-
-#+name: part-of-self
-#+begin_src ttl
-:brain subClassOf: [ a R: ; oP: partOf: ; sVF: :brain ] .
-:neocortex subClassOf: [ a R: ; oP: partOf: ; sVF: :neocortex ] .
-:somatosensory-cortex subClassOf: [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex ] .
-:somatosensory-cortex-rat-atlas-1 subClassOf: [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex-rat-atlas-1 ] .
-:S1 subClassOf: [ a R: ; oP: partOf: ; sVF: :S1 ] .
-:S1-part subClassOf: [ a R: ; oP: partOf: ; sVF: :S1-part ] .
-:S2 subClassOf: [ a R: ; oP: partOf: ; sVF: :S2 ] .
-:S2-part subClassOf: [ a R: ; oP: partOf: ; sVF: :S2-part ] .
-:spinal-cord subClassOf: [ a R: ; oP: partOf: ; sVF: :spina-cordl ] .
 #+end_src
 * OWL DL Queries
 #+begin_src
