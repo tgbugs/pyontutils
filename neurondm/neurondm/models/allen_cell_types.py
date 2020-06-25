@@ -39,6 +39,7 @@ class AllenCellTypes:
                    'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
                    'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
                 **makePrefixes('definition', 'ilxtr', 'owl')}
+    prefixes['AllenTransgenicLine'] = 'http://api.brain-map.org/api/v2/data/TransgenicLine/'
 
     def __init__(self, input, name):
         self.name = name
