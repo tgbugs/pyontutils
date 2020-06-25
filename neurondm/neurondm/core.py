@@ -871,6 +871,7 @@ class Config:
 
     def write(self):
         # FIXME per config prefixes using derived OntCuries?
+        [n._sigh() for n in self.existing_pes]  # ugh
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
@@ -1328,7 +1329,9 @@ class graphBase:
 
     @staticmethod
     def write():
-        og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
+        [n._sigh() for n in graphBase.neurons()]  # ugh
+        og = cull_prefixes(graphBase.out_graph,
+                           prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
         graphBase.part_of_graph.write()
@@ -1395,6 +1398,7 @@ class graphBase:
     def ttl(cls):
         # trying this as a class method to see whether it makes it
         # easier to reason about which graph is being exported
+        [n._sigh() for n in cls.neurons()]  # ugh
         og = cull_prefixes(cls.out_graph, prefixes=uPREFIXES)
         return og.g.serialize(format='nifttl').decode()
 
@@ -2187,7 +2191,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
                  equivalentNeurons=tuple(), disjointNeurons=tuple()):
-
+        self._sighed = False
         if id_ and (equivalentNeurons or disjointNeurons):
             # FIXME does this work!?
             raise TypeError('Neurons defined by id may not use equivalent or disjoint')
@@ -2289,19 +2293,27 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         if (not override and
             self in self.existing_pes and
+            self.existing_pes[self] is not None and  # sigh support
             self.Class.graph is self.existing_pes[self].graph):
             self.Class = self.existing_pes[self]
         else:
             self.existing_pes[self] = None
-            log.warning('self._sigh has not been called')
+            #log.warning('self._sigh has not been called')
 
         self.ttl = self._instance_ttl
         self.python = self._instance_python
 
     def _sigh(self):
+        if self._sighed:
+            return
+
+        # FIXME check on whether setting self.Class = self.existing_pes[self]
+        # causes issues
+        #if self in self.existing_pes and self.existing_pes[self] is not None:
         self.Class = self._graphify()
         self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
         self.existing_pes[self] = self.Class
+        self._sighed = True
 
     def removeDuplicateSuperProperties(self, rawpes):
         # find any duplicate phenotype values
@@ -2359,6 +2371,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return og
 
     def _instance_ttl(self):
+        self._sigh()
         og = self._subgraph()
         return og.g.serialize(format='nifttl').decode()
 
