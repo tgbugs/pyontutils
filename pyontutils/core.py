@@ -24,6 +24,7 @@ import htmlfn as hfn
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
+from ttlser.utils import regjsonld
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import (refile,
@@ -113,7 +114,8 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
             yield from yield_recursive(new_s, p, o, source_graph)
 
 
-def triplesJsonLdPath(path):
+def populateFromJsonLd(graph, path):
+    regjsonld()
     def convert_element(blob,
                         _lu={'literal': rdflib.Literal,
                              'IRI': rdflib.URIRef,
@@ -129,10 +131,22 @@ def triplesJsonLdPath(path):
     with open(path, 'rt') as f:
         j = json.load(f)
 
-    blob = jsonld.to_rdf(jsonld.expand(j))
-    for dt in blob['@default']:
-        yield tuple(convert_element(e) for e in
-                    (dt['subject'], dt['predicate'], dt['object']))
+    #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+    def triples():
+        for dt in blob['@default']:
+            yield tuple(convert_element(e) for e in
+                        (dt['subject'], dt['predicate'], dt['object']))
+
+    proc = jsonld.JsonLdProcessor()
+    ctx = proc.process_context(proc._get_initial_context({}),
+                               j['@context'], {})
+    # FIXME how to deal with non prefixed cases like definition
+    curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
+              v['_prefix']}
+    graph.namespace_manager.populate_from(curies)
+    #graph.populate_from_triples(triples())  # pyld broken above
+    graph.parse(path, format='json-ld')
+    return graph
 
 
 # ontology resource object
@@ -1112,6 +1126,8 @@ class OntGraph(rdflib.Graph):
 
         with open(path, 'wb') as f:
             self.serialize(f, format=format)
+
+        return self  # allow chaining of parse and write
 
     def asMimetype(self, mimetype):
         if mimetype in ('text/turtle+html', 'text/html'):

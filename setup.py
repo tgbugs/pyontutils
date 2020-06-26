@@ -59,7 +59,7 @@ setup(
         'pyyaml',
         'requests',
         'terminaltables',
-        'ttlser>=1.1.2',
+        'ttlser>=1.1.3',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'spell': ['hunspell'],
