@@ -1022,7 +1022,7 @@ function load-graph () {
     # but use cp -r for development to avoid continual rebuild
     cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return $?
     zip -r ${FILE_NAME_ZIP} ${STAMPED} || return $?
-    unlink "${LATEST}" 2&>1 > /dev/null
+    unlink "${LATEST}" > /dev/null 2>&1
     ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return $?
     popd > /dev/null || return $?
 }
