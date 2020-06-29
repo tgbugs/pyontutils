@@ -1,9 +1,32 @@
 #!/usr/bin/env bash
-pushd htmlfn;   pytest --cov-append --cov-config=../.coveragerc --cov=htmlfn || export DEAD=htmlfn: ; popd
-pushd ttlser;   pytest --cov-append --cov-config=../.coveragerc --cov=ttlser || export DEAD=${DEAD}ttlser: ; popd
-                pytest --cov-append                             --cov=pyontutils --cov=ttlser       || export DEAD=${DEAD}pyontutils:
-pushd neurondm; pytest --cov-append                             --cov=pyontutils --cov=neurondm     || export DEAD=${DEAD}neurondm: ; popd
-pushd nifstd;   pytest --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=nifstd_tools || export DEAD=${DEAD}nifstd: ; popd
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    --test-package)
+    TEST_PACKAGE="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+
+TEST_PACKAGE=${TEST_PACKAGE:-all}
+
+case $TEST_PACKAGE in
+    htmlfn|all)   pushd htmlfn;   pytest --cov-append --cov-config=../.coveragerc --cov=htmlfn || export DEAD=htmlfn: ; popd;;&
+    ttlser|all)   pushd ttlser;   pytest --cov-append --cov-config=../.coveragerc --cov=ttlser || export DEAD=${DEAD}ttlser: ; popd;;&
+    pyontutils|all)               pytest --cov-append                             --cov=pyontutils --cov=ttlser       || export DEAD=${DEAD}pyontutils:;;&
+    neurondm|all) pushd neurondm; pytest --cov-append                             --cov=pyontutils --cov=neurondm     || export DEAD=${DEAD}neurondm: ; popd;;&
+    nifstd|all)   pushd nifstd;   pytest --cov-append --cov-config=../.coveragerc --cov=pyontutils --cov=nifstd_tools || export DEAD=${DEAD}nifstd: ; popd;;&
+esac
+
 if [[ ! -z "${DEAD}" ]]; then
     (>&2 echo ${DEAD});
     exit 1;
