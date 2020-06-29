@@ -69,7 +69,7 @@ def _ontology_data_files():
 resources, ontology_data_files = _ontology_data_files()
 print('ontology_data_files:\n\t' + '\n\t'.join(ontology_data_files))
 
-tests_require = ['pytest', 'pytest-runner']
+tests_require = ['pytest']
 try:
     setup(
         name='neurondm',
@@ -94,8 +94,8 @@ try:
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
-            'hyputils>=0.0.4',
-            'pyontutils>=0.1.22',
+            'hyputils>=0.0.6',
+            'pyontutils>=0.1.23',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,

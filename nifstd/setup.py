@@ -15,7 +15,7 @@ __version__ = find_version('nifstd_tools/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+tests_require = ['pytest']
 setup(
     name='nifstd-tools',
     version=__version__,
