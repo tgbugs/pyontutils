@@ -2600,6 +2600,8 @@ class Ont:
                         uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
 
                     wgb = self.wasGeneratedBy = uri
+                else:
+                    filepath = file.name
 
         except TypeError:  # emacs is silly
             line = '#Lnoline'
