@@ -58,7 +58,7 @@ install:
   - >
     for f in {htmlfn,ttlser,.,neurondm,nifstd}; do
         pushd $f;
-        pip install --pre --editable . ;  # --user doesn't work in these venvs
+        pip install --pre --editable . || exit $?; # --user doesn't work in these venvs
         popd;
     done
 
