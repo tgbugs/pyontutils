@@ -2960,6 +2960,17 @@ class NeuronEBM(Neuron):
                                        f'for {invalid_superclass} due to\n{pe}'))
                     #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
 
+    @property
+    def prefLabel(self):
+        if self.origLabel:
+            label = self.origLabel
+            if self._shortname:
+                label += f' {self._shortname}'
+
+            return label
+        else:
+            return self.genLabel
+
 
 class TypeNeuron(Neuron):  # TODO
     """ TypeNeurons modify how NegPhenotype works, shifting to disjointWith.
