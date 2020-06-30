@@ -338,7 +338,7 @@ function push-release () {
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
     echo "local hashes"
-    tail -n2 hashes
+    grep "${packagename}-${version}" hashes
     echo go inspect https://test.pypi.org/project/${packagename}
     echo and go do the github release
     popd
@@ -422,7 +422,7 @@ function final-release () {
     echo "pypi hashes"
     curl https://pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
     echo "local hashes"
-    tail -n2 hashes
+    grep "${packagename}-${version}" hashes
     echo go inspect https://pypi.org/project/${packagename}
 
     popd
