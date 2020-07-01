@@ -149,6 +149,11 @@ class TestSheets(unittest.TestCase):
         self.sheet = SheetToTest(readonly=False)
         self.sheet_ro = SheetToTest()
 
+    def test_fromUrl(self):
+        NewSheet = sheets.Sheet.fromUrl(self.sheet._uri_human() + '#gid=0')
+        ns = NewSheet()
+        assert ns.values == self.sheet_ro.values
+
     def test_range(self):
         """ test the corners """
         #rcs = ((0, 0), (0, -1), (-1, 0), (-1, -1))  # asymmetry is hard

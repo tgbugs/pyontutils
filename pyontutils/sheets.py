@@ -1,6 +1,7 @@
 import pickle
 import itertools
 from pathlib import Path
+from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
 from googleapiclient.discovery import build
@@ -98,8 +99,10 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     return service
 
 
-def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
-    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None, SPREADSHEET_ID=None):
+    if SPREADSHEET_ID is None:
+        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
         ss = service.spreadsheets()
@@ -152,8 +155,10 @@ def num_to_ab(n):
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
-                     filter_cell=default_filter_cell):
-    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
+                     filter_cell=default_filter_cell, SPREADSHEET_ID=None):
+    if SPREADSHEET_ID is None:
+        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
+
     if spreadsheet_service is None:
         service = get_oauth_service()
         ss = service.spreadsheets()
@@ -514,6 +519,27 @@ class Sheet:
             self.fetch(filter_cell=filter_cell)
 
     @classmethod
+    def fromUrl(cls, url):
+        u = urlparse(url)
+        _, ss, d, spreadsheet_id, edit = u.path.split('/')
+        if ss != 'spreadsheets':
+            raise ValueError(f'Not a spreadsheet? {url}')
+
+        _, sheetId = u.fragment.split('=')
+        sheetId = int(sheetId)
+        _sheet_id = classmethod(lambda cls: spreadsheet_id)
+        Temp = type('SomeSheet', (cls,), dict(_sheet_id=_sheet_id))
+        temp = Temp(fetch=False)
+        meta = temp.metadata()
+        for s in meta['sheets']:
+            if s['properties']['sheetId'] == sheetId:
+                sheet_name = s['properties']['title']
+                break
+
+        return type('SomeSheet', (cls,), dict(_sheet_id=_sheet_id,
+                                              sheet_name=sheet_name))
+
+    @classmethod
     def _sheet_id(cls):
         return auth.dynamic_config.secrets('google', 'sheets', cls.name)
 
@@ -561,7 +587,8 @@ class Sheet:
             self.sheet_name,
             spreadsheet_service=self._spreadsheet_service,
             fetch_grid=fetch_grid,
-            filter_cell=filter_cell)
+            filter_cell=filter_cell,
+            SPREADSHEET_ID=self._sheet_id())
 
         self.raw_values = values
         self._values = [list(r) for r in
@@ -643,7 +670,8 @@ class Sheet:
         update_sheet_values(self.name,
                             self.sheet_name,
                             values,
-                            spreadsheet_service=self._spreadsheet_service)
+                            spreadsheet_service=self._spreadsheet_service,
+                            SPREADSHEET_ID=self._sheet_id())
 
     def sheetId(self):
         """ the tab aka sheetId not the _sheet_id aka spreadsheetId """
