@@ -287,7 +287,7 @@ build-release () {
     python setup.py bdist_wheel $@
     mv dist/*.whl ../
     popd
-    rm ./${packagename}-${version}/ -r
+    rm -r ./${packagename}-${version}/
     popd
     # background here to twine?
     popd
@@ -750,7 +750,7 @@ pushd pyontutils*/
 python setup.py bdist_wheel
 mv dist/*.whl ../
 popd
-rm ./pyontutils*/ -r
+rm -r ./pyontutils*/
 popd
 
 for f in {librdflib,htmlfn,ttlser,neurondm,nifstd}; do
@@ -760,7 +760,7 @@ pushd $f*/
 python setup.py bdist_wheel
 mv dist/*.whl ../
 popd
-rm ./$f*/ -r
+rm -r ./$f*/
 popd
 done
 #+END_SRC
