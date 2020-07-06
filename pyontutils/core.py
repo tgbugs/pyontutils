@@ -114,7 +114,7 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
             yield from yield_recursive(new_s, p, o, source_graph)
 
 
-def populateFromJsonLd(graph, path):
+def populateFromJsonLd(graph, path_or_blob):
     regjsonld()
     def convert_element(blob,
                         _lu={'literal': rdflib.Literal,
@@ -128,8 +128,11 @@ def populateFromJsonLd(graph, path):
 
         return _lu[blob['type']](blob['value'], **kwargs)
 
-    with open(path, 'rt') as f:
-        j = json.load(f)
+    if isinstance(path_or_blob, dict):
+        j = path_or_blob
+    else:
+        with open(path, 'rt') as f:
+            j = json.load(f)
 
     #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
     def triples():
