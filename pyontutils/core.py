@@ -129,8 +129,16 @@ def populateFromJsonLd(graph, path_or_blob):
         return _lu[blob['type']](blob['value'], **kwargs)
 
     if isinstance(path_or_blob, dict):
+        # FIXME this whole branch is so dumb
+        close_it = True
         j = path_or_blob
+        fd, _path = tempfile.mkstemp()
+        path = Path(_path)
+        with open(path, 'wt') as f:
+            json.dump(j, f)
     else:
+        close_it = False
+        path = path_or_blob
         with open(path, 'rt') as f:
             j = json.load(f)
 
@@ -149,6 +157,11 @@ def populateFromJsonLd(graph, path_or_blob):
     graph.namespace_manager.populate_from(curies)
     #graph.populate_from_triples(triples())  # pyld broken above
     graph.parse(path, format='json-ld')
+
+    if close_it:
+        fd.close()
+        path.unlink()
+
     return graph
 
 
