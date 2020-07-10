@@ -983,7 +983,7 @@ done
 
 local PATH_GRAPHLOAD=${PATH_GRAPHLOAD:-<<path-graphload-template()>>}
 local PATH_ONTOLOGIES=${PATH_ONTOLOGIES:-"./ontologies.yaml"}  # if missing will error
-local PATH_BUILD=$(realpath ${PATH_BUILD:-<<path-build-graph()>>})
+local PATH_BUILD=$(readlink -m ${PATH_BUILD:-<<path-build-graph()>>})
 local FOLDER_NAME_GRAPH=${FOLDER_NAME_GRAPH:-<<folder-name-graph()>>}
 local LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
 local PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
