@@ -548,6 +548,11 @@ class Sheet:
         # TODO sheet_name -> gid ??
         return f'https://docs.google.com/spreadsheets/d/{cls._sheet_id()}/edit'
 
+    @classmethod
+    def _open_uri(cls):
+        import webbrowser
+        webbrowser.open(cls._uri_human(uri))
+
     def _setup(self):
         if self.readonly:
             if not hasattr(Sheet, '_Sheet__spreadsheet_service_ro'):
@@ -721,6 +726,12 @@ class Sheet:
             return {}  # need to return the empty dict for type safety
         #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
         #rd = grid['data'][0]['rowData']
+
+    def rows(self):
+        return [self.row_object(i) for i, _ in enumerate(self.values)]
+
+    def columns(self):
+        return [self._column_object(i) for i, _ in enumerate(self.values[0])]
 
     @property
     def cells(self):

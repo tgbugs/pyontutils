@@ -159,7 +159,7 @@ def populateFromJsonLd(graph, path_or_blob):
     graph.parse(path, format='json-ld')
 
     if close_it:
-        fd.close()
+        os.close(fd)
         path.unlink()
 
     return graph
