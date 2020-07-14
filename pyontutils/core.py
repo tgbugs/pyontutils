@@ -1,5 +1,7 @@
 import io
 import os
+import re
+import json
 import yaml
 import types
 import gzip
@@ -9,7 +11,7 @@ import mimetypes
 import subprocess
 import idlib
 import rdflib
-from types import MappingProxyType
+from pyld import jsonld
 from inspect import getsourcefile
 from pathlib import Path, PurePath
 from itertools import chain
@@ -22,6 +24,7 @@ import htmlfn as hfn
 from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
+from ttlser.utils import regjsonld
 from pyontutils import combinators as cmb
 from pyontutils import closed_namespaces as cnses
 from pyontutils.utils import (refile,
@@ -111,6 +114,57 @@ def yield_recursive(s, p, o, source_graph):  # FIXME transitive_closure on rdfli
             yield from yield_recursive(new_s, p, o, source_graph)
 
 
+def populateFromJsonLd(graph, path_or_blob):
+    regjsonld()
+    def convert_element(blob,
+                        _lu={'literal': rdflib.Literal,
+                             'IRI': rdflib.URIRef,
+                             'blank node': rdflib.BNode,}):
+        kwargs = {}
+        if 'datatype' in blob:
+            kwargs['datatype'] = blob['datatype']
+        elif 'language' in blob:
+            kwargs['lang'] = blob['language']
+
+        return _lu[blob['type']](blob['value'], **kwargs)
+
+    if isinstance(path_or_blob, dict):
+        # FIXME this whole branch is so dumb
+        close_it = True
+        j = path_or_blob
+        fd, _path = tempfile.mkstemp()
+        path = Path(_path)
+        with open(path, 'wt') as f:
+            json.dump(j, f)
+    else:
+        close_it = False
+        path = path_or_blob
+        with open(path, 'rt') as f:
+            j = json.load(f)
+
+    #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+    def triples():
+        for dt in blob['@default']:
+            yield tuple(convert_element(e) for e in
+                        (dt['subject'], dt['predicate'], dt['object']))
+
+    proc = jsonld.JsonLdProcessor()
+    ctx = proc.process_context(proc._get_initial_context({}),
+                               j['@context'], {})
+    # FIXME how to deal with non prefixed cases like definition
+    curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
+              v['_prefix']}
+    graph.namespace_manager.populate_from(curies)
+    #graph.populate_from_triples(triples())  # pyld broken above
+    graph.parse(path, format='json-ld')
+
+    if close_it:
+        os.close(fd)
+        path.unlink()
+
+    return graph
+
+
 # ontology resource object
 from .iterio import IterIO
 
@@ -129,7 +183,23 @@ class OntRes(idlib.Stream):
 
     Graph = None  # this is set below after OntGraph is created (derp)
 
-    _progenitors = MappingProxyType({})  # this is a dict, but immutable to prevent accidents
+    @staticmethod
+    def fromStr(string):
+        if re.match(r'^(https?)://', string):
+            return OntResIri(string)
+        else:
+            file_uri = re.match(r'^file://(.+)$', string)
+            if file_uri:
+                path_string = file_uri.group(1)
+            else:
+                path_string = string
+
+            # TODO other OntResGit identifier options
+            rp = aug.RepoPath(path_string)
+            if rp.working_dir:
+                return OntResGit(rp)
+            else:
+                return OntResPath(path_string)
 
     def __init__(self, identifier, repo=None, Graph=None):  # XXX DO NOT USE THIS IT IS BROKEN
         self.identifier = identifier  # the potential attribute error here is intentional
@@ -138,50 +208,6 @@ class OntRes(idlib.Stream):
             Graph = OntGraph
 
         self.Graph = Graph
-
-    def progenitor(self, *args, level=1, type=None, _type=type):
-        """ return the reproductible progenitor object/stream at level n
-            also includes progenitors that are not reproducible but that
-            retain metadata about the substream in question, e.g a requests
-            response object has information about the superstream for a
-            text stream
-
-            generators and filelike objects should not be included in
-            the progenitor list since they do not represent stateless
-            progenitors (i.e. a generator can only be expressed once)
-
-            note that sometimes this may include a tuple if the information
-            needed has more than one part, no conventions for this have
-            been decided yet
-
-            level == 0 -> returns self to break"""
-
-        if args:
-            raise TypeError('progenitor acceps keywords arguments only!')
-
-        # FIXME probably makes more sense to store progenitors in a dict
-        # with a controlled set of types than just by accident of ordering
-        # this would allow us to keep everything along the way
-        # of course watch out for garbage collection issues ala lxml etree
-
-        # XXX NOTE: self._progenitors = [] should be set EVERY time data is retrieved
-        # it should NOT be set during __init__
-        # if not hasattr(self, '_progenitors'):  # TODO
-
-        # TODO instrumenting all the other objects with
-        # a progenitor method is going to be a big sigh
-        if type is not None:
-            return self._progenitors[type]  # FIXME need enum or something
-
-        if level is not None and level == 0:
-            return self
-        else:
-            if level < 0:
-                level += 1  # compensate for reversed
-
-            # HACK to retain a stack of progenitors manually for now
-            # FIXME blased insertion order :/ implemnation details
-            return list(self._progenitors.values())[-level]
 
     def _populate(self, graph, gen):
         raise NotImplementedError('too many differences between header/data and xml/all the rest')
@@ -388,7 +414,6 @@ class OntMetaIri(OntMeta, OntIdIri):
         # the whole point of progenitors is to give you access
         # to the exact state that failed so you can debug
         self._progenitors = {}
-
 
         _gz = self.identifier.endswith('.gz')
         _zip = self.identifier.endswith('.zip')
@@ -1008,6 +1033,7 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
 
     def populate(self, graph):
         [graph.bind(k, v) for k, v in self.namespaces()]
+        return graph  # make it possible to write g = BNM.populate(OntGraph())
 
     def populate_from(self, *graph_nsm_dict):
         """ populate namespace manager from graphs,
@@ -1019,6 +1045,8 @@ class BetterNamespaceManager(rdflib.namespace.NamespaceManager):
           if (isinstance(gnd, rdflib.Graph) or
               isinstance(gnd, rdflib.namespace.NamespaceManager)) else
           gnd.items())]
+
+        return self  # allow chaining
 
 
 class OntGraph(rdflib.Graph):
@@ -1037,6 +1065,9 @@ class OntGraph(rdflib.Graph):
             # FIXME the way this is implemented in rdflib makes it impossible to
             # change the namespace manager type in subclasses which is _really_ annoying
             # we shortcircuit this here
+            if namespace_manager and not isinstance(namespace_manager, BetterNamespaceManager):
+                namespace_manager = BetterNamespaceManager(self).populate_from(namespace_manager)
+
             self._namespace_manager = namespace_manager
 
         self.bind('owl', owl)
@@ -1111,6 +1142,8 @@ class OntGraph(rdflib.Graph):
 
         with open(path, 'wb') as f:
             self.serialize(f, format=format)
+
+        return self  # allow chaining of parse and write
 
     def asMimetype(self, mimetype):
         if mimetype in ('text/turtle+html', 'text/html'):
@@ -1599,6 +1632,12 @@ class OntGraph(rdflib.Graph):
 
         nodes, edges = self._genNodesEdges(gen, label_predicate)
         return {'nodes': nodes, 'edges': edges}
+
+    def fromTabular(self, rows, lifting_rule=None):
+        pass
+
+    def asTabular(self, lifting_rule=None, mimetype='text/tsv'):
+        pass
 
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
@@ -2529,7 +2568,8 @@ class Ont:
     def working_dir(self):
         return (aug.RepoPath(getsourcefile(self.__class__))
                 .resolve()
-                .resolve())
+                .resolve()
+                .working_dir)
 
     def __init__(self, *args, **kwargs):
         if 'comment' not in kwargs and self.comment is None and self.__doc__:
@@ -2564,10 +2604,21 @@ class Ont:
 
             else:
                 line = '#L' + str(getSourceLine(self.__class__))
-                _file = getsourcefile(self.__class__)
-                file = Path(_file)
+                file_string = getsourcefile(self.__class__)
+                file = aug.RepoPath(file_string)
                 file = file.resolve().resolve()
-                filepath = file.relative_to(working_dir).as_posix()
+                working_dir = file.working_dir
+                if working_dir is not None:
+                    commit = str(file.latest_commit())
+                    uri = file.remote_uri_human(ref=commit) + line
+                    diff = file.has_uncommitted_changes()
+                    if diff:
+                        uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
+
+                    wgb = self.wasGeneratedBy = uri
+                else:
+                    filepath = file.name
+
         except TypeError:  # emacs is silly
             line = '#Lnoline'
             _file = 'nofile'

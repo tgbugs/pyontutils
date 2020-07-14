@@ -18,7 +18,7 @@ with open('README.md', 'rt') as f:
 ttlfmt_require = ['docopt',
                   'joblib',     # FIXME better if this were optional? or just use a PPE?
 ]
-tests_require = ['pytest', 'pytest-runner'] + ttlfmt_require
+tests_require = ['pytest'] + ttlfmt_require
 setup(
     name='ttlser',
     version=__version__,

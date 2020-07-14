@@ -1,13 +1,14 @@
 import rdflib
 from ontquery import OntCuries
 from pyontutils import combinators as cmb
-from pyontutils.core import OntId, OntTerm as OntTermBase
+from pyontutils.core import OntId, OntTerm as OntTermBase, OntGraph
 from pyontutils.namespaces import ilxtr
 from pyontutils.closed_namespaces import rdf, rdfs, owl
 
-a = rdf.type
 
-current_collection = None
+neurdf = rdflib.Namespace(str(ilxtr) + 'neurdf/')
+
+_current_collection = None
 current_conventions = None
 
 
@@ -36,7 +37,7 @@ class Roots:
 
 # init because some attrs will need to be switched
 # to properties
-dimensions = Dimensions()
+__dimensions = Dimensions()
 curieprefixes = CuriePrefixes()
 roots = Roots()
 
@@ -46,7 +47,11 @@ class OntTerm(OntTermBase):
     skip_for_instrumentation = True
 
     def __new__(cls, *args, **kwargs):
-        self = OntId.__new__(cls, *args, **kwargs)
+        try:
+            self = OntId.__new__(cls, *args, **kwargs)
+        except:
+            breakpoint()
+            raise
         self._args = args
         self._kwargs = kwargs
         return self
@@ -66,6 +71,9 @@ class OntTerm(OntTermBase):
                                      depth=20,
                                      direction='OUTGOING')
 
+    def asType(self, class_):
+        return class_(self)
+
     def _isType(self, name):
         raise NotImplementedError
 
@@ -78,7 +86,7 @@ class PredicateTerm(OntTerm):
     skip_for_instrumentation = True
     __firsts = tuple()
     def _isType(self, name):
-        return self.isSubPropertyOf(getattr(dimensions, name))
+        return self.isSubPropertyOf(getattr(__dimensions, name))
 
     def _isPropertyType(self, property):
         return self.isSubPropertyOf(property)
@@ -102,17 +110,22 @@ class ObjectTerm(OntTerm):
 
 
 class PhenotypeBase(tuple):
+
     _defaultPredicate = ilxtr.hasPhenotype
-    def __new__(cls, value, dimension=_defaultPredicate):
+
+    def __new__(cls, value, dimension=None):  # FIXME consider changing name to aspect
+        if dimension is None:
+            dimension = self._defaultPredicate
+
         return super().__new__(cls, (ObjectTerm(value), PredicateTerm(dimension)))
 
     def __repr__(self):
-        p = f', {self.predicate}' if self.predicate != self._defaultPredicate else ''
-        return self.__class__.__name__ + f'({self.object}{p})'
+        p = f', {self.predicate.curie!r}' if self.predicate != self._defaultPredicate else ''
+        return self.__class__.__name__ + f'({self.object.curie!r}{p})'
 
     @property
     def predicate(self):
-        # yes this is backwards, but we want it to match the args
+        # yes this is backwards, but we want it to match the args TODO reconsider?
         return self[1]
 
     @property
@@ -126,10 +139,20 @@ class PhenotypeBase(tuple):
         """ restriction version useful for debug """
         yield from self.combinator(bnode_subject)
 
+    def asNeurdf(self, subject):
+        u = rdflib.URIRef
+        yield subject, self.predicate.asType(u), self.object.asType(u)
+
+    def asOwl(self, subject):
+        yield from self.combinator(subject)
+
     @property
     def combinator(self):
         """ yes, this is a property that returns a function """
-        return cmb.restriction(self.predicate, self.object)
+        # NOTE a surrounding combinator is needed at the phenotype
+        # collection level
+        combinator = cmb.Restriction(None)
+        return combinator(self.predicate, self.object)
 
     def annotate(self, neuron, *annotations):
         """ in order to annotate a phenotype you must also
@@ -152,52 +175,132 @@ class PhenotypeBase(tuple):
     def localName(self):
         return self.wrapName(self.object.localName(self.predicate))
 
+    @property
+    def prefLabel(self):
+        return self.wrapName(self.object.prefLabel(self.predicate))
+
 
 class Phenotype(PhenotypeBase):
     """ PositivePhenotype """
 
 
 class NegativePhenotype(PhenotypeBase):
-    pass
 
+    @property
+    def combinator(self):
+        Restriction = cmb.Restriction(None)
+        combinator = cmb.ObjectCombinator.full_combinator(
+            cmb.Class,
+            cmb.Pair(owl.complementOf,
+                     Restriction(self.predicate,
+                                 self.object)))
 
-NegPhenotype = NegativePhenotype  # XXX legacy support
+        return combinator
 
 
 # phenotype collections
 
 
 class PhenotypeCollection(frozenset):  # set? seems... fun? ordered set?
-    """ untyped bags of atomic phenotypes """
+    """ untyped bags of atomic phenotypes
 
+        frozenset is used so that collections of phenotypes can be used
+        as dictionary keys, uniquely identifying the neuron by type
+    """
+
+    linker = None
     operator = None
+    neurdf_type = None
 
-    def __new__(cls, *phenotypes):
+    def __new__(cls, *phenotypes):  # FIXME where to we put/manage names
         self = super().__new__(cls, phenotypes)
+
+        # repeated calls to add or massive parenthized statements
+        if _current_collection is not None:
+            _current_collection.add(self)
+
+        #if hasattr(cls, '_current_collection'):
+            #cls._current_collection.add(self)
+
         return self
 
     def __init__(self, *phenotypes):
-        self.identifier = rdflib.BNode()
         pass
 
+    def __hash__(self):
+        return hash((self.__class__, super()))
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and super().__eq__(other)
+
+    @classmethod
+    def fromRow(cls, row, converter=None): pass
+    def asRow(self, converter=None): pass
+
     @property
-    def triples(self):
-        list_ = cmb.List({owl.Restriction:cmb.Restriction(rdf.first)})
-        yield self.identifier, a, owl.Class
-        conbinators = (p.combinator for p in self)
-        yield from list_.serialize(self.identifier, self.operator, *combinators)
+    def combinator(self):
+        combinator = cmb.PredicateCombinator(self.linker)
+        if self.operator is not None:
+            cmb_operator = cmb.PredicateList(self.operator)
+            class Cmb(cmb.Combinator):
+                def __init__(self): pass
+                def __call__(self, subject, *objects):
+                    if objects:
+                        return combinator(subject, cmb_operator(*objects))
+                    else:
+                        return tuple()
 
+                def __repr__(self):
+                    return f'{combinator}(?, {cmb_operator}(*?))'
 
-PhenotypeCollection(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'))
+            return Cmb()
 
+        else:
+            return combinator
 
-class LogicalPhenotype(PhenotypeCollection):
-    """ useful for mapping naming conventions among other things """
+        raise NotImplementedError('implement in subclass')
+
+    def asNeurdf(self, identifier_function=lambda self: rdflib.BNode()):
+        s = identifier_function(self)
+        yield s, rdf.type, self.neurdf_type
+        for phenotype in self:
+            if isinstance(phenotype, PhenotypeCollection):
+                linker = rdflib.BNode()
+                yield s, ilxtr.subCell, linker
+                yield from phenotype.asNeurdf(lambda self: linker)
+            else:
+                yield from phenotype.asNeurdf(s)
+
+    def asOwl(self, identifier_function=lambda self: rdflib.BNode()):
+        # FIXME maybe just use the render function? and control all
+        # of this as part of the renderer?
+        s = identifier_function(self)
+        for type in (PhenotypeCollection, PhenotypeBase):
+            combinators = (phenotype.combinator for phenotype in self
+                           if isinstance(phenotype, type))
+            combinators = list(combinators)
+            if type == PhenotypeCollection and combinators:
+                asdf = list(self.combinator(s, *combinators))
+                OntGraph().populate_from_triples(asdf).debug()
+                breakpoint()  # XXX
+
+            yield from self.combinator(s, *combinators)
+
+    def debug(self, target=None):
+        if target is None:
+            target = self.asOwl
+        OntGraph().populate_from_triples(target()).debug()
+
+    def render(self, render_criteria):  # TODO naming
+        """ decouple the rendering of phenotypes from their core definitions """
+        yield from render_criteria.triples(self)
+        # TODO vs
+        #yield from render_criteria(self).triples()
 
 
 # neurons
 
-class NeuronBase(PhenotypeCollection):
+class CellBase(PhenotypeCollection):
     """ Immutable collections of phenotypes. """
 
     def annotate(self, *annotations):
@@ -207,46 +310,117 @@ class NeuronBase(PhenotypeCollection):
         current_collection.annotation(self, phenotype, *annotations)
 
 
-class AndNeuron(NeuronBase):
+class EntailedCell(CellBase):
+    linker = rdfs.subClassOf
+    operator = None
+    neurdf_type = neurdf.EntailedCell
+
+
+class AndCell(CellBase):
+    linker = owl.equivalentClass
     operator = owl.intersectionOf
+    neurdf_type = neurdf.AndCell
 
 
-class OrNeuron(NeuronBase):
+class OrCell(CellBase):
+    linker = owl.equivalentClass
     operator = owl.unionOf
+    neurdf_type = neurdf.OrCell
 
 
-class Neuron(AndNeuron):
+class Cell(AndCell):
+    #neurdf_type = neurdf.Cell  # leave as AndCell for clarity?
     pass
 
 
-class QueryNeuron(OrNeuron):
+class QueryCell(OrCell):
     # FIXME not quite an OrNeuron because it is the intersection of
     # a QueryNeuron and the union of its phenotypes
     """ Parent class for all neurons that are used
         for bridging queries. """
 
 
-class NeuronCollection:
+
+# legacy XXX
+
+NegPhenotype = NegativePhenotype  # XXX legacy support
+
+
+class LogicalPhenotypeLegacy(PhenotypeCollection):
+    """ useful for mapping naming conventions among other things """
+
+    def __new__(cls, op, *edges):
+        if op == owl.unionOf:
+            cls = OrCell
+        elif op == owl.intersectionOf:
+            cls = AndCell
+        else:
+            raise TypeError(f'unknown op {op}')
+
+        return cls(*edges)
+
+
+class PhenotypeLegacy(Phenotype):
+
+    def __new__(cls, value, dimension=None, label=None):
+        self = super().__new__(cls, value, dimension)
+        if label:
+            self.metadata = dict(label=label)
+
+        return self
+
+
+class NeuronLegacy:
+    """ convert from old implementation """
+
+    def __new__(cls, *phenotypesEdges, id_=None, label=None, override=False,
+                equivalentNeurons=tuple(), disjointNeurons=tuple()):
+        cell = Cell(*phenotypesEdges)
+        cell.metadata = dict(id_=id_,
+                             label=label,
+                             override=override,
+                             equivalentNeurons=equivalentNeurons,
+                             disjointNeurons=disjointNeurons)
+        return cell
+
+    def __init__(*args, **kwargs):
+        pass
+
+
+class CellCollection:
     """ Heed the warnings of your ancestors!
         Just make another object. It will simplify your life!
         But do not do so needlessly! -- Ockham
     """
 
-    def __init__(self,  # TODO the best parts from config ... (hah)
-                 name=None,
-                 comment=None,
-                 metadata=None,):
-        pass
+    # collections are orthgonal to serialization and metadata,
+    # thus they should not have that information included at
+    # init but instead should be pop
+
+    def __init__(self):
+        self._collection = set()
+
+    def __repr__(self):
+        global _current_collection
+        active = ' ACTIVE' if self == _current_collection else ''
+        return self.__class__.__name__ + f' with {len(self)} cells' + active
+
+    def __len__(self):
+        return len(self._collection)
 
     def activate(self):
         """ set this collection as the current
             active collection """
-        global current_collection
-        currrent_collection = self
+        global _current_collection
+        _current_collection = self  # FIXME consider allowing more than one active collection?
 
-    def add(self, neuron):
+    def deactivate(self):
+        global _current_collection
+        _current_collection = None
+
+    def add(self, *cells):
         # TODO, list? dict? set?
-        pass
+        self._collection.update(cells)
 
     # can't do from_python
     # this will be the config object
@@ -256,21 +430,33 @@ class NeuronCollection:
     # one question is whether we use this with a context
     # manager or what ... why not both!
 
+    def asNeurdf(self, identifier_function=lambda self: rdflib.BNode()):
+        # TODO I think we definitely want the renderer here to hold
+        # all the export confiruation kinds of things
+        for cell in self._collection:
+            yield from cell.asNeurdf(identifier_function)
+
+    def asOwl(self, identifier_function=lambda self: rdflib.BNode()):
+        for cell in self._collection:
+            yield from cell.asOwl(identifier_function)
+
+    def debug(self, target=None):
+        if target is None:
+            target = self.asOwl
+
+        OntGraph(namespace_manager=dict(OntCuries._dict)).populate_from_triples(target()).debug()
+
     def from_remote(self, url):
         """ could be a google sheet or a remote rdf representation """
-    def from_file(self, filename, format=None): pass
-    def from_graph(self, graph):
+
+    def fromFile(self, filename, format=None): pass
+    def fromGraph(self, graph):
         """ triples can be a graph """
 
-    def from_table(self, rows): pass
+    def fromTabular(self, rows): pass
 
-    def as_python(self): pass
-    def as_owl(self, format='nifttl'):
-        graph = rdflib.Graph()
-        OntCuries.populate(graph)
-
-    def as_table(self): pass
-
+    def asPython(self): pass
+    def asTabular(self): pass
     def write_python(self, filename): pass
     def write_owl(self, filename): pass
     def write_table(self, filename): pass

@@ -1,0 +1,278 @@
+# -*- org-adapt-indentation: nil; org-edit-src-content-indentation: 0; -*-
+#+title: Overview of OWL modelling decisions
+#+author: Tom Gillespie
+#+options: num:nil html-preamble:t H:2
+# [[file:basic-model.html]]
+
+An overview of how the behavior of different reasoners influenced the decisions about
+how to model location phenotypes and molecular phenotypes in the Neuron Phenotype Ontology.
+
+Of particular note is that creating a =hasLocationPhenotype= property chain axiom breaks FaCT++.
+
+* Code
+Change =NAME== to match the name of the file to run e.g. =NAME=pca=.
+#+begin_src bash :eval never
+NAME=base; protege "$(pwd)/basic-${NAME}.ttl"
+#+end_src
+** Ontology files to tangle
+#+name: base
+#+begin_src ttl :noweb no-export :comments link :tangle ./basic-base.ttl
+<<common>>
+:basic-base a owl:Ontology .
+#+end_src
+
+#+name: pca
+#+begin_src ttl :noweb no-export :comments link :tangle ./basic-pca.ttl
+<<common>>
+<<location-property-chain-axiom>>
+:basic-pca a owl:Ontology .
+#+end_src
+
+#+name: pos
+#+begin_src ttl :noweb no-export :comments link :tangle ./basic-pos.ttl
+<<common>>
+<<part-of-self>>
+:basic-pos a owl:Ontology .
+#+end_src
+
+#+name: pca-pos
+#+begin_src ttl :noweb no-export :comments link :tangle ./basic-pca-pos.ttl
+<<common>>
+<<location-property-chain-axiom>>
+<<part-of-self>>
+:basic-pca-pos a owl:Ontology .
+#+end_src
+** Blocks
+
+Local conventions.
+#+name: local-conventions
+#+begin_src ttl :exports none
+@prefix : <file:///ERROR/EMPTY/PREFIX/BANNED/> .
+@prefix definition: <http://purl.obolibrary.org/obo/IAO_0000115> .
+@prefix ilxtr: <http://uri.interlex.org/tgbugs/uris/readable/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix partOf: <http://purl.obolibrary.org/obo/BFO_0000050> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix subClassOf: <http://www.w3.org/2000/01/rdf-schema#subClassOf> .
+@prefix R: <http://www.w3.org/2002/07/owl#Restriction> .
+@prefix oP: <http://www.w3.org/2002/07/owl#onProperty> .
+@prefix sVF: <http://www.w3.org/2002/07/owl#someValuesFrom> .
+#+end_src
+
+Definition of the property chain axiom for =hasLocationPhenotype=.
+#+name: location-property-chain-axiom
+#+begin_src ttl
+ilxtr:hasLocationPhenotype a owl:ObjectProperty ;
+    owl:propertyChainAxiom (
+            ilxtr:hasLocationPhenotype
+            partOf: ) .
+#+end_src
+
+Definitions of the part of self axioms.
+#+name: part-of-self
+#+begin_src ttl
+:brain subClassOf:                            [ a R: ; oP: partOf: ; sVF: :brain ] .
+:neocortex subClassOf:                        [ a R: ; oP: partOf: ; sVF: :neocortex ] .
+:somatosensory-cortex subClassOf:             [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex ] .
+:somatosensory-cortex-rat-atlas-1 subClassOf: [ a R: ; oP: partOf: ; sVF: :somatosensory-cortex-rat-atlas-1 ] .
+:S1 subClassOf:                               [ a R: ; oP: partOf: ; sVF: :S1 ] .
+:S1-part subClassOf:                          [ a R: ; oP: partOf: ; sVF: :S1-part ] .
+:S2 subClassOf:                               [ a R: ; oP: partOf: ; sVF: :S2 ] .
+:S2-part subClassOf:                          [ a R: ; oP: partOf: ; sVF: :S2-part ] .
+:spinal-cord subClassOf:                      [ a R: ; oP: partOf: ; sVF: :spinal-cordl ] .
+#+end_src
+
+Common definitions.
+#+name: common
+#+begin_src ttl :noweb yes :comments link
+<<local-conventions>>
+### Object Properties
+ilxtr:delineates a owl:ObjectProperty .
+
+ilxtr:hasLocationPhenotype a owl:AsymmetricProperty,
+        owl:IrreflexiveProperty,
+        owl:ObjectProperty ;
+    rdfs:label "hasLocationPhenotype" ;
+    definition: "Expresses a relationship between a neuron type and a brain region or brain parcel. This is a superProperty and should not be used directly." ;
+    rdfs:subPropertyOf ilxtr:hasPhenotype ;
+    rdfs:comment "This property should not be used directly." .
+
+ilxtr:hasPhenotype a owl:ObjectProperty ;
+    rdfs:label "hasPhenotype" .
+
+ilxtr:hasSomaLocatedIn a owl:AsymmetricProperty,
+        owl:IrreflexiveProperty,
+        owl:ObjectProperty ;
+    rdfs:label "hasSomaLocatedIn" ;
+    rdfs:subPropertyOf ilxtr:hasLocationPhenotype .
+
+partOf: a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "partOf" .
+
+### Annotation Properties
+
+definition: a owl:AnnotationProperty .
+
+### Classes
+
+:anatomical-entity a owl:Class .
+
+:brain a owl:Class ;
+    subClassOf: :anatomical-entity .
+
+ilxtr:parcellationLabel a owl:Class ;
+    subClassOf: :anatomical-entity .
+
+:neocortex a owl:Class ;
+    subClassOf: :anatomical-entity,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :brain ] .
+
+:neuron a owl:Class .
+
+:neuron-brain a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom :brain ] ) ] ;
+    rdfs:comment "simple model and query input term" .
+
+:neuron-S1 a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom [ a owl:Restriction ;
+                                owl:onProperty partOf: ;
+                                owl:someValuesFrom :S1 ] ] ) ] ;
+    rdfs:comment "complex model" .
+
+:neuron-S1-part a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom [ a owl:Restriction ;
+                                owl:onProperty partOf: ;
+                                owl:someValuesFrom :S1-part ] ] ) ] ;
+    rdfs:comment "complex simple model, correctly appears as subClassOf: :neuron-S1" .
+
+:neuron-S2 a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom :S2 ] ) ] ;
+    rdfs:comment "simple model" .
+
+:neuron-S2-part a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom :S2-part ] ) ] ;
+    rdfs:comment "breaks simple model, should be subClassOf: :neuron-S2 but won't be" .
+
+:neuron-spinal-cord a owl:Class ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf (
+                    :neuron
+                    [ a owl:Restriction ;
+                        owl:onProperty ilxtr:hasSomaLocatedIn ;
+                        owl:someValuesFrom :spinal-cord ] ) ] ;
+    rdfs:comment "simple model" .
+
+:S1 a owl:Class ;
+    subClassOf: ilxtr:parcellationLabel,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :somatosensory-cortex-rat-atlas-1 ] .
+
+:S1-part a owl:Class ;
+    subClassOf: ilxtr:parcellationLabel,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :S1 ] .
+
+:S2 a owl:Class ;
+    subClassOf: ilxtr:parcellationLabel,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :somatosensory-cortex-rat-atlas-1 ] .
+
+:S2-part a owl:Class ;
+    subClassOf: ilxtr:parcellationLabel,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :S2 ] .
+
+:somatosensory-cortex a owl:Class ;
+    subClassOf: :anatomical-entity,
+        [ a owl:Restriction ;
+            owl:onProperty partOf: ;
+            owl:someValuesFrom :neocortex ] .
+
+:somatosensory-cortex-rat-atlas-1 a owl:Class ;
+    subClassOf: ilxtr:parcellationLabel,
+        :somatosensory-cortex,
+        [ a owl:Restriction ;
+            owl:onProperty ilxtr:delineates ;
+            owl:someValuesFrom :somatosensory-cortex ] .
+
+:spinal-cord a owl:Class ;
+    subClassOf: :anatomical-entity .
+
+### Serialized using the ttlser deterministic serializer v1.2.0
+#+end_src
+* OWL DL Queries
+#+begin_src
+neuron-S1
+neuron-S2
+neuron and hasLocationPhenotype some brain
+neuron and hasLocationPhenotype some (partOf some brain)
+#+end_src
+
+| query | reasoner | file    | result                                                         |
+|-------+----------+---------+----------------------------------------------------------------|
+| ns2   | elk      | base    | nil                                                            |
+| ns1   | elk      | base    | neuron-S1-part                                                 |
+| b     | elk      | base    | neuron-brain                                                   |
+| pob   | elk      | base    | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part              |
+| ns2   | elk      | pca     | nil                                                            |
+| ns1   | elk      | pca     | neuron-S1-part                                                 |
+| b     | elk      | pca     | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part neuron-brain |
+| pob   | elk      | pca     | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part              |
+| ns2   | elk      | pos     | nil                                                            |
+| ns1   | elk      | pos     | neuron-S1-part                                                 |
+| b     | elk      | pos     | neuron-brain                                                   |
+| pob   | elk      | pos     | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part neuron-brain |
+| ns2   | elk      | pca-pos | nil                                                            |
+| ns1   | elk      | pca-pos | neuron-S1-part                                                 |
+| b     | elk      | pca-pos | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part neuron-brain |
+| pob   | elk      | pca-pos | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part neuron-brain |
+|-------+----------+---------+----------------------------------------------------------------|
+| ns2   | fact     | base    | nil                                                            |
+| ns1   | fact     | base    | neuron-S1-part                                                 |
+| b     | fact     | base    | neuron-brain                                                   |
+| pob   | fact     | base    | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part              |
+| ns2   | fact     | pca     | *error*                                                        |
+| ns1   | fact     | pca     | *error*                                                        |
+| b     | fact     | pca     | *error*                                                        |
+| pob   | fact     | pca     | *error*                                                        |
+| ns2   | fact     | pos     | nil                                                            |
+| ns1   | fact     | pos     | neuron-S1-part                                                 |
+| p     | fact     | pos     | neuron-brain                                                   |
+| pob   | fact     | pos     | neuron-S1 neuron-S1-part neuron-S2 neuron-S2-part neuron-brain |
+| ns2   | fact     | pca-pos | *error*                                                        |
+| ns1   | fact     | pca-pos | *error*                                                        |
+| b     | fact     | pca-pos | *error*                                                        |
+| pob   | fact     | pca-pos | *error*                                                        |

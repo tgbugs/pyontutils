@@ -326,6 +326,20 @@ class Registry(Ont):
 
 def main():
     from docopt import docopt
+
+    # import from this file to avoid __main__ vs module issues
+    # when trying to debug inspect in an ipython instance
+    # who doesn't love completely inconsistent behavior within
+    # purely interpreted code? can you imagine what is going to
+    # happen if python ever gets a real compiler !?
+    try:
+        from scr_sync import Registry, RegistrySource
+    except:
+        try:
+            from nifstd_tools.scr_sync import Registry, RegistrySource
+        except:
+            pass
+
     args = docopt(__doc__, version='registry-sync 1.0.0')
     (user, host, port, database, git_remote, git_local,
      org, repo) = (args['--' + k]

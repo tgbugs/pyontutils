@@ -15,7 +15,7 @@ __version__ = find_version('nifstd_tools/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+tests_require = ['pytest']
 setup(
     name='nifstd-tools',
     version=__version__,
@@ -44,7 +44,7 @@ setup(
         'networkx',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.21',
+        'pyontutils>=0.1.23',
         'sqlalchemy',
     ],
     extras_require={'dev': ['mysql-connector',

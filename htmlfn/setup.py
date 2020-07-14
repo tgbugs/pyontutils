@@ -15,7 +15,7 @@ __version__ = find_version('htmlfn/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+tests_require = ['pytest']
 setup(
     name='htmlfn',
     version=__version__,

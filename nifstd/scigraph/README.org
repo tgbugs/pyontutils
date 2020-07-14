@@ -29,10 +29,21 @@ emacs --batch \
       --eval "(unless ((lambda (a b) (or (string> a b) (string= a b))) (org-version) \"9.3\") (message (format \"your org is too old! %s < 9.3 try loading ~/git/orgstrap/init.el\" (org-version))) (kill-emacs 1))" \
       --eval "(org-babel-tangle-file \"${THIS_FILE}\")"
 #+end_src
+
 The core functionality is tangled to [[file:./bin/scigraph-functions.sh]]. \\
 It can be sourced in a shell or from a script by running \\
 =source ~/git/pyontutils/nifstd/scigraph/bin/scigraph-functions.sh= \\
 to make the functions defined in this file available for use.
+
+#+name: fail-if-not-sourced
+#+caption: Fail if [[file:./bin/scigraph-functions.sh]] is not sourced.
+#+begin_src bash :exports none :tangle ./bin/scigraph-functions.sh
+if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
+    echo "${0} is not an executable shell script."
+    echo "Instead run \`source ${0}\`"
+    exit 1
+fi
+#+end_src
 ** Developing this file                                            :noexport:
 You should also run =shellcheck= on the tangled file if you make any changes.
 You don't usually have to worry about green issues, and there are a number of
@@ -254,6 +265,90 @@ Set =ip-jump-host= here
 Set =user-jump-host= here
 #+name: user-jump-host
 : nobody
+* Simple CLI =scigraph-load-graphs=
+Cut out the =graphload.yaml= middle man.
+
+Note this currently can't use shell redirection to do things like
+=load-graphs <(git show branch:path/to/file.ttl)= though it would
+be quite useful to be able to do so.
+
+#+name: &help-load-graphs
+#+begin_src bash :noweb yes
+Load one or more RDF/OWL graphs into a SciGraph database
+Usage:
+    scigraph-load-graphs [options] <path-or-iri>...
+
+Examples:
+    scigraph-load-graphs --path-output loaded-graph.zip path/to/my/ontology.ttl
+    scigraph-load-graphs ttl/nif.ttl ~/git/NIF-Ontology/extra.ttl http://www.w3.org/2002/07/owl#
+
+Options:
+    -h --help                 print this message
+    --path-output=PATH        full path to the output zip file [default: ./]
+    --folder-name-graph=NAME  name of the folder holding the neo4j database [default: test]
+    --path-graphload=PATH     full path to the graphload template [default: <<path-graphload-template()>>]
+#+end_src
+
+#+name: scigraph-load-graphs
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/scigraph-load-graphs
+<<&source-scigraph-functions>>
+load-graphs $@
+#+end_src
+
+#+name: &vars-load-graphs
+#+begin_src bash :eval never :exports none :noweb yes
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-output)       local PATH_OUTPUT="${2}"; shift; shift ;;
+    --folder-name-graph) local FOLDER_NAME_GRAPH="${2}"; shift; shift ;;
+    --path-graphload)    local PATH_GRAPHLOAD="${2}"; shift; shift ;;
+    -h|--help)           echo "${HELP}"; return ;;
+    *)                   POSITIONAL+=("$1"); shift ;;
+esac
+done
+
+if [ -z $POSITIONAL ]; then
+    echo "${HELP}"
+    return 1
+fi
+
+local PATH_OUTPUT=${PATH_OUTPUT:-"./"}
+local PATH_BUILD=$(mktemp --directory load-graph-test-XXXX)
+local PATH_ONTOLOGIES="${PATH_BUILD}/ontologies.yaml"
+local FOLDER_NAME_GRAPH=${FOLDER_NAME_GRAPH:-"test"}
+#+end_src
+
+# have to use :comments link here so that tangling the help doesn't break everything
+#+name: load-graphs
+#+header: :comments link
+#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
+function load-graphs () {
+    local HELP="\
+<<&help-load-graphs>>"
+    <<&vars-load-graphs>>
+    echo ontologies: > "${PATH_ONTOLOGIES}"
+    for PATH_INPUT in "${POSITIONAL[@]}"; do
+        echo "  - url: ${PATH_INPUT}"                                       >> "${PATH_ONTOLOGIES}"
+        echo "    reasonerConfiguration:"                                   >> "${PATH_ONTOLOGIES}"
+        echo "      factory: org.semanticweb.elk.owlapi.ElkReasonerFactory" >> "${PATH_ONTOLOGIES}"
+        echo "      addDirectInferredEdges: true"                           >> "${PATH_ONTOLOGIES}"
+        echo "      removeUnsatisfiableClasses: true"                       >> "${PATH_ONTOLOGIES}"
+    done
+    load-graph
+    CODE=$?
+    if [ $CODE -ne 0 ]; then
+        echo "Loading failed with error ${CODE}"
+    else
+        mv $(realpath "${PATH_BUILD}/LATEST") "${PATH_OUTPUT}"
+    fi
+    rm -r "${PATH_BUILD}"
+    return $CODE
+}
+#+end_src
 * Deployments
 :PROPERTIES:
 :header-args: :mkdirp yes
@@ -393,7 +488,7 @@ you can run both blocks together with =run-load-deploy-graph-sparc=
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc :exports none
 <<run-load-graph-sparc>>
-|| exit 1
+|| exit $?
 <<run-deploy-graph-sparc>>
 #+end_src
 **** deploy from CI
@@ -433,7 +528,7 @@ deploy-services \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc
 <<run-build-services-sparc>>
-|| exit 1
+|| exit $?
 <<run-deploy-services-sparc>>
 #+end_src
 *** variables                                                      :noexport:
@@ -504,7 +599,7 @@ deploy-graph \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-deploy-graph-sparc-data
 <<run-load-graph-sparc-data>>
-|| exit 1
+|| exit $?
 <<run-deploy-graph-sparc-data>>
 #+end_src
 *** services config
@@ -543,7 +638,7 @@ deploy-services \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-build-deploy-services-sparc-data
 <<run-build-services-sparc-data>>
-|| exit 1
+|| exit $?
 <<run-deploy-services-sparc-data>>
 #+end_src
 *** variables                                                      :noexport:
@@ -888,7 +983,7 @@ done
 
 local PATH_GRAPHLOAD=${PATH_GRAPHLOAD:-<<path-graphload-template()>>}
 local PATH_ONTOLOGIES=${PATH_ONTOLOGIES:-"./ontologies.yaml"}  # if missing will error
-local PATH_BUILD=${PATH_BUILD:-<<path-build-graph()>>}
+local PATH_BUILD=$(readlink -m ${PATH_BUILD:-<<path-build-graph()>>})
 local FOLDER_NAME_GRAPH=${FOLDER_NAME_GRAPH:-<<folder-name-graph()>>}
 local LOAD_GRAPH_PATH="${PATH_BUILD}/${FOLDER_NAME_GRAPH}"
 local PATH_CONFIG_YAML="${LOAD_GRAPH_PATH}/graphload-$(date +%Y-%m-%d).yaml"
@@ -915,21 +1010,21 @@ function load-graph () {
     if [[ -d "${LOAD_GRAPH_PATH}" ]]; then
         rm "${LOAD_GRAPH_PATH}" -r
     fi
-    mkdir -p "${LOAD_GRAPH_PATH}" || return 1
-    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return 1
+    mkdir -p "${LOAD_GRAPH_PATH}" || return $?
+    cat "${PATH_GRAPHLOAD}" "${PATH_ONTOLOGIES}" > "${PATH_CONFIG_YAML_RAW}" || return $?
     yq -Y ".graphConfiguration.location = \"${LOAD_GRAPH_PATH}\"" \
-        "${PATH_CONFIG_YAML_RAW}" > "${PATH_CONFIG_YAML}" || return 1
+        "${PATH_CONFIG_YAML_RAW}" > "${PATH_CONFIG_YAML}" || return $?
         # FIXME I think this line is bugged YES BUT ALSO BY THE VERY COMMENT ITSELF
-    scigraph-load -c "${PATH_CONFIG_YAML}" || return 1
+    scigraph-load -c "${PATH_CONFIG_YAML}" || return $?
 
-    pushd "${PATH_BUILD}" || return 1
+    pushd "${PATH_BUILD}" || return $?
     # mv prevents accidentally deploying the same graph twice
     # but use cp -r for development to avoid continual rebuild
-    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return 1
-    zip -r ${FILE_NAME_ZIP} ${STAMPED} || return 1
-    unlink "${LATEST}"
-    ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return 1
-    popd > /dev/null || return 1
+    cp -r ${FOLDER_NAME_GRAPH} ${STAMPED} || return $?
+    zip -r ${FILE_NAME_ZIP} ${STAMPED} || return $?
+    unlink "${LATEST}" > /dev/null 2>&1
+    ln -sT "${FILE_NAME_ZIP}" "${LATEST}" || return $?
+    popd > /dev/null || return $?
 }
 #+end_src
 **** ontload

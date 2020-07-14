@@ -69,8 +69,9 @@ def olit(subject, predicate, *objects):
 
 
 class Combinator:  # FIXME naming, these aren't really thunks, they are combinators
+
     def __init__(self, *present):
-        raise NotImplemented
+        raise NotImplementedError('subclassit')
 
     def __call__(self, subject, predicate, object):
         yield subject, predicate, object
@@ -93,6 +94,7 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
 
 
 class CombinatorIt(Combinator):
+
     def __init__(self, outer_self, *args, **kwargs):
         self.outer_self = outer_self
         self.args = args
@@ -100,13 +102,24 @@ class CombinatorIt(Combinator):
 
     def __call__(self, *args, **kwargs):
         # FIXME might get two subjects by accident...
-        if (isinstance(self.outer_self, Combinator) and args and not isinstance(args[0], str) or
+        if (isinstance(self.outer_self, Combinator) and
+            args and
+            not isinstance(args[0], str) or
             self.args and self.args[0] is None):
             args = (rdflib.BNode(),) + args
             if self.args[0] is None:
                 self.args = self.args[1:]
         elif not args and not self.args:
             args = rdflib.BNode(),
+
+        if (all(hasattr(arg, 'predicate') for arg in self.args) and
+            len(args) == 2):
+            # all self.args are combinators and
+            # subject and predicate were provided
+            # mostly for use with ObjectCombinator.full_combinator
+            subject_linker = rdflib.BNode()
+            yield (*args, subject_linker)
+            args = subject_linker,
 
         yield from self.outer_self.__call__(*args, *self.args, **kwargs, **self.kwargs)
 
@@ -118,6 +131,32 @@ class CombinatorIt(Combinator):
             yield t
             if graph is not None:
                 graph.add(t)
+
+
+class PredicateCombinator(Combinator):
+
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    def __call__(self, subject, *objects):
+        for object in objects:
+            if isinstance(object, Combinator):
+                yield from object(subject, self.predicate)
+
+            elif isinstance(object, rdflib.term.Node):
+                yield subject, self.predicate, object
+
+            else:
+                msg = f'unhandled type {type(object)} for {object}'
+                raise TypeError(msg)
+
+    def __repr__(self):
+        if isinstance(self.predicate, rdflib.URIRef):
+            o = OntId(self.predicate).curie
+        else:
+            o = self.predicate
+
+        return f"{self.__class__.__name__}({o!r})"
 
 
 class ObjectCombinator(Combinator):
@@ -212,7 +251,8 @@ class RestrictionCombinator(_POCombinator):
     def __call__(self, subject, linking_predicate=None):
         if self.outer_self.predicate is not None and linking_predicate is not None:
             if self.outer_self.predicate != linking_predicate:
-                raise TypeError(f'Predicates {self.outer_self.predicate} {linking_predicate} do not match on {self!r}')
+                raise TypeError(f'Predicates {self.outer_self.predicate} '
+                                f'{linking_predicate} do not match on {self!r}')
 
         yield from self.outer_self.serialize(subject, self.predicate, self.object, linking_predicate)
 
@@ -425,6 +465,9 @@ class List(Triple):
 
         return ListCombinator(*objects_or_combinators)
 
+    def __repr__(self):
+        return '<List(Triple)>'
+
     def serialize(self, s, p, *objects_or_combinators):
         # FIXME for restrictions we can't pass the restriction in, we have to know the bnode in advance
         # OR list has to deal with restrictions which is NOT what we want at all...
@@ -552,6 +595,7 @@ class Annotation(Triple):
         if graph is None:  # TODO decorator for this
             graph = rdflib.Graph()
             [graph.add(t) for t in triples]
+
         rspt = rdf.type, owl.annotatedSource, owl.annotatedProperty, owl.annotatedTarget
         for a_s in graph.subjects(rdf.type, owl.Axiom):
             s_s = next(graph.objects(a_s, owl.annotatedSource))
@@ -560,7 +604,9 @@ class Annotation(Triple):
             triple = s_s, s_p, s_o
 
             # TODO combinator? or not in this case?
-            yield triple, tuple((a_p, a_o) for a_p, a_o in graph.predicate_objects(a_s) if a_p not in rspt)
+            yield triple, tuple((a_p, a_o)
+                                for a_p, a_o in graph.predicate_objects(a_s)
+                                if a_p not in rspt)
 
             # duplicated
             #for a_p, a_o in graph.predicate_objects(a_s):
@@ -588,16 +634,20 @@ def annotations(pairs, s, p, o):
     for predicate, object in pairs:
         yield n0, predicate, check_value(object)
 
+
 class PredicateList(Triple):
     predicate = rdf.List
     typeWhenSubjectIsBlank = owl.Class
 
-    def __init__(self):
+    def __init__(self, predicate=None):
+        if predicate is not None:
+            self.predicate = predicate
+
         self._list = List({owl.Restriction:Restriction(rdf.first)})
         self.lift_rules = {rdf.first:self._list, rdf.rest:None}
 
     def __call__(self, *objects_or_combinators):
-        class IntersectionOfCombinator(Combinator):
+        class PredicateListCombinator(Combinator):
             outer_self = self
             def __init__(self):
                 self.combinators = objects_or_combinators
@@ -618,7 +668,10 @@ class PredicateList(Triple):
             def __repr__(self):
                 return f'{self.__class__.__name__}{self.combinators!r}'
 
-        return IntersectionOfCombinator()
+        return PredicateListCombinator()
+
+    def __repr__(self):
+        return f'<PredicateList {self.predicate} {self._list}>'
 
     def serialize(self, subject, objects_or_combinators):
         if subject is None:

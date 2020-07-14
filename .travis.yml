@@ -4,6 +4,12 @@ language: python
 env:
   global:
     - NIFSTD_CHECKOUT_OK=1
+  matrix:
+    - TEST_PACKAGE=htmlfn
+    - TEST_PACKAGE=ttlser
+    - TEST_PACKAGE=pyontutils
+    - TEST_PACKAGE=neurondm
+    - TEST_PACKAGE=nifstd
 branches:
   only:
     - master
@@ -37,6 +43,7 @@ before_install:
     rpm-spec-mode
     ssh-config-mode
     toml-mode
+    ttl-mode
     vimrc-mode
     yaml-mode
   - pushd NIF-Ontology
@@ -51,7 +58,7 @@ install:
   - >
     for f in {htmlfn,ttlser,.,neurondm,nifstd}; do
         pushd $f;
-        pip install --pre --editable . ;  # --user doesn't work in these venvs
+        pip install --pre --editable . || exit $?; # --user doesn't work in these venvs
         popd;
     done
 

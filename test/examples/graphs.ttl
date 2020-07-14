@@ -1,0 +1,79 @@
+@prefix : <https://uilx.org/tgbugs/u/r/test/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+## helper
+:lol a owl:Class ;
+    rdfs:label rdf:nil .
+
+## __BASE
+# graph 1
+## graph 1 metadata stream _META
+:id-stream-1 a :stream, :record-triples ;
+    :id-metadata :id-metadata-1 ;
+    :stream-specification-rules :go-look-over-here ;
+    :pred-var-1 "__RANDOM" ;
+    :pred-var-2 :__RANDOM ;
+    :pred-var-3 "__RANDOM", "__RANDOM-X" ;
+    :pred-invar-1 "in-1" ;
+    :pred-invar-2 "in-2" ;
+    :pred-invar-3 "in-3" ;
+    :pred-invar-4 [ :pred-1 "obj-1" ;
+                    :pred-2 :obj-2, :obj-3 ] .
+
+## graph 1 data stream _DATA
+:sub-1 a :record-pair ;
+    rdfs:label "subject 1" .
+
+:sub-2 a :record-pair ;
+    rdfs:label "subject 2" .
+
+## add data pair record
+# graph 2
+## graph 2 metadata stream
+:__COMMAND :__INSERT :__BASE_META .
+## graph 2 data stream
+:__COMMAND :__INSERT :__BASE_DATA .
+
+:sub-3 a :record-pair ;
+    rdfs:label "subject 3" .
+
+## change metadata invariant record
+# graph 3
+## graph 3 metadata stream
+:id-stream-1 a :stream, :record-triples ;
+    :id-metadata :id-metadata-1 ;
+    :stream-specification-rules :go-look-over-here ;
+    :pred-var-1 "__RANDOM" ;
+    :pred-var-2 :__RANDOM ;
+    :pred-var-3 "__RANDOM", "__RANDOM-X" ;
+    :pred-invar-1 "in-4" ;
+    :pred-invar-2 "in-2" ;
+    :pred-invar-3 "in-3" ;
+    :pred-invar-4 [ :pred-1 "obj-1" ;
+                    :pred-2 :obj-2, :obj-3 ] .
+
+## graph 3 data stream
+:__COMMAND :__INSERT :__BASE_DATA .
+
+## test that __COMMAND is working
+# graph 4
+## graph 4 metadata stream
+:__COMMAND :__INSERT :__BASE_META .
+## graph 4 data stream
+:__COMMAND :__INSERT :__BASE_DATA .
+
+## 
+# graph 5 change metadata invariant record
+## graph 5 metadata stream
+:__COMMAND :__INSERT :__BASE_META .
+## graph 5 data stream
+:__COMMAND :__INSERT :__BASE_DATA .
+
+## 
+# graph 6 change metadata invariant record
+## graph 6 metadata stream
+:__COMMAND :__INSERT :__BASE_META .
+## graph 6 data stream
+:__COMMAND :__INSERT :__BASE_DATA .

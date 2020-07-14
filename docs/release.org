@@ -85,80 +85,91 @@ Tangle this block so you can source [[file:./../bin/python-release-functions.sh]
 <<final-release>>
 #+END_SRC
 ** Build release
-#+NAME: build-release
+#+NAME: &vars-build-release
 #+begin_src bash :eval never :exports code
+local POSITIONAL=()
+local INTEGRATION_PACKAGES=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+# argh (((((((( darned mismatched parens :/
+case $key in
+    -l|--local)
+    local CLONEFROM="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -f|--artifact-folder)
+    local ARTIFACT_FOLDER="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -p|--base-path)
+    local BASE_PATH="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -b|--branch)
+    local BRANCH="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -i|--install-package)
+    INTEGRATION_PACKAGES+=("$2")
+    shift
+    shift
+    ;;
+    --python)
+    local PYTHON_VERSION="$2"
+    shift
+    shift
+    ;;
+    --tag-no-rename)
+    local TAG_NO_RENAME=YES
+    shift # past argument
+    ;;
+    --keep-artifacts)
+    local KEEP_ARTIFACTS=YES
+    shift # past argument
+    ;;
+    ,*)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift # past argument
+    ;;
+esac
+done
+
+local PYTHON_VERSION=${PYTHON_VERSION:-3.7}
+local org=${POSITIONAL[0]}
+local repo=${POSITIONAL[1]}
+local folder=${POSITIONAL[2]}
+local packagename=${POSITIONAL[3]}
+local version=${POSITIONAL[4]}
+local REST=${POSITIONAL[@]:5}  # remaining position passed along
+echo $REST
+
+if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
+    local tag=${version}
+else
+    local tag=${packagename}-${version}
+fi
+
+# TODO make sure no vars are null
+
+: ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
+
+echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
+#+end_src
+
+#+NAME: build-release
+#+begin_src bash :eval never :exports code :noweb yes
 build-release () {
     # example
     # build-release org    repo     folder   packagename version
     # build-release tgbugs ontquery ontquery ontquery    0.0.8
 
-    local POSITIONAL=()
-    local INTEGRATION_PACKAGES=()
-    while [[ $# -gt 0 ]]
-    do
-    key="$1"
-
-    # argh (((((((( darned mismatched parens :/
-    case $key in
-        -l|--local)
-        local CLONEFROM="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -f|--artifact-folder)
-        local ARTIFACT_FOLDER="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -p|--base-path)
-        local BASE_PATH="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -b|--branch)
-        local BRANCH="$2"
-        shift # past argument
-        shift # past value
-        ;;
-        -i|--install-package)
-        INTEGRATION_PACKAGES+=("$2")
-        shift
-        shift
-        ;;
-        --tag-no-rename)
-        local TAG_NO_RENAME=YES
-        shift # past argument
-        ;;
-        --keep-artifacts)
-        local KEEP_ARTIFACTS=YES
-        shift # past argument
-        ;;
-        ,*)    # unknown option
-        POSITIONAL+=("$1") # save it in an array for later
-        shift # past argument
-        ;;
-    esac
-    done
-
-    local org=${POSITIONAL[0]}
-    local repo=${POSITIONAL[1]}
-    local folder=${POSITIONAL[2]}
-    local packagename=${POSITIONAL[3]}
-    local version=${POSITIONAL[4]}
-    local REST=${POSITIONAL[@]:5}  # remaining position passed along
-    echo $REST
-
-    if [[ ${folder} == ${packagename} || -n ${TAG_NO_RENAME} ]]; then
-        local tag=${version}
-    else
-        local tag=${packagename}-${version}
-    fi
-
-    # TODO make sure no vars are null
-
-    : ${BASE_PATH:=/tmp}  # allow override for cases where /tmp causes test failure
-
-    echo $org $repo $folder $packagename $version $tag $CLONEFROM $ARTIFACT_FOLDER $BASE_PATH ${INTEGRATION_PACKAGES[@]}
+    <<&vars-build-release>>
 
     cd ${BASE_PATH}  # ensure we are always working in tmp for the rest of the time
 
@@ -232,14 +243,39 @@ build-release () {
     # into the 'void' just to make sure
     touch Pipfile
     pipenv --rm  # clean any existing env
-    pipenv --python 3.7  # for some reason 3.6 lingers in some envs
+    pipenv --python $PYTHON_VERSION  # for some reason 3.6 lingers in some envs
     if [[ -n ${INTEGRATION_PACKAGES} ]]; then
         echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
         pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return $?
     fi
     echo $(color yellow)installing$(color off) ${packagename}
-    pipenv run pip install -e .[test] || return $?  # .[services] for ontquery full install
-    pipenv run python setup.py test || local FAILURE=$?
+    if [[ -n ${ARTIFACT_FOLDER} ]]; then
+        #pipenv run pip install requests-file || return $?  # sadly this does not work
+        #--extra-index-url "file://$(realpath ${ARTIFACT_FOLDER})" \
+
+        # run a local pip package server for integration testing
+
+        # it would be great to be able to pass 0 for the port to http.server
+        # but http.server doesn't flush stdout correctly until process exit
+        # so we use socket to get a random port and the use that and hope
+        # that some other process doesn't randomly grab it in between
+        PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+        python -m http.server \
+               $PORT \
+               --bind 127.0.0.1 \
+               --directory "${ARTIFACT_FOLDER}" \
+               > /dev/null 2>&1 &  # if you need to debug redirect somewhere other than /dev/null
+        local TOKILL=$!
+        pipenv run pip install \
+               --extra-index-url "http://localhost:${PORT}" \
+               -e .[test] || local CODE=$?
+        kill $TOKILL
+        [[ -n $CODE && $CODE -ne 0 ]] && return $CODE
+    else
+        pipenv run pip install \
+               -e .[test] || return $?  # .[services] for ontquery full install
+    fi
+    pipenv run pytest || local FAILURE=$?
     # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
     # everything should pass if not, keep going until it does
     popd
@@ -251,7 +287,7 @@ build-release () {
     python setup.py bdist_wheel $@
     mv dist/*.whl ../
     popd
-    rm ./${packagename}-${version}/ -r
+    rm -r ./${packagename}-${version}/
     popd
     # background here to twine?
     popd
@@ -260,11 +296,11 @@ build-release () {
     fi
 
     if [[ -n ${ARTIFACT_FOLDER} ]]; then
-        if [ ! -d "${ARTIFACT_FOLDER}" ]; then
-            mkdir -p "${ARTIFACT_FOLDER}"
+        if [ ! -d "${ARTIFACT_FOLDER}/${packagename}" ]; then
+            mkdir -p "${ARTIFACT_FOLDER}/${packagename}"
         fi
-        cp ${folder}/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}"
-        echo "build artifacts have been copied to ${ARTIFACT_FOLDER}"
+        cp ${folder}/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}/${packagename}"
+        echo "build artifacts have been copied to ${ARTIFACT_FOLDER}/${packagename}"
     fi
 
     # FIXME need multiple repos when packages share a repo
@@ -308,7 +344,7 @@ function push-release () {
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
     echo "local hashes"
-    tail -n2 hashes
+    grep "${packagename}-${version}" hashes
     echo go inspect https://test.pypi.org/project/${packagename}
     echo and go do the github release
     popd
@@ -392,7 +428,7 @@ function final-release () {
     echo "pypi hashes"
     curl https://pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
     echo "local hashes"
-    tail -n2 hashes
+    grep "${packagename}-${version}" hashes
     echo go inspect https://pypi.org/project/${packagename}
 
     popd
@@ -714,7 +750,7 @@ pushd pyontutils*/
 python setup.py bdist_wheel
 mv dist/*.whl ../
 popd
-rm ./pyontutils*/ -r
+rm -r ./pyontutils*/
 popd
 
 for f in {librdflib,htmlfn,ttlser,neurondm,nifstd}; do
@@ -724,7 +760,7 @@ pushd $f*/
 python setup.py bdist_wheel
 mv dist/*.whl ../
 popd
-rm ./$f*/ -r
+rm -r ./$f*/
 popd
 done
 #+END_SRC

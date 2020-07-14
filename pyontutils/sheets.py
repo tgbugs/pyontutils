@@ -1,6 +1,7 @@
 import pickle
 import itertools
 from pathlib import Path
+from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
 from googleapiclient.discovery import build
@@ -8,10 +9,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
+from pyontutils.clifun import python_identifier
 
 # TODO decouple oauth group sheets library
 
 log = _log.getChild('sheets')
+
+CELL_DID_NOT_EXIST = type('CellDidNotExist', (object,), {})()
+CELL_REMOVED = type('CellRemoved', (object,), {})()  # FIXME this is ... bad? or is IndexError worse?
 
 
 def _FakeService():
@@ -94,8 +99,10 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     return service
 
 
-def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None):
-    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None, SPREADSHEET_ID=None):
+    if SPREADSHEET_ID is None:
+        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
         ss = service.spreadsheets()
@@ -148,8 +155,10 @@ def num_to_ab(n):
 
 
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
-                     filter_cell=default_filter_cell):
-    SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
+                     filter_cell=default_filter_cell, SPREADSHEET_ID=None):
+    if SPREADSHEET_ID is None:
+        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
+
     if spreadsheet_service is None:
         service = get_oauth_service()
         ss = service.spreadsheets()
@@ -225,6 +234,7 @@ class Cell:
         return Column(self.sheet, self.column_index)
 
     def __repr__(self):
+        # TODO deleted ??
         changed = '*' if self in self.sheet._uncommitted_updates else ' '
         #return f'<Cell{changed} {self.row_index:>4},{self.column_index:>4} -> {self.value!r}>'
         return f'<Cell{changed} {self.range} -> {self.value!r}>'
@@ -261,6 +271,16 @@ class Cell:
         self.sheet._setCellValue(self, value)
 
     @property
+    def _value_str(self):
+        # FIXME TODO this needs a proper systematic solution
+        # that can support more that just updating strings
+        v = self.value
+        if v == CELL_REMOVED:
+            return ''
+        else:
+            return v
+
+    @property
     def grid(self):
         return self.sheet.get_cell(self.row_index, self.column_index)
 
@@ -277,10 +297,23 @@ class Cell:
         return idlib.from_oq.OntTerm(iri=self.hyperlink, label=self.value)
 
     @property
+    def _range(self):
+        ci = self.column_index
+        if ci < 0:
+            ci = len(self.sheet.values[0]) + ci
+
+        c = num_to_ab(ci + 1)
+
+        ri = self.row_index
+        if ri < 0:
+            ri = len(self.sheet.values) + ri
+
+        r = ri + 1
+        return f'{c}{r}'
+
+    @property
     def range(self):
-        c = num_to_ab(self.column_index + 1)
-        r = self.row_index + 1
-        return f'{self.sheet.sheet_name}!{c}{r}'
+        return f'{self.sheet.sheet_name}!{self._range}'
 
 
 class Row:
@@ -288,6 +321,7 @@ class Row:
     def __init__(self, sheet, row_index):
         self.sheet = sheet
         self.row_index = row_index
+        self.index = self.row_index
         for column_index, name in enumerate(self.header):
             def f(ci=column_index):
                 return self.cell_object(ci)
@@ -296,8 +330,9 @@ class Row:
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
-                   else ('*' if [c for c in self.cells
-                                 if c in self.sheet._uncommitted_updates] else ' '))
+                   else ('-' if self in self.sheet._uncommitted_deletes
+                         else ('*' if [c for c in self.cells
+                                       if c in self.sheet._uncommitted_updates] else ' ')))
         return f'<Row{changed} {self.range}>'
 
     def __hash__(self):
@@ -311,7 +346,14 @@ class Row:
 
     @property
     def header(self):
-        return self.sheet.byCol.header  # FIXME normalized vs unnormalized
+        # FIXME normalized vs unnormalized
+        if not self.sheet.values:
+            return []
+
+        return [python_identifier(v)
+                for v in self.sheet.values[0]
+                # FIXME really bad semantics here
+                if v != CELL_REMOVED]
 
     def __getitem__(self, column_index):
         return self.sheet.values[self.row_index][column_index]
@@ -325,6 +367,14 @@ class Row:
 
     @values.setter
     def values(self, values):
+        """ NOTE if the maximum column index in the existing
+            sheet is larger than the number of values provided
+            any existing values beyond the end of the provided
+            values WILL NOT BE CHANGED.
+            row.values -> | a | b | c | d |
+            row.values =  | e | f |
+            row.values -> | e | f | c | d |
+        """
         for column_index, v in enumerate(values):
             self.cell_object(column_index).value = v
 
@@ -335,14 +385,9 @@ class Row:
 
     @property
     def range(self):
-        minc = 'A'  # anticipating arbitrary row ranges
-        maxc = num_to_ab(len(self.values) + 1)
-        ri = self.row_index
-        if ri < 0:
-            ri = len(self.values) + ri
-
-        r = ri + 1
-        return f'{self.sheet.sheet_name}!{minc}{r}:{maxc}{r}'
+        start = self.cell_object(0)
+        end = self.cell_object(-1)
+        return f'{self.sheet.sheet_name}!{start._range}:{end._range}'
 
     def rowFromIndex(self, index):
         return self.__class__(self.sheet, index)
@@ -362,6 +407,7 @@ class Column:
     def __init__(self, sheet, column_index):
         self.sheet = sheet
         self.column_index = column_index
+        self.index = self.column_index
         if self.sheet.index_columns:  # FIXME primary key for row ???
             for row_index, name in enumerate(self.header):
                 def f(ri=row_index):
@@ -371,8 +417,9 @@ class Column:
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
-                   else ('*' if [c for c in self.cells
-                                 if c in self.sheet._uncommitted_updates] else ' '))
+                   else ('-' if self in self.sheet._uncommitted_deletes
+                         else ('*' if [c for c in self.cells
+                                       if c in self.sheet._uncommitted_updates] else ' ')))
         return f'<Column{changed} {self.range}>'
 
     def __hash__(self):
@@ -400,9 +447,11 @@ class Column:
     def cell_object(self, row_index):
         return Cell(self.sheet, row_index, self.column_index)
 
-    # XXX
-    def values(self):  # FIXME naming ?
-        # FIXME can't update this so making it a function ???
+    @property
+    def values(self):
+        # TODO we can update this
+        # and either way need it as a property to make operations
+        # over rows and columns homogenous
         return [v[self.column_index] for v in self.sheet.values]
 
     @property
@@ -412,6 +461,10 @@ class Column:
 
     @property
     def range(self):
+        start = self.cell_object(0)
+        end = self.cell_object(-1)
+        return f'{self.sheet.sheet_name}!{start._range}:{end._range}'
+
         minr = 1  # anticipating arbitrary column ranges
         maxr = len(self.sheet.values) + 1
         ci = self.column_index
@@ -442,8 +495,9 @@ class Sheet:
     fetch_grid = False
     index_columns = tuple()
 
-    def __init__(self, name=None, sheet_name=None, fetch_grid=None, readonly=True,
-                 filter_cell=default_filter_cell):
+    def __init__(self, name=None, sheet_name=None,
+                 fetch=True, fetch_grid=None,
+                 readonly=True, filter_cell=default_filter_cell):
         """ name to override in case the same pattern is used elsewhere """
         if name is not None:
             self.name = name
@@ -456,10 +510,34 @@ class Sheet:
         # TODO can probably unify these since can dispatch on Cell/Row
         self._uncommitted_updates = {}
         self._uncommitted_appends = {}
+        self._uncommitted_deletes = {}
+        self._incomplete_removes = {}  # different than deletes for now
 
         self.readonly = readonly
         self._setup()
-        self.fetch(filter_cell=filter_cell)
+        if fetch:
+            self.fetch(filter_cell=filter_cell)
+
+    @classmethod
+    def fromUrl(cls, url):
+        u = urlparse(url)
+        _, ss, d, spreadsheet_id, edit = u.path.split('/')
+        if ss != 'spreadsheets':
+            raise ValueError(f'Not a spreadsheet? {url}')
+
+        _, sheetId = u.fragment.split('=')
+        sheetId = int(sheetId)
+        _sheet_id = classmethod(lambda cls: spreadsheet_id)
+        Temp = type('SomeSheet', (cls,), dict(_sheet_id=_sheet_id))
+        temp = Temp(fetch=False)
+        meta = temp.metadata()
+        for s in meta['sheets']:
+            if s['properties']['sheetId'] == sheetId:
+                sheet_name = s['properties']['title']
+                break
+
+        return type('SomeSheet', (cls,), dict(_sheet_id=_sheet_id,
+                                              sheet_name=sheet_name))
 
     @classmethod
     def _sheet_id(cls):
@@ -470,20 +548,36 @@ class Sheet:
         # TODO sheet_name -> gid ??
         return f'https://docs.google.com/spreadsheets/d/{cls._sheet_id()}/edit'
 
+    @classmethod
+    def _open_uri(cls):
+        import webbrowser
+        webbrowser.open(cls._uri_human(uri))
+
     def _setup(self):
         if self.readonly:
-            if not hasattr(Sheet, '__spreadsheet_service_ro'):
-                service = get_oauth_service(readonly=self.readonly)  # I think it is correct to keep this ephimoral
+            if not hasattr(Sheet, '_Sheet__spreadsheet_service_ro'):
+                # I think it is correct to keep this ephimoral
+                service = get_oauth_service(readonly=self.readonly)
                 Sheet.__spreadsheet_service_ro = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service_ro
 
         else:
-            if not hasattr(Sheet, '__spreadsheet_service'):
+            if not hasattr(Sheet, '_Sheet__spreadsheet_service'):
                 service = get_oauth_service(readonly=self.readonly)
                 Sheet.__spreadsheet_service = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
+
+    def metadata(self):
+        # TODO figure out the caching here
+        resp = (self._spreadsheet_service
+                .get(spreadsheetId=self._sheet_id())
+                .execute())
+        self._meta = resp
+        # TODO use this to create generic subclasses
+        # on the fly for each sheet?
+        return self._meta
 
     def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
@@ -491,14 +585,20 @@ class Sheet:
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
 
-        values, grid, cells_index = get_sheet_values(self.name,
-                                                     self.sheet_name,
-                                                     spreadsheet_service=self._spreadsheet_service,
-                                                     fetch_grid=fetch_grid,
-                                                     filter_cell=filter_cell)
+        self.metadata()
+
+        values, grid, cells_index = get_sheet_values(
+            self.name,
+            self.sheet_name,
+            spreadsheet_service=self._spreadsheet_service,
+            fetch_grid=fetch_grid,
+            filter_cell=filter_cell,
+            SPREADSHEET_ID=self._sheet_id())
 
         self.raw_values = values
-        self.values = [list(r) for r in zip(*itertools.zip_longest(*self.raw_values, fillvalue=''))]
+        self._values = [list(r) for r in
+                        zip(*itertools.zip_longest(*self.raw_values,
+                                                   fillvalue=''))]
         try:
             self.byCol = byCol(self.values, to_index=self.index_columns)
         except ValueError as e:
@@ -530,17 +630,81 @@ class Sheet:
         #_asdf = pickle.dumps(self)
         #print(len(_asdf) / 1024 ** 2)
 
+    @property
+    def values(self):
+        return self._values
+
+    @values.setter
+    def values(self, values):
+        """ NOTE this will not delete/erase existing values beyond the ends
+            of the provided values. Explicitly update a range for that or
+            use self.update which will blank existing values. """
+        for i, row_values in enumerate(values):
+            try:
+                self.row_object(i).values = row_values
+            except IndexError:
+                self._appendRow(row_values)
+
     def update(self, values):
+        """ update all values at the same time """
+        old_lv = len(self._values[0]) if self._values else 0
+        lv = len(values)
+        raw_values = [[''] * old_lv] + values
+        update_values = [list(r) for r in
+                         zip(*itertools.zip_longest(
+                             *raw_values, fillvalue=CELL_REMOVED))][1:]
+
+        lev = len(self._values)
+        if lv < lev:
+            nblank = lev - lv
+            nc = len(update_values[0])  # FIXME values = [] ??
+            update_values += [[CELL_REMOVED] * nc] * nblank
+
+        self.values = update_values
+
+    def _update_old(self, values):
         """ update all values at the same time """
         if self.readonly:
             raise PermissionError('sheet was loaded readonly, '
                                   'if you want to write '
                                   'reinit with readonly=False')
 
+        # FIXME this needs to updated the values attached to _THIS_ sheet
+        # as well
+        # FIXME also this bypasses the commit mechanism
         update_sheet_values(self.name,
                             self.sheet_name,
                             values,
-                            spreadsheet_service=self._spreadsheet_service)
+                            spreadsheet_service=self._spreadsheet_service,
+                            SPREADSHEET_ID=self._sheet_id())
+
+    def sheetId(self):
+        """ the tab aka sheetId not the _sheet_id aka spreadsheetId """
+        # maximum confusion
+        for s in self._meta['sheets']:
+            props = s['properties']
+            if props['title'] == self.sheet_name:
+                return props['sheetId']
+
+    def createRemoteSheet(self):
+        if self.sheetId() is not None:
+            raise TypeError(f'Sheet {self.sheet_name} already exists!')
+
+        data = [{'addSheet':
+                 {'properties':
+                  {'title': self.sheet_name,
+                   }}}]
+
+        body = {'requests': data}
+        resp = (self._spreadsheet_service
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+        added = [reply['addSheet'] for reply in resp['replies'] if 'addSheet' in reply]
+        self._meta['sheets'].extend(added)
+        if not hasattr(self, '_values'):
+            self.fetch()  # FIXME so many network calls
+
+        return resp
 
     def show_notes(self):
         for i, row in enumerate(self.values):
@@ -563,6 +727,21 @@ class Sheet:
         #grid = [s for s in self.grid['sheets'] if s['properties']['title'] == self.sheet_name][0]
         #rd = grid['data'][0]['rowData']
 
+    def rows(self):
+        return [self.row_object(i) for i, _ in enumerate(self.values)]
+
+    def columns(self):
+        return [self._column_object(i) for i, _ in enumerate(self.values[0])]
+
+    @property
+    def cells(self):
+        out = []
+        for i, _ in enumerate(self.values):
+            ro = self.row_object(i)
+            out.append(ro.cells)
+
+        return out
+
     def cell_object(self, row_index, column_index):
         return Cell(self, row_index, column_index)
 
@@ -577,15 +756,64 @@ class Sheet:
         if isinstance(value, Cell):
             raise TypeError(f'values should not be of type Cell: {value}')
 
-        if cell not in self._uncommitted_updates:
-            self._uncommitted_updates[cell] = cell.value  # store the old values
+        self._error_when_in_delete()
 
-        self.values[cell.row_index][cell.column_index] = value
+        if cell not in self._uncommitted_updates:
+            try:
+                self._uncommitted_updates[cell] = cell.value  # store the old values
+            except IndexError:
+                # there was no old value so not storing the cell
+                # will have to figure out how to remove values
+                # that forced the extension of the rows I'm sure
+                pass
+
+        if value == CELL_REMOVED:
+            self._incomplete_removes[cell] = value
+
+        try:
+            row_values = self.values[cell.row_index]
+        except IndexError:
+            raise  # this is needed to force over to append
+
+        try:
+            row_values[cell.column_index] = value
+        except IndexError as e:
+            self._appendColCell(cell, row_values, value, e)
+
+    def _appendColCell(self, cell, row_values, value, e):
+        lc = len(row_values)
+        if cell.column_index > lc + 1:
+            msg = (f'Column index {cell.column_index} > {lc} + 1 '
+                    'current max index + 1')
+            raise IndexError(msg) from e
+        else:
+            self._appendColBlank()
+            row_values[cell.column_index] = value
+
+    def _appendColBlank(self):
+        # FIXME TODO make sure that the bottom right corner of a double
+        # append with a row and a column is flagged correctly
+
+        # and here is the cost of a schema change over all rows ...
+        for row in self.values:
+            row.append(CELL_DID_NOT_EXIST)
+
+        new_column = Column(self, len(row) - 1)
+        self._uncommitted_appends[new_column] = new_column.values  # TODO handle this for rollback
+
+        # FIXME not sure if this is the right way to handle getting the * to show up
+        # but I think it is, this way we have a column of values that "does not exist"
+        # that we can detect was added, rather than trying to account for which columns
+        # were addeded or subtracted, and this avoids the risk of accidetnally pushing
+        # the random object to the remote since None -> null -> discarded
+        for cell in new_column.cells:
+            cell.value = ''  # FIXME object -> string issue
 
     def _appendRow(self, row):
         # NOTE this intentionally does not go in the byCol index
         # it should be added after commit completes, but byCol is static
         # and we need to remove it as a dependency at some point ...
+        self._error_when_in_delete()
         if row not in self.values:
             self.values.append(row)
             row_object = Row(self, self.values.index(row))
@@ -595,38 +823,178 @@ class Sheet:
             # or do we require another mechanism for that?
             raise ValueError('row already in sheet')
 
+    def _row_from_index(self, index_column=None, value=None, row=None,
+                        fail=False):
+        if index_column is None:
+            index_column = self.index_columns[0]
+
+        if (value is None and row is None or
+            value is not None and row is not None):
+            raise TypeError('one and only one of value or row is required')
+
+        cell_index_header = getattr(self.row_object(0), index_column)()
+        if row:
+            index_value = row[cell_index_header.column_index]
+        else:
+            index_value = value
+
+        row_object = getattr(cell_index_header.column, index_value)().row
+        return row_object, index_value
+
+    def insert(self, *rows):
+        """ you know it """
+        for row in rows:
+            try:
+                row_object, index_value = self._row_from_index(row=row)
+                raise ValueError('Row with pkey {value!r} already exists!\n'
+                                 'You should probably rollback your changes.')
+            except AttributeError:
+                self._appendRow(row)
+
+    def _error_when_uncommited(self):
+        if self._uncommitted_appends or self._uncommitted_updates:
+            raise ValueError('Sheet currently has uncommited appends or updates.')
+
+    def _error_when_in_delete(self):
+        # managing deletes is not simple because the row index has to be
+        # shifted based on the number of deletes, same issue for all
+        # other operations as well ... SIGH, basically don't stack
+        # deletes with anything else right now :/
+        if self._uncommitted_deletes:
+            raise ValueError('Sheet currently has uncommited deletes.')
+
+    def delete(self, *rows):
+        """ get me outa here """
+        if self.uncommitted():
+            raise ValueError('Sheet has uncommited changes, no deletes '
+                             'may be added to this transaction.')
+
+        row_objects = sorted([self._row_from_index(row=row)[0] for row in rows],
+                             key=lambda ro: ro.row_index)
+
+        # backwards so indexes don't shift under us
+        for row_object in row_objects[::-1]:
+            if row_object in self._uncommitted_deletes:
+                raise ValueError('very bad things have happened here')
+
+            self._uncommitted_deletes[row_object] = self.values.pop(row_object.row_index)
+
+    def upsert(self, *rows):
+        """ update or insert one or more rows
+            WARNING: DO NOT USE THIS IF THE PRIMARY INDEX COLUMN IS NOT UNIQUE
+            We do not currently have support for composite primary keys. """
+
+        for row in rows:
+            try:
+                row_object, index_value = self._row_from_index(row=row)
+                row_object.values = row
+            except AttributeError:
+                self._appendRow(row)
+
+    def rollback(self):
+        """ remove all changes staged for commit to the local version """
+        # TODO
+        if not self.uncommitted():
+            raise ValueError('There are no uncommitted changes to roll back!')
+
+        raise NotImplementedError('TODO')
+        # remove the new rows
+        self._uncommitted_appends = {}
+        # restore the previous rows
+        self._uncommitted_updates = {}
+        # restore the previous rows, note that all rows >= row_index += 1
+        # have to use list.insert(row_object.row_index, )
+
+        [self.values.insert(row_object.row_index, previously_deleted_row)
+         for row_object, previously_deleted_row in
+         sorted(self._uncommitted_deletes.items(),
+                # have to insert lowest first so that we don't try to insert
+                # into a position in the list that doesn't exist since we
+                # previously removed it
+                key=lambda kv: kv[0].row_index)]
+        self._uncommitted_deletes = {}
+
     def uncommitted(self):
-        return {**self._uncommitted_appends, **self._uncommitted_updates}
+        return {**self._uncommitted_appends,
+                **self._uncommitted_updates,
+                **self._uncommitted_deletes}
 
     def commit(self):
-        self._commit_appends()
+        # FIXME need clear documentation about the order in which these things execute
+        self._commit_appends()  # has to go first in cases where an added row is later updated
         self._commit_updates()
 
+        # deletes go last so that they don't rearrange the sheet and shift
+        # cell definitions for everything else
+        self._commit_deletes()
+
+        # implementaiton note:
+        # deletes are cases where we explicitly delete rows on our end
+        # removes are used during an update where where are not explicit
+        # deletes, therefore have to clean up the local blook keeping of
+        # the removed cells after the commit finishes
+        # NOTE: this means that checking len of the values lists during
+        # during a call to update may return an incorrect value not entirely
+        # sure how to test for that, fix involves checking _incomplete_removes
+        self._complete_removes()  # FIXME could rewrite these as deletes?
+
+
+    def _appendRange(self, objects):
+        """ WARNING objects must be sorted, non-empty,
+            and have values of uniform length """
+        no = len(objects)
+        _rmin = len(self.values) + no
+        _rmax = 0
+        _cmin = len(self.values[0]) + no
+        _cmax = 0
+
+        for o in (objects[0], objects[-1]):
+            cells = o.cells
+            for cell in (cells[0], cells[-1]):
+                _rmin = cell.row_index if cell.row_index < _rmin else _rmin
+                _rmax = cell.row_index if cell.row_index > _rmax else _rmax
+                _cmin = cell.column_index if cell.column_index < _cmin else _cmin
+                _cmax = cell.column_index if cell.column_index > _cmax else _cmax
+
+        rmin = _rmin + 1
+        rmax = _rmax + 1
+        cmin = num_to_ab(_cmin + 1)
+        cmax = num_to_ab(_cmax + 1)
+        return f'{self.sheet_name}!{cmin}{rmin}:{cmax}{rmax}'
+
     def _commit_appends(self):
+
+        def sigh(vs):  # FIXME
+            return ['' if v == CELL_REMOVED else v for v in vs]
+
         if not self._uncommitted_appends:
             return
 
-        row_objects = sorted(self._uncommitted_appends, key= lambda r: r.row_index)
-        values = [r.values for r in row_objects]  # FIXME variable length appends
-        body = {'values': values}
+        data = []
+        for oclass in (Row, Column):
+            objects = sorted((o for o in self._uncommitted_appends
+                              if isinstance(o, oclass)),
+                             key=lambda o: o.index)
+            if objects:
+                blob = dict(
+                    range = self._appendRange(objects),
+                    values = [sigh(o.values) for o in objects],  # FIXME object -> string issue
+                    majorDimension = oclass.__name__.capitalize() + 'S',
+                )
+                data.append(blob)
+                # FIXME overlapping cells are added twice
 
-        rmin = row_objects[0].row_index + 1
-        rmax = row_objects[-1].row_index + 1
-        cmin = 'A'
-        cmax = num_to_ab(max(len(v) for v in values) + 1)
-        range = f'{self.sheet_name}!{cmin}{rmin}:{cmax}{rmax}'
+        body = {'valueInputOption': 'USER_ENTERED',
+                'data': data,}
 
         resp = (self._spreadsheet_service.values()
-                .append(spreadsheetId=self._sheet_id(),
-                        valueInputOption='USER_ENTERED',
-                        range=range,
-                        body=body)
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
                 .execute())
 
         self._uncommitted_appends = {}
 
     def _commit_updates(self):
-        data = [{'range': cell.range, 'values': [[cell.value]]}
+        data = [{'range': cell.range, 'values': [[cell._value_str]]}
                 for cell in self._uncommitted_updates]
         body = {'valueInputOption': 'USER_ENTERED',
                 'data': data,}
@@ -636,12 +1004,55 @@ class Sheet:
 
         self._uncommitted_updates = {}
 
+    def _commit_deletes(self):
+        if not self._uncommitted_deletes:
+            return
+
+        # TODO columns ?
+
+        # delete from the bottom up to avoid changes in the indexing
+        row_objects = sorted(self._uncommitted_deletes, key= lambda r: r.row_index)
+        # can't use rmin and rmax because there might be gaps
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        data = [
+            {'deleteDimension': {
+                'range': {
+                    'sheetId': self.sheetId(),
+                    'dimension': 'ROWS' if isinstance(row_object, Row) else 'COLUMNS',
+                    'startIndex': row_object.row_index,
+                    'endIndex': row_object.row_index + 1,  # have to delete at least one whole row
+                }}}
+            for row_object in row_objects[::-1]]  # remove last first just in case
+        body = {'requests': data}
+        resp = (self._spreadsheet_service
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+
+        self._uncommitted_deletes = {}
+
+    def _complete_removes(self):
+        for cell in sorted(self._incomplete_removes,
+                           # this runs backwards removing the most distant first
+                           key=lambda c: (-c.row_index, -c.column_index)):
+            columns = self.values[cell.row_index]
+            columns.pop(cell.column_index)
+            if not columns:
+                self.values.pop(cell.row_index)
+
+        self._incomplete_removes = {}
+
     def _stash_uncommitted(self):
         self._stash = {c:c.value for c in self._uncommitted_updates}
         # TODO do we revert here?
 
     def _reapply_uncommitted(self):
         """ if fetch is called, reapply our changes """
+
+        # FIXME TODO detect changes in number of rows etc.
+        # and/or use the index columns ...
+
         old_u = self._uncommitted_updates  # keep in case something goes wrong ?
         self._uncommitted_updates = {}  # reset this to capture the new starting values
         old_a = self._uncommitted_appends  # in the event someone else appended rows, don't klobber

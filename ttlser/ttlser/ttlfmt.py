@@ -35,9 +35,12 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt, parse_defaults
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
+from .utils import regjsonld
+
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
-GRAPHCLASS = rdflib.Graph
+#GRAPHCLASS = rdflib.Graph
+GRAPHCLASS = rdflib.ConjunctiveGraph
 
 
 def getVersion():
@@ -58,8 +61,9 @@ def prepare(filepath_or_stream, outpath=None, stream=False):
         filetype = ext.strip('.')
         if filetype == 'ttl':
             infmt_guess = 'ttl'
-        elif filetype == 'json':
+        elif filetype in ('json', 'jsonld'):
             infmt_guess = 'json-ld'
+            regjsonld()
         else:
             infmt_guess = None
         if outpath is None:
@@ -189,6 +193,9 @@ def main():
         outfmt = 'rktttl'
     else:
         outfmt = args['--outfmt']
+
+    if outfmt == 'json-ld' or infmt == 'json-ld':
+        regjsonld()
 
     outpath = args['--output']
     files = args['<file>']

@@ -41,6 +41,7 @@ from augpathlib import exceptions as aexc
 from pyontutils import clifun as clif
 from pyontutils.utils import TODAY, noneMembers, makeSimpleLogger, isoformat
 from pyontutils.utils import TermColors as tc, get_working_dir
+from pyontutils.utils import asStr, findAssignToName
 from pyontutils.ontutils import tokstrip, _bads
 
 log = makeSimpleLogger('ont-docs')
@@ -52,48 +53,6 @@ except ImportError:
     hunspell = None
 
 suffixFuncs = {}
-
-
-def findAssignToName(name, body, reverse=False):
-    eb = enumerate(body)
-    gen = reversed(list(eb)) if reverse else eb
-    return [(i, n) for i, n in gen
-            if n.col_offset == 0 and
-            isinstance(n, ast.Assign) and
-            isinstance(n.targets[0], ast.Name) and
-            n.targets[0].id == name]
-
-
-def asStr(astNode, prior=tuple()):
-    if isinstance(astNode, ast.Str):
-        return astNode.s
-    elif isinstance(astNode, ast.FormattedValue):
-        v = astNode.value
-        if isinstance(v, ast.Name):
-            # have to reverse to find the latest setting of the value
-            # not the first since python allows rebinding
-            maybe_name = findAssignToName(v.id, prior, reverse=True)
-            if maybe_name:
-                _, n = maybe_name[0]
-                return asStr(n.value)
-            else:
-                raise NotImplementedError(f'found no assignment to {v.id}')
-        else:
-            return asStr(v)
-    elif isinstance(astNode, ast.Name):
-        return astNode.id
-    elif isinstance(astNode, ast.BinOp):
-        return (asStr(astNode.left) +
-                ' ' + asStr(astNode.op) + ' ' +
-                asStr(astNode.right))
-    elif isinstance(astNode, ast.Div):
-        return '/'
-    elif isinstance(astNode, ast.Call):
-        return asStr(astNode.func)
-    elif isinstance(astNode, ast.Attribute):
-        return asStr(astNode.value) + '.' + astNode.attr
-    else:
-        raise NotImplementedError(f'{astNode}')
 
 
 def patch_theme_setup(theme):
@@ -185,8 +144,11 @@ class FixLinks:
         self.current_file = Path(current_file).resolve()
         self.working_dir = self.current_file.working_dir
         if self.working_dir is None:
+            log.warning(f'Not in repo, not fixing links for {self.current_file}')
+            self.__call__ = lambda org: org
+            return
             # cannot proceed without git
-            raise FileNotFoundError(f'No working directory found for {self.current_file}')
+            #raise FileNotFoundError(f'No working directory found for {self.current_file}')
             #self.repo_name = 'NOREPO'
             #self.netloc = 'NOWHERE'
             #self.netloc_raw = 'NOWHERE'
@@ -393,7 +355,7 @@ def get__doc__s(repo_paths, skip_folders, skip):
     # TODO figure out how to do relative loads for resolver docs
     docs = []
     #skip = 'neuron', 'phenotype_namespaces'  # import issues + none have __doc__
-    skip = 'ilxcli', 'deploy'
+    skip = 'ilxcli', 'deploy', 'test',  # FIXME move to config
     for i, ppath in enumerate(paths):
         path = ppath.repo_relative_path.as_posix()
         if any(nope in path for nope in skip):
@@ -413,7 +375,14 @@ def get__doc__s(repo_paths, skip_folders, skip):
             if maybe__doc__:  # FIXME warn on multi?
                 i, n = maybe__doc__[0]
                 prior = tree.body[:i]
-                doc = ''.join([asStr(v, prior) for v in n.value.values])
+                #_values = [asStr(v, prior) for v in n.value.values]
+                #doc = ''.join(_values)
+                doc = asStr(n.value, prior)
+                if isinstance(n.value, ast.JoinedStr):
+                    doc = ast.literal_eval(doc)
+                if doc.startswith("'"):
+                    breakpoint()
+                    doc = ast.literal_eval(doc)
 
             else:
                 #print(tc.red('WARNING:'), 'no docstring for', module_path)
@@ -555,7 +524,7 @@ def renderOrg(path, debug=False, **kwargs):
     try:
         ref = path.latest_commit().hexsha
         github_link = path.remote_uri_human(ref=ref)
-    except aexc.NoCommitsForFile:
+    except (aexc.NoCommitsForFile, aexc.NotInRepoError):
         github_link = None
 
     #print(' '.join(compile_org_file))
@@ -888,7 +857,9 @@ class Main(clif.Dispatcher):
         if self.options.docstring_only:
             [kwargs.update({'theme': theme})
             for _, _, kwargs in wd_docs_kwargs]
-            outname, rendered = render_docs(wd_docs_kwargs, out_path, 1,
+            outname, rendered = render_docs(wd_docs_kwargs, out_path,
+                                            titles=None,
+                                            n_jobs=1,
                                             debug=self.options.debug)[0]
             if not outname.parent.exists():
                 outname.parent.mkdir(parents=True)

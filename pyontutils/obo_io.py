@@ -10,8 +10,11 @@ Options:
     -d --debug            break after parsing
     -t --out-format=FMT   output to this format
                           options are obo or ttl [default: obo]
+    -o --overwrite        write the format, overwrite existing
     -w --write            write the output
     -s --strict           fail on missing definitions
+    -r --robot            match the format produced by robot
+    -n --no-stamp         do not add date, user, and program header stamp
 
 based on the obo 1.2 / 1.4 (ish) spec defined at
 https://owlcollab.github.io/oboformat/doc/GO.format.obo-1_2.html
@@ -21,7 +24,7 @@ lacks appropraite levels of testing for production use
 acts as a command line script or as a python module
 also converts to ttl format but the conversion convetions are ill defined
 
-When writing a file if the filename for the obofile exists it will not
+When writing a file if the path for the obofile exists it will not
 overwrite what you have but instead will append a number to the end.
 
 ALWAYS MANUALLY CHECK YOUR OUTPUT THIS SUCKER IS FLAKY
@@ -64,6 +67,7 @@ __author__ = 'Tom Gillespie'
 import os
 import ast
 import inspect
+import pathlib
 from types import MethodType
 from datetime import datetime
 from getpass import getuser
@@ -85,8 +89,12 @@ log = makeSimpleLogger('obo-io')
 
 fobo, obo, NIFSTD, NOPE = makeNamespaces('fobo', 'obo', 'NIFSTD', '')
 
-N = -1  # use to define 'many ' for tag counts
+N = type('N', (object,), dict(__repr__=lambda self: '<N many>'))()  # use to define 'many' for tag counts
 TW = 4  # tab width
+
+OBO_VER_DEFAULT = '1.4'
+OBO_VER_ROBOT = '1.4-robot'
+
 
 class od(OrderedDict):
     pass
@@ -139,8 +147,10 @@ class OboFile:
         You can then access tags as python attributes. For example
         `t.xref += [TVPair('xref: ASDF:123 ! a new xref')]`.
     """
-    def __init__(self, filename=None, header=None, terms=None, typedefs=None, instances=None, strict=False):
-        self.filename = filename
+
+    def __init__(self, *args, path=None, data=None, header=None, terms=None,
+                 typedefs=None, instances=None, strict=False):
+        self.path = path
         self.Terms = od()
         self.Terms.names = {}
         self.Typedefs = od()
@@ -149,11 +159,16 @@ class OboFile:
         self.Instances.names = {}
         self.Headers = od()  #LOL STUPID FIXME
         self.Headers.names = {}  # FIXME do not want? what about imports?
-        if filename is not None:  # FIXME could spec filename here?
-            #od_types = {type_.__name__:type_od for type_,type_od in zip((Term, Typedef, Instance),(self.Terms,self.Typedefs,self.Instances))}
-            #LOL GETATTR
-            with open(filename, 'rt') as f:
-                data = f.read()
+        if path is not None:  # FIXME could spec path here?
+            if path.exists():  # FIXME decouple OboContainer and file via .parse
+                if data is not None:
+                    raise TypeError('path= and data= are mutually exclusive')
+                #od_types = {type_.__name__:type_od for type_,type_od in zip((Term, Typedef, Instance),(self.Terms,self.Typedefs,self.Instances))}
+                #LOL GETATTR
+                with open(path, 'rt') as f:
+                    data = f.read()
+
+        if data is not None:
             #deal with \<newline> escape
             data = data.replace(' \n','\n')  # FXIME need for arbitrary whitespace
             data = data.replace('\<newline>\n',' ')
@@ -171,9 +186,11 @@ class OboFile:
 
             missing = {k:v for k, v in self.Terms.items() if isinstance(v, list)}
             if missing:
-                msg = ('The following identifiers were referenced but have no definition\n' +
-                       '\n'.join(sorted(missing)))
-                log.error(msg)
+                msg = (('The following identifiers were referenced '
+                        'but have no definition\n') + '\n'.join(sorted(missing)))
+                log.debug(msg)
+                log.error(f'{len(missing)} identifiers were referenced '
+                          'but have no definition')
                 if strict:
                     raise ValueError(msg)
 
@@ -198,32 +215,51 @@ class OboFile:
         for store in tvpair_stores:
             self.add_tvpair_store(store)
 
-    def write(self, filename, type_='obo'):  #FIXME this is bugged
+    def write(self, path=None, format='obo', overwrite=False,
+              stamp=True, version=OBO_VER_DEFAULT):  #FIXME this is bugged
         """ Write file, will not overwrite files with the same name
             outputs to obo by default but can also output to ttl if
-            passed type_='ttl' when called.
-        """
-        if os.path.exists(filename):
-            name, ext = filename.rsplit('.',1)
-            try:
-                prefix, num = name.rsplit('_',1)
-                n = int(num)
-                n += 1
-                filename = prefix + '_' + str(n) + '.' + ext
-            except ValueError:
-                filename = name + '_1.' + ext
-            print('file exists, renaming to %s' % filename)
-            self.write(filename, type_)
+            passed format='ttl' when called. """
 
+        if path is None:
+            path = self.path
+            if path is None:
+                raise ValueError('self.path is not set so path= cannot be None')
+
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        if path.exists() and not overwrite:
+            suffixes = path.suffixes
+            n = 1
+            if len(path.suffixes) > 1:
+                try:
+                    n = int(path.suffixes[-2][1:]) + 1
+                except ValueError:
+                    pass
+
+            suffix = f'.{n}{path.suffix}'
+            path = path.with_name(path.stem).with_suffix(suffix)
+            final_path = self.write(path=path,
+                                    format=format,
+                                    overwrite=overwrite,
+                                    stamp=stamp,
+                                    version=version,)
+            if path == final_path:
+                log.warning(f'path exists, renaming to {path}')
         else:
-            with open(filename, 'wt', encoding='utf-8') as f:
-                if type_ == 'obo':
-                    f.write(str(self))  # FIXME this is incredibly slow for big files :/
-                elif type_ == 'ttl':
-                    f.write(self.__ttl__())
-                else:
-                    raise TypeError('No exporter for file type %s!' % type_)
+            # FIXME streaming output that can use the stream setters from aug
+            if format == 'obo':
+                value = self.asObo(stamp=stamp, version=version)
+            elif format == 'ttl':
+                value = self.__ttl__()
+            else:
+                raise NotImplementedError(f'No exporter for file type {format}!')
 
+            with open(path, 'wt', encoding='utf-8') as f:
+                f.write(value)
+
+        return path
 
     def __ttl__(self):
         g = rdflib.Graph()
@@ -264,11 +300,11 @@ class OboFile:
         ontid = fobo[self.header.ontology.value + '.ttl']
         yield ontid, rdf.type, owl.Ontology
 
-    def __str__(self):
+    def asObo(self, stamp=True, version=OBO_VER_DEFAULT):
         def oboify(values):
-            return [str(s) for s in values if not isinstance(s, list)]
+            return [s.asObo(version=version) for s in values if not isinstance(s, list)]
 
-        stores = [str(self.header)]
+        stores = [self.header.asObo(stamp=stamp, version=version)]
         stores += oboify(self.Terms.values())
         stores += oboify(self.Typedefs.values())
         stores += oboify(self.Instances.values())
@@ -314,7 +350,6 @@ class TVPair:  #TODO these need to be parented to something!
 
         if line is not None:
             self.parse(line)
-            #print(self)
             self.validate(warn=True)
         else:
             self.make(tag, value, modifiers, comment, **kwargs)
@@ -359,9 +394,13 @@ class TVPair:  #TODO these need to be parented to something!
         try:
             # comment
             tail, comment = comm_split[-1].split('!',1)
-            comment = comment.strip()
-            comm_split[-1] = tail
-            value = '\!'.join(comm_split)
+            if tail.count('"') % 2 == 1 and comment.count('"') % 2 == 1:  # so dumb
+                comment = None
+                value = comm_split[-1]
+            else:
+                comment = comment.strip()
+                comm_split[-1] = tail
+                value = '\!'.join(comm_split)
 
         except ValueError:
             comment = None
@@ -474,21 +513,36 @@ class TVPair:  #TODO these need to be parented to something!
             return False  # pairs themselves don't know anyting about their ordering
 
     @staticmethod
-    def _format_trailing_modifiers(trailing_modifiers):
-        tm = ', '.join([f'{k}="{v}"' for k, v in sorted(set(trailing_modifiers))])
+    def _format_trailing_modifiers(trailing_modifiers, key=lambda kv: kv):
+        if key is None:
+            ordered = trailing_modifiers
+        else:
+            ordered = sorted(set(trailing_modifiers), key=key)
+
+        tm = ', '.join([f'{k}="{v}"' for k, v in ordered])
         return f' {{{tm}}}'
 
-    def __str__(self):
+    def asObo(self, version=OBO_VER_DEFAULT):
         string = '{}: {}'.format(self.tag, self._value())
 
         if self.trailing_modifiers:
-            string += self._format_trailing_modifiers(self.trailing_modifiers)
+            tm = self.trailing_modifiers
+            if version == OBO_VER_ROBOT:
+                key = None  # don't change the order at all
+            else:
+                key = lambda kv: kv
+
+            string += self._format_trailing_modifiers(self.trailing_modifiers,
+                                                      key=key)
 
         if self.comment:
             # TODO: autofill is_a comments
             string += " ! " + self._comment()
 
         return string
+
+    def __str__(self):
+        return self.asObo()
 
     def __ttl__(self):
         pass
@@ -563,6 +617,11 @@ class TVPairStore:
     """
         Ancestor class for stanzas and headers.
     """
+
+    @classmethod
+    def _robot_tags(cls):
+        raise NotImplementedError('subclassit')
+
     def __new__(cls, *args, **kwargs):
         cls._tags = od()
         for tag, limit in cls._all_tags:
@@ -613,7 +672,7 @@ class TVPairStore:
         self.validate(warn)
 
     def append_to_obofile(self, obofile):
-        raise NotImplemented('Please implement me in your subclass!')
+        raise NotImplementedError('Please implement me in your subclass!')
 
     def add_tvpair(self, tvpair):
         tag = tvpair.tag
@@ -621,12 +680,13 @@ class TVPairStore:
 
         if tag not in self.__dict__:
             if tag not in self._tags:
-                print('TAG NOT IN', tag)
+                log.warning(f'TAG NOT IN {tag} for {self.__class__}')
                 self._tags[tag] = N
-                print(self._tags[tag])
+                log.warning(self._tags[tag])
                 self.__dict__[dict_tag] = []
             elif self._tags[tag] == N:
-                self.__dict__[dict_tag] = []
+                if dict_tag not in self.__dict__:
+                    self.__dict__[dict_tag] = []
 
         if self._tags[tag] == N:
             try:
@@ -649,8 +709,14 @@ class TVPairStore:
     def tvpairs(self):
         return self._tvpairs()
 
-    def _tvpairs(self, source_dict=None):
-        index = tuple(self._tags)
+    def _tvpairs(self, source_dict=None, version=OBO_VER_DEFAULT):
+        if version == OBO_VER_DEFAULT:
+            index = tuple(self._tags)
+        elif version == OBO_VER_ROBOT:
+            index = tuple(self._robot_tags())
+        else:
+            raise NotImplementedError('unknown version: {version}')
+
         if not source_dict:
             source_dict = self.__dict__
         #_ = [print(a, b) for a, b in zip(sorted(index), sorted(source_dict))]
@@ -688,8 +754,12 @@ class TVPairStore:
     def __iter__(self):
         yield from self.tvpairs
 
+    def asObo(self, version=OBO_VER_DEFAULT):
+        return '\n'.join(tvpair.asObo(version=version) for tvpair
+                         in self._tvpairs(version=version)) + '\n'
+
     def __str__(self):
-        return '\n'.join(str(tvpair) for tvpair in self.tvpairs) + '\n'
+        return self.asObo()
 
     def __repr__(self):
         return ' '.join(str(tvpair) for tvpair in self.tvpairs) + ' '
@@ -713,7 +783,7 @@ class TVPairStore:
         for tag in self._r_tags:
             if tag not in tags:
                 if warn:
-                    print('probably a multipart definition')  # TODO
+                    log.warning('probably a multipart definition')  # TODO
                     #raise ImportWarning('%s %s is missing a required tag %s' %
                                         #(self.__class__.__name__, str(self), tag))
                 else:
@@ -723,8 +793,9 @@ class TVPairStore:
 
 class Header(TVPairStore):
     """ Header class. """
+
     _r_tags = ('format-version', )
-    _r_defaults = ('1.4',)
+    _r_defaults = (OBO_VER_DEFAULT,)
     _all_tags = (
         ('format-version', 1),
         ('data-version', 1),
@@ -747,11 +818,38 @@ class Header(TVPairStore):
         ('default-relationship-id-prefix', 1),
         ('relax-unique-identifier-assumption-for-namespace', N),
         ('relax-unique-label-assumption-for-namespace', N),
+        ('property_value', N),
         ('remark', N),
         ('ontology', 1),
+        ('owl-axioms', N),
     )
 
     _datetime_fmt = '%d:%m:%Y %H:%M'  # WE USE ZULU
+
+    @classmethod
+    def _robot_tags(cls):
+        order = (  # FIXME missing the cases above
+            'format-version',
+
+            'data-version',
+            'date',
+            'saved-by',
+            'auto-generated-by',
+
+            'subsetdef',
+            'synonymtypedef',
+            'default-namespace',
+            'treat-xrefs-as-equivalent',
+            'treat-xrefs-as-is_a',
+            'import',
+            'ontology',
+            'property_value',
+            'owl-axioms',
+            'treat-xrefs-as-has-subclass',
+            'treat-xrefs-as-reverse-genus-differentia',
+                 )
+
+        return order
 
     def __init__(self, block=None, obofile=None, tvpairs=tuple(), **pairs):
         for tag, value in zip(self._r_tags, self._r_defaults):
@@ -763,17 +861,28 @@ class Header(TVPairStore):
     def append_to_obofile(self, obofile):
         obofile.header = self
 
-    def __str__(self):
+    def asObo(self, stamp=True, version=OBO_VER_DEFAULT):
         """ When we write to file overwrite the relevant variables without
-            also overwriting the original data.
-        """
-        updated = {k:v for k, v in self.__dict__.items()}
-        log.debug(str(tuple(updated.keys())))
-        TVPair.factory('date', datetime.strftime(datetime.utcnow(), self._datetime_fmt),dict_=updated)
-        TVPair.factory('auto-generated-by', __title__, dict_=updated)
-        TVPair.factory('saved-by', getuser(), dict_=updated)
-        tvpairs = self._tvpairs(updated)
-        return '\n'.join(str(tvpair) for tvpair in tvpairs) + '\n'
+            also overwriting the original data. """
+
+        if stamp:
+            updated = {k:v for k, v in self.__dict__.items()}
+            log.debug(str(tuple(updated.keys())))
+            TVPair.factory('date', datetime.strftime(datetime.utcnow(),
+                                                    self._datetime_fmt),
+                        dict_=updated)
+            TVPair.factory('auto-generated-by', __title__, dict_=updated)
+            TVPair.factory('saved-by', getuser(), dict_=updated)
+            tvpairs = self._tvpairs(updated)
+        else:
+            updated = None  # strict roundtrip
+
+        return '\n'.join(str(tvpair) for
+                         tvpair in self._tvpairs(updated,
+                                                 version=version)) + '\n'
+
+    def __str__(self):
+        return self.asObo()
 
 
 class Stanza(TVPairStore):
@@ -845,8 +954,23 @@ class Stanza(TVPairStore):
         'is_metadata_tag',
         'is_class_level',
     ]
+
+    @classmethod
+    def _robot_tags(cls):
+        rt = [t for t, _ in cls._all_tags]
+        tb = [
+            ['property_value', 'is_obsolete'],
+            ['replaced_by', 'consider'],
+        ]
+        for tag, before in tb:
+            rt.remove(tag)
+            rt.insert(rt.index(before), tag)
+
+        return rt
+
     def __new__(cls, *args, **kwargs):
-        cls._all_tags = [tag for tag in cls._all_tags if tag[0] not in cls._bad_tags]
+        cls._all_tags = [tag for tag in cls._all_tags
+                         if tag[0] not in cls._bad_tags]
         instance = super().__new__(cls, *args, **kwargs)
         cls.__new__ = super().__new__  # enforce runonce
         return instance  # we return here so we chain the runonce
@@ -890,8 +1014,12 @@ class Stanza(TVPairStore):
                 existing = type_od.names.pop(self.name.value)
                 type_od.names[self.name.value] = [existing, self]
 
+    def asObo(self, version=OBO_VER_DEFAULT):
+        return ('['+ self.__class__.__name__ +']\n' +
+                super().asObo(version=version))
+
     def __str__(self):
-        return '['+ self.__class__.__name__ +']\n' + super().__str__()
+        return self.asObo()
 
 
 class Term(Stanza):
@@ -916,7 +1044,27 @@ class Term(Stanza):
 
 
 class Typedef(Stanza):
-    _bad_tags = ('union_of', 'intersection_of', 'disjoint_from', 'instance_of')
+    _bad_tags = ('union_of', 'intersection_of', 'instance_of')
+    # now allowed? 'disjoint_from'
+
+    @classmethod
+    def _robot_tags(cls):
+        rt = [t for t, _ in cls._all_tags]
+        tb = [
+            # yes this is a horrible implementation
+            ['property_value', 'domain'],
+            ['property_value', 'is_transitive'],
+            ['property_value', 'is_a'],
+        ]
+        done = []
+        for tag, before in tb:
+            if tag in rt and tag not in done and before in rt:
+                rt.remove(tag)
+                rt.insert(rt.index(before), tag)
+                done.append(tag)
+
+        return rt
+
 
 
 class Instance(Stanza):
@@ -1322,7 +1470,37 @@ class Xref(Value):  # TODO link internal ids, finalize will require cleanup, lot
         return super().parse(split)
 
 
-special_children = {sc.tag:sc for sc in (Subsetdef, Synonymtypedef, Idspace, Id_mapping, Def_, Synonym, Xref, Relationship, Is_a, Property_value)}
+class Consider(Value):
+    tag = 'consider'
+    seps = ' ',
+    def __init__(self, other, tvpair):
+        self.other = other
+
+    def value(self):
+        return self.other
+
+    @classmethod
+    def parse(cls, value, tvpair):
+        target_id = value
+        split = (target_id, tvpair)
+        return super().parse(split)
+
+    def __lt__(self, other):
+        return self.value().lower() < other.value().lower()
+
+
+special_children = {sc.tag:sc for sc in (Subsetdef,
+                                         Synonymtypedef,
+                                         Idspace,
+                                         Id_mapping,
+                                         Def_,
+                                         Synonym,
+                                         Xref,
+                                         Relationship,
+                                         Is_a,
+                                         Property_value,
+                                         Consider,
+                                         )}
 
 
 def deNone(*args):
@@ -1338,26 +1516,35 @@ __all__ = [c.__name__ for c in (OboFile, TVPair, Header, Term, Typedef, Instance
 
 def main():
     args = docopt(__doc__, version='obo-io 0')
-    filename = args['<obofile>']
-    fname, ext = filename.rsplit('.',1)
-    if ext != 'obo':  # FIXME pretty sure a successful parse should be the measure here?
-        # TODO TEST ME!
-        raise TypeError('%s has wrong extension %s != obo !' % (filename, ext) )
+    path_in = pathlib.Path(args['<obofile>'])
 
-    if os.path.exists(filename):
-        of = OboFile(filename=filename, strict=args['--strict'])
+    if args['--debug']:
+        log.setLevel('DEBUG')
+    else:
+        log.setLevel('INFO')
+
+    if path_in.suffix != '.obo':  # FIXME pretty sure a successful parse should be the measure here?
+        # TODO TEST ME!
+        raise TypeError(f'{path_in} has wrong extension {path_id.suffix} != .obo !')
+
+    if path_in.exists():
+        of = OboFile(path=path_in, strict=args['--strict'])
         if args['--out-format'] == 'ttl':
             ttl = of.__ttl__()
     else:
-        raise FileNotFoundError('No file named %s exists at that path!' % filename)
+        raise FileNotFoundError(path_in)
 
     if args['<output-name>']:
-        outfilename = args['<output-name>']
+        path_out = pathlib.Path(args['<output-name>'])
     else:
-        outfilename = fname + '.' + args['--out-format']  # FIXME :/ doesn't play well with mime
+        path_out = path_in.with_suffix('.' + args['--out-format'])
 
-    if args['--write']:
-        of.write(outfilename, type_=args['--out-format'])
+    if args['--write'] or args['--overwrite']:
+        of.write(path=path_out,
+                 format=args['--out-format'],
+                 overwrite=args['--overwrite'],
+                 stamp=not args['--no-stamp'],
+                 version=OBO_VER_ROBOT if args['--robot'] else OBO_VER_DEFAULT,)
 
     if args['--debug']:
         breakpoint()

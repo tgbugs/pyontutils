@@ -51,6 +51,7 @@ __all__ = [
     'resetLocalNames',
     'Phenotype',
     'NegPhenotype',
+    'EntailedPhenotype',
     'LogicalPhenotype',
     'Neuron',
     'NeuronCUT',
@@ -167,10 +168,15 @@ class LabelMaker:
         for function_name, predicate in zip(self._order, self.predicates):
             if predicate in neuron._pesDict:
                 phenotypes = neuron._pesDict[predicate]
+                if not phenotypes:
+                    log.warning('wat: {neuron}')
+                    continue
+
                 function = getattr(self, function_name)
                 # TODO resolve and warn on duplicate phenotypes in the same hierarchy
                 # TODO negative phenotypes
-                sub_labels = list(function(phenotypes))
+                less_entailed = [p for p in phenotypes if not isinstance(p, EntailedPhenotype)]
+                sub_labels = list(function(less_entailed))
                 labels += sub_labels
 
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
@@ -185,6 +191,11 @@ class LabelMaker:
 
     def _default(self, phenotypes):
         for p in sorted(phenotypes, key=self._key):
+            if isinstance(p, EntailedPhenotype):
+                # FIXME TODO I think it is correct to drop these
+                raise TypeError('entailed should have been filtered '
+                                'before arriving here')
+
             if isinstance(p, NegPhenotype):
                 prefix = '-'
             else:
@@ -254,6 +265,7 @@ class LabelMaker:
 
         for i, phenotype in enumerate(phenotypes):
             l = next(self._default((phenotype,)))
+
             if i + 1 == lp:
                 l += ')'
 
@@ -283,6 +295,7 @@ class LabelMaker:
                 prefix = ''
 
             yield prefix + next(self._default((phenotype,)))
+
     def _molecular(self, phenotypes):
         if self.local_conventions:
             yield from self._plus_minus(phenotypes)
@@ -850,7 +863,7 @@ class Config:
         return graphBase.part_of_graph
 
     def neurons(self):
-        return sorted(self.existing_pes)
+        return sorted(self.existing_pes)  # FIXME stupidly slow
 
     def activate(self):
         """ set this config as the active config """
@@ -858,6 +871,7 @@ class Config:
 
     def write(self):
         # FIXME per config prefixes using derived OntCuries?
+        [n._sigh() for n in self.existing_pes]  # ugh
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
@@ -1315,7 +1329,9 @@ class graphBase:
 
     @staticmethod
     def write():
-        og = cull_prefixes(graphBase.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
+        [n._sigh() for n in graphBase.neurons()]  # ugh
+        og = cull_prefixes(graphBase.out_graph,
+                           prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
         og.write()
         graphBase.part_of_graph.write()
@@ -1382,6 +1398,7 @@ class graphBase:
     def ttl(cls):
         # trying this as a class method to see whether it makes it
         # easier to reason about which graph is being exported
+        [n._sigh() for n in cls.neurons()]  # ugh
         og = cull_prefixes(cls.out_graph, prefixes=uPREFIXES)
         return og.g.serialize(format='nifttl').decode()
 
@@ -1460,7 +1477,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
     local_names = {}
     __cache = {}
     __pcache = {}
-    def __init__(self, phenotype, ObjectProperty=None, label=None, override=False, check=True):
+    def __init__(self, phenotype, ObjectProperty=None, label=None, override=True, check=False):
         # FIXME allow ObjectProperty or predicate? keyword?
         # label blackholes
         # TODO implement local names here? or at a layer above? (above)
@@ -1471,7 +1488,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             ObjectProperty = phenotype.e
             phenotype = phenotype.p
 
-        self.p = self.checkPhenotype(phenotype)
+        self.p = self.checkPhenotype(phenotype)  # FIXME do this after construction
         if ObjectProperty is None:
             self.e = self.getObjectProperty(self.p)
         else:
@@ -1498,6 +1515,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return it.asPhenotype(self.e, phenotype_class=self.__class__)
         else:
             return self
+
+    def asEntailed(self):
+        return EntailedPhenotype(self)
+
+    def asNegative(self):
+        """ NOTE asNegativeEntailed doesn't exist right now """
+        return NegPhenotype(self)
 
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
@@ -1843,6 +1867,11 @@ class NegPhenotype(Phenotype):
     """ Class for Negative Phenotypes to simplfy things """
 
 
+class EntailedPhenotype(Phenotype):
+    """ render as subClassOf rather than equivalentClass """
+    _rank = '8'
+
+
 class UnionPhenotype(graphBase):  # not ready
     """ Class for expressing unions of phenotypes.
         There is no intersection phenotype because the bagging process
@@ -2162,7 +2191,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
                  equivalentNeurons=tuple(), disjointNeurons=tuple()):
-
+        self._sighed = False
         if id_ and (equivalentNeurons or disjointNeurons):
             # FIXME does this work!?
             raise TypeError('Neurons defined by id may not use equivalent or disjoint')
@@ -2222,7 +2251,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         lop1 = len(ORDER) + 1
         self.pes = tuple(sorted(sorted(phenotypeEdges),
                                 key=lambda pe: ORDER.index(pe.e) if pe.e in ORDER else lop1))
-        self.validate()
+        #self.validate()  # FIXME this should only be called AFTER construction
 
         self.Class = infixowl.Class(self.id_, graph=self.out_graph)  # once we get the data from existing, prep to dump OUT
 
@@ -2262,16 +2291,29 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         self._origLabel = label
         self._override = override
 
-        if self in self.existing_pes and self.Class.graph is self.existing_pes[self].graph and not override:
+        if (not override and
+            self in self.existing_pes and
+            self.existing_pes[self] is not None and  # sigh support
+            self.Class.graph is self.existing_pes[self].graph):
             self.Class = self.existing_pes[self]
         else:
-            self.Class = self._graphify()
-            self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
-            self.existing_pes[self] = self.Class
+            self.existing_pes[self] = None
+            #log.warning('self._sigh has not been called')
 
         self.ttl = self._instance_ttl
         self.python = self._instance_python
 
+    def _sigh(self):
+        if self._sighed:
+            return
+
+        # FIXME check on whether setting self.Class = self.existing_pes[self]
+        # causes issues
+        #if self in self.existing_pes and self.existing_pes[self] is not None:
+        self.Class = self._graphify()
+        self.Class.label = rdflib.Literal(self.label)  # FIXME this seems... broken?
+        self.existing_pes[self] = self.Class
+        self._sighed = True
 
     def removeDuplicateSuperProperties(self, rawpes):
         # find any duplicate phenotype values
@@ -2329,6 +2371,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         return og
 
     def _instance_ttl(self):
+        self._sigh()
         og = self._subgraph()
         return og.g.serialize(format='nifttl').decode()
 
@@ -2423,6 +2466,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
             return self.commonName
         else:
             return self.localLabel
+
+    @property
+    def prefLabel(self):
+        if self.origLabel:
+            return self.origLabel
+
+        return self.genLabel
 
     def realize(self):  # TODO use ilx_utils
         """ Get an identifier """
@@ -2814,6 +2864,9 @@ class Neuron(NeuronBase):
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
 
+        pl = rdflib.Literal(self.prefLabel)
+        graph.add((self.id_, skos.prefLabel, pl))
+
         sl = rdflib.Literal(self.simpleLabel)
         graph.add((self.id_, ilxtr.simpleLabel, sl))
         sll = rdflib.Literal(self.simpleLocalLabel)
@@ -2830,6 +2883,11 @@ class Neuron(NeuronBase):
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
                 djc.complementOf = target
                 members.append(djc)
+            elif isinstance(pe, EntailedPhenotype):
+                restr = target
+                _sco = list(self.Class.subClassOf)
+                _sco.append(restr)
+                self.Class.subClassOf = _sco
             else:
                 members.append(target)  # FIXME negative logical phenotypes :/
 
@@ -2901,6 +2959,17 @@ class NeuronEBM(Neuron):
                                        '(please use a more specific identifier) '
                                        f'for {invalid_superclass} due to\n{pe}'))
                     #raise TypeError(f'subClassOf restriction violated for {invalid_superclass} due to {pe}')  # TODO can't quite switch this on yet, breaks too many examples
+
+    @property
+    def prefLabel(self):
+        if self.origLabel:
+            label = self.origLabel
+            if self._shortname:
+                label += f' {self._shortname}'
+
+            return label
+        else:
+            return self.genLabel
 
 
 class TypeNeuron(Neuron):  # TODO

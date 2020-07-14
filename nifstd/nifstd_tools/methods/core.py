@@ -1,4 +1,5 @@
 import rdflib
+from pyontutils import combinators as cmb
 from pyontutils.core import simpleOnt, OntId, OntGraph
 from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
@@ -711,6 +712,29 @@ triples = (
           blankc(rdfs.subClassOf,
                  restN(ilxtr.hasPrimaryAspectActualized,
                        ilxtr.aspect)))(rdflib.BNode()),
+
+    ## modalitiy
+    cmb.Class(ilxtr.ExperimentalModality,
+              cmb.Pair(rdfs.label, rdflib.Literal('experimental modality')),
+              ),
+    cmb.Class(ilxtr.ExperimentalPreparation,
+              cmb.Pair(rdfs.label, rdflib.Literal('experimental preparation')),
+              ),  # in vivo in vitro
+
+    ## behavior
+    cmb.Class(ilxtr.BehavioralTask,
+              cmb.Pair(rdfs.label, rdflib.Literal('behavioral task')),
+              ),  # tasks that have protocols
+    cmb.Class(ilxtr.BehavioralParadigm,
+              cmb.Pair(rdfs.label, rdflib.Literal('behavioral paradigm')),
+              ),  # more abstract behaviors e.g. forced choice detection
+    cmb.Class(ilxtr.BehavioralReadout,
+              cmb.Pair(rdfs.label, rdflib.Literal('behavioral readout')),
+              ),  # e.g. delayed saccad
+    # behaviorl task structure
+    # reward type
+    # structure in the sensory environment that they need to process
+    # working memory is more like a study target
 
     ## technique
     oc(BFO['0000015']),

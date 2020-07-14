@@ -15,7 +15,7 @@ __version__ = find_version('pyontutils/__init__.py')
 with open('README.md', 'rt') as f:
     long_description = f.read()
 
-tests_require = ['pytest', 'pytest-runner']
+tests_require = ['pytest']
 setup(
     name='pyontutils',
     version=__version__,
@@ -41,24 +41,25 @@ setup(
     python_requires='>=3.6',
     tests_require=tests_require,
     install_requires=[
-        'augpathlib>=0.0.16',
+        'augpathlib>=0.0.19',
         'colorlog',
         'docopt',
         'gitpython',
         'google-api-python-client',
         'google-auth-oauthlib',
         'htmlfn',
-        'idlib',
+        'idlib>=0.0.1.dev5',
         "ipython; python_version < '3.7'",
         'joblib>=0.14.1',
         'lxml',
         'nest_asyncio',
         'ontquery>=0.2.3',
-        'orthauth>=0.0.11',
+        'orthauth>=0.0.12',
+        'pyld',
         'pyyaml',
         'requests',
         'terminaltables',
-        'ttlser>=1.1.2',
+        'ttlser>=1.1.3',
     ],
     extras_require={'dev': ['pytest-cov', 'wheel'],
                     'spell': ['hunspell'],

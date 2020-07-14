@@ -39,6 +39,7 @@ class AllenCellTypes:
                    'MMRRC': 'http://www.mmrrc.org/catalog/getSDS.jsp?mmrrc_id=',
                    'AllenTL': 'http://api.brain-map.org/api/v2/data/TransgenicLine/'},
                 **makePrefixes('definition', 'ilxtr', 'owl')}
+    prefixes['AllenTransgenicLine'] = 'http://api.brain-map.org/api/v2/data/TransgenicLine/'
 
     def __init__(self, input, name):
         self.name = name
@@ -83,7 +84,6 @@ class AllenCellTypes:
                     Phenotype(
                         curie,
                         mapping,
-                        label=value
                     )
                 )
         return phenotypes
@@ -113,9 +113,9 @@ class AllenCellTypes:
             mapping = donor_mappings.get(name)
             if mapping and value:
                 if name == 'sex_full_name':
-                    if value.lower() == 'male':
+                    if value.lower() == 'female':
                         curie = 'PATO:0000383'
-                    elif value.lower() == 'female':
+                    elif value.lower() == 'male':
                         curie = 'PATO:0000384'
                     else:
                         raise ValueError('unkown sex ' + str(value))
@@ -123,7 +123,6 @@ class AllenCellTypes:
                     Phenotype(
                         curie,
                         mapping,
-                        label='name'
                     ),
                 )
         return phenotypes

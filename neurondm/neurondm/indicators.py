@@ -8,6 +8,9 @@ from pyontutils.sheets import Sheet
 from pyontutils.namespaces import owl, rdf, rdfs, ilxtr, NIFRID, OntCuries, skos, makeNamespaces
 from neurondm import OntTerm, OntId
 from neurondm.models.allen_cell_types import AllenCellTypes
+from neurondm.core import log
+
+log = log.getChild('indicators')
 
 OntCuries(AllenCellTypes.prefixes)  # FIXME BAD
 OntCuries({'TEMPIND': 'http://uri.interlex.org/temp/uris/phenotype-indicators/'})
@@ -21,7 +24,7 @@ a = rdf.type
 
 class PhenotypeIndicators(Sheet):
     name = 'phenotype-indicators'
-    sheet_name = 'Sheet1'
+    sheet_name = 'indicators'
 
     @property
     def things(self):
