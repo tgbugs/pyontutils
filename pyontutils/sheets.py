@@ -731,7 +731,7 @@ class Sheet:
         return [self.row_object(i) for i, _ in enumerate(self.values)]
 
     def columns(self):
-        return [self._column_object(i) for i, _ in enumerate(self.values[0])]
+        return [self.column_object(i) for i, _ in enumerate(self.values[0])]
 
     @property
     def cells(self):
