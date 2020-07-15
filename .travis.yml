@@ -4,6 +4,7 @@ language: python
 env:
   global:
     - NIFSTD_CHECKOUT_OK=1
+    - secure: NRhNdnCe9VW1PRMHGtua1ndxrFHRX007pPaC/F+qR5o//iVekVBeASMNLpenTpFitNghs3UfKp69r1/SnHXHXb7lZxpoev+M8VrKu5TWvaolZtITrwxdpJA4Z/JixjWogb6HUTfk/xXtZw61PI3IiWBs/ibirDA3izrlHYzv8CkvgjAuhoYjCb7Z2lHnmilCnWe6A40DnZosIZhB/ZhPam5412/YtWsNuxqkJb9fIFZ79Uguq4KoGCSd39BiUM82kSVkr22ZdqfA3b+pBnyCzyPmx5rpeJ74STBUG7zBzwNEUlsoedUJuUIFNS4tRwrjhKw+C83+RMcwx3CHJqZ0hpgzsj+cOizRyR3c1iyMYlTLD0BjqneOvm4MB2Jdom48CaFred17v0J0DMs0IteZ2pmc8KgsVhTHAfFjAZqVl5y9ryJt/dRXJYBlriYOaLqW3J1MEvBopsb06w1YJ9ARwhxcUmvm00kt0aNhs9Clm761iq8kCOPQKwFPC8t8OLgJ/Zq5JW2NVhwqXHjlkp0oE+DRqEpVAmSavojNhvCACX2VZdqESFuIk0Zm6gvs1k7nJNbo7YpuArTJrsvxSqokAZA1d7MTjo8fCpda7qzlUygnqf6uFXLYzicqsMXXfJZ29MAjpEeMPmC33vA+KS6JeROUUoc80sIulizp/WIXszE=
   matrix:
     - TEST_PACKAGE=htmlfn
     - TEST_PACKAGE=ttlser
@@ -51,6 +52,8 @@ before_install:
   - git fetch origin dev:dev --depth=1
   - popd
   - popd
+  - mkdir -p ~/.config/orthauth
+  - printf 'google:\n  sheets:\n    pyontutils-test: '"${TEST_SHEET_ID}" >> ~/.config/orthauth/secrets.yaml
 
 install:
   - pip install --upgrade pytest pytest-cov
