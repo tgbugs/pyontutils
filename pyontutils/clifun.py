@@ -83,6 +83,18 @@ class Options:
         for k in sorted(cmd_args, key=lambda k: self._argv.index(k)):
             yield python_identifier(k)
 
+    def asKwargs(self, cull_none=True):
+        # use dir here so that both the dynamically added properties
+        # and the statically defined properties are included
+        out = {k:getattr(self, k)
+               for k in dir(self.__class__)
+               if k!= 'commands' and  # FIXME change to _commands
+               isinstance(getattr(self.__class__, k), property)}
+        if cull_none:
+            out = {k:v for k, v in out.items() if v is not None}
+
+        return out
+
     def __repr__(self):
         def key(kv, counter=[0]):
             k, v = kv
