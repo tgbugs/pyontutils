@@ -700,7 +700,7 @@ class Config:
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
 
-        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack to expand paths
+        cfg = oa.core.ConfigBase(None)  # FIXME hack to expand paths
         if import_as_local or import_no_net:
             if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
                 # NOTE: we currently do the translation more ... inelegantly inside of config so we

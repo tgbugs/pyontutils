@@ -406,12 +406,12 @@ with Huang2017:
         Neuron(Sst, Calb2)
 
         fig1a = dict(
-        PVBC = Neuron(Basket, PV, label='PVBC neuron', override=True),
-        CHC =  Neuron(Nkx2_1, label='CHC neuron', override=True),
-        CCKC = Neuron(Basket, VIP, CCK, label='CCKC neuron', override=True),
-        MNC =  Neuron(SST, CR, label='MNC neuron', override=True),
-        ISC =  Neuron(VIP, CR, label='ISC neuron', override=True),
-        LPC =  Neuron(SST, NOS1, label='LPC neuron', override=True),
+        PVBC = Neuron(Basket, PV, label='PVBC cortical neuron', override=True),
+        CHC =  Neuron(Nkx2_1, label='CHC cortical neuron', override=True),
+        CCKC = Neuron(Basket, VIP, CCK, label='CCKC cortical neuron', override=True),
+        MNC =  Neuron(SST, CR, label='MNC cortical neuron', override=True),
+        ISC =  Neuron(VIP, CR, label='ISC cortical neuron', override=True),
+        LPC =  Neuron(SST, NOS1, label='LPC cortical neuron', override=True),
         )
 
         f7 = dict(

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.7
 
 from pathlib import Path
+import rdflib
 from pyontutils.utils import rowParse, relative_path
 from pyontutils.namespaces import ilxtr
 from neurondm.lang import *
@@ -29,6 +30,10 @@ class table1(rowParse):
         abrv = abrv.rstrip(')').strip()
         # print((syn, abrv))
         self._mtype = BBP[abrv]
+
+        with self._context:
+            n = NeuronMarkram2015(self._mtype, label=f'{syn}')
+            n.abbrevs = [rdflib.Literal(abrv)]
 
         return self._mtype
 
