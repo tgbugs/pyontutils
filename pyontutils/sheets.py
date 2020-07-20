@@ -60,6 +60,9 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
 
     if store_file is None:
         _p = 'RUNTIME_CONFIG' if auth._path is None else auth._path
+        # FIXME bad error message, need to check whether the key is even in
+        # the user config, and yes we need our way to update the user config
+        # and warn about unexpected formats for orthauth configs
         msg = (f'No file exists at the path specified by {_auth_var} in {_p}')
         log.debug(auth._runtime_config)
         log.debug(auth.user_config._runtime_config)

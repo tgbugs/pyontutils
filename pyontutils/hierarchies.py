@@ -521,7 +521,19 @@ def process_nodes(j, root, direction, verbose):
     return nodes, objects, subjects, names, pnames, edgerep, root, roots, leaves
 
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None, entail=True):
+def creatTree(root,
+              relationshipType=None,
+              direction='INCOMING',
+              depth=1,
+              graph=None,
+              json=None,
+              filter_prefix=None,
+              prefixes=uPREFIXES,
+              html_head=tuple(),
+              local=False,
+              verbose=False,
+              curie=None,
+              entail=True):
     sgg = graph
     html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
@@ -543,6 +555,12 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
 
     # filter out owl:Nothing
     j['edges'] = [e for e in j['edges'] if 'owl:Nothing' not in e.values()]
+
+    # filter out has part meta edges
+    j['edges'] = [e for e in j['edges'] if not
+                  ('meta' in e and
+                   'owlType' in e['meta'] and
+                   'http://purl.obolibrary.org/obo/BFO_0000051' in e['meta']['owlType'])]
 
     if verbose:
         print(len(j['nodes']))
