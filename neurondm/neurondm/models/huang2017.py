@@ -380,6 +380,7 @@ class Genes(LocalNameManager):
 
 class Huang2017(Genes, Species):
     Neocortex = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')
+    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasExpressionPhenotype')
     Basket = Phenotype('ilxtr:BasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
@@ -389,7 +390,7 @@ class Huang2017(Genes, Species):
 
 
 with Huang2017:
-    with Neuron_(Mouse, Neocortex) as context:
+    with Neuron_(Mouse, Neocortex, GABA) as context:
         #context.subClassOf(ilxtr.huang2017)
         # TODO add the names assigned here as abbrevs somehow
 

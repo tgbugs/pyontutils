@@ -157,7 +157,7 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     #STRI = Phenotype('UBERON:0005383', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
     STRI = Phenotype('PAXRAT:168', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
     MSN = Phenotype('ilxtr:MediumSpinyPhenotype', 'ilxtr:hasMorphologicalPhenotype')
-    INT = Phenotype('ilxtr:InterneuronPhenotype', 'ilxtr:hasCircuitRolePhenotype')  # unsatisfactory
+    INT = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')  # unsatisfactory
     #CER = Phenotype('UBERON:0002037', 'ilxtr:hasSomaLocatedIn')
     CER = Phenotype('PAXRAT:191', 'ilxtr:hasSomaLocatedIn')
     GRAN = Phenotype('ilxtr:GranulePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # vs granular?
