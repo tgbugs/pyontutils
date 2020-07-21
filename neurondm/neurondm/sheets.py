@@ -368,8 +368,11 @@ class CutsV1(Cuts):
 
     @classmethod
     def mapCell(cls, cell, syns=False):
-        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBITaxon', 'NCBIGene', 'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL',
-                           'BIRNLEX',)
+        search_prefixes = ('CHEBI', 'UBERON', 'PR', 'NCBIGene', 'NCBITaxon',
+                           'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL', 'BIRNLEX',)
+
+        if cell == 'contralateral':
+            return ilxtr.Contralateral, cell  # XXX FIXME only BSPO has this right now
 
         if ':' in cell and ' ' not in cell:
             log.debug(cell)
@@ -383,8 +386,12 @@ class CutsV1(Cuts):
 
             return t.u, t.label
 
-        result = [r for r in cls.sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
-                  if not r['deprecated']]
+        if cell in ('Vertebrata', ):  # search syns
+            syns = True
+
+        rank_mask = lambda r: tuple(r['curie'].startswith(p) for p in search_prefixes)  # why did it take so long to think of this?
+        result = sorted([r for r in cls.sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
+                         if not r['deprecated']], key=rank_mask, reverse=True)
         #printD(cell, result)
         if not result:
             log.debug(f'{cell}')
@@ -398,7 +405,7 @@ class CutsV1(Cuts):
                 return None, None
         elif len(result) > 1:
             #printD('WARNING', result)
-            result = select_by_curie_rank(result)
+            result = result[0] #select_by_curie_rank(result)
         else:
             result = result[0]
 
@@ -456,19 +463,62 @@ class Row(sheets.Row):
             if term:
                 yield OntTerm(iri=term[0]['iri']).asPhenotype()
 
-    def neuron_cleaned(self):
-        ne = self.neuron_existing()
-        emp = list(self.entailed_molecular_phenotypes())
-        eobjects = [e.p for e in emp]
-        if not emp:
-            return ne
+    def asNeuron(self):
+        log.warning(f'New neuron from sheet! {self.label().value}')
+        has = [(attr, ilxtr[suffix])
+               for attr, suffix in zip(self.header, self.sheet.values[0])
+               if attr.startswith('has')]
 
+        def map(attr):
+            cell = getattr(self, attr)()
+            value = cell.value
+            if value:
+                for iri, label in list(self.sheet.convert_cell(value)):
+                    if ',' not in value and label != value:
+                        log.warning(f'label mismatch {label!r} != {value!r}')
+
+                    yield iri
+
+        mapped = [(v, p) for attr, p in has for v in map(attr)]
+        pes = [LogicalPhenotype(value[0], *(Phenotype(v, dimension)
+                                            for v in value[1:]))
+               if isinstance(value, tuple) else
+               Phenotype(value, dimension)
+               for value, dimension in mapped
+               if value is not None]
+        # moveToIndicator
+        # exHasMolecularPhenotype
+        # PMID
+        # Other reference
+        # Other label
+        # definition
+        # synonyms
+        if not pes:
+            breakpoint()
+        return NeuronCUT(*pes, label=self.label().value)
+
+    def neuron_cleaned(self):
         entail_predicates = ilxtr.hasAxonLocatedIn,
 
+        ne = self.neuron_existing()
+        emp = list(self.entailed_molecular_phenotypes())
+        if ne is None:
+            return self.asNeuron()
+
+        if not emp:
+            # can't just return the existing neuron because it isn't bound to the current config
+            # FIXME uh what an aweful design
+            return NeuronCUT(*ne, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
+
+        eobjects = [e.p for e in emp]
         def should_entail(pe):
             return pe.p in eobjects or pe.e in entail_predicates
 
-        pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne.pes]
+        log.critical(ne.id_)
+        if 'Neocortex-layer-4-pyramidal-cell' in ne.id_:
+            breakpoint()
+
+        pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne]
         return NeuronCUT(*pes, id_=ne.id_, label=ne.origLabel, override=True)
 
 
