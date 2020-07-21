@@ -461,7 +461,13 @@ class Row(sheets.Row):
             label = label.strip()
             term = self.sheet.sgv.findByTerm(label)
             if term:
-                yield OntTerm(iri=term[0]['iri']).asPhenotype()
+                ot = OntTerm(iri=term[0]['iri'])
+                p = ot.asPhenotype()
+                yield p
+                if ot.curie == 'NLXMOL:1006001':
+                    yield OntTerm(curie='ilxtr:GABAReceptor').asPhenotype()
+                elif ot.curie == 'SAO:1164727693':
+                    yield OntTerm(curie='ilxtr:glutamateReceptor').asPhenotype()
 
     def asNeuron(self):
         log.warning(f'New neuron from sheet! {self.label().value}')
@@ -493,12 +499,10 @@ class Row(sheets.Row):
         # Other label
         # definition
         # synonyms
-        if not pes:
-            breakpoint()
         return NeuronCUT(*pes, label=self.label().value)
 
     def neuron_cleaned(self):
-        entail_predicates = ilxtr.hasAxonLocatedIn,
+        entail_predicates = ilxtr.hasAxonLocatedIn, ilxtr.hasDendriteLocatedIn
 
         ne = self.neuron_existing()
         emp = list(self.entailed_molecular_phenotypes())
@@ -513,10 +517,6 @@ class Row(sheets.Row):
         eobjects = [e.p for e in emp]
         def should_entail(pe):
             return pe.p in eobjects or pe.e in entail_predicates
-
-        log.critical(ne.id_)
-        if 'Neocortex-layer-4-pyramidal-cell' in ne.id_:
-            breakpoint()
 
         pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne]
         return NeuronCUT(*pes, id_=ne.id_, label=ne.origLabel, override=True)

@@ -384,7 +384,8 @@ class Huang2017(Genes, Species):
     Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Projection = Phenotype('ilxtr:ProjectionPhenotype', 'ilxtr:hasCircuitRolePhenotype')
-    OnToInter = Phenotype('NLXCELL:1003113', 'ilxtr:hasConnectionPhenotype')
+    Inter = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')
+    OnToInter = Phenotype('NLXCELL:1003113', 'ilxtr:hasForwardConnectionPhenotype')
 
 
 with Huang2017:
@@ -416,12 +417,12 @@ with Huang2017:
         # distinct from these 6 for this reason the morphology of the neurons is included
         f = lambda *args, label=None, override=None: (args, dict(label=label, override=override))
         fig1a = dict(
-        PVBC = f(Basket,     PV,        label='PVBC cortical neuron', override=True),
-        CHC =  f(Chandelier, Nkx2_1,    label='CHC cortical neuron', override=True),
-        CCKC = f(Basket,     VIP, CCK,  label='CCKC cortical neuron', override=True),
-        MNC =  f(Martinotti, SST, CR,   label='MNC cortical neuron', override=True),
-        ISC =  f(OnToInter,  VIP, CR,   label='ISC cortical neuron', override=True),
-        LPC =  f(Projection, SST, NOS1, label='LPC cortical neuron', override=True),
+        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True),
+        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=True),
+        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=True),
+        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=True),
+        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=True),
+        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=True),
         )
 
         f7 = dict(

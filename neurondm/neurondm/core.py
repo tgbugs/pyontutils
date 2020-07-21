@@ -341,8 +341,14 @@ class LabelMaker:
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
         yield from self._with_thing_located_in('projecting to', phenotypes)
     @od
+    def hasReverseConnectionPhenotype(self, phenotypes):
+        yield from self._with_thing_located_in('projected onto by', phenotypes)
+    @od
+    def hasForwardConnectionPhenotype(self, phenotypes):
+        yield from self._with_thing_located_in('projecting onto', phenotypes)
+    @od
     def hasConnectionPhenotype(self, phenotypes):
-        yield from self._default(phenotypes)
+        yield from self._with_thing_located_in('connecting to', phenotypes)
     @od
     def hasExperimentalPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
