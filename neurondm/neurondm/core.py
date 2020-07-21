@@ -2275,7 +2275,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 if len(dimensions) == 1:
                     dimension = next(iter(dimensions))
                 else:
-                    dimension = tuple(sorted(dimensions))
+                    _key = lambda d: ((not isinstance(d, tuple)), d)
+                    dimension = tuple(sorted(dimensions, key=_key))
 
                 if dimension not in self._pesDict:
                     self._pesDict[dimension] = []

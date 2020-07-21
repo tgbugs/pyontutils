@@ -57,7 +57,7 @@ class Genes(LocalNameManager):
 
     # cre equivalents where appropriate
     PVBCEq = LogicalPhenotype(AND, Pvalb)
-    CHCEq = LogicalPhenotype(AND)  # pretty sure this doesn't have any
+    CHCEq = LogicalPhenotype(AND)  # pretty sure this doesn't have any since it is developmental & inducible
     CCKCEq = LogicalPhenotype(AND, Vip, Cck)
     MNCEq = LogicalPhenotype(AND, Sst, Calb2)
     ISCEq = LogicalPhenotype(AND, Vip, Calb2)
@@ -221,7 +221,9 @@ class Genes(LocalNameManager):
     CHCDend = LogicalPhenotype(AND,
                                GluA1, GluA4, α1GABAaR, Kv3,
                                α4GABAaR, δGABAaR, Cckbr,
-                               Lower) # FIXME bad model
+                               Lower) # FIXME bad model it is not the intersection of the
+                                      # restrictions it is a restriction on the intersection
+                                      # of the objects
 
     #Cnr1 = Phenotype('ilxtr:Cnr1', 'ilxtr:hasExpressionPhenotype')
     #Htr2c = Phenotype('ilxtr:Htr2c', 'ilxtr:hasExpressionPhenotype')
@@ -379,6 +381,10 @@ class Genes(LocalNameManager):
 class Huang2017(Genes, Species):
     Neocortex = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')
     Basket = Phenotype('ilxtr:BasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Projection = Phenotype('ilxtr:ProjectionPhenotype', 'ilxtr:hasCircuitRolePhenotype')
+    OnToInter = Phenotype('NLXCELL:1003113', 'ilxtr:hasConnectionPhenotype')
 
 
 with Huang2017:
@@ -405,13 +411,17 @@ with Huang2017:
         Neuron(Vip, Calb2)
         Neuron(Sst, Calb2)
 
+        # NOTE fig1a and fig1b are subtly different and the driver lines are described as
+        # marking a superset of neurons that includes these 6 types "and likely other types"
+        # distinct from these 6 for this reason the morphology of the neurons is included
+        f = lambda *args, label=None, override=None: (args, dict(label=label, override=override))
         fig1a = dict(
-        PVBC = Neuron(Basket, PV, label='PVBC cortical neuron', override=True),
-        CHC =  Neuron(Nkx2_1, label='CHC cortical neuron', override=True),
-        CCKC = Neuron(Basket, VIP, CCK, label='CCKC cortical neuron', override=True),
-        MNC =  Neuron(SST, CR, label='MNC cortical neuron', override=True),
-        ISC =  Neuron(VIP, CR, label='ISC cortical neuron', override=True),
-        LPC =  Neuron(SST, NOS1, label='LPC cortical neuron', override=True),
+        PVBC = f(Basket,     PV,        label='PVBC cortical neuron', override=True),
+        CHC =  f(Chandelier, Nkx2_1,    label='CHC cortical neuron', override=True),
+        CCKC = f(Basket,     VIP, CCK,  label='CCKC cortical neuron', override=True),
+        MNC =  f(Martinotti, SST, CR,   label='MNC cortical neuron', override=True),
+        ISC =  f(OnToInter,  VIP, CR,   label='ISC cortical neuron', override=True),
+        LPC =  f(Projection, SST, NOS1, label='LPC cortical neuron', override=True),
         )
 
         f7 = dict(
@@ -422,13 +432,13 @@ with Huang2017:
         axon =      (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
         other =     (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
-        figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                            label=f'{type} molecular types neuron', override=True)
-                 # the zip below packs all PVBC with PVBC, all CHEC, etc.
+        figs7 = {type:Neuron(LogicalPhenotype(AND, *(pe for p in phenos for pe in p.pes)), *args, **kwargs
+                            )#label=f'{type} molecular types neuron', override=True)
+                 # the zip below packs all PVBC with PVBC, all CHC, etc.
                  #for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
-                 for type, *phenos in zip(fig1a, *f7.values())}
+                 for (type, (args, kwargs)), *phenos in zip(fig1a.items(), *f7.values())}
 
-        for k, v in fig1a.items():
+        #for k, v in fig1a.items():
             # ISC is in fact corrctly classified as a subClassOf +Cck neurons
             # which is consistent with the overlap between CR and CCK in fig1b
             # some _subset_ of those have cck, but it is not clear how many and
@@ -436,7 +446,7 @@ with Huang2017:
             # we do here, then the only question is whether the ISC -Cck subset
             # has any additional distinguishing features CCKC doesn't have Calb2
             # on the list, but fig1b suggests that some might
-            figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
+            #figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
         if extra:
             peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
@@ -450,8 +460,8 @@ with Huang2017:
             peps = []
             sigs = []
 
-        # assert disjointness between top level types based on fig1a
-        for dis in (peps, sigs, tuple(fig1a.values())):
+        # assert disjointness between top level types based on +fig1a+ figs7 sigh
+        for dis in (peps, sigs, tuple(figs7.values())):
             for i, n in enumerate(dis[:-1]):
                 for on in dis[i+1:]:
                     n.disjointWith(on)
