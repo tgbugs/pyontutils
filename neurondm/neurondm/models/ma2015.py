@@ -31,10 +31,8 @@ class table1(rowParse):
         # print((syn, abrv))
         self._mtype = BBP[abrv]
 
-        with self._context:
-            n = NeuronMarkram2015(self._mtype, label=f'{syn}')
-            n.abbrevs = [rdflib.Literal(abrv)]
-
+        self._m_syn = syn
+        self._m_abrev = abrv
         return self._mtype
 
     def Other_morphological_classifications(self, value):
@@ -149,6 +147,11 @@ class table1(rowParse):
 
     def _row_post(self):
         with self._context:
+            n = NeuronMarkram2015(self._mtype,
+                                  *[m.asEntailed() for m in self._moltypes],
+                                  label=self._m_syn)
+            n.abbrevs = [rdflib.Literal(self._m_abrev)]
+
             for etype in self._etypes:
                 NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
 

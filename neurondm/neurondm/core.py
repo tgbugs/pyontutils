@@ -1523,11 +1523,16 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             return self
 
     def asEntailed(self):
+        if isinstance(self, NegPhenotype):
+            return self.asNegativeEntailed()
+
         return EntailedPhenotype(self)
 
     def asNegative(self):
-        """ NOTE asNegativeEntailed doesn't exist right now """
         return NegPhenotype(self)
+
+    def asNegativeEntailed(self):
+        return NegEntailedPhenotype(self)
 
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
@@ -1876,6 +1881,10 @@ class NegPhenotype(Phenotype):
 class EntailedPhenotype(Phenotype):
     """ render as subClassOf rather than equivalentClass """
     _rank = '8'
+
+
+class NegEntailedPhenotype(NegPhenotype, EntailedPhenotype):
+    _rank = '8.5'
 
 
 class UnionPhenotype(graphBase):  # not ready
@@ -2885,7 +2894,14 @@ class Neuron(NeuronBase):
     def _graphify_pes(self, graph, members, method='_graphify_expand_location'):
         for pe in self.pes:
             target = getattr(pe, method)(graph=graph, method=method)
-            if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
+            if isinstance(pe, NegEntailedPhenotype):
+                djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
+                djc.complementOf = target
+                restr = djc
+                _sco = list(self.Class.subClassOf)
+                _sco.append(restr)
+                self.Class.subClassOf = _sco
+            elif isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
                 #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
                 djc.complementOf = target
