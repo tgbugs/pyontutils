@@ -776,7 +776,7 @@ builds from failing due to missing dependencies.
 
 If you have a default rpmbuild setup, and you have the
 
-#+name: run-compile-scigraph-rpm
+#+name: run-compile-scigraph-rpm-oneshot
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :tangle ./bin/run-compile-scigraph-rpm
 # link specs and other files so that rpmbuild can find them
@@ -785,8 +785,18 @@ ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/scigraph.service \
       ~/files/rpmbuild/SOURCES/scigraph.service
 ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/xvfb.service \
       ~/files/rpmbuild/SOURCES/xvfb.service
+#+end_src
+
+#+name: run-compile-scigraph-rpm
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash
+# pull changes if the local repo already exists
+if [ -d ~/files/rpmbuild/BUILD/SciGraph/.git ]; then
+    git --git-dir ~/files/rpmbuild/BUILD/SciGraph/.git pull
+fi
 
 pushd ~/files/rpmbuild
+
 # build the rpm
 spectool -g -R SPECS/scigraph.spec
 rpmbuild -ba --nodeps SPECS/scigraph.spec
@@ -947,12 +957,19 @@ run-deploy-scigraph-rpm --server aws-scigraph-data
 scp ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
 ssh ${SERVER} '
     sudo <<rpm-install>>'
+ssh ${SERVER} '
+    sudo systemctl restart scigraph'
 #+end_src
 
 If you want to have more than one service or have a different name for =services.yaml=
 then take a look at =/lib/systemd/system/scigraph.service= and take what you want to
 customize and put it in =/etc/systemd/system/scigraph.service.d/scigraph.conf=
-(retaining the section hearders).
+(retaining the section headers).
+***** Updating
+Beware when updating, if you have made any changes to =/lib/systemd/system/scigraph.service=
+in order to tweak the JVM those changes will be klobbered when running =yum reinstall -y scigraph*.rpm=.
+Until I can figure out how to get systemd to accept the JVM config options as something that can,
+you know, be configured instead of something that has to be static, this is going to be a problem.
 **** git
 **** docker
 :properties:
