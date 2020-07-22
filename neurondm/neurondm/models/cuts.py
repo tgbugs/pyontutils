@@ -56,6 +56,14 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 #'Neocortex layer 5 pyramidal cell':  # TODO layer 5-6??
                 'Hippocampus CA2 Basket cell': 'Hippocampus CA2 basket cell broad',
                 'Neocortex layer 4 spiny stellate cell': 'Neocortex stellate layer 4 cell',
+
+                # some of the missing neurolex neurons, this mapping doesn't quite work, but is correct
+                'Neostriatum Neurogliaform cell': 'Striatum neurogliaform cell',
+                'Neostriatum SOM/NOS cell': 'Striatum somatostatin positive nitric oxide synthase cell',
+                'Neostriatum cholinergic cell': 'Striatum cholinergic cell',
+                'Neostriatum gaba/parvalbumin interneuron': 'Striatum parvalbumin interneuron',
+                #Neostriatum direct pathway spiny neuron: Striatum medium spiny neuron,
+                #Neostriatum indirect pathway spiny neuron: Striatum medium spiny neuron,
 }
 
 

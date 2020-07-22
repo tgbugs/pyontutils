@@ -339,16 +339,16 @@ class LabelMaker:
         yield from self._plus_minus(phenotypes)
     @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
-        yield from self._with_thing_located_in('projecting to', phenotypes)
+        yield from self._with_thing_located_in('projecting-to', phenotypes)
     @od
     def hasReverseConnectionPhenotype(self, phenotypes):
-        yield from self._with_thing_located_in('projected onto by', phenotypes)
+        yield from self._with_thing_located_in('projected-onto-by', phenotypes)
     @od
     def hasForwardConnectionPhenotype(self, phenotypes):
-        yield from self._with_thing_located_in('projecting onto', phenotypes)
+        yield from self._with_thing_located_in('projecting-onto', phenotypes)
     @od
     def hasConnectionPhenotype(self, phenotypes):
-        yield from self._with_thing_located_in('connecting to', phenotypes)
+        yield from self._with_thing_located_in('connecting-to', phenotypes)
     @od
     def hasExperimentalPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
@@ -1522,6 +1522,10 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             return self
 
+    def asPosEntailed(self):
+        """ have to have this since asEntailed preserved +/- """
+        return EntailedPhenotype(self)
+
     def asEntailed(self):
         if isinstance(self, NegPhenotype):
             return self.asNegativeEntailed()
@@ -1931,6 +1935,13 @@ class LogicalPhenotype(graphBase):
     def asIndicator(self):
         return self.__class__(self.op, *[pe.asIndicator() for pe in self.pes])
 
+    def asEntailed(self):
+        if isinstance(self, NegPhenotype):
+            raise NotImplementedError('TODO')
+            return self.asNegativeEntailed()
+
+        return EntailedLogicalPhenotype(self.op, *self.pes)
+
     @property
     def p(self):
         return tuple((pe.p for pe in self.pes))
@@ -2083,6 +2094,10 @@ class LogicalPhenotype(graphBase):
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
+
+
+class EntailedLogicalPhenotype(LogicalPhenotype):
+    _rank = '3'
 
 
 class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
@@ -2906,7 +2921,8 @@ class Neuron(NeuronBase):
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
                 djc.complementOf = target
                 members.append(djc)
-            elif isinstance(pe, EntailedPhenotype):
+            elif (isinstance(pe, EntailedPhenotype) or
+                  isinstance(pe, EntailedLogicalPhenotype)):
                 restr = target
                 _sco = list(self.Class.subClassOf)
                 _sco.append(restr)

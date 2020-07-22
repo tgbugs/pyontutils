@@ -9,7 +9,7 @@ from pyontutils.scigraph import Vocabulary
 from pyontutils.namespaces import ilxtr, TEMP, definition, npoph
 from pyontutils.namespaces import rdfs, rdf
 from pyontutils.utils import allMembers
-from neurondm import NeuronCUT, Config, Phenotype, LogicalPhenotype
+from neurondm import NeuronCUT, Config, Phenotype, NegPhenotype, LogicalPhenotype
 from neurondm import EntailedPhenotype
 from neurondm.models.cuts import make_cut_id, fixname
 from neurondm.core import log, OntId, OntTerm
@@ -367,9 +367,14 @@ class CutsV1(Cuts):
         return label not in cell and label.lower() not in cell.lower()  # have to handle comma sep case
 
     @classmethod
-    def mapCell(cls, cell, syns=False):
-        search_prefixes = ('CHEBI', 'UBERON', 'PR', 'NCBIGene', 'NCBITaxon',
+    def mapCell(cls, cell, syns=False, predicate=None):
+        search_prefixes = ('UBERON', 'CHEBI', 'PR', 'NCBIGene', 'NCBITaxon',
                            'ilxtr', 'NIFEXT', 'SAO', 'NLXMOL', 'BIRNLEX',)
+
+        if predicate and predicate in Phenotype._molecular_predicates:
+            # uberon syns pollute molecular results so move it to one before birnlex
+            ub, *rest, b = search_prefixes
+            search_prefixes = (*rest, ub, b)
 
         if cell == 'contralateral':
             return ilxtr.Contralateral, cell  # XXX FIXME only BSPO has this right now
@@ -389,7 +394,25 @@ class CutsV1(Cuts):
         if cell in ('Vertebrata', ):  # search syns
             syns = True
 
-        rank_mask = lambda r: tuple(r['curie'].startswith(p) for p in search_prefixes)  # why did it take so long to think of this?
+        def rank_mask(r):
+            """
+            create a boolean array testing if the current entry
+            starts with the prefixes in order and what you will
+            get out is arrays where the nth element is true if
+            the nth prefix is matched which will then be sorted by n
+            1 0 0 0 0 0 0 1 \\
+            1 0 0 0 0 0 0 0 \\
+            0 1 0 0 0 0 0 0 \\
+            0 0 1 0 0 0 0 0 \\
+            0 0 0 1 0 0 0 0 \\
+            0 0 0 0 1 0 0 0 \\
+            """
+            # why did it take so long to think of this?
+            return (
+                *(r['curie'].startswith(p) for p in search_prefixes),
+                'labels' in r and cell in r['labels'],
+            )
+
         result = sorted([r for r in cls.sgv.findByTerm(cell, searchSynonyms=syns, prefix=search_prefixes)
                          if not r['deprecated']], key=rank_mask, reverse=True)
         #printD(cell, result)
@@ -400,7 +423,7 @@ class CutsV1(Cuts):
                 t = maybe[0]
                 return t.u, t.label
             elif not syns:
-                return cls.mapCell(cell, syns=True)
+                return cls.mapCell(cell, syns=True, predicate=predicate)
             else:
                 return None, None
         elif len(result) > 1:
@@ -412,10 +435,15 @@ class CutsV1(Cuts):
         return rdflib.URIRef(result['iri']), result['labels'][0]
 
     @classmethod
-    def convert_cell(cls, cell_or_comma_sep):
+    def convert_cell(cls, cell_or_comma_sep, predicate=None):
         #printD('CONVERTING', cell_or_comma_sep)
         for cell_w_junk in cell_or_comma_sep.split(','):  # XXX WARNING need a way to alter people to this
             cell = cell_w_junk.strip()
+            negative = (cell.lower().startswith('lacks') or
+                        cell.lower().startswith('not '))
+            if negative:
+                __lacks, cell = cell.split(' ', 1)
+
             if cell.startswith('(OR') or cell.startswith('(AND'):
                 start, *middle, end = cell.split('" "')
                 OPoperator, first = start.split(' "')
@@ -424,20 +452,44 @@ class CutsV1(Cuts):
                 last, CP = end.rsplit('"')
                 iris, labels = [], []
                 for term in (first, *middle, last):
-                    iri, label = cls.mapCell(term)
+                    iri, label = cls.mapCell(term, predicate=predicate)
                     if label is None:
                         label = cell_or_comma_sep
+                    if negative:
+                        iri = LacksObject(iri)
+
                     iris.append(iri)
                     labels.append(label)
 
                 yield (operator, *iris), tuple(labels)
 
             else:
-                iri, label = cls.mapCell(cell)
+                iri, label = cls.mapCell(cell, predicate=predicate)
+                if negative:
+                    iri = LacksObject(iri)
+
                 if label is None:
                     yield iri, cell_or_comma_sep  # FIXME need a way to handle this that doesn't break things?
                 else:
                     yield iri, label
+
+
+class LacksObject(rdflib.URIRef):
+    """ Objects that can indicate that they
+        should be lifted to negative phenotypes
+
+        This is a trick we can play to with the type system
+        to pack the negative phenotype into a single object
+        that could then be expanded to object.asPhenotype(predicate)
+
+        potential alternate names:
+        NegativeObject
+        NegativePhenotypeValue
+        AbsentObject
+    """
+
+    def asURIRef(self):
+        return rdflib.URIRef(self)
 
 
 class CutsV1Lite(Cuts):
@@ -469,27 +521,48 @@ class Row(sheets.Row):
                 elif ot.curie == 'SAO:1164727693':
                     yield OntTerm(curie='ilxtr:glutamateReceptor').asPhenotype()
 
-    def asNeuron(self):
+    def asPhenotypes(self):
         log.warning(f'New neuron from sheet! {self.label().value}')
         has = [(attr, ilxtr[suffix])
                for attr, suffix in zip(self.header, self.sheet.values[0])
                if attr.startswith('has')]
 
-        def map(attr):
+        def map(attr, predicate):
             cell = getattr(self, attr)()
             value = cell.value
             if value:
-                for iri, label in list(self.sheet.convert_cell(value)):
+                for iri, label in list(self.sheet.convert_cell(value, predicate=predicate)):
                     if ',' not in value and label != value:
                         log.warning(f'label mismatch {label!r} != {value!r}')
 
-                    yield iri
+                    if iri is None:
+                        if label == 'bed nucleus of stria terminalis juxtacapsular nucleus':
+                            iri = OntTerm('UBERON:0011173', label='anterior division of bed nuclei of stria terminalis')
+                        else:
+                            log.debug(f'nothing found for {label}')
+                            continue
 
-        mapped = [(v, p) for attr, p in has for v in map(attr)]
-        pes = [LogicalPhenotype(value[0], *(Phenotype(v, dimension)
-                                            for v in value[1:]))
+                    if isinstance(iri, tuple):
+                        op, *rest = iri  # TODO need combinators in future version for union/intersection of object
+                        out = (op, *(NegPhenotype(r, predicate)
+                                     if isinstance(r, LacksObject) else
+                                     Phenotype(r, predicate)
+                                     for r in rest if r is not None))
+                        yield out
+                        continue
+                    elif isinstance(iri, LacksObject):
+                        p = NegPhenotype(iri.asURIRef(), predicate)
+                    else:
+                        p = Phenotype(iri, predicate)
+
+                    yield p.asIndicator()
+
+
+        mapped = [(v, p) for attr, p in has for v in map(attr, p)]
+        pes = [LogicalPhenotype(*value)
                if isinstance(value, tuple) else
-               Phenotype(value, dimension)
+               value
+               #Phenotype(value, dimension)
                for value, dimension in mapped
                if value is not None]
         # moveToIndicator
@@ -499,27 +572,46 @@ class Row(sheets.Row):
         # Other label
         # definition
         # synonyms
+        return pes
+
+    def asNeuron(self):
+        pes = self.asPhenotypes()
         return NeuronCUT(*pes, label=self.label().value)
 
     def neuron_cleaned(self):
-        entail_predicates = ilxtr.hasAxonLocatedIn, ilxtr.hasDendriteLocatedIn
+        entail_predicates = (
+            ilxtr.hasAxonLocatedIn,
+            ilxtr.hasDendriteLocatedIn,
+            ilxtr.hasDendriteMorphologicalPhenotype,
+        )
+        conditional_entailed_predicates = (
+            (ilxtr.hasSomaLocatedInLayer, (False or self.curie().value == 'NIFEXT:55')),  # martinotti cell
+        )
 
         ne = self.neuron_existing()
         emp = list(self.entailed_molecular_phenotypes())
         if ne is None:
             return self.asNeuron()
 
-        if not emp:
-            # can't just return the existing neuron because it isn't bound to the current config
-            # FIXME uh what an aweful design
-            return NeuronCUT(*ne, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
 
         eobjects = [e.p for e in emp]
         def should_entail(pe):
-            return pe.p in eobjects or pe.e in entail_predicates
+            return (pe.p in eobjects or
+                    pe.e in entail_predicates or
+                    (pe.e, True) in conditional_entailed_predicates or
+                    isinstance(pe, LogicalPhenotype) and any(should_entail(_) for _ in pe.pes))
+
+
+        sheet_pes = self.asPhenotypes()
+        sheet_pes = [pe.asEntailed() if should_entail(pe) else pe for pe in sheet_pes]
+
+        if not emp:
+            # can't just return the existing neuron because it isn't bound to the current config
+            # FIXME uh what an aweful design
+            return NeuronCUT(*ne, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True).adopt_meta(ne)
 
         pes = [pe.asEntailed() if should_entail(pe) else pe for pe in ne]
-        return NeuronCUT(*pes, id_=ne.id_, label=ne.origLabel, override=True)
+        return NeuronCUT(*pes, *sheet_pes, id_=ne.id_, label=ne.origLabel, override=True)
 
 
 # monkey patch

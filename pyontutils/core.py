@@ -21,7 +21,6 @@ import ontquery as oq
 import augpathlib as aug
 import requests
 import htmlfn as hfn
-from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from ttlser.utils import regjsonld
@@ -78,6 +77,7 @@ def standard_checks(graph):
 
 def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
+    from joblib import Parallel, delayed  # importing in here saves 150ms
     tail = lambda:tuple()
     lonts = len(onts)
     if lonts > 1:
