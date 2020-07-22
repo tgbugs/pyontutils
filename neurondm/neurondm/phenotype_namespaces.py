@@ -139,7 +139,7 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     #PVP = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')  # this errors as expected
     SOM = Phenotype('PR:000015665', 'ilxtr:hasExpressionPhenotype')
     VIP = Phenotype('PR:000017299', 'ilxtr:hasExpressionPhenotype')
-    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasExpressionPhenotype')
+    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype')
     D1 = Phenotype('PR:000001175', 'ilxtr:hasExpressionPhenotype')
     DA = Phenotype('CHEBI:18243', 'ilxtr:hasExpressionPhenotype')
     Th = Phenotype('ilxtr:ThickPhenotype', 'ilxtr:hasDendriteMorphologicalPhenotype')

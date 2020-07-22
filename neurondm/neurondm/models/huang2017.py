@@ -380,7 +380,7 @@ class Genes(LocalNameManager):
 
 class Huang2017(Genes, Species):
     Neocortex = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')
-    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasExpressionPhenotype')
+    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype')
     Basket = Phenotype('ilxtr:BasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
