@@ -1924,11 +1924,13 @@ class LogicalPhenotype(graphBase):
         self.op = op  # TODO more with op
         self.pes = tuple(sorted(edges))
         self._pesDict = {}
-        for pe in self.pes:
-            if pe.e in self._pesDict:
-                self._pesDict[pe.e].append(pe)
-            else:
-                self._pesDict[pe.e] = [pe]
+        for e in self.e:
+            for pe in self.pes:
+                if pe.e == e:
+                    if e in self._pesDict:
+                        self._pesDict[e].append(pe)
+                    else:
+                        self._pesDict[e] = [pe]
 
         self.labelPostRule = lambda l: l
 
@@ -1944,11 +1946,18 @@ class LogicalPhenotype(graphBase):
 
     @property
     def p(self):
-        return tuple((pe.p for pe in self.pes))
+        out = tuple((p for pe in self.pes for p in
+                     (pe.p if isinstance(pe, LogicalPhenotype) else (pe.p,))))
+        return tuple(set(out))
+        #return tuple((pe.p for pe in self.pes))
 
     @property
     def e(self):
-        return tuple((pe.e for pe in self.pes))
+        out = tuple((e for pe in self.pes for e in
+                     (pe.e if isinstance(pe, LogicalPhenotype) else (pe.e,))))
+        out = tuple(set(out))
+        return out
+        #return tuple((pe.e for pe in self.pes))
 
     @property
     def _pClass(self):
@@ -1966,7 +1975,9 @@ class LogicalPhenotype(graphBase):
             try:
                 # FIXME this is dumb should be using OntId internally
                 # the convert to URIRef only for the graph ...
-                return self.label_maker._order.index(OntId(pe.e).suffix), getattr(pe, attr)
+                return (tuple(self.label_maker._order.index(OntId(e).suffix)
+                              for e in (pe.e if isinstance(pe, LogicalPhenotype) else (pe.e,))),
+                        getattr(pe, attr))
             except ValueError as e:
                 log.error(pe)
                 raise e
@@ -2301,7 +2312,8 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         for pe in self.pes:  # FIXME TODO
             if isinstance(pe, LogicalPhenotype):  # FIXME
                 # FIXME hpm should actually be an inclusive subclass query on hasPhenotype
-                dimensions = set(_.e for _ in pe.pes if _.e != ilxtr.hasPhenotypeModifier)
+                dimensions = set([e for e in pe.e if e != ilxtr.hasPhenotypeModifier])
+                #dimensions = set(_.e for _ in pe.pes if _.e != ilxtr.hasPhenotypeModifier)
                 if len(dimensions) == 1:
                     dimension = next(iter(dimensions))
                 else:

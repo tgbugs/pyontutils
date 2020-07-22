@@ -196,3 +196,53 @@ class TestRoundtripCUT(TestRoundtrip):
         super().setUp()
         from neurondm import NeuronCUT
         self.Neuron = NeuronCUT
+
+
+class TestLabels(_TestNeuronsBase):
+    def setUp(self):
+        super().setUp()
+        from neurondm import Config, Neuron, Phenotype, NegPhenotype
+        from neurondm import EntailedPhenotype, LogicalPhenotype, AND
+        self.AND = AND
+        self.Config = Config
+        self.Neuron = Neuron
+        self.Phenotype = Phenotype
+        self.NegPhenotype = NegPhenotype
+        self.EntailedPhenotype = EntailedPhenotype
+        self.LogicalPhenotype = LogicalPhenotype
+
+    def test_nest_logical(self):
+        AND = self.AND
+        Neuron = self.Neuron
+        LogicalPhenotype = self.LogicalPhenotype
+        Phenotype = self.Phenotype
+        n1 = Neuron(Phenotype('NCBITaxon:10090',
+                              'ilxtr:hasInstanceInTaxon',
+                              label='Mus musculus'),
+                    LogicalPhenotype(AND,
+                                     Phenotype('NCBIGene:50779',
+                                               'ilxtr:hasExpressionPhenotype',
+                                               label='Rgs6'),
+                                     LogicalPhenotype(AND,
+                                                      Phenotype('ilxtr:GABAReceptor',
+                                                                'ilxtr:hasExpressionPhenotype',
+                                                                label='GABAR'))),
+                    label='test logical')
+
+        n2 = Neuron(Phenotype('NCBITaxon:10090',
+                              'ilxtr:hasInstanceInTaxon',
+                              label='Mus musculus'),
+                    LogicalPhenotype(AND,
+                                     Phenotype('NCBIGene:50779',
+                                               'ilxtr:hasExpressionPhenotype',
+                                               label='Rgs6'),
+                                     Phenotype('ilxtr:GABAReceptor',
+                                               'ilxtr:hasExpressionPhenotype',
+                                               label='GABAR')),
+                    label='test logical')
+
+        n1l = n1.genLabel
+        n2l = n2.genLabel
+        breakpoint()
+        assert '(intersectionOf' in n1l, n1l
+        assert '(intersectionOf' in n2l, n2l
