@@ -590,10 +590,6 @@ class Row(sheets.Row):
 
         ne = self.neuron_existing()
         emp = list(self.entailed_molecular_phenotypes())
-        if ne is None:
-            return self.asNeuron()
-
-
         eobjects = [e.p for e in emp]
         def should_entail(pe):
             return (pe.p in eobjects or
@@ -604,6 +600,9 @@ class Row(sheets.Row):
 
         sheet_pes = self.asPhenotypes()
         sheet_pes = [pe.asEntailed() if should_entail(pe) else pe for pe in sheet_pes]
+
+        if ne is None:
+            return NeuronCUT(*sheet_pes, label=self.label().value)
 
         if not emp:
             # can't just return the existing neuron because it isn't bound to the current config
