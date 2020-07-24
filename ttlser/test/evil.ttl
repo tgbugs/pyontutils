@@ -1,0 +1,35 @@
+@prefix TEMP: <http://uri.interlex.org/temp/uris/> .
+@prefix ilxtr: <http://uri.interlex.org/tgbugs/uris/readable/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+TEMP:271 a owl:Class ;
+    rdfs:label "electrical stimulation technique" ;
+    owl:equivalentClass [ a owl:Class ;
+            owl:intersectionOf [ rdf:first ilxtr:technique ;
+                    rdf:rest [ rdf:first [ a owl:Restriction ;
+                                    owl:onProperty ilxtr:hasPrimaryAspect ;
+                                    owl:someValuesFrom <http://uri.interlex.org/tgbugs/uris/readable/aspect/electrical> ] ;
+                            rdf:rest _:sg_0_4,
+                                _:sg_0_6 ] ] ] .
+
+_:sg_0_5 a owl:Restriction ;
+    owl:onProperty ilxtr:hasProbe,
+        ilxtr:hasSomething ;
+    owl:someValuesFrom TEMP:272,
+        ilxtr:electricalField .
+
+_:sg_0_7 a owl:Restriction ;
+    owl:onProperty ilxtr:hasProbe,
+        ilxtr:hasSomething ;
+    owl:someValuesFrom TEMP:272,
+        ilxtr:electricalField .
+
+_:sg_0_4 rdf:first _:sg_0_5 ;
+    rdf:rest _:sg_0_6,
+        () .
+
+_:sg_0_6 rdf:first _:sg_0_7 ;
+    rdf:rest _:sg_0_4,
+        () .
