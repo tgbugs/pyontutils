@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-# [[file:notes.org::keast-2020-neurondm][keast-2020-neurondm]]
 from neurondm.core import LocalNameManager
-from neurondm.lang import Phenotype, Neuron
+from neurondm.lang import Phenotype, Neuron, Config
+
 slp = 'ilxtr:hasSomaLocatedIn'
 alp = 'ilxtr:hasAxonLocatedIn'
 synp = 'ilxtr:hasAxonPresynapticElementIn'
 fconp = 'ilxtr:hasForwardConnectionPhenotype'
+
+
+class NeuronKeast2020(Neuron):
+    owlClass = 'ilxtr:NeuronKeast2020'
+    shortname = 'Keast2020'
 
 
 def needs_keast_namespace():
@@ -30,7 +35,7 @@ def needs_keast_namespace():
     neuron_6 = []
     neuron_7 = []
     neuron_8 = []
-    with Neuron(VII, SPGfcon):
+    with NeuronKeast2020(VII, SPGfcon):
         for i, somaloc in enumerate((L1, L2)):
             soma_index = i + 2  # L1 aligns to the 3rd the sypathetic ganglion
             with Neuron(somaloc, *common[somaloc]):
@@ -49,8 +54,8 @@ def needs_keast_namespace():
                     n8 = Neuron(syn, *axons_in)
                     neuron_8.append(n8)
 
-    [print(repr(n)) for n in Neuron.neurons()]
-# [[[[file:~/ni/sparc/notes.org::keast-2020-neurondm-ns-export][keast-2020-neurondm-ns-export]]][keast-2020-neurondm-ns-export]]
+    #[print(repr(n)) for n in Neuron.neurons()]
+
 
 class Keast2020(LocalNameManager):
     # soma layers
@@ -139,7 +144,17 @@ def syn_chain_axons_in(syn_index, soma_index):
     return axons_in
 
 
-with Keast2020:
-    needs_keast_namespace()
-# keast-2020-neurondm-ns-export ends here
-# keast-2020-neurondm ends here
+def main():
+    from pyontutils.utils import relative_path
+    config = Config('keast-2020',
+                    source_file=relative_path(__file__),)
+    with Keast2020:
+        needs_keast_namespace()
+
+    config.write()
+    config.write_python()
+    return config
+
+
+if __name__ == '__main__':
+    main()
