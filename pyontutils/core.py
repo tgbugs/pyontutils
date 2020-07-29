@@ -128,39 +128,41 @@ def populateFromJsonLd(graph, path_or_blob):
 
         return _lu[blob['type']](blob['value'], **kwargs)
 
-    if isinstance(path_or_blob, dict):
-        # FIXME this whole branch is so dumb
-        close_it = True
-        j = path_or_blob
-        fd, _path = tempfile.mkstemp()
-        path = Path(_path)
-        with open(path, 'wt') as f:
-            json.dump(j, f)
-    else:
-        close_it = False
-        path = path_or_blob
-        with open(path, 'rt') as f:
-            j = json.load(f)
+    fd = None
+    try:
+        if isinstance(path_or_blob, dict):
+            # FIXME this whole branch is so dumb
+            close_it = True
+            j = path_or_blob
+            fd, _path = tempfile.mkstemp()
+            path = Path(_path)
+            with open(path, 'wt') as f:
+                json.dump(j, f)
+        else:
+            path = path_or_blob
+            with open(path, 'rt') as f:
+                j = json.load(f)
 
-    #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
-    def triples():
-        for dt in blob['@default']:
-            yield tuple(convert_element(e) for e in
-                        (dt['subject'], dt['predicate'], dt['object']))
+        #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+        def triples():
+            for dt in blob['@default']:
+                yield tuple(convert_element(e) for e in
+                            (dt['subject'], dt['predicate'], dt['object']))
 
-    proc = jsonld.JsonLdProcessor()
-    ctx = proc.process_context(proc._get_initial_context({}),
-                               j['@context'], {})
-    # FIXME how to deal with non prefixed cases like definition
-    curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
-              v['_prefix']}
-    graph.namespace_manager.populate_from(curies)
-    #graph.populate_from_triples(triples())  # pyld broken above
-    graph.parse(path, format='json-ld')
+        proc = jsonld.JsonLdProcessor()
+        ctx = proc.process_context(proc._get_initial_context({}),
+                                j['@context'], {})
 
-    if close_it:
-        os.close(fd)
-        path.unlink()
+        # FIXME how to deal with non prefixed cases like definition
+        curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
+                v['_prefix']}
+        graph.namespace_manager.populate_from(curies)
+        #graph.populate_from_triples(triples())  # pyld broken above
+        graph.parse(path, format='json-ld')
+    finally:
+        if fd is not None:
+            os.close(fd)
+            path.unlink()
 
     return graph
 
@@ -401,6 +403,25 @@ class OntMetaIri(OntMeta, OntIdIri):
     def _data(self, yield_response_gen=False):
         yield from self.data_next(yield_response_gen=yield_response_gen)
 
+    def _process_resp_zip(self, resp, file):
+        # FIXME since the resp is already closed here
+        # need to prevent double close issuse below
+        self._progenitors['stream-http-response'] = resp
+        self.headers = resp.headers  # XXX I think this is right ?
+        # FIXME obvious issue here is if the content length is the
+        # same but the checksum differs, e.g. due to single char fixes
+        # though for zipped content that seems unlikely given all the
+        # metadata that a zipfile embeds
+        # some sources do provide an etag might help?
+        if 'Content-Length' in resp.headers:  # WHY U DO DIS!??!!
+            content_length = int(resp.headers['Content-Length'])
+        else:
+            # apparently the chebi server doesn't returen content length on some requests !?
+            content_length = object()
+
+        if not file.exists() or file.size != content_length:
+            file.data = resp.iter_content(chunk_size=file.chunksize)
+
     def data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None,
                   conventions_type=None,  # expect header detection conventions
                   # FIXME probably all we need are
@@ -424,23 +445,7 @@ class OntMetaIri(OntMeta, OntIdIri):
             cache_dir.mkdir(exist_ok=True, parents=True)
             file = aug.LocalPath(cache_dir / id_hash)
             with self._get(send_data=send_data) as resp:
-                # FIXME since the resp is already closed here
-                # need to prevent double close issuse below
-                self._progenitors['stream-http'] = resp
-                self.headers = resp.headers  # XXX I think this is right ?
-                # FIXME obvious issue here is if the content length is the
-                # same but the checksum differs, e.g. due to single char fixes
-                # though for zipped content that seems unlikely given all the
-                # metadata that a zipfile embeds
-                # some sources do provide an etag might help?
-                if 'Content-Length' in resp.headers:  # WHY U DO DIS!??!!
-                    content_length = int(resp.headers['Content-Length'])
-                else:
-                    # apparently the chebi server doesn't returen content length on some requests !?
-                    content_length = object()
-
-                if not file.exists() or file.size != content_length:
-                    file.data = resp.iter_content(chunk_size=file.chunksize)
+                self._process_resp_zip(resp, file)
 
             self._progenitors['path'] = file
 
@@ -459,7 +464,7 @@ class OntMetaIri(OntMeta, OntIdIri):
 
                 if len(matching_members) != 1:
                     # TODO
-                    raise ValueError(matching_memebers)
+                    raise ValueError(matching_members)
 
                 member = matching_members[0]
                 self._progenitors['path-compressed'] = member  # ok to include a tuple here I think ...
@@ -486,7 +491,7 @@ class OntMetaIri(OntMeta, OntIdIri):
                 # it really is a file like instead of the resp.iter_content
                 # case that we deal with here
                 gen = filelike_to_generator(filelike)
-                self._progenitors['stream-generator'] = gen  # NOTE reproductible progenitors only
+                self._progenitors['stream-generator'] = gen  # NOTE reproducible progenitors only
 
             else:
                 raise BaseException('WHAT HATH THOU PROSECUTED SIR!?')
@@ -499,6 +504,21 @@ class OntMetaIri(OntMeta, OntIdIri):
             filelike = None
             gen = resp.iter_content(chunk_size=4096)
 
+        yield from self._data_from_generator(
+            resp,
+            filelike,
+            gen,
+            conventions_type,
+            yield_response_gen,
+        )
+
+    def _data_from_generator(self,
+                             resp,
+                             filelike,
+                             gen,
+                             conventions_type,
+                             yield_response_gen,
+                             ):
         first = next(gen)
         # TODO better type detection
 
@@ -744,6 +764,9 @@ class OntIdPath(OntRes):
     # should OntResIri be an instrumented iri?
     def __init__(self, path):
         # FIXME type caste?
+        if not isinstance(path, Path):
+            path = aug.AugmentedPath(path)
+
         self.path = path
 
     @property
@@ -766,6 +789,22 @@ class OntIdPath(OntRes):
 class OntMetaPath(OntIdPath, OntMeta):
     data = OntMetaIri.data
     _data = OntMetaIri._data
+    _data_from_generator = OntMetaIri._data_from_generator
+
+    def data_next(self, *, send_type=None, send_head=None, send_meta=None,
+                  send_data=None, conventions_type=None, yield_response_gen=False):
+        self._progenitors = {}
+        self._progenitors['path'] = self.path
+        resp = self._get()
+        filelike = None
+        gen = resp.iter_content(chunk_size=4096)
+        yield from self._data_from_generator(
+            resp,
+            filelike,
+            gen,
+            conventions_type,
+            yield_response_gen,
+        )
 
 
 class OntResPath(OntIdPath, OntResOnt):
@@ -773,6 +812,7 @@ class OntResPath(OntIdPath, OntResOnt):
 
     _metadata_class = OntMetaPath
     data = OntResIri.data
+    data_next = OntResIri.data_next
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
@@ -842,6 +882,7 @@ class OntMetaGit(OntIdGit, OntMeta):
     data = OntMetaIri.data
     _data = OntMetaIri._data
     data_next = OntMetaIri.data_next
+    _data_from_generator = OntMetaIri._data_from_generator
 
 
 class OntResGit(OntIdGit, OntResOnt):
@@ -1155,6 +1196,7 @@ class OntGraph(rdflib.Graph):
 
     @property
     def ttl(self):
+        #breakpoint()  # infinite loop inside somehow
         out = self.serialize(format='nifttl').decode()
         return out
 
@@ -1166,6 +1208,7 @@ class OntGraph(rdflib.Graph):
     def debug(self):
         """ don't call this from other code
             you won't be able to find the call site """
+        #breakpoint()  # infinite loop
         print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):

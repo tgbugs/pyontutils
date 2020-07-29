@@ -509,6 +509,11 @@ class Row(sheets.Row):
     def entailed_molecular_phenotypes(self):
         cell = self.exhasmolecularphenotype()
         labels = cell.value.split(',')
+
+        # FIXME hack
+        yield OntTerm(curie='ilxtr:GABAReceptor').asPhenotype()
+        yield OntTerm(curie='ilxtr:glutamateReceptor').asPhenotype()
+
         for label in labels:
             label = label.strip()
             term = self.sheet.sgv.findByTerm(label)

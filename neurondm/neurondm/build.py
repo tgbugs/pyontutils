@@ -335,7 +335,7 @@ def make_phenotypes():
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
             if 'Cone' in label or 'Rod' in label:  # sigh hard coding
                 label = label.replace(' Morphological', '')
-            self._label = label
+            self._label = label.capitalize()
 
         def subClassOf(self, value):
             if value:

@@ -325,11 +325,23 @@ class Row:
         self.sheet = sheet
         self.row_index = row_index
         self.index = self.row_index
+        self._trouble = {}
         for column_index, name in enumerate(self.header):
             def f(ci=column_index):
                 return self.cell_object(ci)
 
-            setattr(self, name, f)
+            if not hasattr(self, name):
+                setattr(self, name, f)
+            else:
+                self._trouble[name] = f
+
+    def ___getattr__(self, attr):
+        # doesn't work
+        if attr in self._trouble:
+            return self._trouble[attr]
+        else:
+            #return super().__getattr__(attr)
+            return getattr(self, attr)
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
@@ -350,8 +362,12 @@ class Row:
     @property
     def header(self):
         # FIXME normalized vs unnormalized
-        if not self.sheet.values:
-            return []
+        try:
+            if not self.sheet.values:
+                return []
+        except AttributeError as e:
+            breakpoint()
+            raise e
 
         return [python_identifier(v)
                 for v in self.sheet.values[0]
@@ -411,12 +427,24 @@ class Column:
         self.sheet = sheet
         self.column_index = column_index
         self.index = self.column_index
+        self._trouble = {}
         if self.sheet.index_columns:  # FIXME primary key for row ???
             for row_index, name in enumerate(self.header):
                 def f(ri=row_index):
                     return self.cell_object(ri)
 
-                setattr(self, name, f)
+                if not hasattr(self, name):
+                    setattr(self, name, f)
+                else:
+                    self._trouble[name] = f
+
+    def ___getattr__(self, attr):
+        # doesn't work
+        if attr in self._trouble:
+            return self._trouble[attr]
+        else:
+            #return super().__getattr__(attr)
+            return getattr(self, attr)
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends

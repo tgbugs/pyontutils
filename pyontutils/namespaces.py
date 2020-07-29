@@ -39,7 +39,8 @@ WHSSD = rdflib.Namespace(interlex_namespace('waxholm/uris/sd/labels/'))
 BERCAT = rdflib.Namespace(interlex_namespace('berman/uris/cat/labels/'))
 npokb = rdflib.Namespace(interlex_namespace('npo/uris/neurons/'))
 
-OntCuries({'BERCAT': str(BERCAT)})
+OntCuries({'BERCAT': str(BERCAT),
+           'xsd': str(rdflib.XSD),})
 
 # prefixes
 

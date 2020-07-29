@@ -243,6 +243,5 @@ class TestLabels(_TestNeuronsBase):
 
         n1l = n1.genLabel
         n2l = n2.genLabel
-        breakpoint()
         assert '(intersectionOf' in n1l, n1l
         assert '(intersectionOf' in n2l, n2l

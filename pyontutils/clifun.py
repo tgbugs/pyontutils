@@ -23,8 +23,9 @@ from keyword import kwlist
 from terminaltables import AsciiTable
 
 
-def python_identifier(string):
+def python_identifier(string:str):
     """ pythonify a string for use as an identifier """
+
     to_empty = r'[<>\(\)\+…\x83]'
     s = string.strip()
     s = re.sub(to_empty, '', s)

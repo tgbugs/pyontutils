@@ -67,6 +67,14 @@ def isoformat_safe(datetime_instance, timespec='auto'):
     unsafe = isoformat(datetime_instance, timespec)
     return unsafe.replace('-', '').replace(':', '')
 
+
+def timeformat_friendly(datetime_instance, timespec='auto'):
+    """ a not quite iso format that is file system safe
+        to reach isoformat remove all dashes"""
+    unsafe = isoformat(datetime_instance, timespec)
+    return unsafe.replace(':', '')
+
+
 def NOWDANGER(*, implicit_tz=None, timespec='auto'):
     """ now without a timezone, if you use this you WILL encounter
         a problem at some point in the future because the actual
