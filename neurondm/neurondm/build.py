@@ -394,13 +394,13 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            hl = self._label.rsplit(' Phenotype')[0]
+            hl = self._label.rsplit(' phenotype')[0]
             if hl.endswith('Morphological'):
                 hl = hl.rsplit(' Morphological')[0]
 
             graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, hl)
 
-            label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
+            label = rdflib.Literal(self._label.rstrip('phenotype') + 'neuron')
 
             self.ilx_start += 1
             #id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
