@@ -3329,6 +3329,8 @@ objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
 Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
 OntologyGlobalConventions = _ogc = injective_dict(
+    Vertebrata = Phenotype('NCBITaxon:7742', 'ilxtr:hasInstanceInTaxon'),  # fix annoying labels
+
     L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer'),
     L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer'),
     L3 = Phenotype('UBERON:0005392', 'ilxtr:hasSomaLocatedInLayer'),
