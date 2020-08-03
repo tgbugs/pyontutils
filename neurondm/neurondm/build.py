@@ -1320,7 +1320,7 @@ def make_devel():
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
-        filename = 'neuron-development'
+        filename = 'npo'
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/generated/allen-transgenic-lines.ttl'],
@@ -1414,7 +1414,7 @@ def make_devel():
     class neuronUtilityBig(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
-        filename = 'neuron-development-big'
+        filename = 'npo-large'
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/bridge/chemical-bridge.ttl'],
