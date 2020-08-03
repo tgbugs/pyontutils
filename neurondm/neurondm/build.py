@@ -1178,9 +1178,10 @@ def make_devel():
     olr = auth.get_path('ontology-local-repo')
     n = (olr / 'ttl/generated/neurons')
     fns =('allen-cell-types.ttl',
-          'bolser-lewis.ttl',
+          #'bolser-lewis.ttl',
           'common-usage-types.ttl',
-          'cut-roundtrip.ttl',
+          'cut-release-final.ttl',
+          #'cut-roundtrip.ttl',
           'huang-2017.ttl',
           'markram-2015.ttl',)
     g = OntConjunctiveGraph()
