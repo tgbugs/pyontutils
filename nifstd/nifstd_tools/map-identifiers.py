@@ -1,15 +1,23 @@
 #!/usr/bin/env python3.7
+"""map ids
+Usage:
+    map-identifiers [options] [methods npokb]
+
+Options:
+    -h --help    print this
+"""
 
 # equivalent indexed as default
 # equivalent indexed in map only
 
 import augpathlib as aug
+from pyontutils import clifun as clif
 from pyontutils.core import OntGraph, OntResGit
 from pyontutils.namespaces import TEMP, ilx, rdf, owl, ilxtr, npokb, OntCuries
 from pyontutils.config import auth
 
 
-def npokb():
+def npokb_mapping():
     index_graph = OntGraph(path=auth.get_path('ontology-local-repo') /
                            'ttl/generated/neurons/npokb-index.ttl')
 
@@ -22,7 +30,11 @@ def npokb():
     #[index_graph.add((npokb[str(i)], ilxtr.hasTemporaryId, TEMP[str(i)])) for i in range(1, 11)]
 
     ios = []
-    for eff in ('common-usage-types', 'huang-2017', 'markram-2015', 'allen-cell-types'):
+    for eff in ('cut-release-final',
+                #'common-usage-types',  # excluded due to modelling changes
+                'huang-2017',
+                'markram-2015',
+                'allen-cell-types'):
         path = auth.get_path('ontology-local-repo') / f'ttl/generated/neurons/{eff}.ttl'
         input_graph = OntGraph(path=path)
         input_graph.parse()
@@ -32,7 +44,7 @@ def npokb():
     input_graph, output_graph = ios[0]
     a, r, c = output_graph.subjectsChanged(input_graph)
     index_graph.write()
-    # [o.write() for i, o, in ios]  # when ready
+    [o.write() for i, o, in ios]  # when ready
     #from sparcur.paths import Path
     #Path(index_graph.path).xopen()
     breakpoint()
@@ -108,8 +120,11 @@ def methods_sneech():
 
 
 def main():
-    #npokb()
-    methods_mapping()
+    options, args, defaults = clif.Options.setup(__doc__)
+    if options.npokb:
+        npokb_mapping()
+    elif options.methods:
+        methods_mapping()
 
 
 if __name__ == '__main__':
