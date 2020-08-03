@@ -95,8 +95,8 @@ ilxtr:PetillaSustainedStutteringPhenotype,ilxtr:PetillaSustainedSpikingPhenotype
 ilxtr:PetillaSustainedIrregularPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ir,,,,hasElectrophysiologicalPhenotype
 ilxtr:FastSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:RegularSpikingNonPyramidalPhenotype,,hasElectrophysiologicalPhenotype
 ilxtr:RegularSpikingNonPyramidalPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
-ilxtr:AccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:NonAccomodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
-ilxtr:NonAccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilxtr:AccommodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:NonAccommodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
+ilxtr:NonAccommodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ,,,,,,,
 ilxtr:ExpressionPhenotype,ilxtr:CellPhenotype,,molecular phenotype,,,,hasExpressionPhenotype
 ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,"figure out how to regularize these since I have used ilxtr:parvalbumin elsewhere, probably ilxtr:phenotype/thing will be best",hasExpressionPhenotype

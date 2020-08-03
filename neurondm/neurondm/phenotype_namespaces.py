@@ -115,8 +115,8 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     LBC = Phenotype('ilxtr:LargeBasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     NBC = Phenotype('ilxtr:NestBasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     SS = Phenotype('ilxtr:SpinyStellatePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # SS is used on the website, SSC is used on the spreadsheet TODO usecase for non-injective naming...
-    AC = Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
-    NAC = Phenotype('ilxtr:PetillaSustainedNonAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
+    AC = Phenotype('ilxtr:PetillaSustainedAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
+    NAC = Phenotype('ilxtr:PetillaSustainedNonAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')

@@ -3347,8 +3347,8 @@ OntologyGlobalConventions = _ogc = injective_dict(
     CCK = Phenotype('PR:000005110', 'ilxtr:hasMolecularPhenotype'),
     GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype'),
 
-    AC = Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
-    NAC = Phenotype('ilxtr:PetillaSustainedNonAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    AC = Phenotype('ilxtr:PetillaSustainedAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    NAC = Phenotype('ilxtr:PetillaSustainedNonAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
