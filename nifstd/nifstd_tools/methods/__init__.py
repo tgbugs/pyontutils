@@ -1525,7 +1525,7 @@ triples = (
        # is this the assertional/definitional part where we include everything?
        (ilxtr.hasPrimaryParticipant, ilxtr.tissue),
        #(ilxtr.hasSomething, TEMP(172.5)),
-       synonyms=('hisology',)),
+       synonyms=('histology',)),
 
     _t(OntTerm('BIRNLEX:2107'), 'staining technique',  # TODO integration
        (ilxtr.hasSomething, blank(48))),
