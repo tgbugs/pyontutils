@@ -157,6 +157,7 @@ def make_contains_rules():
         'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').asPhenotype(),  # spelling ...
         'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').asPhenotype(),  # had to cook up my search function to find this
         'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').asPhenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
+        'Pontine nuclei': OntTerm('UBERON:0002151', label='pontine nuclear group').asPhenotype(),  # pontine nuclei has a search collision in scigraph with UBERON:0002597 likely due to inclusion of overly broad synonyms on UBERON:0002597
         'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').asPhenotype(),  # oof
         'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').asPhenotype(),  # conclusion: scigraph cannot handle reordering
         'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').asPhenotype(),
@@ -323,7 +324,13 @@ def get_smatch(labels_set2):
     for l in labels_set2:
         pes = tuple()
         l_rem = l
-        for match, pheno in contains_rules.items():
+        for match, pheno in sorted(contains_rules.items(), key=lambda ab:-len(ab[0])):
+            if not l_rem:
+                break
+
+            if len(match) > len(l_rem):
+                continue
+
             t = None
             if match not in skip and pheno == OntTerm:
                 try:
