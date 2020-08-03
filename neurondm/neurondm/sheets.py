@@ -78,7 +78,7 @@ class CutsV1(Cuts):
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'existing'):
-            e_config = Config('common-usage-types')
+            e_config = Config('cut-development')
             e_config.load_existing()
             # FIXME clear use case for the remaining bound to whatever query produced it rather
             # than the other way around ... how to support this use case ...
@@ -731,7 +731,7 @@ def main():
     to_fix = [r for r in ros if list(r.entailed_molecular_phenotypes())]
     #maybe_fixed = [t.neuron_cleaned() for t in to_fix]
     #assert maybe_fixed != [f.neuron_existing() for f in to_fix]
-    config = Config('cut-release-final')
+    config = Config('common-usage-types')
     _final = [r.neuron_cleaned() for r in ros if r.include()]
     final = [f for f in _final if f is not None]  # FIXME there are 16 neurons marked as yes that are missing
     #fixed = [f for f in final if [_ for _ in f.pes if isinstance(_, EntailedPhenotype)]]

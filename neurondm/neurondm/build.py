@@ -1179,8 +1179,8 @@ def make_devel():
     n = (olr / 'ttl/generated/neurons')
     fns =('allen-cell-types.ttl',
           #'bolser-lewis.ttl',
+          'cut-development.ttl',
           'common-usage-types.ttl',
-          'cut-release-final.ttl',
           #'cut-roundtrip.ttl',
           'huang-2017.ttl',
           'markram-2015.ttl',)
@@ -1455,7 +1455,7 @@ def main():
         from neurondm.lang import Config
         from neurondm.compiled.common_usage_types import config as c_config
         cnrns = c_config.neurons()
-        config = Config('common-usage-types-fixed')
+        config = Config('cut-development-fixed')
         nns = [n.asUndeprecated() for n in cnrns]
         config.write()
         config.write_python()
