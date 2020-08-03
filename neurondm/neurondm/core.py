@@ -175,7 +175,8 @@ class LabelMaker:
                 function = getattr(self, function_name)
                 # TODO resolve and warn on duplicate phenotypes in the same hierarchy
                 # TODO negative phenotypes
-                less_entailed = [p for p in phenotypes if not isinstance(p, EntailedPhenotype)]
+                less_entailed = [p for p in phenotypes
+                                 if not isinstance(p, EntailedPhenotype)]
                 sub_labels = list(function(less_entailed))
                 labels += sub_labels
 
@@ -2004,18 +2005,7 @@ class LogicalPhenotype(graphBase):
             if self in inj:
                 return inj[self]
 
-        snk = self._lkey('pShortName')
-        lnk = self._lkey('pLongName')
-        def dkey(value):
-            rank, string = snk(value)
-            if not string:
-                rank, string = lnk(value)
-
-            return rank, string
-
-        spes = sorted(self.pes, key=dkey)
-        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName
-                          for pe in spes])
+        label = self.label_maker(self)
         op = OntId(self.op).suffix
         return self.labelPostRule(f'({op} {label})')
 
