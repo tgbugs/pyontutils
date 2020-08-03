@@ -83,6 +83,7 @@ class CutsV1(Cuts):
             # FIXME clear use case for the remaining bound to whatever query produced it rather
             # than the other way around ... how to support this use case ...
             cls.existing = {n.origLabel.toPython():n for n in e_config.existing_pes}
+            cls.existing.update({n.id_:n for n in e_config.existing_pes})
             cls.query = oq.OntQuery(oq.plugin.get('rdflib')(e_config.core_graph), instrumented=OntTerm)
             cls.sgv = Vocabulary()
 
@@ -378,6 +379,8 @@ class CutsV1(Cuts):
 
         if cell == 'contralateral':
             return ilxtr.Contralateral, cell  # XXX FIXME only BSPO has this right now
+        elif cell.lower() == 'gaba receptor role':
+            return ilxtr.GABAReceptor, cell
 
         if ':' in cell and ' ' not in cell:
             log.debug(cell)
@@ -500,6 +503,13 @@ class CutsV1Lite(Cuts):
 class Row(sheets.Row):
 
     def neuron_existing(self):
+        curie = self.curie().value
+        if curie:
+            id_ = OntTerm(curie).u
+            match = self.sheet.existing.get(id_)
+            if match:
+                return match
+
         al = self.alignment_label().value
         return self.sheet.existing.get(al if al else self.label().value)
 
@@ -607,7 +617,9 @@ class Row(sheets.Row):
         sheet_pes = [pe.asEntailed() if should_entail(pe) else pe for pe in sheet_pes]
 
         if ne is None:
-            return NeuronCUT(*sheet_pes, label=self.label().value)
+            curie = self.curie().value
+            id_ = curie if curie else None
+            return NeuronCUT(*sheet_pes, id_=id_, label=self.label().value, override=id_ is None)
 
         if not emp:
             # can't just return the existing neuron because it isn't bound to the current config
