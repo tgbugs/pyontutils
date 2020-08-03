@@ -87,6 +87,7 @@ try:
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
         ],
         keywords=('neuron types NIF ontology neuroscience phenotype '
                 'OWL rdf rdflib data model'),
@@ -95,7 +96,7 @@ try:
         tests_require=tests_require,
         install_requires=[
             'hyputils>=0.0.6',
-            'pyontutils>=0.1.23',
+            'pyontutils>=0.1.24',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,

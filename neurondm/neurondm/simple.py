@@ -233,6 +233,9 @@ class PhenotypeCollection(frozenset):  # set? seems... fun? ordered set?
     def __eq__(self, other):
         return self.__class__ == other.__class__ and super().__eq__(other)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @classmethod
     def fromRow(cls, row, converter=None): pass
     def asRow(self, converter=None): pass
@@ -444,7 +447,9 @@ class CellCollection:
         if target is None:
             target = self.asOwl
 
-        OntGraph(namespace_manager=dict(OntCuries._dict)).populate_from_triples(target()).debug()
+        (OntGraph(namespace_manager=dict(OntCuries._dict))
+         .populate_from_triples(target())
+         .debug())
 
     def from_remote(self, url):
         """ could be a google sheet or a remote rdf representation """
