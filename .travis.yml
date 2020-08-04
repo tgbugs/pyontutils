@@ -53,7 +53,7 @@ before_install:
   - popd
   - popd
   - mkdir -p ~/.config/orthauth
-  - printf 'google:\n  sheets:\n    pyontutils-test: '"${TEST_SHEET_ID}" >> ~/.config/orthauth/secrets.yaml
+  - bash -c 'printf "google:\n  sheets:\n    pyontutils-test: ${TEST_SHEET_ID}\n" >> ~/.config/orthauth/secrets.yaml'
 
 install:
   - pip install --upgrade pytest pytest-cov
