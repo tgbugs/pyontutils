@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
+from terminaltables import AsciiTable
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -1101,3 +1102,17 @@ class Sheet:
                     raise NotImplementedError('Unhandled type {type(k)}')
 
         self._stash = None
+
+    @property
+    def title(self):
+        if not hasattr(self, '_metadata'):
+            self.metadata()
+
+        return self._meta['properties']['title'] + ' sheet ' + self.sheet_name
+
+    def asPretty(self, limit=30):
+        rows = [[c[:limit] + ' ...' if isinstance(c, str)
+                 and len(c) > limit else c
+                 for c in r] for r in self.values]
+        table = AsciiTable(rows, title=self.title)
+        return table.table

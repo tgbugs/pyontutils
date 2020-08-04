@@ -333,7 +333,7 @@ def make_phenotypes():
             self.id_ = graph2.expand(value)
             self.Class = infixowl.Class(self.id_, graph=graph2.g)
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
-            if 'Cone' in label or 'Rod' in label:  # sigh hard coding
+            if 'Cone' in label or 'Rod' in label or 'Disc' in label:  # sigh hard coding
                 label = label.replace(' Morphological', '')
             self._label = label.capitalize()
 

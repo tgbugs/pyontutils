@@ -30,8 +30,7 @@ def npokb_mapping():
     #[index_graph.add((npokb[str(i)], ilxtr.hasTemporaryId, TEMP[str(i)])) for i in range(1, 11)]
 
     ios = []
-    for eff in ('cut-release-final',
-                #'common-usage-types',  # excluded due to modelling changes
+    for eff in ( 'common-usage-types',
                 'huang-2017',
                 'markram-2015',
                 'allen-cell-types'):

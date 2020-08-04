@@ -51,6 +51,7 @@ ilxtr:BistratifiedPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPh
 ilxtr:GranulePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:ConeMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:RodMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:DiscMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
 ,,,,,,,
 ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
