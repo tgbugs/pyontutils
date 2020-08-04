@@ -46,7 +46,7 @@ setup(
         'networkx',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.24',
+        'pyontutils>=0.1.25',
         'sqlalchemy',
     ],
     extras_require={'dev': ['mysql-connector',

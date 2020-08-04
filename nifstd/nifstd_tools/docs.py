@@ -898,7 +898,9 @@ class Main(clif.Dispatcher):
             title = titles.get(apath.as_posix(), _NOTITLE)
             # TODO parse out/add titles
             if title is not None:
-                value = hfn.atag(apath) if title is _NOTITLE else hfn.atag(apath, title)
+                value = (hfn.atag(apath)
+                         if title is _NOTITLE else
+                         hfn.atag(apath, title))
                 index.append(value)
 
             if not outname.parent.exists():
@@ -909,7 +911,11 @@ class Main(clif.Dispatcher):
 
         lt  = list(titles)
         def title_key(a):
-            return lt.index(a.split('"')[1])
+            title = a.split('"')[1]
+            if title not in lt:
+                msg = (f'{title} missing from {self.options.config}')
+                raise ValueError(msg)
+            return lt.index(title)
 
         index_body = '<br>\n'.join(['<h1>Documentation Index</h1>'] +
                                     sorted(index, key=title_key))
@@ -921,7 +927,8 @@ class Main(clif.Dispatcher):
 def main():
     from docopt import docopt, parse_defaults
     args = docopt(__doc__)
-    defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
+    defaults = {o.name:o.value if o.argcount else None
+                for o in parse_defaults(__doc__)}
     debug = args['--debug']
     options = Options(args, defaults)
     main = Main(options)
