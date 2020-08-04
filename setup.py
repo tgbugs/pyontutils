@@ -54,7 +54,7 @@ setup(
         'joblib>=0.14.1',
         'lxml',
         'nest_asyncio',
-        'ontquery>=0.2.4',
+        'ontquery>=0.2.5',
         'orthauth>=0.0.13',
         'pyld',
         'pyyaml',
