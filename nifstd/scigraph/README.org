@@ -45,6 +45,9 @@ if [ "${BASH_SOURCE[0]}" -ef "$0" ]; then
 fi
 #+end_src
 ** Developing this file                                            :noexport:
+If you are using emacs, then =flycheck-mode= will run =shellcheck= for you!
+You don't even have to run it independently.
+
 You should also run =shellcheck= on the tangled file if you make any changes.
 You don't usually have to worry about green issues, and there are a number of
 false positives because we are dealing with some crazy local vs remote expansion.

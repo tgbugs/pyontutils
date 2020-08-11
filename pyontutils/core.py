@@ -1685,7 +1685,7 @@ class OntGraph(rdflib.Graph):
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
     def __init__(self, *args, store='default', identifier=None, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, store=store, identifier=identifier, **kwargs)
         # overwrite default context with our subclass
         self.default_context = OntGraph(store=self.store,
                                         identifier=identifier or rdflib.BNode())
