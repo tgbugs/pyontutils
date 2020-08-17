@@ -92,51 +92,17 @@ local INTEGRATION_PACKAGES=()
 while [[ $# -gt 0 ]]
 do
 key="$1"
-
-# argh (((((((( darned mismatched parens :/
 case $key in
-    -l|--local)
-    local CLONEFROM="$2"
-    shift # past argument
-    shift # past value
-    ;;
-    -f|--artifact-folder)
-    local ARTIFACT_FOLDER="$2"
-    shift # past argument
-    shift # past value
-    ;;
-    -p|--base-path)
-    local BASE_PATH="$2"
-    shift # past argument
-    shift # past value
-    ;;
-    -b|--branch)
-    local BRANCH="$2"
-    shift # past argument
-    shift # past value
-    ;;
-    -i|--install-package)
-    INTEGRATION_PACKAGES+=("$2")
-    shift
-    shift
-    ;;
-    --python)
-    local PYTHON_VERSION="$2"
-    shift
-    shift
-    ;;
-    --tag-no-rename)
-    local TAG_NO_RENAME=YES
-    shift # past argument
-    ;;
-    --keep-artifacts)
-    local KEEP_ARTIFACTS=YES
-    shift # past argument
-    ;;
-    ,*)    # unknown option
-    POSITIONAL+=("$1") # save it in an array for later
-    shift # past argument
-    ;;
+    -l|--local)           local CLONEFROM="$2"; shift; shift ;;
+    -f|--artifact-folder) local ARTIFACT_FOLDER="$2"; shift; shift ;;
+    -p|--base-path)       local BASE_PATH="$2"; shift; shift ;;
+    -b|--branch)          local BRANCH="$2"; shift; shift ;;
+    -i|--install-package) local INTEGRATION_PACKAGES+=("$2"); shift; shift ;;
+    --python)             local PYTHON_VERSION="$2"; shift; shift ;;
+    --tag-no-rename)      local TAG_NO_RENAME=YES; shift ;;
+    --keep-artifacts)     local KEEP_ARTIFACTS=YES; shift ;;
+    --debug)              local DEBUG=YES; shift ;;
+    ,*)                   local POSITIONAL+=("$1"); shift ;;
 esac
 done
 
@@ -244,11 +210,13 @@ build-release () {
     touch Pipfile
     pipenv --rm  # clean any existing env
     pipenv --python $PYTHON_VERSION  # for some reason 3.6 lingers in some envs
-    if [[ -n ${INTEGRATION_PACKAGES} ]]; then
-        echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
-        pipenv run pip install ${INTEGRATION_PACKAGES[@]} || return $?
+    if [[ -n ${DEBUG} ]]; then
+        pipenv run pip install pudb ipdb  # install both for simplicity
+        NOCAP='-s'
     fi
-    echo $(color yellow)installing$(color off) ${packagename}
+
+    # local package server
+    local maybe_eiu=()
     if [[ -n ${ARTIFACT_FOLDER} ]]; then
         #pipenv run pip install requests-file || return $?  # sadly this does not work
         #--extra-index-url "file://$(realpath ${ARTIFACT_FOLDER})" \
@@ -259,6 +227,7 @@ build-release () {
         # but http.server doesn't flush stdout correctly until process exit
         # so we use socket to get a random port and the use that and hope
         # that some other process doesn't randomly grab it in between
+        # spoilers: some day it will
         PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
         python -m http.server \
                $PORT \
@@ -266,16 +235,25 @@ build-release () {
                --directory "${ARTIFACT_FOLDER}" \
                > /dev/null 2>&1 &  # if you need to debug redirect somewhere other than /dev/null
         local TOKILL=$!
-        pipenv run pip install \
-               --extra-index-url "http://localhost:${PORT}" \
-               -e .[test] || local CODE=$?
-        kill $TOKILL
-        [[ -n $CODE && $CODE -ne 0 ]] && return $CODE
-    else
-        pipenv run pip install \
-               -e .[test] || return $?  # .[services] for ontquery full install
+        maybe_eiu+=(--extra-index-url "http://localhost:${PORT}")
     fi
-    pipenv run pytest || local FAILURE=$?
+
+    if [[ -n ${INTEGRATION_PACKAGES} ]]; then
+        echo $(color yellow)installing integration packages$(color off) ${INTEGRATION_PACKAGES[@]}
+        pipenv run pip install \
+               "${maybe_eiu[@]}" \
+               ${INTEGRATION_PACKAGES[@]} || return $?
+    fi
+
+    echo $(color yellow)installing$(color off) ${packagename}
+    pipenv run pip install \
+           "${maybe_eiu[@]}" \
+            -e .[test] || local CODE=$?
+
+    [[ -n $TOKILL ]] && kill $TOKILL
+    [[ -n $CODE && $CODE -ne 0 ]] && return $CODE
+
+    pipenv run pytest ${NOCAP} || local FAILURE=$?
     # FIXME popd on failure ... can't && because we loose the next popd instead of exiting
     # everything should pass if not, keep going until it does
     popd
