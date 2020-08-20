@@ -1360,6 +1360,7 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
+            skip = 'TEMPIND', 'npokb'
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1367,6 +1368,9 @@ def make_devel():
                         continue
 
                     done.append(term)
+                    if term.curie and [p for p in skip if term.curie.startswith(p)]:
+                        continue
+
                     if (not term.label or (not term.label.lower().endswith('neuron') and
                                            not term.label.lower().endswith('cell') and
                                            not term.label.lower().endswith('cell outer'))

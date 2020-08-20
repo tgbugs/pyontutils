@@ -450,7 +450,7 @@ class OntTerm(bOntTerm, OntId):
         skips = 'pheno:parvalbumin',
         bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
                 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
-                'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+                'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID', 'TEMPIND', 'npokb')
         s = self.URIRef
         if self.type is None:
             yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
@@ -476,13 +476,20 @@ class OntTerm(bOntTerm, OntId):
                 if superclass.curie in skips:
                     continue
                 elif superclass.prefix in bads:
-                    if superclass.prefix == 'BFO' or self.prefix in bads or 'interlex' in self.iri:
+                    if (superclass.prefix == 'BFO' or
+                        self.prefix in bads or
+                        'interlex' in self.iri):
                         yield s, rdfs.subClassOf, superclass.URIRef
                         break
                     else:
                         continue
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
+                    # ensure that all superclasses are closed for type and label
+                    yield superclass.URIRef, rdf.type, owl.Class
+                    if superclass.label:
+                        _l = rdflib.Literal(superclass.label)
+                        yield superclass.URIRef, rdfs.label, _l
 
         predicates = 'partOf:', 'RO:0002433' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
@@ -492,7 +499,15 @@ class OntTerm(bOntTerm, OntId):
                     if superpart.prefix in bads:
                         continue
                     if (predicate, superpart) not in done:
-                        yield from cmb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
+                        yield from cmb.restriction(OntId(predicate).URIRef,
+                                                   superpart.URIRef)(s)
+
+                        # ensure that all superparts are closed for type and label
+                        yield superpart.URIRef, rdf.type, owl.Class
+                        if superpart.label:
+                            _l = rdflib.Literal(superpart.label)
+                            yield superpart.URIRef, rdfs.label, _l
+
                         done.append((predicate, superpart))
 
 
