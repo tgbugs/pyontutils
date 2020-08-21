@@ -2167,18 +2167,26 @@ class OntTerm(oq.OntTerm, OntId):
     def atag(self, curie=False, **kwargs):
         return hfn.atag(self.iri, self.curie if curie else self.label, **kwargs)  # TODO schema.org ...
 
+    @classmethod
+    def _sinit(cls):
+        """ set up services for a particular OntTerm class or subclass
+        calling this more than once may produce unexpected results """
+        SGR = oq.plugin.get('SciGraph')
+        IXR = oq.plugin.get('InterLex')
+        #sgr.verbose = True
+        for rc in (SGR, IXR):
+            rc.known_inverses += (
+                ('hasPart:', 'partOf:'),
+                ('NIFRID:has_proper_part', 'NIFRID:proper_part_of'))
 
-SGR = oq.plugin.get('SciGraph')
-IXR = oq.plugin.get('InterLex')
-#sgr.verbose = True
-for rc in (SGR, IXR):
-    rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
+        sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
+        ixr = IXR(readonly=True)
+        ixr.Graph = OntGraph
+        cls.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
+        [cls.repr_level(verbose=False) for _ in range(2)]
 
-sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
-ixr = IXR(readonly=True)
-ixr.Graph = OntGraph
-OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
-[OntTerm.repr_level(verbose=False) for _ in range(2)]
+
+OntTerm._sinit()
 query = oq.OntQueryCli(query=OntTerm.query)
 
 
@@ -2186,6 +2194,7 @@ class IlxTerm(OntTerm):
     skip_for_instrumentation = True
 
 
+ixr = query.services[-1]  # FIXME this whole approach seems bad and wrong
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 

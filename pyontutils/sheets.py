@@ -542,6 +542,7 @@ class Sheet:
         # TODO can probably unify these since can dispatch on Cell/Row
         self._uncommitted_updates = {}
         self._uncommitted_appends = {}
+        self._uncommitted_extends = {}
         self._uncommitted_deletes = {}
         self._incomplete_removes = {}  # different than deletes for now
 
@@ -930,6 +931,8 @@ class Sheet:
             raise ValueError('There are no uncommitted changes to roll back!')
 
         raise NotImplementedError('TODO')
+        # remove any explicit extensions
+        self._uncommitted_extends = {}  # TODO also deletes
         # remove the new rows
         self._uncommitted_appends = {}
         # restore the previous rows
@@ -1003,11 +1006,13 @@ class Sheet:
             return
 
         data = []
+        extend_objects = []
         for oclass in (Row, Column):
             objects = sorted((o for o in self._uncommitted_appends
                               if isinstance(o, oclass)),
                              key=lambda o: o.index)
             if objects:
+                extend_objects.extend(objects)
                 blob = dict(
                     range = self._appendRange(objects),
                     values = [sigh(o.values) for o in objects],  # FIXME object -> string issue
@@ -1016,6 +1021,10 @@ class Sheet:
                 data.append(blob)
                 # FIXME overlapping cells are added twice
 
+        # sheet updates
+        self._commit_extends(extend_objects)
+
+        # value updates
         body = {'valueInputOption': 'USER_ENTERED',
                 'data': data,}
 
@@ -1024,6 +1033,37 @@ class Sheet:
                 .execute())
 
         self._uncommitted_appends = {}
+
+    def _commit_extends(self, objects=None):
+        if not self._uncommitted_extends and not objects:
+            return
+
+        # TODO columns ?
+
+        if not objects:
+            objects = sorted(self._uncommitted_extends, key=lambda o: o.index)
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        sid = self.sheetId()
+        data = [
+            {'insertDimension': {
+                'inheritFromBefore': True,
+                'range': {
+                    'sheetId': sid,
+                    'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',
+                    'startIndex': object.index,
+                    'endIndex': object.index + 1,  # have to delete at least one whole row
+                }}}
+            for object in objects]
+
+        body = {'requests': data}
+        resp = (self._spreadsheet_service
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+
+        if self._uncommitted_extends:
+            self._uncommitted_extends = {}
 
     def _commit_updates(self):
         data = [{'range': cell.range, 'values': [[cell._value_str]]}
