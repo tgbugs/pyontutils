@@ -1334,6 +1334,26 @@ class OntGraph(rdflib.Graph):
             if isinstance(s, rdflib.URIRef):
                 yield s
 
+    def mapStableIdentifiers(self, other_graph, predicate):
+        """ returns a new graph the is the result of mapping
+            idenitifers between graphs using a predicate that points to
+            objects that are known to be stable independent of changes to
+            automatically generated identifiers
+
+            the other graph is taken as the source of the identifiers that
+            will be used in the new graph """
+
+        gen = ((s, ilxtr.hasTemporaryId, temp_s)
+               for s, o in other_graph[:predicate:]
+               for temp_s in self[:predicate:o])
+
+
+        add_replace_graph = self.__class__()
+        add_replace_graph.populate_from_triples(gen)
+        new_self = self._do_add_replace(add_replace_graph)
+        new_self.namespace_manager.populate_from(self).populate_from(other_graph)
+        return new_self
+
     def subjectsRenamed(self, other_graph):
         """ find subjects where only the id has changed """
         # FIXME dispatch on OntRes ?
@@ -1485,6 +1505,11 @@ class OntGraph(rdflib.Graph):
         # against a global index
         # TODO detect use of likely non-unique suffixes in temp namespaces
         [add_replace_graph.add(t) for t in not_replaced]
+        new_self = self._do_add_replace(add_replace_graph)
+        new_self.namespace_manager.populate_from(index_graph)
+        return new_self
+
+    def _do_add_replace(self, add_replace_graph):
         add_only_graph, remove_graph, same_graph = self.diffFromReplace(add_replace_graph)
 
         # the other semantics that could be used here
@@ -1497,8 +1522,6 @@ class OntGraph(rdflib.Graph):
         [new_self.add(t) for t in add_replace_graph]
         [new_self.add(t) for t in add_only_graph]
         [new_self.add(t) for t in same_graph]
-
-        new_self.namespace_manager.populate_from(index_graph)
         return new_self
 
     def identity(self, cypher=None):
