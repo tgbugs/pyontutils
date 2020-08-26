@@ -1,0 +1,29 @@
+[Unit]
+Description=ontree gunicorn daemon
+After=network.target
+
+[Service]
+PIDFile=/run/ontree/pid
+User=nifstd-tools
+Group=nifstd-tools
+RuntimeDirectory=/dev/null
+WorkingDirectory=/dev/null
+EnvironmentFile=/etc/systemd/system/ontree.service.d/env.conf
+ExecStart=/var/lib/nifstd-tools/.local/bin/pipenv run gunicorn \
+--bind unix:/run/ontree/socket \
+--name ontree \
+--workers 4 \
+--worker-class gevent \
+--timeout 90 \
+--group nifstd-tools \
+--user nifstd-tools \
+--log-level DEBUG \
+--log-file $LOG_LOC/ontree.log \
+--capture-output \
+nifstd_tools.ontree_server:app
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

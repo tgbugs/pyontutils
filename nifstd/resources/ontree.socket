@@ -1,0 +1,8 @@
+[Unit]
+Description=ontree gunicorn socket
+
+[Socket]
+ListenStream=/run/ontree/socket
+
+[Install]
+WantedBy=sockets.target
