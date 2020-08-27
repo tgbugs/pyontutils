@@ -115,13 +115,28 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     LBC = Phenotype('ilxtr:LargeBasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     NBC = Phenotype('ilxtr:NestBasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     SS = Phenotype('ilxtr:SpinyStellatePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # SS is used on the website, SSC is used on the spreadsheet TODO usecase for non-injective naming...
+
     AC = Phenotype('ilxtr:PetillaSustainedAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     NAC = Phenotype('ilxtr:PetillaSustainedNonAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
+    bAC = LogicalPhenotype(AND, b, AC)
+    bNAC = LogicalPhenotype(AND, b, NAC)
+    bSTUT = LogicalPhenotype(AND, b, STUT)
+    bIR = LogicalPhenotype(AND, b, IR)
     c = Phenotype('ilxtr:PetillaInitialClassicalSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
+    cAC = LogicalPhenotype(AND, c, AC)
+    cNAC = LogicalPhenotype(AND, c, NAC)
+    cSTUT = LogicalPhenotype(AND, c, STUT)
+    cIR = LogicalPhenotype(AND, c, IR)
     d = Phenotype('ilxtr:PetillaInitialDelayedSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
+    dAC = LogicalPhenotype(AND, d, AC)
+    dNAC = LogicalPhenotype(AND, d, NAC)
+    dSTUT = LogicalPhenotype(AND, d, STUT)
+    dIR = LogicalPhenotype(AND, d, IR)
+
+
     FS = Phenotype('ilxtr:FastSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     RSNP = Phenotype('ilxtr:RegularSpikingNonPyramidalPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype')
     L1D = Phenotype('UBERON:0005390', 'ilxtr:hasDendriteLocatedIn')
@@ -157,7 +172,7 @@ class BBP(PaxRatLayers, PaxRatRegions, Species):
     #STRI = Phenotype('UBERON:0005383', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
     STRI = Phenotype('PAXRAT:168', 'ilxtr:hasSomaLocatedIn')  # VS UBERON:0002435 (always comes up)
     MSN = Phenotype('ilxtr:MediumSpinyPhenotype', 'ilxtr:hasMorphologicalPhenotype')
-    INT = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')  # unsatisfactory
+    Interneuron = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')  # unsatisfactory
     #CER = Phenotype('UBERON:0002037', 'ilxtr:hasSomaLocatedIn')
     CER = Phenotype('PAXRAT:191', 'ilxtr:hasSomaLocatedIn')
     GRAN = Phenotype('ilxtr:GranulePhenotype', 'ilxtr:hasMorphologicalPhenotype')  # vs granular?

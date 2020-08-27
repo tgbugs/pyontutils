@@ -136,8 +136,10 @@ class LabelMaker:
     """ disregard existing data acquire raw from identifiers """
     predicate_namespace = ilxtr
     field_separator = ' '
-    def __init__(self, local_conventions=False):
+    def __init__(self, local_conventions=False, render_entailed=True):
         """ `local_conventions=True` -> serialize using current LocalNamingConventions """
+        self._do_ent = False
+        self.render_entailed = render_entailed
         self.local_conventions = local_conventions
         if self.local_conventions:
             self._label_property = '__humanSortKey__'
@@ -150,9 +152,9 @@ class LabelMaker:
 
         def _key(phen):
             if phen in self._convention_lookup:
-                return self._convention_lookup[phen]
+                return phen.__class__._rank, self._convention_lookup[phen]
             else:
-                return getattr(phen, self._label_property)
+                return phen.__class__._rank, getattr(phen, self._label_property)
 
         self._key = _key
 
@@ -161,12 +163,15 @@ class LabelMaker:
                                    self.predicate_namespace[function_name])
                                   for function_name in self._order))
 
-    def __call__(self, neuron):
+    def __call__(self, neuron, render_entailed=None):
         # FIXME consider creating a new class every time
         # it will allow state to propagate more easily?
+        render_entailed = self.render_entailed and (render_entailed is None or render_entailed)
         labels = []
+        entailed = []
         for function_name, predicate in zip(self._order, self.predicates):
             if predicate in neuron._pesDict:
+                #phenotypes = sorted(neuron._pesDict[predicate], key=self._key)
                 phenotypes = neuron._pesDict[predicate]
                 if not phenotypes:
                     log.warning('wat: {neuron}')
@@ -177,8 +182,17 @@ class LabelMaker:
                 # TODO negative phenotypes
                 less_entailed = [p for p in phenotypes
                                  if not isinstance(p, EntailedPhenotype)]
-                sub_labels = list(function(less_entailed))
+                sub_labels = sorted(function(less_entailed))
                 labels += sub_labels
+
+                yes_entailed = [p for p in phenotypes
+                                if isinstance(p, EntailedPhenotype)]
+                try:
+                    self._do_ent = True
+                    elabels = list(function(yes_entailed))
+                finally:
+                    self._do_ent = False
+                entailed += elabels
 
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
             self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict):
@@ -188,11 +202,18 @@ class LabelMaker:
             if neuron._shortname:
                 labels += [neuron._shortname]
 
-        return self.field_separator.join(labels)
+        label = self.field_separator.join(labels)
+
+        if entailed and render_entailed:
+            ent_labels = '(implies ' + self.field_separator.join(entailed) + ')'
+            label += ' ' + ent_labels
+
+        return label
 
     def _default(self, phenotypes):
+        #log.debug([self._key(p) for p in phenotypes])
         for p in sorted(phenotypes, key=self._key):
-            if isinstance(p, EntailedPhenotype):
+            if isinstance(p, EntailedPhenotype) and not self._do_ent:
                 # FIXME TODO I think it is correct to drop these
                 raise TypeError('entailed should have been filtered '
                                 'before arriving here')
@@ -202,10 +223,26 @@ class LabelMaker:
             else:
                 prefix = ''
 
+            if isinstance(p, LogicalPhenotype):
+                yield self._logical_default(p)
+                return
+
             if p in self._convention_lookup:
                 yield prefix + self._convention_lookup[p]
+            elif self._do_ent and Phenotype(p) in self._convention_lookup:
+                yield prefix + self._convention_lookup[Phenotype(p)]
             else:
                 yield prefix + getattr(p, self._label_property)
+
+    def _logical_default(self, lp):
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if lp in inj:
+                return inj[lp]
+
+        label = self(lp)
+        op = OntId(lp.op).suffix
+        return f'({op} {label})'
 
     @od
     def hasTaxonRank(self, phenotypes):
@@ -384,13 +421,22 @@ class LabelMaker:
         for phenotype in phenotypes:
             yield next(self._default((phenotype,))).lower()
 
-        suffix = suffix()
-        if suffix:
-            yield suffix
+        if self.local_conventions:
+            # FIXME this isn't quite right but for some reason the neuron
+            # suffix still sticks around on the allen neurons ???
+            return
+
+        if phenotypes and not self.local_conventions:
+            suffix = suffix()
+            if suffix:
+                yield suffix
 
 # helper classes
 
 class OntTerm(bOntTerm, OntId):
+
+    _cache_ind = dict()
+
     def traverse(self, *predicates):
         """ return the graph closure when traversing multiple edge types """
         done = set()
@@ -418,6 +464,9 @@ class OntTerm(bOntTerm, OntId):
         return phenotype_class(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
     def asIndicator(self):
+        if self in self._cache_ind:
+            return self._cache_ind[self]
+
         sco = self(rdfs.subClassOf, depth=2, asTerm=True)
         uris = [t.URIRef for t in sco]
         if ilxtr.PhenotypeIndicator in uris:
@@ -428,9 +477,11 @@ class OntTerm(bOntTerm, OntId):
             # FIXME it being first is by accident of implementation only
             log.debug(f'{sco} {self}')
             assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
+            self._cache_ind[self] = ind
             return ind
         else:
             log.debug(f'No indicator for {self.curie} {self.label}')
+            self._cache_ind[self] = self  # avoid repeated lookup cost which is quite high
             return self
 
     def triples(self, predicate):
@@ -1527,9 +1578,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             self._label = label  # I cannot wait to get rid of this premature graph integration >_<
             self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
-        # use this specify consistent patterns for modifying labels
-        self.labelPostRule = lambda l: l
-
     def asIndicator(self):
         t = OntTerm(self.p)
         it = t.asIndicator()
@@ -1597,7 +1645,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                     except ConnectionError:
                         #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                             #self._sgv._basePath)
-                        log.warning(f'Phenotype unvalidated. No SciGraph was instance found at {self._sgv._basePath}')
+                        msg = ('Phenotype unvalidated. No SciGraph was instance '
+                               f'found at {self._sgv._basePath}')
+                        log.warning(msg)
 
         self.__cache[phenotype] = subject
         return subject
@@ -1665,7 +1715,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 l = self.ng.qname(self.p)
         else:
             l = l[0]
-        return self.labelPostRule(l)
+
+        return l
 
 
     @property
@@ -1676,7 +1727,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             l = self.pShortName  # FIXME
 
-        return self.labelPostRule(l)
+        return l
 
     @property
     @cacheout
@@ -1709,7 +1760,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if resp:  # DERP
             abvs = resp['abbreviations']
             if not abvs:
-                abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
+                abvs = sorted([s for s in resp['synonyms']
+                               if 1 < len(s) < 5], key=lambda s :(len(s), s))
+
+            # handle cases where a label is quite short
+            if resp['labels'] and 1 < len(resp['labels'][0]) < 5:
+                abvs = [resp['labels'][0]] + abvs
+
         else:
             abvs = None
 
@@ -1939,16 +1996,16 @@ class LogicalPhenotype(graphBase):
         super().__init__()
         self.op = op  # TODO more with op
         self.pes = tuple(sorted(edges))
-        self._pesDict = {}
+        _pesDict = {}
         for e in self.e:
             for pe in self.pes:
                 if pe.e == e:
-                    if e in self._pesDict:
-                        self._pesDict[e].append(pe)
+                    if e in _pesDict:
+                        _pesDict[e].add(pe)
                     else:
-                        self._pesDict[e] = [pe]
+                        _pesDict[e] = {pe}
 
-        self.labelPostRule = lambda l: l
+        self._pesDict = {k:sorted(v) for k, v in _pesDict.items()}
 
     def asIndicator(self):
         return self.__class__(self.op, *[pe.asIndicator() for pe in self.pes])
@@ -2011,7 +2068,7 @@ class LogicalPhenotype(graphBase):
         spes = sorted(self.pes, key=self._lkey('pHiddenLabel'))
         label = ' '.join([pe.pHiddenLabel for pe in spes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
-        return self.labelPostRule(f'({op} {label})')
+        return f'({op} {label})'
 
     @property
     def pShortName(self):
@@ -2022,7 +2079,7 @@ class LogicalPhenotype(graphBase):
 
         label = self.label_maker(self)
         op = OntId(self.op).suffix
-        return self.labelPostRule(f'({op} {label})')
+        return f'({op} {label})'
 
     @property
     def pLongName(self):
@@ -2906,8 +2963,8 @@ class Neuron(NeuronBase):
         ll = self.localLabel
         ol = self.origLabel
         graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(gl)))
-        if ll != gl:
-            graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
+        #if ll != gl:
+        graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
 
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
@@ -3158,6 +3215,9 @@ class injective(type):
         return injective_dict()
 
     def __new__(cls, name, bases, inj_dict):
+        # we cast back to dict here so that inj_dict doesn't cause
+        # errors if the same name is used in the class namespace
+        # even if not for assignment
         self = super().__new__(cls, name, bases, dict(inj_dict))
         self.debug = False
         return self

@@ -610,8 +610,10 @@ class Row(sheets.Row):
             return (pe.p in eobjects or
                     pe.e in entail_predicates or
                     (pe.e, True) in conditional_entailed_predicates or
-                    isinstance(pe, LogicalPhenotype) and any(should_entail(_) for _ in pe.pes))
-
+                    isinstance(pe, LogicalPhenotype) and any(should_entail(_) for _ in pe.pes) or
+                    # see this comment for discussion about negative phenotypes on CUTs
+                    # https://github.com/SciCrunch/NIF-Ontology/issues/222#issuecomment-680175477
+                    isinstance(pe, NegPhenotype))
 
         sheet_pes = self.asPhenotypes()
         sheet_pes = [pe.asEntailed() if should_entail(pe) else pe for pe in sheet_pes]

@@ -169,10 +169,23 @@ class Genes(LocalNameManager):
     δGABAaR = Phenotype('NCBIGene:14403', 'ilxtr:hasExpressionPhenotype', label='Gabrd', override=True)
     PGC1α = Phenotype('NCBIGene:19017', 'ilxtr:hasExpressionPhenotype', label='Ppargc1a', override=True)
 
+    # stragglers
+    Znt3 = Phenotype('NCBIGene:22784', 'ilxtr:hasExpressionPhenotype', label='Slc30a3', override=True)
+    Zip1 = Phenotype('NCBIGene:194642', 'ilxtr:hasExpressionPhenotype', label='Slc39a1-ps', override=True)
+    Rspn = Phenotype('NCBIGene:239405', 'ilxtr:hasExpressionPhenotype', label='Rspo2', override=True)  # NOTE THAT Rspn is not used ANYWHERE in the literature and is almost certainly a typo
+
     # peptides
     #Tac1 = Phenotype('ilxtr:Tac1', 'ilxtr:hasExpressionPhenotype')
     #Adm = Phenotype('ilxtr:Adm', 'ilxtr:hasExpressionPhenotype')
-    Rspn = Phenotype('ilxtr:Rspn', 'ilxtr:hasExpressionPhenotype')  # FIXME this does not seem to exist
+
+    # based on my reading of figure 6C and the random un lettered figure
+    # between figure 6 D,B, and C, and the description of the R-spondin family
+    # in the paper below, I am ruling that this is actually a reference to Rspo2
+    # a reasonable guess at the gene symbol, but the 'din' wasn't what inspired
+    # the short name, rather it was the 'spond'
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3496018/#S2title
+    #Rspn = Phenotype('ilxtr:Rspn', 'ilxtr:hasExpressionPhenotype')  # FIXME this does not seem to exist
+
     PVBCPep = LogicalPhenotype(AND, Tac1, Adm, Rspn)
 
     #Pthlh = Phenotype('ilxtr:Pthlh', 'ilxtr:hasExpressionPhenotype')
@@ -341,11 +354,11 @@ class Genes(LocalNameManager):
                                                 Higher))
     #Cplx2 = Phenotype('ilxtr:Cplx2', 'ilxtr:hasExpressionPhenotype')
     #Cplx3 = Phenotype('ilxtr:Cplx3', 'ilxtr:hasExpressionPhenotype')
-    LDCV = Phenotype('ilxtr:LDCV', 'ilxtr:hasExpressionPhenotype')
+    #LDCV = Phenotype('ilxtr:LargeDenseCoreVesicleRelease', 'ilxtr:hasSynapticPhenotype')
     #Syt10 = Phenotype('ilxtr:Syt10', 'ilxtr:hasExpressionPhenotype')
-    CCKCAxon = LogicalPhenotype(AND, Cplx2, Cplx3, LDCV, Syt10)  # FIXME LDCV release?
-    Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
-    Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
+    CCKCAxon = LogicalPhenotype(AND, Cplx2, Cplx3, Syt10)
+    #Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
+    #Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
     MNCAxon = LogicalPhenotype(AND, Znt3, Zip1)  # FIXME why does he have the names out front?
     ISCAxon = LogicalPhenotype(AND, *CCKCAxon.pes, Phenotype(ilxtr.similarTo, ilxtr.hasPhenotypeModifier))  # FIXME similar
     #Syt4 = Phenotype('ilxtr:Syt4', 'ilxtr:hasExpressionPhenotype')
@@ -385,7 +398,7 @@ class Huang2017(Genes, Species):
     Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
     Projection = Phenotype('ilxtr:ProjectionPhenotype', 'ilxtr:hasCircuitRolePhenotype')
-    Inter = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')
+    Interneuron = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')
     OnToInter = Phenotype('NLXCELL:1003113', 'ilxtr:hasForwardConnectionPhenotype')
 
 
@@ -416,6 +429,7 @@ with Huang2017:
         # NOTE fig1a and fig1b are subtly different and the driver lines are described as
         # marking a superset of neurons that includes these 6 types "and likely other types"
         # distinct from these 6 for this reason the morphology of the neurons is included
+        Inter = Interneuron
         f = lambda *args, label=None, override=None: (args, dict(label=label, override=override))
         fig1a = dict(
         PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True),
@@ -502,8 +516,10 @@ Neuron.out_graph.add((ilxtr.gene, owl.equivalentClass, OntId('SO:0000704').u))
 Neuron.out_graph.add((NeuronHuang2017.owlClass,
                       ilxtr.modelSource,
                       OntId('https://doi.org/10.1016/j.cell.2017.08.032').u))
-Neuron.write()
-Neuron.write_python()
+
+with Huang2017:
+    Neuron.write()
+    Neuron.write_python()
 
 
 def wrap_query(l):

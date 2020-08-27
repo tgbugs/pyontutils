@@ -20,9 +20,8 @@ class table1(rowParse):
 
     def __init__(self, *args, **kwargs):
         with BBP:
-            self._context = Neuron(Rat, S1, INT, GABA)
-
-        super().__init__(*args, **kwargs)
+            self._context = Neuron(Rat, S1, Interneuron, GABA)
+            super().__init__(*args, **kwargs)
 
     def Morphological_type(self, value):
         syn, abrv = value.split(' (')
@@ -105,18 +104,17 @@ class table1(rowParse):
         return self._moltypes
 
     def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
-        with BBP:
-            e_map = {
-                'b':b,
-                'c':c,
-                'd':d,
-            }
-            l_map = {
-                'AC':AC,
-                'NAC':NAC,
-                'STUT':STUT,
-                'IR':IR,
-            }
+        e_map = {
+            'b':b,
+            'c':c,
+            'd':d,
+        }
+        l_map = {
+            'AC':AC,
+            'NAC':NAC,
+            'STUT':STUT,
+            'IR':IR,
+        }
 
         values = value.split(self._sep)
         self._etypes = []
@@ -132,10 +130,9 @@ class table1(rowParse):
         return self._etypes
 
     def Other_electrical_classifications(self, value):
-        with BBP:
-            valid_mappings = {'Fast spiking':FS,
-                              'Non-fast spiking':NegPhenotype(FS),  # only in this very limited context
-                              'Regular spiking non-pyramidal':RSNP}
+        valid_mappings = {'Fast spiking':FS,
+                          'Non-fast spiking':NegPhenotype(FS),  # only in this very limited context
+                          'Regular spiking non-pyramidal':RSNP}
 
         values = value.split(self._sep)
         self._other_etypes = []
