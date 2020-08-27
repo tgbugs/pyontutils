@@ -5,6 +5,7 @@ __doc__ = f"""Common commands for ontology processes.
 Also old ontology refactors to run in the root ttl folder.
 
 Usage:
+    ontutils set ontology-local-repo <path>
     ontutils devconfig [--write] [<field> ...]
     ontutils parcellation
     ontutils catalog-extras [options]
@@ -794,7 +795,31 @@ def main():
                      'generated/NIF-NIFSTD-mapping.ttl')
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
-    if args['devconfig']:
+    if args['set']:
+        if args['ontology-local-repo']:
+            from pyontutils.config import auth
+            olr = Path(args['<path>']).expanduser().resolve()
+            olr_string = olr.as_posix()
+            uc = auth.user_config
+            blob = uc.load()
+            # XXX NEVER DUMP A A CONFIG THIS YOU _WILL_ KLOBBER IT
+            # BY ACCIDENT AT SOME POINT
+            # THERE IS NO SAFETY WITH THIS IMPLEMENTATION
+            # USERS SHOULD EDIT THEIR CONFIGS DIRECTLY
+            # except that it makes giving instructions for
+            # setting values a bit more complicated
+            blob['auth-variables']['ontology-local-repo'] = olr_string
+            uc.dump(blob)
+            olr2 = auth.get_path('ontology-local-repo')
+            assert olr == olr2
+            if not olr2.exists():
+                msg = f'ontology-local-repo path does not exist! {olr2}'
+                print(tc.red('WARNING'), msg)
+
+            msg = f'ontology-local-repo path {olr2} written to {uc._path}'
+            print(msg)
+
+    elif args['devconfig']:
         if args['--write']:
             file = devconfig.write(args['--output-file'])
             print(f'config written to {file}')

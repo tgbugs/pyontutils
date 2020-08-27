@@ -3,16 +3,47 @@
 
 A data model for neuron types.
 
-## Neuron Types
-If you have found your way to this repository because you are interested in using neuron-lang for
-describing neuron types please see
-[this introduction](http://github.com/SciCrunch/NIF-Ontology/blob/master/docs/Neurons.md)
-to the general approach.  To get started all you need to do is follow the installation instructions above and then include
-`from neurondm.lang import *` in your import statements. Please see the documentation for how to
-[set up neuron-lang for jupyter notebooks](docs/neurons_notebook.md) and take a look at some
-[examples of how to use neuron-lang to create new neurons](./docs/NeuronLangExample.ipynb).
-
 ## Installation
+You can install `neurondm` using the following commands.
+
+```bash
+pip install neurondm[notebook]
+```
+
+Once installation is complete you should be able to run python code.
+
+```python
+from neurondm import *
+config = Config()
+n = Neuron(Phenotype('TEMP:myPhenotype'))
+config.write()
+config.write_python()
+```
+
+To work with the NIF-Ontology and build existing models.
+
+```bash
+git clone https://github.com/SciCrunch/NIF-Ontology.git
+ontutils set ontology-local-repo ./NIF-Ontology
+pushd ./NIF-Ontology
+git checkout neurons
+popd
+```
+
+Once that is done you should be able to run the following.
+```bash
+python -m neurondm.models.huang2017
+```
+
+## Neuron Types
+If you have found your way to this repository because you are interested in using
+neuron-lang for describing neuron types please see
+[this introduction](http://github.com/SciCrunch/NIF-Ontology/blob/master/docs/Neurons.md)
+to the general approach.  To get started follow the installation instructions below and then
+include `from neurondm.lang import *` in your import statements. Please see the documentation
+for how to [set up neuron-lang for jupyter notebooks](docs/neurons_notebook.md) and
+take a look at some [examples of how to use neuron-lang to create new neurons](./docs/NeuronLangExample.ipynb).
+
 `neurondm` has not yet been fully decoupled from the [pyontutils respository](https://github.com/tgbugs/pyontutils).
 You can install it as stand-alone package install it using `pip install --user neurondm`,
 however it is currently more useful to follow the [installation instructions](https://github.com/tgbugs/pyontutils/#installation)

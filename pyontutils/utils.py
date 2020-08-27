@@ -355,14 +355,18 @@ def refile(script__file__, path):
     return str(Path(script__file__).parent / path)
 
 
-def relative_path(script__file__):
+def relative_path(script__file__, no_wd_value=None):
     # FIXME will break outside of subfolders of working_dir neuron_models folder ...
     working_dir = get_working_dir(script__file__)
+    if working_dir is None and no_wd_value is not None:
+        return no_wd_value
+
     rpath = (Path(script__file__).
              resolve().
              relative_to(working_dir.
                          resolve()).
              as_posix())
+
     return rpath
 
 

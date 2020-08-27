@@ -27,6 +27,8 @@ def _ontology_data_files():
                 'ttl/phenotype-indicators.ttl',
                 'ttl/phenotypes.ttl',
                 'ttl/generated/part-of-self.ttl',]
+    respaths = ['26451489 table 1.csv',
+                'common-usage-types.csv',]
     if RELEASE:
         from augpathlib import RepoPath as Path
         ### KILL IT WITH FIRE
@@ -54,14 +56,16 @@ def _ontology_data_files():
 
         resources = Path(resources)
         resources.mkdir()  # if we add resources to git, this will error before we delete by accident
-        paths = [olr / rp for rp in relpaths]
+        _resources_path = Path(auth.get_path('resources'))
+        paths = ([olr / rp for rp in relpaths] +
+                 [_resources_path / rp for rp in respaths])
         for p in paths:
             p.copy_to(resources / p.name)
 
     else:
         from pathlib import Path
         resources = Path(resources)
-        paths = [Path(rp) for rp in relpaths]
+        paths = [Path(rp) for rp in relpaths + respaths]
 
     return resources.absolute(), [(resources / p.name).as_posix() for p in paths]
 
@@ -91,12 +95,12 @@ try:
         ],
         keywords=('neuron types NIF ontology neuroscience phenotype '
                 'OWL rdf rdflib data model'),
-        packages=['neurondm'],  # don't package models due to data resources needs?
+        packages=['neurondm', 'neurondm.models'],  # don't package models due to data resources needs?
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
-            'hyputils>=0.0.6',
-            'pyontutils>=0.1.24',
+            'hyputils>=0.0.8',
+            'pyontutils>=0.1.26',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
@@ -106,7 +110,8 @@ try:
             'console_scripts': [
             ],
         },
-        data_files=[('share/neurondm', ontology_data_files)]
+        data_files=[('share/neurondm', ontology_data_files),
+                    ]
     )
 finally:
     if RELEASE:

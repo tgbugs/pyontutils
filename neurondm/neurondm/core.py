@@ -3,6 +3,7 @@ import os
 import sys
 import atexit
 import inspect
+import tempfile
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
 from importlib import import_module
@@ -32,6 +33,7 @@ from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 auth = oa.configure_here('auth-config.py', __name__, include=pauth)
+cfg = oa.core.ConfigBase(None)  # FIXME hack to expand paths
 ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
@@ -418,12 +420,15 @@ class LabelMaker:
             phenotypes.remove(interneuron_phenotype)
             phenotypes = phenotypes + [interneuron_phenotype]
 
+        have_neuron = False  # FIXME not working for cuts
         for phenotype in phenotypes:
-            yield next(self._default((phenotype,))).lower()
+            value = next(self._default((phenotype,))).lower()
+            if not have_neuron:
+                have_neuron = 'neuron' in value
 
-        if self.local_conventions:
-            # FIXME this isn't quite right but for some reason the neuron
-            # suffix still sticks around on the allen neurons ???
+            yield value
+
+        if self.local_conventions and have_neuron:
             return
 
         if phenotypes and not self.local_conventions:
@@ -772,10 +777,8 @@ class Config:
 
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
-
-        cfg = oa.core.ConfigBase(None)  # FIXME hack to expand paths
         if import_as_local or import_no_net:
-            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+            if local.exists() and (local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology'):
                 # NOTE: we currently do the translation more ... inelegantly inside of config so we
                 # have to keep the translation layer out here (sigh)
                 log.debug(f'local ont {local}')
@@ -813,7 +816,7 @@ class Config:
                 udp = cfg._pathit('{:user-data-path}/neurondm/')
                 search_paths = [
                     udp,
-                    cfg._pathit('{:prefix}/neurondm/'),
+                    cfg._pathit('{:prefix}/share/neurondm/'),
                     Path('./share/neurondm/').absolute(),
                 ]
                 for base in search_paths:
@@ -1167,9 +1170,9 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= (PPath('/tmp/neurondm/compiled')
+                      compiled_location= ((Path(tempfile.gettempdir()) / 'neurondm/compiled')
                                           if working_dir is None else
-                                          PPath(working_dir, 'neurondm/neurondm/compiled')),
+                                          Path(working_dir, 'neurondm/neurondm/compiled')),
                       ignore_existing=   False,
                       local_conventions= False,):
         # FIXME suffixes seem like a bad way to have done this :/
@@ -1268,7 +1271,22 @@ class graphBase:
                 except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
                     local_working_dir = get_working_dir(graphBase.local_base)
                     if local_working_dir is None:
-                        raise e
+                        log.exception(e)
+                        udp = cfg._pathit('{:user-data-path}/neurondm/git-repo')
+                        trp = RepoPath(udp)
+                        if not trp.exists():
+                            trp.init()
+
+                        graphBase.local_base = trp
+                        # FIXME this is a stupid hack, and a reminder that the whole
+                        # set up inside graphBase was a horrible mistake
+                        # all sorts of things are thrown out of sync because of this
+                        out_graph_path = (graphBase.local_base /
+                                          'ttl/generated/neurons' /
+                                          Path(out_graph_path).name)
+                        repo = trp.repo
+                        msg = f'No NIF-Ontology repo found. Using a temporary repo at {trp}'
+                        log.critical(msg)
                     else:
                         msg = (f'{graphBase.local_base} is already contained in a git repository '
                                'located in {local_working_dir} if you wish to use this repo please '
@@ -1406,15 +1424,20 @@ class graphBase:
         og = cull_prefixes(graphBase.out_graph,
                            prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
+        path = Path(og.filename)
+        ppath = path.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
         og.write()
         graphBase.part_of_graph.write()
+        log.debug(f'Neurons ttl file written to {path}')
 
     @staticmethod
     def filename_python():
-        p = PPath(graphBase.ng.filename)
+        p = Path(graphBase.ng.filename)
         return ((graphBase.compiled_location / p.name.replace('-', '_'))
-                .with_suffix('.py')
-                .as_posix())
+                .with_suffix('.py'))
 
     @staticmethod
     def write_python():
@@ -1424,8 +1447,16 @@ class graphBase:
         # tell you that there is no source! therefore we generate all
         # the python before potentially opening (and thus erasing) the
         # original file from which some of the code was sourced
-        with open(graphBase.filename_python(), 'wt') as f:
+        fp = graphBase.filename_python()
+
+        ppath = fp.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
+        with open(fp, 'wt') as f:
             f.write(python)
+
+        log.debug(f'Neurons python file written to {fp}')
 
     @classmethod
     def python_header(cls):
@@ -1826,7 +1857,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         except AttributeError as e:
             # FIXME ick
             # we aren't set up yet and we are doing something stupid
-            OntTerm(p.iri)  # force setup
+            try:
+                OntTerm(p.iri)  # force setup
+            except ConnectionError as e:
+                log.exception(e)
+                return p.iri
+
             return self.pLongName
 
         if not l:
