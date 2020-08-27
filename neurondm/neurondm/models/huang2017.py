@@ -37,14 +37,14 @@ class Genes(LocalNameManager):
     #PV = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')
 
     # cre lines from star methods table
-    VIP = Phenotype('JAX:028578', const_exp, label='VIP-flp', override=True)
-    CCK = Phenotype('JAX:012706', const_exp, label='CCK-cre', override=True)
-    SST = Phenotype('JAX:028579', const_exp, label='SST-flp', override=True)
-    CR = Phenotype('JAX:013730', const_exp, label='CR-cre', override=True)
-    PV = Phenotype('JAX:017320', const_exp, label='PV-cre', override=True)
-    NOS1 = Phenotype('JAX:014541', induced_exp, label='NOS1-creER', override=True)
-    Nkx2_1 = Phenotype('JAX:014552', induced_exp, label='Nkx2.1-creER', override=True)
-    Nkx2_1flp = Phenotype('JAX:028577', const_exp, label='Nxk2.1-flp', override=True)
+    VIP = Phenotype('JAX:028578', const_exp, label='VIP-Flp', override=True)
+    CCK = Phenotype('JAX:012706', const_exp, label='CCK-Cre', override=True)
+    SST = Phenotype('JAX:028579', const_exp, label='SST-Flp', override=True)
+    CR = Phenotype('JAX:013730', const_exp, label='CR-Cre', override=True)
+    PV = Phenotype('JAX:017320', const_exp, label='PV-Cre', override=True)
+    NOS1 = Phenotype('JAX:014541', induced_exp, label='NOS1-CreER', override=True)
+    Nkx2_1 = Phenotype('JAX:014552', induced_exp, label='Nkx2.1-CreER', override=True)
+    Nkx2_1flp = Phenotype('JAX:028577', const_exp, label='Nxk2.1-Flp', override=True)
 
     # Actual genes
 
