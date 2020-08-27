@@ -164,4 +164,5 @@ NIFNEURNT:  http://ontology.neuinfo.org/NIF/BiomaterialEntities/NIF-Neuron-NT-Br
 apinatomy:          https://apinatomy.org/uris/readable/
 apinatomy.elements: https://apinatomy.org/uris/elements/
 apinm.bolew:        https://apinatomy.org/uris/models/bolserLewisNew/ids/
-apinm.keast:        https://apinatomy.org/uris/models/keastSpinalTest/ids/
+apinm.keast-test:   https://apinatomy.org/uris/models/keastSpinalTest/ids/
+apinm.keast:        https://apinatomy.org/uris/models/keast-spinal-full/ids/
