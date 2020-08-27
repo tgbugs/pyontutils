@@ -766,10 +766,8 @@ have an RPM based package manager then you will need the second bit to prevent
 builds from failing due to missing dependencies.
 # (
 #+name: rpmmacros
-#+caption: [[file:${HOME}/.rpmmacros][~/.rpmmacros]] 
+#+caption: [[file:${HOME}/.rpmmacros][~/.rpmmacros]]
 #+BEGIN_SRC rpm-spec :tangle ~/.rpmmacros :tangle no
-%_topdir %(echo $HOME)/files/rpmbuild
-
 %__arch_install_post \
     [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
     case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
@@ -777,32 +775,18 @@ builds from failing due to missing dependencies.
     # /usr/lib/rpm/check-buildroot
 #+END_SRC
 
-If you have a default rpmbuild setup, and you have the
-
-#+name: run-compile-scigraph-rpm-oneshot
-#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+begin_src bash :tangle ./bin/run-compile-scigraph-rpm
-# link specs and other files so that rpmbuild can find them
-ln -s ~/git/pyontutils/nifstd/scigraph/scigraph.spec ~/files/rpmbuild/SPECS/scigraph.spec
-ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/scigraph.service \
-      ~/files/rpmbuild/SOURCES/scigraph.service
-ln -s ~/git/tgbugs-overlay/dev-java/scigraph-bin/files/xvfb.service \
-      ~/files/rpmbuild/SOURCES/xvfb.service
-#+end_src
-
 #+name: run-compile-scigraph-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+begin_src bash
+#+begin_src bash :results output
+pushd rpmbuild
 # pull changes if the local repo already exists
-if [ -d ~/files/rpmbuild/BUILD/SciGraph/.git ]; then
-    git --git-dir ~/files/rpmbuild/BUILD/SciGraph/.git pull
+if [ -d BUILD/SciGraph/.git ]; then
+    git --git-dir BUILD/SciGraph/.git pull
 fi
-
-pushd ~/files/rpmbuild
 
 # build the rpm
 spectool -g -R SPECS/scigraph.spec
-rpmbuild -ba --nodeps SPECS/scigraph.spec
+rpmbuild --nodeps --define "_topdir `pwd`" -ba SPECS/scigraph.spec
 
 # inspect the preinstall script
 rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
