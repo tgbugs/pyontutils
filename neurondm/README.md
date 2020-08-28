@@ -20,7 +20,9 @@ config.write()
 config.write_python()
 ```
 
-To work with the NIF-Ontology and build existing models.
+To work with the NIF-Ontology and build existing models
+you need to clone the ontology repository and set your
+SciGraph API key or set up a local SciGraph instance.
 
 ```bash
 git clone https://github.com/SciCrunch/NIF-Ontology.git
@@ -28,6 +30,13 @@ ontutils set ontology-local-repo ./NIF-Ontology
 pushd ./NIF-Ontology
 git checkout neurons
 popd
+```
+
+Set the API key in a separate terminal to avoid losing
+additional history after setting the api key.
+```bash
+unset HISTFILE
+ontutils set scigraph-api-key <key>
 ```
 
 Once that is done you should be able to run the following.

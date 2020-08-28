@@ -6,6 +6,7 @@ Also old ontology refactors to run in the root ttl folder.
 
 Usage:
     ontutils set ontology-local-repo <path>
+    ontutils set scigraph-api-key <key>
     ontutils devconfig [--write] [<field> ...]
     ontutils parcellation
     ontutils catalog-extras [options]
@@ -796,28 +797,93 @@ def main():
     rfilenames = [f for f in filenames if f not in refactor_skip]
 
     if args['set']:
-        if args['ontology-local-repo']:
-            from pyontutils.config import auth
-            olr = Path(args['<path>']).expanduser().resolve()
-            olr_string = olr.as_posix()
-            uc = auth.user_config
+        from pyontutils.config import auth
+        uc = auth.user_config
+        def set_uc(var, value):
+            with open(uc._path, 'rt') as f:
+                text = f.read()
+
+            if '#' in text:
+                msg = f'Comments detected! Not writing config! {uc._path}'
+                raise ValueError(msg)
+
             blob = uc.load()
-            # XXX NEVER DUMP A A CONFIG THIS YOU _WILL_ KLOBBER IT
-            # BY ACCIDENT AT SOME POINT
+            # XXX NEVER DUMP A CONFIG THIS YOU _WILL_ KLOBBER IT
+            # BY ACCIDENT AT SOME POINT AND WILL ERASE ANY/ALL COMMENTS
             # THERE IS NO SAFETY WITH THIS IMPLEMENTATION
             # USERS SHOULD EDIT THEIR CONFIGS DIRECTLY
             # except that it makes giving instructions for
             # setting values a bit more complicated
-            blob['auth-variables']['ontology-local-repo'] = olr_string
+            blob['auth-variables'][var] = value
             uc.dump(blob)
-            olr2 = auth.get_path('ontology-local-repo')
-            assert olr == olr2
-            if not olr2.exists():
-                msg = f'ontology-local-repo path does not exist! {olr2}'
+
+        if args['ontology-local-repo']:
+            var = 'ontology-local-repo'
+            olr = Path(args['<path>']).expanduser().resolve()
+            olr_string = olr.as_posix()
+            set_uc(var, olr_string)
+            value2 = auth.get_path(var)
+            if not value2.exists():
+                msg = f'{var} path does not exist! {value2}'
                 print(tc.red('WARNING'), msg)
 
-            msg = f'ontology-local-repo path {olr2} written to {uc._path}'
+            msg = f'{var} path {value2} written to {uc._path}'
             print(msg)
+            assert olr == value2
+
+        elif args['scigraph-api-key']:
+            # FIXME this is a hack on top of orthauth, which will not
+            # 
+            # check the secrets path first to make sure it is ok
+            # be implementing programmtic modification of user config
+            # files any time soon, though it might make sense to have a
+            # "machine config path" in addition to auth and user config
+            path = ['scigraph', 'api', 'key']
+            spath = auth._pathit(uc.get_blob('auth-stores', 'secrets')['path'])
+            if not spath.parent.exists():
+                spath.parent.mkdir(parents=True)
+                spath.parent.chmod(0o0700)
+            if spath.suffix != '.yaml':
+                msg = f"Can't write secrets file of type {spath.suffix}"
+                args = None
+                raise NotImplementedError(msg)
+
+            v = None
+            try:
+                s = uc.secrets
+                v = s(*path)
+            except:
+                pass
+
+            if v is not None:
+                v = None
+                raise ValueError(f'Path already in secrets! {path} in {spath}')
+
+            # safely append to the secrets file
+            key = args['<key>']
+            path_key = f'\nscigraph:\n  api:\n    key: {key}'
+            if not spath.exists():
+                spath.touch()
+                spath.chmod(0o0600)
+
+            with open(spath, 'a+') as f:
+                f.write(path_key)
+
+            # set the config var
+            var = 'scigraph-api-key'
+            value = {'path': ' '.join(path)}
+            set_uc(var, value)  # set the path
+            # XXX NOTE yes, it is correct to do this only after secrets succeeds
+            # otherwise it is possible to get into a state where secrets does
+            # not exist but there is a path pointing to it, so load this
+            # ontutils file will fail during import time
+
+            # test that we got the value we expected
+            value2 = auth.get(var)
+            msg = (f'Key written to secrets. {spath} and path to '
+                   f'key was written to config {uc._spath}')
+            print(msg)
+            assert key == value2, 'Key retrieved does not match key set!'
 
     elif args['devconfig']:
         if args['--write']:
