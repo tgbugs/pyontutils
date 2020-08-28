@@ -175,4 +175,5 @@ def main():
 __globals__ = globals()  # fuck you python
 
 if __name__ == '__main__':
-    main()
+    with BBP:
+        main()
