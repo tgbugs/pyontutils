@@ -2896,6 +2896,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               comment=None,
               path='ttl/',
               branch='master',
+              local_base=None,
               fail=False,
               _repo=True,
               write=False,
@@ -2919,6 +2920,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.comment = comment
     Simple.imports = imports
     Simple.prefixes = dict(uPREFIXES)
+    if local_base is not None:
+        Simple.local_base = local_base
+
     if prefixes:
         Simple.prefixes.update({k:str(v) for k, v in prefixes.items()})
 

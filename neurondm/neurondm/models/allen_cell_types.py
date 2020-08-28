@@ -309,6 +309,7 @@ class AllenCellTypes:
 
         # TODO aspects.ttl?
         transgenic_lines = simpleOnt(filename='allen-transgenic-lines',
+                                     local_base=graphBase.local_base,
                                      path='ttl/generated/',
                                      prefixes=self.prefixes,
                                      triples=triples,
