@@ -12,7 +12,7 @@ Options:
     -a --api=API                API endpoint to build from  [default: {auth.get('scigraph-api')}]
     -v --scigraph-version=VER   API docs version            [default: 2]
 
-    -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]
+    -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/sparc-scigraph]
     -d --dynamic=<PATH>         additional servers to search for dynamic endpoints
 
 """
