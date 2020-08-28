@@ -195,7 +195,7 @@ build-release () {
     pushd dist/
     tar xvzf ${packagename}-${version}.tar.gz
     pushd ./${packagename}-${version}/
-    python setup.py bdist_wheel $REST
+    python setup.py bdist_wheel $@  # this should NOT be $REST, because we don't call it with --release (among other things)
     mv dist/*.whl ../
     popd  # from ./${packagename}-${version}/
     rm -r ./${packagename}-${version}/
