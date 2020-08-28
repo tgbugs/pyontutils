@@ -228,7 +228,10 @@ class PhenotypeCollection(frozenset):  # set? seems... fun? ordered set?
         pass
 
     def __hash__(self):
-        return hash((self.__class__, super()))
+        # we cannot use super() here because in pypy3
+        # different super()s have different hashes
+        # this seems like it is probably a bug
+        return hash((self.__class__, frozenset(self)))
 
     def __eq__(self, other):
         return self.__class__ == other.__class__ and super().__eq__(other)

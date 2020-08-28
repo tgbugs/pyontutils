@@ -71,4 +71,6 @@ class TestSimple(unittest.TestCase):
                              Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
         assert c1 is not c1o
         assert c1 == c1o
-        assert len(set((c1, c1o))) == 1
+
+        ls = len(set((c1, c1o)))
+        assert ls == 1

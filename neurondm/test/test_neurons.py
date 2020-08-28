@@ -129,6 +129,9 @@ class TestRoundtrip(_TestNeuronsBase):
         self.NegPhenotype = NegPhenotype
         self.EntailedPhenotype = EntailedPhenotype
 
+    def tearDown(self):
+        super().tearDown()
+
     def test_py_simple(self):
 
         config = self.Config(self.pyname, ttl_export_dir=tel, py_export_dir=pyel)
@@ -152,11 +155,14 @@ class TestRoundtrip(_TestNeuronsBase):
         assert config.neurons() == config2.neurons() == config3.neurons()
 
     def test_ttl_simple(self):
-        # this fails when
-        # test_integration.py is run
-        # AND
-        # test_roundtrip_py is run
-        # but NOT when either is run independently
+        # madness spreads apparently, here is a minimal repro for the issue
+        # pytest test/test_madness.py test/test_neurons.py -k 'test_ttl_simple or test_entailed_predicate'
+        # The other classes in this file can be commented out
+        # an even more specific repro
+        # pytest test/test_madness.py test/test_neurons.py \
+        # -k 'test_madness and test_ttl_simple or
+        #     test_neurons and test_entailed_predicate or
+        #     test_neurons and test_ttl_simple'
 
         config = self.Config(self.ttlname, ttl_export_dir=tel, py_export_dir=pyel)
         self.Neuron(self.Phenotype('TEMP:turtle-phenotype'))
@@ -177,6 +183,14 @@ class TestRoundtrip(_TestNeuronsBase):
 
         print(a, b, c)
         assert config.existing_pes is not config2.existing_pes is not config3.existing_pes
+        if not a == b == c:
+            breakpoint()
+        # so somehow when test_entailed_predicate is called along with test_ttl_simple
+        # n1 from that sneeks into config3, but ONLY when this class is imported into
+        # another file AND that file is run, so this seems like it is happening because
+        # somehow the tep neuron persists through the tearDown, and for some reason
+        # importing a testing module into another file is sufficient to keep the
+        # garbage collector from collecting between runs or something ??!?
         assert a == b == c
 
     def test_entailed_predicate(self):
@@ -196,6 +210,7 @@ class TestRoundtripCUT(TestRoundtrip):
         super().setUp()
         from neurondm import NeuronCUT
         self.Neuron = NeuronCUT
+
 
 
 class TestLabels(_TestNeuronsBase):
