@@ -845,7 +845,7 @@ class Config:
 
             partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
             graphBase.part_of_graph = OntResIri(partofpath).graph
-            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+            if local.exists() and (local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology'):
                 _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
             else:
                 _writepath = cfg._pathit('{:user-data-path}/neurondm/part-of-self.ttl')
@@ -947,11 +947,18 @@ class Config:
 
     def write(self):
         # FIXME per config prefixes using derived OntCuries?
+        # FIXME code duplication with graphBase
         [n._sigh() for n in self.existing_pes]  # ugh
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
+        path = Path(og.filename)
+        ppath = path.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
         og.write()
         self.part_of_graph.write()
+        log.debug(f'Neurons ttl file written to {path}')
 
     def write_python(self):
         # FIXME hack, will write other configs if call after graphbase has switched
@@ -1170,7 +1177,7 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= ((Path(tempfile.gettempdir()) / 'neurondm/compiled')
+                      compiled_location= (cfg._pathit('{:user-data-path}/neurondm/compiled')
                                           if working_dir is None else
                                           Path(working_dir, 'neurondm/neurondm/compiled')),
                       ignore_existing=   False,
@@ -1284,6 +1291,12 @@ class graphBase:
                         out_graph_path = (graphBase.local_base /
                                           'ttl/generated/neurons' /
                                           Path(out_graph_path).name)
+                        if hasattr(graphBase, 'part_of_graph'):
+                            graphBase.part_of_graph.path = (
+                                graphBase.local_base /
+                                'ttl/generated' /
+                                graphBase.part_of_graph.path.name)
+
                         repo = trp.repo
                         msg = f'No NIF-Ontology repo found. Using a temporary repo at {trp}'
                         log.critical(msg)

@@ -881,7 +881,7 @@ def main():
             # test that we got the value we expected
             value2 = auth.get(var)
             msg = (f'Key written to secrets. {spath} and path to '
-                   f'key was written to config {uc._spath}')
+                   f'key was written to config {uc._path}')
             print(msg)
             assert key == value2, 'Key retrieved does not match key set!'
 
