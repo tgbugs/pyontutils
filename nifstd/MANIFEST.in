@@ -13,7 +13,19 @@ recursive-exclude scigraph *
 recursive-exclude * *.pyc
 recursive-exclude * *.swp
 recursive-exclude * *.swo
+recursive-exclude * *.rpm
 recursive-include resources *.confd
 recursive-include resources *.rc
+recursive-include resources *.socket
+recursive-include resources *.service
+recursive-include resources *.spec
 recursive-include resources *.el
+recursive-include resources *.yaml
 recursive-include resources/sparc_term_versions *
+include resources/ontree.tmp
+include resources/neuron_phenotype.csv
+include resources/26451489*
+include resources/neuron_phenotype.csv
+include resources/common-usage-types.csv
+include resources/neuron_phenotype_edges.csv
+recursive-exclude resources/rpmbuild/BUILD *

@@ -27,8 +27,6 @@ def _ontology_data_files():
                 'ttl/phenotype-indicators.ttl',
                 'ttl/phenotypes.ttl',
                 'ttl/generated/part-of-self.ttl',]
-    respaths = ['26451489 table 1.csv',
-                'common-usage-types.csv',]
     if RELEASE:
         from augpathlib import RepoPath as Path
         ### KILL IT WITH FIRE
@@ -56,16 +54,14 @@ def _ontology_data_files():
 
         resources = Path(resources)
         resources.mkdir()  # if we add resources to git, this will error before we delete by accident
-        _resources_path = Path(auth.get_path('resources'))
-        paths = ([olr / rp for rp in relpaths] +
-                 [_resources_path / rp for rp in respaths])
+        paths = [olr / rp for rp in relpaths]
         for p in paths:
             p.copy_to(resources / p.name)
 
     else:
         from pathlib import Path
         resources = Path(resources)
-        paths = [Path(rp) for rp in relpaths + respaths]
+        paths = [Path(rp) for rp in relpaths]
 
     return resources.absolute(), [(resources / p.name).as_posix() for p in paths]
 
@@ -73,7 +69,8 @@ def _ontology_data_files():
 resources, ontology_data_files = _ontology_data_files()
 print('ontology_data_files:\n\t' + '\n\t'.join(ontology_data_files))
 
-tests_require = ['pytest']
+models_require = ['nifstd-tools>=0.0.6']
+tests_require = ['pytest'] + models_require
 try:
     setup(
         name='neurondm',
@@ -104,6 +101,7 @@ try:
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
+                        'models': models_require,
                         'notebook': ['jupyter'],
         },
         entry_points={
