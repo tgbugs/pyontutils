@@ -483,8 +483,6 @@ with Huang2017:
                     n.disjointWith(on)
         #LPCbyPepties = Neuron(*LPCPep.pes)
 
-# common usage types
-# allen 2016 hongwei
 
 for n, p in Huang2017.items():
     if isinstance(p, Phenotype) and not n.startswith('_'):

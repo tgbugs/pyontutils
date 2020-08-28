@@ -195,7 +195,7 @@ def stack_magic(stack):
             if '__builtins__' in fl:
                 #print('globals found at', i)
                 return fl
-    elif in_notebook or in_ipython or in_test:
+    elif in_notebook or in_ipython or in_test or '_run_module_as_main' in function_names:
         index = 1  # this seems to work for now
     elif function_names.count('main') >= 2:
         # FIXME this is a hack that only works
