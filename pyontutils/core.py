@@ -2456,8 +2456,7 @@ class Source(tuple):
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
                         if not dry_run:  # dry_run means data may not be present
-                            file_commit = cls.repo_path.latest_commit().hexsha
-                            #file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                            file_commit = next(cls.repo.iter_commits(max_count=1)).hexsha
                             commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                             print(commit_path)
                             if 'github' in cls.source:
@@ -2481,7 +2480,11 @@ class Source(tuple):
                 cls.source = aug.RepoPath(cls.source)
                 try:
                     cls.source.repo
-                    file_commit = cls.source.latest_commit()
+                    try:
+                        file_commit = next(cls.source.repo.iter_commits(max_count=1)).hexsha
+                    except StopIteration:
+                        file_commit = None
+
                     if file_commit is not None:
                         cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
                                                 + cls.source.repo_relative_path.as_posix())
@@ -2668,8 +2671,19 @@ class Ont:
                 if isinstance(self.source_file, aug.RepoPath):
                     working_dir = self.source_file.working_dir
                     if working_dir is not None:
-                        commit = str(self.source_file.latest_commit())
+                        # this can fail on new repo
+                        commit = next(self.source_file.repo.iter_commits(max_count=1)).hexsha
+                        #str(self.source_file.latest_commit())
                         uri = self.source_file.remote_uri_human(ref=commit)
+                        # we always want the latest commit for the repo
+                        # but when checking if a file should be marked as
+                        # dirty/uncommitted we only check the file itself
+                        # because there can be other files that linger in
+                        # uncommitted states that are completely unrelated
+                        # the _right_ thing to do would be to trace the
+                        # import chain, but that is a major TODO not quick
+                        #t = self.source_file.repo.head.commit.tree
+                        #diff = self.source_file.repo.git.diff(t)
                         diff = self.source_file.has_uncommitted_changes()
                         if diff:
                             uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
@@ -2683,8 +2697,12 @@ class Ont:
                 file = file.resolve().resolve()
                 working_dir = file.working_dir
                 if working_dir is not None:
-                    commit = str(file.latest_commit())
+                    # this can fail on new repo
+                    commit = next(file.repo.iter_commits(max_count=1)).hexsha
+                    #str(file.latest_commit())
                     uri = file.remote_uri_human(ref=commit) + line
+                    #t = file.repo.head.commit.tree
+                    #diff = file.repo.git.diff(t)
                     diff = file.has_uncommitted_changes()
                     if diff:
                         uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
