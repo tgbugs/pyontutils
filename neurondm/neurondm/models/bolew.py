@@ -72,7 +72,8 @@ class BolserLewisNeuron(NeuronEBM):
 
 def main():
     a = APIN()
-    config = Config('bolser-lewis', source_file=relative_path(__file__))
+    config = Config('bolser-lewis',
+                    source_file=relative_path(__file__, no_wd_value=__file__))
     bags = list(a.bags)
     for label, bag in bags:
         BolserLewisNeuron(*bag, label=label, override=True)

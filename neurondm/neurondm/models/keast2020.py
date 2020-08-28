@@ -147,7 +147,7 @@ def syn_chain_axons_in(syn_index, soma_index):
 def main():
     from pyontutils.utils import relative_path
     config = Config('keast-2020',
-                    source_file=relative_path(__file__),)
+                    source_file=relative_path(__file__, no_wd_value=__file__))
     with Keast2020:
         needs_keast_namespace()
 

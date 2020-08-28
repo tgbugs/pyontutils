@@ -164,10 +164,11 @@ class table1(rowParse):
 def main():
     import csv
     from neurondm.core import auth
-    with open((auth.get_path('resources') / '26451489 table 1.csv').as_posix(), 'rt') as f:
+    with open(auth.get_path('resources') / '26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
-    config = Config('markram-2015', source_file=relative_path(__file__))
+    config = Config('markram-2015',
+                    source_file=relative_path(__file__, no_wd_value=__file__))
     table1(rows)
     return config,
 
