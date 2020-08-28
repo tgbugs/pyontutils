@@ -195,7 +195,7 @@ build-release () {
     pushd dist/
     tar xvzf ${packagename}-${version}.tar.gz
     pushd ./${packagename}-${version}/
-    python setup.py bdist_wheel $@
+    python setup.py bdist_wheel $REST
     mv dist/*.whl ../
     popd  # from ./${packagename}-${version}/
     rm -r ./${packagename}-${version}/
@@ -204,7 +204,7 @@ build-release () {
     ## testing
     if [[ -z ${NO_TEST} ]]; then
         unset PYTHONPATH
-        cp dist/${packagename}-${version}* "${TEST_PATH}"
+        cp dist/${packagename//-/*}-${version}* "${TEST_PATH}"
 
         pushd "${TEST_PATH}"
         tar xvzf ${packagename}-${version}.tar.gz
@@ -291,7 +291,7 @@ build-release () {
         if [ ! -d "${ARTIFACT_FOLDER}/${packagename}" ]; then
             mkdir -p "${ARTIFACT_FOLDER}/${packagename}"
         fi
-        cp "${folder}"/dist/${packagename}-${version}* "${ARTIFACT_FOLDER}/${packagename}"
+        cp "${folder}"/dist/${packagename//-/*}-${version}* "${ARTIFACT_FOLDER}/${packagename}"
         echo "build artifacts have been copied to ${ARTIFACT_FOLDER}/${packagename}"
     fi
 
@@ -300,7 +300,7 @@ build-release () {
     if [[ -n ${KEEP_ARTIFACTS} ]]; then
         echo "$(color yellow)keeping artifacts$(color off)"
     elif [[ -n ${CLONEFROM} || ${BRANCH} ]]; then
-        rm ${folder}/dist/${packagename}-${version}*
+        rm ${folder}/dist/${packagename//-/*}-${version}*
         if [[ -n ${CLONEFROM} ]]; then
             echo "$(color yellow)release build was cloned from a local source$(color off) ${CLONEFROM}"
         else
@@ -330,10 +330,10 @@ function push-release () {
 
     # NOTE Always deploy from ${folder}/dist NOT from ARTIFACT_FOLDER
     # This prevents accidental release of testing builds
-    rsync -a -v --ignore-existing ${folder}/dist/${packagename/-/*}-${version}{-,.tar}* ${software_releases_path}/ || return $?
+    rsync -a -v --ignore-existing ${folder}/dist/${packagename//-/*}-${version}{-,.tar}* ${software_releases_path}/ || return $?
     pushd ${software_releases_path}
-    sha256sum ${packagename/-/*}-${version}{-,.tar}* >> hashes
-    twine upload --repository test ${packagename/-/*}-${version}{-,.tar}* || return $?
+    sha256sum ${packagename//-/*}-${version}{-,.tar}* >> hashes
+    twine upload --repository test ${packagename//-/*}-${version}{-,.tar}* || return $?
     sleep 1
     echo "test pypi hashes"
     curl https://test.pypi.org/pypi/${packagename}/json | python -m json.tool | grep "\(sha256\|filename\)" | grep -B1 "${version}" | awk '{ gsub(/"/, "", $2); printf("%s ", $2) }' | sed 's/,\ /\n/g'
