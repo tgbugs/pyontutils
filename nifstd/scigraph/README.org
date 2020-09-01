@@ -1146,29 +1146,19 @@ local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
 local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
 #+end_src
 
-
-#+name: deploy-graph-localhost
-#+caption: deploy-graph-localhost
-#+header: :comments noweb
-#+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
-function deploy-graph-localhost () {
-    <<&vars-deploy-graph-local>>
-    cp ${PATH_ZIP} ${PATH_RUNTIME} || return $?
-    pushd ${PATH_RUNTIME} || return $?
-    unzip -n ${FILE_NAME_ZIP} || return $?
-    unlink ${FOLDER_NAME_RUNTIME} || return $?
-    ln -sT ${STAMPED} ${FOLDER_NAME_RUNTIME} || return $?
-    popd
-}
-#+end_src
-
 #+name: &local-deploy-command
-#+begin_src bash :eval never
-su - ${SVC_USER} -c '$(typeset -f deploy-graph-localhost); \
-deploy-graph-localhost \
---path-zip ${PATH_ZIP} \
---path-runtime ${PATH_RUNTIME} \
---folder-name-runtime ${FOLDER_NAME_RUNTIME}'
+#+caption: &local-deploy-command
+#+header: :comments noweb
+#+begin_src bash :noweb yes
+cp ${PATH_ZIP} ${PATH_RUNTIME} || return $?
+pushd ${PATH_RUNTIME} || return $?
+unzip -n ${FILE_NAME_ZIP} || return $?
+chown -R ${SVC_USER}:${SVC_USER} ${STAMPED} || return $?
+service-manager scigraph stop
+unlink ${FOLDER_NAME_RUNTIME} > /dev/null 2>&1
+ln -sT ${STAMPED} ${FOLDER_NAME_RUNTIME}
+service-manager scigraph start
+popd
 #+end_src
 
 #+name: &vars-deploy-graph
@@ -1224,9 +1214,9 @@ function deploy-graph () {
     <<&are-you-sure>>
 
     if [ "${SERVER}" = "localhost" ]; then
-        su - root -c "
+        su - root -c "$(typeset -f service-manager);
 <<&local-deploy-command>>
-" || $?
+" || return $?
     else
         scp "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
         ssh ${SERVER_AS_SCIGRAPH} "pushd \"${PATH_RUNTIME}\"; unzip -n \"${FILE_NAME_ZIP}\"" || return $?
