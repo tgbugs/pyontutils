@@ -675,8 +675,12 @@ Set =host-services-sparc-data= here
 :properties:
 :visibility: folded
 :end:
-#+begin_src bash :noweb yes
-./bin/deploy-graph --path-build
+#+name: run-deploy-graph-sparc-local
+#+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
+#+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-local
+<<&source-scigraph-functions>>
+deploy-graph \
+--path-build <<path-build-sparc()>>
 #+end_src
 *** services config
 **** build
@@ -1116,21 +1120,57 @@ run-load-graph-sparc --path-build-scigraph <<path-build-scigraph()>>
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
+
+#+name: &vars-deploy-graph-local
+#+begin_src bash :noweb yes :exports none
+local POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    --path-zip)            local PATH_ZIP="${2}"; shift; shift ;;
+    --path-runtime)        local PATH_RUNTIME="${2}"; shift; shift ;;
+    --folder-name-runtime) local FOLDER_NAME_RUNTIME="${2}"; shift; shift ;;
+    *)                     POSITIONAL+=("$1"); shift ;;
+esac
+done
+if [ ! -f "${PATH_ZIP}" ]; then
+    echo $PATH_ZIP path does not exist.
+    echo Not deploying.
+    return 1
+fi
+local FILE_NAME_ZIP=$(basename "${PATH_ZIP}")
+local STAMPED="${FILE_NAME_ZIP//.zip/}"
+
+local PATH_RUNTIME=${PATH_RUNTIME:-<<path-runtime()>>}
+local FOLDER_NAME_RUNTIME=${FOLDER_NAME_RUNTIME:-<<folder-name-runtime()>>}
+#+end_src
+
+
 #+name: deploy-graph-localhost
 #+caption: deploy-graph-localhost
 #+header: :comments noweb
 #+begin_src bash :noweb no-export :tangle ./bin/scigraph-functions.sh
 function deploy-graph-localhost () {
+    <<&vars-deploy-graph-local>>
     cp ${PATH_ZIP} ${PATH_RUNTIME} || return $?
     pushd ${PATH_RUNTIME} || return $?
     unzip -n ${FILE_NAME_ZIP} || return $?
-    unlink ${FOLDER_NAME_GRAPH} || return $?
-    ln -sT ${STAMPED} ${FOLDER_NAME_GRAPH} || return $?
+    unlink ${FOLDER_NAME_RUNTIME} || return $?
+    ln -sT ${STAMPED} ${FOLDER_NAME_RUNTIME} || return $?
     popd
 }
 #+end_src
 
-# (((((((
+#+name: &local-deploy-command
+#+begin_src bash :eval never
+su - ${SVC_USER} -c '$(typeset -f deploy-graph-localhost); \
+deploy-graph-localhost \
+--path-zip ${PATH_ZIP} \
+--path-runtime ${PATH_RUNTIME} \
+--folder-name-runtime ${FOLDER_NAME_RUNTIME}'
+#+end_src
+
 #+name: &vars-deploy-graph
 #+begin_src bash :noweb yes :exports none
 local POSITIONAL=()
@@ -1184,8 +1224,9 @@ function deploy-graph () {
     <<&are-you-sure>>
 
     if [ "${SERVER}" = "localhost" ]; then
-        CMD="su - ${SVC_USER} -c \"$(typeset -f deploy-graph-localhost) deploy-graph-localhost\""
-        su - root -c "${CMD}" || $?
+        su - root -c "
+<<&local-deploy-command>>
+" || $?
     else
         scp "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
         ssh ${SERVER_AS_SCIGRAPH} "pushd \"${PATH_RUNTIME}\"; unzip -n \"${FILE_NAME_ZIP}\"" || return $?
@@ -1227,7 +1268,6 @@ Set =folder-name-runtime= here
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
-# ((((((((((
 #+name: &vars-build-services
 #+begin_src bash :noweb yes :exports none
 local POSITIONAL=()
