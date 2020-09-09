@@ -325,6 +325,7 @@ local PATH_ONTOLOGIES="${PATH_BUILD}/ontologies.yaml"
 local FOLDER_NAME_GRAPH=${FOLDER_NAME_GRAPH:-"test"}
 #+end_src
 
+# FIXME scigraph bugs mean that it might make sense to construct a temporary top level ontology file instead
 # have to use :comments link here so that tangling the help doesn't break everything
 #+name: load-graphs
 #+header: :comments link
@@ -764,20 +765,18 @@ Code is compiled once for all deployments.
 The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
 [[file:./scigraph.spec]].
 
-To prevent =rmpbuild= from sitting in your home directory add the first line
-below to [[file:${HOME}/.rpmmacros][~/.rpmmacros]]. If you are building on a system that does not
-have an RPM based package manager then you will need the second bit to prevent
-builds from failing due to missing dependencies.
-# (
+If you are building on a system that does not have an RPM based package manager then
+you will need the second bit to prevent builds from failing due to missing dependencies.
+
 #+name: rpmmacros
 #+caption: [[file:${HOME}/.rpmmacros][~/.rpmmacros]]
-#+BEGIN_SRC rpm-spec :tangle ~/.rpmmacros :tangle no
+#+begin_src rpm-spec :tangle ~/.rpmmacros :tangle no
 %__arch_install_post \
     [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
     case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
         echo no qa here
     # /usr/lib/rpm/check-buildroot
-#+END_SRC
+#+end_src
 
 #+name: run-compile-scigraph-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
@@ -877,7 +876,6 @@ function check-dir () {
 }
 #+end_src
 
-# (((((
 #+name: &vars-compile-scigraph-git
 #+begin_src bash :noweb yes :exports none
 local POSITIONAL=()
@@ -945,7 +943,7 @@ run-deploy-scigraph-rpm --server aws-scigraph-data
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-code-rpm
 # TODO backup the old rpm?
-scp ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
+rsync --rsh ssh ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
 ssh ${SERVER} '
     sudo <<rpm-install>>'
 ssh ${SERVER} '
@@ -973,7 +971,7 @@ https://github.com/SciGraph/SciGraph/tree/master/docker
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
-# (((((
+
 #+name: &vars-load-graph
 #+begin_src bash :eval never :exports none :noweb yes
 local POSITIONAL=()
@@ -1040,7 +1038,7 @@ function load-graph () {
 :VISIBILITY: folded
 :END:
 # sigh command line flags inside of flags
-# (((((((
+
 #+name: &vars-load-graph-ontload
 #+begin_src bash :eval never :exports none :noweb yes
 local POSITIONAL=()
@@ -1156,7 +1154,7 @@ unzip -n ${FILE_NAME_ZIP} || return $?
 chown -R ${SVC_USER}:${SVC_USER} ${STAMPED} || return $?
 service-manager scigraph stop
 unlink ${FOLDER_NAME_RUNTIME} > /dev/null 2>&1
-ln -sT ${STAMPED} ${FOLDER_NAME_RUNTIME}
+ln -sT ${STAMPED} ${FOLDER_NAME_RUNTIME} || echo relink failed
 service-manager scigraph start
 popd
 #+end_src
@@ -1215,16 +1213,16 @@ function deploy-graph () {
 
     if [ "${SERVER}" = "localhost" ]; then
         su - root -c "$(typeset -f service-manager);
-<<&local-deploy-command>>
-" || return $?
+                      <<&local-deploy-command>>" || return $?
     else
-        scp "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
+        rsync --rsh ssh "${PATH_ZIP}" "${SERVER_AS_SCIGRAPH}:${PATH_RUNTIME}" || return $?
         ssh ${SERVER_AS_SCIGRAPH} "pushd \"${PATH_RUNTIME}\"; unzip -n \"${FILE_NAME_ZIP}\"" || return $?
 
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph stop" || return $?
 
-        ssh ${SERVER_AS_SCIGRAPH} "unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
-                              ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"" || echo relink failed
+        ssh ${SERVER_AS_SCIGRAPH} "
+            unlink \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"
+            ln -sT \"${PATH_RUNTIME}/${STAMPED}\" \"${PATH_RUNTIME}/${FOLDER_NAME_RUNTIME}\"" || echo relink failed
 
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph start"
     fi
@@ -1329,9 +1327,9 @@ function build-services () {
 :VISIBILITY: folded
 :END:
 # TODO
-Once =services.yaml= has been created scp the raw and expanded configs
+Once =services.yaml= has been created rsync the raw and expanded configs
 to the target host.
-# ((((
+
 #+name: &vars-deploy-services
 #+begin_src bash :noweb yes :exports none
 local POSITIONAL=()
@@ -1398,8 +1396,8 @@ function deploy-services () {
     else
         # if only we could rsync
         ssh ${SERVER_AS_SCIGRAPH} "$(typeset -f backup-services-config); backup-services-config ${EXISTING} ${PATH_RUNTIME} ${YAML}" || return $?
-        scp "${CONFIG_RAW}" "${TARGET}" || return $?
-        scp "${CONFIG}" "${TARGET}" || return $?
+        rsync --rsh ssh "${CONFIG_RAW}" "${TARGET}" || return $?
+        rsync --rsh ssh "${CONFIG}" "${TARGET}" || return $?
         ssh -t ${SERVER} "$(typeset -f service-manager); service-manager scigraph restart" || return $?
     fi
 }
@@ -1449,7 +1447,7 @@ Set =file-stem-services-output= here
 :CUSTOM_ID: ssh-setup
 :VISIBILITY: folded
 :END:
-# ((((
+
 #+name: &vars-ssh-keygen-deploy
 #+begin_src bash :exports none
 local POSITIONAL=()
@@ -1518,7 +1516,7 @@ function ssh-copy-id-simple () {
 
     # copy the key to the host
     TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
-    scp ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return $?
+    rsync --rsh ssh ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return $?
     # TODO option to deploy private key if the key is generated for a service user
 
     # and today we learn about typeset, sigh
@@ -1556,7 +1554,7 @@ function copy-id-to-user-authorized-keys () {
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
-# ((((
+
 #+name: &are-you-sure
 #+begin_src bash
 printf "Are you sure you want to deploy? y/N "
