@@ -42,7 +42,7 @@ def pathing(path, check_path=False):
     return path
 
 
-class IlxSql():
+class IlxSql:
 
     def __init__(self,
                  db_url: str,
@@ -266,6 +266,7 @@ class IlxSql():
         ilx2synonyms = self.get_ilx2synonyms()
         ilx2existing_ids = self.get_ilx2existing_ids()
         ilx2annotations = self.get_ilx2annotations()
+        ilx2relationships = self.get_ilx2relationships()
         ilx2superclass = self.get_ilx2superclass()
         ilx_complete = []
         header = ['Index'] + list(self.fetch_terms().columns)
@@ -292,20 +293,34 @@ class IlxSql():
             clean = lambda string: string.lower().strip()
         label2ilx = defaultdict(list)
         [label2ilx[clean(row.label)].append(row.ilx) for row in self.fetch_terms().itertuples()]
+        [label2ilx[clean(row.literal)].append(row.ilx) for row in self.fetch_synonyms().itertuples()]
         return label2ilx
 
-    def get_label2rows(self):
-        self.terms_complete = self.fetch_terms_complete()
-        visited = {}
-        label2rows = defaultdict(list)
-        header = ['Index'] + list(self.terms_complete.columns)
-        for row in self.terms_complete.itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
-            label = self.local_degrade(row['label'])
-            if not visited.get((label, row['type'], row['ilx'])):
-                label2rows[label].append(row)
-                visited[(label, row['type'], row['ilx'])] = True
-        return label2rows
+    # def get_label2rows(self):
+    #     self.terms = self.fetch_terms()
+    #     visited = {}
+    #     label2rows = defaultdict(list)
+    #     header = ['Index'] + list(self.terms.columns)
+    #     for row in self.terms.itertuples():
+    #         row = {header[i]: val for i, val in enumerate(row)}
+    #         label = row['label'].lower().strip()
+    #         if not visited.get((label, row['type'], row['ilx'])):
+    #             label2rows[label].append(row)
+    #             visited[(label, row['type'], row['ilx'])] = True
+    #     return label2rows
+    
+    def get_label2rows(self, clean: object = None) -> Dict[str, list]:
+        if not clean:
+            clean = lambda string: string.lower().strip()
+        label2ilx = defaultdict(list)
+        [label2ilx[clean(row.label)].append(row) for row in self.fetch_terms().itertuples()]
+        [label2ilx[clean(row.literal)].append(row) for row in self.fetch_synonyms().itertuples()]
+        return label2ilx
+
+    def get_ilx2synonyms(self) -> defaultdict(list):
+        ilx2synonyms = defaultdict(list)
+        [ilx2synonyms[row.ilx].append(row.literal) for row in self.fetch_synonyms().itertuples()]
+        return ilx2synonyms
 
     def get_definition2rows(self):
         self.terms = self.fetch_terms()
@@ -313,8 +328,8 @@ class IlxSql():
         definition2rows = defaultdict(list)
         header = ['Index'] + list(self.terms.columns)
         for row in self.terms.itertuples():
-            row = {header[i]:val for i, val in enumerate(row)}
-            definition = self.local_degrade(row['definition'])
+            row = {header[i]: val for i, val in enumerate(row)}
+            definition = row['definition'].lower().strip()
             if not definition or definition == ' ':
                 continue
             if not visited.get((definition, row['type'], row['ilx'])):
@@ -371,6 +386,12 @@ class IlxSql():
             elif not clean:
                 tid2annotations[row['tid']].append(row)
         return tid2annotations
+
+    def get_ilx2relationships(self):
+        ilx2relationships = defaultdict(list)
+        header = ['Index'] + list(self.fetch_relationships().columns)
+        for row in self.fetch_relationships().itertuples():
+            row = {header[i]:val for i, val in enumerate(row)}      
 
     def get_ilx2annotations(self, clean:bool=True):
         ''' clean: for list of literals only '''

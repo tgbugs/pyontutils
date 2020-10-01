@@ -4,10 +4,12 @@ from interlex_sql import IlxSql
 import pickle
 import os
 
+
 def create_pickle(data, outfilename):
     with open(outfilename, 'wb') as outfile:
         pickle.dump(data, outfile)
-        
+
+
 sql = IlxSql(db_url=os.environ.get('SCICRUNCH_DB_URL_PRODUCTION'))
 
 

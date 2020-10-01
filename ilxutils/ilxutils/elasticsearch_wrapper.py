@@ -36,6 +36,17 @@ class ElasticSearchTools:
         """
         return self.es.search(index=self.type, body=body, **kwargs)
 
+    def scroll(self, body: dict, size: int, **kwargs) -> dict:
+        body['size'] = 10000
+        body['from'] = 0
+        hits = []
+        print(body)
+        for step in range(0, size, 10000):
+            hits += self.es.search(index=self.type, body=body, **kwargs)['hits']['hits']
+            body['from'] = step
+            print(body)
+        return hits 
+
     def all_matches(self, sorting: str, size, start) -> dict:
         """First or last set of entities.
 
@@ -67,7 +78,8 @@ class InterLexES(ElasticSearchTools):
 
     def __init__(self, beta=True):
         super().__init__(
-            host = BASHRC('INTERLEX_ELASTIC_URL'),
+            host = BASHRC('SCICRUNCH_ELASTIC_URL'),
+            # index = 'interlex_2019oct28',
             index = 'interlex',
             type = 'term',
             user = BASHRC('INTERLEX_ELASTIC_USER'),

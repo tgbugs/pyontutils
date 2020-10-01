@@ -37,7 +37,7 @@ class SciCrunchSession:
         self.key = key
         self.host = ''
         self.api = ''
-
+        
         # Pull host for potential url
         if host.startswith('http'):
             host = urlparse(host).netloc

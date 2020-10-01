@@ -15,7 +15,7 @@ def remote(server=''):
     interlex_remote = InterLexRemote()
 
     # setup inheritance classes
-    interlex_remote.setup(instrumented=OntTerm)
     interlex_remote.apiEndpoint = endpoint
+    interlex_remote.setup(instrumented=OntTerm)
 
     return interlex_remote
