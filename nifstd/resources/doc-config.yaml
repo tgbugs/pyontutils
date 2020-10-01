@@ -92,5 +92,6 @@ titles:
   augpathlib/README.html: augpathlib readme
   pyontutils/htmlfn/README.html: htmlfn readme
   pyontutils/ttlser/README.html: ttlser readme
+  ontquery/docs/tutorial.html: ontquery tutorial notebook
   orthauth/docs/guide.html: orthauth user guide
   sparc-curation/docs/background.html: null  # prevent broken links

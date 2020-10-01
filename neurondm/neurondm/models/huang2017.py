@@ -12,7 +12,7 @@ from neurondm.phenotype_namespaces import *
 
 extra = False  # construct extra classes
 config = Config('huang-2017',
-                source_file=relative_path(__file__))
+                source_file=relative_path(__file__, no_wd_value=__file__))
 OntTerm.query.add(ontquery.plugin.get('rdflib')(Neuron.core_graph, OntId))
 
 
@@ -37,14 +37,14 @@ class Genes(LocalNameManager):
     #PV = Phenotype('PR:000013502', 'ilxtr:hasExpressionPhenotype')
 
     # cre lines from star methods table
-    VIP = Phenotype('JAX:028578', const_exp, label='VIP-flp', override=True)
-    CCK = Phenotype('JAX:012706', const_exp, label='CCK-cre', override=True)
-    SST = Phenotype('JAX:028579', const_exp, label='SST-flp', override=True)
-    CR = Phenotype('JAX:013730', const_exp, label='CR-cre', override=True)
-    PV = Phenotype('JAX:017320', const_exp, label='PV-cre', override=True)
-    NOS1 = Phenotype('JAX:014541', induced_exp, label='NOS1-creER', override=True)
-    Nkx2_1 = Phenotype('JAX:014552', induced_exp, label='Nkx2.1-creER', override=True)
-    Nkx2_1flp = Phenotype('JAX:028577', const_exp, label='Nxk2.1-flp', override=True)
+    VIP = Phenotype('JAX:028578', const_exp, label='VIP-Flp', override=True)
+    CCK = Phenotype('JAX:012706', const_exp, label='CCK-Cre', override=True)
+    SST = Phenotype('JAX:028579', const_exp, label='SST-Flp', override=True)
+    CR = Phenotype('JAX:013730', const_exp, label='CR-Cre', override=True)
+    PV = Phenotype('JAX:017320', const_exp, label='PV-Cre', override=True)
+    NOS1 = Phenotype('JAX:014541', induced_exp, label='NOS1-CreER', override=True)
+    Nkx2_1 = Phenotype('JAX:014552', induced_exp, label='Nkx2.1-CreER', override=True)
+    Nkx2_1flp = Phenotype('JAX:028577', const_exp, label='Nxk2.1-Flp', override=True)
 
     # Actual genes
 
@@ -57,7 +57,7 @@ class Genes(LocalNameManager):
 
     # cre equivalents where appropriate
     PVBCEq = LogicalPhenotype(AND, Pvalb)
-    CHCEq = LogicalPhenotype(AND)  # pretty sure this doesn't have any
+    CHCEq = LogicalPhenotype(AND)  # pretty sure this doesn't have any since it is developmental & inducible
     CCKCEq = LogicalPhenotype(AND, Vip, Cck)
     MNCEq = LogicalPhenotype(AND, Sst, Calb2)
     ISCEq = LogicalPhenotype(AND, Vip, Calb2)
@@ -169,10 +169,23 @@ class Genes(LocalNameManager):
     δGABAaR = Phenotype('NCBIGene:14403', 'ilxtr:hasExpressionPhenotype', label='Gabrd', override=True)
     PGC1α = Phenotype('NCBIGene:19017', 'ilxtr:hasExpressionPhenotype', label='Ppargc1a', override=True)
 
+    # stragglers
+    Znt3 = Phenotype('NCBIGene:22784', 'ilxtr:hasExpressionPhenotype', label='Slc30a3', override=True)
+    Zip1 = Phenotype('NCBIGene:194642', 'ilxtr:hasExpressionPhenotype', label='Slc39a1-ps', override=True)
+    Rspn = Phenotype('NCBIGene:239405', 'ilxtr:hasExpressionPhenotype', label='Rspo2', override=True)  # NOTE THAT Rspn is not used ANYWHERE in the literature and is almost certainly a typo
+
     # peptides
     #Tac1 = Phenotype('ilxtr:Tac1', 'ilxtr:hasExpressionPhenotype')
     #Adm = Phenotype('ilxtr:Adm', 'ilxtr:hasExpressionPhenotype')
-    Rspn = Phenotype('ilxtr:Rspn', 'ilxtr:hasExpressionPhenotype')  # FIXME this does not seem to exist
+
+    # based on my reading of figure 6C and the random un lettered figure
+    # between figure 6 D,B, and C, and the description of the R-spondin family
+    # in the paper below, I am ruling that this is actually a reference to Rspo2
+    # a reasonable guess at the gene symbol, but the 'din' wasn't what inspired
+    # the short name, rather it was the 'spond'
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3496018/#S2title
+    #Rspn = Phenotype('ilxtr:Rspn', 'ilxtr:hasExpressionPhenotype')  # FIXME this does not seem to exist
+
     PVBCPep = LogicalPhenotype(AND, Tac1, Adm, Rspn)
 
     #Pthlh = Phenotype('ilxtr:Pthlh', 'ilxtr:hasExpressionPhenotype')
@@ -221,7 +234,9 @@ class Genes(LocalNameManager):
     CHCDend = LogicalPhenotype(AND,
                                GluA1, GluA4, α1GABAaR, Kv3,
                                α4GABAaR, δGABAaR, Cckbr,
-                               Lower) # FIXME bad model
+                               Lower) # FIXME bad model it is not the intersection of the
+                                      # restrictions it is a restriction on the intersection
+                                      # of the objects
 
     #Cnr1 = Phenotype('ilxtr:Cnr1', 'ilxtr:hasExpressionPhenotype')
     #Htr2c = Phenotype('ilxtr:Htr2c', 'ilxtr:hasExpressionPhenotype')
@@ -339,11 +354,11 @@ class Genes(LocalNameManager):
                                                 Higher))
     #Cplx2 = Phenotype('ilxtr:Cplx2', 'ilxtr:hasExpressionPhenotype')
     #Cplx3 = Phenotype('ilxtr:Cplx3', 'ilxtr:hasExpressionPhenotype')
-    LDCV = Phenotype('ilxtr:LDCV', 'ilxtr:hasExpressionPhenotype')
+    #LDCV = Phenotype('ilxtr:LargeDenseCoreVesicleRelease', 'ilxtr:hasSynapticPhenotype')
     #Syt10 = Phenotype('ilxtr:Syt10', 'ilxtr:hasExpressionPhenotype')
-    CCKCAxon = LogicalPhenotype(AND, Cplx2, Cplx3, LDCV, Syt10)  # FIXME LDCV release?
-    Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
-    Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
+    CCKCAxon = LogicalPhenotype(AND, Cplx2, Cplx3, Syt10)
+    #Znt3 = Phenotype('ilxtr:Znt3', 'ilxtr:hasExpressionPhenotype')
+    #Zip1 = Phenotype('ilxtr:Zip1', 'ilxtr:hasExpressionPhenotype')
     MNCAxon = LogicalPhenotype(AND, Znt3, Zip1)  # FIXME why does he have the names out front?
     ISCAxon = LogicalPhenotype(AND, *CCKCAxon.pes, Phenotype(ilxtr.similarTo, ilxtr.hasPhenotypeModifier))  # FIXME similar
     #Syt4 = Phenotype('ilxtr:Syt4', 'ilxtr:hasExpressionPhenotype')
@@ -378,11 +393,17 @@ class Genes(LocalNameManager):
 
 class Huang2017(Genes, Species):
     Neocortex = Phenotype('UBERON:0001950', 'ilxtr:hasSomaLocatedIn')
+    GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype')
     Basket = Phenotype('ilxtr:BasketPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Martinotti = Phenotype('ilxtr:MartinottiPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Chandelier = Phenotype('ilxtr:ChandelierPhenotype', 'ilxtr:hasMorphologicalPhenotype')
+    Projection = Phenotype('ilxtr:ProjectionPhenotype', 'ilxtr:hasCircuitRolePhenotype')
+    Interneuron = Phenotype('ilxtr:IntrinsicPhenotype', 'ilxtr:hasCircuitRolePhenotype')
+    OnToInter = Phenotype('NLXCELL:1003113', 'ilxtr:hasForwardConnectionPhenotype')
 
 
 with Huang2017:
-    with Neuron_(Mouse, Neocortex) as context:
+    with Neuron_(Mouse, Neocortex, GABA) as context:
         #context.subClassOf(ilxtr.huang2017)
         # TODO add the names assigned here as abbrevs somehow
 
@@ -405,13 +426,18 @@ with Huang2017:
         Neuron(Vip, Calb2)
         Neuron(Sst, Calb2)
 
+        # NOTE fig1a and fig1b are subtly different and the driver lines are described as
+        # marking a superset of neurons that includes these 6 types "and likely other types"
+        # distinct from these 6 for this reason the morphology of the neurons is included
+        Inter = Interneuron
+        f = lambda *args, label=None, override=None: (args, dict(label=label, override=override))
         fig1a = dict(
-        PVBC = Neuron(Basket, PV, label='PVBC neuron', override=True),
-        CHC =  Neuron(Nkx2_1, label='CHC neuron', override=True),
-        CCKC = Neuron(Basket, VIP, CCK, label='CCKC neuron', override=True),
-        MNC =  Neuron(SST, CR, label='MNC neuron', override=True),
-        ISC =  Neuron(VIP, CR, label='ISC neuron', override=True),
-        LPC =  Neuron(SST, NOS1, label='LPC neuron', override=True),
+        PVBC = f(Basket,     Inter, PV,        label='PVBC cortical neuron', override=True),
+        CHC =  f(Chandelier, Inter, Nkx2_1,    label='CHC cortical neuron', override=True),
+        CCKC = f(Basket,     Inter, VIP, CCK,  label='CCKC cortical neuron', override=True),
+        MNC =  f(Martinotti, Inter, SST, CR,   label='MNC cortical neuron', override=True),
+        ISC =  f(OnToInter,  Inter, VIP, CR,   label='ISC cortical neuron', override=True),
+        LPC =  f(Projection,        SST, NOS1, label='LPC cortical neuron', override=True),
         )
 
         f7 = dict(
@@ -422,13 +448,13 @@ with Huang2017:
         axon =      (PVBCAxon, CHCAxon, CCKCAxon, MNCAxon, ISCAxon, LPCAxon),
         other =     (PVBCOther, CHCOther, CCKCOther, MNCOther, ISCOther, LPCOther))
 
-        figs7 = {type:Neuron(*(pe for p in phenos for pe in p.pes),
-                            label=f'{type} molecular types neuron', override=True)
-                 # the zip below packs all PVBC with PVBC, all CHEC, etc.
+        figs7 = {type:Neuron(LogicalPhenotype(AND, *(pe for p in phenos for pe in p.pes)), *args, **kwargs
+                            )#label=f'{type} molecular types neuron', override=True)
+                 # the zip below packs all PVBC with PVBC, all CHC, etc.
                  #for type, *phenos in zip(fig1a, fig1a.values(), *f7.values())}
-                 for type, *phenos in zip(fig1a, *f7.values())}
+                 for (type, (args, kwargs)), *phenos in zip(fig1a.items(), *f7.values())}
 
-        for k, v in fig1a.items():
+        #for k, v in fig1a.items():
             # ISC is in fact corrctly classified as a subClassOf +Cck neurons
             # which is consistent with the overlap between CR and CCK in fig1b
             # some _subset_ of those have cck, but it is not clear how many and
@@ -436,7 +462,7 @@ with Huang2017:
             # we do here, then the only question is whether the ISC -Cck subset
             # has any additional distinguishing features CCKC doesn't have Calb2
             # on the list, but fig1b suggests that some might
-            figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
+            #figs7[k].equivalentClass(v)  # TODO asserted by Josh Huang in figure s7
 
         if extra:
             peps = [Neuron(*p.pes, label=f'{l} peptides neuron', override=True)
@@ -450,15 +476,13 @@ with Huang2017:
             peps = []
             sigs = []
 
-        # assert disjointness between top level types based on fig1a
-        for dis in (peps, sigs, tuple(fig1a.values())):
+        # assert disjointness between top level types based on +fig1a+ figs7 sigh
+        for dis in (peps, sigs, tuple(figs7.values())):
             for i, n in enumerate(dis[:-1]):
                 for on in dis[i+1:]:
                     n.disjointWith(on)
         #LPCbyPepties = Neuron(*LPCPep.pes)
 
-# common usage types
-# allen 2016 hongwei
 
 for n, p in Huang2017.items():
     if isinstance(p, Phenotype) and not n.startswith('_'):
@@ -490,8 +514,10 @@ Neuron.out_graph.add((ilxtr.gene, owl.equivalentClass, OntId('SO:0000704').u))
 Neuron.out_graph.add((NeuronHuang2017.owlClass,
                       ilxtr.modelSource,
                       OntId('https://doi.org/10.1016/j.cell.2017.08.032').u))
-Neuron.write()
-Neuron.write_python()
+
+with Huang2017:
+    Neuron.write()
+    Neuron.write_python()
 
 
 def wrap_query(l):
@@ -533,7 +559,8 @@ def ncbigene():
 
 
 def main():
-    breakpoint()
+    #breakpoint()
+    pass
 
 
 if __name__ == '__main__':

@@ -3,6 +3,7 @@ import os
 import sys
 import atexit
 import inspect
+import tempfile
 from pprint import pformat
 from pathlib import Path, PurePath as PPath
 from importlib import import_module
@@ -32,6 +33,7 @@ from pyontutils.namespaces import rdf, rdfs, owl, skos
 
 log = makeSimpleLogger('neurondm')
 auth = oa.configure_here('auth-config.py', __name__, include=pauth)
+cfg = oa.core.ConfigBase(None)  # FIXME hack to expand paths
 ont_checkout_ok = auth.get('nifstd-checkout-ok')
 RDFL = oq.plugin.get('rdflib')
 _SGR = oq.plugin.get('SciGraph')
@@ -136,8 +138,10 @@ class LabelMaker:
     """ disregard existing data acquire raw from identifiers """
     predicate_namespace = ilxtr
     field_separator = ' '
-    def __init__(self, local_conventions=False):
+    def __init__(self, local_conventions=False, render_entailed=True):
         """ `local_conventions=True` -> serialize using current LocalNamingConventions """
+        self._do_ent = False
+        self.render_entailed = render_entailed
         self.local_conventions = local_conventions
         if self.local_conventions:
             self._label_property = '__humanSortKey__'
@@ -150,9 +154,9 @@ class LabelMaker:
 
         def _key(phen):
             if phen in self._convention_lookup:
-                return self._convention_lookup[phen]
+                return phen.__class__._rank, self._convention_lookup[phen]
             else:
-                return getattr(phen, self._label_property)
+                return phen.__class__._rank, getattr(phen, self._label_property)
 
         self._key = _key
 
@@ -161,12 +165,15 @@ class LabelMaker:
                                    self.predicate_namespace[function_name])
                                   for function_name in self._order))
 
-    def __call__(self, neuron):
+    def __call__(self, neuron, render_entailed=None):
         # FIXME consider creating a new class every time
         # it will allow state to propagate more easily?
+        render_entailed = self.render_entailed and (render_entailed is None or render_entailed)
         labels = []
+        entailed = []
         for function_name, predicate in zip(self._order, self.predicates):
             if predicate in neuron._pesDict:
+                #phenotypes = sorted(neuron._pesDict[predicate], key=self._key)
                 phenotypes = neuron._pesDict[predicate]
                 if not phenotypes:
                     log.warning('wat: {neuron}')
@@ -175,9 +182,19 @@ class LabelMaker:
                 function = getattr(self, function_name)
                 # TODO resolve and warn on duplicate phenotypes in the same hierarchy
                 # TODO negative phenotypes
-                less_entailed = [p for p in phenotypes if not isinstance(p, EntailedPhenotype)]
-                sub_labels = list(function(less_entailed))
+                less_entailed = [p for p in phenotypes
+                                 if not isinstance(p, EntailedPhenotype)]
+                sub_labels = sorted(function(less_entailed))
                 labels += sub_labels
+
+                yes_entailed = [p for p in phenotypes
+                                if isinstance(p, EntailedPhenotype)]
+                try:
+                    self._do_ent = True
+                    elabels = list(function(yes_entailed))
+                finally:
+                    self._do_ent = False
+                entailed += elabels
 
         if (isinstance(neuron, Neuron) and  # is also used to render LogicalPhenotype collections
             self.predicate_namespace['hasCircuitRolePhenotype'] not in neuron._pesDict):
@@ -187,11 +204,18 @@ class LabelMaker:
             if neuron._shortname:
                 labels += [neuron._shortname]
 
-        return self.field_separator.join(labels)
+        label = self.field_separator.join(labels)
+
+        if entailed and render_entailed:
+            ent_labels = '(implies ' + self.field_separator.join(entailed) + ')'
+            label += ' ' + ent_labels
+
+        return label
 
     def _default(self, phenotypes):
+        #log.debug([self._key(p) for p in phenotypes])
         for p in sorted(phenotypes, key=self._key):
-            if isinstance(p, EntailedPhenotype):
+            if isinstance(p, EntailedPhenotype) and not self._do_ent:
                 # FIXME TODO I think it is correct to drop these
                 raise TypeError('entailed should have been filtered '
                                 'before arriving here')
@@ -201,10 +225,26 @@ class LabelMaker:
             else:
                 prefix = ''
 
+            if isinstance(p, LogicalPhenotype):
+                yield self._logical_default(p)
+                return
+
             if p in self._convention_lookup:
                 yield prefix + self._convention_lookup[p]
+            elif self._do_ent and Phenotype(p) in self._convention_lookup:
+                yield prefix + self._convention_lookup[Phenotype(p)]
             else:
                 yield prefix + getattr(p, self._label_property)
+
+    def _logical_default(self, lp):
+        if self.local_conventions:
+            inj = {v:k for k, v in graphBase.LocalNames.items()}  # XXX very slow...
+            if lp in inj:
+                return inj[lp]
+
+        label = self(lp)
+        op = OntId(lp.op).suffix
+        return f'({op} {label})'
 
     @od
     def hasTaxonRank(self, phenotypes):
@@ -339,10 +379,16 @@ class LabelMaker:
         yield from self._plus_minus(phenotypes)
     @od
     def hasProjectionPhenotype(self, phenotypes):  # consider inserting after end, requires rework of code...
-        yield from self._with_thing_located_in('projecting to', phenotypes)
+        yield from self._with_thing_located_in('projecting-to', phenotypes)
+    @od
+    def hasReverseConnectionPhenotype(self, phenotypes):
+        yield from self._with_thing_located_in('projected-onto-by', phenotypes)
+    @od
+    def hasForwardConnectionPhenotype(self, phenotypes):
+        yield from self._with_thing_located_in('projecting-onto', phenotypes)
     @od
     def hasConnectionPhenotype(self, phenotypes):
-        yield from self._default(phenotypes)
+        yield from self._with_thing_located_in('connecting-to', phenotypes)
     @od
     def hasExperimentalPhenotype(self, phenotypes):
         yield from self._default(phenotypes)
@@ -374,16 +420,28 @@ class LabelMaker:
             phenotypes.remove(interneuron_phenotype)
             phenotypes = phenotypes + [interneuron_phenotype]
 
+        have_neuron = False  # FIXME not working for cuts
         for phenotype in phenotypes:
-            yield next(self._default((phenotype,))).lower()
+            value = next(self._default((phenotype,))).lower()
+            if not have_neuron:
+                have_neuron = 'neuron' in value
 
-        suffix = suffix()
-        if suffix:
-            yield suffix
+            yield value
+
+        if self.local_conventions and have_neuron:
+            return
+
+        if phenotypes and not self.local_conventions:
+            suffix = suffix()
+            if suffix:
+                yield suffix
 
 # helper classes
 
 class OntTerm(bOntTerm, OntId):
+
+    _cache_ind = dict()
+
     def traverse(self, *predicates):
         """ return the graph closure when traversing multiple edge types """
         done = set()
@@ -411,6 +469,9 @@ class OntTerm(bOntTerm, OntId):
         return phenotype_class(self, ObjectProperty=predicate, label=self.label, override=bool(self.label))
 
     def asIndicator(self):
+        if self in self._cache_ind:
+            return self._cache_ind[self]
+
         sco = self(rdfs.subClassOf, depth=2, asTerm=True)
         uris = [t.URIRef for t in sco]
         if ilxtr.PhenotypeIndicator in uris:
@@ -421,9 +482,11 @@ class OntTerm(bOntTerm, OntId):
             # FIXME it being first is by accident of implementation only
             log.debug(f'{sco} {self}')
             assert ilxtr.PhenotypeIndicator == ind.predicates['rdfs:subClassOf'].u
+            self._cache_ind[self] = ind
             return ind
         else:
             log.debug(f'No indicator for {self.curie} {self.label}')
+            self._cache_ind[self] = self  # avoid repeated lookup cost which is quite high
             return self
 
     def triples(self, predicate):
@@ -443,7 +506,7 @@ class OntTerm(bOntTerm, OntId):
         skips = 'pheno:parvalbumin',
         bads = ('TEMP', 'ilxtr', 'rdf', 'rdfs', 'owl', '_', 'prov', 'ILX', 'BFO1SNAP', 'NLXANAT',
                 'NLXCELL', 'NLXNEURNT', 'BFO', 'MBA', 'JAX', 'MMRRC', 'ilx', 'CARO', 'NLX',
-                'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID')
+                'BIRNLEX', 'NIFEXT', 'obo', 'NIFRID', 'TEMPIND', 'npokb')
         s = self.URIRef
         if self.type is None:
             yield s, rdf.type, owl.Class  # FIXME ... IAO terms fail on this ... somehow
@@ -469,13 +532,20 @@ class OntTerm(bOntTerm, OntId):
                 if superclass.curie in skips:
                     continue
                 elif superclass.prefix in bads:
-                    if superclass.prefix == 'BFO' or self.prefix in bads or 'interlex' in self.iri:
+                    if (superclass.prefix == 'BFO' or
+                        self.prefix in bads or
+                        'interlex' in self.iri):
                         yield s, rdfs.subClassOf, superclass.URIRef
                         break
                     else:
                         continue
                 if superclass.curie != 'owl:Thing':
                     yield s, rdfs.subClassOf, superclass.URIRef
+                    # ensure that all superclasses are closed for type and label
+                    yield superclass.URIRef, rdf.type, owl.Class
+                    if superclass.label:
+                        _l = rdflib.Literal(superclass.label)
+                        yield superclass.URIRef, rdfs.label, _l
 
         predicates = 'partOf:', 'RO:0002433' #'ilxtr:labelPartOf', 'ilxtr:isDelineatedBy', 'ilxtr:delineates'
         done = []
@@ -485,7 +555,15 @@ class OntTerm(bOntTerm, OntId):
                     if superpart.prefix in bads:
                         continue
                     if (predicate, superpart) not in done:
-                        yield from cmb.restriction(OntId(predicate).URIRef, superpart.URIRef)(s)
+                        yield from cmb.restriction(OntId(predicate).URIRef,
+                                                   superpart.URIRef)(s)
+
+                        # ensure that all superparts are closed for type and label
+                        yield superpart.URIRef, rdf.type, owl.Class
+                        if superpart.label:
+                            _l = rdflib.Literal(superpart.label)
+                            yield superpart.URIRef, rdfs.label, _l
+
                         done.append((predicate, superpart))
 
 
@@ -699,10 +777,8 @@ class Config:
 
         out_local_base = ttl_export_dir
         out_base = out_local_base if False else out_remote_base  # TODO switch or drop local?
-
-        cfg = oa.core.ConfigBase('does-not-exist.py')  # FIXME hack to expand paths
         if import_as_local or import_no_net:
-            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+            if local.exists() and (local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology'):
                 # NOTE: we currently do the translation more ... inelegantly inside of config so we
                 # have to keep the translation layer out here (sigh)
                 log.debug(f'local ont {local}')
@@ -740,7 +816,7 @@ class Config:
                 udp = cfg._pathit('{:user-data-path}/neurondm/')
                 search_paths = [
                     udp,
-                    cfg._pathit('{:prefix}/neurondm/'),
+                    cfg._pathit('{:prefix}/share/neurondm/'),
                     Path('./share/neurondm/').absolute(),
                 ]
                 for base in search_paths:
@@ -769,7 +845,7 @@ class Config:
 
             partofpath = remote.iri + 'ttl/generated/part-of-self.ttl'
             graphBase.part_of_graph = OntResIri(partofpath).graph
-            if local.exists() and local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology':
+            if local.exists() and (local.name == 'NIF-Ontology' or local.parent.name == 'NIF-Ontology'):
                 _writepath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
             else:
                 _writepath = cfg._pathit('{:user-data-path}/neurondm/part-of-self.ttl')
@@ -871,11 +947,18 @@ class Config:
 
     def write(self):
         # FIXME per config prefixes using derived OntCuries?
+        # FIXME code duplication with graphBase
         [n._sigh() for n in self.existing_pes]  # ugh
         og = cull_prefixes(self.out_graph, prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
+        path = Path(og.filename)
+        ppath = path.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
         og.write()
         self.part_of_graph.write()
+        log.debug(f'Neurons ttl file written to {path}')
 
     def write_python(self):
         # FIXME hack, will write other configs if call after graphbase has switched
@@ -1094,9 +1177,9 @@ class graphBase:
                       sources=           tuple(),
                       source_file=       None,
                       use_local_import_paths=True,
-                      compiled_location= (PPath('/tmp/neurondm/compiled')
+                      compiled_location= (cfg._pathit('{:user-data-path}/neurondm/compiled')
                                           if working_dir is None else
-                                          PPath(working_dir, 'neurondm/neurondm/compiled')),
+                                          Path(working_dir, 'neurondm/neurondm/compiled')),
                       ignore_existing=   False,
                       local_conventions= False,):
         # FIXME suffixes seem like a bad way to have done this :/
@@ -1195,7 +1278,28 @@ class graphBase:
                 except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
                     local_working_dir = get_working_dir(graphBase.local_base)
                     if local_working_dir is None:
-                        raise e
+                        log.exception(e)
+                        udp = cfg._pathit('{:user-data-path}/neurondm/git-repo')
+                        trp = RepoPath(udp)
+                        if not trp.exists():
+                            trp.init()
+
+                        graphBase.local_base = trp
+                        # FIXME this is a stupid hack, and a reminder that the whole
+                        # set up inside graphBase was a horrible mistake
+                        # all sorts of things are thrown out of sync because of this
+                        out_graph_path = (graphBase.local_base /
+                                          'ttl/generated/neurons' /
+                                          Path(out_graph_path).name)
+                        if hasattr(graphBase, 'part_of_graph'):
+                            graphBase.part_of_graph.path = (
+                                graphBase.local_base /
+                                'ttl/generated' /
+                                graphBase.part_of_graph.path.name)
+
+                        repo = trp.repo
+                        msg = f'No NIF-Ontology repo found. Using a temporary repo at {trp}'
+                        log.critical(msg)
                     else:
                         msg = (f'{graphBase.local_base} is already contained in a git repository '
                                'located in {local_working_dir} if you wish to use this repo please '
@@ -1333,15 +1437,20 @@ class graphBase:
         og = cull_prefixes(graphBase.out_graph,
                            prefixes={**graphBase.prefixes, **uPREFIXES})
         og.filename = graphBase.ng.filename
+        path = Path(og.filename)
+        ppath = path.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
         og.write()
         graphBase.part_of_graph.write()
+        log.debug(f'Neurons ttl file written to {path}')
 
     @staticmethod
     def filename_python():
-        p = PPath(graphBase.ng.filename)
+        p = Path(graphBase.ng.filename)
         return ((graphBase.compiled_location / p.name.replace('-', '_'))
-                .with_suffix('.py')
-                .as_posix())
+                .with_suffix('.py'))
 
     @staticmethod
     def write_python():
@@ -1351,8 +1460,16 @@ class graphBase:
         # tell you that there is no source! therefore we generate all
         # the python before potentially opening (and thus erasing) the
         # original file from which some of the code was sourced
-        with open(graphBase.filename_python(), 'wt') as f:
+        fp = graphBase.filename_python()
+
+        ppath = fp.parent
+        if not ppath.exists():
+            ppath.mkdir(parents=True)
+
+        with open(fp, 'wt') as f:
             f.write(python)
+
+        log.debug(f'Neurons python file written to {fp}')
 
     @classmethod
     def python_header(cls):
@@ -1505,9 +1622,6 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
             self._label = label  # I cannot wait to get rid of this premature graph integration >_<
             self.in_graph.add((self.p, rdfs.label, rdflib.Literal(label)))
 
-        # use this specify consistent patterns for modifying labels
-        self.labelPostRule = lambda l: l
-
     def asIndicator(self):
         t = OntTerm(self.p)
         it = t.asIndicator()
@@ -1516,12 +1630,21 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             return self
 
+    def asPosEntailed(self):
+        """ have to have this since asEntailed preserved +/- """
+        return EntailedPhenotype(self)
+
     def asEntailed(self):
+        if isinstance(self, NegPhenotype):
+            return self.asNegativeEntailed()
+
         return EntailedPhenotype(self)
 
     def asNegative(self):
-        """ NOTE asNegativeEntailed doesn't exist right now """
         return NegPhenotype(self)
+
+    def asNegativeEntailed(self):
+        return NegEntailedPhenotype(self)
 
     def checkPhenotype(self, phenotype):
         if isinstance(phenotype, infixowl.Class):
@@ -1566,7 +1689,9 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                     except ConnectionError:
                         #print(tc.red('WARNING:'), 'Phenotype unvalidated. No SciGraph was instance found at',
                             #self._sgv._basePath)
-                        log.warning(f'Phenotype unvalidated. No SciGraph was instance found at {self._sgv._basePath}')
+                        msg = ('Phenotype unvalidated. No SciGraph was instance '
+                               f'found at {self._sgv._basePath}')
+                        log.warning(msg)
 
         self.__cache[phenotype] = subject
         return subject
@@ -1634,7 +1759,8 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
                 l = self.ng.qname(self.p)
         else:
             l = l[0]
-        return self.labelPostRule(l)
+
+        return l
 
 
     @property
@@ -1645,7 +1771,7 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         else:
             l = self.pShortName  # FIXME
 
-        return self.labelPostRule(l)
+        return l
 
     @property
     @cacheout
@@ -1678,7 +1804,13 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         if resp:  # DERP
             abvs = resp['abbreviations']
             if not abvs:
-                abvs = sorted([s for s in resp['synonyms'] if 1 < len(s) < 5], key=lambda s :(len(s), s))
+                abvs = sorted([s for s in resp['synonyms']
+                               if 1 < len(s) < 5], key=lambda s :(len(s), s))
+
+            # handle cases where a label is quite short
+            if resp['labels'] and 1 < len(resp['labels'][0]) < 5:
+                abvs = [resp['labels'][0]] + abvs
+
         else:
             abvs = None
 
@@ -1738,7 +1870,12 @@ class Phenotype(graphBase):  # this is really just a 2 tuple...  # FIXME +/- nee
         except AttributeError as e:
             # FIXME ick
             # we aren't set up yet and we are doing something stupid
-            OntTerm(p.iri)  # force setup
+            try:
+                OntTerm(p.iri)  # force setup
+            except ConnectionError as e:
+                log.exception(e)
+                return p.iri
+
             return self.pLongName
 
         if not l:
@@ -1872,6 +2009,10 @@ class EntailedPhenotype(Phenotype):
     _rank = '8'
 
 
+class NegEntailedPhenotype(NegPhenotype, EntailedPhenotype):
+    _rank = '8.5'
+
+
 class UnionPhenotype(graphBase):  # not ready
     """ Class for expressing unions of phenotypes.
         There is no intersection phenotype because the bagging process
@@ -1904,25 +2045,41 @@ class LogicalPhenotype(graphBase):
         super().__init__()
         self.op = op  # TODO more with op
         self.pes = tuple(sorted(edges))
-        self._pesDict = {}
-        for pe in self.pes:
-            if pe.e in self._pesDict:
-                self._pesDict[pe.e].append(pe)
-            else:
-                self._pesDict[pe.e] = [pe]
+        _pesDict = {}
+        for e in self.e:
+            for pe in self.pes:
+                if pe.e == e:
+                    if e in _pesDict:
+                        _pesDict[e].add(pe)
+                    else:
+                        _pesDict[e] = {pe}
 
-        self.labelPostRule = lambda l: l
+        self._pesDict = {k:sorted(v) for k, v in _pesDict.items()}
 
     def asIndicator(self):
         return self.__class__(self.op, *[pe.asIndicator() for pe in self.pes])
 
+    def asEntailed(self):
+        if isinstance(self, NegPhenotype):
+            raise NotImplementedError('TODO')
+            return self.asNegativeEntailed()
+
+        return EntailedLogicalPhenotype(self.op, *self.pes)
+
     @property
     def p(self):
-        return tuple((pe.p for pe in self.pes))
+        out = tuple((p for pe in self.pes for p in
+                     (pe.p if isinstance(pe, LogicalPhenotype) else (pe.p,))))
+        return tuple(set(out))
+        #return tuple((pe.p for pe in self.pes))
 
     @property
     def e(self):
-        return tuple((pe.e for pe in self.pes))
+        out = tuple((e for pe in self.pes for e in
+                     (pe.e if isinstance(pe, LogicalPhenotype) else (pe.e,))))
+        out = tuple(set(out))
+        return out
+        #return tuple((pe.e for pe in self.pes))
 
     @property
     def _pClass(self):
@@ -1940,7 +2097,9 @@ class LogicalPhenotype(graphBase):
             try:
                 # FIXME this is dumb should be using OntId internally
                 # the convert to URIRef only for the graph ...
-                return self.label_maker._order.index(OntId(pe.e).suffix), getattr(pe, attr)
+                return (tuple(self.label_maker._order.index(OntId(e).suffix)
+                              for e in (pe.e if isinstance(pe, LogicalPhenotype) else (pe.e,))),
+                        getattr(pe, attr))
             except ValueError as e:
                 log.error(pe)
                 raise e
@@ -1958,7 +2117,7 @@ class LogicalPhenotype(graphBase):
         spes = sorted(self.pes, key=self._lkey('pHiddenLabel'))
         label = ' '.join([pe.pHiddenLabel for pe in spes])  # FIXME we need to catch non-existent phenotypes BEFORE we try to get their hiddenLabel because the errors you get here are completely opaque
         op = self.local_names[self.op]
-        return self.labelPostRule(f'({op} {label})')
+        return f'({op} {label})'
 
     @property
     def pShortName(self):
@@ -1967,20 +2126,9 @@ class LogicalPhenotype(graphBase):
             if self in inj:
                 return inj[self]
 
-        snk = self._lkey('pShortName')
-        lnk = self._lkey('pLongName')
-        def dkey(value):
-            rank, string = snk(value)
-            if not string:
-                rank, string = lnk(value)
-
-            return rank, string
-
-        spes = sorted(self.pes, key=dkey)
-        label = ' '.join([pe.pShortName if pe.pShortName else pe.pLongName
-                          for pe in spes])
+        label = self.label_maker(self)
         op = OntId(self.op).suffix
-        return self.labelPostRule(f'({op} {label})')
+        return f'({op} {label})'
 
     @property
     def pLongName(self):
@@ -2068,6 +2216,10 @@ class LogicalPhenotype(graphBase):
         base =',\n%s' % t
         pes = base.join([_.__str__().replace('\n', '\n' + t) for _ in self.pes])
         return '%s(%s%s%s)' % (self.__class__.__name__, op, base, pes)
+
+
+class EntailedLogicalPhenotype(LogicalPhenotype):
+    _rank = '3'
 
 
 class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
@@ -2271,11 +2423,13 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
         for pe in self.pes:  # FIXME TODO
             if isinstance(pe, LogicalPhenotype):  # FIXME
                 # FIXME hpm should actually be an inclusive subclass query on hasPhenotype
-                dimensions = set(_.e for _ in pe.pes if _.e != ilxtr.hasPhenotypeModifier)
+                dimensions = set([e for e in pe.e if e != ilxtr.hasPhenotypeModifier])
+                #dimensions = set(_.e for _ in pe.pes if _.e != ilxtr.hasPhenotypeModifier)
                 if len(dimensions) == 1:
                     dimension = next(iter(dimensions))
                 else:
-                    dimension = tuple(sorted(dimensions))
+                    _key = lambda d: ((not isinstance(d, tuple)), d)
+                    dimension = tuple(sorted(dimensions, key=_key))
 
                 if dimension not in self._pesDict:
                     self._pesDict[dimension] = []
@@ -2858,8 +3012,8 @@ class Neuron(NeuronBase):
         ll = self.localLabel
         ol = self.origLabel
         graph.add((self.id_, ilxtr.genLabel, rdflib.Literal(gl)))
-        if ll != gl:
-            graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
+        #if ll != gl:
+        graph.add((self.id_, ilxtr.localLabel, rdflib.Literal(ll)))
 
         if ol and ol != gl:
             graph.add((self.id_, ilxtr.origLabel, rdflib.Literal(ol)))
@@ -2878,12 +3032,20 @@ class Neuron(NeuronBase):
     def _graphify_pes(self, graph, members, method='_graphify_expand_location'):
         for pe in self.pes:
             target = getattr(pe, method)(graph=graph, method=method)
-            if isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
+            if isinstance(pe, NegEntailedPhenotype):
+                djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
+                djc.complementOf = target
+                restr = djc
+                _sco = list(self.Class.subClassOf)
+                _sco.append(restr)
+                self.Class.subClassOf = _sco
+            elif isinstance(pe, NegPhenotype):  # isinstance will match NegPhenotype -> Phenotype
                 #self.Class.disjointWith = [target]  # FIXME for defined neurons this is what we need and I think it is strong than the complementOf version
                 djc = infixowl.Class(graph=graph)  # TODO for generic neurons this is what we need
                 djc.complementOf = target
                 members.append(djc)
-            elif isinstance(pe, EntailedPhenotype):
+            elif (isinstance(pe, EntailedPhenotype) or
+                  isinstance(pe, EntailedLogicalPhenotype)):
                 restr = target
                 _sco = list(self.Class.subClassOf)
                 _sco.append(restr)
@@ -3102,6 +3264,9 @@ class injective(type):
         return injective_dict()
 
     def __new__(cls, name, bases, inj_dict):
+        # we cast back to dict here so that inj_dict doesn't cause
+        # errors if the same name is used in the class namespace
+        # even if not for assignment
         self = super().__new__(cls, name, bases, dict(inj_dict))
         self.debug = False
         return self
@@ -3288,6 +3453,8 @@ objective for any entry here should be to have it ultimately implemented as
 a rule plus operating from single standard ontology file. """
 Config(import_no_net=True)  # explicitly load the core graph TODO need a lighter weight way to do this
 OntologyGlobalConventions = _ogc = injective_dict(
+    Vertebrata = Phenotype('NCBITaxon:7742', 'ilxtr:hasInstanceInTaxon'),  # fix annoying labels
+
     L1 = Phenotype('UBERON:0005390', 'ilxtr:hasSomaLocatedInLayer'),
     L2 = Phenotype('UBERON:0005391', 'ilxtr:hasSomaLocatedInLayer'),
     L3 = Phenotype('UBERON:0005392', 'ilxtr:hasSomaLocatedInLayer'),
@@ -3304,8 +3471,8 @@ OntologyGlobalConventions = _ogc = injective_dict(
     CCK = Phenotype('PR:000005110', 'ilxtr:hasMolecularPhenotype'),
     GABA = Phenotype('CHEBI:16865', 'ilxtr:hasNeurotransmitterPhenotype'),
 
-    AC = Phenotype('ilxtr:PetillaSustainedAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
-    NAC = Phenotype('ilxtr:PetillaSustainedNonAccomodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    AC = Phenotype('ilxtr:PetillaSustainedAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
+    NAC = Phenotype('ilxtr:PetillaSustainedNonAccommodatingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     STUT = Phenotype('ilxtr:PetillaSustainedStutteringPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     IR = Phenotype('ilxtr:PetillaSustainedIrregularPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),
     b = Phenotype('ilxtr:PetillaInitialBurstSpikingPhenotype', 'ilxtr:hasElectrophysiologicalPhenotype'),

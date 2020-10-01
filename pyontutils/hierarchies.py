@@ -188,7 +188,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
     #current_parent = None
     html_head = ''
 
-    def print_tree(self, level = 0, html=False):
+    def print_tree(self, level = 0, html=False, hpr=None, tparent=None):
         output = ''
 
         if html:
@@ -207,7 +207,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                 item = [k for k in self.keys()][0]
                 output += str(item)
                 self.__class__.current_parent = item
-                output += ''.join([v.print_tree(1, html) for v in self.values()])
+                output += ''.join([v.print_tree(1, html, hpr, item) for v in self.values()])
                 #self.__class__.prefix.pop()  # FIXME causes errors???
                 self.__class__.existing = {}  # clean up new mess
                 self.__class__.current_parent = None
@@ -226,6 +226,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
         items = []
 
         def switch(symboltype, key, value):
+            itparent = key
             #if key in self.existing and type(value) == type(self):
             if False:  # we deal with this by dematerializing the tree
                 #print('WEEEE MULTIPARENT!', items[-1], self.current_parent)
@@ -239,7 +240,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     if cend == _MID_STEM:
                         self.__class__.prefix[-1] = symboltype
                     self.__class__.current_parent = key
-                    value = __t.print_tree(level, html)
+                    value = __t.print_tree(level, html, hpr, itparent)
                     items.append((str(key), value))
                     self.__class__.prefix[-1] = cend
                 else:
@@ -261,7 +262,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
                     self.__class__.prefix[-1] = symboltype
 
                 self.__class__.current_parent = key
-                v = value.print_tree(level + 1, html)  # recurse here XXX
+                v = value.print_tree(level + 1, html, hpr, itparent)  # recurse here XXX
 
                 if html and v:
                     if first_occurance:
@@ -277,7 +278,7 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
             else:
                 v = str(value)
 
-            items.append((str(key), v, ds))
+            items.append((str(key), v, ds, itparent))
 
         items_list = sorted(sorted(((f'{k}', v)  # XXX best
                                     for k, v in self.items()),
@@ -294,17 +295,39 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
         switch(BLANK, *items_list[-1])  # need to put blanks after _BOT_STEM
 
-        output += '\n'.join(['{3}{0}{1}{2}'.format(''.join(self.prefix), k, v, ds) for k, v, ds in items[:-1]])
+        def pp(k):
+            out = ''.join(self.prefix)
+            if html and hpr is not None and k:
+                if tparent is not None:
+                    k1 = tparent.strip('*').strip()
+                    k2 = k.strip('*').strip()
+                    if [_ for _ in (k1, k2)
+                        if 'CYCLE DETECTED' in _ or
+                        'ROOT' in _]:
+                        return out.format(predicate='')
+                    try:
+                        predicate = hpr[k1, k2]
+                    except KeyError as e:
+                        log.exception(e)
+                        return out
+
+                    out = out.format(predicate=predicate)
+
+            return out
+
+        output += '\n'.join(
+            ['{3}{0}{1}{2}'.format(pp(nk), k, v, ds, nk)
+             for k, v, ds, nk in items[:-1]])
         self.__class__.prefix[-1] = _BOT_STEM
-        output += '\n' + '{3}{0}{1}{2}'.format(''.join(self.prefix), *items[-1])
+        output += '\n' + '{3}{0}{1}{2}'.format(pp(items[-1][-1]), *items[-1])
 
         if len(self.__class__.prefix) > 1:
             self.__class__.prefix.pop()
 
         return output
 
-    def __str__(self, html=False):
-        output = self.print_tree(html=html)
+    def __str__(self, html=False, hpr=None):
+        output = self.print_tree(html=html, hpr=hpr)
         # FIXME gotta do cleanup here for now :/
         self.__class__.prefix = []
         self.__class__.existing = {}  # clean up new mess
@@ -333,8 +356,8 @@ class TreeNode(defaultdict):  # FIXME need to factory this to allow separate tre
 
         return output
 
-    def __html__(self):
-        output = self.__str__(html=True)
+    def __html__(self, hpr=None):
+        output = self.__str__(html=True, hpr=hpr)
         lines = output.split('\n')
         new_lines = []
         for line in lines:
@@ -404,7 +427,7 @@ def queryTree(root, relationshipType, direction, depth, entail, sgg, filter_pref
         relationshipType = 'subPropertyOf'
 
     j = sgg.getNeighbors(root, relationshipType=relationshipType,
-                            direction=direction, depth=depth, entail=entail)
+                         direction=direction, depth=depth, entail=entail)
     if j is None:
         raise ValueError(f'Unknown root {root}')
     elif root.startswith('http'):
@@ -478,6 +501,15 @@ def process_nodes(j, root, direction, verbose):
     nodes = {n['id']:n['lbl'] for n in j['nodes']}
     nodes[CYCLE] = CYCLE  # make sure we can look up the cycle
     edgerep = ['{} {} {}'.format(nodes[e['sub']], e['pred'], nodes[e['obj']]) for e in j['edges']]
+    # note that if there are multiple relations between s & p then last one wins
+    # sorting by the predicate should help keep it a bit more stable
+    pair_rel = {(e['sub'], e['obj'])
+                if direction == 'OUTGOING' else
+                (e['obj'], e['sub']):
+                e['pred'] + '>'
+                if direction == 'OUTGOING' else
+                '<' + e['pred']
+                for e in sorted(j['edges'], key = lambda e: e['pred'])}
 
     objects = defaultdict(list)  # note: not all nodes are objects!
     for edge in j['edges']:
@@ -518,10 +550,22 @@ def process_nodes(j, root, direction, verbose):
 
     names = {nodes[k]:[nodes[s] for s in v] for k,v in objects.items()}  # children don't need filtering
     pnames = {nodes[k]:[nodes[s] for s in v] for k,v in subjects.items()}
-    return nodes, objects, subjects, names, pnames, edgerep, root, roots, leaves
+    return nodes, objects, subjects, names, pnames, edgerep, root, roots, leaves, pair_rel
 
 
-def creatTree(root, relationshipType, direction, depth, graph=None, json=None, filter_prefix=None, prefixes=uPREFIXES, html_head=tuple(), local=False, verbose=False, curie=None, entail=True):
+def creatTree(root,
+              relationshipType=None,
+              direction='INCOMING',
+              depth=1,
+              graph=None,
+              json=None,
+              filter_prefix=None,
+              prefixes=uPREFIXES,
+              html_head=tuple(),
+              local=False,
+              verbose=False,
+              curie=None,
+              entail=True):
     sgg = graph
     html_head = list(html_head)
     # TODO FIXME can probably switch over to the inverse of the automata I wrote for parsing trees in parc...
@@ -544,11 +588,17 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
     # filter out owl:Nothing
     j['edges'] = [e for e in j['edges'] if 'owl:Nothing' not in e.values()]
 
+    # filter out has part meta edges
+    j['edges'] = [e for e in j['edges'] if not
+                  ('meta' in e and
+                   'owlType' in e['meta'] and
+                   'http://purl.obolibrary.org/obo/BFO_0000051' in e['meta']['owlType'])]
+
     if verbose:
         print(len(j['nodes']))
 
-    (nodes, objects, subjects, names,
-     pnames, edgerep, root, roots, leaves) = process_nodes(j, root, direction, verbose)
+    (nodes, objects, subjects, names, pnames,
+     edgerep, root, roots, leaves, pair_rel) = process_nodes(j, root, direction, verbose)
 
     if root is None:
         breakpoint()
@@ -569,6 +619,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
     htmlNodes = makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root)
     hpnames = {htmlNodes[k]:[htmlNodes[s] for s in v] for k, v in subjects.items()}
     _, hTreeNode = newTree('html' + tree_name, parent_dict=hpnames, html_head=html_head)
+    html_pair_rel = {tuple(htmlNodes[_] for _ in k):v for k, v in pair_rel.items()}
 
     def htmlTree(tree):
         dict_ = hTreeNode()
@@ -594,7 +645,7 @@ def creatTree(root, relationshipType, direction, depth, graph=None, json=None, f
 
         return h
 
-    html_body = sub_prefixes(html_hierarchy.__html__())
+    html_body = sub_prefixes(html_hierarchy.__html__(hpr=html_pair_rel))
     extras = Extras(hierarchy, html_hierarchy,
                     dupes, nodes, edgerep,
                     objects, subjects,

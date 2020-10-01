@@ -6,7 +6,7 @@ import augpathlib as aug
 #sys.breakpointhook = pudb.set_trace
 
 # TestRoundtrip by itself is not sufficient to induce the cross module version
-from test.test_neurons import TestRoundtrip
+#from test.test_neurons import TestRoundtrip  # for now comment this out due to issue in test_ttl_simple
 from .common import skipif_no_net
 
 # write the file manually to show the issue is not related to a previous write

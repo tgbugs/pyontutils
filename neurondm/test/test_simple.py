@@ -68,7 +68,9 @@ class TestSimple(unittest.TestCase):
         assert len(set((c1, c2))) == 2
 
         c1o = simple.AndCell(Phenotype('ilxtr:someValue', 'ilxtr:someDimension'),
-                            Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
+                             Phenotype(ilxtr.someOtherValue, ilxtr.someOtherDimension),)
         assert c1 is not c1o
         assert c1 == c1o
-        assert len(set((c1, c1o))) == 1
+
+        ls = len(set((c1, c1o)))
+        assert ls == 1

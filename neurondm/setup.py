@@ -69,7 +69,8 @@ def _ontology_data_files():
 resources, ontology_data_files = _ontology_data_files()
 print('ontology_data_files:\n\t' + '\n\t'.join(ontology_data_files))
 
-tests_require = ['pytest']
+models_require = ['nifstd-tools>=0.0.6']
+tests_require = ['pytest'] + models_require
 try:
     setup(
         name='neurondm',
@@ -87,25 +88,28 @@ try:
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
         ],
         keywords=('neuron types NIF ontology neuroscience phenotype '
                 'OWL rdf rdflib data model'),
-        packages=['neurondm'],  # don't package models due to data resources needs?
+        packages=['neurondm', 'neurondm.models'],  # don't package models due to data resources needs?
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
-            'hyputils>=0.0.6',
-            'pyontutils>=0.1.23',
+            'hyputils>=0.0.8',
+            'pyontutils>=0.1.27',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
+                        'models': models_require,
                         'notebook': ['jupyter'],
         },
         entry_points={
             'console_scripts': [
             ],
         },
-        data_files=[('share/neurondm', ontology_data_files)]
+        data_files=[('share/neurondm', ontology_data_files),
+                    ]
     )
 finally:
     if RELEASE:

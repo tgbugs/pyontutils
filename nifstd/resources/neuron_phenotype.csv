@@ -51,6 +51,7 @@ ilxtr:BistratifiedPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPh
 ilxtr:GranulePhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:ConeMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ilxtr:RodMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
+ilxtr:DiscMorphologicalPhenotype,ilxtr:MorphologicalPhenotype,,,,,,hasMorphologicalPhenotype
 ,,,,,,,
 ,,,,,,,
 ilxtr:DenseAxonPhenotype,ilxtr:AxonPhenotype,,,,,,HasAxonMorphologicalPhenotype
@@ -89,14 +90,14 @@ ilxtr:PetillaInitialBurstSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,
 ilxtr:PetillaInitialClassicalSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,petilla c,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaInitialDelayedSpikingPhenotype,ilxtr:PetillaInitialSpikingPhenotype,,petilla d,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedSpikingPhenotype,ilxtr:SpikingPhenotype,,,,subClassesDisjoint,,hasElectrophysiologicalPhenotype
-ilxtr:PetillaSustainedAccommodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accomodating phenotypes‚ multiple parent is annoying,hasElectrophysiologicalPhenotype
+ilxtr:PetillaSustainedAccommodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ac,,,how do we deal with the fact that there are other accommodating phenotypes‚ multiple parent is annoying,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedNonAccommodatingPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla nac,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedStutteringPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla stut,,,,hasElectrophysiologicalPhenotype
 ilxtr:PetillaSustainedIrregularPhenotype,ilxtr:PetillaSustainedSpikingPhenotype,,petilla ir,,,,hasElectrophysiologicalPhenotype
 ilxtr:FastSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:RegularSpikingNonPyramidalPhenotype,,hasElectrophysiologicalPhenotype
 ilxtr:RegularSpikingNonPyramidalPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
-ilxtr:AccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:NonAccomodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
-ilxtr:NonAccomodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
+ilxtr:AccommodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,disjointWith ilxtr:NonAccommodatingSpikingPhenotype,,hasElectrophysiologicalPhenotype
+ilxtr:NonAccommodatingSpikingPhenotype,ilxtr:SpikingPhenotype,,,,,,hasElectrophysiologicalPhenotype
 ,,,,,,,
 ilxtr:ExpressionPhenotype,ilxtr:CellPhenotype,,molecular phenotype,,,,hasExpressionPhenotype
 ilxtr:DopaminergicPhenotype,ilxtr:ExpressionPhenotype,,,,,"figure out how to regularize these since I have used ilxtr:parvalbumin elsewhere, probably ilxtr:phenotype/thing will be best",hasExpressionPhenotype

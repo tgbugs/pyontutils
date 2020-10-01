@@ -333,9 +333,9 @@ def make_phenotypes():
             self.id_ = graph2.expand(value)
             self.Class = infixowl.Class(self.id_, graph=graph2.g)
             label = ' '.join(re.findall(r'[A-Z][a-z]*', self.id_.split(':')[1]))
-            if 'Cone' in label or 'Rod' in label:  # sigh hard coding
+            if 'Cone' in label or 'Rod' in label or 'Disc' in label:  # sigh hard coding
                 label = label.replace(' Morphological', '')
-            self._label = label
+            self._label = label.capitalize()
 
         def subClassOf(self, value):
             if value:
@@ -394,13 +394,13 @@ def make_phenotypes():
                 #print(self.id_)
 
             # hidden label for consturctions
-            hl = self._label.rsplit(' Phenotype')[0]
+            hl = self._label.rsplit(' phenotype')[0]
             if hl.endswith('Morphological'):
                 hl = hl.rsplit(' Morphological')[0]
 
             graph2.add_trip(self.id_, rdflib.namespace.SKOS.hiddenLabel, hl)
 
-            label = rdflib.Literal(self._label.rstrip('Phenotype') + 'neuron')
+            label = rdflib.Literal(self._label.rstrip('phenotype') + 'neuron')
 
             self.ilx_start += 1
             #id_ = defined_graph.expand(ilx_base.format(self.ilx_start))
@@ -484,7 +484,7 @@ def make_phenotypes():
     ontid = NIFRAW['neurons/ttl/' + graph.name + '.ttl']
     graph.add_ont(ontid, 'NIF Phenotype core', comment= 'This is the core set of predicates used to model phenotypes and the parent class for phenotypes.')
     graph.add_class('ilxtr:Phenotype', label='Phenotype')
-    graph.add_trip('ilxtr:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accomodating and Non-Accomodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possible. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental conditions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxiliary variable that we think accounts for the difference.')
+    graph.add_trip('ilxtr:Phenotype', 'skos:definition', 'A Phenotype is a binary property of a biological entity. Phenotypes are derived from measurements made on the subject of interest. While Phenotype is not currently placed within the BFO hierarchy, if we were to place it, it would fall under BFO:0000016 -> disposition, since these phenotypes are contingent on the experimental conditions under which measurements were made and are NOT qualities. For consideration: in theory this would mean that disjointness does not make sense, even for things that would seem to be obviously disjoint such as Accommodating and Non-Accommodating. However, this information can still be captured on a subject by subject basis by asserting that for this particular entity, coocurrance of phenotypes is not possible. This still leaves the question of whether the class of biological entities that correspond to the bag of phenotypes is implicitly bounded/limited only to the extrinsic and unspecified experimental conditions, some of which are not and cannot be included in a bag of phenotypes. The way to deal with this when we want to include 2 \'same time\' disjoint phenotypes, is to use a logical phenotype to wrap them with an auxiliary variable that we think accounts for the difference.')
     #graph.add_trip(ontid, rdflib.RDFS.comment, 'The NIF Neuron ontology holds materialized neurons that are collections of phenotypes.')
     #graph.add_trip(ontid, rdflib.OWL.versionInfo, ONTOLOGY_DEF['version'])
     #graph.g.commit()
@@ -940,8 +940,8 @@ def add_phenotypes(graph):
     delayed_p = 'ilxtr:PetillaInitialDelayedSpikingPhenotype'
     #s_spiking_phenotype = 'ilxtr:PetillaSustainedSpikingPhenotype'
     #morpho_phenotype = 'ilxtr:MorphologicalPhenotype'
-    ac_p = 'ilxtr:PetillaSustainedAccomodatingPhenotype'
-    nac_p = 'ilxtr:PetillaSustainedNonAccomodatingPhenotype'
+    ac_p = 'ilxtr:PetillaSustainedAccommodatingPhenotype'
+    nac_p = 'ilxtr:PetillaSustainedNonAccommodatingPhenotype'
     st_p = 'ilxtr:PetillaSustainedStutteringPhenotype'
     ir_p = 'ilxtr:PetillaSustainedIrregularPhenotype'
 
@@ -964,8 +964,8 @@ def add_phenotypes(graph):
     sClass = infixowl.Class(graph.expand(s_spiking_phenotype), graph=graph.g)
     sClass.disjointWith = [iClass]
 
-    graph.add_class(ac_p, s_spiking_phenotype, ('accomodating',), autogen=True)  # FIXME this is silly
-    graph.add_class(nac_p, s_spiking_phenotype, ('non accomodating',), autogen=True)
+    graph.add_class(ac_p, s_spiking_phenotype, ('accommodating',), autogen=True)  # FIXME this is silly
+    graph.add_class(nac_p, s_spiking_phenotype, ('non accommodating',), autogen=True)
     graph.add_class(st_p, s_spiking_phenotype, ('stuttering',), autogen=True)
     graph.add_class(ir_p, s_spiking_phenotype, ('irregular',), autogen=True)
     graph.add_class(morpho_phenotype, neuron_phenotype, autogen=True)
@@ -1178,9 +1178,10 @@ def make_devel():
     olr = auth.get_path('ontology-local-repo')
     n = (olr / 'ttl/generated/neurons')
     fns =('allen-cell-types.ttl',
-          'bolser-lewis.ttl',
+          #'bolser-lewis.ttl',
+          'cut-development.ttl',
           'common-usage-types.ttl',
-          'cut-roundtrip.ttl',
+          #'cut-roundtrip.ttl',
           'huang-2017.ttl',
           'markram-2015.ttl',)
     g = OntConjunctiveGraph()
@@ -1319,7 +1320,7 @@ def make_devel():
     class neuronUtility(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
-        filename = 'neuron-development'
+        filename = 'npo'
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/generated/allen-transgenic-lines.ttl'],
@@ -1359,6 +1360,7 @@ def make_devel():
             if not terms:
                 raise BaseException('WHAT')
 
+            skip = 'TEMPIND', 'npokb'
             while terms:
                 next_terms = []
                 for term in terms:
@@ -1366,6 +1368,9 @@ def make_devel():
                         continue
 
                     done.append(term)
+                    if term.curie and [p for p in skip if term.curie.startswith(p)]:
+                        continue
+
                     if (not term.label or (not term.label.lower().endswith('neuron') and
                                            not term.label.lower().endswith('cell') and
                                            not term.label.lower().endswith('cell outer'))
@@ -1413,7 +1418,7 @@ def make_devel():
     class neuronUtilityBig(Ont):
         remote_base = str(NIFRAW['neurons/'])
         path = 'ttl/'  # FIXME should be ttl/utility/ but would need the catalog file working
-        filename = 'neuron-development-big'
+        filename = 'npo-large'
         name = 'Utility ontology for neuron development'
         imports = (NIFRAW['neurons/ttl/bridge/neuron-bridge.ttl'],
                    NIFRAW['neurons/ttl/bridge/chemical-bridge.ttl'],
@@ -1454,7 +1459,7 @@ def main():
         from neurondm.lang import Config
         from neurondm.compiled.common_usage_types import config as c_config
         cnrns = c_config.neurons()
-        config = Config('common-usage-types-fixed')
+        config = Config('cut-development-fixed')
         nns = [n.asUndeprecated() for n in cnrns]
         config.write()
         config.write_python()

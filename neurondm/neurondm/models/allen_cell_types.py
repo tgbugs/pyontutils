@@ -240,7 +240,9 @@ class AllenCellTypes:
                              prefixes=self.prefixes,
                              branch=self.branch,
                              sources=tuple(),  # TODO insert the link to the query...
-                             source_file=relative_path(__file__))
+                             source_file=relative_path(
+                                 __file__,
+                                 no_wd_value=__file__))
 
     def build_neurons(self):
         instances = []
@@ -307,6 +309,7 @@ class AllenCellTypes:
 
         # TODO aspects.ttl?
         transgenic_lines = simpleOnt(filename='allen-transgenic-lines',
+                                     local_base=graphBase.local_base,
                                      path='ttl/generated/',
                                      prefixes=self.prefixes,
                                      triples=triples,

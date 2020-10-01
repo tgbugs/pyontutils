@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
+from terminaltables import AsciiTable
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -60,6 +61,9 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
 
     if store_file is None:
         _p = 'RUNTIME_CONFIG' if auth._path is None else auth._path
+        # FIXME bad error message, need to check whether the key is even in
+        # the user config, and yes we need our way to update the user config
+        # and warn about unexpected formats for orthauth configs
         msg = (f'No file exists at the path specified by {_auth_var} in {_p}')
         log.debug(auth._runtime_config)
         log.debug(auth.user_config._runtime_config)
@@ -322,11 +326,23 @@ class Row:
         self.sheet = sheet
         self.row_index = row_index
         self.index = self.row_index
+        self._trouble = {}
         for column_index, name in enumerate(self.header):
             def f(ci=column_index):
                 return self.cell_object(ci)
 
-            setattr(self, name, f)
+            if not hasattr(self, name):
+                setattr(self, name, f)
+            else:
+                self._trouble[name] = f
+
+    def ___getattr__(self, attr):
+        # doesn't work
+        if attr in self._trouble:
+            return self._trouble[attr]
+        else:
+            #return super().__getattr__(attr)
+            return getattr(self, attr)
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
@@ -347,8 +363,12 @@ class Row:
     @property
     def header(self):
         # FIXME normalized vs unnormalized
-        if not self.sheet.values:
-            return []
+        try:
+            if not self.sheet.values:
+                return []
+        except AttributeError as e:
+            breakpoint()
+            raise e
 
         return [python_identifier(v)
                 for v in self.sheet.values[0]
@@ -408,12 +428,24 @@ class Column:
         self.sheet = sheet
         self.column_index = column_index
         self.index = self.column_index
+        self._trouble = {}
         if self.sheet.index_columns:  # FIXME primary key for row ???
             for row_index, name in enumerate(self.header):
                 def f(ri=row_index):
                     return self.cell_object(ri)
 
-                setattr(self, name, f)
+                if not hasattr(self, name):
+                    setattr(self, name, f)
+                else:
+                    self._trouble[name] = f
+
+    def ___getattr__(self, attr):
+        # doesn't work
+        if attr in self._trouble:
+            return self._trouble[attr]
+        else:
+            #return super().__getattr__(attr)
+            return getattr(self, attr)
 
     def __repr__(self):
         changed = ('+' if self in self.sheet._uncommitted_appends
@@ -510,6 +542,7 @@ class Sheet:
         # TODO can probably unify these since can dispatch on Cell/Row
         self._uncommitted_updates = {}
         self._uncommitted_appends = {}
+        self._uncommitted_extends = {}
         self._uncommitted_deletes = {}
         self._incomplete_removes = {}  # different than deletes for now
 
@@ -731,7 +764,7 @@ class Sheet:
         return [self.row_object(i) for i, _ in enumerate(self.values)]
 
     def columns(self):
-        return [self._column_object(i) for i, _ in enumerate(self.values[0])]
+        return [self.column_object(i) for i, _ in enumerate(self.values[0])]
 
     @property
     def cells(self):
@@ -898,6 +931,8 @@ class Sheet:
             raise ValueError('There are no uncommitted changes to roll back!')
 
         raise NotImplementedError('TODO')
+        # remove any explicit extensions
+        self._uncommitted_extends = {}  # TODO also deletes
         # remove the new rows
         self._uncommitted_appends = {}
         # restore the previous rows
@@ -971,11 +1006,13 @@ class Sheet:
             return
 
         data = []
+        extend_objects = []
         for oclass in (Row, Column):
             objects = sorted((o for o in self._uncommitted_appends
                               if isinstance(o, oclass)),
                              key=lambda o: o.index)
             if objects:
+                extend_objects.extend(objects)
                 blob = dict(
                     range = self._appendRange(objects),
                     values = [sigh(o.values) for o in objects],  # FIXME object -> string issue
@@ -984,6 +1021,10 @@ class Sheet:
                 data.append(blob)
                 # FIXME overlapping cells are added twice
 
+        # sheet updates
+        self._commit_extends(extend_objects)
+
+        # value updates
         body = {'valueInputOption': 'USER_ENTERED',
                 'data': data,}
 
@@ -992,6 +1033,37 @@ class Sheet:
                 .execute())
 
         self._uncommitted_appends = {}
+
+    def _commit_extends(self, objects=None):
+        if not self._uncommitted_extends and not objects:
+            return
+
+        # TODO columns ?
+
+        if not objects:
+            objects = sorted(self._uncommitted_extends, key=lambda o: o.index)
+
+        # FIXME there are some seriously nasty concurrency issues lurking here
+
+        sid = self.sheetId()
+        data = [
+            {'insertDimension': {
+                'inheritFromBefore': True,
+                'range': {
+                    'sheetId': sid,
+                    'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',
+                    'startIndex': object.index,
+                    'endIndex': object.index + 1,  # have to delete at least one whole row
+                }}}
+            for object in objects]
+
+        body = {'requests': data}
+        resp = (self._spreadsheet_service
+                .batchUpdate(spreadsheetId=self._sheet_id(), body=body)
+                .execute())
+
+        if self._uncommitted_extends:
+            self._uncommitted_extends = {}
 
     def _commit_updates(self):
         data = [{'range': cell.range, 'values': [[cell._value_str]]}
@@ -1070,3 +1142,17 @@ class Sheet:
                     raise NotImplementedError('Unhandled type {type(k)}')
 
         self._stash = None
+
+    @property
+    def title(self):
+        if not hasattr(self, '_metadata'):
+            self.metadata()
+
+        return self._meta['properties']['title'] + ' sheet ' + self.sheet_name
+
+    def asPretty(self, limit=30):
+        rows = [[c[:limit] + ' ...' if isinstance(c, str)
+                 and len(c) > limit else c
+                 for c in r] for r in self.values]
+        table = AsciiTable(rows, title=self.title)
+        return table.table

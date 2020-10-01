@@ -95,7 +95,7 @@ class TestOboIo(unittest.TestCase):
         ]
         tvpairs = [oio.TVPair(tag=t, value=v) for t, v in tags_values]
         of.header.add(*tvpairs)
-        tv = str(of)
+        tv = of.asObo()
         assert len(tv.split(test_tag)) > 2, tv
 
     def test_property_value_bug(self):

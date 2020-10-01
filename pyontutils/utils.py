@@ -67,6 +67,14 @@ def isoformat_safe(datetime_instance, timespec='auto'):
     unsafe = isoformat(datetime_instance, timespec)
     return unsafe.replace('-', '').replace(':', '')
 
+
+def timeformat_friendly(datetime_instance, timespec='auto'):
+    """ a not quite iso format that is file system safe
+        to reach isoformat remove all dashes"""
+    unsafe = isoformat(datetime_instance, timespec)
+    return unsafe.replace(':', '')
+
+
 def NOWDANGER(*, implicit_tz=None, timespec='auto'):
     """ now without a timezone, if you use this you WILL encounter
         a problem at some point in the future because the actual
@@ -187,7 +195,7 @@ def stack_magic(stack):
             if '__builtins__' in fl:
                 #print('globals found at', i)
                 return fl
-    elif in_notebook or in_ipython or in_test:
+    elif in_notebook or in_ipython or in_test or '_run_module_as_main' in function_names:
         index = 1  # this seems to work for now
     elif function_names.count('main') >= 2:
         # FIXME this is a hack that only works
@@ -347,14 +355,18 @@ def refile(script__file__, path):
     return str(Path(script__file__).parent / path)
 
 
-def relative_path(script__file__):
+def relative_path(script__file__, no_wd_value=None):
     # FIXME will break outside of subfolders of working_dir neuron_models folder ...
     working_dir = get_working_dir(script__file__)
+    if working_dir is None and no_wd_value is not None:
+        return no_wd_value
+
     rpath = (Path(script__file__).
              resolve().
              relative_to(working_dir.
                          resolve()).
              as_posix())
+
     return rpath
 
 

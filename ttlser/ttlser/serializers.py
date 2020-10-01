@@ -252,7 +252,12 @@ class CustomTurtleSerializer(TurtleSerializer):
 
     @classmethod
     def addTopClasses(cls, *uris):
-        for uri in uris:
+        """ add rdf:type objects to the list of top classes in order
+            such that the first uri in the list will appear first
+            note that sequential calls to this class always add in
+            such a way that the latest call always appears first in
+            the file """
+        for uri in reversed(uris):
             if uri not in cls.topClasses:
                 cls.topClasses = [uri] + cls.topClasses
                 cls.SECTIONS = ('',) + cls.SECTIONS

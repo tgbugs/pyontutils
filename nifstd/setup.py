@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from setuptools import setup
 
 
@@ -31,6 +32,8 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     keywords='nif nifstd ontology pyontutils neuroscience',
     packages=['nifstd_tools'],
@@ -44,7 +47,7 @@ setup(
         'networkx',
         'psutil',
         'pymysql',
-        'pyontutils>=0.1.23',
+        'pyontutils>=0.1.26',
         'sqlalchemy',
     ],
     extras_require={'dev': ['mysql-connector',
@@ -65,5 +68,8 @@ setup(
         ],
     },
     data_files=[('share/nifstd/resources/sparc_term_versions/',
-                 ['resources/sparc_term_versions/sparc_terms2-mod.txt'])]
-)
+                 ['resources/sparc_term_versions/sparc_terms2-mod.txt']),
+                ('share/nifstd/resources/',
+                 [p.as_posix() for p in Path('resources').iterdir()
+                  if p.is_file() and p.suffix[1:] not in
+                  ('confd', 'rc', 'service', 'socket', 'tmp', 'spec')],)])

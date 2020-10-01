@@ -12,7 +12,7 @@ Options:
     -a --api=API                API endpoint to build from  [default: {auth.get('scigraph-api')}]
     -v --scigraph-version=VER   API docs version            [default: 2]
 
-    -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/scigraph]
+    -b --basepath=BASEPATH      alternate default basepath  [default: https://scicrunch.org/api/1/sparc-scigraph]
     -d --dynamic=<PATH>         additional servers to search for dynamic endpoints
 
 """
@@ -915,10 +915,14 @@ def main():
     from docopt import parse_defaults
     defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
     args = docopt(__doc__, version='scigraph-codegen 1.0.0')
+    ssd = 'https://scicrunch.org/swagger-docs'
     if args['--api'] == defaults['--basepath']:
-        args['--api'] = 'https://scicrunch.org/swagger-docs'
+        args['--api'] = ssd
 
-    if args['--api'] == 'https://scicrunch.org/swagger-docs':
+    if args['--api'] == 'https://scicrunch.org/api/1/scigraph':
+        args['--api'] = ssd
+
+    if args['--api'] == ssd:
         State2.path_prefix = '/scigraph'
 
     output_file, api, version, basepath = (

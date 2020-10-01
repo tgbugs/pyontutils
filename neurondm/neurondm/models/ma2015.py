@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.7
 
 from pathlib import Path
+import rdflib
 from pyontutils.utils import rowParse, relative_path
 from pyontutils.namespaces import ilxtr
 from neurondm.lang import *
@@ -19,9 +20,8 @@ class table1(rowParse):
 
     def __init__(self, *args, **kwargs):
         with BBP:
-            self._context = Neuron(Rat, S1, INT, GABA)
-
-        super().__init__(*args, **kwargs)
+            self._context = Neuron(Rat, S1, Interneuron, GABA)
+            super().__init__(*args, **kwargs)
 
     def Morphological_type(self, value):
         syn, abrv = value.split(' (')
@@ -30,6 +30,8 @@ class table1(rowParse):
         # print((syn, abrv))
         self._mtype = BBP[abrv]
 
+        self._m_syn = syn
+        self._m_abrev = abrv
         return self._mtype
 
     def Other_morphological_classifications(self, value):
@@ -102,18 +104,17 @@ class table1(rowParse):
         return self._moltypes
 
     def Electrical_types(self, value):  # FIXME these are mutually exclusive types, so they force the creation of subClasses so we can't apply?
-        with BBP:
-            e_map = {
-                'b':b,
-                'c':c,
-                'd':d,
-            }
-            l_map = {
-                'AC':AC,
-                'NAC':NAC,
-                'STUT':STUT,
-                'IR':IR,
-            }
+        e_map = {
+            'b':b,
+            'c':c,
+            'd':d,
+        }
+        l_map = {
+            'AC':AC,
+            'NAC':NAC,
+            'STUT':STUT,
+            'IR':IR,
+        }
 
         values = value.split(self._sep)
         self._etypes = []
@@ -129,10 +130,9 @@ class table1(rowParse):
         return self._etypes
 
     def Other_electrical_classifications(self, value):
-        with BBP:
-            valid_mappings = {'Fast spiking':FS,
-                              'Non-fast spiking':NegPhenotype(FS),  # only in this very limited context
-                              'Regular spiking non-pyramidal':RSNP}
+        valid_mappings = {'Fast spiking':FS,
+                          'Non-fast spiking':NegPhenotype(FS),  # only in this very limited context
+                          'Regular spiking non-pyramidal':RSNP}
 
         values = value.split(self._sep)
         self._other_etypes = []
@@ -144,6 +144,11 @@ class table1(rowParse):
 
     def _row_post(self):
         with self._context:
+            n = NeuronMarkram2015(self._mtype,
+                                  *[m.asEntailed() for m in self._moltypes],
+                                  label=self._m_syn)
+            n.abbrevs = [rdflib.Literal(self._m_abrev)]
+
             for etype in self._etypes:
                 NeuronMarkram2015(etype, self._mtype, *self._other_etypes, *self._moltypes)
 
@@ -159,10 +164,11 @@ class table1(rowParse):
 def main():
     import csv
     from neurondm.core import auth
-    with open((auth.get_path('resources') / '26451489 table 1.csv').as_posix(), 'rt') as f:
+    with open(auth.get_path('resources') / '26451489 table 1.csv', 'rt') as f:
         rows = [list(r) for r in zip(*csv.reader(f))]
 
-    config = Config('markram-2015', source_file=relative_path(__file__))
+    config = Config('markram-2015',
+                    source_file=relative_path(__file__, no_wd_value=__file__))
     table1(rows)
     return config,
 
@@ -170,4 +176,5 @@ def main():
 __globals__ = globals()  # fuck you python
 
 if __name__ == '__main__':
-    main()
+    with BBP:
+        main()

@@ -21,7 +21,6 @@ import ontquery as oq
 import augpathlib as aug
 import requests
 import htmlfn as hfn
-from joblib import Parallel, delayed
 from rdflib.extras import infixowl
 from ttlser import CustomTurtleSerializer, natsort
 from ttlser.utils import regjsonld
@@ -78,6 +77,7 @@ def standard_checks(graph):
 
 def build(*onts, fail=False, n_jobs=9, write=True):
     """ Set n_jobs=1 for debug or embed() will crash. """
+    from joblib import Parallel, delayed  # importing in here saves 150ms
     tail = lambda:tuple()
     lonts = len(onts)
     if lonts > 1:
@@ -128,39 +128,41 @@ def populateFromJsonLd(graph, path_or_blob):
 
         return _lu[blob['type']](blob['value'], **kwargs)
 
-    if isinstance(path_or_blob, dict):
-        # FIXME this whole branch is so dumb
-        close_it = True
-        j = path_or_blob
-        fd, _path = tempfile.mkstemp()
-        path = Path(_path)
-        with open(path, 'wt') as f:
-            json.dump(j, f)
-    else:
-        close_it = False
-        path = path_or_blob
-        with open(path, 'rt') as f:
-            j = json.load(f)
+    fd = None
+    try:
+        if isinstance(path_or_blob, dict):
+            # FIXME this whole branch is so dumb
+            close_it = True
+            j = path_or_blob
+            fd, _path = tempfile.mkstemp()
+            path = Path(_path)
+            with open(path, 'wt') as f:
+                json.dump(j, f)
+        else:
+            path = path_or_blob
+            with open(path, 'rt') as f:
+                j = json.load(f)
 
-    #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
-    def triples():
-        for dt in blob['@default']:
-            yield tuple(convert_element(e) for e in
-                        (dt['subject'], dt['predicate'], dt['object']))
+        #blob = jsonld.to_rdf(j)  # XXX this seems completely broken ???
+        def triples():
+            for dt in blob['@default']:
+                yield tuple(convert_element(e) for e in
+                            (dt['subject'], dt['predicate'], dt['object']))
 
-    proc = jsonld.JsonLdProcessor()
-    ctx = proc.process_context(proc._get_initial_context({}),
-                               j['@context'], {})
-    # FIXME how to deal with non prefixed cases like definition
-    curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
-              v['_prefix']}
-    graph.namespace_manager.populate_from(curies)
-    #graph.populate_from_triples(triples())  # pyld broken above
-    graph.parse(path, format='json-ld')
+        proc = jsonld.JsonLdProcessor()
+        ctx = proc.process_context(proc._get_initial_context({}),
+                                j['@context'], {})
 
-    if close_it:
-        os.close(fd)
-        path.unlink()
+        # FIXME how to deal with non prefixed cases like definition
+        curies = {k:v['@id'] for k, v in ctx['mappings'].items() if
+                v['_prefix']}
+        graph.namespace_manager.populate_from(curies)
+        #graph.populate_from_triples(triples())  # pyld broken above
+        graph.parse(path, format='json-ld')
+    finally:
+        if fd is not None:
+            os.close(fd)
+            path.unlink()
 
     return graph
 
@@ -401,6 +403,25 @@ class OntMetaIri(OntMeta, OntIdIri):
     def _data(self, yield_response_gen=False):
         yield from self.data_next(yield_response_gen=yield_response_gen)
 
+    def _process_resp_zip(self, resp, file):
+        # FIXME since the resp is already closed here
+        # need to prevent double close issuse below
+        self._progenitors['stream-http-response'] = resp
+        self.headers = resp.headers  # XXX I think this is right ?
+        # FIXME obvious issue here is if the content length is the
+        # same but the checksum differs, e.g. due to single char fixes
+        # though for zipped content that seems unlikely given all the
+        # metadata that a zipfile embeds
+        # some sources do provide an etag might help?
+        if 'Content-Length' in resp.headers:  # WHY U DO DIS!??!!
+            content_length = int(resp.headers['Content-Length'])
+        else:
+            # apparently the chebi server doesn't returen content length on some requests !?
+            content_length = object()
+
+        if not file.exists() or file.size != content_length:
+            file.data = resp.iter_content(chunk_size=file.chunksize)
+
     def data_next(self, *, send_type=None, send_head=None, send_meta=None, send_data=None,
                   conventions_type=None,  # expect header detection conventions
                   # FIXME probably all we need are
@@ -424,23 +445,7 @@ class OntMetaIri(OntMeta, OntIdIri):
             cache_dir.mkdir(exist_ok=True, parents=True)
             file = aug.LocalPath(cache_dir / id_hash)
             with self._get(send_data=send_data) as resp:
-                # FIXME since the resp is already closed here
-                # need to prevent double close issuse below
-                self._progenitors['stream-http'] = resp
-                self.headers = resp.headers  # XXX I think this is right ?
-                # FIXME obvious issue here is if the content length is the
-                # same but the checksum differs, e.g. due to single char fixes
-                # though for zipped content that seems unlikely given all the
-                # metadata that a zipfile embeds
-                # some sources do provide an etag might help?
-                if 'Content-Length' in resp.headers:  # WHY U DO DIS!??!!
-                    content_length = int(resp.headers['Content-Length'])
-                else:
-                    # apparently the chebi server doesn't returen content length on some requests !?
-                    content_length = object()
-
-                if not file.exists() or file.size != content_length:
-                    file.data = resp.iter_content(chunk_size=file.chunksize)
+                self._process_resp_zip(resp, file)
 
             self._progenitors['path'] = file
 
@@ -459,7 +464,7 @@ class OntMetaIri(OntMeta, OntIdIri):
 
                 if len(matching_members) != 1:
                     # TODO
-                    raise ValueError(matching_memebers)
+                    raise ValueError(matching_members)
 
                 member = matching_members[0]
                 self._progenitors['path-compressed'] = member  # ok to include a tuple here I think ...
@@ -486,7 +491,7 @@ class OntMetaIri(OntMeta, OntIdIri):
                 # it really is a file like instead of the resp.iter_content
                 # case that we deal with here
                 gen = filelike_to_generator(filelike)
-                self._progenitors['stream-generator'] = gen  # NOTE reproductible progenitors only
+                self._progenitors['stream-generator'] = gen  # NOTE reproducible progenitors only
 
             else:
                 raise BaseException('WHAT HATH THOU PROSECUTED SIR!?')
@@ -499,6 +504,21 @@ class OntMetaIri(OntMeta, OntIdIri):
             filelike = None
             gen = resp.iter_content(chunk_size=4096)
 
+        yield from self._data_from_generator(
+            resp,
+            filelike,
+            gen,
+            conventions_type,
+            yield_response_gen,
+        )
+
+    def _data_from_generator(self,
+                             resp,
+                             filelike,
+                             gen,
+                             conventions_type,
+                             yield_response_gen,
+                             ):
         first = next(gen)
         # TODO better type detection
 
@@ -744,6 +764,9 @@ class OntIdPath(OntRes):
     # should OntResIri be an instrumented iri?
     def __init__(self, path):
         # FIXME type caste?
+        if not isinstance(path, Path):
+            path = aug.AugmentedPath(path)
+
         self.path = path
 
     @property
@@ -766,6 +789,22 @@ class OntIdPath(OntRes):
 class OntMetaPath(OntIdPath, OntMeta):
     data = OntMetaIri.data
     _data = OntMetaIri._data
+    _data_from_generator = OntMetaIri._data_from_generator
+
+    def data_next(self, *, send_type=None, send_head=None, send_meta=None,
+                  send_data=None, conventions_type=None, yield_response_gen=False):
+        self._progenitors = {}
+        self._progenitors['path'] = self.path
+        resp = self._get()
+        filelike = None
+        gen = resp.iter_content(chunk_size=4096)
+        yield from self._data_from_generator(
+            resp,
+            filelike,
+            gen,
+            conventions_type,
+            yield_response_gen,
+        )
 
 
 class OntResPath(OntIdPath, OntResOnt):
@@ -773,6 +812,7 @@ class OntResPath(OntIdPath, OntResOnt):
 
     _metadata_class = OntMetaPath
     data = OntResIri.data
+    data_next = OntResIri.data_next
 
     _populate = OntResIri._populate  # FIXME application/rdf+xml is a mess ... cant parse streams :/
 
@@ -842,6 +882,7 @@ class OntMetaGit(OntIdGit, OntMeta):
     data = OntMetaIri.data
     _data = OntMetaIri._data
     data_next = OntMetaIri.data_next
+    _data_from_generator = OntMetaIri._data_from_generator
 
 
 class OntResGit(OntIdGit, OntResOnt):
@@ -1155,6 +1196,7 @@ class OntGraph(rdflib.Graph):
 
     @property
     def ttl(self):
+        #breakpoint()  # infinite loop inside somehow
         out = self.serialize(format='nifttl').decode()
         return out
 
@@ -1166,6 +1208,7 @@ class OntGraph(rdflib.Graph):
     def debug(self):
         """ don't call this from other code
             you won't be able to find the call site """
+        #breakpoint()  # infinite loop
         print(self.ttl)
 
     def matchNamespace(self, namespace, *, ignore_predicates=tuple()):
@@ -1290,6 +1333,26 @@ class OntGraph(rdflib.Graph):
         for s in self.subjects():
             if isinstance(s, rdflib.URIRef):
                 yield s
+
+    def mapStableIdentifiers(self, other_graph, predicate):
+        """ returns a new graph the is the result of mapping
+            idenitifers between graphs using a predicate that points to
+            objects that are known to be stable independent of changes to
+            automatically generated identifiers
+
+            the other graph is taken as the source of the identifiers that
+            will be used in the new graph """
+
+        gen = ((s, ilxtr.hasTemporaryId, temp_s)
+               for s, o in other_graph[:predicate:]
+               for temp_s in self[:predicate:o])
+
+
+        add_replace_graph = self.__class__()
+        add_replace_graph.populate_from_triples(gen)
+        new_self = self._do_add_replace(add_replace_graph)
+        new_self.namespace_manager.populate_from(self).populate_from(other_graph)
+        return new_self
 
     def subjectsRenamed(self, other_graph):
         """ find subjects where only the id has changed """
@@ -1442,6 +1505,11 @@ class OntGraph(rdflib.Graph):
         # against a global index
         # TODO detect use of likely non-unique suffixes in temp namespaces
         [add_replace_graph.add(t) for t in not_replaced]
+        new_self = self._do_add_replace(add_replace_graph)
+        new_self.namespace_manager.populate_from(index_graph)
+        return new_self
+
+    def _do_add_replace(self, add_replace_graph):
         add_only_graph, remove_graph, same_graph = self.diffFromReplace(add_replace_graph)
 
         # the other semantics that could be used here
@@ -1454,8 +1522,6 @@ class OntGraph(rdflib.Graph):
         [new_self.add(t) for t in add_replace_graph]
         [new_self.add(t) for t in add_only_graph]
         [new_self.add(t) for t in same_graph]
-
-        new_self.namespace_manager.populate_from(index_graph)
         return new_self
 
     def identity(self, cypher=None):
@@ -1642,7 +1708,7 @@ class OntGraph(rdflib.Graph):
 
 class OntConjunctiveGraph(rdflib.ConjunctiveGraph, OntGraph):
     def __init__(self, *args, store='default', identifier=None, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, store=store, identifier=identifier, **kwargs)
         # overwrite default context with our subclass
         self.default_context = OntGraph(store=self.store,
                                         identifier=identifier or rdflib.BNode())
@@ -2124,19 +2190,26 @@ class OntTerm(oq.OntTerm, OntId):
     def atag(self, curie=False, **kwargs):
         return hfn.atag(self.iri, self.curie if curie else self.label, **kwargs)  # TODO schema.org ...
 
+    @classmethod
+    def _sinit(cls):
+        """ set up services for a particular OntTerm class or subclass
+        calling this more than once may produce unexpected results """
+        SGR = oq.plugin.get('SciGraph')
+        IXR = oq.plugin.get('InterLex')
+        #sgr.verbose = True
+        for rc in (SGR, IXR):
+            rc.known_inverses += (
+                ('hasPart:', 'partOf:'),
+                ('NIFRID:has_proper_part', 'NIFRID:proper_part_of'))
 
-SGR = oq.plugin.get('SciGraph')
-IXR = oq.plugin.get('InterLex')
-#sgr.verbose = True
-for rc in (SGR, IXR):
-    rc.known_inverses += ('hasPart:', 'partOf:'), ('NIFRID:has_proper_part', 'NIFRID:proper_part_of')
+        sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
+        ixr = IXR(readonly=True)
+        ixr.Graph = OntGraph
+        cls.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
+        [cls.repr_level(verbose=False) for _ in range(2)]
 
-sgr = SGR(apiEndpoint=auth.get('scigraph-api'))
-ixr = IXR(apiEndpoint=None, readonly=True)
-#ixr.port = None
-ixr.Graph = OntGraph
-OntTerm.query_init(sgr, ixr)  # = oq.OntQuery(sgr, ixr, instrumented=OntTerm)
-[OntTerm.repr_level(verbose=False) for _ in range(2)]
+
+OntTerm._sinit()
 query = oq.OntQueryCli(query=OntTerm.query)
 
 
@@ -2144,6 +2217,7 @@ class IlxTerm(OntTerm):
     skip_for_instrumentation = True
 
 
+ixr = query.services[-1]  # FIXME this whole approach seems bad and wrong
 IlxTerm.query = oq.OntQuery(ixr, instrumented=OntTerm)  # This init pattern still works if you want to mix and match
 ilxquery = oq.OntQueryCli(query=IlxTerm.query)
 
@@ -2382,8 +2456,7 @@ class Source(tuple):
                     if cls.sourceFile is not None:
                         file = cls.repo_path / cls.sourceFile
                         if not dry_run:  # dry_run means data may not be present
-                            file_commit = cls.repo_path.latest_commit().hexsha
-                            #file_commit = next(cls.repo.iter_commits(paths=file.as_posix(), max_count=1)).hexsha
+                            file_commit = next(cls.repo.iter_commits(max_count=1)).hexsha
                             commit_path = os.path.join('blob', file_commit, cls.sourceFile)
                             print(commit_path)
                             if 'github' in cls.source:
@@ -2407,7 +2480,11 @@ class Source(tuple):
                 cls.source = aug.RepoPath(cls.source)
                 try:
                     cls.source.repo
-                    file_commit = cls.source.latest_commit()
+                    try:
+                        file_commit = next(cls.source.repo.iter_commits(max_count=1)).hexsha
+                    except StopIteration:
+                        file_commit = None
+
                     if file_commit is not None:
                         cls.iri = rdflib.URIRef(cls.iri_prefix_wdf.format(file_commit=file_commit)
                                                 + cls.source.repo_relative_path.as_posix())
@@ -2594,8 +2671,19 @@ class Ont:
                 if isinstance(self.source_file, aug.RepoPath):
                     working_dir = self.source_file.working_dir
                     if working_dir is not None:
-                        commit = str(self.source_file.latest_commit())
+                        # this can fail on new repo
+                        commit = next(self.source_file.repo.iter_commits(max_count=1)).hexsha
+                        #str(self.source_file.latest_commit())
                         uri = self.source_file.remote_uri_human(ref=commit)
+                        # we always want the latest commit for the repo
+                        # but when checking if a file should be marked as
+                        # dirty/uncommitted we only check the file itself
+                        # because there can be other files that linger in
+                        # uncommitted states that are completely unrelated
+                        # the _right_ thing to do would be to trace the
+                        # import chain, but that is a major TODO not quick
+                        #t = self.source_file.repo.head.commit.tree
+                        #diff = self.source_file.repo.git.diff(t)
                         diff = self.source_file.has_uncommitted_changes()
                         if diff:
                             uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
@@ -2609,8 +2697,12 @@ class Ont:
                 file = file.resolve().resolve()
                 working_dir = file.working_dir
                 if working_dir is not None:
-                    commit = str(file.latest_commit())
+                    # this can fail on new repo
+                    commit = next(file.repo.iter_commits(max_count=1)).hexsha
+                    #str(file.latest_commit())
                     uri = file.remote_uri_human(ref=commit) + line
+                    #t = file.repo.head.commit.tree
+                    #diff = file.repo.git.diff(t)
                     diff = file.has_uncommitted_changes()
                     if diff:
                         uri = uri.replace(commit, f'uncommitted@{commit[:8]}')
@@ -2804,6 +2896,7 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
               comment=None,
               path='ttl/',
               branch='master',
+              local_base=None,
               fail=False,
               _repo=True,
               write=False,
@@ -2827,6 +2920,9 @@ def simpleOnt(filename=f'temp-{UTCNOW()}',
     Simple.comment = comment
     Simple.imports = imports
     Simple.prefixes = dict(uPREFIXES)
+    if local_base is not None:
+        Simple.local_base = local_base
+
     if prefixes:
         Simple.prefixes.update({k:str(v) for k, v in prefixes.items()})
 

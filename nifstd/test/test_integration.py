@@ -14,6 +14,7 @@ skip = tuple()
 ci_skip = (
     'cocomac_uberon',  # lookups too slow when using remote scigraph
     'chebi_bridge',  # too slow generally
+    'parcellation',  # too slow
 )
 network_tests = (  # reminder that these only skip mains
     'methods',
@@ -29,7 +30,7 @@ mains = {'methods': None,
          'gen_nat_models': None,
          'cocomac_uberon': None,  # needs entity_mapping
          'ontree': ['ontree', '--test'],
-         'parcellation': ['parcellation', '--jobs', '1'],
+         'parcellation': ['parcellation', '--jobs', '9'],
          'scr_sync': ['registry-sync', '--test'],
         }
 

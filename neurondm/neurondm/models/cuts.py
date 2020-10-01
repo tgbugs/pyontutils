@@ -56,6 +56,14 @@ rename_rules = {'Colliculus inferior': 'Inferior colliculus',
                 #'Neocortex layer 5 pyramidal cell':  # TODO layer 5-6??
                 'Hippocampus CA2 Basket cell': 'Hippocampus CA2 basket cell broad',
                 'Neocortex layer 4 spiny stellate cell': 'Neocortex stellate layer 4 cell',
+
+                # some of the missing neurolex neurons, this mapping doesn't quite work, but is correct
+                'Neostriatum Neurogliaform cell': 'Striatum neurogliaform cell',
+                'Neostriatum SOM/NOS cell': 'Striatum somatostatin positive nitric oxide synthase cell',
+                'Neostriatum cholinergic cell': 'Striatum cholinergic cell',
+                'Neostriatum gaba/parvalbumin interneuron': 'Striatum parvalbumin interneuron',
+                #Neostriatum direct pathway spiny neuron: Striatum medium spiny neuron,
+                #Neostriatum indirect pathway spiny neuron: Striatum medium spiny neuron,
 }
 
 
@@ -149,6 +157,7 @@ def make_contains_rules():
         'Retroambiguous nucleus': OntTerm('UBERON:0016848', label='retroambiguus nucleus').asPhenotype(),  # spelling ...
         'Trigeminal nerve motor nucleus': OntTerm('UBERON:0002633', label='motor nucleus of trigeminal nerve').asPhenotype(),  # had to cook up my search function to find this
         'Trigeminal nerve principal sensory nucleus': OntTerm('UBERON:0002597', label='principal sensory nucleus of trigeminal nerve').asPhenotype(),  # had to go to wikipedia for this one, and no amount of tweaking seems to help scigraph (sigh)
+        'Pontine nuclei': OntTerm('UBERON:0002151', label='pontine nuclear group').asPhenotype(),  # pontine nuclei has a search collision in scigraph with UBERON:0002597 likely due to inclusion of overly broad synonyms on UBERON:0002597
         'Basolateral amygdalar complex': OntTerm('UBERON:0006107', label='basolateral amygdaloid nuclear complex').asPhenotype(),  # oof
         'Amygdala lateral': OntTerm('UBERON:0002886', label='lateral amygdaloid nucleus').asPhenotype(),  # conclusion: scigraph cannot handle reordering
         'Globus pallidus ventral': OntTerm('UBERON:0002778', label='ventral pallidum').asPhenotype(),
@@ -315,7 +324,13 @@ def get_smatch(labels_set2):
     for l in labels_set2:
         pes = tuple()
         l_rem = l
-        for match, pheno in contains_rules.items():
+        for match, pheno in sorted(contains_rules.items(), key=lambda ab:-len(ab[0])):
+            if not l_rem:
+                break
+
+            if len(match) > len(l_rem):
+                continue
+
             t = None
             if match not in skip and pheno == OntTerm:
                 try:
@@ -450,7 +465,7 @@ def main():
     ndl_neurons = sorted(ndl_config.neurons())
 
     resources = auth.get_path('resources')
-    cutcsv = resources / 'common-usage-types.csv'
+    cutcsv = resources / 'cut-development.csv'
     with open(cutcsv.as_posix(), 'rt') as f:
         rows = [l for l in csv.reader(f)]
 
@@ -517,14 +532,14 @@ def main():
     snlx_labels = set(nlx_labels)
 
     class SourceCUT(resSource):
-        sourceFile = 'nifstd/resources/common-usage-types.csv'  # FIXME relative to git workingdir...
+        sourceFile = 'nifstd/resources/cut-development.csv'  # FIXME relative to git workingdir...
         source_original = True
 
     sources = SourceCUT(),
     swanr = rdflib.Namespace(interlex_namespace('swanson/uris/readable/'))
     SWAN = interlex_namespace('swanson/uris/neuroanatomical-terminology/terms/')
     SWAA = interlex_namespace('swanson/uris/neuroanatomical-terminology/appendix/')
-    config = Config('common-usage-types-raw', sources=sources, source_file=relative_path(__file__),
+    config = Config('cut-development-raw', sources=sources, source_file=relative_path(__file__),
                     prefixes={'swanr': swanr,
                               'SWAN': SWAN,
                               'SWAA': SWAA,})
@@ -548,7 +563,7 @@ def main():
     # even though we are in theory tripling number of neurons in the current config graph
     # it won't show up in the next config (and this is why we need to reengineer)
     raw_neurons_ind_undep = [n.asUndeprecated().asIndicator() for n in raw_neurons]
-    config = Config('common-usage-types', sources=sources, source_file=relative_path(__file__),
+    config = Config('cut-development', sources=sources, source_file=relative_path(__file__),
                     prefixes={'swanr': swanr,
                               'SWAN': SWAN,
                               'SWAA': SWAA,})

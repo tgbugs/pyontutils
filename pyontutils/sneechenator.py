@@ -459,7 +459,7 @@ class Sneechenator:
         #namespaces = [derp(p) for p in prefixes]  # FIXME prefix vs namespace
         rg, maybe_sneeches = self.sneechReviewGraph(source_graph, namespaces,  sneech_file, path_out)
         # TODO I think we commit here ?
-        #breakpoint()
+        breakpoint()
 
     def CONTINUE(self, path_sneech_file):
         pass
@@ -661,9 +661,9 @@ class InterLexSneechenator(Sneechenator):
 
 def test():
     snchf = SnchFile.fromYaml('../test/sneech-file.yaml')
-    snchf.write(aug.RepoPath('../test/').resolve())
+    snchf.writeTtl(aug.RepoPath('../test/rando-sneech-ttl.ttl').resolve())
     rp = aug.RepoPath(auth.get_path('ontology-local-repo'))
-    wrangler = SneechWrangler()
+    wrangler = SneechWrangler(aug.RepoPath('~/git/sneechenator').expanduser())
     dir_snchn = wrangler.dir_process / 'test-sneechening'
     if not dir_snchn.exists():  # FIXME bad workflow
         dir_snchn.mkdir()
