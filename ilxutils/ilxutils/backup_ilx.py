@@ -1,13 +1,7 @@
 from pathlib import Path as p
-from interlex_sql import IlxSql
-# from tools import create_pickle
-import pickle
+from ilxutils.interlex_sql import IlxSql
+from ilxutils.tools import create_pickle
 import os
-
-
-def create_pickle(data, outfilename):
-    with open(outfilename, 'wb') as outfile:
-        pickle.dump(data, outfile)
 
 
 sql = IlxSql(db_url=os.environ.get('SCICRUNCH_DB_URL_PRODUCTION'))
