@@ -160,6 +160,7 @@ and copy the sections into [[file:${HOME}/.ssh/config][your ssh config file]].
 
 If you are deploying to an aws server (e.g. aws-scigraph or aws-scigraph-data),
 the =IdentityFile= entry must point to a key that has admin access via the aws console.
+# NOTE it seems that Host * settings fail on windows ?!??!
 #+begin_src ssh-config :noweb yes :tangle ~/.ssh/config.scigraph.example
 # enable connection multiplexing for all hosts
 Host *
@@ -1474,7 +1475,7 @@ local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
 local KEYNAME=${KEYNAME:-${KEYNAME_DEFAULT}}
 local KEYTYPE=ed25519  # this is hardcoded for now
 KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
-SUDO_OR_SU='$(command -v sudo && echo sudo ${0} -c || echo For su on ${HOSTNAME} 1>& 2; echo su -c)'
+SUDO_OR_SU='$(command -v sudo 1>& 2 && echo sudo ${0} -c || { echo For su on ${HOSTNAME} 1>& 2; echo su -c; })'
 #+end_src
 
 #+name: ssh-functions
