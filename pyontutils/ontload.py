@@ -586,7 +586,7 @@ def loadall(git_local, repo_name, local=False, dobig=False):
 
     done = []
     git_path = '/home/tmsincomb/Dropbox/git/'
-    hardcoded_files = [repo_name + '/' + 'extra.ttl'] + [git_path+'fma_slim.ttl', git_path+'emapa.ttl', git_path+'uberon.ttl', git_path+'mondo.ttl']
+    hardcoded_files = [repo_name + '/' + 'extra.ttl'] + [git_path+'sparc-view.ttl', git_path+'fma_slim.ttl', git_path+'emapa.ttl', git_path+'uberon.ttl', git_path+'mondo.ttl']
     filenames = hardcoded_files + [f for g in ('*', '*/*', '*/*/*') for f in glob(lb_ttl + '/' + g + '.ttl')]
     graph = OntGraph()
     for f in filenames:
