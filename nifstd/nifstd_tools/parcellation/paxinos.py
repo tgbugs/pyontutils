@@ -104,6 +104,32 @@ class Artifacts(Collector):
                        copyrighted='2014',
                        version='7th Edition',)
 
+    class PaxSpinalAt(Atlas):
+        iri = ilx['paxinos/uris/spina']  # ilxtr.paxinosMouseAtlas
+        class_label = 'Paxinos Spinal Atlas'
+
+    PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
+                           species=NCBITaxon['???'],
+                           devstage=UBERON['0000113'],
+                           region=UBERON['???'],
+                           citation=,)
+
+    PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
+                       label='Spine 2009',
+                       synonyms=tuple(),
+                       abbrevs=tuple(),
+                       shortname='PAXSPINE2009',
+                       copyrighted='2009',
+                       version='??',)
+
+    PaxSpine2013 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2013'],
+                       label='Spine 2013',
+                       synonyms=tuple(),
+                       abbrevs=tuple(),
+                       shortname='PAXSPINE2013',
+                       copyrighted='2013',
+                       version='??',)
+
 
 class PaxSr_6(resSource):
     sourceFile = auth.get_path('resources') / 'paxinos09names.txt'
@@ -223,6 +249,7 @@ class PaxSrAr(resSource):
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
 
+        breakpoint()
         return sr, ar, out, achild, schild
 
     @classmethod
@@ -430,6 +457,20 @@ class PaxMFix(LocalSource):
     _data = ({}, {})
 
 
+class PaxSpineSource2009(Source):
+
+    @classmethod
+    def validate(cls, ???):
+        return records, errata
+
+
+class PaxSpineSource2013(Source):
+
+    @classmethod
+    def validate(cls, ???):
+        return records, errata
+
+
 class PaxLabels(LabelsBase):
     """ Base class for processing paxinos indexes. """
     __pythonOnly = True
@@ -613,6 +654,7 @@ class PaxLabels(LabelsBase):
 
         for se in self.sources:
             source, errata = se
+            breakpoint()
             for t in se.isVersionOf:
                 self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -892,6 +934,11 @@ class PaxRatLabels(PaxLabels):
         breakpoint()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
+
+
+class PaxSpinalLabels(PaxLabels):
+    sources = PaxSpineSource2009, PaxSpineSource2013
+    # TODO
 
 
 class PaxRecord:
