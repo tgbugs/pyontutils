@@ -112,7 +112,7 @@ class Artifacts(Collector):
                            species=NCBITaxon['???'],
                            devstage=UBERON['0000113'],
                            region=UBERON['???'],
-                           citation=,)
+                           citation='???',)
 
     PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
                        label='Spine 2009',
@@ -458,6 +458,8 @@ class PaxMFix(LocalSource):
 
 
 class PaxSpineSource2009(Source):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
+    artifact = Artifacts.PaxSpine2009
 
     @classmethod
     def validate(cls, ???):
@@ -465,6 +467,8 @@ class PaxSpineSource2009(Source):
 
 
 class PaxSpineSource2013(Source):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
+    artifact = Artifacts.PaxSpine2013
 
     @classmethod
     def validate(cls, ???):
