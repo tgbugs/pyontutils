@@ -197,8 +197,10 @@ class PaxSrAr(resSource):
 
                 #asdf = l.rsplit(' ', 1)
                 #print(asdf)
+                l = l.strip()
                 abbrev, rest = l.split(' ', 1)
                 parts = rest.split(' ')
+                # print(parts, abbrev)
                 #print(parts)
                 for i, pr in enumerate(parts[::-1]):
                     #print(i, pr)
@@ -249,7 +251,7 @@ class PaxSrAr(resSource):
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
 
-        breakpoint()
+        # breakpoint()
         return sr, ar, out, achild, schild
 
     @classmethod
@@ -290,9 +292,101 @@ class PaxSrAr(resSource):
         errata = {'nodes with layers':achild}
         return out, errata
 
+class PaxSrAr2(resSource):
+    artifact = None
+
+    @classmethod
+    def parseData(cls):
+        a, b = cls.raw.split('List of Structures')
+        if not a:
+            los, loa = b.split('List of Abbreviations')
+        else:
+            los = b
+            _, loa = a.split('List of Abbreviations')
+
+        sr = []
+        for l in los.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+
+                #asdf = l.rsplit(' ', 1)
+                #print(asdf)
+                struct, abbrev = l.rsplit(' ', 1)
+                sr.append((abbrev, struct))
+
+        ar = []
+        for l in loa.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+
+                #asdf = l.rsplit(' ', 1)
+                #print(asdf)
+                l = l.strip()
+                abbrev, rest = l.split(' ', 1)
+                parts = rest.split(' ')
+                # print(parts, abbrev)
+                #print(parts)
+                for i, pr in enumerate(parts[::-1]):
+                    #print(i, pr)
+                    z = pr[0].isdigit()
+                    if not z or i > 0 and z and pr[-1] != ',':
+                        break
+
+                struct = ' '.join(parts[:-i])
+                figs = tuple(tuple(int(_) for _ in p.split('-'))
+                             if '-' in p
+                             else (tuple(f'{nl[:-1]}{l}'
+                                        for nl, *ls in p.split(',')
+                                        for l in (nl[-1], *ls))
+                                   if ',' in p or p[-1].isalpha()
+                                   else int(p))
+                             for p in (_.rstrip(',') for _ in parts[-i:]))
+                figs = tuple(f for f in figs if f)  # zero marks abbrevs in index that are not in figures
+                #print(struct)
+                ar.append((abbrev, struct, figs))
+        return sr, ar
+
+    @classmethod
+    def processData(cls):
+        sr, ar = cls.parseData()
+        out = {}
+        achild = {}
+        for a, s, f in ar:
+            if ', layer 1' in s or s.endswith(' layer 1'):  # DTT1 ends in ' layer 1' without a comma
+                achild[a[:-1]] = a
+                continue  # remove the precomposed, we will deal with them systematically
+            if a not in out:
+                out[a] = ([s], f)
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from ar for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+
+        schild = {}
+        for a, s in sr:
+            if ', layer 1' in s or s.endswith(' layer 1'):
+                schild[a[:-1]] = a
+                continue # remove the precomposed, we will deal with them systematically
+            if a not in out:
+                out[a] = ([s], tuple())
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from sr for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+                    #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
+
+        # breakpoint()
+        return sr, ar, out, achild, schild
 
 class PaxSrAr_4(PaxSrAr):
     sourceFile = auth.get_path('resources') / 'pax-4th-ed-indexes.txt'
+    # sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
     artifact = Artifacts.PaxRat4
 
 
@@ -457,22 +551,22 @@ class PaxMFix(LocalSource):
     _data = ({}, {})
 
 
-class PaxSpineSource2009(Source):
-    sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
-    artifact = Artifacts.PaxSpine2009
+# class PaxSpineSource2009(PaxSrAr2):
+#     sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
+#     artifact = Artifacts.PaxSpine2009
 
-    @classmethod
-    def validate(cls, ???):
-        return records, errata
+# #     # @classmethod
+# #     # def validate(cls, ???):
+# #     #     return records, errata
 
 
-class PaxSpineSource2013(Source):
-    sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
-    artifact = Artifacts.PaxSpine2013
+# class PaxSpineSource2013(PaxSrAr2):
+#     sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
+#     artifact = Artifacts.PaxSpine2013
 
-    @classmethod
-    def validate(cls, ???):
-        return records, errata
+    # @classmethod
+    # def validate(cls, ???):
+    #     return records, errata
 
 
 class PaxLabels(LabelsBase):
@@ -658,7 +752,7 @@ class PaxLabels(LabelsBase):
 
         for se in self.sources:
             source, errata = se
-            breakpoint()
+            # breakpoint()
             for t in se.isVersionOf:
                 self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -935,14 +1029,14 @@ class PaxRatLabels(PaxLabels):
 
         abrv_match_not_name = {k:v[0] for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1}
         _ = [print(k, *v[0]) for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1]
-        breakpoint()
+        # breakpoint()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
-class PaxSpinalLabels(PaxLabels):
-    sources = PaxSpineSource2009, PaxSpineSource2013
-    # TODO
+# class PaxSpinalLabels(PaxLabels):
+#     sources = PaxSpineSource2009, PaxSpineSource2013
+# #     # TODO
 
 
 class PaxRecord:
