@@ -50,10 +50,10 @@ data about a single cell at a time or some part of that single cell.
 Let $R$, $E$, and $P$ each be a single technique from the modalities
 transcriptomics, epigenomics, and [electro]physiology respectively.
 They _do not_ represent the union of all techniques that fall under
-that modality. If they did the assertions below would be false, since
+that modality. If they did, the assertions below would be false, since
 there are many techniques within a single modality that produce data
-that cross-wise incompatible with the functions that operate on each
-type of data (i.e., that {{{ft(R_1)}}}({{{dt(R_2)}}}) \rightarrow
+that is cross-wise incompatible with the functions that operate on
+each type of data (i.e., that {{{ft(R_1)}}}({{{dt(R_2)}}}) \rightarrow
 \bot{} and {{{ft(R_2)}}}({{{dt(R_1)}}}) \rightarrow \bot{}).
 
 Result types. Note that $x$ and $x'$ have no meaningful relation when

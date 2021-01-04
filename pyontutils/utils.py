@@ -60,6 +60,7 @@ def isoformat(datetime_instance, timespec='auto'):
             .replace('.', ',')
             .replace('+00:00', 'Z'))
 
+
 def isoformat_safe(datetime_instance, timespec='auto'):
     """ portable file system safe iso format (sigh) """
     # FIXME this is super inefficient implement from scratch
