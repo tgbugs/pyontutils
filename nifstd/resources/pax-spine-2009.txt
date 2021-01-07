@@ -20,10 +20,10 @@ cuneate fasciculus cu
 deltoid motoneurons of lamina 9 De9
 dorsal corticospinal tract dcs
 dorsal funiculus df
-dorsal nucleus (Clarke) D
+dorsal nucleus (clarke) D
 dorsal root dr
 dorsal root ganglion DRG
-dorsolateral fasciculus (Lissauer) dl
+dorsolateral fasciculus (lissauer) dl
 ; E
 external anal sphincter motoneurons of lamina 9 ExA9
 external urethral sphincter motoneurons of lamina 9 ExU9

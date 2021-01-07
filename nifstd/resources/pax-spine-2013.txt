@@ -16,7 +16,7 @@ central cervical nucleus CeCv
 coccygeal vertebra CoVert
 cremaster motoneurons of lamina 9 Cr9
 crural extensor motoneurons of lamina 9 CEx9
-crural flexor motoneurons of lamina 9 CF19
+crural flexor motoneurons of lamina 9 CFl9
 cuneate fasciculus cu
 ; D
 deltoid motoneurons of lamina 9 De9
@@ -44,7 +44,7 @@ hamstring motoneurons of lamina 9 Hm9
 iliopsoas motoneurons of lamina 9 IPs9
 infrahyoid muscle motoneurons of lamina 9 IH9
 intercalated nucleus ICl
-intercalated nucleus, paraependymal part ICIPe
+intercalated nucleus, paraependymal part IClPe
 intercostal muscle motoneurons of lamina 9 ICo9
 intermediolateral column IML
 intermediolateral column, funicular part IMFL
@@ -64,7 +64,7 @@ lamina 5 of the spinal gray, lateral part 5SpL
 lamina 5 of the spinal gray, medial part 5SpM
 lamina 6 of the spinal gray 6Sp
 lamina 6 of the spinal gray, lateral part 6SpL
-lamina 6 of the spinal gray, medial part  6SpM
+lamina 6 of the spinal gray, medial part 6SpM
 lamina 7 of the spinal gray 7Sp
 lamina 8 of the spinal gray 8Sp
 lamina 9 of the spinal gray 9Sp
@@ -75,11 +75,11 @@ lateral spinal nucleus LSp
 lateral spinothalamic tract lst
 lateral vestibulospinal tract lvs
 latissimus dorsi motoneurons of lamina 9 LD9
-levator scapulae motoneurons of lamina 9  LS9
-lumbar dorsal commissural nucleus  LDCom
+levator scapulae motoneurons of lamina 9 LS9
+lumbar dorsal commissural nucleus LDCom
 lumbar precerebellar nucleus LPrCb
 ; M
-manus motoneurons of lamina 9  Man9
+manus motoneurons of lamina 9 Man9
 medial vestibulospinal tract mvs
 ; N
 ; O
@@ -145,7 +145,7 @@ CeCv central cervical nucleus
 CoVert coccygeal vertebra
 Cr9 cremaster motoneurons of lamina 9
 CEx9 crural extensor motoneurons of lamina 9
-CF19 crural flexor motoneurons of lamina 9
+CFl9 crural flexor motoneurons of lamina 9
 cu cuneate fasciculus
 ; D
 De9 deltoid motoneurons of lamina 9
@@ -172,7 +172,7 @@ Hm9 hamstring motoneurons of lamina 9
 IPs9 iliopsoas motoneurons of lamina 9
 IH9 infrahyoid muscle motoneurons of lamina 9
 ICl intercalated nucleus
-ICIPe intercalated nucleus, paraependymal part
+IClPe intercalated nucleus, paraependymal part
 ICo9 intercostal muscle motoneurons of lamina 9
 IML intermediolateral column
 IMFL intermediolateral column, funicular part
