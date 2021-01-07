@@ -7,7 +7,7 @@ from pyontutils.config import auth
 from pyontutils.namespaces import nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP
 from pyontutils.namespaces import NCBITaxon, UBERON
-from pyontutils.namespaces import PAXMUS, PAXRAT, paxmusver, paxratver
+from pyontutils.namespaces import PAXSPN, PAXMUS, PAXRAT, paxmusver, paxratver
 from pyontutils.namespaces import rdf, rdfs, owl
 from pyontutils.combinators import annotations
 from nifstd_tools.parcellation import log
@@ -105,7 +105,7 @@ class Artifacts(Collector):
                        version='7th Edition',)
 
     class PaxSpinalAt(Atlas):
-        iri = ilx['paxinos/uris/spina']  # ilxtr.paxinosMouseAtlas
+        iri = ilx['paxinos/uris/spinal']  # ilxtr.paxinosMouseAtlas
         class_label = 'Paxinos Spinal Atlas'
 
     PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
@@ -118,7 +118,7 @@ class Artifacts(Collector):
                             label='Spine 2009',
                             synonyms=tuple(),
                             abbrevs=tuple(),
-                            shortname='PAXSPINE2009',
+                            shortname='PAXSPN2009',
                             copyrighted='2009',
                             version='??',) # todo change me
 
@@ -126,7 +126,7 @@ class Artifacts(Collector):
                             label='Spine 2013',
                             synonyms=tuple(), 
                             abbrevs=tuple(),
-                            shortname='PAXSPINE2013',
+                            shortname='PAXSPN2013',
                             copyrighted='2013',
                             version='??',) # todo change me
 
@@ -218,7 +218,6 @@ class PaxSrAr(resSource):
                                    else int(p))
                              for p in (_.rstrip(',') for _ in parts[-i:]))
                 figs = tuple(f for f in figs if f)  # zero marks abbrevs in index that are not in figures
-                #print(struct)
                 ar.append((abbrev, struct, figs))
         return sr, ar
 
@@ -251,7 +250,6 @@ class PaxSrAr(resSource):
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
 
-        # breakpoint()
         return sr, ar, out, achild, schild
 
     @classmethod
@@ -311,9 +309,6 @@ class PaxSrArSpinal(resSource):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
-
-                #asdf = l.rsplit(' ', 1)
-                #print(asdf)
                 struct, abbrev = l.rsplit(' ', 1)
                 sr.append((abbrev, struct))
 
@@ -324,31 +319,12 @@ class PaxSrArSpinal(resSource):
                     l, *comment = l.split(';')
                     l = l.strip()
                     print(l, comment)
-
-                #asdf = l.rsplit(' ', 1)
-                #print(asdf)
                 l = l.strip()
                 abbrev, rest = l.split(' ', 1)
                 parts = rest.split(' ')
-                # print(parts, abbrev)
-                #print(parts)
-                for i, pr in enumerate(parts[::-1]):
-                    #print(i, pr)
-                    z = pr[0].isdigit()
-                    if not z or i > 0 and z and pr[-1] != ',':
-                        break
-
-                struct = ' '.join(parts[:-i])
-                figs = tuple(tuple(int(_) for _ in p.split('-'))
-                             if '-' in p
-                             else (tuple(f'{nl[:-1]}{l}'
-                                        for nl, *ls in p.split(',')
-                                        for l in (nl[-1], *ls))
-                                   if ',' in p or p[-1].isalpha()
-                                   else int(p))
-                             for p in (_.rstrip(',') for _ in parts[-i:]))
-                figs = tuple(f for f in figs if f)  # zero marks abbrevs in index that are not in figures
-                #print(struct)
+                struct = ' '.join(parts[:])
+                # some labels end with numbers so figs need to be disabled 
+                figs = tuple()
                 ar.append((abbrev, struct, figs))
         return sr, ar
 
@@ -381,7 +357,6 @@ class PaxSrArSpinal(resSource):
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
 
-        # breakpoint()
         return sr, ar, out, achild, schild
 
     @classmethod
@@ -781,7 +756,6 @@ class PaxLabels(LabelsBase):
 
         for se in self.sources:
             source, errata = se
-            # breakpoint()
             for t in se.isVersionOf:
                 self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -1058,26 +1032,26 @@ class PaxRatLabels(PaxLabels):
 
         abrv_match_not_name = {k:v[0] for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1}
         _ = [print(k, *v[0]) for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1]
-        # breakpoint()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
 class PaxSpinalLabels(PaxLabels):
-    filename = 'paxinos-spina-labels'
+    filename = 'paxinos-spinal-labels'
     name = 'Paxinos & Watson Spinal Labels'
-    shortname = 'paxmus'
-    namespace = PAXMUS
+    shortname = 'paxspn'
+    namespace = PAXSPN
     prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'),
-                'PAXMUS':str(PAXMUS),
-                'paxmusver':str(paxmusver),
+                'PAXSPN':str(PAXSPN),  
+                # 'paxmusver':str(paxmusver),
     }
     sources = PaxSpineSource2009, PaxSpineSource2013
-    # root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
-    #                  label='Paxinos spinal parcellation label root',
-    #                  shortname=shortname,
-    #                  definingArtifactsS=(Artifacts.PaxSpinalAt.iri,),
-    # )
+    # If getting insertion errors there are errors with data most likely abbrevs
+    root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
+                     label='Paxinos spinal parcellation label root',
+                     shortname=shortname,
+                     definingArtifactsS=(Artifacts.PaxSpinalAt.iri,),
+    )
 
 
 class PaxRecord:
