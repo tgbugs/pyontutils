@@ -111,24 +111,28 @@ class Artifacts(Collector):
     PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
                            species=NCBITaxon['10116'], # todo change me
                            devstage=UBERON['0000113'],
-                           region=UBERON['0000955'], # todo change me 
-                           citation='blah, blah',) # todo change me
+                           region=UBERON['0000955'],)
 
     PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
-                            label='Spine 2009',
+                            label='The Spinal Cord: A Christopher and Dana Reeve Foundation Text and Atlas 2009',
                             synonyms=tuple(),
                             abbrevs=tuple(),
                             shortname='PAXSPN2009',
                             copyrighted='2009',
-                            version='??',) # todo change me
+                            version='1st edition',
+                            citation=('Watson, C., Paxinos, G., &amp; Kayalioglu, G. (2009). '
+                                     'The spinal cord: A Christopher and Dana Reeve foundation text and atlas. '
+                                     'Amsterdam: Elsevier/Academic Press.'),) 
 
     PaxSpine2013 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2013'],
-                            label='Spine 2013',
+                            label='Atlas of the Spinal Cord 2013',
                             synonyms=tuple(), 
                             abbrevs=tuple(),
                             shortname='PAXSPN2013',
                             copyrighted='2013',
-                            version='??',) # todo change me
+                            version='1st edition',
+                            citation=('Sengul, G. (2013). Atlas of the spinal cord of the '
+                                      'rat, mouse, marmoset, rhesus, and human. London: Elsevier Academic Press.')) 
 
 
 class PaxSr_6(resSource):
@@ -1046,7 +1050,7 @@ class PaxSpinalLabels(PaxLabels):
                 # 'paxmusver':str(paxmusver),
     }
     sources = PaxSpineSource2009, PaxSpineSource2013
-    # If getting insertion errors there are errors with data most likely abbrevs
+    # If getting errors it is most likely the data. Abbrevs were a common mistake
     root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
                      label='Paxinos spinal parcellation label root',
                      shortname=shortname,
