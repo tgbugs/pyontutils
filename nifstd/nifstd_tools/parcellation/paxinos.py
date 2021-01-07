@@ -109,26 +109,26 @@ class Artifacts(Collector):
         class_label = 'Paxinos Spinal Atlas'
 
     PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
-                           species=NCBITaxon['???'],
+                           species=NCBITaxon['10116'], # todo change me
                            devstage=UBERON['0000113'],
-                           region=UBERON['???'],
-                           citation='???',)
+                           region=UBERON['0000955'], # todo change me 
+                           citation='blah, blah',) # todo change me
 
     PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
-                       label='Spine 2009',
-                       synonyms=tuple(),
-                       abbrevs=tuple(),
-                       shortname='PAXSPINE2009',
-                       copyrighted='2009',
-                       version='??',)
+                            label='Spine 2009',
+                            # synonyms=tuple(),
+                            # abbrevs=tuple(),
+                            shortname='PAXSPINE2009',
+                            copyrighted='2009',
+                            version='??',) # todo change me
 
     PaxSpine2013 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2013'],
-                       label='Spine 2013',
-                       synonyms=tuple(),
-                       abbrevs=tuple(),
-                       shortname='PAXSPINE2013',
-                       copyrighted='2013',
-                       version='??',)
+                            label='Spine 2013',
+                            # synonyms=tuple(), 
+                            # abbrevs=tuple(),
+                            shortname='PAXSPINE2013',
+                            copyrighted='2013',
+                            version='??',) # todo change me
 
 
 class PaxSr_6(resSource):
@@ -292,7 +292,7 @@ class PaxSrAr(resSource):
         errata = {'nodes with layers':achild}
         return out, errata
 
-class PaxSrAr2(resSource):
+class PaxSrArSpinal(resSource):
     artifact = None
 
     @classmethod
@@ -383,6 +383,44 @@ class PaxSrAr2(resSource):
 
         # breakpoint()
         return sr, ar, out, achild, schild
+
+    @classmethod
+    def validate(cls, sr, ar, out, achild, schild):
+        def missing(a, b):
+            am = a - b
+            bm = b - a
+            return am, bm
+        sabs = set(_[0] for _ in sr)
+        aabs = set(_[0] for _ in ar)
+        ssts = set(_[1] for _ in sr)
+        asts = set(_[1] for _ in ar)
+        ar2 = set(_[:2] for _ in ar)
+        aam, sam = missing(aabs, sabs)
+        asm, ssm = missing(asts, ssts)
+        ar2m, sr2m = missing(ar2, set(sr))
+        print('OK to skip')
+        print(sorted(aam))
+        print('Need to be created')
+        print(sorted(sam))
+        print()
+        print(sorted(asm))
+        print()
+        print(sorted(ssm))
+        print()
+        #print(sorted(ar2m))
+        #print()
+        #print(sorted(sr2m))
+        #print()
+
+        assert all(s in achild for s in schild), f'somehow the kids dont match {achild} {schild}\n' + str(sorted(set(a) - set(s) | set(s) - set(a)
+                                                                                               for a, s in ((tuple(sorted(achild.items())),
+                                                                                                             tuple(sorted(schild.items()))),)))
+        for k, (structs, figs) in out.items():
+            for struct in structs:
+                assert not re.match('\d+-\d+', struct) and not re.match('\d+$', struct), f'bad struct {struct} in {k}'
+
+        errata = {'nodes with layers':achild}
+        return out, errata
 
 class PaxSrAr_4(PaxSrAr):
     sourceFile = auth.get_path('resources') / 'pax-4th-ed-indexes.txt'
@@ -551,22 +589,13 @@ class PaxMFix(LocalSource):
     _data = ({}, {})
 
 
-# class PaxSpineSource2009(PaxSrAr2):
-#     sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
-#     artifact = Artifacts.PaxSpine2009
+class PaxSpineSource2009(PaxSrArSpinal):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
+    artifact = Artifacts.PaxSpine2009
 
-# #     # @classmethod
-# #     # def validate(cls, ???):
-# #     #     return records, errata
-
-
-# class PaxSpineSource2013(PaxSrAr2):
+# class PaxSpineSource2013(PaxSrArSpinal):
 #     sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
 #     artifact = Artifacts.PaxSpine2013
-
-    # @classmethod
-    # def validate(cls, ???):
-    #     return records, errata
 
 
 class PaxLabels(LabelsBase):
@@ -1034,9 +1063,21 @@ class PaxRatLabels(PaxLabels):
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
-# class PaxSpinalLabels(PaxLabels):
-#     sources = PaxSpineSource2009, PaxSpineSource2013
-# #     # TODO
+class PaxSpinalLabels(PaxLabels):
+    filename = 'paxinos-spina-labels'
+    name = 'Paxinos & Watson Spinal Labels'
+    shortname = 'paxmus'
+    namespace = PAXMUS
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'),
+                'PAXMUS':str(PAXMUS),
+                'paxmusver':str(paxmusver),
+    }
+    sources = PaxFix, PaxSpineSource2009#, PaxSpineSource2013
+    root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
+                     label='Paxinos mouse parcellation label root',
+                     shortname=shortname,
+                     definingArtifactsS=(Artifacts.PaxMouseAt.iri,),
+    )
 
 
 class PaxRecord:

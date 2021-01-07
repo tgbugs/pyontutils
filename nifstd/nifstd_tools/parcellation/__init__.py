@@ -368,6 +368,8 @@ class LocalSource(Source):
 
     @classmethod
     def prov(cls):
+        cls.iri = URIRef('https://lol.com')
+        return
         from inspect import getsourcelines
         #source_lines = getSourceLine
 
