@@ -116,16 +116,16 @@ class Artifacts(Collector):
 
     PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
                             label='Spine 2009',
-                            # synonyms=tuple(),
-                            # abbrevs=tuple(),
+                            synonyms=tuple(),
+                            abbrevs=tuple(),
                             shortname='PAXSPINE2009',
                             copyrighted='2009',
                             version='??',) # todo change me
 
     PaxSpine2013 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2013'],
                             label='Spine 2013',
-                            # synonyms=tuple(), 
-                            # abbrevs=tuple(),
+                            synonyms=tuple(), 
+                            abbrevs=tuple(),
                             shortname='PAXSPINE2013',
                             copyrighted='2013',
                             version='??',) # todo change me
@@ -593,9 +593,9 @@ class PaxSpineSource2009(PaxSrArSpinal):
     sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
     artifact = Artifacts.PaxSpine2009
 
-# class PaxSpineSource2013(PaxSrArSpinal):
-#     sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
-#     artifact = Artifacts.PaxSpine2013
+class PaxSpineSource2013(PaxSrArSpinal):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
+    artifact = Artifacts.PaxSpine2013
 
 
 class PaxLabels(LabelsBase):
@@ -1072,12 +1072,12 @@ class PaxSpinalLabels(PaxLabels):
                 'PAXMUS':str(PAXMUS),
                 'paxmusver':str(paxmusver),
     }
-    sources = PaxFix, PaxSpineSource2009#, PaxSpineSource2013
-    root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
-                     label='Paxinos mouse parcellation label root',
-                     shortname=shortname,
-                     definingArtifactsS=(Artifacts.PaxMouseAt.iri,),
-    )
+    sources = PaxSpineSource2009, PaxSpineSource2013
+    # root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
+    #                  label='Paxinos spinal parcellation label root',
+    #                  shortname=shortname,
+    #                  definingArtifactsS=(Artifacts.PaxSpinalAt.iri,),
+    # )
 
 
 class PaxRecord:

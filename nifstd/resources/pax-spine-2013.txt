@@ -130,126 +130,126 @@ vertebral body VB
 List of Abbreviations
 ; #
 ; A
-adductor motoneurons of lamina 9 Ad9
-anterior corticospinal tract acs
-anterior spinal artery asp
-area 10 of the spinal gray 10Sp
-axial muscle motoneurons of lamina 9 Ax9
+Ad9 adductor motoneurons of lamina 9
+acs anterior corticospinal tract 
+asp anterior spinal artery
+10Sp area 10 of the spinal gray
+Ax9 axial muscle motoneurons of lamina 9
 ; B
-biceps motoneurons of lamina 9 Bi9
+Bi9 biceps motoneurons of lamina 9
 ; C
-cauda equina CE
-caudal reticulospinal tract crsp
-central canal CC
-central cervical nucleus CeCv
-coccygeal vertebra CoVert
-cremaster motoneurons of lamina 9 Cr9
-crural extensor motoneurons of lamina 9 CEx9
-crural flexor motoneurons of lamina 9 CF19
-cuneate fasciculus cu
+CE cauda equina
+crsp caudal reticulospinal tract
+CC central canal
+CeCv central cervical nucleus
+CoVert coccygeal vertebra
+Cr9 cremaster motoneurons of lamina 9
+CEx9 crural extensor motoneurons of lamina 9
+CF19 crural flexor motoneurons of lamina 9
+cu cuneate fasciculus
 ; D
-deltoid motoneurons of lamina 9 De9
-dorsal corticospinal tract dcs
-dorsal funiculus df
-dorsal nucleus (clarke) D
-dorsal root  dr
-dorsal root ganglion DRG
+De9 deltoid motoneurons of lamina 9
+dcs dorsal corticospinal tract
+df dorsal funiculus
+D dorsal nucleus
+dr dorsal root
+DRG dorsal root ganglion
 dorsal spinocerebellar tract dsc
-dorsolateral fasciculus (lissauer) dl
-dorsolateral spinothalamic tract dlst
+dl dorsolateral fasciculus
+dlst dorsolateral spinothalamic tract
 ; E
-external anal sphincter motoneurons of lamina 9 ExA9
-external urethral sphincter motoneurons of lamina 9 ExU9
+ExA9 external anal sphincter motoneurons of lamina 9
+ExU9 external urethral sphincter motoneurons of lamina 9
 ; F
-forearm extensor motoneurons of lamina 9 FEx9
-forearm flexor motoneurons of lamina 9 FFl9
+FEx9 forearm extensor motoneurons of lamina 9
+FFl9 forearm flexor motoneurons of lamina 9
 ; G
-gluteal motoneurons of lamina 9 Gl9
-gracile fasciculus gr
+Gl9 gluteal motoneurons of lamina 9
+gr gracile fasciculus
 ; H
-hamstring motoneurons of lamina 9 Hm9
+Hm9 hamstring motoneurons of lamina 9
 ; I
-iliopsoas motoneurons of lamina 9 IPs9
-infrahyoid muscle motoneurons of lamina 9 IH9
-intercalated nucleus ICl
-intercalated nucleus, paraependymal part ICIPe
-intercostal muscle motoneurons of lamina 9 ICo9
-intermediolateral column IML
-intermediolateral column, funicular part IMFL
-intermediomedial column IMM
-internal basilar nucleus IB
+IPs9 iliopsoas motoneurons of lamina 9
+IH9 infrahyoid muscle motoneurons of lamina 9
+ICl intercalated nucleus
+ICIPe intercalated nucleus, paraependymal part
+ICo9 intercostal muscle motoneurons of lamina 9
+IML intermediolateral column
+IMFL intermediolateral column, funicular part
+IMM intermediomedial column
+IB internal basilar nucleus
 ; J
 ; K
 ; L
-lamina 1 of the spinal gray 1Sp
-lamina 2 of the spinal gray 2Sp
-lamina 2 of the spinal gray, inner part 2SpI
-lamina 2 of the spinal gray, outer part 2SpO
-lamina 3 of the spinal gray 3Sp
-lamina 4 of the spinal gray 4Sp
-lamina 5 of the spinal gray 5Sp
-lamina 5 of the spinal gray, lateral part 5SpL
-lamina 5 of the spinal gray, medial part 5SpM
-lamina 6 of the spinal gray 6Sp
-lamina 6 of the spinal gray, lateral part 6SpL
-lamina 6 of the spinal gray, medial part  6SpM
-lamina 7 of the spinal gray 7Sp
-lamina 8 of the spinal gray 8Sp
-lamina 9 of the spinal gray 9Sp
-lateral cervical nucleus LatC
-lateral corticospinal tract lcs
-lateral funiculus lf
-lateral spinal nucleus  LSp
-lateral spinothalamic tract lst
-lateral vestibulospinal tract lvs
-latissimus dorsi motoneurons of lamina 9 LD9
-levator scapulae motoneurons of lamina 9 LS9
-lumbar dorsal commissural nucleus  LDCom
-lumbar precerebellar nucleus LPrCb
+1Sp lamina 1 of the spinal gray
+2Sp lamina 2 of the spinal gray
+2SpI lamina 2 of the spinal gray, inner part
+2SpO lamina 2 of the spinal gray, outer part
+3Sp lamina 3 of the spinal gray
+4Sp lamina 4 of the spinal gray
+5Sp lamina 5 of the spinal gray
+5SpL lamina 5 of the spinal gray, lateral part
+5SpM lamina 5 of the spinal gray, medial part
+6Sp lamina 6 of the spinal gray
+6SpL lamina 6 of the spinal gray, lateral part
+6SpM lamina 6 of the spinal gray, medial part
+7Sp lamina 7 of the spinal gray
+8Sp lamina 8 of the spinal gray
+9Sp lamina 9 of the spinal gray
+LatC lateral cervical nucleus
+lcs lateral corticospinal tract
+lf lateral funiculus
+LSp lateral spinal nucleus
+lst lateral spinothalamic tract
+lvs lateral vestibulospinal tract
+LD9 latissimus dorsi motoneurons of lamina 9
+LS9 levator scapulae motoneurons of lamina 9
+LDCom lumbar dorsal commissural nucleus
+LPrCb lumbar precerebellar nucleus
 ; M
-manus motoneurons of lamina 9 Man9
-medial vestibulospinal tract mvs
+Man9 manus motoneurons of lamina 9
+mvs medial vestibulospinal tract
 ; N
 ; O
 ; P
-pectoral muscle motoneurons of lamina 9 Pec9
-pes motoneurons of lamina 9 Pes9
-phrenic motoneurons of lamina 9 Ph9
-postsynaptic dorsal column pathway psdc
-psoas muscle motoneurons of lamina 9 Ps9
+Pec9 pectoral muscle motoneurons of lamina 9
+Pes9 pes motoneurons of lamina 9
+Ph9 phrenic motoneurons of lamina 9
+psdc postsynaptic dorsal column pathway 
+psdc psoas muscle motoneurons of lamina 9
 ; Q
-quadratus lumborum motoneurons of lamina 9 QL9
-quadriceps motoneurons of lamina 9 Q9
+QL9 quadratus lumborum motoneurons of lamina 9
+Q9 quadriceps motoneurons of lamina 9
 ; R
-rhomboid muscle motoneurons of lamina 9 Rh9
-rostral reticulospinal tract rrsp
-rubrospinal tract rs
+Rh9 rhomboid muscle motoneurons of lamina 9
+rrsp rostral reticulospinal tract
+rs rubrospinal tract
 ; S
-sacral dorsal commissural nucleus SDCom
-sacral parasympathetic nucleus SPSy
-sacral precerebellar nucleus SPrCb
-scalene muscle motoneurons of lamina 9 Sc9
-serratus anterior motoneurons in lamina 9 Sr9
-spinal accessory nerve 11n
-spinous process of vertebra SpPr
-sternomastoid motoneurons of lamina 9 SM9
-supraspinatus and infraspinatus motoneurons of lamina 9 SI9
+SDCom sacral dorsal commissural nucleus
+SPSy sacral parasympathetic nucleus
+SPrCb sacral precerebellar nucleus
+Sc9 scalene muscle motoneurons of lamina 9
+Sr9 serratus anterior motoneurons in lamina 9
+11n spinal accessory nerve
+SpPr spinous process of vertebra
+SM9 sternomastoid motoneurons of lamina 9
+SI9 supraspinatus and infraspinatus motoneurons of lamina 9
 ; T
-tail muscle motoneurons of lamina 9 Tail9
-thoracoabdominal wall muscle motoneurons of lamina 9 ThAb9
-trapezius and sternomastoid motoneurons of lamina 9 TzSM9
-trapezius motoneurons of lamina 9 Tz9
-triceps motoneurons of lamina 9 Tr9
+Tail9 tail muscle motoneurons of lamina 9
+ThAb9 thoracoabdominal wall muscle motoneurons of lamina 9
+TzSM9 trapezius and sternomastoid motoneurons of lamina 9
+Tz9 trapezius motoneurons of lamina 9
+Tr9 triceps motoneurons of lamina 9
 ; U
 ; V
-ventral funiculus vf
-ventral median fissure vmf
-ventral root vr
-ventral spinocerebellar tract vsc
-ventral spinothalamic tract vst
-ventral white commissure vwc
-vertebral arch VAr
-vertebral body VB
+vf ventral funiculus
+vmf ventral median fissure
+vr ventral root
+vsc ventral spinocerebellar tract
+vst ventral spinothalamic tract
+vwc ventral white commissure
+VAr vertebral arch
+VB vertebral body
 ; W
 ; X
 ; Y
