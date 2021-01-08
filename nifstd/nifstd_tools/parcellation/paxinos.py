@@ -109,7 +109,12 @@ class Artifacts(Collector):
         class_label = 'Paxinos Spinal Atlas'
 
     PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
-                           species=NCBITaxon['10116'], # todo change me
+                           species=(NCBITaxon['10116'],    # rat 
+                                    NCBITaxon['10090'],    # mouse
+                                    NCBITaxon['9483'],     # marmoset
+                                    NCBITaxon['1088310'],  # rhesus
+                                    NCBITaxon['9606'],),   # human
+                           # species=NCBITaxon['10116'], # Could be: rat, mouse, marmoset, rhesus, or human
                            devstage=UBERON['0000113'],
                            region=UBERON['0000955'],)
 
