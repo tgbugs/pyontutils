@@ -35,7 +35,7 @@ from concurrent.futures import ProcessPoolExecutor
 from docopt import docopt, parse_defaults
 import rdflib
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from .utils import regjsonld
+from ttlser.utils import regjsonld
 
 
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
@@ -104,7 +104,8 @@ def parse(source, format_guess, outpath, graph=None, infmt=None, graph_class=GRA
     raise BadSyntax(str(errors)) from errors[0]
 
 
-def serialize(graph, outpath, outfmt=defaults['--outfmt'], debug=False, profile=False):
+def serialize(graph, outpath, outfmt=defaults['--outfmt'],
+              debug=False, profile=False, nowrite=False):
     if debug:
         if type(outpath) == type(sys.stdout):
             pipe_debug(graph=graph, outpath=outpath)
@@ -119,7 +120,13 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'], debug=False, profile=
         kwargs = {'auto_compact': True}
     else:
         kwargs = {}
+
     out = graph.serialize(format=outfmt, **kwargs)
+
+    if nowrite:
+        print('FILE NOT WRITTEN {}'.format(outpath))
+        return
+
     if profile:
         print('PARSING Success', outpath)
     elif not isinstance(outpath, str):  # FIXME not a good test that it is stdout
@@ -131,12 +138,12 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'], debug=False, profile=
 
 def convert(file_or_list_or_stream, outpath=None, stream=False,
             infmt=None, outfmt=defaults['--outfmt'],
-            debug=False, profile=False, graph_class=GRAPHCLASS):
+            debug=False, profile=False, nowrite=False, graph_class=GRAPHCLASS):
     if stream or type(file_or_list_or_stream) == str:
         file_or_stream = file_or_list_or_stream
         serialize(*parse(**prepare(file_or_stream, outpath, stream),
                          infmt=infmt),
-                  outfmt=outfmt, debug=debug, profile=profile)
+                  outfmt=outfmt, debug=debug, profile=profile, nowrite=nowrite)
     else:
         # file list is used here because this allows is to merge files
         # without any additional code if we pass it more than one file
@@ -146,7 +153,7 @@ def convert(file_or_list_or_stream, outpath=None, stream=False,
             graph = graph_class()
             [parse(**prepare(file, outpath), graph=graph, infmt=infmt) for file in file_list]
             serialize(graph, outpath, outfmt=outfmt,
-                      debug=debug, profile=profile)
+                      debug=debug, profile=profile, nowrite=nowrite)
         else:
             [convert(file, infmt=infmt, outfmt=outfmt,
                      debug=debug, profile=profile,
@@ -175,6 +182,8 @@ def main():
             serialize = profile_me(serialize)
         except ImportError:
             pass
+
+    nowrite = args['--nowrite']
 
     infmt = args['--format']
     debug = args['--debug']
@@ -205,7 +214,8 @@ def main():
         if stdin is not None:
             convert(stdin, outpath, stream=True,
                     infmt=infmt, outfmt=outfmt,
-                    debug=debug, profile=profile)
+                    debug=debug, profile=profile,
+                    nowrite=nowrite)
         else:
             print(__doc__)
     else:
@@ -216,7 +226,8 @@ def main():
 
             convert(files, outpath=outpath,
                     infmt=infmt, outfmt=outfmt,
-                    debug=debug, profile=profile)
+                    debug=debug, profile=profile,
+                    nowrite=nowrite)
         else:
             from joblib import Parallel, delayed
             nj = 9
@@ -226,7 +237,8 @@ def main():
             Parallel(n_jobs=nj, verbose=10)(delayed(convert)
                                             (file,
                                              infmt=infmt, outfmt=outfmt,
-                                             debug=debug, profile=profile)
+                                             debug=debug, profile=profile,
+                                             nowrite=nowrite)
                                             for file in files)
 
 
