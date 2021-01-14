@@ -7,7 +7,7 @@ from pyontutils.config import auth
 from pyontutils.namespaces import nsExact
 from pyontutils.namespaces import NIFRID, ilx, ilxtr, TEMP
 from pyontutils.namespaces import NCBITaxon, UBERON
-from pyontutils.namespaces import PAXMUS, PAXRAT, paxmusver, paxratver
+from pyontutils.namespaces import PAXSPN, PAXMUS, PAXRAT, paxmusver, paxratver
 from pyontutils.namespaces import rdf, rdfs, owl
 from pyontutils.combinators import annotations
 from nifstd_tools.parcellation import log
@@ -105,30 +105,35 @@ class Artifacts(Collector):
                        version='7th Edition',)
 
     class PaxSpinalAt(Atlas):
-        iri = ilx['paxinos/uris/spina']  # ilxtr.paxinosMouseAtlas
+        iri = ilx['paxinos/uris/spinal']  # ilxtr.paxinosMouseAtlas
         class_label = 'Paxinos Spinal Atlas'
 
     PaxSpinalAtlas = Atlas(iri=PaxSpinalAt.iri,
-                           species=NCBITaxon['???'],
+                           species=NCBITaxon['40674'], # mammalia
+                           # species=NCBITaxon['10116'], # Could be: rat, mouse, marmoset, rhesus, or human
                            devstage=UBERON['0000113'],
-                           region=UBERON['???'],
-                           citation=,)
+                           region=UBERON['0000955'],)
 
     PaxSpine2009 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2009'],
-                       label='Spine 2009',
-                       synonyms=tuple(),
-                       abbrevs=tuple(),
-                       shortname='PAXSPINE2009',
-                       copyrighted='2009',
-                       version='??',)
+                            label='The Spinal Cord: A Christopher and Dana Reeve Foundation Text and Atlas 2009',
+                            synonyms=tuple(),
+                            abbrevs=tuple(),
+                            shortname='PAXSPN2009',
+                            copyrighted='2009',
+                            version='1st edition',
+                            citation=('Watson, C., Paxinos, G., &amp; Kayalioglu, G. (2009). '
+                                     'The spinal cord: A Christopher and Dana Reeve foundation text and atlas. '
+                                     'Amsterdam: Elsevier/Academic Press.'),) 
 
     PaxSpine2013 = PaxRatAt(iri=ilx['paxinos/uris/spinal/versions/2013'],
-                       label='Spine 2013',
-                       synonyms=tuple(),
-                       abbrevs=tuple(),
-                       shortname='PAXSPINE2013',
-                       copyrighted='2013',
-                       version='??',)
+                            label='Atlas of the Spinal Cord 2013',
+                            synonyms=tuple(), 
+                            abbrevs=tuple(),
+                            shortname='PAXSPN2013',
+                            copyrighted='2013',
+                            version='1st edition',
+                            citation=('Sengul, G. (2013). Atlas of the spinal cord of the '
+                                      'rat, mouse, marmoset, rhesus, and human. London: Elsevier Academic Press.')) 
 
 
 class PaxSr_6(resSource):
@@ -197,8 +202,10 @@ class PaxSrAr(resSource):
 
                 #asdf = l.rsplit(' ', 1)
                 #print(asdf)
+                l = l.strip()
                 abbrev, rest = l.split(' ', 1)
                 parts = rest.split(' ')
+                # print(parts, abbrev)
                 #print(parts)
                 for i, pr in enumerate(parts[::-1]):
                     #print(i, pr)
@@ -216,7 +223,6 @@ class PaxSrAr(resSource):
                                    else int(p))
                              for p in (_.rstrip(',') for _ in parts[-i:]))
                 figs = tuple(f for f in figs if f)  # zero marks abbrevs in index that are not in figures
-                #print(struct)
                 ar.append((abbrev, struct, figs))
         return sr, ar
 
@@ -249,7 +255,6 @@ class PaxSrAr(resSource):
                     out[a][0].append(s)
                     #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
 
-        breakpoint()
         return sr, ar, out, achild, schild
 
     @classmethod
@@ -290,9 +295,116 @@ class PaxSrAr(resSource):
         errata = {'nodes with layers':achild}
         return out, errata
 
+class PaxSrArSpinal(resSource):
+    artifact = None
+
+    @classmethod
+    def parseData(cls):
+        a, b = cls.raw.split('List of Structures')
+        if not a:
+            los, loa = b.split('List of Abbreviations')
+        else:
+            los = b
+            _, loa = a.split('List of Abbreviations')
+
+        sr = []
+        for l in los.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+                struct, abbrev = l.rsplit(' ', 1)
+                sr.append((abbrev, struct))
+
+        ar = []
+        for l in loa.split('\n'):
+            if l and not l[0] == ';':
+                if ';' in l:
+                    l, *comment = l.split(';')
+                    l = l.strip()
+                    print(l, comment)
+                l = l.strip()
+                abbrev, rest = l.split(' ', 1)
+                parts = rest.split(' ')
+                struct = ' '.join(parts[:])
+                # some labels end with numbers so figs need to be disabled 
+                figs = tuple()
+                ar.append((abbrev, struct, figs))
+        return sr, ar
+
+    @classmethod
+    def processData(cls):
+        sr, ar = cls.parseData()
+        out = {}
+        achild = {}
+        for a, s, f in ar:
+            if ', layer 1' in s or s.endswith(' layer 1'):  # DTT1 ends in ' layer 1' without a comma
+                achild[a[:-1]] = a
+                continue  # remove the precomposed, we will deal with them systematically
+            if a not in out:
+                out[a] = ([s], f)
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from ar for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+
+        schild = {}
+        for a, s in sr:
+            if ', layer 1' in s or s.endswith(' layer 1'):
+                schild[a[:-1]] = a
+                continue # remove the precomposed, we will deal with them systematically
+            if a not in out:
+                out[a] = ([s], tuple())
+            else:
+                if s not in out[a][0]:
+                    print(f'Found new label from sr for {a}:\n{s}\n{out[a][0]}')
+                    out[a][0].append(s)
+                    #raise TypeError(f'Mismatched labels on {a}: {s} {out[a][0]}')
+
+        return sr, ar, out, achild, schild
+
+    @classmethod
+    def validate(cls, sr, ar, out, achild, schild):
+        def missing(a, b):
+            am = a - b
+            bm = b - a
+            return am, bm
+        sabs = set(_[0] for _ in sr)
+        aabs = set(_[0] for _ in ar)
+        ssts = set(_[1] for _ in sr)
+        asts = set(_[1] for _ in ar)
+        ar2 = set(_[:2] for _ in ar)
+        aam, sam = missing(aabs, sabs)
+        asm, ssm = missing(asts, ssts)
+        ar2m, sr2m = missing(ar2, set(sr))
+        print('OK to skip')
+        print(sorted(aam))
+        print('Need to be created')
+        print(sorted(sam))
+        print()
+        print(sorted(asm))
+        print()
+        print(sorted(ssm))
+        print()
+        #print(sorted(ar2m))
+        #print()
+        #print(sorted(sr2m))
+        #print()
+
+        assert all(s in achild for s in schild), f'somehow the kids dont match {achild} {schild}\n' + str(sorted(set(a) - set(s) | set(s) - set(a)
+                                                                                               for a, s in ((tuple(sorted(achild.items())),
+                                                                                                             tuple(sorted(schild.items()))),)))
+        for k, (structs, figs) in out.items():
+            for struct in structs:
+                assert not re.match('\d+-\d+', struct) and not re.match('\d+$', struct), f'bad struct {struct} in {k}'
+
+        errata = {'nodes with layers':achild}
+        return out, errata
 
 class PaxSrAr_4(PaxSrAr):
     sourceFile = auth.get_path('resources') / 'pax-4th-ed-indexes.txt'
+    # sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
     artifact = Artifacts.PaxRat4
 
 
@@ -457,18 +569,13 @@ class PaxMFix(LocalSource):
     _data = ({}, {})
 
 
-class PaxSpineSource2009(Source):
+class PaxSpineSource2009(PaxSrArSpinal):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2009.txt'
+    artifact = Artifacts.PaxSpine2009
 
-    @classmethod
-    def validate(cls, ???):
-        return records, errata
-
-
-class PaxSpineSource2013(Source):
-
-    @classmethod
-    def validate(cls, ???):
-        return records, errata
+class PaxSpineSource2013(PaxSrArSpinal):
+    sourceFile = auth.get_path('resources') / 'pax-spine-2013.txt'
+    artifact = Artifacts.PaxSpine2013
 
 
 class PaxLabels(LabelsBase):
@@ -654,7 +761,6 @@ class PaxLabels(LabelsBase):
 
         for se in self.sources:
             source, errata = se
-            breakpoint()
             for t in se.isVersionOf:
                 self.addTrip(*t)
             for a, (ss, f, *_) in source.items():  # *_ eat the tree for now
@@ -931,14 +1037,26 @@ class PaxRatLabels(PaxLabels):
 
         abrv_match_not_name = {k:v[0] for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1}
         _ = [print(k, *v[0]) for k, v in PaxRatLabels().records()[0].items() if len(v[0]) > 1]
-        breakpoint()
 
         #self.in_tree_not_in_six = in_tree_not_in_six  # need for skipping things that were not actually named by paxinos
 
 
 class PaxSpinalLabels(PaxLabels):
+    filename = 'paxinos-spinal-labels'
+    name = 'Paxinos & Watson Spinal Labels'
+    shortname = 'paxspn'
+    namespace = PAXSPN
+    prefixes = {**makePrefixes('NIFRID', 'ilxtr', 'prov', 'dcterms'),
+                'PAXSPN':str(PAXSPN),  
+                # 'paxmusver':str(paxmusver),
+    }
     sources = PaxSpineSource2009, PaxSpineSource2013
-    # TODO
+    # If getting errors it is most likely the data. Abbrevs were a common mistake
+    root = LabelRoot(iri=nsExact(namespace),  # PAXMUS['0'],
+                     label='Paxinos spinal parcellation label root',
+                     shortname=shortname,
+                     definingArtifactsS=(Artifacts.PaxSpinalAt.iri,),
+    )
 
 
 class PaxRecord:
