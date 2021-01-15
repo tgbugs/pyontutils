@@ -145,9 +145,18 @@ class SheetToTest(sheets.Sheet):
 
 class TestSheets(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        cls.base_sheet = SheetToTest(readonly=False)
+        cls.base_sheet_ro = SheetToTest()
+
     def setUp(self):
-        self.sheet = SheetToTest(readonly=False)
-        self.sheet_ro = SheetToTest()
+        self.sheet = SheetToTest(readonly=False, fetch=False)
+        self.sheet_ro = SheetToTest(fetch=False)
+
+        # keep the fetch count down at risk of desync
+        self.sheet._fetch_from_other_sheet(self.base_sheet)
+        self.sheet_ro._fetch_from_other_sheet(self.base_sheet_ro)
 
     def test_fromUrl(self):
         NewSheet = sheets.Sheet.fromUrl(self.sheet._uri_human() + '#gid=0')
@@ -192,7 +201,7 @@ class TestSheets(unittest.TestCase):
         assert self.sheet.values == tv2
         assert tv1 != tv2
 
-    def test_upsert_up(self):
+    def test_1_upsert_up(self):
         row = ['a', 'lol', 'nope']
         assert row not in self.sheet.values
         row_object, _ = self.sheet._row_from_index(row=row)
@@ -233,7 +242,7 @@ class TestSheets(unittest.TestCase):
                 assert self.sheet.values == tv1
                 assert row in tv1
 
-    def test_upsert_in(self):
+    def test_1_upsert_in(self):
         row = ['e', 'lol', 'nope']
         assert row not in self.sheet.values
         self.sheet.upsert(row)
@@ -250,9 +259,34 @@ class TestSheets(unittest.TestCase):
                 tv1 = self.sheet_ro.values
                 assert self.sheet.values == tv1
 
-    @pytest.mark.skip('TODO')
     def test_append(self):
-        pass
+        """ make sure that you are on the version of the
+            test sheet that doesn't have extra rows """
+        rows = dict(
+            row1 = ['f', 'append', '1'],
+            row2 = ['g', 'append', '2'],
+            row3 = ['h', 'append', '3'],)
+        for row in rows.values():
+            assert row not in self.sheet.values
+            self.sheet._appendRow(row)
+
+        self.sheet.commit()
+        self.sheet_ro.fetch()
+        tv1 = self.sheet_ro.values
+        try:
+            assert self.sheet.values == tv1
+        finally:
+            to_delete = []
+            for row in rows.values():
+                if row in self.sheet.values:
+                    to_delete.append(row)
+
+            if to_delete:
+                self.sheet.delete(*to_delete)
+                self.sheet.commit()
+                self.sheet_ro.fetch()
+                tv1 = self.sheet_ro.values
+                assert self.sheet.values == tv1
 
     @pytest.mark.skip('TODO')
     def test_stash(self):
@@ -311,6 +345,7 @@ class TestSheets(unittest.TestCase):
             tv1 = self.sheet_ro.values
             assert self.sheet.values == tv1
         finally:
+            # FIXME need to delete the new rows not just return to the size of the old values
             self.sheet.update(ovalues)
             self.sheet.commit()
             self.sheet_ro.fetch()

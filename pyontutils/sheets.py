@@ -1,3 +1,4 @@
+import copy
 import pickle
 import itertools
 from pathlib import Path
@@ -612,8 +613,21 @@ class Sheet:
         # on the fly for each sheet?
         return self._meta
 
+    def _fetch_from_other_sheet(self, other):
+        """ fix for rate limits when testing """
+        self._meta = copy.deepcopy(other._meta)
+        self.raw_values = copy.deepcopy(other.raw_values)
+        self._values = copy.deepcopy(other._values)
+        if hasattr(other, 'byCol'):
+            self.byCol = copy.deepcopy(other.byCol)
+        self.grid = copy.deepcopy(other.grid)
+        self.cells_index = copy.deepcopy(other.cells_index)
+
+    #fetch_count = 0
     def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
+        #self.__class__.fetch_count += 1
+        #log.debug(f'fetch count: {self.__class__.fetch_count}')
         self._stash_uncommitted()
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
@@ -847,6 +861,15 @@ class Sheet:
         # it should be added after commit completes, but byCol is static
         # and we need to remove it as a dependency at some point ...
         self._error_when_in_delete()
+
+        ncols = len(self.values[0])
+        lrow = len(row)
+        if lrow < ncols:
+            # ensure padding to avoid hard to debug index errors
+            # and mutate in place so that anyone dealing with a
+            # reference to the original row has the corrected version
+            row.extend(['' for _ in range(ncols - lrow)])
+
         if row not in self.values:
             self.values.append(row)
             row_object = Row(self, self.values.index(row))
