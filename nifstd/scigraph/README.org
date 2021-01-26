@@ -433,7 +433,7 @@ Run this block
 #+name: sparc-community-terms-update
 #+caption: running =interlex-alt= is really all that is required, the url is for simplicity
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
-#+begin_src bash :results output :noweb no-export :tangle ./bin/sparc-community-terms-update
+#+begin_src bash :results output :noweb no-export :tangle ./bin/sparc-community-terms-update :wrap src diff
 pushd ~/git/NIF-Ontology/ttl
 git checkout sparc || exit $?  # can fail if your working copy has stuff saved
 git pull || exit $?
@@ -1459,7 +1459,8 @@ case $key in
     --server)   SERVER="${2}"; shift; shift ;;
     --svc-user) SVC_USER="${2}"; shift; shift ;;
     --keyname)  local KEYNAME="${2}"; shift; shift ;;
-    *)          POSITIONAL+=("$1"); shift ;;
+    --nosudo)   NOSUDO="nosudo"; shift;;
+    ,*)          POSITIONAL+=("$1"); shift ;;
 esac
 done
 
@@ -1475,7 +1476,11 @@ local KEYNAME_DEFAULT=${HOSTNAME}.${USER}.${SERVER}.${SVC_USER}
 local KEYNAME=${KEYNAME:-${KEYNAME_DEFAULT}}
 local KEYTYPE=ed25519  # this is hardcoded for now
 KEYPATH=~/.ssh/id_${KEYTYPE}.${KEYNAME}
-SUDO_OR_SU='$(command -v sudo 1>& 2 && echo sudo ${0} -c || { echo For su on ${HOSTNAME} 1>& 2; echo su -c; })'
+if [ -z ${NOSUDO} ]; then
+    SUDO_OR_SU='$(command -v sudo 1>& 2 && echo sudo ${0} -c || { echo For su on ${HOSTNAME} 1>& 2; echo su -c; })'
+else
+    SUDO_OR_SU='$(echo For su on ${HOSTNAME} 1>& 2; echo su -c;)'
+fi
 #+end_src
 
 #+name: ssh-functions
@@ -1487,7 +1492,7 @@ function ssh-keygen-simple () {
     # test if the key already exists
     if [ -f "${KEYPATH}" ]; then
         echo "${KEYPATH}" already exists not running keygen and not deploying
-        unset KEYPATH SERVER SVC_USER SUDO_OR_SU
+        unset KEYPATH SERVER SVC_USER SUDO_OR_SU NOSUDO
         return 1
     fi
 
@@ -1516,19 +1521,19 @@ function ssh-copy-id-simple () {
     fi
 
     # copy the key to the host
-    TEMP_RANDOM_NAME=$(head /dev/urandom | tr -dc A-F0-9 | head -c 20)
-    rsync --rsh ssh ${KEYPATH}.pub ${SERVER}:${TEMP_RANDOM_NAME}.pub || return $?
+    TEMP_PATH=$(ssh ${SERVER} 'mktemp')
+    rsync --rsh ssh "${KEYPATH}.pub" ${SERVER}:${TEMP_PATH} || return $?
     # TODO option to deploy private key if the key is generated for a service user
 
     # and today we learn about typeset, sigh
-    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f copy-id-to-user-authorized-keys); copy-id-to-user-authorized-keys ${TEMP_RANDOM_NAME}.pub ${SVC_USER}'"
+    ssh -t ${SERVER} "${SUDO_OR_SU} '$(typeset -f copy-id-to-user-authorized-keys); copy-id-to-user-authorized-keys ${TEMP_PATH} ${SVC_USER}'"
 
     local oops=$?
     if [ $oops -ne 0 ]; then
-        echo FAILED so ${SERVER}:${TEMP_RANDOM_NAME}.pub is still present
+        echo FAILED so ${SERVER}:${TEMP_PATH} is still present
         return $oops
     fi
-    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_RANDOM_NAME
+    unset KEYPATH SERVER SVC_USER SUDO_OR_SU TEMP_PATH NOSUDO
 }
 #+end_src
 
@@ -1543,11 +1548,11 @@ function copy-id-to-user-authorized-keys () {
     fi
     if [ ! -f ${UHOME}/.ssh/authorized_keys ]; then
         touch ${UHOME}/.ssh/authorized_keys
-        chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
+        chown -R ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh
     fi
     cat ${PUB_KEY} >> \
     ${UHOME}/.ssh/authorized_keys && \
-    chown ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
+    chown -R ${SVC_USER}:${SVC_USER} ${UHOME}/.ssh && \
     rm ${PUB_KEY};
 }
 #+end_src
