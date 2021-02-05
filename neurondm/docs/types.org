@@ -27,7 +27,7 @@ to produce \bot{} results.
 #+macro: ct $C_{\tau_{$1}}$
 
 # only needed to demonstrate commutativity
-#+macro: t2 $\tau_{$1}\tau_{$1}$
+#+macro: t2 $\tau_{$1}\tau_{$2}$
 #+macro: dt2 $D_{\tau_{$1}\tau_{$2}}$
 #+macro: dt3 $D_{\tau_{$1}\tau_{$2}\tau{$3}}$
 #+macro: ft2 $f_{\tau_{$1}\tau_{$2}}$
