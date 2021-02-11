@@ -182,6 +182,8 @@ def _loadPrefixes():
 
         'partOf':'http://purl.obolibrary.org/obo/BFO_0000050',
         'hasPart':'http://purl.obolibrary.org/obo/BFO_0000051',
+        'memberOf': 'http://purl.obolibrary.org/obo/RO_0002350',
+        'hasMember': 'http://purl.obolibrary.org/obo/RO_0002351',
     }
 
     normal = {
