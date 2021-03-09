@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 #!/usr/bin/env pypy3
 """Set qnames based on the curies defined for a given ontology.
 

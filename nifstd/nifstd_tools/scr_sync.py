@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 from pyontutils.config import auth
 __doc__ = f"""Sync the scicrunch registry to a ttl file for loading into scigraph for autocomplete.
 

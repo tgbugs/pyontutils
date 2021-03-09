@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 # equivalent indexed as default
 # equivalent indexed in map only

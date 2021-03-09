@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import tempfile
 from pyontutils.config import auth
 __doc__ = f"""Client library generator for SciGraph REST api.

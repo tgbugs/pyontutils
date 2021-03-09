@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import csv
 from pprint import pprint
 from pathlib import Path

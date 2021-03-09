@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 #!/usr/bin/env pypy3
 from pyontutils.config import auth
 __doc__ = f"""Common commands for ontology processes.

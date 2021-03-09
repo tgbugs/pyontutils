@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import tempfile
 from pyontutils.core import auth
 __doc__ = f"""Use SciGraph to load an ontology from a loacal git repository.

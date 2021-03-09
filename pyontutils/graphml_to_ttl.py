@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import tempfile
 __doc__ = f"""convert graphml files to ttl files
 

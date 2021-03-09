@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import os
 import sys
 import atexit
@@ -1473,7 +1473,7 @@ class graphBase:
 
     @classmethod
     def python_header(cls):
-        out = '#!/usr/bin/env python3.7\n'
+        out = '#!/usr/bin/env python3\n'
         out += f'from {cls.__import_name__} import *\n\n'
 
         all_types = set(type(n) for n in cls.neurons())

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """Given a ttl file get ILX ids for ILXREPLACE terms.
 
 Usage:

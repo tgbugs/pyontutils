@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """ api access for google sheets (and friends)
 Usage:
     googapis auth (sheets|docs|drive)... [options] [--drive-scope=<SCOPE>...]

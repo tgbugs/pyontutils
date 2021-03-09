@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """ run neurondm related exports and conversions
 Usage:
     neurondm-build release [options]
