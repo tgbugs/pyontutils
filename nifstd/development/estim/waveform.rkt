@@ -2,8 +2,20 @@
 (require plot
          racket/bool
          racket/contract
+         racket/match
          racket/math
          racket/generic
+         (only-in racket/list flatten)
+         (only-in racket/hash hash-union)
+         (for-syntax
+          racket/base
+          syntax/parse)
+         )
+(provide cospi
+         sinpi
+         make-periodic
+         waveform-add
+         waveform-concat
          )
 
 (define (cospi x) (cos (* x (* 2 pi))))
@@ -91,6 +103,9 @@
                     (let ([f ((waveform-state-combinator s) (waveform-state-level s))])
                       (f t))))
                 (list (list state-end 0) (list state-begin t-transition-begin)))))
+
+(define (dl-new f-state-beg-t->l f-state-end-t->l t-transition-begin)
+  (- (f-state-end-t->l 0) (f-state-beg-t->l t-transition-begin)))
 
 (define (dln fun-s-b
              fun-s-e
@@ -727,6 +742,198 @@ under the definition of state for 181 2011 on page 8 (p20 in the pdf)."
               [else (f-1 (- t t4))]
               )))))
 
+(define (unitary-pulse
+         #:t-2 t-2
+         #:t-3 t-3
+         #:trans-1 [trans-1 transition-unspecified]
+         #:trans-2 [trans-2 transition-unspecified])
+  ; t-1 is always 0
+  ; t-4 is always 1
+  ; l-0 is always 0
+  ; l-1 is always 1
+  ; s-0 is always (λ (t) 0)
+  ; s-1 is always (λ (t) 1)
+
+  ; composition with periodic functions can then proceed
+  ; mathematically with the shape defined here
+  (values))
+
+(define (norm . vector-values)
+  (sqrt (apply + (map sqr vector-values))))
+
+(define (amp-off level-0 level-1)
+  "pulse amplitudes are signed"
+  (let ([amp (- level-0 level-1)]
+        [off level-0])
+    (cons amp off)))
+
+(define (arbitrary->unitary pulse-family-function)
+  "return a linear normalization of the pulse parameters to
+t-4 == 1
+level-0 == 0
+level-1 == 1
+
+I'm sure there is an edge case with exponential pulses or something.
+
+XXX note that the problem with using something like this is that
+there is a risk of losing precision relative to the original input
+parameters, further, we already have the prototypical shapes in their
+unitary normalized form. This may still be useful for recovering
+information about the function at runtime."
+  (let* ([h (pulse-family-function 'params)]
+         [amplitude-offset (amp-off (hash-ref h '#:level-0) (hash-ref h '#:level-1))]
+         [amplitude (car amplitude-offset)]
+         [offset (cdr amplitude-offset)]
+         ;
+         [shift (hash-ref h '#:t-1)]
+         [stretch (- (hash-ref h '#:t-4) shift)]
+         [t-2 (/ (- (hash-ref h '#:t-2) shift) stretch)]
+         [t-3 (/ (- (hash-ref h '#:t-3) shift) stretch)])
+    (values (unitary-pulse
+             #:t-2 t-2
+             #:t-3 t-3)
+            amplitude
+            offset
+            ; FIXME do we normalize to t-1 = 0 or no? that gives us
+            ; pulse shape independent of the temporal offset, however
+            ; it means that when we scale the pulse we ... I think we
+            ; want both, but the default should be for t-1 to be zero,
+            ; and the provide the original shift this is related to a
+            ; comment about invariants somwhere else in this file
+            stretch
+            shift)))
+
+(define (cmb-family-pulse
+         #:t-1 t1
+         #:t-2 t2
+         #:t-3 t3
+         #:t-4 t4
+         #:level-0 [level-0 0]
+         #:level-1 [level-1 1]
+         #:state-0 [state-0 cmb-constant-level]
+         #:state-1 [state-1 (λ (l) (λ (t) l))]
+         #:trans-1 [trans-1 transition-unspecified]
+         #:trans-2 [trans-2 transition-unspecified])
+
+  ;; levels are set to 0 and 1 by default so that
+  ;; the default output can be composed with the usual
+  ;; amplitude modifying functions
+  ;; because t-1 ... t-4 are concrete times and are not
+  ;; given in fractions of a unit epoch, there is no
+  ;; easy way to scale those, there was a use case for
+  ;; that we could define a variant of this function
+  ;; that required the transition times to be on [0,1]
+  ;; and then rescaled accordingly, or rather, that
+  ;; always set t4 to 1, ... which would allow us to
+  ;; translate any pulse into a canonical form along
+  ;; with amplitude and phase scaling (stretching?)
+  ;; assuming a linear stretching function
+
+  ; XXX how many layers of combinators do we want here?
+  ; getting something that can scale in time an level
+  ; is the objective, those are the things we want
+  ; to specify last, and they should all come together
+  ; this is the last stop on the way to getting a
+  ; concrete waveform, which means that transitions
+  ; and states should be one level above this I think
+  ; of course the real issue is that we want to be
+  ; able to reparameterize any one thing independent
+  ; of all the others after having specified them before
+  ; seems like case lambda is probably what we will need ...
+  (define current-parameterization-of-f
+    (let ([f-1 (state-0 level-0)]
+          [f-2 (state-1 level-1)]
+          [l-1 level-0]
+          ; FIXME dl almost certainly should be calculated to for continuous transitions
+          ; with the state function not with the reference level for that function ?
+          ; this is something that needs to be clarified, that or all periodic state
+          ; functions cannot be arbitrary but must start at zero? seems bad
+          ;[dl-1 (dy s1 s2)]
+          ;[dl-2 (dy s2 s1)]
+          ; XXX need feedback
+          )
+      (let ([dl-1 (dl-new f-1 f-2 t1)]
+            [dl-2 (dl-new f-2 f-1 t3)]
+            ;[l-2 (waveform-state-level s2)]
+            [dt-1 (- t2 t1)]
+            [dt-2 (- t4 t3)])
+        (println (list dl-1 dl-2 dt-1 dt-2))
+        (let ([ft-1->2 (trans-1 dl-1 dt-1 l-1 t1)]
+              [ft-2->1 (trans-2 dl-2 dt-2 l-1 t4)])
+          (lambda (t)
+            (cond [(< t t1) (f-1 t)]
+                  [(< t t2) (ft-1->2 t)]
+                  [(< t t3) (f-2 (- t t2))]
+                  ; FIXME we could normalize the transitions so that
+                  ; they were always normalized to start at t=0, but
+                  ; it seems more efficient to encode the values in
+                  ; the constants rather than subtract the time offset
+                  ; like we have to do for the non-transition periods
+                  [(< t t4) (ft-2->1 t)]
+                  [else (f-1 (- t t4))]
+                  ))))))
+  ; unfortunately case-lambda currently does not take keyword
+  ; arguments, so we can't do a simple redefinition but we can do it
+  ; by having multiple arguments
+  (case-lambda
+    [() (error 'oops)]
+    [(t)
+     ; NOTE there is always a default setting
+     ; that can be overwritten or specialized
+     (current-parameterization-of-f t)]
+    [(action . key-value)
+     (let ([current (apply hash `(#:t-1 ,t1
+                                  #:t-2 ,t2
+                                  #:t-3 ,t3
+                                  #:t-4 ,t4
+                                  #:level-0 ,level-0
+                                  #:level-1 ,level-1
+                                  #:state-0 ,state-0
+                                  #:state-1 ,state-1
+                                  #:trans-1 ,trans-1
+                                  #:trans-2 ,trans-2))])
+       (match action
+         ['derive (let ([new-kwargs (hash-union current
+                                                (apply hash key-value)
+                                                ; last one wins
+                                                #:combine/key (λ (k v1 v2) v2)
+                                                )])
+                    (keyword-apply-hash cmb-family-pulse new-kwargs))]
+         ['params current]))]))
+
+(define (keyword-apply-hash f kw-hash)
+  (let* ([skeys (sort (hash-keys kw-hash) keyword<?)]
+         [svals (map (λ (k) (hash-ref kw-hash k)) skeys)])
+    (keyword-apply f skeys svals '())))
+
+(module+ test-cmb-fp
+  (define aaa (let ([f (λ (t) 0)])
+                (case-lambda
+                  [(t) (f t)]
+                  [key-value key-value])))
+  (aaa '#:a 1 '#:b 2 '#:c 3)
+
+  ; FIXME TODO we can probably actually handle trapezoidal ->
+  ; exponental translations by parameterizing tau based on the state
+  ; occurance definition for state 2 it is kind of loose, and the
+  ; usual criteria for working with exponentials isn the limit is
+  ; probably going to cause trouble
+  (define lol (cmb-family-pulse
+               #:t-1 1
+               #:t-2 2
+               #:t-3 3
+               #:t-4 4
+               #:trans-1 transition-linear))
+  (define lol2 (lol 'derive
+                    '#:t-2 1.5
+                    '#:level-1 0.7
+                    '#:trans-2 transition-linear))
+  (plot (list (axes)
+              (function lol 0 5 #:color 8 #:style 0)
+              (function lol2 0 5 #:color 8 #:style 1)
+              ))
+  )
+
 (define s0 (waveform-state 0 (lambda (level) (lambda (t) level))))
 (define s1 (waveform-state 1 (lambda (level) (lambda (t) level))))
 
@@ -750,6 +957,34 @@ under the definition of state for 181 2011 on page 8 (p20 in the pdf)."
 
 (define (family-ramp s1 s2 t1 t234)
   (family-triangular s1 s2 t1 t234 t234))
+
+#;
+(define cmb-constant-level
+  ; a state level combinator that returns
+  ; a constant value
+  (λ (l) (λ (t) l) ))
+
+(define-syntax (define-level-combinator stx)
+  "Regularize the creation of state level combinators where `level' will
+be bound at runtime."
+  (syntax-parse stx
+    [(_ body ...)
+     ; break hygene so we can use level in the body
+     #:with (new-body ...) (datum->syntax #'(body ...) (syntax->datum #'(body ...)))
+     #'(λ (level)
+         new-body ...)]))
+
+(define-syntax define-cmb-lvl (make-rename-transformer #'define-level-combinator))
+
+(define cmb-constant-level (define-cmb-lvl (λ (t) level)))
+
+(define (cmb-family-trapezoidal t1 t2 t3 t4
+                                #:state-0 [state-0 cmb-constant-level]
+                                #:state-1 [state-1 (λ (l) (λ (t) l))]
+                                )
+  (cmb-family-pulse t1 t2 t3 t4
+                    #:state-0 state-0
+                    #:state-1 state-1))
 
 (module+ test-fam-trap
   ; TODO max over range * 1.5 probably, surely the plot library has this?
@@ -1019,4 +1254,67 @@ under the definition of state for 181 2011 on page 8 (p20 in the pdf)."
   (set! beat-2 (make-periodic sinpi #:famp (make-periodic sinpi #:fcyc (λ (t) 0.5)) #:fcyc (λ (t) 10)))
   (plot (function beat-2 0 1 #:color 8 #:style 0))
 
+  )
+
+;;; composition
+
+(define (cumsum l)
+  (cdr (reverse (foldl (λ (y xs) (cons (+ (car xs) y) xs)) '(0) l)))
+  #; ; I was close l vs r issue
+  (reverse (foldr (λ (a b) (cons (+ (car a) b) a)) '(0) l)))
+
+(define (waveform-add . functions)
+  "Add waveforms together. All functions must take single argument t."
+  (λ (t) (apply + (map (λ (f) (f t)) functions))))
+
+(define (waveform-add-curiosity . functions)
+  "version of waveform-add implemented via waveform-concat"
+  (let ([epoch-durations (for/list ([f functions]) 0)])
+    (waveform-concat functions epoch-durations)))
+
+(define (waveform-concat functions epoch-durations)
+  "Shift and add. The last epoch duration is ignored but required."
+  (let ([shifts (cumsum (cons 0 (reverse (cdr (reverse epoch-durations)))))])
+    (λ (t) (apply + (map (λ (f s) (f (- t s))) functions shifts)))))
+
+(define (waveform-compose . functions)
+  "This will produce very confusing results if used with most waveforms."
+  (λ (t) ((apply compose functions) t)))
+
+(module+ test-compose
+  (define f (family-rectangular s0 s1 1 3))
+  (define g (family-ramp s0 s1 0 5))
+  (define h (waveform-compose f g))
+  (define j (waveform-compose g f))
+  (plot (function h 0 5 #:color 8 #:style 0))
+  (plot (function j 0 5 #:color 8 #:style 0))
+  )
+
+(module+ test-add
+  (define f (family-rectangular s0 s1 1 3))
+  (define g (family-rectangular s0 s1 2 4))
+  (define i (family-ramp s0 s1 0 5))
+  (define h (waveform-add f g))
+  (define j (waveform-add-curiosity f g i))
+  (plot (function h 0 5 #:color 8 #:style 0))
+  (plot (function j 0 5 #:color 8 #:style 0))
+  )
+
+#;
+(define (waveform-concat-old . f-end-pairs)
+  "This can't take raw functions of time, it has to also take endpoints in time."
+  (let ([functions (map car f-end-pairs)]
+        [shifts (cumsum (cons 0 (reverse (cdr (map cdr (reverse f-end-pairs))))))])
+    (λ (t) (apply + (map (λ (f s) (f (- t s))) functions shifts)))))
+
+(module+ test-concat
+  (define f (family-rectangular s0 s1 1 2))
+  #;
+  (define g (waveform-concat-old (cons f 3) (cons f +inf.0)))
+  (define g (waveform-concat
+             (list f f)
+             (list 3 4)))
+  (define h (waveform-add g (family-ramp s0 s1 0 5)))
+  (plot (function g 0 10 #:color 8 #:style 0))
+  (plot (function h 0 10 #:color 8 #:style 0))
   )
