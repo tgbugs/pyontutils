@@ -226,6 +226,21 @@ def subclasses(start):
             yield from subclasses(sc)
 
 
+def subclass_tree(start, node_type=tuple):
+    if issubclass(start, type):
+        scs = start.__subclasses__(start)
+    else:
+        scs = start.__subclasses__()
+
+    for sc in scs:
+        if sc is not None:
+            subclasses = node_type(subclass_tree(sc))
+            if subclasses:
+                yield node_type((sc, *subclasses))
+            else:
+                yield node_type((sc,))
+
+
 def getSourceLine(cls):
     tc = TermColors
     try:
