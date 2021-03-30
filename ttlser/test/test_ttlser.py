@@ -33,8 +33,9 @@ def randomize_dict_order(d):
 
 
 def randomize_prefix_order(graph):
-    namespace = graph.namespace_manager.store._IOMemory__namespace
-    prefix = graph.namespace_manager.store._IOMemory__prefix
+    nm_store = graph.namespace_manager.store
+    namespace = getattr(nm_store, f'_{nm_store.__class__.__name__}__namespace')
+    prefix = getattr(nm_store, f'_{nm_store.__class__.__name__}__prefix')
     def save(d):
         keys = list(d)
         shuffle(keys)

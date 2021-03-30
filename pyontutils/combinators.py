@@ -86,7 +86,7 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
         if l is None:
             l = self.__call__(*args)
         [graph.add(t) for t in l]
-        out = graph.serialize(format='nifttl').decode()
+        out = graph.serialize(format='nifttl', encoding='utf-8').decode()
         if ret:
             return out
         else:

@@ -11,7 +11,6 @@ import asyncio
 import inspect
 import logging
 from time import time, sleep
-from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, date, timezone
 from functools import wraps

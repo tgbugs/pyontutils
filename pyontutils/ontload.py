@@ -563,7 +563,7 @@ def local_imports(remote_base, local_base, ontologies, local_versions=tuple(), r
                 if not readonly:
                     _orp = CustomTurtleSerializer.roundtrip_prefixes  # FIXME awful hack :/
                     CustomTurtleSerializer.roundtrip_prefixes = True
-                    ttl = scratch.serialize(format='nifttl')
+                    ttl = scratch.serialize(format='nifttl', encoding='utf-8')
                     CustomTurtleSerializer.roundtrip_prefixes = _orp
                     ndata, comment = ttl.split(b'###', 1)
                     out = ndata + b'###' + rest

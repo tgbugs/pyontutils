@@ -126,10 +126,14 @@ def _loadPrefixes():
         'ilx.anno.maxValue': 'http://uri.interlex.org/base/ilx_0381357',
         'ilx.anno.allowedTypes': 'http://uri.interlex.org/base/ilx_0381358',
         'ilx.anno.allowedValues': 'http://uri.interlex.org/base/ilx_0381359',
+
         'ilx.anno.hasExactSynonym': 'http://uri.interlex.org/base/ilx_0737161',
         'ilx.anno.hasRelatedSynonym': 'http://uri.interlex.org/base/ilx_0737162',
         'ilx.anno.hasNarrowSynonym': 'http://uri.interlex.org/base/ilx_0737163',
         'ilx.anno.hasBroadSynonym': 'http://uri.interlex.org/base/ilx_0737164',
+
+        'ilx.anno.hasDefinitionSource': 'http://uri.interlex.org/base/ilx_0739292',
+
         'ilx.hasDbXref': 'http://uri.interlex.org/base/ilx_0381360',
         'ilx.hasUnit': 'http://uri.interlex.org/base/ilx_0381384',
         'ilx.isAbout': 'http://uri.interlex.org/base/ilx_0381385',  # should probalby map to iao

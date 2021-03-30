@@ -70,6 +70,7 @@ def substitute_graph(graph, base_graph=None):
 
     return g
 
+
 def make_graphs(path):
     with open(path, 'rt') as f:
         raw_all_streams = f.read()

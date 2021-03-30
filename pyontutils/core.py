@@ -1177,6 +1177,11 @@ class OntGraph(rdflib.Graph):
 
         raise NotImplementedError('yet')
 
+    def serialize(self, *args, encoding='utf-8', **kwargs):  # FIXME XXX eventually remove this
+        # compatibility layer for transition from 5.0 to 6.0 behavior
+        # where the default switched from string to bytes
+        return super().serialize(*args, encoding=encoding, **kwargs)
+
     def write(self, path=None, format='nifttl'):
         if path is None:
             path = self.path
@@ -1830,7 +1835,7 @@ class makeGraph:
         if cull:
             cull_prefixes(self).write()
         else:
-            ser = self.g.serialize(format='nifttl')
+            ser = self.g.serialize(format='nifttl', encoding='utf-8')
             with open(self.filename, 'wb') as f:
                 f.write(ser)
                 #print('yes we wrote the first version...', self.name)

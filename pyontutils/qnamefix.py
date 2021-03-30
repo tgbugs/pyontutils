@@ -62,7 +62,7 @@ def serialize(graph, outpath):
     pc = prefix_cleanup if isinstance(outpath, str) else lambda a, b: None
     graph = cull_prefixes(graph, cleanup=pc, prefixes=PREFIXES)
 
-    out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES))
+    out = graph.g.serialize(format='nifttl', gen_prefix=bool(PREFIXES), encoding='utf-8')
     if not isinstance(outpath, str):  # FIXME not a good test that it is stdout
         outpath.buffer.write(out)
     else:

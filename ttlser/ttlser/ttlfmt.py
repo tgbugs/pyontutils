@@ -5,7 +5,6 @@
 Usage:
     ttlfmt [options]
     ttlfmt [options] <file>...
-    ttlfmt [options] <file>...
 
 Options:
     -h --help       print this
@@ -121,7 +120,7 @@ def serialize(graph, outpath, outfmt=defaults['--outfmt'],
     else:
         kwargs = {}
 
-    out = graph.serialize(format=outfmt, **kwargs)
+    out = graph.serialize(format=outfmt, encoding='utf-8', **kwargs)
 
     if nowrite:
         print('FILE NOT WRITTEN {}'.format(outpath))
