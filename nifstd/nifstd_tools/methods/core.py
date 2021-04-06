@@ -3,7 +3,7 @@ from pyontutils import combinators as cmb
 from pyontutils.core import simpleOnt, OntId, OntGraph
 from pyontutils.namespaces import OntCuries, makeNamespaces
 from pyontutils.namespaces import NIFTTL, NIFRID, ilxtr, BFO
-from pyontutils.namespaces import partOf, definition
+from pyontutils.namespaces import partOf, definition, editorNote, replacedBy
 from pyontutils.namespaces import hasParticipant, hasPart, hasInput, hasOutput
 from pyontutils.namespaces import prot, proc, tech, asp, dim, unit
 from pyontutils.namespaces import owl, rdf, rdfs
@@ -714,9 +714,25 @@ triples = (
                        ilxtr.aspect)))(rdflib.BNode()),
 
     ## modalitiy
-    cmb.Class(ilxtr.ExperimentalModality,
-              cmb.Pair(rdfs.label, rdflib.Literal('experimental modality')),
-              ),
+    cmb.Class(
+        ilxtr.ExperimentalModality,
+        cmb.Pair(owl.deprecated, rdflib.Literal(True)),
+        cmb.Pair(replacedBy, ilxtr.ExperimentalApproach),
+        cmb.Pair(editorNote, rdflib.Literal(
+            'For clarity switch to use ilxtr:ExperimentalApproach since we are '
+            'changing the preferred terminology. Hopefully keeping the id '
+            'aligned will prevent confusion down the line. Follow replacedBy: '
+            'to find the new id.')),
+    ),
+    cmb.Class(
+        ilxtr.ExperimentalApproach,
+        cmb.Pair(rdfs.label, rdflib.Literal('experimental approach')),
+        cmb.Pair(NIFRID.synonym, rdflib.Literal('experimental modality')),
+        cmb.Pair(definition, rdflib.Literal(
+            'The general experimental approach used to answer a '
+            'scientific question. Approaches often define whole '
+            'research disciplines.')),
+    ),
     cmb.Class(ilxtr.ExperimentalPreparation,
               cmb.Pair(rdfs.label, rdflib.Literal('experimental preparation')),
               ),  # in vivo in vitro
