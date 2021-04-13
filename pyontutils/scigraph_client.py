@@ -25,10 +25,13 @@ class restService:
 
     _api_key = None
 
-    def __init__(self, cache=False, safe_cache=False, key=None):
+    _hrx = re.compile('^https?://')
+
+    def __init__(self, cache=False, safe_cache=False, key=None, do_error=False):
         self._session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_connections=1000, pool_maxsize=1000)
         self._session.mount('http://', adapter)
+        self._do_error = do_error
 
         if cache:
             #print('WARNING: cache enabled, if you mutate the contents of return values you will mutate the cache!')
@@ -87,7 +90,10 @@ class restService:
                                   f'Did you set {self.__class__.__name__}.api_key'
                                   ' = my_api_key?')
         elif not resp.ok:
-            return None
+            if self._do_error:
+                resp.raise_for_status()
+            else:
+                return None
         elif resp.headers['content-type'] == 'application/json':
             return resp.json()
         elif resp.headers['content-type'].startswith('text/plain'):
@@ -127,12 +133,12 @@ class restService:
 class Analyzer(restService):
     """ Analysis services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def enrich(self, sample, ontologyClass, path, callback=None, output='application/json'):
         """ Class Enrichment Service from: /analyzer/enrichment
@@ -179,12 +185,12 @@ class Analyzer(restService):
 class Annotations(restService):
     """ Annotation services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def annotate(self, content, includeCat=None, excludeCat=None, minLength=None, longestOnly=None, includeAbbrev=None, includeAcronym=None, includeNumbers=None, output='text/plain; charset=utf-8'):
         """ Annotate text from: /annotations
@@ -368,12 +374,12 @@ class Annotations(restService):
 class CypherBase(restService):
     """ Cypher utility services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def getCuries(self, callback=None, output='application/json'):
         """ Get the curie map from: /cypher/curies
@@ -546,46 +552,37 @@ class Cypher(CypherBase):
 class DynamicBase(restService):
     """ Dynamic Cypher resources """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
-    def multiquery_relationship_id(self, relationship, id, output='application/json'):
-        """ actually include parent class properties like owl is supposed to ... from: /dynamic/multiquery/{relationship}/{id}
+    def demos_apinat_bundles_start_id(self, start_id, output='application/json'):
+        """ Return the paths to somas from an anatomical region (aka connected-somas) from: /dynamic/demos/apinat/bundles/{start-id}
 
             Arguments:
-            relationship: ontology id of the relationship to traverse
-            id: ontology id of the starting point
+            start_id: ontology id of the starting point
 
             Query:
-            MATCH path = (start:Class{iri: "${id}"})
-            -[:subClassOf|${relationship}*]
-            ->(end)
-            RETURN path
-            
-            /* // apparently broken
-            MATCH (start:Class{iri: "${id}"})
-            -[:subClassOf*0..20]
-            -(intermediate)
-            -[${relationship}*]
-            ->(end)
-            RETURN end
-            */
-            /*
-            MATCH (start:Class{iri: "${id}"})
-            -[:subClassOf*]
-            ->(superClass)
-            WITH superClass
-            MATCH (superClass)-[:${relationship}*]->(superpart)
-            RETURN superpart
-            UNION
-            MATCH (start:Class{iri: "${id}"})
-            -[:${relationship}*]->(superpart)
-            RETURN superpart
-            */
+            MATCH path1 = (start:Class{iri: "${start-id}"})
+            -[:apinatomy:annotates]->(start_housing)
+            -[:apinatomy:subtypes*0..1]->()
+            -[:apinatomy:clones*0..1]->(layer_or_end)
+            -[:apinatomy:layers*0..1]->()
+            -[:apinatomy:bundles]->(linkStart)
+            -[:apinatomy:prevChainEndLevels|apinatomy:prev|apinatomy:source*1..]->(link)
+            -[:apinatomy:targetOf|apinatomy:sourceOf]->(linkSoma)  // axon or dendrite root
+            -[:apinatomy:conveyingLyph]->()
+            -[:apinatomy:supertype*0..1]->(soma:NamedIndividual)
+            -[:apinatomy:external]->(c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            WITH path1, link
+            OPTIONAL MATCH path2 = (link)
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:layerIn*0..1]->(end)
+            -[:apinatomy:external]->(external)
+            RETURN path1, path2
 
             outputs:
                 application/json
@@ -600,13 +597,406 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
-            id = parse.quote(id, safe='')
-        kwargs = {'relationship': relationship, 'id': id}
+        kwargs = {'start_id': start_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
-        param_rest = self._make_rest('id', **kwargs)
-        url = self._basePath + ('/dynamic/multiquery/{relationship}/{id}').format(**kwargs)
-        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/bundles/{start_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_housing_lyphs(self, output='application/json'):
+        """ List all the housing lyphs (neuronal processes) for all starting points. from: /dynamic/demos/apinat/housing-lyphs
+
+            Arguments:
+
+
+            Query:
+            MATCH path = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)  // soma lyph
+            -[:apinatomy:conveys]->(somaLink)                // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(root)    // axon or dendrite root
+            -[:apinatomy:controlNodes|apinatomy:rootOf*1..2]->(chain)                    // axon or dendrite tree
+            -[:apinatomy:housingLyphs]->(housing)            // list of lyphs housing the trees
+            -[:apinatomy:external*0..1]->(external)          // external ids for the housing lyphs
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            RETURN path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        # type caste not needed
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/housing-lyphs').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_housing_lyphs_start_id(self, start_id, output='application/json'):
+        """ List all the housing lyphs for a starting point. from: /dynamic/demos/apinat/housing-lyphs/{start-id}
+
+            Arguments:
+            start_id: ontology id of the starting point
+
+            Query:
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)  // soma lyph
+            -[:apinatomy:conveys]->(somaLink)                // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(root)    // axon or dendrite root
+            -[:apinatomy:internalIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(layer_or_end_external:Class{iri: '${start-id}'})
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, root
+            MATCH path2 = (root)
+            -[:apinatomy:controlNodes|apinatomy:rootOf*1..2]->(chain)                    // axon or dendrite tree
+            -[:apinatomy:housingLyphs]->(housing)            // list of lyphs housing the trees
+            -[:apinatomy:external*0..1]->(external)          // external ids for the housing lyphs
+            RETURN path1, path2
+            
+            UNION
+            
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)  // soma lyph
+            -[:apinatomy:conveys]->(somaLink)                // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(root)    // axon or dendrite root
+            -[:apinatomy:internalIn]->(layer)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external:Class{iri: '${start-id}'})
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, root
+            MATCH path2 = (root)
+            -[:apinatomy:rootOf]->(chain)                    // axon or dendrite tree
+            -[:apinatomy:housingLyphs]->(housing)            // list of lyphs housing the trees
+            -[:apinatomy:external*0..1]->(external)          // external ids for the housing lyphs
+            RETURN path1, path2
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/housing-lyphs/{start_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_model_bundles_start_id(self, start_id, model_id=None, output='application/json'):
+        """ Return the paths to somas from an anatomical region (aka connected-somas) from: /dynamic/demos/apinat/model-bundles/{start-id}
+
+            Arguments:
+            start_id: ontology id of the starting point
+            model_id: the id of the model to restrict the query to
+
+            Query:
+            MATCH path1 = (model:Ontology{iri: "${model-id}"})
+            <-[:isDefinedBy]-(start:Class{iri: "${start-id}"})
+            -[:apinatomy:annotates]->(start_housing)
+            -[:apinatomy:subtypes*0..1]->()
+            -[:apinatomy:clones*0..1]->(layer_or_end)
+            -[:apinatomy:layers*0..1]->()
+            -[:apinatomy:bundles]->(linkStart)
+            -[:apinatomy:prevChainEndLevels|apinatomy:prev|apinatomy:source*1..]->(link)
+            -[:apinatomy:targetOf|apinatomy:sourceOf]->(linkSoma)  // axon or dendrite root
+            -[:apinatomy:conveyingLyph]->()
+            -[:apinatomy:supertype*0..1]->(soma:NamedIndividual)
+            -[:apinatomy:external]->(c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            WITH path1, link
+            OPTIONAL MATCH path2 = (link)
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:layerIn*0..1]->(end)
+            -[:apinatomy:external]->(external)
+            RETURN path1, path2
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id, 'model_id': model_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/model-bundles/{start_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_old_bundles_start_id(self, start_id, output='application/json'):
+        """ Return the paths to somas from an anatomical region (aka connected-somas) from: /dynamic/demos/apinat/old-bundles/{start-id}
+
+            Arguments:
+            start_id: ontology id of the starting point
+
+            Query:
+            MATCH path1 = (start:Class{iri: '${start-id}'})
+            -[:apinatomy:annotates]->(start_housing)
+            -[:apinatomy:bundlesChains]->(chain)
+            -[:apinatomy:root]->(root)
+            -[:apinatomy:internalIn]->(layer_or_end)  # this hits a cycle back to start_housing
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(layer_or_end_external)
+            WITH path1, root, layer_or_end AS layer
+            OPTIONAL MATCH path2 = (layer)
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external)
+            WITH path1, path2, root
+            MATCH path3 = (root) // in the layer case this hits an additional lyph
+            <-[:apinatomy:target|apinatomy:source]-(link)
+            <-[:apinatomy:conveys]-(soma)
+            <-[:apinatomy:annotates]-(soma_NLX)
+            RETURN path1, path2, path3
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/old-bundles/{start_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_soma_processes(self, output='application/json'):
+        """ List all the neuronal processes for all somas. from: /dynamic/demos/apinat/soma-processes
+
+            Arguments:
+
+
+            Query:
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)    // soma lyph
+            -[:apinatomy:conveys]->(linkSoma)                  // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(nodeRoot)  // axon or dendrite root
+            -[:apinatomy:sourceOf|apinatomy:nextChainStartLevels|apinatomy:next*1..]->(link)  // sourceOf is first and only once
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(external)
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, nodeRoot, layer_or_end AS layer
+            OPTIONAL MATCH path2 = (layer)  // if we were in a layer, get the containing lyph as well
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external)
+            WITH path1, path2, nodeRoot
+            MATCH path3 = (nodeRoot)        // extract chain for axon vs dendrite
+            -[:apinatomy:rootOf]->(chain)
+            RETURN path1, path2, path3
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        # type caste not needed
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/soma-processes').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_soma_processes_start_id(self, start_id, output='application/json'):
+        """ List all the neuronal processes for somas located in start-id. from: /dynamic/demos/apinat/soma-processes/{start-id}
+
+            Arguments:
+            start_id: ontology id of the starting point
+
+            Query:
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)    // soma lyph
+            -[:apinatomy:conveys]->(linkSoma)                  // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(nodeRoot)  // axon or dendrite root
+            -[:apinatomy:internalIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:layerIn*0..1]->(layerSoma)  // don't need to see both layer and housing for soma
+            -[:apinatomy:external]->(externalEndSoma:Class{iri: '${start-id}'})
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, nodeRoot
+            MATCH path3 = (chain)
+            <-[:apinatomy:rootOf]-(nodeRoot)
+            -[:apinatomy:sourceOf|apinatomy:nextChainStartLevels|apinatomy:next*1..]->(link)
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(external)
+            WITH path1, path3, nodeRoot, layer_or_end AS layer
+            OPTIONAL MATCH path2 = (layer)  // if we were in a layer, get the containing lyph as well
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external)
+            RETURN path1, path2, path3
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'start_id': start_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/soma-processes/{start_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_somas(self, output='application/json'):
+        """ List all the somas for a given graph (TODO on the given graph) from: /dynamic/demos/apinat/somas
+
+            Arguments:
+
+
+            Query:
+            MATCH (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)
+            RETURN soma
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        # type caste not needed
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/somas').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def demos_apinat_weird_soma_processes_process_id(self, process_id, output='application/json'):
+        """ List all the neuronal processes for somas where some processes is in process-id. from: /dynamic/demos/apinat/weird-soma-processes/{process-id}
+
+            Arguments:
+            process_id: ontology id of the starting point
+
+            Query:
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)    // soma lyph
+            -[:apinatomy:conveys]->(linkSoma)                  // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(nodeRoot)  // axon or dendrite root
+            -[:apinatomy:sourceOf|apinatomy:nextChainStartLevels|apinatomy:next*1..]->(link)  // sourceOf is first and only once
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(external:Class{iri: '${process-id}'})
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, nodeRoot, layer_or_end AS layer
+            OPTIONAL MATCH path2 = (layer)  // if we were in a layer, get the containing lyph as well
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external)
+            WITH path1, path2, nodeRoot
+            MATCH path3 = (nodeRoot)        // extract chain for axon vs dendrite
+            -[:apinatomy:rootOf]->(chain)
+            RETURN path1, path2, path3
+            
+            UNION
+            
+            MATCH path1 = (c:Class{iri: "http://uri.neuinfo.org/nif/nifstd/nlx_154731"})
+            -[:apinatomy:annotates]->(soma:NamedIndividual)    // soma lyph
+            -[:apinatomy:conveys]->(linkSoma)                  // link connecting soma to axon and dendrite
+            -[:apinatomy:target|apinatomy:source]->(nodeRoot)  // axon or dendrite root
+            -[:apinatomy:sourceOf|apinatomy:nextChainStartLevels|apinatomy:next*1..]->(link)  // sourceOf is first and only once
+            -[:apinatomy:fasciculatesIn]->(layer_or_end)
+            -[:apinatomy:cloneOf*0..1]->()
+            -[:apinatomy:supertype*0..1]->()
+            -[:apinatomy:external]->(external)
+            WHERE soma.`https://apinatomy.org/uris/readable/generated` IS NULL
+            WITH path1, nodeRoot, layer_or_end AS layer
+            MATCH path2 = (layer)  // if we were in a layer, get the containing lyph as well
+            -[:apinatomy:layerIn]->(end_housing)
+            -[:apinatomy:external]->(end_housing_external:Class{iri: '${process-id}'})
+            WITH path1, path2, nodeRoot
+            MATCH path3 = (nodeRoot)        // extract chain for axon vs dendrite
+            -[:apinatomy:rootOf]->(chain)
+            RETURN path1, path2, path3
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {'process_id': process_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/demos/apinat/weird-soma-processes/{process_id}').format(**kwargs)
+        requests_params = kwargs
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
@@ -713,7 +1103,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if artifact_id and artifact_id.startswith('http:'):
+        if artifact_id and self._hrx.match(artifact_id):
             artifact_id = parse.quote(artifact_id, safe='')
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -748,7 +1138,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if artifact_id and artifact_id.startswith('http:'):
+        if artifact_id and self._hrx.match(artifact_id):
             artifact_id = parse.quote(artifact_id, safe='')
         kwargs = {'artifact_id': artifact_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -767,24 +1157,26 @@ class DynamicBase(restService):
             Query:
             MATCH (n)
             WHERE n.iri IN [
-                    "http://purl.org/sig/ont/fma/fma7195",
-                    "http://purl.org/sig/ont/fma/fma7088",
-                    "http://purl.org/sig/ont/fma/fma7197",
-                    "http://purl.org/sig/ont/fma/fma7198",
-                    "http://purl.org/sig/ont/fma/fma7203",
-                    "http://purl.org/sig/ont/fma/fma7148",
-                    "http://purl.org/sig/ont/fma/fma7196",
-                    "http://purl.org/sig/ont/fma/fma14543",
-                    "http://purl.org/sig/ont/fma/fma7201",
-                    "http://purl.org/sig/ont/fma/fma7200",
-                    "http://purl.org/sig/ont/fma/fma7199",
-                    "http://purl.org/sig/ont/fma/fma15900",
-                    "http://purl.org/sig/ont/fma/fma45659",
-                    "http://purl.org/sig/ont/fma/fma7157",
-                    "http://purl.org/sig/ont/fma/fma9903",
-                    "http://purl.org/sig/ont/fma/fma9906",
-                    "http://purl.org/sig/ont/fma/fma7647",
-                    "http://purl.org/sig/ont/fma/fma50801"]
+                    "http://purl.org/sig/ont/fma/fma7195",  // lung
+                    "http://purl.org/sig/ont/fma/fma7088",  // heart
+                    "http://purl.org/sig/ont/fma/fma7197",  // liver
+                    "http://purl.org/sig/ont/fma/fma7198",  // pancreas
+                    "http://purl.org/sig/ont/fma/fma7203",  // kidney
+                    "http://purl.org/sig/ont/fma/fma7148",  // stomach
+                    "http://purl.org/sig/ont/fma/fma7196",  // spleen
+                    "http://purl.org/sig/ont/fma/fma14543", // colon
+                    "http://purl.org/sig/ont/fma/fma7201",  // large intestine
+                    "http://purl.org/sig/ont/fma/fma7200",  // small intestine
+                    "http://purl.org/sig/ont/fma/fma7199",  // intestine
+                    "http://purl.org/sig/ont/fma/fma15900", // urinary bladder
+                    "http://purl.org/sig/ont/fma/fma45659", // lower urinary tract
+                    "http://purl.org/sig/ont/fma/fma7157",  // nervous system
+                    "http://purl.org/sig/ont/fma/fma9903",  // peripheral nervous system
+                    "http://purl.org/sig/ont/fma/fma9906",  // sympathetic nervous system
+                    "http://purl.org/sig/ont/fma/fma7647",  // spinal cord
+                    "http://purl.org/sig/ont/fma/fma50801", // brain
+                    "http://purl.org/sig/ont/fma/fma5889"   // autonomic ganglion
+                    ]
             RETURN n
 
             outputs:
@@ -815,85 +1207,19 @@ class DynamicBase(restService):
             id: ontology id of the organ
 
             Query:
-            // NOTE: continuous with seems like it is what we want, but it causes
-            // MASSIVE memory usage in creatTree :/
-            // all parts of and directly connected to organ or parts of organ
+            // depth of 6 captures everything, 5 is too shallow, 40 is WAY too deep
             MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            -[:fma:arterial_supply|fma:nerve_supply|fma:venous_drainage|fma:continuous_with*0..1]->(sup)
-            -[:fma:constitutional_part|fma:branch_of|fma:tributary_of|fma:branch*0..1]->(a_bit_more)
+            <-[:subClassOf|ilxtr:includedForSPARCUnder|fma:regional_part_of|fma:constitutional_part_of|fma:related_part_of*0..6]-(part)
+            <-[:fma:arterial_supply_of|fma:nerve_supply_of|fma:venous_drainage_of|fma:continuous_with*0..1]-(sup)
+            <-[:subClassOf|fma:constitutional_part_of|fma:branch|fma:tributary|fma:branch_of*0..1]-(a_bit_more)
             RETURN path
-            UNION
-            // return the major artery for any arteries supplying the organ directly
+            UNION  // for this query UNION seems to be MUCH faster than using WITH
             MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:arterial_supply|fma:venous_drainage]->(vessel)
-            -[:fma:branch_of|fma:tributary_of]->(more_vessel)
-            -[:fma:branch_of|fma:tributary_of|fma:regional_part_of]->(even_more_vessel)
+            // this one does not need to be inverted ? except for the INCOMING flag
+            <-[:fma:arterial_supply_of|fma:venous_drainage_of]-(vessel)
+            <-[:fma:branch|fma:tributary]-(more_vessel)
+            <-[:fma:branch|fma:tributary|fma:regional_part]-(even_more_vessel)
             RETURN path
-            //
-            //
-            //
-            //
-            //
-            //
-            /*
-            MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
-            RETURN path
-            UNION
-            MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            -[:fma:connected_to*1]->(thing)
-            RETURN path
-            UNION
-            MATCH ppath = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            // can't exclude here otherwise we miss nerves of the containing parts
-            // WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
-            WITH start, ppath, part
-            MATCH path = (part)
-            -[:fma:nerve_supply*1]->(nerve)
-            -[:fma:branch_of*0..20]->(more_nerve)
-            WHERE NOT (more_nerve)-[:fma:branch_of]->()
-            // WHERE more_nerve <> part
-            RETURN path
-            UNION
-            MATCH ppath = (start:Class{iri: "${id}"})
-            -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            // can't exclude here otherwise we miss nerves of the containing parts
-            // WHERE NOT (part)-[:fma:regional_part|fma:constitutional_part|fma:related_part]->()
-            WITH start, ppath, part
-            MATCH path = (part)
-            -[:fma:arterial_supply*1]->(artery)
-            RETURN path
-            UNION
-            MATCH path = (start:Class{iri: "${id}"})
-            -[:fma:arterial_supply]->(artery)
-            -[:fma:branch_of]->(more_artery)
-            RETURN path
-            // UNION
-            // MATCH ppath = (start:Class{iri: "${id}"})
-            // -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(part)
-            // -[:fma:arterial_supply*1]->(artery)
-            // WITH start, ppath, artery
-            // MATCH path = (artery)
-            // -[:fma:branch_of*1]->(more_artery)
-            // WHERE NOT more_artery IN nodes(ppath)
-            
-            // works but slow as fuck
-            // WHERE NOT (start)
-            // -[:fma:regional_part|fma:constitutional_part|fma:related_part*0..20]->(more_artery)
-            
-            // WHERE NOT more_artery IN nodes(ppath)
-            // WHERE NOT more_artery IN nodes(path)[0..-2]
-            // WHERE more_artery <> part AND more_artery <> artery
-            // WHERE length([n IN nodes(path) WHERE more_artery = n]) < 2
-            // WHERE more_artery IS NOT NULL
-            // WHERE NONE (p in collect(part) WHERE more_artery.id = p.id)
-            // WHERE NOT more_artery IN collect(part)
-            // RETURN path
-            */
 
             outputs:
                 application/json
@@ -908,7 +1234,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -980,7 +1306,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if species_id and species_id.startswith('http:'):
+        if species_id and self._hrx.match(species_id):
             species_id = parse.quote(species_id, safe='')
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1111,7 +1437,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if species_id and species_id.startswith('http:'):
+        if species_id and self._hrx.match(species_id):
             species_id = parse.quote(species_id, safe='')
         kwargs = {'species_id': species_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1166,9 +1492,9 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if species_id and species_id.startswith('http:'):
+        if species_id and self._hrx.match(species_id):
             species_id = parse.quote(species_id, safe='')
-        if region_id and region_id.startswith('http:'):
+        if region_id and self._hrx.match(region_id):
             region_id = parse.quote(region_id, safe='')
         kwargs = {'species_id': species_id, 'region_id': region_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1239,9 +1565,9 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if species_id and species_id.startswith('http:'):
+        if species_id and self._hrx.match(species_id):
             species_id = parse.quote(species_id, safe='')
-        if fma_id and fma_id.startswith('http:'):
+        if fma_id and self._hrx.match(fma_id):
             fma_id = parse.quote(fma_id, safe='')
         kwargs = {'species_id': species_id, 'fma_id': fma_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1279,7 +1605,7 @@ class DynamicBase(restService):
                 image/png
         """
 
-        if root_id and root_id.startswith('http:'):
+        if root_id and self._hrx.match(root_id):
             root_id = parse.quote(root_id, safe='')
         kwargs = {'root_id': root_id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1298,12 +1624,13 @@ class DynamicBase(restService):
             Query:
             MATCH (n)
             WHERE n.iri IN [
-                    "http://purl.obolibrary.org/obo/NCBITaxon_9378",
-                    "http://purl.obolibrary.org/obo/NCBITaxon_9606",
-                    "http://purl.obolibrary.org/obo/NCBITaxon_9685",
-                    "http://purl.obolibrary.org/obo/NCBITaxon_9823",
-                    "http://purl.obolibrary.org/obo/NCBITaxon_10090",
-                    "http://purl.obolibrary.org/obo/NCBITaxon_10116"]
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9378",   // Suncus murinus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9606",   // Homo sapiens
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9685",   // Felis catus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9823",   // Sus scrofa
+                    "http://purl.obolibrary.org/obo/NCBITaxon_10090",  // Mus musculus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_10116"   // Rattus norvegicus
+                    ]
             RETURN n
 
             outputs:
@@ -1365,6 +1692,252 @@ class DynamicBase(restService):
         output = self._get('GET', url, requests_params, output)
         return output if output else None
 
+    def test_sparc_organList(self, output='application/json'):
+        """ Get the list of all FMA organ identifiers relevant to SPARC from: /dynamic/test/sparc/organList
+
+            Arguments:
+
+
+            Query:
+            MATCH (n)
+            WHERE n.iri IN [
+                    "http://purl.org/sig/ont/fma/fma7195",  // lung
+                    "http://purl.org/sig/ont/fma/fma7088",  // heart
+                    "http://purl.org/sig/ont/fma/fma7197",  // liver
+                    "http://purl.org/sig/ont/fma/fma7198",  // pancreas
+                    "http://purl.org/sig/ont/fma/fma7203",  // kidney
+                    "http://purl.org/sig/ont/fma/fma7148",  // stomach
+                    "http://purl.org/sig/ont/fma/fma7196",  // spleen
+                    "http://purl.org/sig/ont/fma/fma14543", // colon
+                    "http://purl.org/sig/ont/fma/fma7201",  // large intestine
+                    "http://purl.org/sig/ont/fma/fma7200",  // small intestine
+                    "http://purl.org/sig/ont/fma/fma7199",  // intestine
+                    "http://purl.org/sig/ont/fma/fma15900", // urinary bladder
+                    "http://purl.org/sig/ont/fma/fma45659", // lower urinary tract
+                    "http://purl.org/sig/ont/fma/fma7157",  // nervous system
+                    "http://purl.org/sig/ont/fma/fma9903",  // peripheral nervous system
+                    "http://purl.org/sig/ont/fma/fma9906",  // sympathetic nervous system
+                    "http://purl.org/sig/ont/fma/fma7647",  // spinal cord
+                    "http://purl.org/sig/ont/fma/fma50801", // brain
+                    "http://purl.org/sig/ont/fma/fma5889"   // autonomic ganglion
+                    ]
+            RETURN n
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        # type caste not needed
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/test/sparc/organList').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def test_sparc_organParts_id(self, id, output='application/json'):
+        """ Get the parts list for an organ including nerves and blood vessles from: /dynamic/test/sparc/organParts/{id}
+
+            Arguments:
+            id: ontology id of the organ
+
+            Query:
+            // depth of 6 captures everything, 5 is too shallow, 40 is WAY too deep
+            MATCH path = (start:Class{iri: "${id}"})
+            <-[:subClassOf|ilxtr:includedForSPARCUnder|fma:regional_part_of|fma:constitutional_part_of|fma:related_part_of*0..6]-(part)
+            <-[:fma:arterial_supply_of|fma:nerve_supply_of|fma:venous_drainage_of|fma:continuous_with*0..1]-(sup)
+            <-[:subClassOf|fma:constitutional_part_of|fma:branch|fma:tributary|fma:branch_of*0..1]-(a_bit_more)
+            RETURN path
+            UNION  // for this query UNION seems to be MUCH faster than using WITH
+            MATCH path = (start:Class{iri: "${id}"})
+            // this one does not need to be inverted ? except for the INCOMING flag
+            <-[:fma:arterial_supply_of|fma:venous_drainage_of]-(vessel)
+            <-[:fma:branch|fma:tributary]-(more_vessel)
+            <-[:fma:branch|fma:tributary|fma:regional_part]-(even_more_vessel)
+            RETURN path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if id and self._hrx.match(id):
+            id = parse.quote(id, safe='')
+        kwargs = {'id': id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest('id', **kwargs)
+        url = self._basePath + ('/dynamic/test/sparc/organParts/{id}').format(**kwargs)
+        requests_params = {k:v for k, v in kwargs.items() if k != 'id'}
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def test_sparc_parcellationRootsFMA_species_id_fma_id(self, species_id, fma_id, output='application/json'):
+        """ Get the graph of all parcellation label roots for a single species and anatomical region from: /dynamic/test/sparc/parcellationRootsFMA/{species-id}/{fma-id}
+
+            Arguments:
+            species_id: ontology id of the species
+            fma_id: ontology id of the anatomical region
+
+            Query:
+            MATCH (fma:Class{iri: "${fma-id}"})
+            WITH "FMA:" + toString(fma.`http://purl.org/sig/ont/fma/FMAID`) AS curie
+            MATCH (region)
+            -[:subClassOf*]->(start:Class{iri: "http://purl.obolibrary.org/obo/UBERON_0001062"})
+            WHERE any(x IN
+                      region.`http://www.geneontology.org/formats/oboInOwl#hasDbXref`
+                      WHERE x =~ curie)
+            WITH region
+            MATCH
+            (region)
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (artifact)
+            -[:subClassOf*0..2]->(parent)
+            WHERE artifact.iri <> "http://www.w3.org/2002/07/owl#Nothing"
+            RETURN path
+            UNION
+            MATCH (fma:Class{iri: "${fma-id}"})
+            WITH "FMA:" + toString(fma.`http://purl.org/sig/ont/fma/FMAID`) AS curie
+            MATCH (region)
+            -[:subClassOf*]->(start:Class{iri: "http://purl.obolibrary.org/obo/UBERON_0001062"})
+            WHERE any(x IN
+                      region.`http://www.geneontology.org/formats/oboInOwl#hasDbXref`
+                      WHERE x =~ curie)
+            WITH region
+            MATCH
+            (region)
+            <-[:ilxtr:isDefinedInRegion]-
+            (parent)
+            -[:ilxtr:isDefinedInTaxon]->
+            (species:Class{iri: "${species-id}"})
+            WITH parent
+            MATCH path = (root)
+            -[:ilxtr:isDefinedBy]->(artifact)
+            -[:subClassOf*0..2]->(parent)
+            RETURN path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if species_id and self._hrx.match(species_id):
+            species_id = parse.quote(species_id, safe='')
+        if fma_id and self._hrx.match(fma_id):
+            fma_id = parse.quote(fma_id, safe='')
+        kwargs = {'species_id': species_id, 'fma_id': fma_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/test/sparc/parcellationRootsFMA/{species_id}/{fma_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def test_sparc_rootLabels_root_id(self, root_id, output='application/json'):
+        """ Get the list of all parcellation labels for a single label root from: /dynamic/test/sparc/rootLabels/{root-id}
+
+            Arguments:
+            root_id: ontology id of the parcellation label root
+
+            Query:
+            MATCH (label)-[:subClassOf]->(root:Class{iri: "${root-id}"})
+            WITH label
+            MATCH path = (label)-[relation*0..1]-(maybe)
+            WHERE NONE (r in relation WHERE type(r) IN ["isDefinedBy", "subClassOf", "filler"])
+                  AND NOT (label.iri =~ ".*_:.*") AND NOT (maybe.iri =~ ".*_:.*")
+                  AND label.iri <> "http://www.w3.org/2002/07/owl#Nothing"
+            RETURN path
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        if root_id and self._hrx.match(root_id):
+            root_id = parse.quote(root_id, safe='')
+        kwargs = {'root_id': root_id}
+        kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/test/sparc/rootLabels/{root_id}').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
+    def test_sparc_speciesList(self, output='application/json'):
+        """ Get the list of all NCBITaxon species identifiers relevant to SPARC from: /dynamic/test/sparc/speciesList
+
+            Arguments:
+
+
+            Query:
+            MATCH (n)
+            WHERE n.iri IN [
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9378",   // Suncus murinus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9606",   // Homo sapiens
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9685",   // Felis catus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_9823",   // Sus scrofa
+                    "http://purl.obolibrary.org/obo/NCBITaxon_10090",  // Mus musculus
+                    "http://purl.obolibrary.org/obo/NCBITaxon_10116"   // Rattus norvegicus
+                    ]
+            RETURN n
+
+            outputs:
+                application/json
+                application/graphson
+                application/xml
+                application/graphml+xml
+                application/xgmml
+                text/gml
+                text/csv
+                text/tab-separated-values
+                image/jpeg
+                image/png
+        """
+
+        kwargs = {}
+        # type caste not needed
+        param_rest = self._make_rest(None, **kwargs)
+        url = self._basePath + ('/dynamic/test/sparc/speciesList').format(**kwargs)
+        requests_params = kwargs
+        output = self._get('GET', url, requests_params, output)
+        return output if output else None
+
 
 class Dynamic(DynamicBase):
 
@@ -1385,7 +1958,9 @@ class Dynamic(DynamicBase):
             kwargs = {}
 
         if '.' in path:
-            raise ValueError('extensions not supported directly please use output=mimetype')
+            # FIXME logic seems bad ...
+            if ':' not in path or path.index('.') > path.index(':'):
+                raise ValueError('extensions not supported directly please use output=mimetype')
 
         if ':' in path:  # curie FIXME way more potential arguments here ...
             key = lambda s: len(s)
@@ -1417,6 +1992,9 @@ class Dynamic(DynamicBase):
 
                 cands = new_cands
 
+            elif not cands:
+                raise ValueError(f'{self._basePath} does not have endpoints matching {path}')
+
             fname = cands[0]
         else:
             arg = None
@@ -1425,25 +2003,28 @@ class Dynamic(DynamicBase):
             fname = self._path_to_id(path)
 
         if not hasattr(self, fname):
-            raise TypeError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
+            raise ValueError(f'{self._basePath} does not have endpoint {path} -> {fname!r}')
 
         return getattr(self, fname), args, kwargs
 
     def dispatch(self, path, output='application/json', **kwargs):
         f, args, query_kwargs = self._path_function_arg(path)
         kwargs.update(query_kwargs)
-        return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        try:
+            return f(*args, output=output, **kwargs) if args else f(output=output, **kwargs)
+        except TypeError as e:
+            raise TypeError('Did you remember to set parameters in the services config?') from e
 
 
 class GraphBase(restService):
     """ Graph services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def getEdges(self, type, entail=None, limit=None, skip=None, callback=None, output='application/json'):
         """ Get nodes connected by an edge type from: /graph/edges/{type}
@@ -1505,7 +2086,7 @@ class GraphBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1543,7 +2124,7 @@ class GraphBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'depth': depth, 'blankNodes': blankNodes, 'relationshipType': relationshipType, 'direction': direction, 'entail': entail, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1597,7 +2178,7 @@ class GraphBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'hint': hint, 'relationships': relationships, 'lbls': lbls, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1648,7 +2229,7 @@ class GraphBase(restService):
                 image/png
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id, 'project': project, 'callback': callback}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1682,12 +2263,12 @@ class Graph(GraphBase):
 class Lexical(restService):
     """ Lexical services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def getChunks(self, text, output='application/json'):
         """ Extract entities from text. from: /lexical/chunks
@@ -1761,12 +2342,12 @@ class Lexical(restService):
 class Refine(restService):
     """ OpenRefine Reconciliation Services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def getPreview(self, id, output='application/json'):
         """  from: /refine/preview/{id}
@@ -1778,7 +2359,7 @@ class Refine(restService):
                 application/javascript
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1875,7 +2456,7 @@ class Refine(restService):
                 application/javascript
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
@@ -1889,12 +2470,12 @@ class Refine(restService):
 class Vocabulary(restService):
     """ Vocabulary services """
 
-    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None):
+    def __init__(self, basePath=None, verbose=False, cache=False, safe_cache=False, key=None, do_error=False):
         if basePath is None:
             basePath = BASEPATH
         self._basePath = basePath
         self._verbose = verbose
-        super().__init__(cache=cache, safe_cache=safe_cache, key=key)
+        super().__init__(cache=cache, safe_cache=safe_cache, key=key, do_error=do_error)
 
     def findByPrefix(self, term, limit=None, searchSynonyms=None, searchAbbreviations=None, searchAcronyms=None, includeDeprecated=None, category=None, prefix=None, output='application/json'):
         """ Find a concept by its prefix from: /vocabulary/autocomplete/{term}
@@ -1946,7 +2527,7 @@ class Vocabulary(restService):
                 application/json
         """
 
-        if id and id.startswith('http:'):
+        if id and self._hrx.match(id):
             id = parse.quote(id, safe='')
         kwargs = {'id': id}
         kwargs = {k:dumps(v) if builtins.type(v) is dict else v for k, v in kwargs.items()}
