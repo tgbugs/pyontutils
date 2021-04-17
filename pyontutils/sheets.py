@@ -6,9 +6,6 @@ from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
 from terminaltables import AsciiTable
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
 from pyontutils.clifun import python_identifier
@@ -91,8 +88,10 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
     if not creds or not creds.valid:
         # the first time you run this you will need to use the --noauth_local_webserver args
         if creds and creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
             creds.refresh(Request())
         else:
+            from google_auth_oauthlib.flow import InstalledAppFlow # XXX slow import
             creds_file = auth.get_path('google-api-creds-file')
             flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
             creds = flow.run_console()
@@ -100,6 +99,7 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
         with open(store_file, 'wb') as f:
             pickle.dump(creds, f)
 
+    from googleapiclient.discovery import build
     service = build(api, version, credentials=creds)
     return service
 
