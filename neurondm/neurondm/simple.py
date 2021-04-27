@@ -109,6 +109,43 @@ class ObjectTerm(OntTerm):
         global current_conventions
 
 
+class Intersection(frozenset):
+    """ Composed intersectional terms are routinely needed when specifying the
+    exact locations for dimensions that have cardinality > 1. Axon location is
+    a good example. If I have an axon in spinal L1 and an axon in spinal L2 and
+    I have an axon in spinal VII and spinal VIII, this is equivalent to at
+    least at least 4 possible scenarios, whereas having an axon in spinal L1
+    VII and spinal L2 VIII corresponds to only a single scenario. This is
+    because hasAxonLocatedIn allows cardinality > 1 (unlike for soma location,
+    though even that is somewhat flexible), and because for the card > 1 case,
+    phenotype and intersection are not commutative, that is
+    (phenotype (intersection region layer)) <=/=>
+    (intersection (phenotype region) (phenotype layer))
+    it gets worse when there are multiple possible compositions when all
+    regions share a layer, but axons are present in different regions in
+    different layers """
+
+    # XXX using this complicates the neurdf representation, but sometimes
+    # there isn't much we can do about it without materializing terms
+
+    # FIXME enforce member type
+
+    def __new__(cls, *phenotype_values):  # FIXME where to we put/manage names
+        self = super().__new__(cls, [ObjectTerm(v) for v in phenotype_values])
+        return self
+
+    @property
+    def combinator(self):
+        return cmb.intersectionOf(*self)
+
+    def asOwl(self, identifier_function=lambda self: rdflib.BNode()):
+        s = identifier_function(self)
+        yield from self.combinator(s)
+
+
+# phenotypes
+
+
 class PhenotypeBase(tuple):
 
     _defaultPredicate = ilxtr.hasPhenotype
@@ -286,7 +323,7 @@ class PhenotypeCollection(frozenset):  # set? seems... fun? ordered set?
                            if isinstance(phenotype, type))
             combinators = list(combinators)
             if type == PhenotypeCollection and combinators:
-                asdf = list(self.combinator(s, *combinators))
+                asdf = list(self.combinator(s, *combinators))  # reminder: self.combinator is a property that returns a function
                 OntGraph().populate_from_triples(asdf).debug()
                 breakpoint()  # XXX
 
@@ -313,7 +350,7 @@ class CellBase(PhenotypeCollection):
         """ annotate the neuron as a whole """
 
     def annotate_phenotype(self, phenotype, *annotations):
-        current_collection.annotation(self, phenotype, *annotations)
+        _current_collection.annotation(self, phenotype, *annotations)
 
 
 class EntailedCell(CellBase):

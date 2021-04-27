@@ -665,6 +665,9 @@ class PredicateList(Triple):
 
                 yield from self.outer_self.serialize(subject, self.combinators)
 
+            def debug(self):
+                return super().debug(rdflib.BNode())
+
             def __repr__(self):
                 return f'{self.__class__.__name__}{self.combinators!r}'
 
