@@ -1,29 +1,39 @@
 #!/usr/bin/env python3
 from neurondm.core import LocalNameManager
-from neurondm.lang import Phenotype, Neuron, Config
+from neurondm.lang import Phenotype, EntailedPhenotype, Neuron, NeuronEBM, Config
 
 slp = 'ilxtr:hasSomaLocatedIn'
+sllp = 'ilxtr:hasSomaLocatedInLayer'
 alp = 'ilxtr:hasAxonLocatedIn'
+dlp = 'ilxtr:hasDendriteLocatedIn'
 synp = 'ilxtr:hasAxonPresynapticElementIn'
+snsp = 'ilxtr:hasSensorySubceullarElementIn'  # XXX new, kind of like axon terminal but for dendrites
 fconp = 'ilxtr:hasForwardConnectionPhenotype'
 
 
-class NeuronKeast2020(Neuron):
+class NeuronKeast2020(Neuron):  # FIXME should be an EBM but something is a bit off
     owlClass = 'ilxtr:NeuronKeast2020'
     shortname = 'Keast2020'
 
 
 def needs_keast_namespace():
     """ define neurons for keast spinal """
+
     common = {L1: (L1_vr, L1_wr),
               L2: (L2_vr, L2_wr),}
     common67 = {L1: (L1_gr,),
                 L2: (L2_gr,),}
 
-    neuron_2 = [Neuron(PG, n_bl, synloc) for synloc in (BNWsyn, BDWsyn)]
-    neuron_4 = []
+    # FIXME spinal cord white matter axons are missing from these bags
 
-    with Neuron(SPG4, n_ps, PGax, n_bl):
+    # neuron populations
+    neuron_1 = [Neuron(PG, n_bl, BDWsyn, BNWsyn)]  # pos
+    neuron_2 = [Neuron(PG, n_bl, synloc) for synloc in (BDWsyn, BNWsyn)]  # sos # FIXME smooth muslce only
+    neuron_3 = [Neuron(IMG, BDWsyn, BNWsyn)]  # sos # FIXME smooth muscle only
+
+    Neuron(ntk_4, id_='ilxtr:neuron-type-keast-4')  # the (will be inferred) parent
+    neuron_4 = []  # sos
+    with Neuron(ntk_4_ent, n_ps, PGax, n_bl):
         for soma_location_id in four_soma_locs:
             somaloc = Phenotype(soma_location_id, slp)
             for exits_via in ((L6_gr,), (S1ax, S1_gr,)):
@@ -32,12 +42,21 @@ def needs_keast_namespace():
                     n4 = Neuron(somaloc, *exits_via, synapses_on)
                     neuron_4.append(n4)
 
-    neuron_6 = []
-    neuron_7 = []
-    neuron_8 = []
-    with NeuronKeast2020(VII, SPGfcon):
+    neuron_5 = []  # pre
+    with NeuronKeast2020(VII, n_ps, PGax, PGsyn, ntk_1_fcon):
+        for somaloc, ventral_root_exit in zip((L6,    S1),
+                                              (L6_vr, S1_vr)):
+            n5 = Neuron(somaloc, ventral_root_exit)
+            neuron_5.append(n5)
+
+    neuron_6 = []  # sre
+    neuron_7 = []  # sre
+    neuron_8 = []  # sre
+    with NeuronKeast2020(VII, WMax, sos_fcon):
         for i, somaloc in enumerate((L1, L2)):
             soma_index = i + 2  # L1 aligns to the 3rd the sypathetic ganglion
+            # which is of course the L1 sypathetic ganglion, but it is
+            # the 3rd ganlion in the model with a neuron 4 soma
             with Neuron(somaloc, *common[somaloc]):
                 with Neuron(n_ls, *common67[somaloc]):
                     # 6
@@ -54,18 +73,71 @@ def needs_keast_namespace():
                     n8 = Neuron(syn, *axons_in)
                     neuron_8.append(n8)
 
+    neuron_9 = []  # slm
+    with NeuronKeast2020(IX, WMax, n_pu, URTsyn):
+        for somaloc, ventral_root_exit in zip((L5,    L6),
+                                              (L5_vr, L6_vr)):
+            n9 = Neuron(somaloc, ventral_root_exit)
+            neuron_9.append(n9)
+
+    neuron_10 = []  # fos
+    neuron_11 = []  # fos
+    neuron_12 = []  # fos
+    with NeuronKeast2020(Isyn, IIsyn, Vsyn, VIIsyn, Xsyn):  # 10 11 12 XXX layers are wrong, intersection has to come before phenotype
+        for somaloc in (L6_dr, S1_dr):
+            n10 = Neuron(somaloc, n_ps_dn, PGdn, n_bl_dn, )  # TODO a bunch of other sensory terminals
+            neuron_10.append(n10)
+
+            n12 = Neuron(somaloc, n_pu_dn, URTdn, )  # TODO URTdn layer is rhabdosphincter
+            neuron_12.append(n12)
+
+        for somaloc in (L1_dr, L2_dr):
+            n11 = Neuron(somaloc, n_ls_dn, IMGdn, n_hg_dn, PGdn, n_bl_dn, )  # TODO bladder and layers
+            neuron_11.append(n11)
+
+    with Neuron(pons_ax):
+        with Neuron(midbrain_ax):
+            with Neuron(dienc_ax):
+                with Neuron(cn_ax):
+                    neuron_13 = [Neuron(BNST, BRGTNsyn)]  # soma in BNST   ???
+                    neuron_14 = [Neuron(CeA, BRGTNsyn)]   # soma in CeA    ???
+                neuron_15 = [Neuron(MPOA, BRGTNsyn)]  # soma in MPOA   ???
+                neuron_16 = [Neuron(MnPO, BRGTNsyn)]  # soma in MnPO   ???
+                neuron_17 = [Neuron(LPOA, BRGTNsyn)]  # soma in LPOA   ???
+                neuron_18 = [Neuron(LHA, BRGTNsyn)]   # soma in LHA    ???
+            neuron_19 = [Neuron(VLPAG, BRGTNsyn)] # soma in VLPAG  ???
+        neuron_20 = [Neuron(BRGTN, )]  # soma in BRGTN  ??? # TODO many a syntapse
+
+
+    # implicit types (parents)
+    fos = first_order_sensory = [neuron_10, neuron_11, neuron_12]
+    slm = somatic_lower_motor = [neuron_9]
+    pre = parasympathetic_pre_ganglionic = [neuron_5]
+    pos = parasympathetic_post_ganglionic = [neuron_1]
+    sre = sympathetic_pre_ganglionic = [neuron_6, neuron_7, neuron_8]
+    sos = sympathetic_post_ganglionic = [neuron_2, neuron_3, neuron_4]
+
     #[print(repr(n)) for n in Neuron.neurons()]
 
 
 class Keast2020(LocalNameManager):
     # soma layers
-    VII= Phenotype('ilxtr:spinal-VII', 'ilxtr:hasSomaLocatedInLayer')
+    VII= Phenotype('ilxtr:spinal-VII', sllp)
+    IX = Phenotype('ilxtr:spinal-IX', sllp)
 
     # soma locations
     L1 = Phenotype('ilxtr:spinal-L1', slp)
     L2 = Phenotype('ilxtr:spinal-L2', slp)
+    L5 = Phenotype('ilxtr:spinal-L5', slp)
+    L6 = Phenotype('ilxtr:spinal-L6', slp)
+    S1 = Phenotype('ilxtr:spinal-S1', slp)
     IMG = Phenotype('ilxtr:IMG', slp)
     PG = Phenotype('ilxtr:PG', slp)
+
+    L1_dr = Phenotype('ilxtr:dr-L1', slp) # soma implies ax + dn
+    L2_dr = Phenotype('ilxtr:dr-L2', slp)
+    L6_dr = Phenotype('ilxtr:dr-L6', slp)
+    S1_dr = Phenotype('ilxtr:dr-S1', slp)
 
     # sort of nerves
     L1_vr = Phenotype('ilxtr:vr-L1', alp)
@@ -76,19 +148,52 @@ class Keast2020(LocalNameManager):
     L2_wr = Phenotype('ilxtr:wr-L2', alp)
     L2_gr = Phenotype('ilxtr:gr-L2', alp)
 
+    L5_vr = Phenotype('ilxtr:vr-L5', alp)
+
     L6_gr = Phenotype('ilxtr:gr-L6', alp)
+    L6_vr = Phenotype('ilxtr:vr-L6', alp)
+
     S1_gr = Phenotype('ilxtr:gr-S1', alp)
+    S1_vr = Phenotype('ilxtr:vr-S1', alp)
 
     IMGax = Phenotype('ilxtr:IMG', alp)
     PGax = Phenotype('ilxtr:PG', alp)
 
     S1ax = Phenotype('ilxtr:sc-S1', alp)
 
+    # ilxtr:spinal-white-matter technically a layer
+    # FIXME because axon location does not have cardianlity 1 WMax is
+    # ambiguous unless it is composed with a layer of the spinal cord
+    # because the operation is not commutative with card > 1
+    WMax = Phenotype('ilxtr:spinal-white-matter', alp)
+
+    # sensory dendrite sort of nerves
+    IMGdn = Phenotype('ilxtr:IMG', dlp)
+    PGdn = Phenotype('ilxtr:PG', dlp)
+
+    # XXX FIXME I'm being something of a literalist here, and guessing that
+    # the boxes that are drawn for these might not actually be what is intended
+    cn_ax = Phenotype('UBERON:0010011', alp)
+    dienc_ax = Phenotype('UBERON:0001894', alp)
+    midbrain_ax = Phenotype('UBERON:0001891', alp)
+    pons_ax = Phenotype('UBERON:0000988', alp)
+    medulla_ax = Phenotype('UBERON:0001896', alp)
+
     # nerves
-    n_ls = Phenotype('ilxtr:nerve-lumbar-splanic', alp)
-    n_hg = Phenotype('ilxtr:nerve-hypogastric', alp)
-    n_ps = Phenotype('ilxtr:nerve-pelvic-splanic', alp)
     n_bl = Phenotype('ilxtr:nerve-bladder', alp)
+    n_hg = Phenotype('ilxtr:nerve-hypogastric', alp)
+    n_ls = Phenotype('ilxtr:nerve-lumbar-splanic', alp)
+    n_ps = Phenotype('ilxtr:nerve-pelvic-splanic', alp)
+    n_pu = Phenotype('ilxtr:nerve-pudendal', alp)
+
+    # sensory ??ents
+    n_bl_dn = Phenotype('ilxtr:nerve-bladder', dlp)
+    n_hg_dn = Phenotype('ilxtr:nerve-hypogastric', dlp)
+    n_ls_dn = Phenotype('ilxtr:nerve-lumbar-splanic', dlp)
+    n_ps_dn = Phenotype('ilxtr:nerve-pelvic-splanic', dlp)
+    n_pu_dn = Phenotype('ilxtr:nerve-pudendal', dlp)
+
+    URTdn = Phenotype('ilxtr:urethra', dlp)
 
     # synaptic locations
     IMGsyn = Phenotype('ilxtr:IMG', synp)
@@ -100,12 +205,63 @@ class Keast2020(LocalNameManager):
     BDWsyn = Phenotype('ilxtr:bladder-dome-wall', synp)
     BNWsyn = Phenotype('ilxtr:bladder-neck-wall', synp)
 
+    URTsyn = Phenotype('ilxtr:urethra', synp)
+
+    BNST = Phenotype('UBERON:0001880', slp)
+    CeA = Phenotype( 'UBERON:0002883', slp)  # central amygdala
+    MPOA = Phenotype('UBERON:0007769', slp)
+    MnPO = Phenotype('UBERON:0002625', slp)
+    LPOA = Phenotype('UBERON:0001931', slp)
+    LHA = Phenotype('UBERON:0002430', slp)
+    VLPAG = Phenotype('UBERON:0003040', slp) # vent lat peri aq gray
+    BRGTN = Phenotype('UBERON:0007632', slp) # barrington's nucleus
+
+    BRGTNsyn = Phenotype('UBERON:0007632', synp)
+
+    # FIXME synp into layer has the cardinality issue
+    # with the fact that (intersection (phenotype layer hp) (phenotype region hp))
+    # is not commutative with (phenotype (intersection layer region) hp)
+    # when the relationship hp allows cardinality > 1
+    Isyn = Phenotype('ilxtr:spinal-I', synp)
+    IIsyn = Phenotype('ilxtr:spinal-II', synp)
+    Vsyn = Phenotype('ilxtr:spinal-V', synp)
+    VIIsyn = Phenotype('ilxtr:spinal-VII', synp)
+    Xsyn = Phenotype('ilxtr:spinal-X', synp)
+
+    # sensory substructure locations
+
     # target cell types
-    SPGfcon = Phenotype('ilxtr:sympathetic-post-ganglionic', fconp)
-    SPG4 = Phenotype('ilxtr:keast-neuron-4-type', 'ilxtr:hasPhenotype')  # FIXME what is this really?
+    ntk_4 = Phenotype('ilxtr:neuron-phenotype-keast-4', 'ilxtr:hasPhenotype')  # FIXME what is this really?
+    ntk_4_ent = EntailedPhenotype('ilxtr:neuron-phenotype-keast-4', 'ilxtr:hasPhenotype')  # FIXME what is this really?
+    # XXX using a specific phenotype here is undesireable, because it must _always_ be asserted
+    # in order for membership to be determined, this is true for individuals as well, therefore this
+    # should be used as entailed restriction so that anything that matches the necessary contitions
+    # will automatically classify as a result
+
+    # is this a phenotype or a superclass? XXX kind of dirty to do it this way by creating an aribrary
+    # phenotype that is borne by these, but being marked as a keast-type-4 neuron is a thing so here we are
+    # in a pure type world, this would be the coloring and the numbering, but it is more assertional
+    # making it a superclass is probably better than
+
+    ntk_1_fcon = Phenotype('ilxtr:neuron-type-keast-1', fconp)
+    sos_fcon = Phenotype('ilxtr:sympathetic-post-ganglionic', fconp)  # FIXME likely overly broad?
+
+    # phenotypes over layers do not compose well because the
+    # intersection of the layer is ambiguous with regard to which
+    # other anatomical structures it applies to, so for example and it
+    # does not sufficiently constrain that it must be the same axon
+    # segment that is in both the bladder dome wall and epithelium we
+    # do not currently have a way to express anatomical intersections
+    # in neuron lang, we were able to punt on this for somas because
+    # there is at most 1 soma, so the referent is unambiguous
+
+    #SMsyn = Phenotype('ilxtr:smooth-muscle', synp)
+    #EPIsyn = Phenotype('ilxtr:epithelium', synp)
+    #RABsyn = Phenotype('ilxtr:epithelium', synp)
 
 
 four_soma_locs = [
+    # sympathetic chain
     'ilxtr:sc-T12',
     'ilxtr:sc-T13',
     'ilxtr:sc-L1',
