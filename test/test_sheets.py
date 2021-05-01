@@ -46,7 +46,7 @@ def type_scopes(e): return (isinstance(e, TypeError) and
 
 def value_nofi(e): return (isinstance(e, ValueError) and
                            e.args and
-                           e.args[0].startswith('No file exists'))
+                           e.args[0].startswith('The file (or absense of file)'))
 
 def value_nova(e): return (isinstance(e, ValueError) and
                            e.args and
