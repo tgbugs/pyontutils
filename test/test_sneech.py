@@ -146,3 +146,4 @@ class TestInterLex(TestSneechenator):
         of = self.wrangler.dir_process / 'SEEEEEEEEEEEEEEEEEEEEEEEEEECH!'
         a = snchf.COMMENCE(snchr, path_out=of)
         b = snchr.COMMENCE(sneech_file=snchf, path_out=of)
+        #breakpoint()
