@@ -1,3 +1,4 @@
+import os
 import pprint
 import unittest
 import pytest
@@ -143,6 +144,7 @@ class SheetToTest(sheets.Sheet):
     fetch_grid = True
 
 
+@pytest.mark.skipif('CI' in os.environ, reason='Google API creds required.')
 class TestSheets(unittest.TestCase):
 
     @classmethod
