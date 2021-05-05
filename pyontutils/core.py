@@ -314,7 +314,7 @@ class OntMeta(OntRes):
         else:
             itio = IterIO(gen)
             itio.name = self.identifier  # some rdflib parses need a name
-            graph.parse(file=itio, format=self.format)
+            graph.parse(source=itio, format=self.format)
 
     def _populate_next(self, graph, *args, yield_response_gen=False, **kwargs):
         """ Use when you want to populate a graph with the header
@@ -756,7 +756,7 @@ class OntResIri(OntIdIri, OntResOnt):
         else:
             itio = IterIO(gen)
             itio.name = self.identifier
-            graph.parse(file=itio, format=self.format)
+            graph.parse(source=itio, format=self.format)
 
 
 class OntIdPath(OntRes):
