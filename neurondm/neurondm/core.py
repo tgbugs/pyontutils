@@ -2342,7 +2342,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 NeuronBase._loading = False
 
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
-                 equivalentNeurons=tuple(), disjointNeurons=tuple()):
+                 equivalentNeurons=tuple(), disjointNeurons=tuple(), definition=None):
         self._sighed = False
         if id_ and (equivalentNeurons or disjointNeurons):
             # FIXME does this work!?
@@ -2444,6 +2444,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         self._origLabel = label
         self._override = override
+        if definition is not None:
+            # FIXME nasty side effecting behavior
+            self.definition = rdflib.Literal(definition)  # TODO check to make sure we aren't fighting with existing
 
         if (not override and
             self in self.existing_pes and
