@@ -909,8 +909,9 @@ class Sheet:
         # and we need to remove it as a dependency at some point ...
         self._error_when_in_delete()
 
-        ncols = len(self.values[0])
         lrow = len(row)
+        # FIXME ensure that lrow actually has max length
+        ncols = len(self.values[0]) if self.values else lrow
         if lrow < ncols:
             # ensure padding to avoid hard to debug index errors
             # and mutate in place so that anyone dealing with a
@@ -1118,7 +1119,7 @@ class Sheet:
         sid = self.sheetId()
         data = [
             {'insertDimension': {
-                'inheritFromBefore': True,
+                'inheritFromBefore': bool(self.raw_values),  # if raw_values is empty there is nothing to inherit
                 'range': {
                     'sheetId': sid,
                     'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',
