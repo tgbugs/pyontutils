@@ -54,8 +54,13 @@ def utcnowtz(): return datetime.now(tz=timezone.utc)
 
 
 def isoformat(datetime_instance, timespec='auto'):
+    kwargs = {}
+    if isinstance(datetime_instance, datetime):
+        # don't pass timespec if type is not date not datetime
+        kwargs['timespec'] = timespec
+
     return (datetime_instance
-            .isoformat(timespec=timespec)
+            .isoformat(**kwargs)
             .replace('.', ',')
             .replace('+00:00', 'Z'))
 
