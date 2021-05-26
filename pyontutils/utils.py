@@ -984,5 +984,8 @@ def asStr(astNode, prior=tuple(), dereference=False):
             return astNode.name + ((' as ' + astNode.asname)
                                    if astNode.asname else
                                    '')
+    elif isinstance(astNode, ast.Constant):
+        # e.g. bools True and False
+        return str(astNode.value)
     else:
         raise NotImplementedError(f'{astNode}')
