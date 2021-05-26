@@ -79,7 +79,7 @@ class InterLexES(ElasticSearchTools):
     def __init__(self, beta=True):
         super().__init__(
             host = BASHRC('SCICRUNCH_ELASTIC_URL'),
-            # index = 'interlex_2019oct28',
+            # index = 'Interlex_old',
             index = 'interlex',
             type = 'term',
             user = BASHRC('INTERLEX_ELASTIC_USER'),
