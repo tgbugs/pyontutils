@@ -42,6 +42,8 @@ SAO:       http://uri.neuinfo.org/nif/nifstd/sao
 
 # interlex
 ILX:        http://uri.interlex.org/base/ilx_
+#CDE:        http://uri.interlex.org/base/cde_  # needs to be updated to ILX.CDE
+ILX.CDE:    http://uri.interlex.org/base/cde_
 ilx:        http://uri.interlex.org/  # NOTE no /base/
 ilxr:       http://uri.interlex.org/base/readable/
 TEMP:       http://uri.interlex.org/temp/uris/

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import tempfile
 from pyontutils.config import auth
 from augpathlib import RepoPath as Path

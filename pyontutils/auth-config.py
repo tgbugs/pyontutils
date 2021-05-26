@@ -26,6 +26,7 @@
                 'environment-variables': 'NIFSTD_RESOURCES ONTOLOGY_RESOURCES RESOURCES'},
 
   # google api
+  'google-api-service-account-file': None,
   'google-api-store-file': None,
   'google-api-store-file-readonly': None,
   'google-api-creds-file': None,

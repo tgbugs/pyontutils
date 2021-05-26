@@ -17,7 +17,7 @@ class TestIBNode(unittest.TestCase):
 
         g2format = 'nt'
         # broken serialization :/ with full lenght prefixes
-        self.ser2 = self.graph1.serialize(format=g2format)
+        self.ser2 = self.graph1.serialize(format=g2format, encoding='utf-8')
         with open('test_ser2.ttl', 'wb') as f:
             f.write(self.ser2)
 

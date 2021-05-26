@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """Render a tree from a predicate root pair.
 Normally run as a web service.
 

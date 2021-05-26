@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """
     A collection of reused functions and classes.
     Depends only on python standard library.
@@ -11,7 +11,6 @@ import asyncio
 import inspect
 import logging
 from time import time, sleep
-from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, date, timezone
 from functools import wraps
@@ -55,10 +54,16 @@ def utcnowtz(): return datetime.now(tz=timezone.utc)
 
 
 def isoformat(datetime_instance, timespec='auto'):
+    kwargs = {}
+    if isinstance(datetime_instance, datetime):
+        # don't pass timespec if type is not date not datetime
+        kwargs['timespec'] = timespec
+
     return (datetime_instance
-            .isoformat(timespec=timespec)
+            .isoformat(**kwargs)
             .replace('.', ',')
             .replace('+00:00', 'Z'))
+
 
 def isoformat_safe(datetime_instance, timespec='auto'):
     """ portable file system safe iso format (sigh) """
@@ -223,6 +228,21 @@ def subclasses(start):
         if sc is not None:
             yield sc
             yield from subclasses(sc)
+
+
+def subclass_tree(start, node_type=tuple):
+    if issubclass(start, type):
+        scs = start.__subclasses__(start)
+    else:
+        scs = start.__subclasses__()
+
+    for sc in scs:
+        if sc is not None:
+            subclasses = node_type(subclass_tree(sc))
+            if subclasses:
+                yield node_type((sc, *subclasses))
+            else:
+                yield node_type((sc,))
 
 
 def getSourceLine(cls):

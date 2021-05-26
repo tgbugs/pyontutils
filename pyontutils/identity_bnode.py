@@ -1,3 +1,4 @@
+import sys
 import hashlib
 from collections import defaultdict
 import rdflib
@@ -40,7 +41,7 @@ class IdentityBNode(rdflib.BNode):
     """
     cypher = hashlib.sha256
     cypher_field_separator = ' '
-    encoding = 'utf-8'
+    encoding = sys.getdefaultencoding()
     sortlast = b'\xff' * 64
 
     def __new__(cls, triples_or_pairs_or_thing, symmetric_predicates=tuple(), debug=False):

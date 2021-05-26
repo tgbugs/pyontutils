@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 from pyontutils.config import auth
 """ Synchronize KnowledgeSpace definitions to the ontology
 """

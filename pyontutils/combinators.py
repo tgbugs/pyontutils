@@ -86,7 +86,7 @@ class Combinator:  # FIXME naming, these aren't really thunks, they are combinat
         if l is None:
             l = self.__call__(*args)
         [graph.add(t) for t in l]
-        out = graph.serialize(format='nifttl').decode()
+        out = graph.serialize(format='nifttl', encoding='utf-8').decode()
         if ret:
             return out
         else:
@@ -664,6 +664,9 @@ class PredicateList(Triple):
                     yield subject, rdf.type, self.outer_self.typeWhenSubjectIsBlank
 
                 yield from self.outer_self.serialize(subject, self.combinators)
+
+            def debug(self):
+                return super().debug(rdflib.BNode())
 
             def __repr__(self):
                 return f'{self.__class__.__name__}{self.combinators!r}'

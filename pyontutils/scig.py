@@ -1,26 +1,27 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """Look look up ontology terms on the command line.
 
 Usage:
-    scig v  [--api --local --verbose --key=KEY] <id>...
-    scig i  [--api --local --verbose --key=KEY] <id>...
-    scig t  [--api --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
-    scig s  [--api --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
-    scig g  [--api --local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
-    scig e  [--api --local --verbose --key=KEY] <p> <s> <o>
-    scig c  [--api --local --verbose --key=KEY]
-    scig cy [--api --local --verbose --limit=LIMIT] <query>
-    scig onts [options]
+    scig v    [--api=A --local --verbose --key=KEY] <id>...
+    scig i    [--api=A --local --verbose --key=KEY] <id>...
+    scig t    [--api=A --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
+    scig s    [--api=A --local --verbose --limit=LIMIT --key=KEY --prefix=P...] <term>...
+    scig g    [--api=A --local --verbose --rt=RELTYPE --edges --key=KEY] <id>...
+    scig e    [--api=A --local --verbose --key=KEY] <p> <s> <o>
+    scig c    [--api=A --local --verbose --key=KEY]
+    scig cy   [--api=A --local --verbose --limit=LIMIT] <query>
+    scig onts [--api=A --local --verbose --key=KEY]
 
 Options:
-    -a --api=API        Full url to SciGraph api endpoint
+    -a --api=A          Full url to SciGraph api endpoint
     -e --edges          print edges only
     -l --local          hit the local scigraph server
     -v --verbose        print the full uri
     -t --limit=LIMIT    limit number of results [default: 10]
     -k --key=KEY        api key
     -w --warn           warn on errors
-    -p --prefix=P...    filter by prefix
+    -p --prefix=P       filter by prefix
+    -r --rt=RELTYPE     relationshipType
 
 """
 import tempfile
@@ -97,7 +98,7 @@ class ImportChain:  # TODO abstract this a bit to support other onts, move back 
     def write_import_chain(self, location=tempfile.tempdir):
         html = self.make_html()
         if not html:
-            self.path = f'{tempfile.tempdir}/noimport.html'
+            self.path = Path(tempfile.tempdir) / 'noimport.html'
         else:
             self.name = Path(next(iter(self.tree.keys()))).name
             self.path = Path(location, f'{self.name}-import-closure.html')
@@ -260,7 +261,7 @@ class scigPrint:
 
 def main():
     args = docopt(__doc__, version='scig 0')
-    #print(args)
+    print(args)
     server = None
     verbose = False
     if args['--api']:
@@ -310,12 +311,20 @@ def main():
     elif args['e']:
         v = Vocabulary(server, verbose) if server else Vocabulary(verbose=verbose)
         p, s, o = args['<p>'], args['<s>'], args['<o>']
+        def getl(e):
+            r = v.findById(e)
+            if r and r['labels']:
+                return r['labels'][0]
+            else:
+                return e
+
         if ':' in p:
-            p = v.findById(p)['labels'][0]
+            p = getl(p)
         if ':' in s:
-            s = v.findById(s)['labels'][0]
+            s = getl(s)
         if ':' in o:
-            o = v.findById(o)['labels'][0]
+            o = getl(o)
+
         print('(%s %s %s)' % tuple([_.replace(' ', '-') for _ in (p, s, o)]))
     elif args['c']:
         c = Cypher(server, verbose) if server else Cypher(verbose=verbose)

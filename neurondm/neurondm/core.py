@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import os
 import sys
 import atexit
@@ -1473,7 +1473,7 @@ class graphBase:
 
     @classmethod
     def python_header(cls):
-        out = '#!/usr/bin/env python3.7\n'
+        out = '#!/usr/bin/env python3\n'
         out += f'from {cls.__import_name__} import *\n\n'
 
         all_types = set(type(n) for n in cls.neurons())
@@ -2342,7 +2342,7 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
                 NeuronBase._loading = False
 
     def __init__(self, *phenotypeEdges, id_=None, label=None, override=False,
-                 equivalentNeurons=tuple(), disjointNeurons=tuple()):
+                 equivalentNeurons=tuple(), disjointNeurons=tuple(), definition=None):
         self._sighed = False
         if id_ and (equivalentNeurons or disjointNeurons):
             # FIXME does this work!?
@@ -2444,6 +2444,9 @@ class NeuronBase(AnnotationMixin, GraphOpsMixin, graphBase):
 
         self._origLabel = label
         self._override = override
+        if definition is not None:
+            # FIXME nasty side effecting behavior
+            self.definition = rdflib.Literal(definition)  # TODO check to make sure we aren't fighting with existing
 
         if (not override and
             self in self.existing_pes and

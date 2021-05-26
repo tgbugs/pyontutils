@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 from pathlib import Path
 import rdflib
 from pyontutils.core import makeGraph

@@ -314,7 +314,7 @@ class OntMeta(OntRes):
         else:
             itio = IterIO(gen)
             itio.name = self.identifier  # some rdflib parses need a name
-            graph.parse(file=itio, format=self.format)
+            graph.parse(source=itio, format=self.format)
 
     def _populate_next(self, graph, *args, yield_response_gen=False, **kwargs):
         """ Use when you want to populate a graph with the header
@@ -756,7 +756,7 @@ class OntResIri(OntIdIri, OntResOnt):
         else:
             itio = IterIO(gen)
             itio.name = self.identifier
-            graph.parse(file=itio, format=self.format)
+            graph.parse(source=itio, format=self.format)
 
 
 class OntIdPath(OntRes):
@@ -1176,6 +1176,11 @@ class OntGraph(rdflib.Graph):
         # whether that is a file or a graph etc.
 
         raise NotImplementedError('yet')
+
+    def serialize(self, *args, encoding='utf-8', **kwargs):  # FIXME XXX eventually remove this
+        # compatibility layer for transition from 5.0 to 6.0 behavior
+        # where the default switched from string to bytes
+        return super().serialize(*args, encoding=encoding, **kwargs)
 
     def write(self, path=None, format='nifttl'):
         if path is None:
@@ -1830,7 +1835,7 @@ class makeGraph:
         if cull:
             cull_prefixes(self).write()
         else:
-            ser = self.g.serialize(format='nifttl')
+            ser = self.g.serialize(format='nifttl', encoding='utf-8')
             with open(self.filename, 'wb') as f:
                 f.write(ser)
                 #print('yes we wrote the first version...', self.name)

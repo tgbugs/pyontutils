@@ -7,6 +7,14 @@
 :lol a owl:Class ;
     rdfs:label rdf:nil .
 
+:header a :structure-type .
+
+:record-triples a :header ;
+    :def "semantic metadata record embedded in the stream of this type, it is like a header that says what the following contents are, not what the record itself is" .
+
+:record-pair a :structure-type ;
+    :def "identified contents of a triple stream, named substructure in a stream" .
+
 ## __BASE
 # graph 1
 ## graph 1 metadata stream _META

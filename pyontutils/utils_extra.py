@@ -2,6 +2,7 @@
     Reused utilties that depend on packages outside the python standard library.
 """
 import hashlib
+from urllib.parse import quote as url_quote
 import rdflib
 
 
@@ -15,7 +16,18 @@ def check_value(v):
     if isinstance(v, rdflib.Literal) or isinstance(v, rdflib.URIRef):
         return v
     elif isinstance(v, str) and v.startswith('http'):
-        return rdflib.URIRef(v)
+        # FIXME this is dumb and dangerous but whatever
+        uri = rdflib.URIRef(v)
+        try:
+            uri.n3()
+        except:
+            # dois allow ... non-url and non-identifier chars
+            # that must be escaped or we have to use strings
+            # FIXME this WILL induce an aliasing problem if
+            # another process quotes using a different rule
+            uri = rdflib.URIRef(url_quote(v, ':/;()'))
+
+        return uri
     else:
         return rdflib.Literal(v)
 

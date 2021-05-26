@@ -41,7 +41,7 @@ class Recuration(PPP):
     sheet_name = 'Recuration'
 
 
-class Modalities(PPP):
+class Approaches(PPP):
     # see also map-identifiers.py and methods/ for the rest of this
     sheet_name = 'Modalities Merged'
     index_columns = 'id',
@@ -99,7 +99,7 @@ class Modalities(PPP):
     @property
     def pathTtl(self):
         olr = aug.RepoPath(auth.get_path('ontology-local-repo'))
-        path = olr / 'ttl' / 'modality.ttl'
+        path = olr / 'ttl' / 'approach.ttl'
         return path
 
     def populateHeader(self, graph):
@@ -107,7 +107,7 @@ class Modalities(PPP):
         s = rdflib.URIRef(path.remote_uri_machine())
         # TODO prov
         pairs = ((rdf.type, owl.Ontology),
-                 (rdfs.label, rdflib.Literal('Experimental modalities.')),)
+                 (rdfs.label, rdflib.Literal('Experimental approaches.')),)
         for p, o in pairs:
             graph.add((s, p, o))
 
@@ -126,7 +126,7 @@ def main():
         missing = unique - all_u
         extra = all_u - unique
 
-    ma = Modalities()
+    ma = Approaches()
     ma.writeTtl()
 
 

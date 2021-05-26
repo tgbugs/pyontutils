@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 #!/usr/bin/env pypy3
 from pyontutils.config import auth, devconfig
 __doc__ = f"""Common commands for ontology processes.
@@ -104,7 +104,7 @@ class ontologySection:
         self.graph = rdflib.Graph().parse(data=ontraw, format='turtle')
 
     def write(self):
-        ontraw_comment = self.graph.serialize(format='nifttl')
+        ontraw_comment = self.graph.serialize(format='nifttl', encoding='utf-8')
         ontraw, comment = ontraw_comment.split(b'###', 1)
         with open(self.filename, 'wb') as f:
             f.write(ontraw)

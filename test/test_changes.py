@@ -70,6 +70,7 @@ def substitute_graph(graph, base_graph=None):
 
     return g
 
+
 def make_graphs(path):
     with open(path, 'rt') as f:
         raw_all_streams = f.read()
@@ -93,3 +94,4 @@ def make_graphs(path):
 class TestChanges(unittest.TestCase):
     def test_graphs(self):
         test_graphs = make_graphs(path_graphs)
+        #breakpoint()

@@ -24,3 +24,6 @@ queries will be slower because they use a pure python mysql connector.
 If you don't want to use pipenv (which is probably most people) then the quickest
 way to get up and running with a development install is `pip install --user --editable .`
 from the folder that contains this readme.
+
+## Workflows
+See the documentation for [NIF-Ontology processes](https://github.com/SciCrunch/NIF-Ontology/blob/master/docs/processes.md).

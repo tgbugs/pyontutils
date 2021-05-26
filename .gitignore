@@ -96,3 +96,7 @@ target/
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Racket
+*.dep
+*.zo

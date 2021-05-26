@@ -286,7 +286,7 @@ class OboFile:
 
         [g.add(t) for t in self.triples()]
          
-        out = g.serialize(format='nifttl')
+        out = g.serialize(format='nifttl', encoding='utf-8')
         return out.decode()
 
     def triples(self):
@@ -742,7 +742,7 @@ class TVPairStore:
         g = rdflib.Graph()
         [g.add(t) for t in self.triples()]
         # TODO go peek at how we removed prefixes for neurons
-        return g.serialize(format='nifttl')
+        return g.serialize(format='nifttl', encoding='utf-8')
 
     def triples(self):
         id_pair, *rest = self.tvpairs

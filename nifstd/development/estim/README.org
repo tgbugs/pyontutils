@@ -1,0 +1,11 @@
+# [[file:README.pdf]]
+#+title: Development for the electrophysiology stimulation ontology
+
+* Waveform visualization
+# cmb-family-pulse is the most up-to-date
+[[file:waveform.rkt]]
+** Trapezoidal family
+[[file:images/trapezoid.png]]
+[[file:images/rectangle.png]]
+[[file:images/triangle.png]]
+[[file:images/ramp.png]]

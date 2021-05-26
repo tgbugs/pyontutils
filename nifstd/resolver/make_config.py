@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 from pyontutils.config import auth
 __doc__ = f""" Create nginx configs for resolver.
 

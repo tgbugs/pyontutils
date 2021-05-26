@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 import tempfile
 from pyontutils.config import auth
 __doc__ = f"""Client library generator for SciGraph REST api.
@@ -27,6 +27,8 @@ class restService:
     """ Base class for SciGraph rest services. """
 
     _api_key = None
+
+    _hrx = re.compile('^https?://')
 
     def __init__(self, cache=False, safe_cache=False, key=None, do_error=False):
         self._session = requests.Session()
@@ -623,7 +625,7 @@ class State:
                        'region_id', 'species-id', 'fma_id', 'root_id'):
                 cond = key
                 params_conditional += (
-                    "\n{t}{t}if {cond} and {cond}.startswith('http:'):\n"
+                    "\n{t}{t}if {cond} and self._hrx.match({cond}):\n"
                     "{t}{t}{t}{cond} = parse.quote({cond}, safe='')").format(cond=cond, t=self.tab)
 
         if 'produces' in api_dict:  # ICK but the alt is nastier

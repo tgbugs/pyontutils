@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """ api access for google sheets (and friends)
 Usage:
     googapis auth (sheets|docs|drive)... [options] [--drive-scope=<SCOPE>...]
@@ -7,6 +7,7 @@ Examples:
     googapis auth sheets
 
 Options:
+    --store-file=<PATH>...    write to a specific store file
     -n --readonly             set the readonly scope
     --drive-scope=<SCOPE>...  add drive scopes (overrides readonly)
                               values: appdata
@@ -20,6 +21,7 @@ Options:
 """
 
 import sys
+from pathlib import Path
 from pyontutils.utils import log
 from pyontutils.clifun import Dispatcher, Options as BaseOptions
 from pyontutils.sheets import _get_oauth_service
@@ -49,8 +51,13 @@ class Options(BaseOptions):
 
         return super().__new__(cls, args, defaults)
 
+    @property
+    def store_file(self):
+        return Path(self._args['--store-file']).resolve()
+
 
 class Main(Dispatcher):
+
     @property
     def _scopes(self):
         base = 'https://www.googleapis.com/auth/'
@@ -80,7 +87,8 @@ class Main(Dispatcher):
         if self.options.debug:
             log.debug(f'requesting for scopes:\n{newline.join(scopes)}')
 
-        service = _get_oauth_service(readonly=self.options.readonly, SCOPES=scopes)
+        service = _get_oauth_service(readonly=self.options.readonly, SCOPES=scopes,
+                                     store_file=self.options.store_file)
         # FIXME decouple this ...
         log.info(f'Auth finished successfully for scopes:\n{newline.join(scopes)}')
 

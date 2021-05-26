@@ -348,7 +348,7 @@ a:link { text-decoration: none;
 
 emacs_style = '''
 body {
-    color: #00ff00 ;
+    color: #a67ff4 ;
     background-color: black ;
 }
 .symbol { color : #770055; background-color : transparent; border: 0px; margin: 0px;}
@@ -430,7 +430,7 @@ span.paren9 { color: #4d4d4d ;
     font-weight: bold;
 }
 
-.default { color: #00ff00 ;
+.default { color: #a67ff4 ;
     font-weight: normal;
     background-color: none;
     }

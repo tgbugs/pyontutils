@@ -1,3 +1,4 @@
+import copy
 import pickle
 import itertools
 from pathlib import Path
@@ -5,9 +6,6 @@ from urllib.parse import urlparse
 import idlib
 import htmlfn as hfn
 from terminaltables import AsciiTable
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from pyontutils.utils import byCol, log as _log
 from pyontutils.config import auth
 from pyontutils.clifun import python_identifier
@@ -18,6 +16,11 @@ log = _log.getChild('sheets')
 
 CELL_DID_NOT_EXIST = type('CellDidNotExist', (object,), {})()
 CELL_REMOVED = type('CellRemoved', (object,), {})()  # FIXME this is ... bad? or is IndexError worse?
+__scopes_error_message = (
+    'SCOPES has not been set, possibly because this is\n'
+    'being called by a function that expects the store file\n'
+    'to already exist. Please run `googapis auth` with the\n'
+    'appropriate scope.')
 
 
 def _FakeService():
@@ -42,35 +45,72 @@ def get_oauth_service(api='sheets', version='v4', readonly=True):
     """ outward facing API for accessing oauth creds """
     return _get_oauth_service(api=api, version=version, readonly=readonly)
 
-
-def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
-    """ Inner implementation for get oauth. If you see this function used directly
+def _get_oauth_service(
+        api='sheets', version='v4', readonly=True, SCOPES=None,
+        store_file=None, service_account_file=None):
+    """ Inner implementation for get oauth. If you see this function used
         anywhere other than in googapis it is almost certainly a mistake. """
 
-    if readonly:  # FIXME the division isn't so clean for drive ...
-        _auth_var = 'google-api-store-file-readonly'
-    else:
-        _auth_var = 'google-api-store-file'
+    if service_account_file is None:
+        try:
+            service_account_file = auth.get_path(
+                'google-api-service-account-file')
+        except KeyError:
+            # not required to be set, and in many cases will not be due to
+            # needing slightly different permissions in slightly different cases
+            pass
 
-    try:
-        store_file = auth.get_path(_auth_var)
-    except KeyError as e:
-        _msg = (f'No value found for {_auth_var} in {auth._path}\n'
-                'See the previous error for more details about the cause.')
-        raise ValueError(_msg) from e
+    if service_account_file is not None:
+        if SCOPES is None:
+            base = 'https://www.googleapis.com/auth/'
+            suffix = '.readonly' if readonly else ''
+            scope = {'sheets': 'spreadsheets',
+                    'docs': 'doccuments'}[api]  # KeyError on unknown api
+            SCOPES=[base + scope + suffix]
+
+        from google.oauth2 import service_account
+        creds = service_account.Credentials.from_service_account_file(
+            service_account_file, scopes=SCOPES)
+
+        store_file = False  # bypass is None since we have creds
+    else:
+        creds = None
 
     if store_file is None:
-        _p = 'RUNTIME_CONFIG' if auth._path is None else auth._path
-        # FIXME bad error message, need to check whether the key is even in
-        # the user config, and yes we need our way to update the user config
-        # and warn about unexpected formats for orthauth configs
-        msg = (f'No file exists at the path specified by {_auth_var} in {_p}')
-        log.debug(auth._runtime_config)
-        log.debug(auth.user_config._runtime_config)
-        raise ValueError(msg)
+        if readonly:  # FIXME the division isn't so clean for drive ...
+            _auth_var = 'google-api-store-file-readonly'
+        else:
+            _auth_var = 'google-api-store-file'
+
+        try:
+            store_file = auth.get_path(_auth_var)
+        except KeyError as e:
+            _msg = (f'No value found for {_auth_var} in {auth._path}\n'
+                    'See the previous error for more details about the cause.')
+            raise ValueError(_msg) from e
+
+        if store_file is None:
+            _p = 'RUNTIME_CONFIG' if auth._path is None else auth._path
+            _u = ('RUNTIME_CONFIG' if auth.user_config._path is None
+                else auth.user_config._path)
+            # FIXME bad error message, need to check whether the key is even in
+            # the user config, and yes we need our way to update the user config
+            # and warn about unexpected formats for orthauth configs
+            # XXX this branch happens when the keys are in the user config
+            # but they are null and no secrets path is set
+            msg = ('The file (or absense of file) specified by '
+                f'{_auth_var} in {_p} and {_u} cound not be found')
+
+            if hasattr(auth, '_runtime_config'):
+                log.debug(auth._runtime_config)
+
+            if hasattr(auth.user_config, '_runtime_config'):
+                log.debug(auth.user_config._runtime_config)
+
+            raise ValueError(msg)
 
     # TODO log which file it is writing to ...
-    if store_file.exists():
+    if store_file and store_file.exists():
         with open(store_file, 'rb') as f:
             try:
                 creds = pickle.load(f)
@@ -79,19 +119,20 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
                 # that won't leak secrets by default
                 log.error(f'problem in file at path for {_auth_var}')
                 raise e
+    elif creds:
+        pass  # got them from the service account file
     else:
         creds = None
         if SCOPES is None:
-            raise TypeError('SCOPES has not been set, possibly because this is\n'
-                            'being called by a function that expects the store file\n'
-                            'to already exist. Please run `googapis auth` with the\n'
-                            'appropriate scope.')
+            raise TypeError(__scopes_error_message)
 
-    if not creds or not creds.valid:
+    if not creds or service_account_file is None and not creds.valid:
         # the first time you run this you will need to use the --noauth_local_webserver args
         if creds and creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
             creds.refresh(Request())
         else:
+            from google_auth_oauthlib.flow import InstalledAppFlow # XXX slow import
             creds_file = auth.get_path('google-api-creds-file')
             flow = InstalledAppFlow.from_client_secrets_file((creds_file).as_posix(), SCOPES)
             creds = flow.run_console()
@@ -99,13 +140,15 @@ def _get_oauth_service(api='sheets', version='v4', readonly=True, SCOPES=None):
         with open(store_file, 'wb') as f:
             pickle.dump(creds, f)
 
+    from googleapiclient.discovery import build
     service = build(api, version, credentials=creds)
     return service
 
 
-def update_sheet_values(spreadsheet_name, sheet_name, values, spreadsheet_service=None, SPREADSHEET_ID=None):
+def update_sheet_values(spreadsheet_name, sheet_name, values,
+                        spreadsheet_service=None, SPREADSHEET_ID=None):
     if SPREADSHEET_ID is None:
-        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
+        SPREADSHEET_ID = auth.user_config.secrets('google', 'sheets', spreadsheet_name)  # FIXME wrong order ...
 
     if spreadsheet_service is None:
         service = get_oauth_service(readonly=False)
@@ -161,7 +204,7 @@ def num_to_ab(n):
 def get_sheet_values(spreadsheet_name, sheet_name, fetch_grid=False, spreadsheet_service=None,
                      filter_cell=default_filter_cell, SPREADSHEET_ID=None):
     if SPREADSHEET_ID is None:
-        SPREADSHEET_ID = auth.dynamic_config.secrets('google', 'sheets', spreadsheet_name)
+        SPREADSHEET_ID = auth.user_config.secrets('google', 'sheets', spreadsheet_name)
 
     if spreadsheet_service is None:
         service = get_oauth_service()
@@ -574,7 +617,7 @@ class Sheet:
 
     @classmethod
     def _sheet_id(cls):
-        return auth.dynamic_config.secrets('google', 'sheets', cls.name)
+        return auth.user_config.secrets('google', 'sheets', cls.name)
 
     @classmethod
     def _uri_human(cls):
@@ -586,18 +629,23 @@ class Sheet:
         import webbrowser
         webbrowser.open(cls._uri_human(uri))
 
+    _saf = None  # SIGH
     def _setup(self):
         if self.readonly:
             if not hasattr(Sheet, '_Sheet__spreadsheet_service_ro'):
                 # I think it is correct to keep this ephimoral
-                service = get_oauth_service(readonly=self.readonly)
+                service = _get_oauth_service(
+                    readonly=self.readonly,
+                    service_account_file=self._saf)
                 Sheet.__spreadsheet_service_ro = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service_ro
 
         else:
             if not hasattr(Sheet, '_Sheet__spreadsheet_service'):
-                service = get_oauth_service(readonly=self.readonly)
+                service = _get_oauth_service(
+                    readonly=self.readonly,
+                    service_account_file=self._saf)
                 Sheet.__spreadsheet_service = service.spreadsheets()
 
             self._spreadsheet_service = Sheet.__spreadsheet_service
@@ -612,8 +660,21 @@ class Sheet:
         # on the fly for each sheet?
         return self._meta
 
+    def _fetch_from_other_sheet(self, other):
+        """ fix for rate limits when testing """
+        self._meta = copy.deepcopy(other._meta)
+        self.raw_values = copy.deepcopy(other.raw_values)
+        self._values = copy.deepcopy(other._values)
+        if hasattr(other, 'byCol'):
+            self.byCol = copy.deepcopy(other.byCol)
+        self.grid = copy.deepcopy(other.grid)
+        self.cells_index = copy.deepcopy(other.cells_index)
+
+    #fetch_count = 0
     def fetch(self, fetch_grid=None, filter_cell=None):
         """ update remote values (called automatically at __init__) """
+        #self.__class__.fetch_count += 1
+        #log.debug(f'fetch count: {self.__class__.fetch_count}')
         self._stash_uncommitted()
         if fetch_grid is None:
             fetch_grid = self.fetch_grid
@@ -847,6 +908,16 @@ class Sheet:
         # it should be added after commit completes, but byCol is static
         # and we need to remove it as a dependency at some point ...
         self._error_when_in_delete()
+
+        lrow = len(row)
+        # FIXME ensure that lrow actually has max length
+        ncols = len(self.values[0]) if self.values else lrow
+        if lrow < ncols:
+            # ensure padding to avoid hard to debug index errors
+            # and mutate in place so that anyone dealing with a
+            # reference to the original row has the corrected version
+            row.extend(['' for _ in range(ncols - lrow)])
+
         if row not in self.values:
             self.values.append(row)
             row_object = Row(self, self.values.index(row))
@@ -1048,7 +1119,7 @@ class Sheet:
         sid = self.sheetId()
         data = [
             {'insertDimension': {
-                'inheritFromBefore': True,
+                'inheritFromBefore': bool(self.raw_values),  # if raw_values is empty there is nothing to inherit
                 'range': {
                     'sheetId': sid,
                     'dimension': 'ROWS' if isinstance(object, Row) else 'COLUMNS',

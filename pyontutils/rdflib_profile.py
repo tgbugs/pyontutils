@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 """run rdflib performance tests
 
 Usage:
@@ -32,7 +32,7 @@ class _prof:
     #filters = 'namespace.py', 'compute_qname'
     filters = 'turtle.py', 'serialize'
 
-    def serialize(self, stream, base=None, encoding=None,
+    def serialize(self, stream, base=None, encoding='utf-8',
                   spacious=None, **args):
         pr = cProfile.Profile()
         pr.enable()
@@ -70,7 +70,7 @@ def do_serialize(graph, reps, filename, format):
                      '", "' + filename +
                      '", ' + str(_prof.filters) + ',\n[')
     for i in range(reps):
-        ser = graph.serialize(format=format)
+        ser = graph.serialize(format=format, encoding='utf-8')
     sys.stdout.write(']],')
     return ser
 

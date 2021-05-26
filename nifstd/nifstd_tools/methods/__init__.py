@@ -1467,7 +1467,7 @@ triples = (
 
     _t(DEV(119), 'fly culture technique',
        (ilxtr.hasPrimaryInputOutput,
-        OntTerm('NCBITaxon:7215', label='Drosophila <fruit fly, genus>')
+        OntTerm('NCBITaxon:7215', label='Drosophila <flies,genus>')
         #OntTerm(term='drosophila')
        ),
        synonyms=('fly culture',),),

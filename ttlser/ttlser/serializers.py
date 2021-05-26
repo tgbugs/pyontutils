@@ -873,8 +873,9 @@ class CompactTurtleSerializer(CustomTurtleSerializer):
                          if isinstance(e, URIRef))
         preds = set(v for v, c in counts.items() if c > 2 and len(v) > 10)
         if not self._compact:
-            real_namespace = store.store._IOMemory__namespace
-            real_prefix = store.store._IOMemory__prefix
+            nm_store = store.store
+            real_namespace = getattr(nm_store, f'_{nm_store.__class__.__name__}__namespace')
+            real_prefix = getattr(nm_store, f'_{nm_store.__class__.__name__}__prefix')
             for p, n in tuple(real_namespace.items()):
                 if n in preds:
                     real_namespace.pop(p)

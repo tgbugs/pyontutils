@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 # equivalent indexed as default
 # equivalent indexed in map only
@@ -459,7 +459,7 @@ class Sneechenator:
         #namespaces = [derp(p) for p in prefixes]  # FIXME prefix vs namespace
         rg, maybe_sneeches = self.sneechReviewGraph(source_graph, namespaces,  sneech_file, path_out)
         # TODO I think we commit here ?
-        breakpoint()
+        #breakpoint()
 
     def CONTINUE(self, path_sneech_file):
         pass

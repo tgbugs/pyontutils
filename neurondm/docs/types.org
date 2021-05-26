@@ -1,0 +1,188 @@
+:PROPERTIES:
+:CREATED:  [2020-10-24 Sat 14:14]
+:END:
+#+title: A Mathematical Account of Cell Types
+#+author: Tom Gillespie
+#+date: 2020-10-24
+# [[file:./types.pdf]]
+#+latex_header: \usepackage[margin=1.0in]{geometry}
+
+* Types
+This is a gross oversimplification. The relationship between data type
+and function type can be granular to the level of the exact technique
+used to collect data from a particular modality. There are cases where
+some function types are matched to the technique types, or rather the
+data types not of the modality but of the exact technique used to
+collect data from that modality. There are functions that are defined
+on the domain of data derived from a particular modality, but those
+may require some level of preprocessing/loss of precision in order not
+to produce \bot{} results.
+
+# FIXME macros are case insensitive !??!! that must be a bug
+
+#+macro: t $\tau_{$1}$
+#+macro: ft $f_{\tau_{$1}}$
+#+macro: at $\mathcal{F}_{\tau_{$1}}$
+#+macro: dt $D_{\tau_{$1}}$
+#+macro: ct $C_{\tau_{$1}}$
+
+# only needed to demonstrate commutativity
+#+macro: t2 $\tau_{$1}\tau_{$2}$
+#+macro: dt2 $D_{\tau_{$1}\tau_{$2}}$
+#+macro: dt3 $D_{\tau_{$1}\tau_{$2}\tau{$3}}$
+#+macro: ft2 $f_{\tau_{$1}\tau_{$2}}$
+#+macro: ft3 $f_{\tau_{$1}\tau_{$2}\tau{$3}}$
+
+| Data modality  | Type       | Data type   | Function type |
+|----------------+------------+-------------+---------------|
+| Transcriptomic | {{{t(R)}}} | {{{dt(R)}}} | {{{ft(R)}}}   |
+| Epigenomic     | {{{t(E)}}} | {{{dt(E)}}} | {{{ft(E)}}}   |
+| Physiology     | {{{t(P)}}} | {{{dt(P)}}} | {{{ft(P)}}}   |
+
+A note on the commutative behavior of the type notation.
+{{{t2(R,E)}}} \iff {{{t(RE)}}}, which is to say that when dealing
+with data, /all/ individuals with {{{dt(RE)}}} have data of both
+{{{dt(R)}}} and {{{dt(E)}}}. The inverse cannot be inferred for
+populations where some individuals lack either {{{dt(R)}}} or {{{dt(E)}}}.
+
+Let $\mathcal{T}_{cell}$ be the set of all techniques that can produce
+data about a single cell at a time or some part of that single cell.
+Let $R$, $E$, and $P$ each be a single technique from the modalities
+transcriptomics, epigenomics, and [electro]physiology respectively.
+They _do not_ represent the union of all techniques that fall under
+that modality. If they did, the assertions below would be false, since
+there are many techniques within a single modality that produce data
+that is cross-wise incompatible with the functions that operate on
+each type of data (i.e., that {{{ft(R_1)}}}({{{dt(R_2)}}}) \rightarrow
+\bot{} and {{{ft(R_2)}}}({{{dt(R_1)}}}) \rightarrow \bot{}).
+
+Result types. Note that $x$ and $x'$ have no meaningful relation when
+it comes to their relation to functions accepting their types.
+{{{ft(x)}}}({{{dt(x')}}}) \rightarrow \bot{} and
+{{{ft(x')}}}({{{dt(x)}}}) \rightarrow \bot{}. The convention is used
+only to make it easier to follow the fact that their relation comes
+from the fact that one is the input type and the other is an output
+type of a given function. Note that it is entirely possible for output
+types {{{t(R_1')}}} and {{{t(R_2')}}} to be equivalent. In those cases
+an explicit assertion or a harder to follow type name will be used.
+
+#+name: t:return-types
+#+caption: Return types.
+| {{{ft(R)}}}   | \rightarrow | {{{t(R')}}}   |
+| {{{ft(E)}}}   | \rightarrow | {{{t(E')}}}   |
+| {{{ft(P)}}}   | \rightarrow | {{{t(P')}}}   |
+| {{{ft(RE)}}}  | \rightarrow | {{{t(RE')}}}  |
+| {{{ft(RP)}}}  | \rightarrow | {{{t(RP')}}}  |
+| {{{ft(EP)}}}  | \rightarrow | {{{t(EP')}}}  |
+| {{{ft(REP)}}} | \rightarrow | {{{t(REP')}}} |
+
+An overview of the types of processing/analysis functions and how they
+relate to continuous types and discrete types.
+
+#+name: t:f-be-1
+#+caption: Behavior of functions with types operating on a single modality.
+| {{{ft(R)}}}({{{dt(R)}}}) | \rightarrow | {{{ct(R')}}} | {{{ft(E)}}}({{{dt(R)}}}) | \rightarrow | \bot{}       | {{{ft(P)}}}({{{dt(R)}}}) | \rightarrow | \bot{}       |
+| {{{ft(R)}}}({{{dt(E)}}}) | \rightarrow | \bot{}       | {{{ft(E)}}}({{{dt(E)}}}) | \rightarrow | {{{ct(E')}}} | {{{ft(P)}}}({{{dt(E)}}}) | \rightarrow | \bot{}       |
+| {{{ft(R)}}}({{{dt(P)}}}) | \rightarrow | \bot{}       | {{{ft(E)}}}({{{dt(P)}}}) | \rightarrow | \bot{}       | {{{ft(P)}}}({{{dt(P)}}}) | \rightarrow | {{{ct(P')}}} |
+
+#+name: t:f-be-2
+#+caption: Behavior over two modalities.
+| {{{ft(R)}}}({{{dt(EP)}}})  | \rightarrow | \bot{}       | {{{ft(E)}}}({{{dt(EP)}}})  | \rightarrow | {{{ct(E')}}} |
+| {{{ft(R)}}}({{{dt(RP)}}})  | \rightarrow | {{{ct(R')}}} | {{{ft(E)}}}({{{dt(RP)}}})  | \rightarrow | \bot{}       |
+| {{{ft(R)}}}({{{dt(RE)}}})  | \rightarrow | {{{ct(R')}}} | {{{ft(E)}}}({{{dt(RE)}}})  | \rightarrow | {{{ct(E')}}} |
+| {{{ft(R)}}}({{{dt(REP)}}}) | \rightarrow | {{{ct(R')}}} | {{{ft(E)}}}({{{dt(REP)}}}) | \rightarrow | {{{ct(E')}}} |
+
+#+name: t:f-be-3
+#+caption: Behavior over three modalities.
+| {{{ft(REP)}}}({{{dt(RE)}}})  | \rightarrow | \bot{}      |
+| {{{ft(REP)}}}({{{dt(RP)}}})  | \rightarrow | \bot{}      |
+| {{{ft(REP)}}}({{{dt(EP)}}})  | \rightarrow | \bot{}      |
+| {{{ft(REP)}}}({{{dt(REP)}}}) | \rightarrow | {{{ct(REP')}}} |
+
+# In multi-modality cases the original data from modalities that
+# could not be processed by a given function is still present.
+
+# \vdash
+
+What we usually mean when we talk about types derived from a
+particular modality is the set of all types {{{t(R'_{1..n})}}}
+that make up the union of the return types for the family of
+functions {{{at(R)}}} that have the input type {{{t(R)}}} and
+a return type {{{t(R'_{1..n})}}} where $n$ is the number of
+functions in {{{at(R)}}} (possibly infinite).
+
+Our task then is to use this understanding of types to classify a
+single cell as belonging to one or more types. The first an most
+trivial type is the type of data that has been collected about it.
+
+A cell that has had data collected about it using technique $t$ can be
+said to "have" type {{{t(t)}}}. This is not mathematically precise,
+but we can sort of cheat here since techniques and functions can never
+share the same domain --- techniques have a domain that includes
+non-symbolic entities in the real world, whereas functions have
+domains that are purely symbolic. As a result, it is reasonable to use
+the type notation {{{t(t)}}} for a cell to mean that the cell has had
+technique $t$ applied to it, while also applying it in the context of
+data to mean that the data was the symbolic output of technique
+$t$. Two sides of the same +coin+ technique.
+
+Formally, a cell $c$ has type {{{t(t)}}} iff it was the primary
+participant in a performance of technique $t$. Data has type
+{{{t(t)}}} iff it was the primary symbolic output of a performance of
+technique $t$.
+
+The meaning expands to cell $c$ has data about it that is of type
+{{{t(t)}}} (possibly =hasMeasuredDataOfType=). If we consider $T$ to
+be a process that produces data of type {{{t(t)}}} then this can be
+written as $t$ \rightarrow {{{dt(t)}}}. That a cell has type
+{{{t(t)}}} is usually incidental, an accident of happenstance, and
+thus not of particular interest scientifically[fn::There are some
+cases where {{{t(t)}}} is of scientific interest, but they are not
+usually about the cell itself, rather the scientific interest arises
+from the fact that different techniques that all attempt to measure
+similar things often have different biases and different types of
+systematic error.  As a result, {{{t(t)}}} nearly always needs to be
+accounted for when doing integrative analysis, if only so that an
+explicit factor can be added to account for its influence on the
+variability of the results].  However, practically speaking, knowing
+this type is critical in order to arrive at types that might be of
+scientific interest.
+
+Specifically, type {{{t(t)}}} delimits the set of functions that can
+be used to process the data to those in family {{{at(t)}}}, as well as
+any functions that can be used to process any constituent types of
+data within {{{t(t)}}}. The constituent types would correspond
+(probably 1:1) to the outputs of techniques that are parts of
+$t$. Thus for $t_{s_{1..n}}$ sub techniques of $t$ one might have n
+types of data {{{t(s_{1..n})}}} that compose {{{t(t)}}} (e.g.  this
+could be a list of objects each with different types).
+
+A consequence of this is that if $t$ represents the sum total of all
+measurements that can be made on a cell, then knowing {{{t(t)}}}
+immediately delimits the number of types that can ever be asserted for
+the cell. It does not limited the number of types that can be inferred
+about the cell, but what we have come to call the experimental type of
+the cell is fixed and known. All further information relating types
+derived from {{{t(t)}}} to types that are mutually exclusive with
+{{{t(t)}}} ({{{t(\neg{t})}}} maybe?) must come from some heroic
+experiment that is able to overcome the practical limitations of $t$.
+
+# {{{t(R)}}}
+# {{{dt(R)}}}
+
+# {{{dt2(R,P)}}}
+# {{{dt2(E,P)}}}
+# {{{dt3(R,E,P)}}}
+# {{{ft(R)}}}
+# {{{ft2(R,P)}}}
+# {{{ft2(E,P)}}}
+# {{{ft3(R,E,P)}}}
+
+# $R$ 
+# $f_R$
+# $f_R(x)$
+# $D_R$
+# \binom{REP}{2}
+# \bot
+
+# [[https://groups.csail.mit.edu/mac/users/gjs/6.945/readings/Steele-MIT-April-2017.pdf][Steele on notation.]]
