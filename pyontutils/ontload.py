@@ -81,6 +81,7 @@ except NameError:
 defaults = {o.name:o.value if o.argcount else None for o in parse_defaults(__doc__)}
 
 COMMIT_HASH_HEAD_LEN = 8
+CONFIG_HASH_HEAD_LEN = 8
 
 bigleaves = 'go.owl', 'uberon.owl', 'pr.owl', 'doid.owl', 'taxslim.owl', 'chebislim.ttl', 'ero.owl'
 
@@ -90,7 +91,9 @@ class NotBuiltError(FileNotFoundError):
     pass
 
 
-def identity_json(blob, *, cypher=hashlib.blake2b, encoding='utf-8', cls=None):
+
+def identity_json(blob, *, cls=None,
+                  cypher=hashlib.blake2b, encoding='utf-8', sort_lists=False):
     """ Return the checksum (default blake2b) of the json string
     serialize of a python dict, list, etc. This is a hacky substitute
     for a properly specified algorithm for normalizing and hashing python
@@ -98,13 +101,40 @@ def identity_json(blob, *, cypher=hashlib.blake2b, encoding='utf-8', cls=None):
     # this function may be called without arguments, but if it is
     # called with arguments then the signature changes so we know that
     # we are in a different regieme
+    if sort_lists:
+        # reminder that json.JSONEncoder.default is not extensible for
+        # known types >_< SIGH
+        rank = {dict:0,
+                list:1,
+                str:2,
+                float:3,}
+        def key(e):
+            if isinstance(e, dict):
+                return rank[dict], sorted([list(t) for t in e.items()], key=key)
+            elif isinstance(e, list):
+                return rank[list], e  # should already be sorted
+            else:
+                return rank[type(e)], e
+
+        def sigh(blob):
+            if isinstance(blob, dict):
+                return {k: sigh(v) for k, v in blob.items()}
+            elif isinstance(blob, list) or isinstance(blob, tuple):
+                return sorted([sigh(e) for e in blob], key=key)
+            else:
+                return blob
+
+        blob = sigh(blob)
+
     s = json.dumps(blob,
                    indent=0,
                    separators=(',', ':'),
                    ensure_ascii=True,
                    sort_keys=True,
                    cls=cls)
-    b = s.encode(encoding)
+    snn = s.replace('\n', '')
+
+    b = snn.encode(encoding)
     m = cypher()
     m.update(b)
     checksum = m.digest()
@@ -163,7 +193,7 @@ class ReproLoader:
             ontology_commit = 'NONE'
 
         config_path, config = self.make_graphload_config(graphload_config_template, graphload_ontologies, zip_location, date_today)
-        config_hash = identity_dict(config, sort_lists=True)
+        config_hash = identity_json(config, sort_lists=True).hex()
 
         (graph_path, zip_path, zip_command,
          wild_zip_path) = self._set_up_paths(zip_location, repo_name, branch,
@@ -171,7 +201,7 @@ class ReproLoader:
                                              config_hash, date_today)
 
         # NOTE config is modified in place
-        ontologies = self.configure_config(config, graph_path, remote_base, local_base)
+        ontologies = self.configure_config(config, graph_path, remote_base, local_base, config_path)
 
         load_command = load_base.format(config_path=config_path)  # 'exit 1' to test
         print(load_command)
@@ -271,7 +301,7 @@ class ReproLoader:
                     '-' + ('*' if wild else date_today) +
                     '-' + scigraph_commit[:COMMIT_HASH_HEAD_LEN] +
                     '-' + ontology_commit +
-                    '-' + config_hash)
+                    '-' + config_hash[:CONFIG_HASH_HEAD_LEN])
 
         def make_folder_zip(wild=False):
             folder = folder_name(scigraph_commit, wild)
@@ -310,6 +340,7 @@ class ReproLoader:
 
         return config_path, config
 
+    @staticmethod
     def configure_config(config, graph_path, remote_base, local_base, config_path):  # lel
         config['graphConfiguration']['location'] = graph_path.as_posix()
         if isinstance(local_base, Path):
