@@ -53,6 +53,7 @@ import os
 import json
 import yaml
 import shutil
+import hashlib
 import subprocess
 from io import BytesIO
 from glob import glob
@@ -87,6 +88,27 @@ Query = namedtuple('Query', ['root','relationshipType','direction','depth'])
 
 class NotBuiltError(FileNotFoundError):
     pass
+
+
+def identity_json(blob, *, cypher=hashlib.blake2b, encoding='utf-8', cls=None):
+    """ Return the checksum (default blake2b) of the json string
+    serialize of a python dict, list, etc. This is a hacky substitute
+    for a properly specified algorithm for normalizing and hashing python
+    objects. """
+    # this function may be called without arguments, but if it is
+    # called with arguments then the signature changes so we know that
+    # we are in a different regieme
+    s = json.dumps(blob,
+                   indent=0,
+                   separators=(',', ':'),
+                   ensure_ascii=True,
+                   sort_keys=True,
+                   cls=cls)
+    b = s.encode(encoding)
+    m = cypher()
+    m.update(b)
+    checksum = m.digest()
+    return checksum
 
 
 def make_catalog(itrips):
