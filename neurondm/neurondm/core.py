@@ -704,7 +704,7 @@ class Config:
                  imports =              tuple(),  # iterable
                  import_as_local =      False,  # also load from local?
                  load_from_local =      True,
-                 branch =               auth.get('neurons-branch'),
+                 branch =               auth.get('neurons-branch'),  # FIXME rename to ref
                  sources =              tuple(),
                  source_file =          None,
                  ignore_existing =      False,
@@ -792,10 +792,13 @@ class Config:
                 # FIXME hardcoded ...
                 partofpath = RepoPath(olr, 'ttl/generated/part-of-self.ttl')
                 repo = partofpath.repo
-                if repo.active_branch.name != branch and not ont_checkout_ok:
+                ref_name = repo.currentRefName()
+                if ref_name != branch and not ont_checkout_ok:
+                    if ref_name is None:
+                        ref_name = repo.head.commit.hexsha
                     raise graphBase.GitRepoOnWrongBranch(
                         f'Local git repo not on {branch} branch!\n'
-                        f'It is on {repo.active_branch} branch instead.\n'
+                        f'It is on {ref_name} instead.\n'
                         f'Please run `git checkout {branch}` in '
                         f'{repo.working_dir}, '
                         'set NIFSTD_CHECKOUT_OK= via export or '
@@ -1248,7 +1251,10 @@ class graphBase:
             and graphBase.local_base.exists()):
 
             repo = Repo(graphBase.local_base.as_posix())
-            if repo.active_branch.name != branch and not checkout_ok:
+            ref_name = repo.currentRefName()
+            if ref_name != branch and not checkout_ok:
+                if ref_name is None:
+                    ref_name = repo.head.commit.hexsha
                 raise graphBase.GitRepoOnWrongBranch(
                     'Local git repo not on %s branch!\n'
                     'Please run `git checkout %s` in %s, '

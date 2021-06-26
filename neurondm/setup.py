@@ -70,6 +70,7 @@ resources, ontology_data_files = _ontology_data_files()
 print('ontology_data_files:\n\t' + '\n\t'.join(ontology_data_files))
 
 models_require = ['nifstd-tools>=0.0.6']
+tasic_require = ['pandas', 'anytree']
 tests_require = ['pytest'] + models_require
 try:
     setup(
@@ -96,12 +97,14 @@ try:
         python_requires='>=3.6',
         tests_require=tests_require,
         install_requires=[
+            'augpathlib>=0.0.22',
             'hyputils>=0.0.8',
             'pyontutils>=0.1.27',
         ],
         extras_require={'dev': ['pytest-cov', 'wheel'],
                         'test': tests_require,
                         'models': models_require,
+                        'tasic': tasic_require,
                         'notebook': ['jupyter'],
         },
         entry_points={
