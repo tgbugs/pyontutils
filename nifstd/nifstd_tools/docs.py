@@ -701,7 +701,7 @@ def renderNotebook(path, **kwargs):
     with open(nbfile, 'rt') as f:
         notebook = nbformat.read(f, as_version=4)
     html_exporter = HTMLExporter()
-    html_exporter.template_file = 'full'
+    #html_exporter.template_file = 'full'
     body, resources = html_exporter.from_notebook_node(notebook)
     return body
 
