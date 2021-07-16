@@ -769,33 +769,33 @@ The easiest way to deploy SciGraph to RHEL-like systems is to build an RPM using
 If you are building on a system that does not have an RPM based package manager then
 you will need the second bit to prevent builds from failing due to missing dependencies.
 
-#+name: rpmmacros
-#+caption: [[file:${HOME}/.rpmmacros][~/.rpmmacros]]
-#+begin_src rpm-spec :tangle ~/.rpmmacros :tangle no
-%__arch_install_post \
-    [ "%{buildarch}" = "noarch" ] || QA_CHECK_RPATHS=1 ; \
-    case "${QA_CHECK_RPATHS:-}" in [1yY]*) /usr/lib/rpm/check-rpaths ;; esac \
-        echo no qa here
-    # /usr/lib/rpm/check-buildroot
-#+end_src
+# Apparently configuring ~/.rpmmacros on gentoo is no longer needed
+# because __arch_install_post is set to nil in all cases?
 
 #+name: run-compile-scigraph-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :results output
-pushd rpmbuild
-# pull changes if the local repo already exists
-if [ -d BUILD/SciGraph/.git ]; then
-    git --git-dir BUILD/SciGraph/.git pull
-fi
+function build-scigraph-rpm () {
+    pushd rpmbuild
+    # pull changes if the local repo already exists
+    if [ -d BUILD/SciGraph/.git ]; then
+        git -C BUILD/SciGraph pull
+        git -C BUILD/SciGraph remote add scicrunch https://github.com/SciCrunch/SciGraph.git
+        git -C BUILD/SciGraph fetch scicrunch
+        git -C BUILD/SciGraph checkout cypher-execute-fix
+        git -C BUILD/SciGraph stash
+    fi
 
-# build the rpm
-spectool -g -R SPECS/scigraph.spec
-rpmbuild --nodeps --define "_topdir `pwd`" -ba SPECS/scigraph.spec
+    # build the rpm
+    spectool -g -R SPECS/scigraph.spec
+    rpmbuild --nodeps --define "_topdir `pwd`" -ba SPECS/scigraph.spec
 
-# inspect the preinstall script
-rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
-popd
+    # inspect the preinstall script
+    rpm -qp --scripts RPMS/noarch/scigraph-9999-0.noarch.rpm
+    popd
+}
 #+end_src
+
 **** ontload only
 :properties:
 :visibility: folded
