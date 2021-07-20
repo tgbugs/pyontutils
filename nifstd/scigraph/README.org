@@ -2,6 +2,7 @@
 #+TITLE: Using SciGraph
 #+OPTIONS: num:nil
 #+STARTUP: showall
+#+property: header-args:bash :mkdirp "yes"
 
 # [[file:./README.html]]
 
