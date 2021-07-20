@@ -579,10 +579,15 @@ into SciGraph.
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
 <<&source-scigraph-functions>>
+# XXX temporary fix for scigraph brokeness
+mkdir <<&path-build-sparc-data()>>
+cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
+     pypy3 -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data()>>/curation-export.owl
 load-graph \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
---path-ontologies <<path-ontologies-sparc-data()>> \
+--path-ontologies <<&path-ontologies-sparc-data()>> \
 $@ \
 #+end_src
 **** deploy
@@ -595,7 +600,7 @@ $@ \
 <<&source-scigraph-functions>>
 deploy-graph \
 --server aws-scigraph-data \
---path-build <<path-build-sparc-data()>>
+--path-build <<&path-build-sparc-data()>>
 #+end_src
 **** load-deploy
 :properties:
@@ -619,7 +624,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data
 <<&source-scigraph-functions>>
 build-services \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --svc-host <<host-services-sparc-data()>> \
 --path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 #+end_src
@@ -632,7 +637,7 @@ build-services \
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data
 <<&source-scigraph-functions>>
 deploy-services \
---config <<path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
+--config <<&path-build-sparc-data()>>/<<file-stem-services-output()>>.yaml \
 --server aws-scigraph-data
 #+end_src
 **** build-deploy
@@ -653,7 +658,7 @@ deploy-services \
 :end:
 **** load graph
 Set =path-build-sparc-data= here
-#+name: path-build-sparc-data
+#+name: &path-build-sparc-data
 : /tmp/scigraph-build/sparc-data
 
 Set =folder-name-graph-sparc-data= here
@@ -661,7 +666,7 @@ Set =folder-name-graph-sparc-data= here
 : sparc-data
 
 Set =path-ontologies-sparc-data= here
-#+name: path-ontologies-sparc-data
+#+name: &path-ontologies-sparc-data
 : ~/git/sparc-curation/resources/scigraph/ontologies-sparc-data.yaml
 
 **** build services config
@@ -709,7 +714,7 @@ deploy-services --config <<path-build-sparc()>>/<<file-stem-services-output()>>.
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-graph-sparc-data-local
 <<&source-scigraph-functions>>
 deploy-graph \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>>
 #+end_src
 *** services config
@@ -722,7 +727,7 @@ deploy-graph \
 #+begin_src bash :noweb yes :tangle ./bin/run-build-services-sparc-data-local
 <<&source-scigraph-functions>>
 ./build-services \
---path-build <<path-build-sparc-data()>> \
+--path-build <<&path-build-sparc-data()>> \
 --path-cypher-resources <<path-cypher-resources-sparc-data()>> \
 --file-stem <<file-stem-sparc-data-local()>> \
 --folder-name-runtime <<folder-name-runtime-sparc-data-local()>> \
@@ -735,7 +740,7 @@ deploy-graph \
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-services-sparc-data-local
 <<&source-scigraph-functions>>
-deploy-services --config <<path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
+deploy-services --config <<&path-build-sparc-data()>>/<<file-stem-sparc-data-local()>>.yaml
 #+end_src
 **** build-deploy
 *** variables                                                      :noexport:
