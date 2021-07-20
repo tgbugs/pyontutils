@@ -579,11 +579,15 @@ into SciGraph.
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data
 <<&source-scigraph-functions>>
+
 # XXX temporary fix for scigraph brokeness
 mkdir <<&path-build-sparc-data()>>
+
 cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
+
 curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
      pypy3 -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data()>>/curation-export.owl
+
 load-graph \
 --path-build <<&path-build-sparc-data()>> \
 --folder-name-graph <<folder-name-graph-sparc-data()>> \
@@ -677,6 +681,62 @@ Set =path-cypher-resources-sparc-data= here
 Set =host-services-sparc-data= here
 #+name: host-services-sparc-data
 : sparc-data.scicrunch.io
+** sparc-data-dev
+:properties:
+:visibility: folded
+:end:
+#+name: run-load-graph-sparc-data-dev
+#+header: :shebang "#!/usr/bin/env bash"
+#+begin_src bash :noweb yes :tangle ./bin/run-load-graph-sparc-data-dev
+<<&source-scigraph-functions>>
+
+# XXX temporary fix for scigraph brokeness and dev graph
+PY_X=$(command -v pypy3 1>& 2 || command -v python)
+
+mkdir <<&path-build-sparc-data-dev()>>
+
+cat <<&path-ontologies-sparc-data()>> | \
+    sed 's/sparc-data/sparc-data-dev/g' > \
+    <<&path-build-sparc-data-dev()>>/ontologies-sparc-data-dev.yaml
+
+cat "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" | \
+    sed 's/sparc-data/sparc-data-dev/g' | \
+    sed 's,https://cassava.ucsd.edu/ApiNATOMY/ontologies/,file://<<&path-build-sparc-data-dev()>>/,g' > \
+    <<&path-build-sparc-data-dev()>>/sparc-data-dev.ttl
+    # TODO consider an option to exclude npo, curation-export, and protcur
+
+curl https://cassava.ucsd.edu/sparc/preview/exports/curation-export.ttl | \
+     ${PY_X} -m ttlser.ttlfmt -f ttl -t xml -o <<&path-build-sparc-data-dev()>>/curation-export.owl
+
+pushd <<&path-build-sparc-data-dev()>>
+if [ ! -f urinary-omega-tree-test.ttl ]; then
+    curl https://cassava.ucsd.edu/ApiNATOMY/ontologies/urinary-omega-tree-test.ttl -O
+fi
+popd
+
+for model_id in {bolser-lewis,bronchomotor,ard-arm-cardiac,sawg-distal-colon,vagus-nerve,scaffold-test}; do
+    cp ~/git/apinatomy-models/${model_id}/derived/${model_id}.ttl <<&path-build-sparc-data-dev()>>/;
+done
+
+load-graph \
+--path-build <<&path-build-sparc-data-dev()>> \
+--folder-name-graph <<folder-name-graph-sparc-data-dev()>> \
+--path-ontologies <<&path-ontologies-sparc-data-dev()>> \
+$@ \
+#+end_src
+**** load graph
+Set =path-build-sparc-data-dev= here
+#+name: &path-build-sparc-data-dev
+: /tmp/scigraph-build/sparc-data-dev
+
+Set =folder-name-graph-sparc-data-dev= here
+#+name: folder-name-graph-sparc-data-dev
+: sparc-data-dev
+
+Set =path-ontologies-sparc-data-dev= here
+#+name: &path-ontologies-sparc-data-dev
+: /tmp/scigraph-build/sparc-data-dev/ontologies-sparc-data-dev.yaml
+
 ** dev local ontology
 *** graph
 **** deploy
