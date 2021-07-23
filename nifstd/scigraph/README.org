@@ -581,7 +581,7 @@ into SciGraph.
 <<&source-scigraph-functions>>
 
 # XXX temporary fix for scigraph brokeness
-mkdir <<&path-build-sparc-data()>>
+mkdir -p <<&path-build-sparc-data()>>
 
 cp "$(dirname <<&path-ontologies-sparc-data()>>)/sparc-data.ttl" <<&path-build-sparc-data()>>
 
@@ -693,7 +693,7 @@ Set =host-services-sparc-data= here
 # XXX temporary fix for scigraph brokeness and dev graph
 PY_X=$(command -v pypy3 1>& 2 || command -v python)
 
-mkdir <<&path-build-sparc-data-dev()>>
+mkdir -p <<&path-build-sparc-data-dev()>>
 
 cat <<&path-ontologies-sparc-data()>> | \
     sed 's/sparc-data/sparc-data-dev/g' > \
