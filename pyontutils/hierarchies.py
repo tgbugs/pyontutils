@@ -660,7 +660,7 @@ def makeHtmlNodes(nodes, sgg, prefixes, local, root_iri, root):
     for k, v in nodes.items():
         if ':' in k and not k.startswith('http') and not k.startswith('file'):
             prefix, suffix = k.split(':', 1)
-            prefix = prefix.strip('\x1b[91m')  # colors :/
+            prefix = prefix.replace('\x1b[91m', '')  # colors :/
             if sgg is not None and not suffix and k == root:  # FIXME 268
                 url = os.path.join(sgg._basePath, 'vocabulary', 'id',
                                    quote(root_iri, safe=[]))
