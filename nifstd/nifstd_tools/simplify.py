@@ -79,14 +79,14 @@ def simplify(collapse, blob):
                 nxgt.add_edges_from(nxg.edges(c, keys=True))
                 ordered_nodes = list(nx.topological_sort(nxgt))
                 paths = [p
-                            for n in nxgt.nodes()
-                            for e in ends
-                            for p in list(nx.all_simple_paths(nxgt, n, e))
-                            if len(p) == len(coll) + 1]
+                         for n in nxgt.nodes()
+                         for e in ends
+                         for p in list(nx.all_simple_paths(nxgt, n, e))
+                         if len(p) == len(coll) + 1]
 
                 for path in sorted(paths):
                     ordered_edges = nxgt.edges(path, keys=True)
-                    oe2 = [Edge.fromNx(e) for e in ordered_edges]
+                    oe2 = [Edge.fromNx(e) for e in ordered_edges if all([n in path for n in e[:2]])]
                     predicates = [e.p for e in oe2]
                     #log.debug('\n' + pformat(oe2))
                     if predicates == coll: #in collapse:
