@@ -982,7 +982,14 @@ function compile-scigraph-git () {
 :properties:
 :visibility: folded
 :end:
-https://github.com/SciGraph/SciGraph/tree/master/docker
+The upstream docker file is
+https://github.com/SciGraph/SciGraph/tree/master/docker.
+
+A gentoo based image
+https://hub.docker.com/r/tgbugs/musl/tags?name=scigraph and its
+underlying file
+https://github.com/tgbugs/dockerfiles/blob/master/source.org#scigraph
+are also available.
 *** Deploy
 =SERVER= is the name in the .ssh/config
 **** RPM
@@ -1003,14 +1010,15 @@ function run-deploy-scigraph-rpm () {
 
 #+begin_src bash
 run-deploy-scigraph-rpm --server aws-scigraph-data
---path-rpm ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm
+--path-rpm ~/git/pyontutils/nifstd/scigraph/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm
 #+end_src
 
 #+name: run-deploy-code-rpm
 #+header: :shebang "#!/usr/bin/env bash" :tangle-mode (identity #o755)
 #+begin_src bash :noweb yes :tangle ./bin/run-deploy-code-rpm
 # TODO backup the old rpm?
-rsync --rsh ssh ~/files/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
+
+rsync --rsh ssh ~/git/pyontutils/nifstd/scigraph/rpmbuild/RPMS/noarch/scigraph-9999-0.noarch.rpm ${SERVER}:
 ssh ${SERVER} '
     sudo <<rpm-install>>'
 ssh ${SERVER} '
