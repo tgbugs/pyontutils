@@ -54,6 +54,7 @@ __all__ = [
     'Phenotype',
     'NegPhenotype',
     'EntailedPhenotype',
+    'NegEntailedPhenotype',
     'LogicalPhenotype',
     'Neuron',
     'NeuronCUT',
@@ -282,7 +283,7 @@ class LabelMaker:
 
     @od
     def hasAxonLocatedIn(self, phenotypes):
-        yield from self._with_thing_located_in('with-axon{}-in', phenotypes)
+        yield from self._with_thing_located_in('with-axon{}-in', phenotypes)  # FIXME terminating too early
 
     @od
     def hasPresynapticElementIn(self, phenotypes):
@@ -306,7 +307,7 @@ class LabelMaker:
         for i, phenotype in enumerate(phenotypes):
             l = next(self._default((phenotype,)))
 
-            if i + 1 == lp:
+            if i + 1 == lp:  # FIXME this is firing too early on with-axon-in due to inherited/context phenotypes!
                 l += ')'
 
             yield l
