@@ -357,13 +357,16 @@ def main():
     from pyontutils.utils import relative_path
     config = Config('keast-2020',
                     source_file=relative_path(__file__, no_wd_value=__file__))
+
     with Keast2020:
         needs_keast_namespace(config)
 
     config.write()
     config.write_python()
-    return config
+    return config,
 
 
 if __name__ == '__main__':
     main()
+else:
+    __globals__ = globals()

@@ -51,7 +51,7 @@ def main():
     config.write_python()
     neurons = config.neurons()
     n = neurons[0]
-    #breakpoint()
+    return config,
 
 
 if __name__ == '__main__':

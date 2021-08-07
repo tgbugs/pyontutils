@@ -11,6 +11,7 @@ import asyncio
 import inspect
 import logging
 from time import time, sleep
+from types import ModuleType
 from pathlib import Path
 from datetime import datetime, date, timezone
 from functools import wraps
@@ -194,13 +195,19 @@ def stack_magic(stack):
     # REMEMBER KIDS ALWAYS CALL inspect.stack(0) if you don't want
     # to acess the file system for every frame! (still slow, but better)
     function_names = [f.function for f in stack]
-    if len(stack) > 2 and 'exec_module' in function_names:
+    if len(stack) > 2 and ('exec_module' in function_names or
+                           '_run_module_as_main' in function_names):
         for i, frame in enumerate(stack):
             fl = frame[0].f_locals
+            if 'import_module' in fl:
+                for v in fl.values():
+                    if type(v) is ModuleType and hasattr(v, '__globals__'):
+                        return v.__globals__
+
             if '__builtins__' in fl:
                 #print('globals found at', i)
                 return fl
-    elif in_notebook or in_ipython or in_test or '_run_module_as_main' in function_names:
+    elif in_notebook or in_ipython or in_test:
         index = 1  # this seems to work for now
     elif function_names.count('main') >= 2:
         # FIXME this is a hack that only works
